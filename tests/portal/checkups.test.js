@@ -31,7 +31,7 @@ test('checkup due status is computed fresh, never read from a stored column', ()
 test('the checkup banner only reads fields that actually exist on client_portal_checkups', () => {
   const fnMatches = [
     html.match(/function checkupDueInfo\(c\) \{[\s\S]*?\n  \}\n/),
-    html.match(/function renderCheckupBanner\(c\) \{[\s\S]*?\n  \}\n/),
+    html.match(/function renderCheckupBanner\(c, booked\) \{[\s\S]*?\n  \}\n/),
   ];
   const realFields = ['id', 'title', 'interval_months', 'last_created_date'];
   for (const fnMatch of fnMatches) {
@@ -51,7 +51,7 @@ test('the checkup banner uses its own scheduling function, never the quote-speci
   // path, never schedule-quote-job, which is specific to an approved
   // quote and has an approval/already-scheduled guard that doesn't
   // apply here.
-  const fnMatch = html.match(/function renderCheckupBanner\(c\) \{[\s\S]*?\n  \}\n/);
+  const fnMatch = html.match(/function renderCheckupBanner\(c, booked\) \{[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch);
   assert.doesNotMatch(fnMatch[0], /schedule-quote-job/);
   assert.match(fnMatch[0], /toggleCheckupSchedule/);

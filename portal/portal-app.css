@@ -554,3 +554,112 @@ body.portal-page .th-toast-container {
 @media (prefers-reduced-motion: reduce) {
   .th-toast { transition: none; }
 }
+
+/* ---------- Unread message badges (2026-09-22) ----------
+   portalApplyNavUnreadBadges() in portal-app.js. Sits on the icon's
+   top-right corner of the Request / Jobs tabs; a real element so it
+   never collides with the active tab's ::after dot at the bottom. */
+.portal-nav-badge {
+  position: absolute; top: 3px; left: calc(50% + 5px);
+  min-width: 16px; height: 16px; padding: 0 4px; box-sizing: border-box;
+  border-radius: 999px; background: var(--orange); color: #0a0a0a;
+  font-size: 10px; font-weight: 800; line-height: 16px; text-align: center;
+  box-shadow: 0 0 0 2px var(--bg, #0a0a0a);
+  animation: portal-badge-pop .28s ease-out;
+}
+@keyframes portal-badge-pop {
+  0% { transform: scale(.4); opacity: 0; }
+  70% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+/* The per-card "Messages" toggle (work requests + completed jobs) --
+   was a bare underlined text link with no way to tell anything new
+   was inside. Now a small pill with a chat icon and, when there is
+   one, an unread count. */
+.portal-thread-toggle {
+  display: inline-flex; align-items: center; gap: 7px; margin-top: 10px;
+  min-height: 36px; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+  background: var(--bg-panel); border: 1px solid var(--border);
+  color: var(--text); font-family: inherit; font-size: 13px; font-weight: 600;
+  text-decoration: none; transition: border-color .15s ease, color .15s ease;
+}
+.portal-thread-toggle:hover { border-color: var(--blue-light); color: var(--white); }
+.portal-thread-toggle[aria-expanded="true"] { border-color: var(--blue-light); color: var(--white); }
+.portal-thread-toggle svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.portal-thread-toggle.has-unread { border-color: var(--orange-tint-border); background: var(--orange-tint-soft); color: var(--white); }
+.portal-unread-pill {
+  display: inline-block; padding: 1px 7px; border-radius: 999px;
+  background: var(--orange); color: #0a0a0a; font-size: 11px; font-weight: 800; line-height: 16px;
+}
+
+/* ---------- Message threads (2026-09-22) ----------
+   portalMessageThreadHtml() -- chat-style bubbles, a day divider when
+   the day changes, time under each bubble, a "New" divider above the
+   first unread reply. Capped height so a long thread scrolls inside
+   the card rather than pushing the rest of the page away. */
+.portal-thread {
+  display: flex; flex-direction: column; gap: 2px;
+  max-height: 380px; overflow-y: auto; overscroll-behavior: contain;
+  padding: 4px 2px 8px; scroll-behavior: smooth;
+  /* Soft top edge: a scrolled thread fades out instead of slicing a
+     bubble in half at the panel's border. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 14px);
+}
+.portal-thread-empty { color: var(--text-dim); font-size: 13px; padding: 6px 2px 10px; }
+.portal-thread-day,
+.portal-thread-new {
+  display: flex; align-items: center; gap: 10px; margin: 10px 0 4px;
+  color: var(--text-dim); font-size: 11px; font-weight: 600; letter-spacing: .4px; text-transform: uppercase;
+}
+.portal-thread-day::before, .portal-thread-day::after,
+.portal-thread-new::before, .portal-thread-new::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+.portal-thread-new { color: var(--orange-light); }
+.portal-thread-new::before, .portal-thread-new::after { background: var(--orange-tint-border); }
+.portal-msg { display: flex; flex-direction: column; max-width: 82%; margin-top: 4px; }
+.portal-msg.is-client { align-self: flex-end; align-items: flex-end; }
+.portal-msg.is-internal { align-self: flex-start; align-items: flex-start; }
+.portal-msg-sender { font-size: 11px; font-weight: 600; color: var(--text-dim); margin: 6px 6px 3px; }
+.portal-msg.is-internal .portal-msg-sender { color: var(--blue-light); }
+.portal-msg-bubble {
+  padding: 9px 13px; border-radius: 16px; font-size: 14px; line-height: 1.45;
+  white-space: pre-wrap; overflow-wrap: anywhere; color: var(--white);
+}
+.portal-msg.is-client .portal-msg-bubble {
+  background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); border-bottom-right-radius: 5px;
+}
+.portal-msg.is-internal .portal-msg-bubble {
+  background: var(--bg-panel-2); border: 1px solid var(--border); border-bottom-left-radius: 5px;
+}
+.portal-msg-time { font-size: 10.5px; color: var(--text-dim); margin: 3px 8px 0; }
+
+.portal-composer {
+  display: flex; align-items: flex-end; gap: 8px; margin-top: 8px; padding: 6px;
+  background: var(--bg-panel); border: 1px solid var(--border); border-radius: 22px;
+  transition: border-color .15s ease;
+}
+.portal-composer:focus-within { border-color: var(--blue-light); }
+.portal-composer textarea {
+  flex: 1; min-height: 34px; max-height: 140px; resize: none; box-sizing: border-box;
+  border: 0; background: transparent; color: var(--white); outline: none;
+  font-family: inherit; font-size: 16px; line-height: 1.4; padding: 6px 8px;
+}
+.portal-composer textarea:disabled { opacity: .6; }
+.portal-composer-send {
+  flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%; border: 0; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--blue-light); color: #0a0a0a; transition: transform .15s ease, opacity .15s ease;
+}
+.portal-composer-send:hover { transform: scale(1.05); }
+.portal-composer-send:disabled { opacity: .5; cursor: default; transform: none; }
+.portal-composer-send svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.portal-composer-send.is-sending svg { animation: portal-send-pulse .8s ease-in-out infinite; }
+@keyframes portal-send-pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) {
+  .portal-nav-badge, .portal-composer-send.is-sending svg { animation: none; }
+  .portal-thread { scroll-behavior: auto; }
+  .portal-composer-send:hover { transform: none; }
+}

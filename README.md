@@ -3655,3 +3655,54 @@ Verified in a real headless Chromium (local HTTP, fake Supabase):
 - No console errors.
 
 New tests: `tests/tools/job-money-pipeline.test.js` (15).
+
+## What changed, 2026-09-22 (later still) -- Client portal: see your visits, know when we replied, and a Home that knows you
+
+Portal-only (`portal/*`, plus the SQL/edge function behind it). Three
+rounds from a direct audit of the pages and the live schema.
+
+**Your visits.** A client could not see an appointment they booked
+themselves: quote- and check-up-scheduled visits (and `booking.html`
+bookings) live in `th_bookings`, which clients can't read, and the
+quote card only ever said "Job scheduled." A new read-only RPC,
+`get_my_portal_visits()`, returns just the signed-in client's own
+bookings. Home's "Next appointment" now shows every kind of visit with
+a calendar date tile, **Add to calendar** (a real `.ics` file), and
+**Reschedule or cancel** (the existing `manage-booking.html` page), plus
+an "Also coming up" list. Quote cards show the actual appointment, or
+that it was cancelled with a "Pick a new time" button. Check-up banners
+show a visit that's already booked instead of offering to book it
+again. `schedule-quote-job` (deployed, v11) now allows rebooking only
+when every booking for that quote was cancelled -- and ships the
+double-booking race guard the repo had but live never did.
+
+**Unread messages.** Nothing recorded whether a client had seen a
+reply. New `client_portal_thread_reads` table and two RPCs drive "N new"
+badges on each Messages button and on the Request/Jobs tabs, a "New"
+divider in the thread, and a Home item that only appears for a real
+unread reply ("New message from Triple H -- About: Leaky faucet") and
+opens that thread. Both message threads now share one chat renderer
+(day dividers, times, a composer that can't double-send), which also
+fixes `jobs.html` printing "Invalid Date" under every message.
+
+**Staff-side fix (SQL only).** `client_portal_jobs` and
+`client_portal_invoices` only let the client read their own rows, so the
+`tools/clients.html` panels that read them -- Portal job messages,
+Portal invoices, Portal accounts counts, client search -- were silently
+empty. Both now also allow internal accounts to read.
+
+**Home.** Greets the client by name ("Good evening, Jane" -- it always
+said "Welcome"), adds a Recent Activity timeline of the last five real
+events, and a failed contracts lookup now shows as an error instead of
+"Nothing yet". Request Work prefills the phone and address the client
+already gave us.
+
+Verified: full suite, `check-consistency`, `check-undefined-vars`,
+lint, `check-links.py`; RPCs and policies tested live with simulated
+sessions in rolled-back transactions; pages checked in headless
+Chromium at phone and desktop widths. New tests:
+`tests/portal/portal-visits.test.js`, `tests/portal/unread-messages.test.js`,
+`tests/portal/home-greeting-activity-prefill.test.js`,
+`tests/edge-functions/schedule-quote-job-rebook.test.js`. Full detail:
+`docs/specialist-logs/features.md` and `visual.md` (2026-09-22 entries),
+`docs/CLIENT-PORTAL.md` (Database section).

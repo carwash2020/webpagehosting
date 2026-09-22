@@ -34,11 +34,17 @@ test('Home shows an upcoming appointment in the next-appointment hero, not dupli
   assert.match(body, /s\.invoices\.filter\(i => !i\.paid\)/);
   const bannerFn = HOME.match(/function renderNextAppointmentBanner\(s\)[\s\S]*?\n  \}\n/);
   assert.ok(bannerFn, 'expected to isolate renderNextAppointmentBanner()');
-  assert.match(bannerFn[0], /r\.status === 'scheduled' && r\.scheduled_at/);
+  // 2026-09-22: the scheduled-request filter moved into
+  // buildUpcomingVisits(), which merges work-order visits with booked
+  // (th_bookings) ones -- the hero renders from that merged list.
+  assert.match(bannerFn[0], /buildUpcomingVisits\(s\)/);
+  const buildFn = HOME.match(/function buildUpcomingVisits\(s\)[\s\S]*?\n  \}\n/);
+  assert.ok(buildFn, 'expected to isolate buildUpcomingVisits()');
+  assert.match(buildFn[0], /r\.status === 'scheduled' && r\.scheduled_at/);
 });
 
 test('Home fetches scheduled_at and address for the next-appointment hero', () => {
-  assert.match(HOME, /client\.from\('client_portal_work_orders'\)\.select\('id,title,status,scheduled_at,address'\)/);
+  assert.match(HOME, /client\.from\('client_portal_work_orders'\)\.select\('id,title,status,scheduled_at,address[a-z_,]*'\)/);
 });
 
 test('two literal em-dash characters left over from the earlier guest-facing cleanup are gone from renderAttention', () => {

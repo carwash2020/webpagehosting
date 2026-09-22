@@ -138,9 +138,19 @@ test('resolving a client question is a real PATCH against quote_questions, wired
 
 // ---- phase 3: scheduling the job from an approved quote ----
 
-test('scheduling only ever offered for an approved, not-yet-scheduled quote', () => {
-  assert.match(html, /q\.status === 'approved' \? \(q\.scheduled_at \? `/);
-  assert.match(html, /toggleScheduleForm\(\$\{q\.id\}\)/);
+test('scheduling only ever offered for an approved, not-yet-scheduled quote (or one whose every booking was cancelled)', () => {
+  // Restructured 2026-09-22: the approved branch now delegates to
+  // quoteScheduleSectionHtml(q), which shows the real booked visit
+  // (get_my_portal_visits) instead of a bare "Job scheduled" line.
+  assert.match(html, /q\.status === 'approved' \? quoteScheduleSectionHtml\(q\) : ''/);
+  const fnMatch = html.match(/function quoteScheduleSectionHtml\(q\) \{[\s\S]*?\n  \}\n/);
+  assert.ok(fnMatch, 'expected to isolate quoteScheduleSectionHtml()');
+  const body = fnMatch[0];
+  assert.match(body, /if \(!q\.scheduled_at\) return quoteSchedulePanelHtml\(q\.id, /);
+  assert.match(body, /state\.kind === 'cancelled'\) return quoteVisitCardHtml\(state\) \+ quoteSchedulePanelHtml\(q\.id, /);
+  // Upcoming/past visits never get the scheduling flow again.
+  assert.match(body, /return quoteVisitCardHtml\(state\);\n  \}/);
+  assert.match(html, /onclick="toggleScheduleForm\(\$\{quoteId\}\)"/);
 });
 
 test('a scheduled job shows a confirmation note instead of the scheduling flow again', () => {

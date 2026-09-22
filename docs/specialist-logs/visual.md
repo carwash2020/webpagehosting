@@ -1096,4 +1096,40 @@ Cross-logged from features.md (Workspace rework, part 1). Visual calls:
   ⋯. The Money Owed card's To invoice line is orange, a to-do rather
   than a debt.
 
+## 2026-09-22 (later still) -- portal: visit date tiles, chat threads, unread badges, activity timeline
+
+Visual half of the portal visits/messages pass (behaviour and schema are
+in `features.md`'s entry of the same date). Checked in real headless
+Chromium against a local static server with Supabase mocked, at 390px
+and 1280px (the portal is dark-only; no light theme to check).
+
+- **One accent per meaning, reused everywhere.** Blue = a scheduled
+  visit (Home hero, the quote card's visit block, a booked check-up),
+  orange = something owed or awaiting the client, green = done/paid.
+  Cancelled visits borrow the existing amber (`#ffa726`), past ones go
+  neutral. Same calendar-style month/day tile in all three places.
+- **Uppercase `.btn` doesn't fit two-across on a phone.** First shot
+  clipped "ADD TO CALENDA". The portal convention is that `.btn` is
+  uppercase and letter-spaced, so rather than special-casing the text,
+  hero and quote-visit actions are both real `.btn`s (primary +
+  `secondary-btn`) that stack full-width under 520px/640px.
+- **Don't reuse `.checkup-due-label` for a sentence.** portal-polish.css
+  styles it as an uppercase status pill; "Booked for Thursday, October
+  1 at 10:00 AM" became a shouting badge. Booked state has its own
+  kicker + plain-weight time instead.
+- **Chat threads:** bubbles with a tail corner, sender named only on
+  change, time under each bubble, day dividers, one combined
+  "Yesterday · New" divider when the unread run starts a new day (two
+  stacked dividers looked like a rendering glitch), 380px max height
+  with a 14px top mask so a scrolled thread fades rather than slicing a
+  bubble at the border. Composer is a rounded field with a round send
+  button that pulses while sending (off under reduced motion).
+- **Badges:** nav badge is a real element (not `::after`, which the
+  active-tab dot already owns), with a 2px background ring and a small
+  pop-in; the Messages toggle became a pill with an icon and an orange
+  "N new" count instead of an underlined text link.
+- **Recent Activity:** a thin rail with 28px icon dots, text left,
+  relative time right, single-line ellipsis so long titles never wrap
+  the row.
+
 <!-- Add new entries above this line -->

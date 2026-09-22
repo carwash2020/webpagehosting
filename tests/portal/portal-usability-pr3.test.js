@@ -88,6 +88,9 @@ test('the action inbox sorts unpaid invoices before contracts, quotes, and reque
     quotes: [{ id: 3, status: 'pending', total: 80 }],
     requests: [{ id: 4, status: 'submitted', title: 'Leak' }],
     contracts: [{ id: 2, status: 'pending', contract_title: 'Service agreement' }],
+    // 2026-09-22: Reply now appears only for a real unread message from
+    // Triple H (get_portal_unread_counts), not for every open request.
+    unread: [{ thread_type: 'work_order', thread_id: 4, unread_count: 1, latest_unread_at: '2026-09-20T10:00:00Z' }],
   });
   const payAt = html.indexOf('>Pay<');
   const signAt = html.indexOf('>Sign<');
@@ -103,6 +106,9 @@ test('inbox Pay / Approve / Sign / Reply use existing page links, not new APIs',
     quotes: [{ id: 3, status: 'pending', total: 80 }],
     requests: [{ id: 4, status: 'submitted', title: 'Leak' }],
     contracts: [{ id: 2, status: 'pending', contract_title: 'Service agreement' }],
+    // 2026-09-22: Reply now appears only for a real unread message from
+    // Triple H (get_portal_unread_counts), not for every open request.
+    unread: [{ thread_type: 'work_order', thread_id: 4, unread_count: 1, latest_unread_at: '2026-09-20T10:00:00Z' }],
   });
   assert.match(html, /href="\/portal\/dashboard\.html#invoice-card-9"/);
   assert.match(html, /href="\/portal\/quotes\.html#quote-card-3"/);
