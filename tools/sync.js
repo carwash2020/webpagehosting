@@ -234,6 +234,11 @@ const SYNC_DATA_KEYS = [
   'th_review_requests_pending_tombstones',
   'th_review_requests_pending',
   'th_review_requests_log',
+  // Shift clock (2026-09-23): Start my day / End my day, one record per
+  // shift (see data-layer.js's Shift clock section). Tombstones first, same
+  // convention as every deletable array above.
+  'th_shift_tombstones',
+  'th_shift_log',
 ];
 
 // Local-only bookkeeping for the per-field merge below -- NOT itself a
@@ -340,6 +345,8 @@ const MERGE_KEY_FIELD = {
   th_review_requests_pending_tombstones: 'id',
   th_review_requests_pending: 'id',
   th_review_requests_log: 'id',
+  th_shift_tombstones: 'id',
+  th_shift_log: 'id',
 };
 
 // Deep-equality check for plain JSON-shaped values (strings/numbers/
@@ -691,6 +698,13 @@ function applySyncData(obj, keysToApply) {
         if (tombstonedIds.length) {
           const tombstoneSet = new Set(tombstonedIds);
           finalArr = mergedArr.filter(p => !tombstoneSet.has(p.id));
+        }
+      } else if (k === 'th_shift_log') {
+        let tombstonedIds = [];
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_shift_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        if (tombstonedIds.length) {
+          const tombstoneSet = new Set(tombstonedIds);
+          finalArr = mergedArr.filter(s => !tombstoneSet.has(s.id));
         }
       } else if (k === 'th_parts_reference_units') {
         let tombstonedUnitIds = [];
