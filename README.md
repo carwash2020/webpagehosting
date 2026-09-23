@@ -5055,3 +5055,7 @@ Updated with reasons:
 - `tests/design/promo-banner.test.js`, `hiring-banner.test.js`, and `site-banner-no-layout-shift.test.js`: pointed at the new `js/site-banners.js`, with every original check kept and the exact old markup pinned;
 - `tests/design/reduced-motion-coverage.test.js`: the file list;
 - `tests/site-content/site-content-editor.test.js`: its banner warning test picks "My own message" first.
+
+## What changed, 2026-09-23 -- A booking test no longer fails every evening
+
+Tests only. `tests/portal/booking-picker-round4.test.js` tapped the second time slot of the first day with room. Late in the day, that day is today with only one slot left, so the test failed on main and on every open PR from late afternoon (Denver time) until the day's last slot passed. It now taps the last slot shown. The booking picker itself was never broken.
