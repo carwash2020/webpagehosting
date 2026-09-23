@@ -262,6 +262,15 @@ function portalBiometricUnlockedSessionKey(email) {
 }
 
 function portalGuardWithBiometricLock(email, client) {
+  // A second step still owed comes first (2026-09-23): Face ID standing
+  // in for the 2FA code is itself the unlock, so it never asks twice.
+  return portalRequireSecondStep(email, client).then((stoodIn) => {
+    if (stoodIn) return undefined;
+    return portalBiometricLockGate(email, client);
+  });
+}
+
+function portalBiometricLockGate(email, client) {
   if (sessionStorage.getItem(portalBiometricUnlockedSessionKey(email))) return Promise.resolve();
 
   return new Promise((resolve) => {
@@ -312,6 +321,116 @@ function portalGuardWithBiometricLock(email, client) {
     // automatic prompt.
     attemptUnlock();
   });
+}
+
+// Face ID instead of the 2FA code (2026-09-23), requested directly:
+// "facial recognition AND two factor is way too much. Make it pick
+// facial over two factor... also make two factor optional." Two-factor
+// stays optional (off unless the client turns it on in Settings). For an
+// account that has it on, the second step after the password is now one
+// thing, not two:
+//   - on a device where this account has Face ID set up, Face ID (or
+//     Touch ID / the device PIN) stands in for the authenticator code;
+//   - anywhere else -- a new device, a browser without Face ID set up,
+//     or Face ID failing -- it's the code, exactly as before.
+// And right after a fresh sign-in the Face ID lock doesn't ask again.
+//
+// What this is and isn't, honestly: Face ID here is still the local-only
+// WebAuthn check described above, so a session it lets through stays at
+// Supabase's aal1 (password only) as far as the server is concerned. No
+// portal RLS policy has ever required aal2, so that changes nothing
+// server-side. What it does change: before this, the code was only
+// asked for by login.html's own pop-up -- refreshing the page after a
+// correct password skipped it entirely. Every page now checks whether
+// the session still owes its second step and asks for it (Face ID here,
+// or back to login.html for the code). The key below records, for this
+// tab only, that Face ID already stood in, so the step isn't re-asked on
+// every page.
+function portalSecondStepKey(email) {
+  return 'th_portal_second_step_' + email.toLowerCase();
+}
+
+// True when this session proved only the password on an account with
+// two-factor on, and Face ID hasn't stood in for the code yet in this tab.
+// getAuthenticatorAssuranceLevel() reads the current session, not the
+// network; any error reads as "nothing owed", the behavior before this.
+async function portalSecondStepOwed(email, client) {
+  if (sessionStorage.getItem(portalSecondStepKey(email))) return false;
+  try {
+    const { data } = await client.auth.mfa.getAuthenticatorAssuranceLevel();
+    return !!data && data.nextLevel === 'aal2' && data.currentLevel !== 'aal2';
+  } catch (e) {
+    return false;
+  }
+}
+
+// A fresh sign-in just proved who this is: no Face ID lock right after.
+function portalMarkSignedIn(email) {
+  sessionStorage.setItem(portalBiometricUnlockedSessionKey(email), '1');
+}
+
+// The second step, by Face ID. Resolves once Face ID succeeds (marking
+// both the step and the lock done for this tab). "Use my 2FA code
+// instead" hands off to onUseCode and leaves this promise pending, so a
+// caller awaiting it never carries on as if Face ID had passed.
+function portalFaceIdInsteadOfCode(email, onUseCode) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'biometric-lock-overlay';
+    overlay.innerHTML =
+      '<div class="biometric-lock-box" role="dialog" aria-modal="true" aria-labelledby="faceIdStepTitle">' +
+      '<svg viewBox="0 0 24 24" aria-hidden="true" class="biometric-lock-icon"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>' +
+      '<div class="biometric-lock-title" id="faceIdStepTitle">Confirm it’s you</div>' +
+      '<div class="biometric-lock-sub">On this device, Face ID, Touch ID, or your device PIN stands in for your 2FA code.</div>' +
+      '<button class="btn blue" id="faceIdStepBtn" style="width:100%; justify-content:center; margin-top:18px;">Continue with Face ID</button>' +
+      '<button class="small-btn" id="faceIdStepCodeBtn" style="margin-top:12px;">Use my 2FA code instead</button>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    async function attempt() {
+      const btn = document.getElementById('faceIdStepBtn');
+      btn.disabled = true;
+      btn.textContent = 'Checking...';
+      const ok = await portalPromptBiometricUnlock(email);
+      if (ok) {
+        sessionStorage.setItem(portalSecondStepKey(email), '1');
+        sessionStorage.setItem(portalBiometricUnlockedSessionKey(email), '1');
+        overlay.remove();
+        resolve();
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Continue with Face ID';
+      }
+    }
+    document.getElementById('faceIdStepBtn').addEventListener('click', attempt);
+    document.getElementById('faceIdStepCodeBtn').addEventListener('click', () => {
+      overlay.remove();
+      onUseCode();
+    });
+    // Same once-on-load attempt as the lock overlay; the button covers a
+    // browser that wants a tap first.
+    attempt();
+  });
+}
+
+// Every signed-in page's check that the second step isn't still owed.
+// Resolves true when Face ID just stood in for the code, false when
+// nothing was owed; with no Face ID on this device it goes to login.html
+// for the code and never resolves, so the page never renders.
+// One place that leaves the page, so a test can see where it would go.
+function portalGo(url) {
+  window.location.replace(url);
+}
+
+async function portalRequireSecondStep(email, client) {
+  if (!(await portalSecondStepOwed(email, client))) return false;
+  const toCode = () => portalGo('/portal/login.html?step=code');
+  if (!portalIsBiometricLockEnabled(email)) {
+    toCode();
+    return new Promise(() => {});
+  }
+  await portalFaceIdInsteadOfCode(email, toCode);
+  return true;
 }
 
 // Automatic error capture (2026-09-05), requested directly: "future

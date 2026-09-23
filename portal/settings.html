@@ -112,7 +112,7 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/signature-pad.js?v=f95f8e1d28"></script>
-<script src="/portal/portal-app.js?v=202609230030"></script>
+<script src="/portal/portal-app.js?v=202609231400"></script>
 <script src="https://js.stripe.com/v3/"></script>
 <script src="/portal/push-notifications.js"></script>
 <style>
@@ -576,7 +576,7 @@
       -->
       <div class="set-card">
         <span class="set-card-title">Two-Factor Authentication</span>
-        <div class="set-card-sub">A code from an authenticator app as a second step when you sign in, on top of your password.</div>
+        <div class="set-card-sub">Optional. A code from an authenticator app as a second step when you sign in, on top of your password. On a device with Face ID set up below, Face ID is used instead of the code.</div>
         <button class="btn blue set-action" id="mfaToggleBtn">Loading...</button>
         <div id="mfaEnrollArea" style="display:none; margin-top:14px;">
           <div style="text-align:center; margin-bottom:12px;">
@@ -589,6 +589,20 @@
             <button class="btn orange" id="mfaEnrollVerifyBtn" type="button" style="flex:1; justify-content:center;">Verify &amp; Turn On</button>
           </div>
         </div>
+        <!--
+          Turning 2FA off (2026-09-23): Supabase only removes a verified
+          factor from a session that proved the code (aal2). A session
+          Face ID let through (see portal-app.js) proved the password
+          only, so it asks for one code first.
+        -->
+        <div id="mfaDisableArea" style="display:none; margin-top:14px;">
+          <div class="set-card-sub" style="margin-bottom:8px;">To turn it off, enter the 6-digit code from your authenticator app.</div>
+          <input type="text" id="mfaDisableCodeInput" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" placeholder="123456" maxlength="6" aria-label="6-digit code" style="width:100%; padding:11px 13px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:8px; color:var(--white); font-size:16px; font-family:inherit; box-sizing:border-box; margin-bottom:10px; letter-spacing:2px; text-align:center;">
+          <div style="display:flex; gap:10px;">
+            <button class="btn secondary-btn" id="mfaDisableCancelBtn" type="button" style="flex:1; justify-content:center;">Cancel</button>
+            <button class="btn orange" id="mfaDisableVerifyBtn" type="button" style="flex:1; justify-content:center;">Verify &amp; Turn Off</button>
+          </div>
+        </div>
         <div class="set-msg" id="mfaMsg" style="display:none;"></div>
       </div>
       <!--
@@ -598,7 +612,7 @@
       -->
       <div class="set-card">
         <span class="set-card-title">Face ID &amp; Touch ID</span>
-        <div class="set-card-sub">Require Face ID, Touch ID, or your device PIN to open the app on this device.</div>
+        <div class="set-card-sub">Require Face ID, Touch ID, or your device PIN to open the app on this device. If you have two-factor on, it also replaces the code when you sign in here.</div>
         <button class="btn blue set-action" id="biometricToggleBtn">Loading...</button>
         <div class="set-msg" id="biometricMsg" style="display:none;"></div>
       </div>
@@ -1427,6 +1441,7 @@
     const msgEl = document.getElementById('mfaMsg');
     msgEl.style.display = 'none';
     document.getElementById('mfaEnrollArea').style.display = 'none';
+    document.getElementById('mfaDisableArea').style.display = 'none';
     btn.style.display = '';
     btn.disabled = true;
     btn.textContent = 'Loading...';
@@ -1530,6 +1545,22 @@
     const btn = document.getElementById('mfaToggleBtn');
     const msgEl = document.getElementById('mfaMsg');
     msgEl.style.display = 'none';
+    // Signed in with Face ID in place of the code: Supabase needs the
+    // code once before it will remove the factor (see mfaDisableArea).
+    const { data: aal } = await client.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (!aal || aal.currentLevel !== 'aal2') {
+      document.getElementById('mfaDisableCodeInput').value = '';
+      document.getElementById('mfaDisableArea').style.display = 'block';
+      btn.style.display = 'none';
+      document.getElementById('mfaDisableCodeInput').focus();
+      return;
+    }
+    await unenrollMfa();
+  }
+
+  async function unenrollMfa() {
+    const btn = document.getElementById('mfaToggleBtn');
+    const msgEl = document.getElementById('mfaMsg');
     btn.disabled = true;
     btn.textContent = 'Turning off...';
     const { error } = await client.auth.mfa.unenroll({ factorId: mfaFactorId });
@@ -1543,6 +1574,40 @@
     renderMfaToggle();
   }
 
+  async function handleVerifyMfaDisable() {
+    const input = document.getElementById('mfaDisableCodeInput');
+    const msgEl = document.getElementById('mfaMsg');
+    const code = input.value.replace(/\D/g, '');
+    if (!/^\d{6}$/.test(code)) {
+      msgEl.textContent = 'Enter the 6-digit code from your authenticator app.';
+      msgEl.className = 'set-msg is-error';
+      msgEl.style.display = 'block';
+      return;
+    }
+    const verifyBtn = document.getElementById('mfaDisableVerifyBtn');
+    verifyBtn.disabled = true;
+    const { error } = await client.auth.mfa.challengeAndVerify({ factorId: mfaFactorId, code });
+    verifyBtn.disabled = false;
+    if (error) {
+      msgEl.textContent = "That code didn't match. Please try again.";
+      msgEl.className = 'set-msg is-error';
+      msgEl.style.display = 'block';
+      return;
+    }
+    msgEl.style.display = 'none';
+    document.getElementById('mfaDisableArea').style.display = 'none';
+    document.getElementById('mfaToggleBtn').style.display = '';
+    await unenrollMfa();
+  }
+  function handleCancelMfaDisable() {
+    document.getElementById('mfaDisableArea').style.display = 'none';
+    document.getElementById('mfaToggleBtn').style.display = '';
+    document.getElementById('mfaMsg').style.display = 'none';
+  }
+  document.getElementById('mfaDisableVerifyBtn').addEventListener('click', handleVerifyMfaDisable);
+  document.getElementById('mfaDisableCancelBtn').addEventListener('click', handleCancelMfaDisable);
+  document.getElementById('mfaDisableCodeInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); handleVerifyMfaDisable(); } });
+
   document.getElementById('mfaEnrollCancelBtn').addEventListener('click', handleCancelMfaEnroll);
   document.getElementById('mfaEnrollVerifyBtn').addEventListener('click', handleVerifyMfaEnroll);
 
@@ -1550,6 +1615,11 @@
     const { data: { session } } = await client.auth.getSession();
     if (!session) { window.location.replace('/portal/login.html'); return; }
     const email = session.user.email;
+    // A second step still owed (2026-09-23) is asked for here too -- Face
+    // ID on this device, else the code -- so Settings isn't a way around
+    // two-factor. The plain Face ID lock still isn't (see below); the Face
+    // ID step itself offers the code if Face ID is broken.
+    await portalRequireSecondStep(email, client);
     document.getElementById('clientEmailDisplay').textContent = email;
     document.getElementById('detailEmailVal').textContent = email;
 
