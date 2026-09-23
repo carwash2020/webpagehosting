@@ -2919,4 +2919,122 @@ now counts 15 tombstone functions (it pins the count so each new one is
 checked for pruning). `job-clock.test.js` and `your-week.test.js` are
 untouched and pass.
 
+## 2026-09-23 -- Shift clock, part 2: Start my day / End my day in the app shell
+
+Part 1 (#385) was the data layer. This is the button and the sheet.
+
+**Where it lives** (tools-nav-pwa.js, SHIFT CLOCK, right after ON THE
+CLOCK):
+- **Phone and tablet:** a clock button leads `.th-hdr-actions`, before
+  Search and More, since the header is the one place every page shares.
+  - Off: a plain circle.
+  - On shift: a green pill with the start time, with no seconds ticking.
+    "At a glance" was the ask, and a ticking clock would compete with the
+    job clock's bar.
+  - Needs an end time: an amber dot.
+- **Desktop:** a row under New in the sidebar ("On shift · since 7:42 AM"),
+  a `<button>` styled like the Search row beside it.
+- **Why not a second floating bar:** the bottom of a phone already holds
+  the nav plus the job clock's bar, and stacking a third band would eat
+  the screen. The job clock is orange, moving and at the bottom; the
+  shift is green, still and at the top. They read as two different
+  things.
+
+**One sheet, three modes**, chosen fresh each time it opens, and it
+re-renders in place:
+- **Needs an end time** comes first ("When did you finish?"). It offers
+  the job-clock suggestion (`thShiftSuggestedEnd`) as the main button, a
+  `datetime-local` field bounded by the shift's start and start + 24 h,
+  and "It was a mistake: delete this shift" (confirm, tombstone,
+  Graveyard). There is deliberately no "End now", which would record 26
+  hours. Saving one moves straight on to the next, or to Start my day, so
+  the morning after a forgotten punch-out is one flow.
+- **On shift:** End my day, or "Finished earlier?" with a time field.
+  Ending shows an Undo toast (`thUndoEndShift`). A running job clock gets
+  a note ("keeps running: ending your day doesn't stop it"); it isn't
+  stopped, per part 1's reasoning (the job clock isn't anyone's in
+  particular).
+- **Off:** Start now, "Start from 8:12 AM, when you started the clock on
+  Fence" when there's one (`thShiftSuggestedStart`), or "Started earlier?"
+  with a time field.
+
+**Typed times of day** (`thShiftTimeInputMs`) mean the latest time it
+was, at or before now: 11:30 PM typed at 1 AM is last night. Every
+validation message comes from the data layer's `thShiftTimesProblem`
+and shows in a `role="alert"` line. Enter in a field presses its button.
+Focus goes to the main button, not a field, so a phone keyboard doesn't
+cover the sheet (same as the reminder sheet).
+
+**Pages without data-layer.js** (Route Planner, Parts, Settings, Runway):
+- `thShiftStatus` reads `th_shift_log` and the stored session directly,
+  with the same 14-hour and duplicate-shift rules.
+- The button opens `/tools/workspace.html#shift`, and the shell opens the
+  sheet there on arrival, then clears the hash. That's the job clock's
+  pattern (its Stop opens the job there).
+
+**Runway Dashboard** mirrors the header and sidebar CSS only. Its button
+goes to the Dashboard, so it needs no sheet styles.
+
+**Dashboard header at 390px:** the green pill makes its header wrap to a
+second row while on shift (it already wraps at 360px). Part 3's Dashboard
+card is the place to decide whether the Dashboard shows the header button
+at all, the way the job clock's bar hides on its own job's page.
+
+Tests: `tests/tools/shift-clock-shell.test.js` (14, jsdom, the same page
+harness as `job-clock.test.js`).
+
+## 2026-09-23 -- Shift clock, part 3: Hours worked on the Dashboard, and the team view
+
+Parts 1 and 2 were the data layer and the shell's button and sheet. This
+part surfaces the totals.
+
+**Where:** `#shiftCard`, directly under Your week (`workspace.html`,
+`renderShiftCard()`). It reuses Your week's layout classes (`week-card`,
+`week-bar*`, `week-stat*`) so the two read as a pair, but in the shift
+clock's green. Orange stays the job clock's colour, so "On the clock" (job
+time, Your week) and "Hours worked" (whole shifts) can't be mistaken for
+each other. Your week and its tests are untouched.
+
+**What it shows:**
+- **The day, with its one button**, which opens the shell's shift sheet:
+  - Not clocked in: Start my day.
+  - On shift since 7:42 AM, "2 h 18 min so far": End my day. While on
+    shift the card re-renders once a minute, in a guarded interval like
+    Your week's.
+  - A shift that needs an end time: Fix it.
+- Seven bars Mon–Sun (`thShiftWeekSummary`), then Today and This week,
+  with last week under it.
+- A hint on an empty week that says what counts (driving, estimates, the
+  time between jobs).
+
+**Team view** (`thShiftTeamSummary`): a table of Who / Today / This week /
+Last week, on shift first:
+- It shows only when `canViewFinance()` is true. It **fails closed**,
+  unlike Your week's Billed, which shows before the role loads, because
+  it's other people's hours, not the business's own numbers. The card
+  re-renders on `th-role-loaded`.
+- It shows only once someone other than you has a shift; otherwise it
+  would repeat your own numbers.
+- Names use your first name for you, and otherwise the email's first
+  word, capitalized ("mike.helper@..." shows as "Mike").
+- A shift that needs an end time says so and counts 0 h, so a helper's
+  forgotten punch-out shows as a flag, not a 24-hour day.
+- **Read-only on purpose.** Fixing a shift is its owner's job, from
+  their own sheet. An owner editing someone else's times would need the
+  sheet to take an email and a permission check; `thEditShift` already
+  records `editedBy` for that day.
+
+**The Dashboard's header button stays.** Part 2 left open whether the
+Dashboard should hide it, the way the job clock's bar hides on its own
+job's page. It stays: on a phone the card sits below the fold, so the
+header is the only at-a-glance status on the Dashboard too. The cost is
+the header wrapping to a second row at 390px while on shift, as it
+already does at 360px.
+
+**Owner decision logged** in `docs/ACTION-ITEMS.md` (#14): who sees the
+team's hours. Today that's the finance permission, and a separate
+permission would be a small follow-up.
+
+Tests: `tests/tools/shift-hours-card.test.js` (8).
+
 <!-- Add new entries above this line -->

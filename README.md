@@ -4688,3 +4688,91 @@ Verified:
 Tests: `tests/tools/shift-clock.test.js` (18). The job clock's and Your
 week's tests are unchanged and pass.
 
+## What changed, 2026-09-23 -- Shift clock, part 2: the Start my day / End my day button
+
+Part 2 of 3. Part 1 was the data behind it. Full reasoning in
+`docs/specialist-logs/features.md`.
+
+**Clock in for the day, clock out at the end, from any page.**
+- **On a phone or tablet,** a clock button sits at the top right, before
+  Search and More:
+  - plain when you're off;
+  - a **green pill with your start time** while you're on shift;
+  - an **amber dot** when a shift needs an end time.
+- **On a computer,** the same thing is a row under **New** in the
+  sidebar: "Start my day", or "On shift, since 7:42 AM".
+- It stays still (no ticking seconds), so it never gets confused with
+  the job clock's orange bar at the bottom. The two run independently.
+
+**Tap it and one sheet does the rest:**
+- **Start my day:** now; or from when you started the first job clock
+  today, if you forgot to clock in; or from a time you type.
+- **End my day:** now, with an **Undo**; or at a time you type. If a job
+  clock is still running it says so, and leaves it running.
+- **Forgot to clock out?** The next time you open it, it asks "When did
+  you finish?" and suggests when your last job clock stopped that day.
+  Save that, and it goes straight on to starting today. A shift started
+  by mistake can be deleted from there (it's kept in Dev Tools'
+  Graveyard).
+- A time that can't be right (before the start, in the future,
+  overlapping another shift) is explained in plain words and nothing is
+  saved.
+- On pages that don't load the job data (Route Planner, Appliance Wiki,
+  Settings, Runway), the button shows your status and opens the sheet on
+  the Dashboard.
+
+Checked in headless Chromium (local HTTP, fake Supabase), no console
+errors:
+- **390px:** all three header states and all three sheets.
+  - Start from the job-clock suggestion, then End with Undo.
+  - A typed end time before the start shows its error and saves nothing.
+  - The forgotten clock-out: save the suggested end time (8.8 h), then
+    start today.
+  - Delete with its confirm.
+  - Settings and Runway hand off to the Dashboard with the sheet open.
+- **1440px:** the sidebar row, next to a running job clock's bar.
+
+Verified:
+- full suite 3321 of 3322 passing; the one failure is the known
+  `check-links.py` sandbox-proxy test;
+- `check-consistency`, `check-undefined-vars`, `eslint` and
+  `check-visual-snapshot` clean.
+
+Tests: `tests/tools/shift-clock-shell.test.js` (14). The job clock's
+tests are unchanged and pass.
+
+## What changed, 2026-09-23 -- Shift clock, part 3: Hours worked on the Dashboard
+
+The last of three parts. Full reasoning in
+`docs/specialist-logs/features.md`.
+
+**A new card under Your week: Hours worked.**
+- **Your day, with one button:** "Not clocked in" with **Start my day**;
+  "On shift since 7:42 AM, 2 h 18 min so far" with **End my day**; or,
+  if you forgot to clock out, "Your shift from Tue needs an end time"
+  with **Fix it**. Each opens the same sheet as the clock button at the
+  top of the page.
+- **This week in green bars,** Monday to Sunday, then Today and This
+  week, with last week under it. It counts whole shifts: driving,
+  estimates and the time between jobs. Your week, just above, still
+  shows time on the job clock, in orange. The two are separate.
+- **Everyone's hours,** for accounts that can see finance (Owner and
+  Developer by default): who's on shift, and each person's hours today,
+  this week and last week. A forgotten clock-out shows as "Shift needs
+  an end time" and counts nothing, so it can't inflate anyone's week.
+  Everyone else sees only their own. Who gets to see the team is listed
+  in `docs/ACTION-ITEMS.md` for Steve to confirm.
+
+Checked in headless Chromium (local HTTP, fake Supabase), no console
+errors: the card off, on shift and waiting on an end time, and the team
+table (you on shift, Connor off, a helper with a forgotten clock-out).
+
+Verified:
+- full suite 3367 of 3368 passing; the one failure is the known
+  `check-links.py` sandbox-proxy test;
+- `check-consistency`, `check-undefined-vars`, `eslint` and
+  `check-visual-snapshot` clean.
+
+Tests: `tests/tools/shift-hours-card.test.js` (8). Your week's and the job
+clock's tests are unchanged and pass.
+

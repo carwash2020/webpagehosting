@@ -68,7 +68,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=87b1f5227e">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=8fbfc85975">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=6315172f03">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=844eda1750" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -81,7 +81,7 @@
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
 <script src="/tools/tools-dialogs.js?v=310315eb44" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=d635579dfb" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=7ed9e8d3b4" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <script src="/tools/tools-tour.js?v=118148b9a2" defer></script>
 <style>
@@ -601,6 +601,29 @@
   .week-live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--orange); animation: th-clock-pulse 1.6s ease-out infinite; }
   .week-hint { margin-top: 12px; font-size: 12.5px; color: var(--text-dim); }
   @media (prefers-reduced-motion: reduce) { .week-live-dot { animation: none; } }
+  /* Hours worked (2026-09-23, shift clock part 3): Your week's layout, in
+     the shift clock's green -- orange stays the job clock's colour. */
+  .shift-now { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .shift-now-text { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; color: var(--white); }
+  .shift-now-sub { display: block; margin-top: 2px; font-size: 12.5px; font-weight: 500; color: var(--text-dim); }
+  .shift-now.is-due .shift-now-text { color: #e6a23c; }
+  .shift-now > button { flex-shrink: 0; min-height: 44px; }
+  .shift-dot { flex-shrink: 0; width: 9px; height: 9px; border-radius: 50%; background: #4caf78; }
+  .shift-now.is-due .shift-dot { background: #e6a23c; }
+  .shift-now.is-off .shift-dot { background: transparent; border: 1.5px solid var(--text-dim); }
+  .shift-card .week-bar-fill { background: linear-gradient(180deg, #7fd3a2, #4caf78 80%); }
+  .shift-card .week-bar.is-today .week-bar-day, .shift-card .week-bar.is-today .week-bar-h { color: #7fd3a2; }
+  .shift-team { width: 100%; margin-top: 16px; border-collapse: collapse; font-size: 13.5px; }
+  .shift-team caption { text-align: left; padding-bottom: 6px; color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; }
+  .shift-team th { text-align: left; padding: 6px 8px 6px 0; font-size: 11.5px; font-weight: 600; color: var(--text-dim); border-bottom: 1px solid var(--border); }
+  .shift-team td { padding: 8px 8px 8px 0; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: top; }
+  .shift-team tr:last-child td { border-bottom: 0; }
+  .shift-team .is-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; padding-right: 0; padding-left: 8px; }
+  .shift-team-name { font-weight: 600; color: var(--white); }
+  .shift-team-state { display: block; font-size: 12px; color: var(--text-dim); }
+  .shift-team-state.is-on { color: #7fd3a2; }
+  .shift-team-state.is-due { color: #e6a23c; }
+  @media (max-width: 480px) { .shift-team .is-last-week { display: none; } }
   @media (max-width: 720px) {
     .week-card { padding: 14px 16px; }
     .week-body { flex-direction: column; align-items: stretch; gap: 14px; }
@@ -704,6 +727,13 @@
      hours on the clock each day, jobs done, and billed, beside last week.
      Filled by renderWeekCard() from thWeekSummary() in data-layer.js. -->
 <div class="week-card" id="weekCard" aria-labelledby="weekCardLabel"></div>
+
+<!-- Hours worked (2026-09-23, shift clock part 3): Start my day / End my
+     day, your hours worked each day this week (whole shifts, not just
+     time on jobs), and -- for an account that can see finance --
+     everyone's. Filled by renderShiftCard() from thShiftWeekSummary() and
+     thShiftTeamSummary() in data-layer.js. -->
+<div class="week-card shift-card" id="shiftCard" aria-labelledby="shiftCardLabel"></div>
 
 <!-- Needs attention (2026-09-21): the ops inbox, open by default and
      directly under the hero -- leads, bookings, work requests, jobs
@@ -991,6 +1021,7 @@
         <li><strong>Next Job</strong> &mdash; whatever's next on today's schedule, sorted by priority, with a tap-to-call phone number and a tap-to-open-Maps address, a straight line into that job's own page, and <strong>Route today</strong>: one link that opens the whole day's stops as a Google Maps route.</li>
         <li><strong>Money Owed</strong> &mdash; Current and Overdue, split apart so a client who's simply not due yet never gets lumped in with one who needs a follow-up call. Every unpaid invoice is listed right there (overdue first) with a one-tap <strong>Mark paid</strong> &mdash; confirm, and it's recorded as paid in full.</li>
         <li><strong>Your week</strong> &mdash; the scoreboard under the daily actions: a bar for each day, Monday to Sunday, of the hours on the clock (today's grows while a clock runs), then jobs done and billed, with last week's number under each. Billed means invoices dated this week plus income you logged by hand; it shows only to accounts that can see finance.</li>
+        <li><strong>Hours worked</strong> &mdash; your whole day, not just time on jobs. Tap <strong>Start my day</strong> when you begin work and <strong>End my day</strong> when you're done (here, or with the clock button at the top of any page); driving, estimates and the time between jobs all count. The bars are this week, Monday to Sunday, with today and last week beside them. Forgot to clock out? A shift left open more than 14 hours stops counting until you say when you finished &mdash; it suggests when your last job clock stopped. Accounts that can see finance also see everyone's hours here. It's separate from the job clock: neither starts or stops the other.</li>
         <li><strong>Texts that write themselves</strong> &mdash; <strong>On my way</strong> on Next Job, the <strong>Text</strong> button on a job, or <strong>Text</strong> in its sheet on Jobs. You get the texts that job calls for, already written with the client's name: On my way or Running late (pick 10, 20, 30 or 45 minutes), Confirm the visit, a quick Parts run, All done. Edit it if you like and <strong>Send</strong>: it opens your own Messages. The job remembers the last one (&ldquo;On my way sent 12 min ago&rdquo;).</li>
         <li><strong>Remind</strong> &mdash; on any invoice that's due or late (on Money Owed, in an invoice's sheet on Invoices, and on the job). The reminder is already written: their first name, the invoice, what's still owed, how late it is, and &mdash; for an invoice on the client portal &mdash; where to pay by card. Change anything you like, then <strong>Text</strong>, <strong>Email</strong>, or <strong>Copy</strong> it; it goes out from your own phone. Each one is logged on the invoice (&ldquo;Reminded 3 days ago&rdquo;), and the next one is a notch firmer: friendly, then following up, then firm.</li>
         <li><strong>Rest of Today</strong> &mdash; whatever else is on today's schedule after the next job.</li>
@@ -3193,6 +3224,103 @@
     else if (!w.running && weekCardTick) { clearInterval(weekCardTick); weekCardTick = null; }
   }
 
+  // Hours worked (2026-09-23, shift clock part 3). The shift clock's
+  // scoreboard: where your day stands with its one button (Start my day,
+  // End my day, or -- for a shift left open -- Fix it, all opening the
+  // shell's shift sheet), seven bars of hours worked this week, today and
+  // last week; then, for an account that can see finance, everyone's week.
+  // A shift waiting for an end time counts nothing anywhere until it's
+  // fixed, and says so. Team hours fail closed: no finance permission (or
+  // no role loaded), no team table.
+  let shiftCardTick = null;
+  function shiftPersonName(email) {
+    const me = typeof thShiftEmail === 'function' ? thShiftEmail() : null;
+    if (me && email === me && typeof getCurrentUserFirstName === 'function' && getCurrentUserFirstName() && getCurrentUserFirstName() !== me) return getCurrentUserFirstName();
+    const local = String(email || '').split('@')[0].split(/[._-]+/)[0];
+    return local ? local.charAt(0).toUpperCase() + local.slice(1) : email;
+  }
+  function renderShiftCard() {
+    const el = document.getElementById('shiftCard');
+    if (!el || typeof thShiftWeekSummary !== 'function' || typeof thShiftEmail !== 'function') return;
+    const who = thShiftEmail();
+    if (!who) { el.innerHTML = ''; return; }
+    const now = Date.now();
+    const w = thShiftWeekSummary(who, now);
+    const h = (n) => (n % 1 ? n.toFixed(1) : String(n)) + ' h';
+    const t = (iso) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    const day = (iso) => new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const range = w.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' – ' +
+      w.end.toLocaleDateString('en-US', w.end.getMonth() === w.start.getMonth() ? { day: 'numeric' } : { month: 'short', day: 'numeric' });
+    let status;
+    if (w.needsEnd.length) {
+      status = '<div class="shift-now is-due"><span class="shift-dot" aria-hidden="true"></span><span class="shift-now-text">Your shift from ' + escapeHtml(day(w.needsEnd[0].start)) + ' needs an end time' +
+        '<span class="shift-now-sub">It isn\u2019t counting until you say when you finished.</span></span>' +
+        '<button type="button" class="primary-btn" data-shift-open>Fix it</button></div>';
+    } else if (w.onShift) {
+      const soFar = typeof thClockDuration === 'function' ? thClockDuration(now - new Date(w.since).getTime()) + ' so far' : '';
+      status = '<div class="shift-now is-on"><span class="shift-dot" aria-hidden="true"></span><span class="shift-now-text">On shift since ' + escapeHtml(t(w.since)) +
+        '<span class="shift-now-sub">' + soFar + '</span></span>' +
+        '<button type="button" class="secondary-btn" data-shift-open>End my day</button></div>';
+    } else {
+      status = '<div class="shift-now is-off"><span class="shift-dot" aria-hidden="true"></span><span class="shift-now-text">Not clocked in</span>' +
+        '<button type="button" class="primary-btn" data-shift-open>Start my day</button></div>';
+    }
+    const top = Math.max(4, ...w.days.map(d => d.hours));
+    const bars = w.days.map(d =>
+      '<div class="week-bar' + (d.isToday ? ' is-today' : '') + (d.isFuture ? ' is-future' : '') + '">' +
+        '<span class="week-bar-h">' + (d.hours ? (d.hours % 1 ? d.hours.toFixed(1) : d.hours) : '') + '</span>' +
+        '<span class="week-bar-track"><span class="week-bar-fill" style="height:' + Math.round((d.hours / top) * 100) + '%"></span></span>' +
+        '<span class="week-bar-day">' + d.name.charAt(0) + '</span>' +
+      '</div>').join('');
+    const said = w.days.map(d => d.name + ' ' + (d.hours ? h(d.hours) : 'none')).join(', ');
+    const stat = (value, label, last) =>
+      '<div class="week-stat"><div class="week-stat-value">' + value + '</div><div class="week-stat-label">' + label + '</div>' +
+      (last ? '<div class="week-stat-last">' + last + '</div>' : '') + '</div>';
+    // Everyone's week, for an account that can see finance -- and only once
+    // someone besides you has a shift, since until then it would repeat
+    // your own numbers.
+    let team = '';
+    if (typeof canViewFinance === 'function' && canViewFinance() && typeof thShiftTeamSummary === 'function') {
+      const rows = thShiftTeamSummary(now);
+      if (rows.some(r => r.email !== who)) {
+        team = '<table class="shift-team"><caption>Everyone this week</caption>' +
+          '<thead><tr><th scope="col">Who</th><th scope="col" class="is-num">Today</th><th scope="col" class="is-num">This week</th><th scope="col" class="is-num is-last-week">Last week</th></tr></thead><tbody>' +
+          rows.map(r => {
+            const state = r.needsEnd.length ? '<span class="shift-team-state is-due">Shift needs an end time</span>'
+              : r.onShift ? '<span class="shift-team-state is-on">On shift since ' + escapeHtml(t(r.since)) + '</span>'
+              : '<span class="shift-team-state">Off</span>';
+            return '<tr><td><span class="shift-team-name">' + escapeHtml(shiftPersonName(r.email)) + (r.email === who ? ' (you)' : '') + '</span>' + state + '</td>' +
+              '<td class="is-num">' + (r.today ? h(r.today) : '&ndash;') + '</td>' +
+              '<td class="is-num">' + h(r.hours) + '</td>' +
+              '<td class="is-num is-last-week">' + (r.prevHours ? h(r.prevHours) : '&ndash;') + '</td></tr>';
+          }).join('') +
+          '</tbody></table>';
+      }
+    }
+    const nothingYet = !w.hours && !w.prevHours && !w.onShift && !w.needsEnd.length;
+    el.innerHTML =
+      '<div class="week-head"><span class="week-label" id="shiftCardLabel">Hours worked</span><span class="week-range">' + range + '</span></div>' +
+      status +
+      '<div class="week-body">' +
+        '<div class="week-bars" role="img" aria-label="' + escapeAttr('Hours worked: ' + said) + '">' + bars + '</div>' +
+        '<div class="week-stats">' +
+          stat(h(w.today), 'Today') +
+          stat(h(w.hours), 'This week', w.prevHours ? 'Last week ' + h(w.prevHours) : '') +
+        '</div>' +
+      '</div>' +
+      team +
+      (nothingYet ? '<div class="week-hint">Start my day counts your whole day \u2014 driving, estimates and the time between jobs \u2014 not just time on the job clock.</div>' : '');
+    if (!el.dataset.shiftWired) {
+      el.dataset.shiftWired = '1';
+      el.addEventListener('click', (e) => {
+        if (e.target.closest('[data-shift-open]') && typeof thOpenShiftSheet === 'function') thOpenShiftSheet();
+      });
+    }
+    // The shift you're on grows once a minute; nothing ticks otherwise.
+    if (w.onShift && !shiftCardTick) shiftCardTick = setInterval(renderShiftCard, 60000);
+    else if (!w.onShift && shiftCardTick) { clearInterval(shiftCardTick); shiftCardTick = null; }
+  }
+
   // Shares its numbers with Business Snapshot's Outstanding/Overdue
   // cards via computeMoneyOwed() -- called from renderMetrics() each
   // time those recompute, so the two can never drift apart.
@@ -3356,6 +3484,7 @@
     renderGreetingBanner();
     renderTodayHero();
     renderWeekCard();
+    renderShiftCard();
     renderMetrics();
     if (!dashSectionClosed('analytics')) {
       renderStatusBars();
@@ -3517,6 +3646,8 @@
       renderSnapshotLastUpdated();
       renderMfaNagBanner();
       window.addEventListener('th-clock-change', () => { renderTodayHero(); renderWeekCard(); });
+      window.addEventListener('th-shift-change', renderShiftCard);
+      window.addEventListener('th-role-loaded', renderShiftCard);
       window.addEventListener('th-invoice-reminded', renderMetrics);
       window.addEventListener('th-job-texted', renderTodayHero);
       if (typeof startRealtimeSync === 'function') {

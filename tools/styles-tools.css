@@ -2855,3 +2855,49 @@ body .th-remind-text:focus { border-color: var(--orange-light); box-shadow: 0 0 
 .th-text-chip.is-eta { min-height: 32px; padding: 0 12px; font-size: 13px; font-variant-numeric: tabular-nums; }
 .th-text-chip[aria-pressed="true"] { border-color: var(--orange-dark); background: var(--orange-tint-soft); color: var(--orange-light); }
 .th-text .th-remind-text { min-height: 104px; }
+
+/* ---- Shift clock (2026-09-23) ----
+   Start my day / End my day. A header button on a phone and tablet -- a
+   green pill with the start time while on shift, an amber dot when a shift
+   needs an end time -- and a row under New in the desktop sidebar. Both
+   stay still (no ticking) so they don't compete with the job clock's orange
+   bar. The sheet rides on the reminder sheet's layout. */
+.th-hdr-shift[hidden], .th-sidebar-shift[hidden] { display: none; }
+.th-hdr-shift.is-on {
+  width: auto; padding: 0 12px 0 10px; gap: 6px; border-radius: 999px;
+  border-color: rgba(76, 175, 120, 0.55); background: rgba(76, 175, 120, 0.12); color: var(--white);
+}
+.th-hdr-shift.is-on .th-icon { color: #4caf78; }
+.th-hdr-shift-time { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.th-hdr-shift.is-due::after {
+  content: ''; position: absolute; top: 5px; right: 5px; width: 8px; height: 8px; border-radius: 50%;
+  background: #e6a23c; box-shadow: 0 0 0 2px var(--bg-panel-2);
+}
+.th-sidebar-shift { width: 100%; background: none; border: none; font: inherit; margin-bottom: 8px; cursor: pointer; text-align: left; }
+.th-sidebar-shift.is-on { color: var(--text); }
+.th-sidebar-shift.is-on .th-hex-icon .th-icon { color: #4caf78; }
+.th-sidebar-shift.is-due { color: #e6a23c; }
+.th-sidebar-shift-sub { margin-left: auto; font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.th-shift-go {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  width: 100%; min-height: 56px; margin: 12px 0 0; padding: 8px 14px;
+}
+.th-shift-go-sub { font-size: 12.5px; font-weight: 500; opacity: 0.8; }
+.th-shift-field { display: flex; flex-direction: column; gap: 6px; margin: 12px 0 0; font-size: 13px; color: var(--text-dim); }
+.th-shift-row { display: flex; align-items: flex-end; gap: 8px; margin: 12px 0 4px; }
+.th-shift-row .th-shift-field { flex: 1; min-width: 0; margin: 0; }
+.th-shift-row > button { flex-shrink: 0; min-height: 48px; padding: 0 14px; }
+/* 16px so iOS doesn't zoom into the field. */
+body .th-shift-input {
+  width: 100%; box-sizing: border-box; min-height: 48px; padding: 0 12px; border-radius: 12px;
+  border: 1px solid var(--border); background: var(--bg-panel); color: var(--text); font: inherit; font-size: 16px;
+}
+body .th-shift-input:focus { border-color: var(--orange-light); box-shadow: 0 0 0 3px var(--orange-tint-soft); outline: none; }
+.th-shift-note { margin: 10px 0 0; }
+.th-shift-error { margin: 8px 0 0; font-size: 13.5px; color: #e0807a; }
+.th-shift-error:empty { display: none; }
+.th-shift-link {
+  display: block; margin: 6px auto 0; padding: 10px; background: none; border: none; cursor: pointer;
+  font: inherit; font-size: 13.5px; color: var(--text-dim); text-decoration: underline;
+}
+.th-shift-link.is-danger { color: #e0807a; }
