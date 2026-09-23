@@ -127,12 +127,20 @@ click a setting by hand.
    has no exact-match auth check and has been firing fine hourly on the
    same vault secret; only these two newer functions added the
    stricter check and are the ones actually blocked by it.
-9. **Get the real `service_role` key from Supabase (Project Settings ->
+9. **Resolved (confirmed 2026-09-23).** Both strict-check crons
+   (`send-payment-reminder` 15:00 UTC, `send-quote-followup` 16:00 UTC)
+   returned 200 on their 2026-09-22 runs (`function_edge_logs`), so the
+   Vault secret now matches the functions' service-role key and items 7
+   and 8 are working. Original item, for the record:
+   **Get the real `service_role` key from Supabase (Project Settings ->
    API) and update the `send_push_service_role_key` vault secret** (or
    create a new dedicated one and repoint the two crons above) --
    the one manual step actually blocking items 7 and 8 from working.
    Everything else about both is done and tested.
-10. **Delete the orphaned lowercase `send-push` Edge Function** (id
+10. **Resolved (confirmed 2026-09-23):** `list_edge_functions` no longer
+    shows a lowercase `send-push`; only `Send-Push` is deployed. Original
+    item, for the record:
+    **Delete the orphaned lowercase `send-push` Edge Function** (id
     `aaa21126-3451-4bd2-a8e3-97d4f95bbf5a`, slug `send-push`, v8) --
     re-confirmed live and still deployed (2026-09-16), contradicting an
     earlier README note that it was already gone. It's a genuinely dead,
@@ -150,6 +158,28 @@ click a setting by hand.
     environment either. Delete via Supabase dashboard → Edge Functions →
     `send-push` → Delete, or `supabase functions delete send-push` from a
     machine that has the CLI and project access.
+
+11. **Turn off public signup in Supabase Auth** (dashboard:
+    Authentication -> Sign In / Providers -> "Allow new users to sign
+    up" -> off). Confirmed live 2026-09-23 that it's on
+    (`disable_signup: false`), which lets any stranger with a mailbox
+    hold an `authenticated` session -- the root cause of that day's
+    CRITICAL finding (`docs/specialist-logs/security.md`). Nothing in the
+    repo calls `signUp`; portal invites (`send-invite`, service role)
+    keep working with signup off.
+12. **Deploy the security-fixed edge functions that are merged but not
+    live** (2026-09-23 audit). Merging never deploys edge functions in
+    this repo. `notify-job-message-email` is already deployed and
+    verified; still to deploy from `main`: `notify-work-order-message-email`,
+    `notify-work-order-scheduled-email`, and `Send-Push` (HIGH), then
+    `notify-new-work-order-email`, `send-lead-email`,
+    `send-job-application-email`, `send-job-status-change-email`,
+    `reconcile-stripe-payments`. After each, a POST with the anon key
+    should return 401.
+13. **Decide on server-side MFA enforcement for internal accounts**
+    (2026-09-23 audit, finding #4). Today a stolen password alone
+    reaches all internal data through the API. The proposed design and
+    its lockout risks are in `docs/specialist-logs/security.md`.
 
 <!-- Add new manual action items above this line -->
 
