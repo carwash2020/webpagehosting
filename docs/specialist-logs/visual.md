@@ -1224,4 +1224,30 @@ height).
 - **Runway Dashboard** mirrors the rule, as with the rest of the shell
   CSS.
 
+## 2026-09-23 (later) -- the On the clock bar, the job's clock, the Stop sheet
+
+- **The bar:** a 56px frosted pill with an orange border, 94px up from
+  the bottom on a phone (the bottom bar is about 85px tall; at 84px the
+  two touched), full width with 12px gutters.
+  - Contents: a pulsing orange dot, a small-caps orange ON THE CLOCK
+    over the job · client (ellipsis), the time at 20px in tabular
+    figures so it doesn't jitter, and a solid orange Stop.
+  - On a computer: 360px, bottom-right.
+  - While it shows, the page's bottom padding and the toasts move up to
+    clear it.
+- **Job detail:** a card under the tracker. Idle, it's a line ("Time it
+  as you work, and the invoice's labor line fills itself in.") and a
+  secondary **Start the clock** with a play icon. Running, it turns
+  orange-tinted with a 34px ticking time, "On the clock since 9:02 AM",
+  and a primary Stop. A **Time** section lists each visit.
+- **Stop sheet:** the sheet title is normally a small-caps label, which
+  set "1 H 24 MIN" in capitals. For the clock it's a 24px headline
+  duration over "on <job>", then a dim "Added 1.4 h · 2.9 h on this job
+  so far".
+- **Jobs row:** an orange-outlined **On the clock** badge with its own
+  small pulsing dot.
+- New sprite icons: `clock`, `play`, `stop` (the last two filled).
+- Reduced motion turns off every pulse. The Runway Dashboard mirrors
+  the bar's CSS.
+
 <!-- Add new entries above this line -->

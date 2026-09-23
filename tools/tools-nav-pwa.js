@@ -749,6 +749,189 @@
 })();
 
 // ---------------------------------------------------------------------------
+// ON THE CLOCK (2026-09-23, Workspace rework part 9). While a job's clock
+// runs, a bar sits above the bottom nav (bottom-right on a computer) on
+// every tools page: the job, the client, the time ticking, and Stop. Tap
+// the bar for the job. Running is just a field on the job (clockSince --
+// see data-layer.js's Job clock section), so the clock survives closing
+// the app and shows on every device the job syncs to. A page without
+// data-layer.js still shows the bar, read straight from storage; its Stop
+// opens the job instead.
+// ---------------------------------------------------------------------------
+
+// 0:07, 12:40, 1:05:09 -- a stopwatch, not a sentence.
+function thFormatClock(ms) {
+  var s = Math.floor(Math.max(0, ms) / 1000);
+  var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+  return h ? h + ':' + pad(m) + ':' + pad(sec) : m + ':' + pad(sec);
+}
+// 45 min, 1 h, 1 h 25 min -- how long it was, the way you'd say it.
+function thClockDuration(ms) {
+  var mins = Math.round(Math.max(0, ms) / 60000);
+  var h = Math.floor(mins / 60), m = mins % 60;
+  if (!h) return m + ' min';
+  return h + ' h' + (m ? ' ' + m + ' min' : '');
+}
+function thClockHoursLabel(h) {
+  var n = Math.round((Number(h) || 0) * 100) / 100;
+  return (n % 1 ? String(n) : n.toFixed(0)) + ' h';
+}
+
+// Start from anywhere (job detail, the Jobs list, the Dashboard): starts
+// it, and says so when that stopped another job's clock.
+function thStartClock(jobId) {
+  if (typeof thStartJobClock !== 'function') return null;
+  var r = thStartJobClock(jobId);
+  if (!r) return null;
+  if (typeof haptic === 'function') haptic('light');
+  if (r.stopped && typeof showToast === 'function') {
+    showToast('Stopped ' + (r.stopped.job.title || 'the other job') + (r.stopped.hours ? ' (' + thClockHoursLabel(r.stopped.hours) + ' saved)' : '') + '. Clock on ' + (r.job.title || 'this job') + '.');
+  }
+  return r;
+}
+
+// Stop from anywhere: the time is saved the moment Stop is tapped; the
+// sheet only asks what's next. Done -- create the invoice goes straight to
+// the invoice that part 6 fills from the job, now with real hours.
+function thStopClock(jobId) {
+  if (typeof thStopJobClock !== 'function') {
+    window.location.href = '/tools/job-detail.html?id=' + encodeURIComponent(jobId);
+    return null;
+  }
+  var r = thStopJobClock(jobId);
+  if (!r) return null;
+  if (typeof haptic === 'function') haptic('success');
+  thOpenClockStoppedSheet(r);
+  return r;
+}
+function thOpenClockStoppedSheet(r) {
+  var job = r.job;
+  var esc = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  var name = job.title || 'this job';
+  var title = r.hours
+    ? '<span class="th-clock-sheet-head"><strong>' + thClockDuration(r.ms) + '</strong>on ' + esc(name) + '</span>' +
+      '<span class="th-clock-sheet-sub">Added ' + thClockHoursLabel(r.hours) + ' &middot; ' + thClockHoursLabel(r.totalHours) + ' on this job so far</span>'
+    : '<span class="th-clock-sheet-head"><strong>Under a minute</strong>on ' + esc(name) + '</span><span class="th-clock-sheet-sub">Too short to count, so nothing was added.</span>';
+  var keepRunning = { label: 'Keep the clock running', onClick: function () { if (typeof thUndoStopJobClock === 'function') thUndoStopJobClock(job.id, r.undo); } };
+  if (typeof showQuickActionSheet !== 'function') {
+    if (typeof showToast === 'function') showToast(r.hours ? 'Clock stopped: ' + thClockHoursLabel(r.hours) + ' added to ' + name + '.' : 'Clock stopped.');
+    return;
+  }
+  var actions = [];
+  if (job.status !== 'done' && typeof thFinishJob === 'function') {
+    var canInvoice = typeof canManageInvoices !== 'function' || canManageInvoices() || !(typeof getCurrentUserRole === 'function' && getCurrentUserRole());
+    var billable = false;
+    if (canInvoice && typeof thJobMoneyStage === 'function' && typeof thRead === 'function' && typeof TH_KEYS !== 'undefined') {
+      var income = thRead(TH_KEYS.income, []).filter(function (e) { return e.origin !== 'invoice'; });
+      billable = thJobMoneyStage(Object.assign({}, job, { status: 'done' }), thRead(TH_KEYS.invoices, []), income).stage === 'to-invoice';
+    }
+    if (billable) {
+      actions.push({ label: 'Done &mdash; create the invoice', onClick: function () {
+        if (thFinishJob(job.id)) window.location.href = '/tools/invoice-generator.html?jobRef=' + encodeURIComponent(job.id);
+      } });
+    }
+    actions.push({ label: 'Mark it done', onClick: function () {
+      if (!thFinishJob(job.id)) return;
+      if (typeof celebrateCompletion === 'function') celebrateCompletion();
+      if (typeof showToast === 'function') showToast(name + ' marked done.');
+    } });
+  }
+  actions.push(keepRunning);
+  showQuickActionSheet(title, actions, { cancelLabel: job.status === 'done' ? 'OK' : 'Not done yet' });
+}
+
+(function () {
+  'use strict';
+  var tick = null;
+
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function runningJob() {
+    var jobs;
+    try { jobs = JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); } catch (e) { return null; }
+    if (!Array.isArray(jobs)) return null;
+    if (typeof thRunningJobClock === 'function') return thRunningJobClock(jobs);
+    var best = null, bestAt = -Infinity;
+    jobs.forEach(function (j) {
+      var at = j && j.clockSince ? new Date(j.clockSince).getTime() : NaN;
+      if (!isNaN(at) && at > bestAt) { best = j; bestAt = at; }
+    });
+    return best;
+  }
+  function elapsed(since) {
+    var at = new Date(since).getTime();
+    return isNaN(at) ? 0 : Math.max(0, Date.now() - at);
+  }
+  // The job's own page shows its own, bigger clock.
+  function isItsOwnPage(job) {
+    if (!/\/job-detail\.html$/.test(window.location.pathname)) return false;
+    try { return new URLSearchParams(window.location.search).get('id') === String(job.id); } catch (e) { return false; }
+  }
+  function updateTime() {
+    var bar = document.getElementById('thClock');
+    if (!bar || bar.hidden) return;
+    var t = bar.querySelector('.th-clock-time');
+    if (t) t.textContent = thFormatClock(elapsed(bar.getAttribute('data-since')));
+  }
+  function setTicking(on) {
+    if (on && !tick && document.visibilityState !== 'hidden') tick = setInterval(updateTime, 1000);
+    if (!on && tick) { clearInterval(tick); tick = null; }
+  }
+  function render() {
+    if (!document.body) return;
+    var job = runningJob();
+    var bar = document.getElementById('thClock');
+    if (!job || isItsOwnPage(job)) {
+      if (bar) bar.hidden = true;
+      document.body.classList.remove('th-has-clock');
+      setTicking(false);
+      return;
+    }
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.className = 'th-clock';
+      bar.id = 'thClock';
+      bar.setAttribute('role', 'region');
+      bar.setAttribute('aria-label', 'On the clock');
+      document.body.appendChild(bar);
+      bar.addEventListener('click', function (e) {
+        var stop = e.target.closest('.th-clock-stop');
+        if (!stop) return;
+        e.preventDefault();
+        thStopClock(bar.getAttribute('data-job-id'));
+      });
+    }
+    var who = [job.title || 'Job', job.client || ''].filter(Boolean).join(' · ');
+    bar.setAttribute('data-job-id', String(job.id));
+    bar.setAttribute('data-since', job.clockSince);
+    bar.innerHTML =
+      '<a class="th-clock-main" href="/tools/job-detail.html?id=' + encodeURIComponent(job.id) + '">' +
+        '<span class="th-clock-dot" aria-hidden="true"></span>' +
+        '<span class="th-clock-text"><span class="th-clock-label">On the clock</span><span class="th-clock-title">' + esc(who) + '</span></span>' +
+        '<span class="th-clock-time">' + thFormatClock(elapsed(job.clockSince)) + '</span>' +
+      '</a>' +
+      '<button type="button" class="th-clock-stop" aria-label="Stop the clock on ' + esc(job.title || 'this job') + '">' +
+        '<svg class="th-icon" aria-hidden="true"><use href="#icon-stop" xlink:href="#icon-stop"></use></svg><span>Stop</span></button>';
+    bar.hidden = false;
+    document.body.classList.add('th-has-clock');
+    setTicking(true);
+  }
+
+  window.addEventListener('th-clock-change', render);
+  // Another tab, or a sync pull that brought a clock started elsewhere.
+  window.addEventListener('storage', function (e) { if (!e.key || e.key === 'th_tracker_jobs') render(); });
+  window.addEventListener('th-sync-status', render);
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') setTicking(false);
+    else render();
+  });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', render);
+  else render();
+})();
+
+// ---------------------------------------------------------------------------
 // DISPLAY DENSITY TOGGLE -- added 2026-08-16. A personal display
 // preference (comfortable vs compact row spacing), so it lives in plain
 // localStorage rather than the synced data blob -- there's no reason a
@@ -909,6 +1092,10 @@ if (typeof document !== 'undefined') {
     '<symbol id="icon-navigate" viewBox="0 0 24 24"><path d="M20.5 3.5L3.5 11l7.2 2.3L13 20.5z"/></symbol>' +
     '<symbol id="icon-chevron" viewBox="0 0 24 24"><polyline points="9.5,5.5 15.5,12 9.5,18.5"/></symbol>' +
 
+    // Job clock (2026-09-23, rework part 9).
+    '<symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><polyline points="12 7.5 12 12 15.2 14"/></symbol>' +
+    '<symbol id="icon-play" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M8 5.2v13.6a.9.9 0 0 0 1.37.77l10.6-6.8a.9.9 0 0 0 0-1.54L9.37 4.43A.9.9 0 0 0 8 5.2z"/></symbol>' +
+    '<symbol id="icon-stop" viewBox="0 0 24 24"><rect fill="currentColor" stroke="none" x="6" y="6" width="12" height="12" rx="2.5"/></symbol>' +
     '<symbol id="icon-mic" viewBox="0 0 24 24"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5V6a3.5 3.5 0 0 0-7 0v5.5A3.5 3.5 0 0 0 12 15z"/><path d="M6 11.5a6 6 0 0 0 12 0"/><line x1="12" y1="17.5" x2="12" y2="21"/><line x1="8.5" y1="21" x2="15.5" y2="21"/></symbol>' +
 
     '<symbol id="icon-terminal" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M7 9.3l3.3 2.7-3.3 2.7"/><line x1="12" y1="14.7" x2="16.5" y2="14.7"/></symbol>' +

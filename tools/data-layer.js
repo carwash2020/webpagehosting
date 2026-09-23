@@ -911,6 +911,125 @@ function thSetJobNoInvoice(jobId, value) {
   return thWrite(TH_KEYS.jobs, jobs);
 }
 
+// ---------- Job clock (2026-09-23, Workspace rework part 9) ----------
+// Tap Start on a job and its clock runs: on that page, on every other page
+// (the shell's On the clock bar), and on any other device once it syncs,
+// because "running" is just a field on the job (clockSince). Stop adds the
+// time to hoursWorked -- the number part 6's From this job panel already
+// turns into the invoice's Labor line -- and keeps each visit in timeLog.
+// One clock at a time: starting another job stops the first, keeping its
+// time. Under a minute is a mis-tap and adds nothing; the rest rounds to
+// the nearest 0.1 h (6 minutes).
+const TH_CLOCK_MIN_MS = 60 * 1000;
+
+function thJobClockSince(job) {
+  if (!job || !job.clockSince) return null;
+  const t = new Date(job.clockSince).getTime();
+  return isNaN(t) ? null : t;
+}
+function thJobClockElapsedMs(job, now) {
+  const since = thJobClockSince(job);
+  if (since === null) return 0;
+  return Math.max(0, (now === undefined ? Date.now() : new Date(now).getTime()) - since);
+}
+function thRunningJobClock(jobs) {
+  let best = null;
+  (jobs || []).forEach(j => {
+    const since = thJobClockSince(j);
+    if (since !== null && (!best || since > thJobClockSince(best))) best = j;
+  });
+  return best;
+}
+function thClockHours(ms) {
+  if (!(ms >= TH_CLOCK_MIN_MS)) return 0;
+  return Math.max(0.1, Math.round(ms / 360000) / 10);
+}
+function thClockChanged(jobId) {
+  try { window.dispatchEvent(new CustomEvent('th-clock-change', { detail: { jobId: jobId } })); } catch (e) { /* ignore */ }
+}
+function thSaveClockJobs(jobs) {
+  const ok = thWrite(TH_KEYS.jobs, jobs);
+  // Status can change here, and status is a relational column.
+  if (ok && typeof mirrorJobsToRelational === 'function') mirrorJobsToRelational(jobs);
+  return ok;
+}
+// Stops one job's clock in place (no save): its time goes on the job.
+function thCommitJobClock(job, nowMs) {
+  const ms = thJobClockElapsedMs(job, nowMs);
+  const hours = thClockHours(ms);
+  const start = job.clockSince;
+  job.clockSince = null; // null, not deleted: the sync merge is per field
+  if (hours > 0) {
+    job.hoursWorked = Math.round(((Number(job.hoursWorked) || 0) + hours) * 100) / 100;
+    job.timeLog = (Array.isArray(job.timeLog) ? job.timeLog : []).concat([{ start: start, end: new Date(nowMs).toISOString(), hours: hours }]);
+  }
+  return { ms: ms, hours: hours };
+}
+function thStartJobClock(jobId, now) {
+  const nowMs = now === undefined ? Date.now() : new Date(now).getTime();
+  const jobs = thRead(TH_KEYS.jobs, []);
+  const job = jobs.find(j => String(j.id) === String(jobId));
+  if (!job) return null;
+  if (thJobClockSince(job) !== null) return { job: job, stopped: null };
+  let stopped = null;
+  jobs.forEach(other => {
+    if (other !== job && thJobClockSince(other) !== null) stopped = Object.assign({ job: other }, thCommitJobClock(other, nowMs));
+  });
+  job.clockSince = new Date(nowMs).toISOString();
+  // Starting the clock is starting the job.
+  if (!job.status || job.status === 'not-started') {
+    job.status = 'in-progress';
+    job.statusChangedAt = job.clockSince;
+  }
+  job.lastEditedBy = (typeof getCurrentUserEmail === 'function' && getCurrentUserEmail()) || job.lastEditedBy;
+  if (!thSaveClockJobs(jobs)) return null;
+  thClockChanged(job.id);
+  return { job: job, stopped: stopped };
+}
+// Returns what Stop did, plus `undo` -- the fields as they were, for
+// thUndoStopJobClock() when Stop was a mis-tap.
+function thStopJobClock(jobId, now) {
+  const nowMs = now === undefined ? Date.now() : new Date(now).getTime();
+  const jobs = thRead(TH_KEYS.jobs, []);
+  const job = jobs.find(j => String(j.id) === String(jobId));
+  if (!job || thJobClockSince(job) === null) return null;
+  const undo = { clockSince: job.clockSince, hoursWorked: job.hoursWorked === undefined ? null : job.hoursWorked, timeLog: Array.isArray(job.timeLog) ? job.timeLog.slice() : [] };
+  const result = thCommitJobClock(job, nowMs);
+  job.lastEditedBy = (typeof getCurrentUserEmail === 'function' && getCurrentUserEmail()) || job.lastEditedBy;
+  if (!thSaveClockJobs(jobs)) return null;
+  thClockChanged(job.id);
+  return { job: job, ms: result.ms, hours: result.hours, totalHours: Number(job.hoursWorked) || 0, undo: undo };
+}
+function thUndoStopJobClock(jobId, undo) {
+  if (!undo) return false;
+  const jobs = thRead(TH_KEYS.jobs, []);
+  const job = jobs.find(j => String(j.id) === String(jobId));
+  if (!job) return false;
+  job.clockSince = undo.clockSince;
+  job.hoursWorked = undo.hoursWorked;
+  job.timeLog = undo.timeLog;
+  if (!thSaveClockJobs(jobs)) return false;
+  thClockChanged(job.id);
+  return true;
+}
+// Done from the clock's Stop sheet: stops a still-running clock first, so
+// no time is lost, then marks the job done the way the Jobs list does.
+function thFinishJob(jobId, now) {
+  const nowMs = now === undefined ? Date.now() : new Date(now).getTime();
+  const jobs = thRead(TH_KEYS.jobs, []);
+  const job = jobs.find(j => String(j.id) === String(jobId));
+  if (!job) return null;
+  if (thJobClockSince(job) !== null) thCommitJobClock(job, nowMs);
+  if (job.status !== 'done') {
+    job.status = 'done';
+    job.statusChangedAt = new Date(nowMs).toISOString();
+  }
+  job.lastEditedBy = (typeof getCurrentUserEmail === 'function' && getCurrentUserEmail()) || job.lastEditedBy;
+  if (!thSaveClockJobs(jobs)) return null;
+  thClockChanged(job.id);
+  return job;
+}
+
 // Everything for one job in a single call -- the query that makes a real
 // Job Detail view possible, the same way thGetClientBundle() enabled
 // Client Detail. Client resolution prefers job.clientId (written on every

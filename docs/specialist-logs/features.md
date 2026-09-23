@@ -2287,4 +2287,67 @@ actually said.
 that arrived before the role (a share, a fast typist) gets its button
 instead of a stale "can't create".
 
+## 2026-09-23 (later) -- Workspace rework, part 9: On the clock
+
+**Why.** Part 6 fills an invoice from its job, but its Labor line
+depends on `hoursWorked`, which almost nobody typed in. The comment in
+`jobBillables()` says as much: "Most jobs never get their hours logged."
+A clock you start when you arrive gets the hours without anyone typing
+them.
+
+**State lives on the job.** Running means `job.clockSince` holds an ISO
+time, so there's no separate store to keep in step:
+- it survives closing the app;
+- it syncs, because `th_tracker_jobs` merges per field three ways
+  (`mergeRecordArrays`), so a clock started on the phone and a note
+  edited on the computer both survive (tested);
+- `clockSince` is set to `null` on stop, never deleted, for the same
+  merge reason as `noInvoice`.
+
+**Data layer** (data-layer.js, Job clock section):
+- `thStartJobClock(id, now)` stops any other running clock (committing
+  its time), sets `clockSince`, and moves not-started to in-progress
+  with `statusChangedAt`.
+- `thStopJobClock(id, now)` adds the time to `hoursWorked`, appends
+  `{ start, end, hours }` to `timeLog`, and returns an `undo` snapshot.
+- `thUndoStopJobClock(id, undo)` puts those three fields back.
+- `thFinishJob(id, now)` commits a running clock, then marks the job
+  done.
+
+All four save through `thWrite`, which schedules sync, and then
+`mirrorJobsToRelational`, since status is a relational column. Each
+dispatches `th-clock-change`.
+
+**Rounding.** 0.1 h (6 minutes), at least 0.1 h once a session counts.
+Under a minute adds nothing: that's a mis-tap, not work.
+
+**Shell** (tools-nav-pwa.js, ON THE CLOCK):
+- The display helpers are here, since the shell is the one script every
+  page loads: `thFormatClock` (stopwatch), `thClockDuration` ("1 h 25
+  min"), `thClockHoursLabel`.
+- So are the page-facing actions: `thStartClock`, `thStopClock` and the
+  Stop sheet (`thOpenClockStoppedSheet`).
+- The bar re-renders on `th-clock-change`, on `storage` (other tabs),
+  on `th-sync-status` (a pull), and on returning to the tab. It ticks
+  only while the tab is visible, and hides on the running job's own
+  page.
+- Pages without data-layer.js (Route Planner, Parts, Settings) still
+  show the bar, read straight from storage. Their Stop opens the job.
+
+**Stop sheet.** "Done — create the invoice" appears only when the job
+would land in To invoice (`thJobMoneyStage` of the job as done) and the
+account can manage invoices. `showQuickActionSheet` gained an optional
+`{ cancelLabel }`, so its last button reads "Not done yet" instead of
+Cancel.
+
+**Where you start it:**
+- Job detail: its one self-made write, through the helpers above.
+- The Jobs sheet: Start / Stop the clock first.
+- The Dashboard's Next Job card, through a delegated listener, not an
+  inline handler.
+
+`setJobStatus(…, 'done')` stops a running clock before anything else.
+An open edit form picks up new hours and status on `th-clock-change`,
+so saving it can't write stale ones back.
+
 <!-- Add new entries above this line -->

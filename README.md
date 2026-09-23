@@ -3938,3 +3938,52 @@ Verified in a real headless Chromium (local HTTP, fake Supabase):
 - No console errors.
 
 New tests: `tests/tools/quick-add-anywhere.test.js` (7).
+
+
+## What changed, 2026-09-23 (later) -- Workspace rework, part 9: On the clock
+
+Part 9 of the Workspace rework. Full reasoning in
+`docs/specialist-logs/features.md`.
+
+**Time the job as you work it, and the invoice bills the time.** Most
+jobs never had their hours logged, so the invoice's Labor line (part 6)
+usually asked "How long did it take?" Now:
+- **Start the clock** on the job's page, on its card in Jobs (the More /
+  long-press sheet now leads with it), or on the Dashboard's Next Job.
+  Starting it moves a Not started job to In progress.
+- **A bar follows you everywhere** while it runs: above the bottom bar
+  on a phone, bottom-right on a computer. It shows the job, the client,
+  the time ticking, and **Stop**. Tap it for the job. It survives
+  closing the app, and a clock started on the phone shows on the
+  computer once it syncs.
+- **Stop saves the time at once** (rounded to 0.1 h; under a minute
+  counts as a mis-tap and adds nothing), then asks what's next:
+  - **Done — create the invoice** marks the job done and opens the
+    invoice, with its Labor line filled from the hours.
+  - **Mark it done.**
+  - **Keep the clock running** (stopped by mistake: undoes the stop).
+  - **Not done yet** (the time is already saved).
+- **The job's page** shows a big live clock while it runs, and a **Time**
+  section listing every visit (day, from–to, hours).
+- **One clock at a time.** Starting another job's clock stops the first
+  and keeps its time. **Mark Done** on a running job stops its clock
+  first, so no time is lost.
+
+**Fixed along the way:** a job's page that re-rendered (live sync, and
+now Start / Stop) turned its Photos grid back into "Loading..." for
+good. The loaded photos are now kept.
+
+Verified in a real headless Chromium (local HTTP, fake Supabase):
+- 390px: Start on the job's page (the job moves to In progress and the
+  big clock ticks); the Dashboard shows the bar clear of the bottom bar,
+  ticking.
+- Stop after 1 h 24 min: the sheet, then **Done — create the invoice**,
+  lands on the invoice with "Labor 1.4 h logged"; the job is Done with
+  1.4 h and one visit.
+- The Jobs sheet leads with **Start the clock**, and the card then says
+  **On the clock**. The job's page lists the visit under Time.
+- 1440px: the bar sits bottom-right, and Next Job reads **On the clock**
+  with **Stop the clock**.
+- No console errors.
+
+New tests: `tests/tools/job-clock.test.js` (15).

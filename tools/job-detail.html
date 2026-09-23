@@ -52,14 +52,14 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=f4af312884">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=63481e0cf9">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=4cfac4b10e" defer></script>
-<script src="/tools/data-layer.js?v=0eeb0b02fa" defer></script>
+<script src="/tools/data-layer.js?v=1bf38c5a61" defer></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
-<script src="/tools/tools-dialogs.js?v=33199ae1d8" defer></script>
+<script src="/tools/tools-dialogs.js?v=310315eb44" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=4b4d783f9a" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=b4709f3f09" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <!-- U16 fix (High-Impact Upgrades, 2026-09-07): jsPDF for the new
      "Generate Job Sheet" button, same version/CDN as invoice-generator.html
@@ -199,6 +199,23 @@
   .job-next.is-paid .job-next-text strong { color: #6fcf97; }
   .job-next-actions { display: flex; gap: 8px; flex-wrap: wrap; }
   .job-next-btn { text-decoration: none; display: inline-flex; align-items: center; min-height: 40px; padding: 8px 16px; width: auto; }
+
+  /* The job's clock (2026-09-23, Workspace rework part 9). */
+  .job-clock {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    margin-top: 12px; padding: 12px 14px; border-radius: 12px;
+    background: var(--bg-panel-2); border: 1px solid var(--border);
+  }
+  .job-clock-info { min-width: 0; flex: 1 1 200px; }
+  .job-clock-sub { color: var(--text-dim); font-size: 13.5px; line-height: 1.5; }
+  .job-clock-sub strong { color: var(--white); }
+  .job-clock-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 18px; width: auto; }
+  .job-clock-btn .th-icon { width: 14px; height: 14px; margin: 0; }
+  .job-clock.is-running { border-color: var(--orange-dark); background: var(--orange-tint-soft); }
+  .job-clock-face { display: flex; align-items: center; gap: 10px; }
+  .job-clock-time { font-size: 34px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--white); }
+  .job-clock-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--orange); animation: th-clock-pulse 1.6s ease-out infinite; }
+  @media (prefers-reduced-motion: reduce) { .job-clock-dot { animation: none; } }
 </style>
 </head>
 <body>
@@ -268,6 +285,7 @@
     if (typeof startRealtimeSync === 'function') {
       startRealtimeSync(onJobRealtimeChange, updateRealtimeBadge);
     }
+    window.addEventListener('th-clock-change', onJobRealtimeChange);
   });
 
   function updateRealtimeBadge(status) {
@@ -375,6 +393,7 @@
         warrantyBadgeHtml(j) +
       '</div>' +
       jobTrackHtml(bundle, allowed) +
+      jobClockHtml(j) +
       quickHtml +
       '<div class="job-stat-row">' +
         '<div class="job-stat"><div class="job-stat-value">' + money(bundle.margin.revenue) + '</div><div class="job-stat-label">Revenue</div></div>' +
@@ -394,6 +413,8 @@
     if (j.notes) {
       html += '<div class="section-block"><div class="section-heading is-static"><span>Notes</span></div><div style="color:var(--text);font-size:13.5px;line-height:1.6;">' + escapeHtml(j.notes) + '</div></div>';
     }
+
+    html += jobTimeSectionHtml(j);
 
     html += renderRecordSection('Invoices', bundle.linkedInvoices.map(i => ({
       title: 'Invoice ' + (i.invoiceNumber || ''), meta: (i.date || '') + ' \u00b7 ' + invoiceStatusWord(i),
@@ -415,7 +436,18 @@
 
     html += '<div class="section-block"><div class="section-heading is-static"><span>Photos</span></div><div class="job-photo-grid" id="jobPhotosGrid"><div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg>Loading...</div></div></div>';
 
+    // Real bug (2026-09-23): a re-render (live sync, or now the clock's
+    // Start / Stop) rebuilt the Photos grid as "Loading..." and nothing
+    // loaded it again. The grid already loaded is carried across.
+    const oldGrid = document.getElementById('jobPhotosGrid');
+    const loadedPhotos = oldGrid && oldGrid.dataset.loaded ? oldGrid.innerHTML : null;
     document.getElementById('jobContent').innerHTML = html;
+    if (loadedPhotos !== null) {
+      const grid = document.getElementById('jobPhotosGrid');
+      grid.innerHTML = loadedPhotos;
+      grid.dataset.loaded = '1';
+    }
+    syncJobClockTick();
   }
 
   // Paid / Part paid / Unpaid from paidAmount first, the same rule as every
@@ -426,6 +458,73 @@
     if (thInvoiceBalance(inv) <= 0 && (Number(inv.total) || 0) > 0) return 'Paid';
     if (thInvoicePaidAmount(inv) > 0) return 'Part paid';
     return typeof thInvoiceIsOverdue === 'function' && thInvoiceIsOverdue(inv) ? 'Overdue' : 'Unpaid';
+  }
+
+  // The job's clock (2026-09-23, Workspace rework part 9). Start it when
+  // the work starts; Stop saves the time onto the job (hoursWorked, plus a
+  // visit in timeLog), which is what the invoice's Labor line is filled
+  // from. This is the one write the page makes itself, through the same
+  // data-layer.js helpers as the shell's On the clock bar.
+  function jobClockHtml(j) {
+    if (typeof thJobClockSince !== 'function' || typeof thStartClock !== 'function') return '';
+    const since = thJobClockSince(j);
+    const logged = Number(j.hoursWorked) || 0;
+    const icon = (name) => '<svg class="th-icon" aria-hidden="true"><use href="#icon-' + name + '" xlink:href="#icon-' + name + '"></use></svg>';
+    if (since !== null) {
+      const started = new Date(since).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      return '<div class="job-clock is-running" data-since="' + escapeHtml(j.clockSince) + '">' +
+        '<div class="job-clock-info">' +
+          '<div class="job-clock-face"><span class="job-clock-dot" aria-hidden="true"></span><span class="job-clock-time">' + thFormatClock(thJobClockElapsedMs(j)) + '</span></div>' +
+          '<div class="job-clock-sub">On the clock since ' + started + (logged ? ' &middot; ' + thClockHoursLabel(logged) + ' before this' : '') + '</div>' +
+        '</div>' +
+        '<button type="button" class="primary-btn job-clock-btn" onclick="stopJobClockHere()">' + icon('stop') + 'Stop</button>' +
+      '</div>';
+    }
+    if (j.status === 'done') return '';
+    return '<div class="job-clock">' +
+      '<div class="job-clock-info"><div class="job-clock-sub">' +
+        (logged ? '<strong>' + thClockHoursLabel(logged) + '</strong> logged so far.' : 'Time it as you work, and the invoice&rsquo;s labor line fills itself in.') +
+      '</div></div>' +
+      '<button type="button" class="secondary-btn job-clock-btn" onclick="startJobClockHere()">' + icon('play') + 'Start the clock</button>' +
+    '</div>';
+  }
+  // Ticks only while this job's clock is on screen and running.
+  let jobClockTick = null;
+  function syncJobClockTick() {
+    const running = !!document.querySelector('.job-clock.is-running');
+    if (running && !jobClockTick) {
+      jobClockTick = setInterval(() => {
+        const face = document.querySelector('.job-clock.is-running');
+        if (!face) { syncJobClockTick(); return; }
+        if (document.visibilityState === 'hidden') return;
+        face.querySelector('.job-clock-time').textContent = thFormatClock(Date.now() - new Date(face.dataset.since).getTime());
+      }, 1000);
+    } else if (!running && jobClockTick) {
+      clearInterval(jobClockTick);
+      jobClockTick = null;
+    }
+  }
+  function startJobClockHere() {
+    if (currentJobId !== null) thStartClock(currentJobId);
+  }
+  function stopJobClockHere() {
+    if (currentJobId !== null) thStopClock(currentJobId);
+  }
+  // Each visit the clock timed: its day, from-to, and hours.
+  function jobTimeSectionHtml(j) {
+    const log = (Array.isArray(j.timeLog) ? j.timeLog : []).filter(v => v && v.start && v.end);
+    if (!log.length) return '';
+    const day = (d) => d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const time = (d) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    const rows = log.slice().reverse().map(v => {
+      const a = new Date(v.start), b = new Date(v.end);
+      return '<div class="job-record-row">' +
+        '<div><div class="job-record-title">' + escapeHtml(day(a)) + '</div><div class="job-record-meta">' + escapeHtml(time(a) + ' – ' + time(b)) + '</div></div>' +
+        '<div class="job-record-amount">' + thClockHoursLabel(v.hours) + '</div>' +
+      '</div>';
+    }).join('');
+    const total = log.reduce((sum, v) => sum + (Number(v.hours) || 0), 0);
+    return '<div class="section-block"><div class="section-heading is-static"><span>Time (' + log.length + ' visit' + (log.length === 1 ? '' : 's') + ' &middot; ' + thClockHoursLabel(total) + ')</span></div>' + rows + '</div>';
   }
 
   // The job's tracker (2026-09-22, Workspace rework part 5): Booked ->
@@ -518,6 +617,11 @@
   // section, which already does that well -- duplicating those actions
   // here isn't worth the added surface area for this first version.
   async function loadPhotosReadOnly(jobId) {
+    await fillPhotosReadOnly(jobId);
+    const grid = document.getElementById('jobPhotosGrid'); // looked up again: a re-render may have replaced it meanwhile
+    if (grid) grid.dataset.loaded = '1';
+  }
+  async function fillPhotosReadOnly(jobId) {
     const grid = document.getElementById('jobPhotosGrid');
     if (typeof fetchJobPhotos !== 'function') { grid.innerHTML = ''; return; }
     const result = await fetchJobPhotos(jobId);
