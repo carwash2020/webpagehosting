@@ -273,6 +273,7 @@ test('Send-Push: internal broadcasts come from get_internal_push_subscriptions()
   assert.doesNotMatch(fn, /push_subscriptions\?select=id,subscription/, 'must no longer read every subscription row');
   assert.match(fn, /if \(!res\.ok\) \{[\s\S]*?return \[\];/, 'a failed lookup sends to nobody');
   assert.match(src, /token !== SERVICE_ROLE_KEY/, 'the pending caller check ships with it');
+  assert.match(src, /if \(!SERVICE_ROLE_KEY \|\| token !== SERVICE_ROLE_KEY\) \{/, 'an empty env key can never match an empty bearer');
 });
 
 test('Send-Push: the audience-check branch reports counts and never sends', () => {

@@ -853,7 +853,10 @@ Deno.serve(async (req: Request) => {
     // comment on this exact issue).
     const authHeader = req.headers.get("Authorization") || "";
     const token = authHeader.replace(/^Bearer\s+/i, "");
-    if (token !== SERVICE_ROLE_KEY) {
+    // `!SERVICE_ROLE_KEY ||` (2026-09-23): the same guard the 2026-09-23
+    // security audit's trigger-only fix (#363) uses, so an empty env key
+    // can never match an empty bearer.
+    if (!SERVICE_ROLE_KEY || token !== SERVICE_ROLE_KEY) {
       return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },

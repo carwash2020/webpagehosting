@@ -4292,3 +4292,32 @@ sandbox-proxy test), `check-consistency`, `check-undefined-vars`, lint.
 The SQL function was exercised live in rolled-back transactions.
 Driven in headless Chromium at 390px and 1440px. New tests:
 `tests/booking/booking-manage-link-round3.test.js` (12).
+
+## What changed, 2026-09-23 -- Booking flow, round 2: every change reaches the guest, reminders follow a moved visit, and push notifications stay private
+
+Server side only: edge functions and two SQL files. No page changes. Full reasoning: `docs/specialist-logs/features.md` and `security.md` (2026-09-23 round 2 entries).
+
+**Guests hear about every change.** Rescheduling or cancelling used to send nothing, so the guest's inbox kept showing the old time. Now:
+- Moving a visit emails "Your visit has moved", with the old time struck through and a fresh calendar file.
+- Cancelling emails "Your visit is cancelled".
+- Steve and Connor get a matching "Booking moved" or "Booking cancelled" email.
+
+**Reminders follow the visit.** A visit moved after its day-before reminder went out now gets a new reminder for the new day. It used to get none. The reminder also:
+- carries a calendar file and a Google Calendar link
+- sends a phone notification to clients who use the portal
+
+**Notifications stay private.**
+- Team alerts (new leads, bookings, overdue invoices, the weekly digest) now go only to Triple H's own accounts. They would otherwise have reached any client who turned on notifications in the portal.
+- Client notifications (a new invoice, quote, contract or message) could have gone to whichever account signed up most recently. They now go to exactly the right person.
+
+Neither problem had happened yet: every device with notifications on belongs to Steve or Connor.
+
+**Locked down.** The booking email, the reminder and the push notification service now only accept calls from Triple H's own server.
+
+Verified:
+- full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, lint, visual snapshot
+- all nine functions syntax-checked
+- the database changes exercised live in rolled-back transactions
+- every caller of the push service checked before its lock went on
+
+New tests: `tests/edge-functions/booking-notifications-round2.test.js` (23).
