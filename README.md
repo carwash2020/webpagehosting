@@ -4565,3 +4565,29 @@ New test: `tests/design/mobile-menu-dark-panel.test.js` (4; all fail against the
 - the divider is translucent;
 - the row divider spans the arrow;
 - the sub-link rule out-ranks the general menu-link rule.
+
+## What changed, 2026-09-23 -- The 404 page's buttons match the rest of the site
+
+Public site: `404.html` only.
+
+**What was wrong.** On 2026-09-07 the site retired its glossy gradient buttons (U01): one flat orange button for the main action, with a quieter outlined partner. The 404 page keeps its own copy of the button styles, so it can still show if the main stylesheet fails to load, and that copy was never updated. It still showed two glossy gradient buttons of equal weight: blue "Back to Home" and orange "Call".
+
+**The fix.**
+- "Call (435) 414-1667" keeps its orange, now as the site's flat orange button with the solid offset shadow.
+- "Back to Home" becomes the quieter outlined button. That's the same pairing as the homepage's Schedule and Call buttons.
+- Hover, press and keyboard-focus feedback now match the rest of the site, and the hover lift is turned off for visitors who ask for reduced motion.
+
+**Checked** at desktop and 375px, including hover and keyboard focus, next to the homepage hero buttons:
+- the orange, shadow and outline all match the rest of the site;
+- button text contrast is 7.5:1 (Call) and 7.9:1 (Home).
+
+Verified:
+- full suite 3254 of 3255 passing; the one failure is the known `check-links.py` sandbox-proxy test;
+- `check-consistency`, `check-undefined-vars`, `eslint` and `check-visual-snapshot` clean;
+- `check-links.py`: the only failures are the sandbox proxy refusing outside sites, no internal link broken.
+
+New test: `tests/design/404-button-language.test.js` (4; all fail against the old page). It checks:
+- no gradients;
+- exactly one filled primary (Call) and one outlined partner (Home);
+- the orange fill and shadow use `styles.css`'s own colours;
+- the outline, focus ring and reduced-motion styles match the rest of the site.
