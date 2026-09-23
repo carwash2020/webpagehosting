@@ -18,6 +18,13 @@ const BUSINESS_HOURS_SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'js'
   // indirect eval() don't become window properties on their own.
   + '\nwindow.BUSINESS_TIMEZONE = BUSINESS_TIMEZONE; window.HOURS_BY_WEEKDAY = HOURS_BY_WEEKDAY; window.DAYS_AHEAD_SHOWN = DAYS_AHEAD_SHOWN; window.zonedTimeToUtc = zonedTimeToUtc; window.businessWeekday = businessWeekday; window.todayDateStrInBusinessTz = todayDateStrInBusinessTz; window.addDaysToDateStr = addDaysToDateStr; window.formatHoursLabel = formatHoursLabel;';
 
+// booking.html and manage-booking.html also load /js/booking-flow.js
+// (2026-09-22: whole-window availability, add to calendar), right after
+// business-hours.js. Evaluated the same way and in the same order a real
+// browser runs the two <script> tags, so the availability path these
+// tests drive is the page's real code.
+const BOOKING_FLOW_SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'js', 'booking-flow.js'), 'utf8');
+
 function loadPage(url, mockFetch) {
   const html = fs.readFileSync(PAGE_PATH, 'utf8');
   const dom = new JSDOM(html, {
@@ -28,6 +35,7 @@ function loadPage(url, mockFetch) {
       // jsdom never fetches external <script src> files --
       // manage-booking.html now loads /business-hours.js (2026-09-03).
       w.eval(BUSINESS_HOURS_SRC);
+      w.eval(BOOKING_FLOW_SRC);
     },
   });
   return dom.window;
@@ -268,6 +276,11 @@ test('picking a slot calls the real reschedule RPC with the correct token and a 
   window.document.querySelectorAll('.date-btn')[1].dispatchEvent(new window.Event('click', { bubbles: true }));
   await waitForCondition(() => window.document.querySelector('.slot-btn'));
   window.document.querySelector('.slot-btn').dispatchEvent(new window.Event('click', { bubbles: true }));
+  // Confirm step (2026-09-22): a tapped time only PROPOSES the move now --
+  // a mis-tap used to reschedule the real appointment on the spot.
+  assert.equal(rpcCalled, false, 'tapping a time alone must not move the booking');
+  assert.equal(window.document.getElementById('rescheduleConfirm').hidden, false, 'a confirm panel should appear');
+  window.document.getElementById('confirmRescheduleBtn').dispatchEvent(new window.Event('click', { bubbles: true }));
   await waitForCondition(() => window.document.getElementById('content').innerHTML.includes('has been rescheduled'));
 
   assert.ok(rpcCalled, 'the real reschedule RPC should have been called');
@@ -298,6 +311,7 @@ test('a slot-taken response (a real collision caught by the database) is handled
   window.document.querySelectorAll('.date-btn')[1].dispatchEvent(new window.Event('click', { bubbles: true }));
   await waitForCondition(() => window.document.querySelector('.slot-btn'));
   window.document.querySelector('.slot-btn').dispatchEvent(new window.Event('click', { bubbles: true }));
+  window.document.getElementById('confirmRescheduleBtn').dispatchEvent(new window.Event('click', { bubbles: true }));
   await waitForCondition(() => window.document.getElementById('content').innerHTML.includes('just taken'));
   assert.match(window.document.getElementById('content').innerHTML, /just taken/);
 });
