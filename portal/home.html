@@ -73,7 +73,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/portal/portal-app.css?v=202609222345">
+<link rel="stylesheet" href="/portal/portal-app.css?v=202609230030">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -112,7 +112,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/portal/portal-app.js?v=202609222300"></script>
+<script src="/portal/portal-app.js?v=202609230030"></script>
 <style>
   body { background: #0a0a0a; max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
   /* Widened for real desktop screens (2026-09-03), reported directly
@@ -1064,6 +1064,25 @@
     ).join('');
   }
 
+  // Never miss a reply (2026-09-22): Home is the page most often left
+  // open in a tab. When a reply arrives (or they come back to the tab),
+  // the "New message from Triple H" item, the card counts and the nav
+  // badges catch up without a reload. Started once; pull-to-refresh
+  // re-runs init() and just hands it the fresh summary.
+  let homeSummary = null;
+  let homeUnreadWatcher = null;
+  function watchHomeUnread(summary) {
+    homeSummary = summary;
+    if (homeUnreadWatcher) { homeUnreadWatcher.setBaseline(summary.unread); return; }
+    homeUnreadWatcher = portalWatchUnread(client, (rows) => {
+      if (!homeSummary) return;
+      homeSummary.unread = rows;
+      renderAttention(homeSummary);
+      renderCards(homeSummary);
+      portalApplyNavUnreadBadges(rows);
+    }, { baseline: summary.unread });
+  }
+
   async function init() {
     const { data: { session } } = await client.auth.getSession();
     if (!session) { window.location.replace('/portal/login.html'); return; }
@@ -1084,6 +1103,7 @@
       renderCards(summary);
       renderRecentActivity(summary, new Date());
       portalApplyNavUnreadBadges(summary.unread);
+      watchHomeUnread(summary);
     } catch (e) {
       document.getElementById('homeCards').innerHTML =
         '<div class="empty-state is-error"><div class="empty-state-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v6"/><circle cx="12" cy="16.75" r="0.6" fill="currentColor" stroke="none"/></svg></div><p class="empty-state-title">Couldn\'t load your account details just now. Please refresh, or call us at (435) 414-1667.</p></div>';

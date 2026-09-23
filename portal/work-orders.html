@@ -78,7 +78,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/portal/portal-app.css?v=202609222345">
+<link rel="stylesheet" href="/portal/portal-app.css?v=202609230030">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -117,7 +117,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/portal/portal-app.js?v=202609222300"></script>
+<script src="/portal/portal-app.js?v=202609230030"></script>
 <!-- Shared business-hours data (2026-09-04) -- see business-hours.js's
      own header comment for the full reasoning. -->
 <script src="/js/business-hours.js?v=5296319b73"></script>
@@ -468,6 +468,11 @@
 </div>
 
 <p class="wo-intro">Tell us what needs doing and we'll follow up to confirm details and pricing. For anything urgent &mdash; an active leak, no power, a fridge that's failed &mdash; call or text <a href="tel:+14354141667" style="color:var(--orange-light);">(435) 414-1667</a> instead, that reaches us faster.</p>
+
+<!-- "Triple H replied" (2026-09-22): the Request tab's badge used to
+     land on a blank form with the reply somewhere below it. Filled by
+     renderWoReplyNotice(); empty when nothing is unread. -->
+<div id="replyNotice" aria-live="polite"></div>
 
 <div id="successMessage" class="wo-success" style="display:none;">
   <div class="wo-success-title">Request sent</div>
@@ -1079,6 +1084,10 @@
     woUnreadCounts = {};
     unread.forEach(r => { if (r.thread_type === 'work_order') woUnreadCounts[r.thread_id] = Number(r.unread_count) || 0; });
     portalApplyNavUnreadBadges(unreadRows);
+    woRequestTitles = {};
+    (requests || []).forEach(r => { woRequestTitles[r.id] = r.title || 'Your request'; });
+    watchWoUnread();
+    renderWoReplyNotice();
 
     // Fixed alongside the loading state (2026-09-03): this used to
     // clear straight to a completely blank div on a real error, with
@@ -1154,12 +1163,75 @@
       pill.remove();
     }
     portalApplyNavUnreadBadges(unreadRows);
+    renderWoReplyNotice();
+    if (woUnreadWatcher) woUnreadWatcher.setBaseline(unreadRows);
   }
 
-  async function loadAndRenderThread(workOrderId) {
+  // ---- Never miss a reply (2026-09-22) ----
+  // Titles of the requests on this page, for the "Triple H replied" bar.
+  let woRequestTitles = {};
+  let woUnreadWatcher = null;
+
+  function woThreadIsOpen(workOrderId) {
+    const panel = document.getElementById('woMessages-' + workOrderId);
+    return !!panel && panel.style.display !== 'none';
+  }
+
+  // One row per conversation with an unread reply, newest first --
+  // except one that's already open on screen, which the client is
+  // looking at.
+  function renderWoReplyNotice() {
+    const el = document.getElementById('replyNotice');
+    if (!el) return;
+    const items = unreadRows
+      .filter(r => r.thread_type === 'work_order' && woRequestTitles[r.thread_id] && woUnreadCounts[r.thread_id] && !woThreadIsOpen(r.thread_id))
+      .sort((a, b) => new Date(b.latest_unread_at) - new Date(a.latest_unread_at))
+      .map(r => ({ title: woRequestTitles[r.thread_id], count: woUnreadCounts[r.thread_id], action: 'openWoThreadFromNotice(' + Number(r.thread_id) + ')' }));
+    el.innerHTML = portalReplyNoticeHtml(items);
+  }
+
+  function openWoThreadFromNotice(workOrderId) {
+    portalOpenThreadFromNotice('wo-card-' + workOrderId, toggleMessages, workOrderId);
+  }
+
+  // Started once, after the first list render; later renders (pull to
+  // refresh, a new request sent) only reset what counts as "already
+  // known".
+  function watchWoUnread() {
+    if (woUnreadWatcher) { woUnreadWatcher.setBaseline(unreadRows); return; }
+    woUnreadWatcher = portalWatchUnread(client, applyWoUnreadRows, {
+      baseline: unreadRows,
+      isActive: () => Object.keys(woRequestTitles).some(woThreadIsOpen),
+    });
+  }
+
+  // Something changed on the server: badges, pills and the notice catch
+  // up, and a conversation that's open on screen pulls in the new reply
+  // in place (keeping anything half-typed).
+  function applyWoUnreadRows(rows) {
+    unreadRows = rows;
+    const next = {};
+    rows.forEach(r => { if (r.thread_type === 'work_order') next[r.thread_id] = Number(r.unread_count) || 0; });
+    woUnreadCounts = next;
+    const reload = [];
+    Object.keys(woRequestTitles).forEach(id => {
+      const n = next[id] || 0;
+      const open = woThreadIsOpen(id);
+      if (n && open) reload.push(Number(id));
+      portalSyncThreadToggle(document.querySelector('#wo-card-' + id + ' .portal-thread-toggle'), 'woUnread-' + id, open ? 0 : n);
+    });
+    portalApplyNavUnreadBadges(rows);
+    renderWoReplyNotice();
+    reload.forEach(id => loadAndRenderThread(id, { quiet: true }));
+  }
+
+  // opts.quiet: a background refresh of a thread that's already open --
+  // no skeleton flash, and the composer keeps its draft.
+  async function loadAndRenderThread(workOrderId, opts) {
     const panel = document.getElementById('woMessages-' + workOrderId);
     if (!panel) return;
-    panel.innerHTML = portalSkeletonLines(2);
+    const quiet = !!(opts && opts.quiet);
+    if (!quiet) panel.innerHTML = portalSkeletonLines(2);
 
     const { data: messages, error } = await client
       .from('client_portal_work_order_messages')
@@ -1168,15 +1240,20 @@
       .order('created_at', { ascending: true });
 
     if (error) {
-      panel.innerHTML = '<p class="wo-message-meta">Couldn\'t load messages right now.</p>';
+      if (!quiet) panel.innerHTML = '<p class="wo-message-meta">Couldn\'t load messages right now.</p>';
       return;
     }
 
     // Shared renderer (portal-app.js): day dividers, a time on every
     // bubble, and a "New" divider above the first unread reply.
-    panel.innerHTML =
+    const html =
       portalMessageThreadHtml(messages, { unreadCount: woUnreadCounts[workOrderId] || 0 }) +
       portalComposerHtml('woMessageInput-' + workOrderId, 'woMessageSend-' + workOrderId, 'sendMessage(' + workOrderId + ')', 'Ask a question or add a note...');
+    if (quiet) {
+      if (!portalReplaceThreadKeepingDraft(panel, 'woMessageInput-' + workOrderId, html)) return;
+    } else {
+      panel.innerHTML = html;
+    }
     portalScrollThreadToEnd(panel);
 
     // Seen -> read, watermarked at the newest message actually shown

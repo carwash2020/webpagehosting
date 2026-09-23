@@ -802,14 +802,18 @@ function portalDownloadVisitIcs(visit) {
 //
 // Both helpers resolve (never throw) -- an unread badge is an
 // enhancement; a failed lookup just means no badges, never a broken page.
-async function portalLoadUnreadCounts(supabaseClient) {
+// opts.nullOnError: return null (not []) when the lookup fails, so a
+// background refresh can tell "couldn't check" from "nothing unread"
+// and leave the badges alone instead of wiping them on a blip.
+async function portalLoadUnreadCounts(supabaseClient, opts) {
+  const failed = opts && opts.nullOnError ? null : [];
   try {
     const { data, error } = await supabaseClient.rpc('get_portal_unread_counts');
-    if (error) { console.warn('Unread counts unavailable:', error.message || error); return []; }
+    if (error) { console.warn('Unread counts unavailable:', error.message || error); return failed; }
     return Array.isArray(data) ? data : [];
   } catch (e) {
     console.warn('Unread counts unavailable:', e && e.message ? e.message : e);
-    return [];
+    return failed;
   }
 }
 
@@ -866,6 +870,156 @@ function portalApplyNavUnreadBadges(rows) {
     badge.textContent = n > 9 ? '9+' : String(n);
     link.setAttribute('aria-label', tab.label + ', ' + n + ' new message' + (n === 1 ? '' : 's'));
   });
+}
+
+// ---------- Never miss a reply (2026-09-22) ----------
+// Unread counts used to be read once, on page load. A client who had
+// the portal open in a tab (or came back to it from the email saying
+// Triple H replied) saw stale badges until they reloaded, and a reply
+// landing in a thread they had open never appeared at all.
+//
+// portalWatchUnread() re-checks get_portal_unread_counts() when the tab
+// comes back into view, and on a timer while it's visible: every 20s
+// while a conversation is open (so it behaves like a chat), otherwise
+// every 90s. onChange only runs when something actually changed, and a
+// failed check changes nothing. One small RPC, only while the page is
+// being looked at -- no realtime subscription to keep alive.
+function portalUnreadSignature(rows) {
+  return (rows || [])
+    .filter(r => r && Number(r.unread_count) > 0)
+    .map(r => r.thread_type + ':' + r.thread_id + ':' + Number(r.unread_count) + ':' + (r.latest_unread_at || ''))
+    .sort()
+    .join('|');
+}
+
+const PORTAL_UNREAD_ACTIVE_MS = 20000;
+const PORTAL_UNREAD_IDLE_MS = 90000;
+function portalWatchUnread(supabaseClient, onChange, opts) {
+  opts = opts || {};
+  let lastSig = portalUnreadSignature(opts.baseline || []);
+  let lastCheck = Date.now();
+  let busy = false;
+  const isActive = typeof opts.isActive === 'function' ? opts.isActive : () => false;
+
+  async function check(force) {
+    if (busy || document.visibilityState === 'hidden') return;
+    const gap = isActive() ? PORTAL_UNREAD_ACTIVE_MS : PORTAL_UNREAD_IDLE_MS;
+    if (!force && Date.now() - lastCheck < gap) return;
+    busy = true;
+    lastCheck = Date.now();
+    try {
+      const rows = await portalLoadUnreadCounts(supabaseClient, { nullOnError: true });
+      if (!rows) return;
+      const sig = portalUnreadSignature(rows);
+      if (sig === lastSig) return;
+      lastSig = sig;
+      onChange(rows);
+    } finally {
+      busy = false;
+    }
+  }
+
+  // Coming back to the tab is exactly when a reply is most likely to be
+  // waiting (the email or push brought them back), so that check skips
+  // the timer -- but not twice within a few seconds (focus and
+  // visibilitychange usually fire together).
+  function onReturn() {
+    if (Date.now() - lastCheck > 3000) check(true);
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') onReturn(); });
+  window.addEventListener('focus', onReturn);
+  const timer = setInterval(() => check(false), 5000);
+
+  return {
+    check: () => check(true),
+    // After the page itself changes read state (a thread opened and
+    // marked read), so the next check isn't mistaken for news.
+    setBaseline: (rows) => { lastSig = portalUnreadSignature(rows); },
+    stop: () => clearInterval(timer),
+  };
+}
+
+// Pages that only show the nav badges (Quotes, Invoices, Contracts,
+// Settings): load once, then keep them current.
+let portalNavUnreadWatcher = null;
+function portalStartUnreadBadges(supabaseClient) {
+  return portalLoadUnreadCounts(supabaseClient).then((rows) => {
+    portalApplyNavUnreadBadges(rows);
+    if (!portalNavUnreadWatcher) portalNavUnreadWatcher = portalWatchUnread(supabaseClient, portalApplyNavUnreadBadges, { baseline: rows });
+    else portalNavUnreadWatcher.setBaseline(rows);
+    return rows;
+  });
+}
+
+// Keeps a thread's "Messages" button in step with its unread count:
+// the orange pill and the .has-unread outline, added or removed.
+function portalSyncThreadToggle(toggleEl, pillId, count) {
+  if (!toggleEl) return;
+  let pill = document.getElementById(pillId);
+  toggleEl.classList.toggle('has-unread', count > 0);
+  if (!count) { if (pill) pill.remove(); return; }
+  if (!pill) {
+    pill = document.createElement('span');
+    pill.className = 'portal-unread-pill';
+    pill.id = pillId;
+    toggleEl.appendChild(document.createTextNode(' '));
+    toggleEl.appendChild(pill);
+  }
+  pill.textContent = count + ' new';
+}
+
+// The "Triple H replied" bar at the top of Request and Jobs. Those tabs
+// get a badge when there's a reply, but opened on a blank request form
+// (or the check-up list) with the conversation somewhere below it. This
+// puts each unread conversation one tap away. items: [{ title, count,
+// action }] where action is the page's own inline handler to open it.
+function portalReplyNoticeHtml(items) {
+  const list = (items || []).filter(i => i && i.count > 0);
+  if (!list.length) return '';
+  const total = list.reduce((sum, i) => sum + i.count, 0);
+  const heading = total === 1 ? 'Triple H replied' : 'Triple H replied \u00b7 ' + total + ' new messages';
+  const shown = list.slice(0, 3);
+  const extra = list.length - shown.length;
+  return '<div class="portal-reply-notice">' +
+    '<div class="portal-reply-notice-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></svg></div>' +
+    '<div class="portal-reply-notice-body">' +
+      '<div class="portal-reply-notice-title">' + heading + '</div>' +
+      shown.map(i =>
+        '<button type="button" class="portal-reply-notice-item" onclick="' + portalThreadEscape(i.action) + '">' +
+          '<span class="portal-reply-notice-about">' + portalThreadEscape(i.title) + '</span>' +
+          '<span class="portal-unread-pill">' + i.count + ' new</span>' +
+          '<span class="portal-reply-notice-open">Open</span>' +
+        '</button>'
+      ).join('') +
+      (extra > 0 ? '<div class="portal-reply-notice-more">+ ' + extra + ' more below</div>' : '') +
+    '</div>' +
+  '</div>';
+}
+
+// Re-renders an open thread for a background refresh without losing
+// what the client was in the middle of typing, or their cursor. Leaves
+// the panel alone (returns false) while a send is in flight -- the
+// send re-renders the thread itself once it lands.
+function portalReplaceThreadKeepingDraft(panel, inputId, html) {
+  const prev = document.getElementById(inputId);
+  if (prev && prev.disabled) return false;
+  const draft = prev ? prev.value : '';
+  const hadFocus = !!prev && document.activeElement === prev;
+  panel.innerHTML = html;
+  const next = document.getElementById(inputId);
+  if (next && draft) { next.value = draft; portalAutosizeComposer(next); }
+  if (next && hadFocus) next.focus({ preventScroll: true });
+  return true;
+}
+
+// Scroll a card into view and open its thread if it isn't already.
+function portalOpenThreadFromNotice(cardId, toggleFn, threadId) {
+  const card = document.getElementById(cardId);
+  if (!card) return;
+  const toggle = card.querySelector('.portal-thread-toggle');
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  card.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  if (toggle && toggle.getAttribute('aria-expanded') !== 'true') toggleFn(threadId, toggle);
 }
 
 // ---------- Message threads (2026-09-22) ----------

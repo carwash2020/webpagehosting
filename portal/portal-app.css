@@ -593,6 +593,42 @@ body.portal-page .th-toast-container {
   background: var(--orange); color: #0a0a0a; font-size: 11px; font-weight: 800; line-height: 16px;
 }
 
+/* ---------- "Triple H replied" notice (2026-09-22) ----------
+   portalReplyNoticeHtml() -- top of Request and Jobs when a
+   conversation has an unread reply. One row per conversation; the
+   whole row is the button. */
+.portal-reply-notice {
+  display: flex; gap: 12px; align-items: flex-start;
+  margin: 0 0 18px; padding: 14px 14px 10px; border-radius: 12px;
+  background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border);
+  border-left: 3px solid var(--orange);
+}
+.portal-reply-notice-icon {
+  width: 34px; height: 34px; flex-shrink: 0; border-radius: 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(255, 128, 0, .16); color: var(--orange-light);
+}
+.portal-reply-notice-icon svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.portal-reply-notice-body { flex: 1; min-width: 0; }
+.portal-reply-notice-title { font-size: 14.5px; font-weight: 700; color: var(--white); margin: 6px 0 2px; }
+/* Negative left margin lines the row's text up with the heading while
+   keeping a padded hover/tap area. Title, pill and "Open" stay grouped
+   on the left: on a 1500px-wide desktop bar, a right-aligned "Open" sat
+   a long way from the thing it opens. */
+.portal-reply-notice-item {
+  display: flex; align-items: center; gap: 10px; width: calc(100% + 10px); min-height: 44px;
+  margin: 0 0 0 -10px; padding: 8px 10px; border: 0; border-radius: 8px; background: none;
+  color: var(--white); font: inherit; font-size: 14px; text-align: left; cursor: pointer;
+}
+.portal-reply-notice-item + .portal-reply-notice-item { border-top: 1px solid var(--orange-tint-border); border-radius: 0 0 8px 8px; }
+.portal-reply-notice-item:hover { background: rgba(255, 255, 255, .04); }
+.portal-reply-notice-item:focus-visible { outline: 2px solid var(--orange-light); outline-offset: -2px; }
+.portal-reply-notice-about { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.portal-reply-notice .portal-unread-pill { flex-shrink: 0; }
+.portal-reply-notice-open { color: var(--orange-light); font-weight: 700; font-size: 13px; flex-shrink: 0; margin-left: 2px; }
+.portal-reply-notice-open::after { content: ' \203A'; }
+.portal-reply-notice-more { font-size: 12.5px; color: var(--text-dim); padding: 4px 10px 2px; }
+
 /* ---------- Message threads (2026-09-22) ----------
    portalMessageThreadHtml() -- chat-style bubbles, a day divider when
    the day changes, time under each bubble, a "New" divider above the

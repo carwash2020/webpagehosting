@@ -67,7 +67,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/portal/portal-app.css?v=202609222345">
+<link rel="stylesheet" href="/portal/portal-app.css?v=202609230030">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -106,7 +106,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/portal/portal-app.js?v=202609222300"></script>
+<script src="/portal/portal-app.js?v=202609230030"></script>
 <!-- Shared business-hours data (2026-09-03) -- see business-hours.js's
      own header comment. This page used to keep its own FIFTH
      independent hand-typed copy of these exact constants. -->
@@ -327,6 +327,11 @@
     <div class="portal-rail-help-actions"><a href="tel:+14354141667">Call</a><a href="sms:+14354141667">Text</a></div>
   </div>
 </div>
+
+<!-- "Triple H replied" (2026-09-22): a reply on a finished job used to
+     sit below the check-up list with only the tab badge to say so.
+     Filled by renderJobReplyNotice(); empty when nothing is unread. -->
+<div id="replyNotice" aria-live="polite"></div>
 
 <!-- Desktop (1200px+, 2026-09-22): job history in the main column,
      check-up reminders and the warranty summary beside it. -->
@@ -752,12 +757,67 @@
       pill.remove();
     }
     portalApplyNavUnreadBadges(unreadRows);
+    renderJobReplyNotice();
+    if (jobUnreadWatcher) jobUnreadWatcher.setBaseline(unreadRows);
   }
 
-  async function loadAndRenderJobThread(jobId) {
+  // ---- Never miss a reply (2026-09-22) ----
+  // Same as work-orders.html's: a "Triple H replied" bar at the top, and
+  // badges/threads that catch up while the page is open.
+  let jobTitles = {};
+  let jobUnreadWatcher = null;
+
+  function jobThreadIsOpen(jobId) {
+    const panel = document.getElementById('jobMessages-' + jobId);
+    return !!panel && panel.style.display !== 'none';
+  }
+
+  function renderJobReplyNotice() {
+    const el = document.getElementById('replyNotice');
+    if (!el) return;
+    const items = unreadRows
+      .filter(r => r.thread_type === 'job' && jobTitles[r.thread_id] && jobUnreadCounts[r.thread_id] && !jobThreadIsOpen(r.thread_id))
+      .sort((a, b) => new Date(b.latest_unread_at) - new Date(a.latest_unread_at))
+      .map(r => ({ title: jobTitles[r.thread_id], count: jobUnreadCounts[r.thread_id], action: 'openJobThreadFromNotice(' + Number(r.thread_id) + ')' }));
+    el.innerHTML = portalReplyNoticeHtml(items);
+  }
+
+  function openJobThreadFromNotice(jobId) {
+    portalOpenThreadFromNotice('job-card-' + jobId, toggleJobMessages, jobId);
+  }
+
+  function watchJobUnread() {
+    if (jobUnreadWatcher) { jobUnreadWatcher.setBaseline(unreadRows); return; }
+    jobUnreadWatcher = portalWatchUnread(client, applyJobUnreadRows, {
+      baseline: unreadRows,
+      isActive: () => Object.keys(jobTitles).some(jobThreadIsOpen),
+    });
+  }
+
+  function applyJobUnreadRows(rows) {
+    unreadRows = rows;
+    const next = {};
+    rows.forEach(r => { if (r.thread_type === 'job') next[r.thread_id] = Number(r.unread_count) || 0; });
+    jobUnreadCounts = next;
+    const reload = [];
+    Object.keys(jobTitles).forEach(id => {
+      const n = next[id] || 0;
+      const open = jobThreadIsOpen(id);
+      if (n && open) reload.push(Number(id));
+      portalSyncThreadToggle(document.querySelector('#job-card-' + id + ' .portal-thread-toggle'), 'jobUnread-' + id, open ? 0 : n);
+    });
+    portalApplyNavUnreadBadges(rows);
+    renderJobReplyNotice();
+    reload.forEach(id => loadAndRenderJobThread(id, { quiet: true }));
+  }
+
+  // opts.quiet: background refresh of an open thread -- no skeleton
+  // flash, and the composer keeps its draft.
+  async function loadAndRenderJobThread(jobId, opts) {
     const panel = document.getElementById('jobMessages-' + jobId);
     if (!panel) return;
-    panel.innerHTML = portalSkeletonLines(2);
+    const quiet = !!(opts && opts.quiet);
+    if (!quiet) panel.innerHTML = portalSkeletonLines(2);
 
     const { data: messages, error } = await client
       .from('client_portal_job_messages')
@@ -766,7 +826,7 @@
       .order('created_at', { ascending: true });
 
     if (error) {
-      panel.innerHTML = '<p class="job-message-meta">Couldn\'t load messages right now.</p>';
+      if (!quiet) panel.innerHTML = '<p class="job-message-meta">Couldn\'t load messages right now.</p>';
       return;
     }
 
@@ -774,9 +834,14 @@
     // message timestamp through formatDate(), which appends 'T00:00:00'
     // to a date-only string -- on a full timestamptz that produced
     // "Invalid Date" under every single message.
-    panel.innerHTML =
+    const html =
       portalMessageThreadHtml(messages, { unreadCount: jobUnreadCounts[jobId] || 0, emptyText: 'No messages yet. Questions about this job? Ask below.' }) +
       portalComposerHtml('jobMessageInput-' + jobId, 'jobMessageSend-' + jobId, 'sendJobMessage(' + jobId + ')', 'Ask a question about this job...');
+    if (quiet) {
+      if (!portalReplaceThreadKeepingDraft(panel, 'jobMessageInput-' + jobId, html)) return;
+    } else {
+      panel.innerHTML = html;
+    }
     portalScrollThreadToEnd(panel);
 
     if ((messages || []).some(m => m.sender_type === 'internal')) {
@@ -931,6 +996,10 @@
     jobUnreadCounts = {};
     unread.forEach(r => { if (r.thread_type === 'job') jobUnreadCounts[r.thread_id] = Number(r.unread_count) || 0; });
     portalApplyNavUnreadBadges(unreadRows);
+    jobTitles = {};
+    (jobs || []).forEach(j => { jobTitles[j.id] = j.title || 'Your job'; });
+    watchJobUnread();
+    renderJobReplyNotice();
 
     if (error) {
       listEl.innerHTML = `<div class="empty-state is-error"><div class="empty-state-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v6"/><circle cx="12" cy="16.75" r="0.6" fill="currentColor" stroke="none"/></svg></div><p class="empty-state-title">Couldn't load your job history right now. Please try again in a moment.</p></div>`;
