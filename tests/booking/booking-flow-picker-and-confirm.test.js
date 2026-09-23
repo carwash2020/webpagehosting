@@ -444,15 +444,19 @@ test('a slot taken at the last second sends the visitor back to fresh times WITH
 // triage.js on each real page, instead of evaluating the old inline block.
 
 const TRIAGE_JS = fs.readFileSync(repo('js', 'triage.js'), 'utf8');
-const TRIAGE_PAGES = ['index.html',
+const TRIAGE_TAG = /<script src="\/js\/triage\.js\?v=[a-f0-9]+" defer><\/script>/;
+// Every candidate page, read once and shared by all the tests below.
+const PAGE_HTML = new Map(['index.html',
   ...fs.readdirSync(repo('locations')).filter((f) => f.endsWith('.html')).map((f) => `locations/${f}`),
   ...fs.readdirSync(repo('services')).filter((f) => f.endsWith('.html')).map((f) => `services/${f}`),
-].filter((f) => /<script src="\/js\/triage\.js\?v=[a-f0-9]+" defer><\/script>/.test(fs.readFileSync(repo(f), 'utf8')));
+].map((f) => [f, fs.readFileSync(repo(f), 'utf8')]));
+const TRIAGE_PAGES = [...PAGE_HTML].filter(([, html]) => TRIAGE_TAG.test(html)).map(([f]) => f);
 
-function loadTriagePage(file) {
-  const html = fs.readFileSync(repo(file), 'utf8')
-    .replace(/<script src="\/js\/triage\.js\?v=[a-f0-9]+" defer><\/script>/, () => `<script>${TRIAGE_JS}</script>`);
-  const dom = new JSDOM(html, {
+// Runs a real page with the real triage.js inlined. `edit` lets a test
+// change the page first (e.g. drop the opt-in marker).
+function loadTriagePage(file, edit = (html) => html) {
+  const html = edit(PAGE_HTML.get(file)).replace(TRIAGE_TAG, () => `<script>${TRIAGE_JS}</script>`);
+  return new JSDOM(html, {
     runScripts: 'dangerously',
     url: 'https://www.triplehenterprisesllc.biz/' + file,
     beforeParse(window) {
@@ -461,7 +465,6 @@ function loadTriagePage(file) {
       window.matchMedia = (q) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} });
     },
   });
-  return dom;
 }
 
 test('the homepage and every city/service page that loads triage.js are all covered (13)', () => {
@@ -493,7 +496,7 @@ for (const file of TRIAGE_PAGES) {
 
 test('the handoff is opt-in: exactly one marked link per page, inside the triage result, and no inline copy left on the homepage', () => {
   for (const file of TRIAGE_PAGES) {
-    const html = fs.readFileSync(repo(file), 'utf8');
+    const html = PAGE_HTML.get(file);
     assert.equal((html.match(/data-triage-book-link/g) || []).length, 1, file);
     assert.match(html, /<div class="triage-actions">[\s\S]*?<a href="\/booking\.html" class="cta-quiet-link" data-triage-book-link>[\s\S]*?<\/div>/, file);
   }
@@ -503,10 +506,7 @@ test('the handoff is opt-in: exactly one marked link per page, inside the triage
 });
 
 test('a page with the triage tool but no marked link keeps its Book link untouched', () => {
-  const html = fs.readFileSync(repo('index.html'), 'utf8')
-    .replace(' data-triage-book-link>', '>')
-    .replace(/<script src="\/js\/triage\.js\?v=[a-f0-9]+" defer><\/script>/, () => `<script>${TRIAGE_JS}</script>`);
-  const dom = new JSDOM(html, { runScripts: 'dangerously', url: 'https://www.triplehenterprisesllc.biz/', beforeParse(window) { window.fetch = () => Promise.reject(new Error('offline')); window.HTMLElement.prototype.scrollIntoView = function () {}; } });
+  const dom = loadTriagePage('index.html', (html) => html.replace(' data-triage-book-link>', '>'));
   const doc = dom.window.document;
   doc.querySelector('.triage-appliance-pill').dispatchEvent(new dom.window.Event('click', { bubbles: true }));
   doc.querySelector('.triage-symptom-pill').dispatchEvent(new dom.window.Event('click', { bubbles: true }));
