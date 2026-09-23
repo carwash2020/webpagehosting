@@ -364,6 +364,12 @@
   .wo-status.is-completed { border-color: #2e5c46; background: rgba(46,92,70,0.18); color: #4caf78; }
   .wo-status.is-declined  { background: var(--bg-panel-2); color: var(--text-dim); }
   .wo-status.is-cancelled { background: var(--bg-panel-2); color: var(--text-dim); }
+  .wo-cancel-ask {
+    display: block; margin: 10px 0 0 auto; padding: 6px 2px; min-height: 32px;
+    background: none; border: 0; color: var(--text-dim); font: inherit; font-size: 13px;
+    text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+  }
+  .wo-cancel-ask:hover { color: var(--orange-light); }
   /* A real progress track (2026-09-07): the status pill already told a
      client where a request stood, but as a single word with no sense
      of how much further there was to go. Reuses the exact real pipeline
@@ -996,13 +1002,25 @@
              explicit list of "open" statuses) with no record of why,
              so past that point the fix is a real call or text instead. -->
         ${statusKey === 'submitted' ? `<button type="button" class="btn secondary-btn" style="width:100%; justify-content:center; margin-top:8px;" onclick="cancelWorkOrder(${wo.id})">Cancel request</button>` : ''}
+        <!-- Past 'submitted' (2026-09-22): not a status change -- Steve
+             may have parts ordered or a time held -- but no longer
+             "call or text us" either. It asks, in the request's own
+             thread, and he confirms there. -->
+        ${ASK_TO_CANCEL_STATUSES.includes(statusKey) ? `<button type="button" class="wo-cancel-ask" onclick="askToCancelWorkOrder(${wo.id})">Need to cancel?</button>` : ''}
       </div>
     `;
   }
 
+  // Cancel, and say why (2026-09-22). The reason is optional; either way
+  // cancel-work-order posts "I've cancelled this request" on the thread,
+  // which emails Triple H -- a cancel used to be completely silent.
   async function cancelWorkOrder(id) {
-    const confirmed = await portalConfirm('Cancel this request? This can\'t be undone.', { confirmLabel: 'Cancel request' });
-    if (!confirmed) return;
+    const reason = await portalPromptTextarea('Cancel this request? We\'ll let Triple H know. Want to tell us why? (optional)', {
+      confirmLabel: 'Cancel request',
+      cancelLabel: 'Keep it',
+      placeholder: 'e.g. Fixed it myself, or found someone sooner',
+    });
+    if (reason === null) return;
     const { data: { session } } = await client.auth.getSession();
     if (!session) { window.location.replace('/portal/login.html'); return; }
     try {
@@ -1013,18 +1031,50 @@
           'apikey': SUPABASE_ANON_KEY,
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ work_order_id: id }),
+        body: JSON.stringify({ work_order_id: id, reason }),
       });
       const result = await res.json();
       if (!result.ok) {
         showToast(result.error || "Couldn't cancel that request. Please try again.", { type: 'error' });
         return;
       }
-      showToast('Request cancelled.');
+      showToast(result.notified ? "Request cancelled. We've let Triple H know." : 'Request cancelled.');
       renderMyRequests();
     } catch (e) {
       showToast("Couldn't reach the server. Please check your connection and try again.", { type: 'error' });
     }
+  }
+
+  // Asking to cancel something already in progress: a message on the
+  // request's thread (the normal client insert, same as typing it in
+  // Messages), which emails Triple H like any reply. The status is left
+  // for Steve to change once he's sorted out parts or a held time.
+  const ASK_TO_CANCEL_STATUSES = ['reviewing', 'quoted', 'scheduled'];
+  async function askToCancelWorkOrder(id) {
+    const reason = await portalPromptTextarea('We\'ve already started on this one, so we\'ll confirm the cancellation with you by message. Anything we should know? (optional)', {
+      confirmLabel: 'Ask to cancel',
+      cancelLabel: 'Keep it',
+      placeholder: 'e.g. Plans changed, or it started working again',
+    });
+    if (reason === null) return;
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) { window.location.replace('/portal/login.html'); return; }
+    const { error } = await client.from('client_portal_work_order_messages').insert({
+      work_order_id: id,
+      sender_type: 'client',
+      sender_email: session.user.email,
+      message: 'Please cancel this request.' + (reason ? '\n\n' + reason : ''),
+    });
+    if (error) {
+      showToast("Couldn't send that just now. Please try again, or call or text us.", { type: 'error' });
+      return;
+    }
+    showToast("Sent. We'll confirm here by message.");
+    // Show them what went, in the thread where the answer will come.
+    const card = document.getElementById('wo-card-' + id);
+    const toggle = card && card.querySelector('.portal-thread-toggle');
+    if (woThreadIsOpen(id)) loadAndRenderThread(id);
+    else if (toggle) toggleMessages(id, toggle);
   }
 
   // Matches the same timezone-aware display already used in the
