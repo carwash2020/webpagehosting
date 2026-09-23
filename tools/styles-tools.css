@@ -2765,3 +2765,57 @@ a.th-cmdk-item:hover { background: var(--orange-tint-soft); }
 .th-search-field .th-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--text-dim); pointer-events: none; }
 body .th-search-field input { width: 100%; box-sizing: border-box; padding-left: 42px; min-height: 48px; border-radius: 12px; }
 @media (prefers-reduced-motion: reduce) { .th-row { transition: none; } .th-icon-btn:active { transform: none; } }
+
+/* ---- On the clock (2026-09-23, Workspace rework part 9) ----
+   A running job's clock, above the bottom bar on a phone and bottom-right
+   on a computer: pulsing dot, job and client, the time in tabular
+   figures, and an orange Stop. Under the sheets (950) and the bar (900),
+   over the page. */
+.th-clock {
+  position: fixed; z-index: 890;
+  left: max(12px, env(safe-area-inset-left)); right: max(12px, env(safe-area-inset-right));
+  bottom: calc(94px + env(safe-area-inset-bottom, 0px));
+  display: flex; align-items: center; gap: 4px; padding: 5px;
+  border-radius: 18px; border: 1px solid var(--orange-dark);
+  background: color-mix(in srgb, var(--bg-panel) 90%, transparent);
+  -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.32);
+}
+.th-clock[hidden] { display: none; }
+.th-clock-main {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px;
+  padding: 6px 8px 6px 12px; border-radius: 13px; color: var(--white); text-decoration: none;
+}
+.th-clock-dot {
+  width: 10px; height: 10px; flex-shrink: 0; border-radius: 50%; background: var(--orange);
+  animation: th-clock-pulse 1.6s ease-out infinite;
+}
+@keyframes th-clock-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 128, 0, 0.55); }
+  70%, 100% { box-shadow: 0 0 0 9px rgba(255, 128, 0, 0); }
+}
+.th-clock-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; line-height: 1.2; }
+.th-clock-label { font-size: 10.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--orange-light); }
+.th-clock-title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.th-clock-time { flex-shrink: 0; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
+.th-clock-stop {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 15px;
+  border: 0; border-radius: 13px; cursor: pointer;
+  background: linear-gradient(165deg, var(--orange-light), var(--orange) 70%);
+  color: #1a0d02; font: inherit; font-size: 14px; font-weight: 800;
+}
+.th-clock-stop .th-icon { width: 13px; height: 13px; margin: 0; }
+/* The Stop sheet's title: the time is the headline, not a small-caps label. */
+.th-clock-sheet-head { display: block; text-transform: none; letter-spacing: 0; font-size: 15px; font-weight: 600; color: var(--text); }
+.th-clock-sheet-head strong { display: block; margin-bottom: 2px; font-size: 24px; font-weight: 800; color: var(--white); font-variant-numeric: tabular-nums; }
+.th-clock-sheet-sub { display: block; margin-top: 6px; font-size: 13px; font-weight: 500; color: var(--text-dim); text-transform: none; letter-spacing: 0; }
+@media (prefers-reduced-motion: reduce) { .th-clock-dot { animation: none; } }
+@media (max-width: 1023px) {
+  body.th-has-bottomnav.th-has-clock { padding-bottom: calc(158px + env(safe-area-inset-bottom, 0px)); }
+  body.th-has-bottomnav.th-has-clock .th-toast-container { bottom: calc(158px + env(safe-area-inset-bottom, 0px) + 12px); }
+}
+@media (min-width: 1024px) {
+  .th-clock { left: auto; right: 24px; bottom: 20px; width: 360px; }
+  body.th-has-clock { padding-bottom: 88px; }
+  body.th-has-clock .th-toast-container { bottom: 96px; }
+}

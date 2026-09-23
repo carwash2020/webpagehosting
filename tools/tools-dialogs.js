@@ -516,7 +516,10 @@ function swallowNextClick(el) {
 
 // Small bottom-sheet action menu, triggered by attachLongPress above.
 // actions: [{ label, onClick, isDanger }]
-function showQuickActionSheet(title, actions) {
+// options.cancelLabel (2026-09-23): when closing the sheet means something
+// ("Not done yet" after stopping a job's clock), say so instead of Cancel.
+function showQuickActionSheet(title, actions, options) {
+  const cancelLabel = (options && options.cancelLabel) || 'Cancel';
   const overlay = document.createElement('div');
   overlay.className = 'quick-actions-overlay';
   const sheet = document.createElement('div');
@@ -526,7 +529,7 @@ function showQuickActionSheet(title, actions) {
     actions.map((a, i) =>
       '<button class="quick-actions-btn' + (a.isDanger ? ' is-danger' : '') + '" data-action-index="' + i + '">' + a.label + '</button>'
     ).join('') +
-    '<button class="quick-actions-btn quick-actions-cancel">Cancel</button>';
+    '<button class="quick-actions-btn quick-actions-cancel">' + cancelLabel + '</button>';
 
   function close() {
     overlay.classList.remove('is-shown');

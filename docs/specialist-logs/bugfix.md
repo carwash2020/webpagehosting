@@ -911,3 +911,20 @@ Tests: `tests/tools/quick-add.test.js`.
   the caret at the start.
 
 Tests: `tests/tools/quick-add-anywhere.test.js`.
+
+
+## 2026-09-23 -- Job detail's photos went back to "Loading..." on every re-render (Workspace rework part 9)
+
+- `renderJobDetail()` rebuilds the whole page body, including the
+  Photos grid as a "Loading..." placeholder.
+- Only the first load (`loadPhotosReadOnly`) fills the grid. So any
+  re-render left it saying Loading... for good: a live-sync change from
+  another device, and (the reason it came up) the clock's Start / Stop
+  re-rendering the page.
+- The grid is now marked `data-loaded` once filled, and
+  `renderJobDetail()` carries a loaded grid's contents across the
+  rebuild.
+- `loadPhotosReadOnly()` looks the grid up again after its awaits,
+  since a re-render may have replaced the element meanwhile.
+
+Tests: `tests/tools/job-clock.test.js`.

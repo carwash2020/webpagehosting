@@ -52,14 +52,14 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=f4af312884">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=63481e0cf9">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=4cfac4b10e" defer></script>
-<script src="/tools/data-layer.js?v=0eeb0b02fa" defer></script>
+<script src="/tools/data-layer.js?v=1bf38c5a61" defer></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
-<script src="/tools/tools-dialogs.js?v=33199ae1d8" defer></script>
+<script src="/tools/tools-dialogs.js?v=310315eb44" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=4b4d783f9a" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=b4709f3f09" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <script src="/tools/tools-tour.js?v=118148b9a2" defer></script>
 <style>
@@ -331,6 +331,9 @@
   .badge-warranty.is-expired { background: var(--bg-panel-2); color: var(--text-dim); }
   /* Money pills (2026-09-22, rework part 5). To invoice is the loud one: a
      solid orange link, because it is the only one that asks for action. */
+  .badge-clock { display: inline-flex; align-items: center; gap: 6px; background: var(--orange-tint-soft); color: var(--orange-light); border: 1px solid var(--orange-dark); }
+  .badge-clock-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--orange); animation: th-clock-pulse 1.6s ease-out infinite; }
+  @media (prefers-reduced-motion: reduce) { .badge-clock-dot { animation: none; } }
   .badge-money { border: 1px solid transparent; }
   a.badge-money { text-decoration: none; }
   .badge-money.is-to-invoice { background: linear-gradient(165deg, var(--orange-light), var(--orange) 70%); color: #1a0d02; }
@@ -1532,6 +1535,12 @@
     const jobs = loadJobs();
     const job = jobs.find(j => j.id === id);
     if (!job || job.status === newStatus) return;
+    // Done with the clock still running: the time counts, so stop it (and
+    // save it) first, then carry on with the jobs it just saved.
+    if (newStatus === 'done' && typeof thJobClockSince === 'function' && thJobClockSince(job) !== null && typeof thStopJobClock === 'function') {
+      thStopJobClock(id);
+      return setJobStatus(id, newStatus);
+    }
     const wasNotDone = job.status !== 'done';
     job.status = newStatus;
     job.statusChangedAt = new Date().toISOString();
@@ -2124,6 +2133,12 @@
     return pill ? '<span class="badge badge-money ' + pill[0] + '">' + pill[1] + '</span>' : '';
   }
 
+  // A running clock on the job's row (2026-09-23, rework part 9).
+  function jobClockBadgeHtml(job) {
+    if (typeof thJobClockSince !== 'function' || thJobClockSince(job) === null) return '';
+    return '<span class="badge badge-clock" title="Its clock is running"><span class="badge-clock-dot" aria-hidden="true"></span>On the clock</span> ';
+  }
+
   function jobCardHtml(job, marginData, opts) {
     opts = opts || {};
     const isDone = job.status === 'done';
@@ -2139,7 +2154,7 @@
       ? `<span class="badge" style="background:${margin.margin >= 0 ? 'rgba(76,175,80,0.15)' : 'rgba(224,82,82,0.15)'}; color:${margin.margin >= 0 ? '#6fcf97' : '#e0807a'};">${margin.margin >= 0 ? '+' : ''}${money(margin.margin)}</span>${effectiveRateHtml}`
       : '';
     const dateDisplay = job.date ? new Date(job.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'No date set';
-    const moneyPillHtml = jobMoneyPillHtml(job, marginData);
+    const moneyPillHtml = jobClockBadgeHtml(job) + jobMoneyPillHtml(job, marginData);
     // Call / Directions / More (2026-09-22, Workspace rework part 3): on a
     // phone or tablet the card's action row is just Done plus these three
     // round buttons -- what a handyman does from a job card in the truck.
@@ -2315,7 +2330,7 @@
         <tr class="${isDone ? 'is-done' : ''}" data-job-id="${job.id}">
           <td class="jt-title-cell">${personDot(job.lastEditedBy, 'Last edited by')}<a href="/tools/job-detail.html?id=${job.id}" class="jt-title-link">${escapeHtml(job.title)}</a>${warrantyBadgeHtml(job)}</td>
           <td>${job.client ? escapeHtml(job.client) : '&mdash;'}</td>
-          <td><span class="badge badge-status status-${job.status}">${STATUS_LABEL[job.status]}</span> ${jobMoneyPillHtml(job, marginData)}</td>
+          <td><span class="badge badge-status status-${job.status}">${STATUS_LABEL[job.status]}</span> ${jobClockBadgeHtml(job)}${jobMoneyPillHtml(job, marginData)}</td>
           <td><span class="badge badge-${job.priority}">${job.priority}</span></td>
           <td>${dateDisplay}</td>
           <td>${job.phone ? escapeHtml(job.phone) : '&mdash;'}</td>
@@ -2381,6 +2396,12 @@
     const job = jobs.find(j => j.id === jobId);
     if (!job || typeof showQuickActionSheet !== 'function') return;
     const actions = [];
+    // The job's clock (2026-09-23, rework part 9) leads: on site it's the
+    // thing you reach for first.
+    if (typeof thJobClockSince === 'function' && typeof thStartClock === 'function') {
+      if (thJobClockSince(job) !== null) actions.push({ label: 'Stop the clock (' + thFormatClock(thJobClockElapsedMs(job)) + ')', onClick: () => thStopClock(jobId) });
+      else if (job.status !== 'done') actions.push({ label: 'Start the clock', onClick: () => thStartClock(jobId) });
+    }
     if (job.status !== 'done') {
       actions.push({ label: 'Mark Done', onClick: () => setJobStatus(jobId, 'done') });
     }
@@ -3444,6 +3465,20 @@
       if (typeof startRealtimeSync === 'function') {
         startRealtimeSync(onRealtimeChange, updateRealtimeBadge);
       }
+      // Clock started or stopped (here, the shell's bar, or job detail in
+      // another tab): re-render, and bring an open edit form's hours and
+      // status up to date so saving it doesn't write the old ones back.
+      window.addEventListener('th-clock-change', (e) => {
+        renderJobs();
+        const id = e && e.detail ? e.detail.jobId : null;
+        if (editingJobId !== null && String(editingJobId) === String(id)) {
+          const job = loadJobs().find(j => String(j.id) === String(id));
+          if (job) {
+            document.getElementById('jobHoursWorked').value = job.hoursWorked || '';
+            document.getElementById('jobStatus').value = job.status || 'not-started';
+          }
+        }
+      });
       // A guest cancelling or rescheduling through manage-booking.html
       // updates the calendar's booking dots live, same as calendar.html did.
       if (typeof startBookingsRealtime === 'function') {

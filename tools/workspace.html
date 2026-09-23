@@ -68,7 +68,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=f4af312884">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=63481e0cf9">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=4cfac4b10e" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -77,11 +77,11 @@
      manage-booking.html, portal/quotes.html, and portal/jobs.html use. -->
 <script src="/js/business-hours.js?v=5296319b73"></script>
 <script src="/tools/push-notifications.js?v=180abd2a84" defer></script>
-<script src="/tools/data-layer.js?v=0eeb0b02fa" defer></script>
+<script src="/tools/data-layer.js?v=1bf38c5a61" defer></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
-<script src="/tools/tools-dialogs.js?v=33199ae1d8" defer></script>
+<script src="/tools/tools-dialogs.js?v=310315eb44" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=4b4d783f9a" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=b4709f3f09" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <script src="/tools/tools-tour.js?v=118148b9a2" defer></script>
 <style>
@@ -218,6 +218,8 @@
   .today-next-job-meta { color: var(--text-dim); font-size: 13.5px; line-height: 1.8; }
   .today-next-job-meta a { color: var(--orange-light); text-decoration: none; }
   .today-next-job-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  .today-clock-btn { display: inline-flex; align-items: center; gap: 8px; }
+  .today-clock-btn .th-icon { width: 13px; height: 13px; margin: 0; }
 
   .today-side { display: flex; flex-direction: column; gap: 14px; }
   .today-money, .today-restofday {
@@ -948,6 +950,7 @@
         <li><strong>Rest of Today</strong> &mdash; whatever else is on today's schedule after the next job.</li>
         <li><strong>New job / Create invoice / Find client / Calendar / Quick charge / Log expense</strong> &mdash; the six daily actions, one tap each. Quick charge takes a card payment on the spot with no invoice; Log expense opens Finance on the Expenses tab with the receipt form ready. On a phone the bar at the bottom is Home, Jobs, the orange <strong>+</strong>, Clients, and Money (Invoices and Finance, with a switch at the top of either to hop between them); the grid button at the top right opens the rest (Route Planner, Runway, Contracts, Reviews, the Appliance Wiki, Settings). On a computer everything is in the sidebar.</li>
         <li><strong>Create anything</strong> &mdash; the orange <strong>+</strong> in the middle of the bar (or <strong>New</strong> at the top of the sidebar, or the <strong>N</strong> key) starts a job, invoice, quote, quick charge, expense, income entry, contact, contract, or review request from any page. Or type (or say, with the microphone) what you need at the top of it: &ldquo;sink leak for Sarah tomorrow 2pm&rdquo; opens a new job with Sarah Miller's details, the date, and the time filled in; start with <strong>invoice</strong>, <strong>quote</strong>, or <strong>expense</strong> for those (&ldquo;invoice Tom $85&rdquo;, &ldquo;expense $48 Home Depot drain pump&rdquo;). You check it and save it on the form, same as always. Search (Ctrl+K) offers the same thing as its top result. A client texted you? Copy it, then tap <strong>Paste a client&rsquo;s text</strong> under the field, and it pulls out what's wrong, who, and when, and keeps the message itself in the job's notes. On Android, share the text straight to Triple H from Messages. On iPhone, a Shortcut can open <code>/tools/workspace.html?quick=</code> followed by the text. The home-screen icon's <strong>Quick add</strong> shortcut opens it too.</li>
+        <li><strong>On the clock</strong> &mdash; tap <strong>Start the clock</strong> when you get to a job (on the job, on its card in Jobs, or on Next Job here) and a bar with the time ticking follows you to every page, and to your other devices once they sync. <strong>Stop</strong> adds the time to the job's hours and asks what's next: <strong>Done &mdash; create the invoice</strong> opens an invoice with the labor line already filled from those hours. Stopped by mistake? <strong>Keep the clock running</strong> puts it back. Starting another job's clock stops the first and keeps its time.</li>
         <li><strong>Search anywhere</strong> &mdash; the magnifier at the top right of every page (or Ctrl+K / &#8984;K on a computer, or the Search row at the top of the sidebar) finds any job, contact, invoice, quote, or contract by name and jumps straight to it, and lists every action in the app (Log expense, New quote, Quick charge, Plan a route...) so you never have to remember which page something lives on. Type a few letters and pick.</li>
         <li><strong>Needs attention</strong> &mdash; the ops inbox, open by default: work requests, new leads, applicants, and online bookings that still need a response (an empty group hides itself, so you only see what's waiting); jobs due this week; clients overdue for a follow-up; <strong>Ready to invoice</strong> &mdash; jobs finished in the last 60 days with no invoice and no payment logged, oldest first, each with an <strong>Invoice</strong> button (the &middot;&middot;&middot; covers &ldquo;paid another way&rdquo; and &ldquo;no charge&rdquo;); and invoices still unpaid, with paid ones folded away underneath. Tap the heading to collapse it if you'd rather &mdash; your choice is remembered on this device.</li>
         <li><strong>Business</strong> &mdash; everything you check occasionally rather than daily, each collapsed until you want it: Business Snapshot (revenue, expenses, net, outstanding), Analytics (job status, top vendors and clients, lead sources), Compliance &amp; Documents (insurance, LLC/tax info, city licenses, secure files), and the Website Gallery Queue (photos starred in the Job Tracker, review-only). Backup &amp; Restore lives in Dev Tools (Session tab).</li>
@@ -3054,8 +3057,23 @@
     const job = todaysJobs[0];
     const routeStops = todayRouteAddresses(todaysJobs).length;
     const routeUrl = buildTodayRouteUrl(todaysJobs);
+    // The job's clock (2026-09-23, rework part 9): Start when you get
+    // there, from the card you're already looking at.
+    const clockOn = typeof thJobClockSince === 'function' && thJobClockSince(job) !== null;
+    const clockBtn = typeof thStartClock !== 'function' ? '' : clockOn
+      ? '<button type="button" class="secondary-btn today-clock-btn" data-clock-job="' + escapeAttr(job.id) + '" data-clock-action="stop"><svg class="th-icon" aria-hidden="true"><use href="#icon-stop" xlink:href="#icon-stop"></use></svg>Stop the clock</button>'
+      : '<button type="button" class="secondary-btn today-clock-btn" data-clock-job="' + escapeAttr(job.id) + '" data-clock-action="start"><svg class="th-icon" aria-hidden="true"><use href="#icon-play" xlink:href="#icon-play"></use></svg>Start the clock</button>';
+    if (!nextEl.dataset.clockWired) {
+      nextEl.dataset.clockWired = '1';
+      nextEl.addEventListener('click', (e) => {
+        const btn = e.target.closest('.today-clock-btn');
+        if (!btn) return;
+        if (btn.dataset.clockAction === 'stop') thStopClock(btn.dataset.clockJob);
+        else thStartClock(btn.dataset.clockJob);
+      });
+    }
     nextEl.innerHTML = `
-      <div class="today-next-job-label">Next Job</div>
+      <div class="today-next-job-label">${clockOn ? 'On the clock' : 'Next Job'}</div>
       <p class="today-next-job-title"><span class="badge badge-${job.priority}">${job.priority}</span> ${escapeHtml(job.title)}${job.client ? ' &mdash; ' + escapeHtml(job.client) : ''}</p>
       <div class="today-next-job-meta">
         ${job.address ? '<a href="https://maps.google.com/?q=' + encodeURIComponent(job.address) + '" target="_blank" rel="noopener">' + escapeHtml(job.address) + '</a>' : 'No address on file'}<br>
@@ -3063,6 +3081,7 @@
       </div>
       <div class="today-next-job-actions">
         <a href="/tools/job-detail.html?id=${encodeURIComponent(job.id)}" class="primary-btn">Open Job</a>
+        ${clockBtn}
         ${routeUrl ? `<a href="${escapeAttr(routeUrl)}" class="secondary-btn" target="_blank" rel="noopener" id="todayRouteLink">${routeStops === 1 ? 'Directions' : 'Route today \u00b7 ' + routeStops + ' stops'}</a>` : '<a href="/tools/job-tracker.html" class="secondary-btn">View in Job Tracker</a>'}
       </div>`;
 
@@ -3397,6 +3416,7 @@
       renderWelcomeGreeting();
       renderSnapshotLastUpdated();
       renderMfaNagBanner();
+      window.addEventListener('th-clock-change', renderTodayHero);
       if (typeof startRealtimeSync === 'function') {
         // One status callback shared by both channels -- last status wins,
         // which is fine here since they're on the same underlying connection.
