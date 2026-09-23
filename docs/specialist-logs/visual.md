@@ -1554,4 +1554,17 @@ Numbers are in README. Worth knowing before touching them again:
   runs), which is a different element, not a faster page. Compare LCP
   entries for the hero: 2.10s → 2.01s, no slower.
 
+## 2026-09-23 (late) -- round 4: reduced motion reaches pseudo-elements, delays and JS scrolls
+
+Found with `document.getAnimations()` under emulated reduced motion. It lists pseudo-element animations and reports each one's delay and fill.
+
+- **`*` never matches `::before`/`::after`.** The global rule is now `*, *::before, *::after`. Before, these kept animating for reduced-motion visitors:
+  - the homepage "open now" dot's infinite pulse (`openDotPulse` on `.dot::after`);
+  - the process timeline's 0.9s draw (`.process::before`);
+  - the blog/about h2 underline's 0.8s draw (`.blog-article h2::before`).
+- **Zeroing durations isn't enough; delays count too.** The service-area diagram's spokes and nodes have staggered delays up to 1.15s with `fill: backwards`. So even at 0.001ms duration they sat hidden and then popped in. The rule now also sets `animation-delay:0s` and `transition-delay:0s`. Every delay in styles.css and blog.css is a reveal stagger, so nothing else relied on them.
+- **The rule doesn't reach `::-webkit-slider-thumb`,** and it doesn't need to. The teardown and reveal "try me" pulses only start when the page script adds `.is-hinting`, which it never does for reduced motion. The styles.css comment that said otherwise is corrected.
+- **JS `behavior:'smooth'` overrides CSS `scroll-behavior:auto`.** Back-to-top (`index.html`) and the triage result (`js/triage.js`) now pass `'auto'` under reduced motion. The service modal's scroll to `#schedule` is booking-lane code, so it's logged in `features.md`.
+- **Result:** with reduced motion, the probe finds 0 perceptible animations on the homepage, about, a service page, a city page and a blog post (the homepage had 5). Settled screenshots under reduced motion are pixel-identical to before, apart from one strip of live text that differs between two loads of the *old* build too. Normal-motion behaviour is untouched, because the change sits inside the media query.
+
 <!-- Add new entries above this line -->

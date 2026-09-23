@@ -133,7 +133,9 @@
           Array.prototype.forEach.call(symptomPanel.children, function (b) { b.setAttribute('aria-pressed', 'false'); });
           sBtn.setAttribute('aria-pressed', 'true');
           showSymptomResult(s);
-          result.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // behavior:'smooth' here overrides the CSS reduced-motion reset.
+          const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          result.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
         });
         symptomPanel.appendChild(sBtn);
       });

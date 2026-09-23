@@ -81,7 +81,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="styles.css?v=c897dd6da4">
+<link rel="stylesheet" href="styles.css?v=503dd19b44">
 <!-- Improvement roadmap (2026-09-09), tier 1: the hero background is a
      CSS background-image (see .hero in styles.css), so the browser
      doesn't discover it until CSS is parsed -- likely this page's LCP
@@ -2845,7 +2845,10 @@
       backToTopBtn.classList.toggle('is-visible', window.scrollY > 600);
     }, { passive: true });
     backToTopBtn.addEventListener('click', () => {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // An explicit behavior:'smooth' overrides the CSS scroll-behavior
+      // reset, so reduced motion has to be honoured here too.
+      const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
     });
   }
 
@@ -3379,7 +3382,7 @@
 
 
 
-<script src="/js/triage.js?v=61b78f0f3e" defer></script>
+<script src="/js/triage.js?v=3a0a8ab5aa" defer></script>
 <script src="/js/analytics-events.js?v=4a6fd9aa19" defer></script>
 <script src="/js/mobile-nav-collapsible.js" defer></script>
 </body>

@@ -2824,4 +2824,10 @@ Every Send-Push caller was re-checked before deploy. The 4 trigger functions and
 - a reschedule queues +2 and clears `reminder_sent_at`
 - a cancel queues +2
 
+## 2026-09-23 -- note from the visual lane: one smooth scroll in the booking hand-off ignores reduced motion
+
+- `index.html`'s service modal ("Request this service") runs `document.getElementById('schedule').scrollIntoView({behavior:'smooth'})`. An explicit `'smooth'` in script overrides the CSS `scroll-behavior:auto` reset, so reduced-motion visitors still get the animated scroll.
+- The fix is one line: `const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;` and then `behavior: reduced ? 'auto' : 'smooth'`. That's the same fix the visual lane applied to back-to-top and the triage result.
+- It's left for the booking lane because it's in the booking entry point. `tests/design/reduced-motion-coverage.test.js` allowlists this one call, so fixing it won't break that test.
+
 <!-- Add new entries above this line -->

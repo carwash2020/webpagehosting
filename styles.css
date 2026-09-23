@@ -286,9 +286,17 @@
   ::-webkit-scrollbar-thumb{background:var(--border); border-radius:6px;}
   ::-webkit-scrollbar-thumb:hover{background:var(--blue-dark);}
   html{scroll-behavior:smooth;}
+  /* Reduced motion (widened 2026-09-23). `*` alone never matches
+     ::before/::after, so every pseudo-element animation kept running for
+     reduced-motion visitors: the "open now" dot's infinite pulse, the
+     process timeline's 0.9s draw, the blog/about h2 underline's 0.8s
+     draw. Durations were zeroed but delays weren't, so the service-area
+     diagram's spokes and nodes still sat hidden for up to 1.15s and then
+     popped in. Every delay in this file and blog.css is a reveal
+     stagger, so zeroing them all is safe. */
   @media (prefers-reduced-motion: reduce){
     html{scroll-behavior:auto;}
-    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+    *, *::before, *::after{animation-duration:0.001ms !important; animation-iteration-count:1 !important; animation-delay:0s !important; transition-duration:0.001ms !important; transition-delay:0s !important;}
     ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) {
       animation-duration: 0.001ms !important;
     }
@@ -3149,9 +3157,9 @@
      glow on the thumb, added once the auto-demo above finishes playing
      and removed for good the instant a visitor actually drags the
      slider themselves. A fixed 3-iteration count means it also stops on
-     its own even if that removal is somehow missed, and the global
-     prefers-reduced-motion rule near the top of this file already zeroes
-     every animation, so no separate check is needed here. */
+     its own even if that removal is somehow missed. Reduced motion: the
+     page script never adds .is-hinting for those visitors (the global
+     rule's selectors don't reach ::-webkit-slider-thumb). */
   @keyframes slider-hint-pulse{
     0%, 100%{box-shadow:0 4px 14px rgba(255,128,0,.45), 0 0 0 0 rgba(255,128,0,.55);}
     50%{box-shadow:0 4px 14px rgba(255,128,0,.45), 0 0 0 9px rgba(255,128,0,0);}
