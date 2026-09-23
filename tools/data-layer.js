@@ -1119,6 +1119,71 @@ function thInvoiceRemindedLabel(inv, now) {
   return 'Reminded ' + (d <= 0 ? 'today' : d === 1 ? 'yesterday' : d + ' days ago');
 }
 
+// ---------- Your week (2026-09-23, Workspace rework part 11) ----------
+// The Dashboard's scoreboard, Monday to Sunday: hours on the clock each day
+// (part 9's timeLog, plus a clock still running), jobs finished, and what
+// was billed (invoices dated this week, plus income logged by hand), each
+// beside last week's. Billed, not collected: a card payment through the
+// portal has no local payment date to count by.
+function thWeekStart(d) {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
+  return x;
+}
+function thWeekSummary(now, data) {
+  const at = now === undefined ? new Date() : new Date(now);
+  data = data || {};
+  const jobs = data.jobs || thRead(TH_KEYS.jobs, []);
+  const invoices = data.invoices || thRead(TH_KEYS.invoices, []);
+  const income = (data.income || thRead(TH_KEYS.income, [])).filter(e => e && e.origin !== 'invoice');
+  const start = thWeekStart(at);
+  const dayAt = (n) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + n);
+  const end = dayAt(7), prevStart = dayAt(-7);
+  const today = new Date(at.getFullYear(), at.getMonth(), at.getDate());
+  const names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const days = names.map((name, i) => {
+    const d = dayAt(i);
+    return { date: thLocalDateStr(d), name: name, hours: 0, isToday: d.getTime() === today.getTime(), isFuture: d > today };
+  });
+  const indexOf = (d) => {
+    const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    return day < start || day >= end ? -1 : Math.round((day - start) / 86400000);
+  };
+  const out = { start: start, end: dayAt(6), days: days, hours: 0, prevHours: 0, jobsDone: 0, prevJobsDone: 0, billed: 0, prevBilled: 0, running: false };
+  const addHours = (when, h) => {
+    if (!(h > 0) || isNaN(when.getTime())) return;
+    const i = indexOf(when);
+    if (i >= 0) { days[i].hours += h; out.hours += h; }
+    else if (when >= prevStart && when < start) out.prevHours += h;
+  };
+  (jobs || []).forEach(j => {
+    (Array.isArray(j.timeLog) ? j.timeLog : []).forEach(v => { if (v) addHours(new Date(v.start), Number(v.hours) || 0); });
+    const since = thJobClockSince(j);
+    if (since !== null) { out.running = true; addHours(new Date(since), thJobClockElapsedMs(j, at) / 3600000); }
+    if (j.status === 'done') {
+      const done = thJobDoneDate(j);
+      if (done && indexOf(done) >= 0) out.jobsDone++;
+      else if (done && done >= prevStart && done < start) out.prevJobsDone++;
+    }
+  });
+  const addMoney = (dateStr, amount) => {
+    const d = new Date((dateStr || '') + 'T00:00:00');
+    const n = Number(amount) || 0;
+    if (isNaN(d.getTime()) || !n) return;
+    if (indexOf(d) >= 0) out.billed += n;
+    else if (d >= prevStart && d < start) out.prevBilled += n;
+  };
+  (invoices || []).forEach(inv => { if (inv) addMoney(inv.date, inv.total); });
+  income.forEach(e => addMoney(e.date, e.amount));
+  const r1 = (n) => Math.round(n * 10) / 10;
+  days.forEach(d => { d.hours = r1(d.hours); });
+  out.hours = r1(out.hours);
+  out.prevHours = r1(out.prevHours);
+  out.billed = Math.round(out.billed * 100) / 100;
+  out.prevBilled = Math.round(out.prevBilled * 100) / 100;
+  return out;
+}
+
 // Everything for one job in a single call -- the query that makes a real
 // Job Detail view possible, the same way thGetClientBundle() enabled
 // Client Detail. Client resolution prefers job.clientId (written on every

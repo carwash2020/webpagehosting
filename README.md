@@ -4031,3 +4031,38 @@ Verified in a real headless Chromium (local HTTP, fake Supabase), at
 - No console errors.
 
 New tests: `tests/tools/payment-reminders.test.js` (9).
+
+
+## What changed, 2026-09-23 (evening) -- Workspace rework, part 11: Your week
+
+Part 11 of the Workspace rework. Full reasoning in
+`docs/specialist-logs/features.md`.
+
+**A scoreboard for the week, right under the daily actions.** Part 9's
+clock records every visit, so the Dashboard can now show how the week is
+going:
+- **Seven bars, Monday to Sunday**, of the hours on the clock each day.
+  Today's is picked out in orange and grows while a clock runs; days to
+  come are dashed outlines.
+- **On the clock** (with a pulsing dot while one runs), **Jobs done**,
+  and **Billed**, each with last week's figure under it. It's a plain
+  figure rather than an up or down arrow, because on a Tuesday a full
+  last week would always "win".
+- **Billed** is invoices dated this week plus income logged by hand. It
+  doesn't include the income log's own copy of each invoice, and it's
+  shown only to accounts that can see finance. It isn't "collected": a
+  card payment through the portal has no local payment date to count by.
+- Before any clock time exists, a line says how to fill it in.
+
+On a phone the card stacks (bars on top, the three figures in a row). On
+a computer the chart spreads across the card with the figures beside it.
+
+Verified in a real headless Chromium (local HTTP, fake Supabase), at
+390px and 1440px:
+- Monday 2.5 h and Tuesday 6 h from logged visits, plus Wednesday 0.8 h
+  from a clock started 50 minutes earlier, came to 9.3 h, with last
+  week's 3.2 h beside it.
+- 1 job done this week and 1 last week, and $640 billed against $160.
+- No console errors.
+
+New tests: `tests/tools/your-week.test.js` (6).

@@ -2400,4 +2400,43 @@ keyboard doesn't cover the sheet. Escape closes it and focus returns to
 the opener. Sending fires `th-invoice-reminded`, and each page
 re-renders its money list on it.
 
+## 2026-09-23 (evening) -- Workspace rework, part 11: Your week
+
+**Why.** Part 9 gave every job a real time record (`timeLog`), but none
+of it was visible after the invoice went out. A weekly scoreboard turns
+that record into a feel for the business: how many hours, how much work
+finished, how much billed.
+
+**`thWeekSummary(now, data)`** (data-layer.js) is pure, given `data`, and
+reads storage otherwise:
+- **The week** runs Monday to Sunday (`thWeekStart`). Days are built with
+  local calendar arithmetic, not by adding 24-hour blocks, so a DST
+  change can't shift one.
+- **Hours:** each `timeLog` visit counts on the day it started. A running
+  clock adds its elapsed time to the day it started too, so today's bar
+  grows while you work.
+- **Jobs done:** `status === 'done'` with `thJobDoneDate` in the week,
+  the same done-date rule as Ready to invoice.
+- **Billed:** invoice totals dated in the week, plus income entries whose
+  `origin !== 'invoice'`. The income log keeps its own copy of every
+  invoice, so counting both would double every bill.
+- **Last week:** each figure has a last-week version, computed in the
+  same pass.
+
+**Why not "collected".** Invoices carry `paidAmount` but no payment date,
+and portal card payments are settled server-side. Any "collected this
+week" figure would be a guess. Adding a local `paidAt` on Mark paid would
+cover cash and checks from now on, but still not card payments, so it's
+left out rather than shown half-right.
+
+**Rendering** (`renderWeekCard` in workspace.html):
+- It runs with the rest of `renderDashboard`, and on `th-clock-change`.
+- While a clock runs it re-renders once a minute. It's a guarded
+  interval that runs only then, the same care job-detail's clock needed
+  so a jsdom test that loads the page isn't kept alive.
+- Bars scale to the busiest day, with a floor of 4 h, so one short visit
+  doesn't read as a full day.
+- The chart has a `role="img"` label that reads the whole week ("Mon
+  2.5 h, Tue 6 h, … Sun none").
+
 <!-- Add new entries above this line -->

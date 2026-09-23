@@ -1272,4 +1272,25 @@ height).
   their existing dim text. The overdue job's line leads with a primary
   **Send a reminder**, and See invoice drops to secondary.
 
+## 2026-09-23 (evening) -- the Your week card
+
+- One card under the daily-actions strip: a dim small-caps YOUR WEEK
+  with the date range on the right, then the chart and the figures.
+- **Bars:** rounded 84px tracks (72px on a phone) in the panel's second
+  tone, filled from the bottom with the orange gradient the Create
+  button uses. Hours sit above each bar in 10.5px tabular figures and
+  the day letter below. Today's letter and figure are orange; days to
+  come are dashed outlines.
+- **Figures:** the display face at 24px (21px on a phone), a 12.5px
+  label, and a dim "Last week …" line. While a clock runs, a small
+  pulsing dot sits before "On the clock" (off under reduced motion).
+- **Layout:**
+  - On a phone the card stacks, with the bars full width in seven equal
+    columns and the three figures in a row.
+  - On a computer the bars stretch (up to 620px) with the figures
+    grouped beside them.
+  - The first desktop version kept the bars at 26px and spread the
+    figures across the full card, which left a wide dead gap; the chart
+    now takes the room instead.
+
 <!-- Add new entries above this line -->

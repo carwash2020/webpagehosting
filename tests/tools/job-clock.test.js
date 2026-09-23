@@ -335,7 +335,7 @@ test('Dashboard: the Next job card has Start the clock (Stop while it runs), and
   assert.match(fn, /data-clock-action="start"><svg[\s\S]*Start the clock<\/button>/);
   assert.match(fn, /if \(btn\.dataset\.clockAction === 'stop'\) thStopClock\(btn\.dataset\.clockJob\);\s*else thStartClock\(btn\.dataset\.clockJob\);/);
   assert.match(fn, /\$\{clockOn \? 'On the clock' : 'Next Job'\}/);
-  assert.match(WS, /window\.addEventListener\('th-clock-change', renderTodayHero\);/);
+  assert.match(WS, /window\.addEventListener\('th-clock-change', (?:renderTodayHero\)|\(\) => \{ renderTodayHero\(\);)/, 'the Next job card re-renders (part 11 re-renders Your week alongside)');
 });
 
 test('the bar\'s look: clear of the bottom bar on a phone, bottom-right on a computer, pulsing dot off under reduced motion; mirrored on the Runway Dashboard; icons in the sprite', () => {
