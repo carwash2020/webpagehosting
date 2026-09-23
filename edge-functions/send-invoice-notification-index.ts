@@ -87,14 +87,24 @@ function escapeHtml(value: unknown): string {
 // needs looking up via GoTrue's own admin endpoint first. A missing
 // subscription is silent and non-fatal -- push is a best-effort
 // additional channel, never a required step.
+// Exact, case-insensitive email match (2026-09-22 fix) through
+// get_auth_user_id_by_email() -- service role only, see
+// sql/security/scope_push_broadcasts_to_internal_accounts.sql. This used
+// to call GET /auth/v1/admin/users?email=..., but GoTrue's admin list
+// endpoint has no `email` filter (only page/per_page/filter): it ignored
+// the parameter and returned the first page of ALL users, newest first,
+// so users[0] was whichever account was created most recently -- not
+// this client. A client push could have landed on someone else's phone.
+// No exact match now means null, and the push is simply skipped.
 async function getUserIdByEmail(email: string): Promise<string | null> {
-  const res = await fetch(`${SUPABASE_URL}/auth/v1/admin/users?email=${encodeURIComponent(email.toLowerCase())}`, {
-    headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_auth_user_id_by_email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+    body: JSON.stringify({ p_email: email }),
   });
   if (!res.ok) return null;
-  const data = await res.json();
-  const users = Array.isArray(data) ? data : data.users || [];
-  return users.length ? users[0].id : null;
+  const id = await res.json();
+  return typeof id === "string" && id ? id : null;
 }
 
 async function sendClientPush(email: string, title: string, body: string, url: string) {

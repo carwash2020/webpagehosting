@@ -222,10 +222,29 @@ async function supabaseRequest(path: string, init: RequestInit = {}) {
   });
 }
 
+// Internal accounts only (2026-09-22, privacy fix). This used to read
+// EVERY row in push_subscriptions -- fine while only Steve and Connor
+// could subscribe, but client portal accounts write to the same table
+// (portal/push-notifications.js). The first client to turn on portal
+// push would have started receiving every internal alert: new-lead and
+// new-booking names, overdue invoices by client name, the weekly revenue
+// digest. get_internal_push_subscriptions() (service role only, see
+// sql/security/scope_push_broadcasts_to_internal_accounts.sql) returns
+// only subscriptions whose account email is in account_roles.
+//
+// Fails CLOSED: if that lookup ever errors, nobody gets the broadcast --
+// a missed internal alert is recoverable; another client's data on a
+// stranger's phone is not. The failure is logged loudly either way.
+// (sendToAllSubscriptions below keeps its name -- tests and 20+ call
+// sites reference it -- but "all" now means all internal subscriptions.)
 async function getAllSubscriptions() {
-  const res = await supabaseRequest("/rest/v1/push_subscriptions?select=id,subscription");
-  if (!res.ok) return [];
-  return res.json();
+  const res = await supabaseRequest("/rest/v1/rpc/get_internal_push_subscriptions", { method: "POST", body: "{}" });
+  if (!res.ok) {
+    console.error("getAllSubscriptions: internal subscription lookup FAILED -- broadcast NOT sent (failing closed):", res.status, await res.text());
+    return [];
+  }
+  const rows = await res.json();
+  return Array.isArray(rows) ? rows : [];
 }
 
 async function deleteSubscription(id: string) {
@@ -998,6 +1017,20 @@ Deno.serve(async (req: Request) => {
         url: "/tools/dev-tools.html",
       });
       return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
+    }
+
+    // Read-only audience check (2026-09-22): how many subscriptions a
+    // broadcast would reach vs. how many exist in total, WITHOUT sending
+    // anything. Used to verify the internal-only scoping above after a
+    // deploy, and safe to run any time (service role only, like every
+    // other branch here).
+    if (payload.type === "audience-check") {
+      const internal = await getAllSubscriptions();
+      const totalRes = await supabaseRequest("/rest/v1/push_subscriptions?select=id");
+      const total = totalRes.ok ? (await totalRes.json()).length : null;
+      return new Response(JSON.stringify({ ok: true, internal: internal.length, total }), {
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     // Client portal push (2026-09-04), requested directly. Deliberately

@@ -143,7 +143,10 @@ test('the client-notification branch calls the targeted sender, never the broadc
 test('a work order message reply looks up the real auth user id by email before sending push, since push_subscriptions is keyed to a real user id, not an email', () => {
   const fnMatch = WO_MESSAGE.match(/async function getUserIdByEmail\([\s\S]*?\n\}\n/);
   assert.ok(fnMatch, 'expected to isolate getUserIdByEmail()');
-  assert.match(fnMatch[0], /\/auth\/v1\/admin\/users\?email=/);
+  // Updated 2026-09-22: exact lookup via get_auth_user_id_by_email -- the
+  // old admin/users?email= call ignored the email and took the newest user.
+  assert.match(fnMatch[0], /\/rest\/v1\/rpc\/get_auth_user_id_by_email/);
+  assert.doesNotMatch(fnMatch[0], /admin\/users|users\[0\]/);
 });
 
 test('the push call uses the real function\u2019s exact casing (Send-Push), not a lowercase variant -- Supabase function slugs are case-sensitive, and a lowercase call created a genuinely separate, orphaned function during this build', () => {
