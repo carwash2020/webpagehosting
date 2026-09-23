@@ -433,7 +433,10 @@ test('a slot taken at the last second sends the visitor back to fresh times WITH
 test('index.html: the triage Book link carries the tapped appliance + symptom into booking.html', () => {
   const m = INDEX_HTML.match(/<script>\s*\/\/ Triage -> booking handoff[\s\S]*?<\/script>/);
   assert.ok(m, 'expected the triage handoff script');
-  const scriptSrc = m[0].replace(/^<script>/, '').replace(/<\/script>$/, '');
+  // Plain slicing, not a tag-stripping regex (CodeQL js/bad-tag-filter):
+  // the match above already guarantees m[0] starts with '<script>' and
+  // ends with '</script>'.
+  const scriptSrc = m[0].slice('<script>'.length, -'</script>'.length);
   const dom = new JSDOM(
     '<div id="triageSymptomGrid">' +
     '<div class="triage-appliance-pills"><button class="triage-appliance-pill" aria-pressed="true"><span class="triage-appliance-pill-icon"><svg></svg></span><span>Dryer</span></button></div>' +
