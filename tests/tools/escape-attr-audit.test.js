@@ -76,7 +76,10 @@ test('escapeAttr() round-trips 9 adversarial inputs correctly (matches the alrea
 const CASES = [
   { file: 'tools/site-content.html', pattern: /value="\$\{escapeAttr\(item\.question \|\| ''\)\}"/, label: 'FAQ question value=' },
   { file: 'tools/site-content.html', pattern: /value="\$\{escapeAttr\(item\.heading \|\| ''\)\}"/, label: 'Terms heading value=' },
-  { file: 'tools/site-content.html', pattern: /placeholder="' \+ escapeAttr\(f\.placeholder\) \+ '" value="' \+ escapeAttr\(current\[f\.key\] \|\| ''\) \+ '"/, label: 'Site Content field value=' },
+  // Site Content editor rebuilt 2026-09-23 (cmsFieldInputHtml): the live
+  // value is escaped once into `value`, then used in every input's value=.
+  { file: 'tools/site-content.html', pattern: /const value = escapeAttr\(live === null \? '' : live\);[\s\S]*?data-cms-part="value" value="' \+ value \+ '"/, label: 'Site Content field value=' },
+  { file: 'tools/site-content.html', pattern: /data-cms-part="custom" value="' \+ escapeAttr\(parsed\.text \|\| ''\) \+ '"/, label: 'Site Content custom hours value=' },
   { file: 'tools/workspace.html', pattern: /title="\$\{escapeAttr\(vendor\)\}"/, label: 'Top Vendors title=' },
   { file: 'tools/workspace.html', pattern: /title="\$\{escapeAttr\(client\)\}"/, label: 'Top Clients title=' },
   { file: 'tools/workspace.html', pattern: /alt="\$\{escapeAttr\(p\.public_caption \|\| ''\)\}"/, label: 'Gallery queue photo alt=' },

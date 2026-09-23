@@ -63,7 +63,9 @@ test('none of the stats are invented figures with no source elsewhere on the pag
 test('every counter animates from its own data-count-to via a shared count-up, and shows final values under reduced motion', () => {
   assert.match(INDEX, /const statCounts = document\.querySelectorAll\('\.stat-count'\);/);
   assert.match(INDEX, /if \(reduced \|\| !\('IntersectionObserver' in window\)\)/);
-  const counts = [...INDEX.matchAll(/class="stat-count" data-count-to="([\d.]+)"/g)].map((m) => m[1]);
+  // Extra hook classes are allowed (2026-09-23: js-review-rating-stat /
+  // js-review-count-stat, which js/review-stats.js updates from site_content).
+  const counts = [...INDEX.matchAll(/class="stat-count(?: [\w-]+)*" data-count-to="([\d.]+)"/g)].map((m) => m[1]);
   assert.equal(counts.length, 3, 'expected 3 animated counters (rating, reviews, communities) -- the 4th stat is a text badge, not a number');
   // Count-up is progressive enhancement from the already-rendered
   // finals -- never `to * eased` from a zero start, which flashed 0.0.
@@ -73,7 +75,7 @@ test('every counter animates from its own data-count-to via a shared count-up, a
 
 test('visible stat-count text is the final value on first paint, never a zero placeholder', () => {
   const statsSection = INDEX.slice(INDEX.indexOf('class="stats-bar"'), INDEX.indexOf('</section>', INDEX.indexOf('class="stats-bar"')));
-  const visible = [...statsSection.matchAll(/class="stat-count"[^>]*>([^<]+)</g)].map((m) => m[1]);
+  const visible = [...statsSection.matchAll(/class="stat-count(?: [\w-]+)*"[^>]*>([^<]+)</g)].map((m) => m[1]);
   assert.deepEqual(visible, ['5.0', '7', '9']);
   assert.ok(!visible.some((v) => Number(v) === 0), 'no stat may paint as 0 / 0.0');
   assert.ok(Number(visible[0]) <= 5.0 && Number(visible[1]) <= 7 && Number(visible[2]) <= 9);

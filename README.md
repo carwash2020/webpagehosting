@@ -160,7 +160,7 @@ upside to offset the cost.
 | `tools/parts-reference.html` | **Appliance Wiki** — quick lookup for common appliance issues: what part it usually is, the part number, roughly what it costs. |
 | `tools/settings.html` | Account info, display density and color theme, push notifications, tour replay (the tour is a 24-step tutorial as of 2026-09-22 -- every page and tab, about two minutes), password reset, **Backup & Restore** (moved here from the Dashboard on 2026-09-21 — the same full JSON export/import, no hop through another page), sign out. |
 | `tools/dev-tools.html` | Site diagnostics and maintenance utilities, organized into 6 tabs (Health, Access, Session, Notifications, Deploy, Reports) as of 2026-08-25 -- replaced the old scroll-to-anchor nav, which no longer scaled once this page reached 22 panels (now 26, after Booking notification test and the 3 new Reports panels). Access is role-gated (`account_roles` table, see `DISASTER_RECOVERY.md`); an Owner-role account only sees the Access tab (Client Registry, Account Roles), while a Developer-role account sees all 6 tabs. Also supports swiping left/right between tabs on mobile, scoped to the panel content area so it doesn't fight with the tab bar's own horizontal scroll. |
-| `tools/site-content.html` | Site Content / FAQ / Terms editing — split out of `dev-tools.html` on 2026-08-20. |
+| `tools/site-content.html` | Edits the public site's changeable text and numbers with no deploy: Google star rating and review count, banners, homepage hours, phone, email, FAQ, Terms. Fields are checked as you type, every publish shows live-vs-new first, and **Undo this save** / per-field history put back earlier values (rebuilt 2026-09-23, backed by `cms_publish_content()` / `cms_undo_content()` in `sql/site-content/cms_safe_publish_and_undo.sql`). Reached from Dev Tools &rarr; Content; needs the "Site content" permission. Split out of `dev-tools.html` on 2026-08-20. |
 | `tools/client-detail.html` | Full history for one client (jobs, invoices, quotes, contracts) — reached from workspace.html or job-detail.html, not linked from the main nav directly. |
 | `tools/job-detail.html` | Full detail view for one job (photos, linked invoices, margin) — reached from job-tracker.html or finance.html, not linked from the main nav directly. |
 | `tools/login.html` | Auth entry point for the whole suite. |
@@ -4935,6 +4935,45 @@ from its fake page element.
 Workspace tools only. On a real iPhone, the "Start my day" sheet's "STARTED EARLIER?" time field and its "Start from then" button could overlap -- reported directly with a screenshot. Local testing in Chromium never showed it: real iOS Safari's native time picker has a minimum width that CSS can't shrink, wide enough to overflow that row next to the button, while Chromium's own (narrower) time input hid the problem. Fixed by stacking the field above the button on phone-width screens instead of trying to out-shrink the native control.
 
 Verified: full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`. Checked visually at 390x844 with the sheet open -- the field and button now sit on separate rows. No test file references these classes, so no test changes were needed.
+
+
+## What changed, 2026-09-23 -- Site content: a safe editor with real undo, and the Google rating + review count move into it
+
+Tools (`tools/site-content.html`), the public homepage, booking page, and the fridge, dishwasher, and washer/dryer repair pages. Nothing looks different on the public site.
+
+**Updating the reviews is now:** open Dev Tools &rarr; Content, change the number, press **Review &amp; publish**, check it, publish. Live within a few seconds. No branch, no PR, no deploy.
+
+**What the editor does now:**
+- **Plain labels and the right input for each field.** Star rating (1.0 to 5.0, one decimal), number of reviews (a whole number), two banners (up to 200 characters, character-limited), hours per day (Open with time pickers, Closed, or custom text), phone, and email.
+- **Mistakes are caught as you type.** A rating of 6, a review count of 0, a phone number missing a digit: each shows a plain-English error and blocks publishing.
+- **Nothing goes live without a review step.** Each change shows what's live now next to what it becomes, with warnings for things that are allowed but unusual: a review count going down, an email address typed into a banner (that exact mistake went live for 6 seconds on 2026-08-16), a banner hiding the WELCOME15 offer.
+- **Undo.** The top of the editor always shows the last save with an **Undo this save** button. Each field keeps its recent changes, with a button to put back any earlier value.
+- **No more silently overwriting someone else's edit.** The old "Save all" wrote every field every time, so a tab left open could quietly undo a newer change. Now only the fields you touched are sent. If someone changed one after you opened the page, nothing is published and you're shown the latest value. An undo is refused the same way if the field has changed again since.
+
+**The database enforces it, not just the page** (`sql/site-content/cms_safe_publish_and_undo.sql`, applied live):
+- A check refuses a bad rating, review count, phone, email, or oversized text from any source, even with this page bypassed.
+- Publishing is all-or-nothing through `cms_publish_content()`; undo goes through `cms_undo_content()`. Both run as the signed-in user, so the existing "Site content" permission still decides who can write.
+- Every change is logged with which save it belonged to, so a whole save can be undone together. New fields and deletions are logged now too.
+- Tested live in a transaction that always rolls back: 7 &rarr; 8 &rarr; undo &rarr; 7, a stale edit refused, a 6.0 rating refused, a stranger's account refused. Security advisors: nothing new.
+
+**Rating and review count** used to be typed into 11 places across 5 pages. They now come from `site_content` (seeded with today's 5.0 and 7) through the new `js/review-stats.js`: every "5.0 from 7 Google reviews" line, the two homepage stats, and the homepage's search data (`aggregateRating`). The HTML keeps the real values as a fallback if the fetch fails. Below a 5.0 rating, the stats label becomes "Real Google Reviews" instead of "Real 5-Star Reviews", and the stars round.
+- **Proven identical:** 20 element screenshots of every spot, before and after, in real Chromium, with and without reduced motion, are byte-for-byte the same, and so is the search data. A first version wrapped the numbers in new spans. That shifted the text after them by a fraction of a pixel on the booking page (348 pixels differed), so the numbers are now rewritten inside the existing text instead.
+
+**Left in code on purpose:** booking hours (they control the real booking slots; the editor says so) and the policy amounts ($25 trip fee and referral credit, $50 cancellation). Changing those is a policy change, not a text edit.
+
+**Access is unchanged:** the page gate, the database permission, two-factor login, and the dev password all still apply.
+
+Verified:
+- full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint`;
+- the migration run for real in the test suite and live;
+- before/after screenshots.
+
+New tests, 106 in all, most of them against the real migration SQL running in Postgres-in-WASM (PGlite, a new dev dependency):
+- `tests/site-content/cms-safe-publish-db.test.js` (41);
+- `tests/site-content/site-content-editor.test.js` (29): the real page script against that database, including save &rarr; undo &rarr; the original value back exactly;
+- `tests/site-content/review-stats-public.test.js` (36).
+
+Updated with reasons: `tests/design/homepage-stats-bar.test.js` (allows the new hook classes).
 
 ## What changed, 2026-09-23 -- Graveyard restore: three gaps closed after #393
 

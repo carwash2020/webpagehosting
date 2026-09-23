@@ -54,7 +54,7 @@
 <link rel="stylesheet" href="/styles.css?v=87b1f5227e">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=9aa2822757">
 <script src="/tools/data-layer.js?v=b2586a446b" defer></script>
-<script src="/tools/dev-tools-shared.js?v=e6f7bb5803" defer></script>
+<script src="/tools/dev-tools-shared.js?v=f34a6faa86" defer></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
 <script src="/tools/tools-dialogs.js?v=310315eb44" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
@@ -229,13 +229,101 @@
   .dev-panel.is-collapsed .dev-collapse-caret { transform: rotate(-90deg); }
   .dev-panel.is-collapsed .dev-panel-body { display: none; }
   .dev-panel.is-collapsed .dev-panel-heading { margin-bottom: 0; }
+
+  /* Site content editor (2026-09-23) */
+  .cms-last-save {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 12px 14px; margin-bottom: 18px; border-radius: 10px;
+    background: var(--bg-panel-3); border: 1px solid var(--border); font-size: 14px;
+  }
+  .cms-last-save.is-empty { color: var(--text-dim); font-size: 13px; }
+  .cms-last-save-detail { color: var(--text-dim); font-size: 12.5px; margin-top: 3px; word-break: break-word; }
+  .cms-group { margin-bottom: 22px; }
+  .cms-group-title { font-size: 15px; margin: 0 0 4px; }
+  .cms-group-intro { font-size: 13px; color: var(--text-dim); margin: 0 0 12px; max-width: 70ch; }
+  .cms-group-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+  .cms-field {
+    padding: 12px 14px; border-radius: 10px; background: var(--bg-panel-3);
+    border: 1px solid var(--border); transition: border-color .15s ease;
+  }
+  .cms-field.is-dirty { border-color: var(--orange-light); }
+  .cms-field.has-error { border-color: #e05555; }
+  .cms-field-head { display: flex; align-items: center; gap: 8px; }
+  .cms-field-head label { font-weight: 600; font-size: 14px; }
+  .cms-dirty-pill {
+    margin-left: auto; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 600;
+    background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); color: var(--orange-light);
+  }
+  .cms-field-help { font-size: 12.5px; color: var(--text-dim); margin: 4px 0 0; }
+  .cms-field-live { font-size: 12.5px; color: var(--text-dim); margin: 6px 0 0; word-break: break-word; }
+  .cms-field-live strong { color: var(--text); font-weight: 600; }
+  .cms-field-input { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+  .cms-field-input > input, .cms-hours select, .cms-hours input {
+    padding: 9px 11px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); font-size: 16px; font-family: inherit;
+  }
+  .cms-field-input > input { flex: 1 1 180px; min-width: 0; }
+  .cms-field-hours .cms-field-input { margin-top: 6px; }
+  .cms-hours { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; flex: 1 1 auto; }
+  .cms-hours select { flex: 1 1 200px; min-width: 0; }
+  .cms-hours-times { display: inline-flex; align-items: center; gap: 6px; }
+  .cms-hours-times[hidden], .cms-hours-custom[hidden] { display: none; }
+  .cms-hours-to { font-size: 13px; color: var(--text-dim); }
+  .cms-hours-custom { flex: 1 1 180px; min-width: 0; }
+  .cms-field-error { color: #e05555; font-size: 13px; margin: 6px 0 0; }
+  .cms-field-history { margin-top: 8px; font-size: 12.5px; }
+  .cms-field-history summary { cursor: pointer; color: var(--text-dim); }
+  .cms-field-history ul { list-style: none; margin: 6px 0 0; padding: 0; }
+  .cms-field-history li {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px;
+    padding: 6px 0; border-top: 1px solid var(--border);
+  }
+  .cms-hist-meta { color: var(--text-dim); }
+  .cms-hist-change { word-break: break-word; }
+  /* Sticky so "N unsaved changes" stays in view while editing a field far
+     down the page. Clears the floating flag button (desktop), the bottom
+     nav (phones/tablets), and the shift-clock bar when it's showing. */
+  .cms-publish-bar {
+    position: sticky; bottom: 0; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+    margin: 4px -20px -20px; padding: 12px 76px 12px 20px; border-top: 1px solid var(--border);
+    background: var(--bg-panel-2); border-radius: 0 0 var(--radius) var(--radius);
+  }
+  @media (max-width: 1023px) {
+    .cms-publish-bar { padding-right: 20px; }
+    body.th-has-bottomnav .cms-publish-bar { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+    body.th-has-bottomnav.th-has-clock .cms-publish-bar { bottom: calc(158px + env(safe-area-inset-bottom, 0px)); }
+  }
+  @media (min-width: 1024px) {
+    body.th-has-clock .cms-publish-bar { bottom: 88px; }
+  }
+  .cms-pending-summary { flex: 1 1 200px; font-size: 13.5px; color: var(--text-dim); }
+  .cms-pending-summary.has-error { color: #e05555; }
+  .cms-review-modal { max-width: 560px; }
+  .cms-review-intro { margin-bottom: 12px; }
+  .cms-diff-row { padding: 12px 0; border-top: 1px solid var(--border); }
+  .cms-diff-label { font-weight: 600; margin-bottom: 6px; }
+  .cms-diff-values { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: stretch; }
+  .cms-diff-old, .cms-diff-new {
+    padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg);
+    font-size: 14px; word-break: break-word; min-width: 0;
+  }
+  .cms-diff-new { border-color: var(--orange-light); }
+  .cms-diff-tag { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-dim); margin-bottom: 2px; }
+  .cms-diff-arrow { align-self: center; color: var(--text-dim); }
+  .cms-diff-warnings { margin: 8px 0 0; padding-left: 18px; color: var(--orange-light); font-size: 13px; }
+  .cms-review-buttons { margin-top: 14px; }
+  .primary-btn.cms-danger { background: #c94a4a; }
+  @media (max-width: 520px) {
+    .cms-diff-values { grid-template-columns: 1fr; }
+    .cms-diff-arrow { transform: rotate(90deg); justify-self: center; }
+  }
 </style>
 </head>
 <body>
 
 <div id="contentBlockedView" class="dev-blocked" style="display:none;">
   <div class="tool-title" style="font-size:22px;">Not available here</div>
-  <p class="tool-sub">Site Content is only shown on the account actively developing this site. Nothing's wrong with your account — this page just isn't meant for day-to-day use.</p>
+  <p class="tool-sub">Editing the public website needs the "Site content" permission, which this account doesn't have. An account manager can turn it on in Dev Tools &rarr; Access if you need it.</p>
   <a href="/tools/workspace.html" class="primary-btn" style="display:inline-block; margin-top:12px; text-decoration:none;">Back to Dashboard</a>
 </div>
 
@@ -250,19 +338,21 @@
   </div>
 </div>
 
-<p class="tool-sub">Edit the public site's phone, email, hours, banners, FAQ, and Terms page directly -- changes go live without a code push.</p>
+<p class="tool-sub">Change the Google rating and review count, banners, hours, phone, email, FAQ, and Terms on the public site. Every change is checked, shown to you side by side before it goes live, and can be undone -- no code push needed.</p>
 
-  <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="sitecontent">
-    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
-      <h2 id="nav-content" class="dev-anchor">Site content</h2>
-      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('sitecontent')" aria-label="What does this do?" title="What does this do?">?</button>
-      <span class="dev-collapse-caret">&#9660;</span>
+  <!-- The editor is the reason this page exists, so it's always open
+       (2026-09-23) -- "open the tool, change the number, confirm, done"
+       shouldn't start with expanding a collapsed panel. History, FAQ, and
+       Terms below stay collapsible. -->
+  <div class="dev-panel dev-panel-wide" id="siteContentPanel">
+    <div class="dev-panel-heading">
+      <h2 id="nav-content" class="dev-anchor">Website text and numbers</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('sitecontent')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
     <div class="dev-panel-body">
-      <!-- F10 fix (2026-09-07): the strongest case of the 4 fixed on
-           this page -- renderSiteContentForm() makes a real Supabase
-           network fetch (up to a 6s timeout) before overwriting this,
-           and this page had no loading treatment at all. -->
+      <!-- F10 fix (2026-09-07): renderSiteContentForm() makes a real
+           Supabase network fetch before overwriting this, so it starts
+           as a skeleton rather than a bare empty div. -->
       <div id="siteContentForm"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div><div class="skeleton-line w-40"></div></div>
     </div>
   </div>
@@ -318,13 +408,31 @@
       <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
       <h3>How to Use: Site Content</h3>
       <div class="help-modal-body">
-        <p>Site diagnostics and maintenance utilities, visible only on the account actively developing this site.</p>
+        <p>Edits the public website's changeable text and numbers directly, with no code push. Only accounts with the "Site content" permission can open this page or save anything from it.</p>
         <ul>
-          <li><strong>Site content</strong> &mdash; edit the phone, email, hours, and up to 2 announcement banners on the public site directly, no code push needed. Changing phone/email updates every place it appears at once.</li>
-          <li><strong>Content edit history</strong> &mdash; every past change to those fields, who made it, and when -- a real audit trail from a database trigger.</li>
+          <li><strong>Website text and numbers</strong> &mdash; the Google rating and review count, 2 announcement banners, the homepage hours, phone, and email. Edit any of them, press <em>Review &amp; publish</em>, check each change against what's live now, then publish. Anything that doesn't look right (a rating over 5.0, a phone number missing a digit) is flagged before you can publish, and the database refuses it too.</li>
+          <li><strong>Undo</strong> &mdash; the box at the top always shows the last save with an <em>Undo this save</em> button. Each field also keeps its recent changes, with a button to put back any earlier value. An undo is refused, not forced, if someone has changed that field again since.</li>
+          <li><strong>Content edit history</strong> &mdash; every past change to those fields, the FAQ, and Terms: who made it, and when -- a real audit trail from a database trigger.</li>
           <li><strong>FAQ editor</strong> &mdash; add, edit, reorder, or remove questions on the site's FAQ section directly.</li>
           <li><strong>Terms &amp; Conditions editor</strong> &mdash; add, edit, reorder, or remove sections of the Terms document directly.</li>
         </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Review step before anything publishes (2026-09-23): every change's
+       live value next to its new one, plus warnings. Cancel is focused by
+       default so a stray Enter never publishes. -->
+  <div class="help-modal-overlay" id="cmsReviewOverlay" role="dialog" aria-modal="true" aria-labelledby="cmsReviewTitle">
+    <div class="help-modal cms-review-modal">
+      <h3 id="cmsReviewTitle">Review before publishing</h3>
+      <div class="help-modal-body">
+        <p id="cmsReviewIntro" class="cms-review-intro"></p>
+        <div id="cmsReviewBody" class="cms-diff"></div>
+        <div class="form-footer cms-review-buttons">
+          <button type="button" class="secondary-btn" id="cmsReviewCancel">Go back</button>
+          <button type="button" class="primary-btn" id="cmsReviewConfirm">Publish</button>
+        </div>
       </div>
     </div>
   </div>
@@ -348,26 +456,686 @@
 </div>
 
 <script>
-  // Editable public-site content -- a small, separate Supabase table
-  // (public.site_content), NOT part of the same synced blob as private
-  // business data, specifically because this one needs to be readable
-  // by anonymous visitors on the live public site. See the matching
-  // fetch-and-apply script near the end of index.html for the read
-  // side of this; this panel is the write side.
-  const SITE_CONTENT_FIELDS = [
-    { key: 'phone', label: 'Phone number', placeholder: 'e.g. (435) 414-1667 -- blank uses the default already in the code.', info: 'phone' },
-    { key: 'email', label: 'Email address', placeholder: 'e.g. steve@triplehenterprisesllc.biz -- blank uses the default.', info: 'email' },
-    { key: 'hoursMonday', label: 'Hours -- Monday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
-    { key: 'hoursTuesday', label: 'Hours -- Tuesday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
-    { key: 'hoursWednesday', label: 'Hours -- Wednesday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
-    { key: 'hoursThursday', label: 'Hours -- Thursday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
-    { key: 'hoursFriday', label: 'Hours -- Friday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
-    { key: 'hoursSaturday', label: 'Hours -- Saturday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
-    { key: 'hoursSunday', label: 'Hours -- Sunday', placeholder: 'e.g. 7:00 AM \u2013 10:00 PM, or "Closed"', info: 'hours' },
-    { key: 'banner1', label: 'Banner 1 (orange bar, top of site)', placeholder: 'Blank hides it. e.g. Currently booking 2+ weeks out', info: 'banner1' },
-    { key: 'banner2', label: 'Banner 2 (blue bar, top of site)', placeholder: 'Blank hides it.', info: 'banner2' },
+  // ---------------------------------------------------------------------
+  // Site content editor (rebuilt 2026-09-23)
+  //
+  // Edits public.site_content, which the public pages read live at page
+  // load -- no branch, no PR, no deploy. Because nothing reviews an edit
+  // after it's made, every step here is built to catch a mistake BEFORE
+  // it goes live, and to make one reversible if it does:
+  //   1. Each field has the right input for its data and is checked as
+  //      you type (the same rules the database enforces on its own, see
+  //      site_content_value_is_valid in sql/site-content/cms_safe_publish_and_undo.sql).
+  //   2. Nothing publishes until a review step shows every change's
+  //      current live value next to its new one, with warnings for the
+  //      mistakes that have actually happened (an email typed into a
+  //      banner went live on 2026-08-16).
+  //   3. Publishing goes through cms_publish_content(): all-or-nothing,
+  //      and refused if anyone changed a field since this page loaded,
+  //      so a stale tab can never silently revert a newer edit. Only
+  //      fields you actually touched are sent.
+  //   4. Every save is one batch in site_content_history. "Undo this
+  //      save" reverts the whole batch through cms_undo_content(), which
+  //      refuses if a field has changed again since. Each field's own
+  //      history can put back any earlier value, through the same review.
+  // ---------------------------------------------------------------------
+  const CMS_HOURS_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  // What the public pages show when a field is blank -- the static text
+  // already in index.html (its two hours lists) and on every page (phone,
+  // email). tests/site-content/site-content-editor.test.js keeps these in
+  // step with the real HTML.
+  const CMS_BUILT_IN = {
+    phone: '(435) 414-1667',
+    email: 'steve@triplehenterprisesllc.biz',
+    hoursMonday: '2:00 PM – 10:00 PM', hoursTuesday: '2:00 PM – 10:00 PM',
+    hoursWednesday: '2:00 PM – 10:00 PM', hoursThursday: '2:00 PM – 10:00 PM',
+    hoursFriday: '2:00 PM – 10:00 PM', hoursSaturday: '7:00 AM – 10:00 PM',
+    hoursSunday: '2:00 PM – 8:00 PM',
+  };
+  const SITE_CONTENT_GROUPS = [
+    { id: 'reviews', title: 'Google reviews',
+      intro: 'Update these when a new Google review comes in. They show on the homepage (top section, the stats strip, and the booking section), the booking page, and the fridge, dishwasher, and washer/dryer repair pages.' },
+    { id: 'banners', title: 'Announcement banners',
+      intro: 'A one-line bar across the very top of the site. Leave blank for no banner. On the homepage, service pages, and city pages, Banner 1 takes the place of the WELCOME15 new-customer offer and Banner 2 takes the place of the hiring notice while they\'re set.' },
+    { id: 'hours', title: 'Hours on the homepage',
+      intro: 'The hours listed in the homepage\'s contact section and footer. This changes the text only: online booking times and the "Open now" badge still follow the schedule built into the site (Mon–Fri 2–10 PM, Sat 7 AM–10 PM, Sun 2–8 PM). If the real schedule changes, ask Connor to change that too.' },
+    { id: 'contact', title: 'Phone and email',
+      intro: 'Changes every place visitors tap to call, text, or email you. The booking page, the manage-booking pages, and the not-found page still show the number built into the site, so ask Connor to update those too if the number ever changes.' },
   ];
+  const SITE_CONTENT_FIELDS = [
+    { key: 'googleRating', group: 'reviews', kind: 'rating', required: true, info: 'reviews',
+      label: 'Star rating on Google', help: 'Your average rating, with one decimal place, exactly as Google shows it (for example 4.9).' },
+    { key: 'googleReviewCount', group: 'reviews', kind: 'count', required: true, info: 'reviews',
+      label: 'Number of Google reviews', help: 'The total number of reviews on your Google Business Profile.' },
+    { key: 'banner1', group: 'banners', kind: 'banner', info: 'banner1',
+      label: 'Banner 1 (orange bar)', help: 'Shown at the very top of every page. Up to 200 characters, one line.' },
+    { key: 'banner2', group: 'banners', kind: 'banner', info: 'banner2',
+      label: 'Banner 2 (blue bar)', help: 'Shown right under Banner 1. Up to 200 characters, one line.' },
+  ].concat(CMS_HOURS_DAYS.map(day => ({
+    key: 'hours' + day, group: 'hours', kind: 'hours', day: day, info: 'hours', label: day, help: '',
+  }))).concat([
+    { key: 'phone', group: 'contact', kind: 'phone', info: 'phone',
+      label: 'Phone number', help: 'Ten digits, any format -- it\'s saved as (435) 414-1667 style. Blank uses the number built into the site.' },
+    { key: 'email', group: 'contact', kind: 'email', info: 'email',
+      label: 'Email address', help: 'Blank uses the address built into the site.' },
+  ]);
+  const CMS_FIELD_BY_KEY = {};
+  SITE_CONTENT_FIELDS.forEach(f => { CMS_FIELD_BY_KEY[f.key] = f; });
+
+  // ---- pure helpers: normalize / validate / warn / display --------------
+
+  function cmsTrimOrNull(raw) {
+    const s = raw == null ? '' : String(raw).trim();
+    return s === '' ? null : s;
+  }
+
+  // "14:00" -> "2:00 PM"
+  function cmsFormatClock(hhmm) {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm || '');
+    if (!m) return null;
+    const h = Number(m[1]), min = m[2];
+    if (h > 23 || Number(min) > 59) return null;
+    const suffix = h < 12 ? 'AM' : 'PM';
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    return h12 + ':' + min + ' ' + suffix;
+  }
+  function cmsFormatHours(openHHMM, closeHHMM) {
+    const a = cmsFormatClock(openHHMM), b = cmsFormatClock(closeHHMM);
+    return a && b ? a + ' – ' + b : null;
+  }
+  // Reads a saved hours line back into the structured controls. Lenient on
+  // purpose ("2:00 pm - 8:00 pm", the live Sunday value, parses fine);
+  // anything it can't read is shown as custom text rather than lost.
+  function cmsParseHours(value) {
+    if (value == null) return { mode: 'default' };
+    if (/^closed$/i.test(value.trim())) return { mode: 'closed' };
+    const m = /^\s*(\d{1,2}):(\d{2})\s*([ap])\.?\s*m\.?\s*(?:-|–|—|to)\s*(\d{1,2}):(\d{2})\s*([ap])\.?\s*m\.?\s*$/i.exec(value);
+    if (m) {
+      const to24 = (h, ap) => { h = Number(h) % 12; if (/p/i.test(ap)) h += 12; return String(h).padStart(2, '0'); };
+      return { mode: 'open', open: to24(m[1], m[3]) + ':' + m[2], close: to24(m[4], m[6]) + ':' + m[5] };
+    }
+    return { mode: 'custom', text: value };
+  }
+
+  function cmsNormalize(field, raw) {
+    const v = cmsTrimOrNull(raw);
+    if (v === null) return null;
+    if (field.kind === 'rating' && /^\d$/.test(v)) return v + '.0';
+    if (field.kind === 'count' && /^\d+$/.test(v)) return String(Number(v));
+    if (field.kind === 'phone') {
+      let digits = v.replace(/\D/g, '');
+      if (digits.length === 11 && digits[0] === '1') digits = digits.slice(1);
+      if (digits.length === 10) return '(' + digits.slice(0, 3) + ') ' + digits.slice(3, 6) + '-' + digits.slice(6);
+      return v;
+    }
+    if (field.kind === 'banner') return v.replace(/\s+/g, ' ');
+    return v;
+  }
+
+  // Returns a plain-English problem, or '' when the value is fine. Mirrors
+  // public.site_content_value_is_valid() -- the database has the last word.
+  function cmsValidate(field, value) {
+    if (value === null) return field.required ? 'This one can\'t be blank.' : '';
+    if (field.kind === 'rating') {
+      if (!/^\d\.\d$/.test(value)) return 'Enter a number with one decimal place, like 4.9.';
+      const n = Number(value);
+      if (n < 1 || n > 5) return 'Google ratings go from 1.0 to 5.0.';
+      return '';
+    }
+    if (field.kind === 'count') {
+      if (!/^\d+$/.test(value)) return 'Enter a whole number, like 8.';
+      const n = Number(value);
+      if (n < 1) return 'Enter at least 1.';
+      if (n > 99999) return 'That\'s more than 99,999 -- double-check the number.';
+      return '';
+    }
+    if (field.kind === 'phone') {
+      if (!/^\([2-9]\d{2}\) [2-9]\d{2}-\d{4}$/.test(value)) return 'Enter a 10-digit US phone number, like (435) 414-1667.';
+      return '';
+    }
+    if (field.kind === 'email') {
+      if (value.length > 254 || !/^[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/i.test(value)) return 'Enter an email address, like steve@triplehenterprisesllc.biz.';
+      return '';
+    }
+    if (field.kind === 'banner') {
+      if (value.length > 200) return 'Keep it to 200 characters or fewer (' + value.length + ' now).';
+      return '';
+    }
+    if (field.kind === 'hours') {
+      if (value.length > 60) return 'Keep it to 60 characters or fewer.';
+      if (/[\r\n]/.test(value)) return 'Keep it on one line.';
+      return '';
+    }
+    return '';
+  }
+
+  // Things that are allowed but worth a second look. Shown in the review
+  // step, never blocking.
+  function cmsWarnings(field, oldValue, newValue) {
+    const out = [];
+    if (field.kind === 'count' && oldValue !== null && newValue !== null) {
+      const before = Number(oldValue), after = Number(newValue);
+      if (after < before) out.push('Google review counts almost never go down. Make sure ' + after + ' is right, not a typo.');
+      if (after - before > 20) out.push('That\'s ' + (after - before) + ' more than before. Make sure it\'s right.');
+    }
+    if (field.kind === 'rating' && oldValue !== null && newValue !== null) {
+      if (Math.abs(Number(newValue) - Number(oldValue)) >= 0.3) out.push('That\'s a big change from ' + oldValue + '. Make sure it matches Google.');
+      if (Number(newValue) < 5 && Number(oldValue) >= 5) out.push('Below 5.0, the homepage stats strip will say "Real Google Reviews" instead of "Real 5-Star Reviews".');
+    }
+    if (field.kind === 'banner' && newValue !== null) {
+      if (/@/.test(newValue)) out.push('This looks like it has an email address in it. The banner shows exactly this text at the top of every page -- make sure it belongs here.');
+      if (/\d{3}\D{0,2}\d{3}\D?\d{4}/.test(newValue)) out.push('This has a phone number in it. If the number ever changes, remember to update this banner too.');
+      if (oldValue === null) out.push('Adding this banner hides the ' + (field.key === 'banner1' ? 'WELCOME15 offer' : 'hiring notice') + ' on the homepage, service pages, and city pages until you clear it.');
+    }
+    if (field.kind === 'banner' && newValue === null && oldValue !== null) {
+      out.push('The banner will disappear. The ' + (field.key === 'banner1' ? 'WELCOME15 offer' : 'hiring notice') + ' shows in its place again.');
+    }
+    if (field.kind === 'phone') out.push('Every call and text button will use this number. Call it once after publishing to make sure it rings.');
+    if (field.kind === 'email') out.push('Every email link will use this address. Send yourself a test email after publishing.');
+    return out;
+  }
+
+  function cmsDisplay(field, value) {
+    if (value === null || value === undefined) {
+      if (CMS_BUILT_IN[field.key]) return 'Blank (the site shows its built-in ' + (field.kind === 'hours' ? 'hours: ' : '') + CMS_BUILT_IN[field.key] + ')';
+      if (field.kind === 'banner') return 'Blank (no banner)';
+      return 'Blank';
+    }
+    return value;
+  }
+
+  // ---- state -------------------------------------------------------------
+
+  let cmsLive = {};          // key -> current published value (null = blank), as last read from the server
+  let cmsHistory = [];       // site_content_history rows, newest first
+  const cmsTouched = new Set(); // keys the user has edited since the last load/publish
+  let cmsLoadedOk = false;
+
+  function cmsReadInput(field) {
+    const root = document.getElementById('siteContentForm');
+    const part = name => root.querySelector('[data-cms-key="' + field.key + '"][data-cms-part="' + name + '"]');
+    if (field.kind !== 'hours') {
+      const el = part('value');
+      return { value: cmsNormalize(field, el ? el.value : ''), error: '' };
+    }
+    const mode = part('mode') ? part('mode').value : 'default';
+    if (mode === 'default') return { value: null, error: '' };
+    if (mode === 'closed') return { value: 'Closed', error: '' };
+    if (mode === 'custom') {
+      const text = cmsTrimOrNull(part('custom') ? part('custom').value : '');
+      return { value: text, error: text === null ? 'Type the text to show, or pick another option.' : '' };
+    }
+    const open = part('open') ? part('open').value : '';
+    const close = part('close') ? part('close').value : '';
+    if (!open || !close) return { value: null, error: 'Pick both an opening and a closing time.' };
+    if (close <= open) return { value: null, error: 'The closing time has to be after the opening time.' };
+    return { value: cmsFormatHours(open, close), error: '' };
+  }
+
+  // The draft for one field: its live value unless the user touched it.
+  function cmsDraft(field) {
+    const live = cmsLive[field.key] === undefined ? null : cmsLive[field.key];
+    if (!cmsTouched.has(field.key)) return { value: live, error: '', dirty: false };
+    const read = cmsReadInput(field);
+    const error = read.error || cmsValidate(field, read.value);
+    return { value: read.value, error: error, dirty: !read.error && read.value !== live };
+  }
+
+  function cmsPendingChanges() {
+    return SITE_CONTENT_FIELDS
+      .map(field => ({ field: field, draft: cmsDraft(field) }))
+      .filter(x => cmsTouched.has(x.field.key) && (x.draft.dirty || x.draft.error));
+  }
+
+  // ---- network -------------------------------------------------------------
+
+  function cmsHeaders(json) {
+    const h = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() };
+    if (json) h['Content-Type'] = 'application/json';
+    return h;
+  }
+
+  async function cmsRpc(fnName, args) {
+    if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+    let res;
+    try {
+      res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/rpc/' + fnName, 10000, {
+        method: 'POST', headers: cmsHeaders(true), body: JSON.stringify(args),
+      });
+    } catch (e) {
+      return { ok: false, status: 0, body: { message: 'Could not reach the server.' } };
+    }
+    let body = null;
+    try { body = await res.json(); } catch (e) { body = null; }
+    return { ok: res.ok, status: res.status, body: body };
+  }
+
+  async function cmsLoad() {
+    if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+    const keys = SITE_CONTENT_FIELDS.map(f => f.key).join(',');
+    const [liveRes, histRes] = await Promise.all([
+      fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content?select=key,value&key=in.(' + keys + ')', 8000, { headers: cmsHeaders(false) }),
+      fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content_history?select=id,key,old_value,new_value,changed_by,changed_at,action,batch_id,undo_of&key=in.(' + keys + ')&order=id.desc&limit=300', 8000, { headers: cmsHeaders(false) }),
+    ]);
+    if (!liveRes.ok) throw new Error('Could not load the current values (HTTP ' + liveRes.status + ').');
+    const rows = await liveRes.json();
+    const live = {};
+    (Array.isArray(rows) ? rows : []).forEach(r => { live[r.key] = r.value == null ? null : r.value; });
+    cmsLive = live;
+    cmsHistory = histRes.ok ? (await histRes.json()) : [];
+    if (!Array.isArray(cmsHistory)) cmsHistory = [];
+  }
+
+  function cmsErrorMessage(res, verb) {
+    const body = res.body || {};
+    if (res.status === 409) {
+      const field = CMS_FIELD_BY_KEY[body.details];
+      return '"' + (field ? field.label : 'A field') + '" was changed by someone else after this page loaded. Nothing was ' + verb + '. The page now shows the latest values -- your other edits are still here, so review and try again.';
+    }
+    if (res.status === 403 || res.status === 401) return 'This account isn\'t allowed to edit site content. Nothing was ' + verb + '.';
+    if (body.code === '23514') return 'The database refused one of these values as invalid. Nothing was ' + verb + '.';
+    if (res.status === 0) return 'Could not reach the server. Nothing was ' + verb + '. Check the connection and try again.';
+    return (body.message || ('Something went wrong (HTTP ' + res.status + ').')) + ' Nothing was ' + verb + '.';
+  }
+
+  // ---- review dialog -------------------------------------------------------
+
+  let _cmsReviewResolve = null;
+  function cmsCloseReview(result) {
+    document.getElementById('cmsReviewOverlay').classList.remove('is-open');
+    const resolve = _cmsReviewResolve;
+    _cmsReviewResolve = null;
+    if (resolve) resolve(result);
+  }
+  // rows: [{ field, oldValue, newValue, warnings }]
+  function showCmsReview(opts) {
+    return new Promise(resolve => {
+      _cmsReviewResolve = resolve;
+      document.getElementById('cmsReviewTitle').textContent = opts.title;
+      document.getElementById('cmsReviewIntro').textContent = opts.intro || '';
+      document.getElementById('cmsReviewBody').innerHTML = opts.rows.map(r =>
+        '<div class="cms-diff-row">' +
+          '<div class="cms-diff-label">' + escapeHtml(r.field.label) + (r.field.kind === 'hours' ? ' hours' : '') + '</div>' +
+          '<div class="cms-diff-values">' +
+            '<div class="cms-diff-old"><span class="cms-diff-tag">' + escapeHtml(opts.oldTag || 'Live now') + '</span><span class="cms-diff-text">' + escapeHtml(cmsDisplay(r.field, r.oldValue)) + '</span></div>' +
+            '<div class="cms-diff-arrow" aria-hidden="true">&rarr;</div>' +
+            '<div class="cms-diff-new"><span class="cms-diff-tag">' + escapeHtml(opts.newTag || 'After') + '</span><span class="cms-diff-text">' + escapeHtml(cmsDisplay(r.field, r.newValue)) + '</span></div>' +
+          '</div>' +
+          ((r.warnings && r.warnings.length) ? '<ul class="cms-diff-warnings">' + r.warnings.map(w => '<li>' + escapeHtml(w) + '</li>').join('') + '</ul>' : '') +
+        '</div>'
+      ).join('');
+      const confirmBtn = document.getElementById('cmsReviewConfirm');
+      confirmBtn.textContent = opts.confirmText;
+      confirmBtn.className = 'primary-btn' + (opts.danger ? ' cms-danger' : '');
+      document.getElementById('cmsReviewOverlay').classList.add('is-open');
+      // Cancel is focused, not Confirm -- a stray Enter never publishes.
+      setTimeout(() => document.getElementById('cmsReviewCancel').focus(), 30);
+    });
+  }
+
+  // ---- rendering -------------------------------------------------------------
+
+  function cmsWhen(iso) {
+    const d = new Date(iso);
+    return isNaN(d) ? '' : d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  }
+  function cmsWho(email) {
+    if (!email) return 'Setup';
+    const known = typeof KNOWN_USER_NAMES === 'object' && KNOWN_USER_NAMES ? KNOWN_USER_NAMES[String(email).toLowerCase()] : null;
+    return known || email;
+  }
+
+  // The latest save (one batch) that can be undone: made by a person, and
+  // not the one-time setup rows the migration wrote.
+  function cmsLastSave() {
+    const latest = cmsHistory.find(r => r.batch_id && r.changed_by && r.action === 'update');
+    if (!latest) return null;
+    const rows = cmsHistory.filter(r => r.batch_id === latest.batch_id && r.action === 'update');
+    return { batchId: latest.batch_id, rows: rows, by: latest.changed_by, at: latest.changed_at, isUndo: rows.every(r => r.undo_of) };
+  }
+
+  function cmsFieldInputHtml(field) {
+    const live = cmsLive[field.key] === undefined ? null : cmsLive[field.key];
+    const attrs = 'data-cms-key="' + escapeAttr(field.key) + '"';
+    const id = 'siteContent_' + field.key;
+    if (field.kind === 'hours') {
+      const parsed = cmsParseHours(live);
+      const opt = (v, text) => '<option value="' + v + '"' + (parsed.mode === v ? ' selected' : '') + '>' + escapeHtml(text) + '</option>';
+      return '<div class="cms-hours">' +
+        '<select id="' + id + '" ' + attrs + ' data-cms-part="mode" aria-label="' + escapeAttr(field.day + ' hours') + '">' +
+          opt('default', 'Built-in hours (' + CMS_BUILT_IN[field.key] + ')') + opt('open', 'Open') + opt('closed', 'Closed') + opt('custom', 'Custom text') +
+        '</select>' +
+        '<span class="cms-hours-times"' + (parsed.mode === 'open' ? '' : ' hidden') + '>' +
+          '<input type="time" step="900" ' + attrs + ' data-cms-part="open" value="' + escapeAttr(parsed.open || '') + '" aria-label="' + escapeAttr(field.day + ' opening time') + '">' +
+          '<span class="cms-hours-to">to</span>' +
+          '<input type="time" step="900" ' + attrs + ' data-cms-part="close" value="' + escapeAttr(parsed.close || '') + '" aria-label="' + escapeAttr(field.day + ' closing time') + '">' +
+        '</span>' +
+        '<input type="text" maxlength="60" class="cms-hours-custom" ' + attrs + ' data-cms-part="custom" value="' + escapeAttr(parsed.text || '') + '" placeholder="e.g. By appointment"' + (parsed.mode === 'custom' ? '' : ' hidden') + ' aria-label="' + escapeAttr(field.day + ' custom hours text') + '">' +
+      '</div>';
+    }
+    const value = escapeAttr(live === null ? '' : live);
+    if (field.kind === 'rating') return '<input id="' + id + '" type="number" inputmode="decimal" min="1" max="5" step="0.1" ' + attrs + ' data-cms-part="value" value="' + value + '">';
+    if (field.kind === 'count') return '<input id="' + id + '" type="number" inputmode="numeric" min="1" max="99999" step="1" ' + attrs + ' data-cms-part="value" value="' + value + '">';
+    if (field.kind === 'phone') return '<input id="' + id + '" type="tel" autocomplete="off" ' + attrs + ' data-cms-part="value" value="' + value + '" placeholder="' + escapeAttr(CMS_BUILT_IN.phone) + '">';
+    if (field.kind === 'email') return '<input id="' + id + '" type="email" autocomplete="off" ' + attrs + ' data-cms-part="value" value="' + value + '" placeholder="' + escapeAttr(CMS_BUILT_IN.email) + '">';
+    return '<input id="' + id + '" type="text" maxlength="200" ' + attrs + ' data-cms-part="value" value="' + value + '" placeholder="Blank = no banner">';
+  }
+
+  function cmsFieldHistoryHtml(field) {
+    const rows = cmsHistory.filter(r => r.key === field.key && r.action === 'update').slice(0, 5);
+    if (!rows.length) return '';
+    const live = cmsLive[field.key] === undefined ? null : cmsLive[field.key];
+    return '<details class="cms-field-history"><summary>Recent changes (' + rows.length + ')</summary><ul>' +
+      rows.map(r =>
+        '<li><span class="cms-hist-meta">' + escapeHtml(cmsWhen(r.changed_at)) + ' &middot; ' + escapeHtml(cmsWho(r.changed_by)) + (r.undo_of ? ' &middot; undo' : '') + '</span>' +
+        '<span class="cms-hist-change">' + escapeHtml(r.old_value === null ? 'blank' : r.old_value) + ' &rarr; ' + escapeHtml(r.new_value === null ? 'blank' : r.new_value) + '</span>' +
+        (r.old_value !== live ? '<button type="button" class="small-btn" data-cms-action="putback" data-cms-history-id="' + escapeAttr(String(r.id)) + '">Put back ' + escapeHtml(r.old_value === null ? 'blank' : '"' + r.old_value + '"') + '</button>' : '') +
+        '</li>'
+      ).join('') + '</ul></details>';
+  }
+
+  function cmsFieldHtml(field) {
+    const live = cmsLive[field.key] === undefined ? null : cmsLive[field.key];
+    const infoBtn = field.info && field.kind !== 'hours'
+      ? '<button type="button" class="dev-info-bubble" data-cms-action="info" data-cms-info="' + escapeAttr(field.info) + '" title="Where does this appear?" aria-label="Where does this appear?"><svg class="th-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg></button>'
+      : '';
+    return '<div class="cms-field' + (field.kind === 'hours' ? ' cms-field-hours' : '') + '" data-cms-field="' + escapeAttr(field.key) + '">' +
+      '<div class="cms-field-head"><label for="siteContent_' + escapeAttr(field.key) + '">' + escapeHtml(field.label) + '</label>' + infoBtn +
+        '<span class="cms-dirty-pill" hidden>Edited</span></div>' +
+      (field.help ? '<p class="cms-field-help">' + escapeHtml(field.help) + '</p>' : '') +
+      (field.kind === 'hours' ? '' : '<p class="cms-field-live">Live now: <strong>' + escapeHtml(cmsDisplay(field, live)) + '</strong></p>') +
+      '<div class="cms-field-input">' + cmsFieldInputHtml(field) +
+        '<button type="button" class="small-btn cms-cancel-edit" data-cms-action="cancel-edit" hidden>Cancel edit</button></div>' +
+      '<p class="cms-field-error" role="alert" hidden></p>' +
+      cmsFieldHistoryHtml(field) +
+    '</div>';
+  }
+
+  function cmsLastSaveHtml() {
+    const last = cmsLastSave();
+    if (!last) return '<div class="cms-last-save is-empty">No edits yet. Your first save will show here, with a button to undo it.</div>';
+    const summary = last.rows.map(r => {
+      const f = CMS_FIELD_BY_KEY[r.key];
+      return (f ? f.label + (f.kind === 'hours' ? ' hours' : '') : r.key) + ': ' + (r.old_value === null ? 'blank' : r.old_value) + ' → ' + (r.new_value === null ? 'blank' : r.new_value);
+    }).join(' · ');
+    return '<div class="cms-last-save">' +
+      '<div><strong>Last ' + (last.isUndo ? 'undo' : 'save') + ':</strong> ' + escapeHtml(cmsWho(last.by)) + ', ' + escapeHtml(cmsWhen(last.at)) +
+        '<div class="cms-last-save-detail">' + escapeHtml(summary) + '</div></div>' +
+      '<button type="button" class="secondary-btn" data-cms-action="undo-last">' + (last.isUndo ? 'Redo it' : 'Undo this save') + '</button>' +
+    '</div>';
+  }
+
+  function renderCmsEditor() {
+    const el = document.getElementById('siteContentForm');
+    el.innerHTML =
+      cmsLastSaveHtml() +
+      SITE_CONTENT_GROUPS.map(g =>
+        '<div class="cms-group" data-cms-group="' + escapeAttr(g.id) + '">' +
+          '<h3 class="cms-group-title">' + escapeHtml(g.title) + '</h3>' +
+          '<p class="cms-group-intro">' + escapeHtml(g.intro) + '</p>' +
+          '<div class="cms-group-fields">' + SITE_CONTENT_FIELDS.filter(f => f.group === g.id).map(cmsFieldHtml).join('') + '</div>' +
+        '</div>'
+      ).join('') +
+      '<div class="cms-publish-bar">' +
+        '<span id="cmsPendingSummary" class="cms-pending-summary">No unsaved edits.</span>' +
+        '<button type="button" class="secondary-btn" id="cmsDiscardBtn" data-cms-action="discard" disabled>Discard edits</button>' +
+        '<button type="button" class="primary-btn" id="saveSiteContentBtn" data-cms-action="review" disabled>Review &amp; publish</button>' +
+      '</div>';
+    SITE_CONTENT_FIELDS.forEach(cmsRefreshFieldState);
+    cmsRefreshPublishBar();
+  }
+
+  // Updates one field's dirty pill, error line, and cancel button in place
+  // (no re-render, so typing never loses focus).
+  function cmsRefreshFieldState(field) {
+    const wrap = document.querySelector('[data-cms-field="' + field.key + '"]');
+    if (!wrap) return;
+    const draft = cmsDraft(field);
+    const touched = cmsTouched.has(field.key);
+    wrap.classList.toggle('is-dirty', draft.dirty);
+    wrap.classList.toggle('has-error', !!draft.error);
+    wrap.querySelector('.cms-dirty-pill').hidden = !draft.dirty;
+    wrap.querySelector('.cms-cancel-edit').hidden = !touched;
+    const err = wrap.querySelector('.cms-field-error');
+    err.textContent = draft.error || '';
+    err.hidden = !draft.error;
+    if (field.kind === 'hours') {
+      const mode = wrap.querySelector('[data-cms-part="mode"]').value;
+      wrap.querySelector('.cms-hours-times').hidden = mode !== 'open';
+      wrap.querySelector('.cms-hours-custom').hidden = mode !== 'custom';
+    }
+  }
+
+  function cmsRefreshPublishBar() {
+    const pending = cmsPendingChanges();
+    const errors = pending.filter(x => x.draft.error).length;
+    const changes = pending.filter(x => x.draft.dirty).length;
+    const summary = document.getElementById('cmsPendingSummary');
+    const btn = document.getElementById('saveSiteContentBtn');
+    const discard = document.getElementById('cmsDiscardBtn');
+    if (!summary || !btn) return;
+    summary.textContent = errors
+      ? errors + ' field' + (errors === 1 ? ' needs' : 's need') + ' fixing before you can publish.'
+      : changes ? changes + ' unsaved change' + (changes === 1 ? '' : 's') + '.' : 'No unsaved edits.';
+    summary.classList.toggle('has-error', errors > 0);
+    btn.disabled = !cmsLoadedOk || changes === 0 || errors > 0;
+    discard.disabled = cmsTouched.size === 0;
+  }
+
+  async function renderSiteContentForm() {
+    const el = document.getElementById('siteContentForm');
+    try {
+      // A refresh (pull-to-refresh re-runs this) must not throw away
+      // edits that haven't been published yet.
+      if (cmsLoadedOk && cmsTouched.size) { await cmsReloadKeepingDrafts(); return; }
+      await cmsLoad();
+      cmsLoadedOk = true;
+      renderCmsEditor();
+    } catch (e) {
+      cmsLoadedOk = false;
+      el.innerHTML = '<p class="error-state">Could not load the site content: ' + escapeHtml(e.message || String(e)) + ' Nothing can be edited until it loads -- reload to try again.</p>';
+    }
+  }
+
+  // Reloads live values + history after a publish/undo/conflict, keeping
+  // any edits the user hasn't published yet.
+  async function cmsReloadKeepingDrafts() {
+    const drafts = {};
+    const root = document.getElementById('siteContentForm');
+    cmsTouched.forEach(key => {
+      drafts[key] = Array.from(root.querySelectorAll('[data-cms-key="' + key + '"]')).map(el => [el.getAttribute('data-cms-part'), el.value]);
+    });
+    await cmsLoad();
+    renderCmsEditor();
+    Object.keys(drafts).forEach(key => {
+      drafts[key].forEach(([part, value]) => {
+        const el = document.querySelector('[data-cms-key="' + key + '"][data-cms-part="' + part + '"]');
+        if (el) el.value = value;
+      });
+      // A field that was touched but ends up matching what's live (typed
+      // in, then typed back) is no longer an edit.
+      const draft = cmsDraft(CMS_FIELD_BY_KEY[key]);
+      if (!draft.dirty && !draft.error) {
+        cmsTouched.delete(key);
+        const wrap = document.querySelector('[data-cms-field="' + key + '"]');
+        if (wrap) wrap.outerHTML = cmsFieldHtml(CMS_FIELD_BY_KEY[key]);
+      }
+      cmsRefreshFieldState(CMS_FIELD_BY_KEY[key]);
+    });
+    cmsRefreshPublishBar();
+  }
+
+  // ---- actions -------------------------------------------------------------
+
+  async function saveSiteContent() {
+    const pending = cmsPendingChanges();
+    const withErrors = pending.filter(x => x.draft.error);
+    if (withErrors.length) {
+      showToast('Fix the highlighted field first.', { type: 'error' });
+      const first = document.querySelector('[data-cms-field="' + withErrors[0].field.key + '"] input, [data-cms-field="' + withErrors[0].field.key + '"] select');
+      if (first) first.focus();
+      return false;
+    }
+    const changes = pending.filter(x => x.draft.dirty);
+    if (!changes.length) return false;
+
+    const rows = changes.map(x => {
+      const oldValue = cmsLive[x.field.key] === undefined ? null : cmsLive[x.field.key];
+      return { field: x.field, oldValue: oldValue, newValue: x.draft.value, warnings: cmsWarnings(x.field, oldValue, x.draft.value) };
+    });
+    const confirmed = await showCmsReview({
+      title: 'Review before publishing',
+      intro: 'These go live on the public site within a few seconds. Check each one against what you meant to type.',
+      rows: rows,
+      confirmText: 'Publish ' + rows.length + ' change' + (rows.length === 1 ? '' : 's'),
+    });
+    if (!confirmed) return false;
+    if (!(await confirmDevPassword())) return false;
+
+    const btn = document.getElementById('saveSiteContentBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Publishing...'; }
+    const res = await cmsRpc('cms_publish_content', {
+      p_changes: rows.map(r => ({ key: r.field.key, expected: r.oldValue, value: r.newValue })),
+    });
+    if (btn) btn.textContent = 'Review & publish';
+    if (!res.ok) {
+      await showAlert(cmsErrorMessage(res, 'published'));
+      if (res.status === 409) await cmsReloadKeepingDrafts(); else cmsRefreshPublishBar();
+      return false;
+    }
+    rows.forEach(r => cmsTouched.delete(r.field.key));
+    await cmsReloadKeepingDrafts();
+    showToast('Published. Live on the site within a few seconds.');
+    if (typeof renderContentHistory === 'function') renderContentHistory();
+    return true;
+  }
+
+  async function undoLastCmsSave() {
+    const last = cmsLastSave();
+    if (!last) return false;
+    const changed = last.rows.filter(r => (cmsLive[r.key] === undefined ? null : cmsLive[r.key]) !== r.new_value);
+    if (changed.length) {
+      const f = CMS_FIELD_BY_KEY[changed[0].key];
+      await showAlert('"' + (f ? f.label : changed[0].key) + '" has been changed again since that save, so it can\'t be undone as a whole. Use that field\'s "Recent changes" to put back an earlier value instead.');
+      return false;
+    }
+    const rows = last.rows.map(r => ({ field: CMS_FIELD_BY_KEY[r.key] || { key: r.key, label: r.key, kind: 'text' }, oldValue: r.new_value, newValue: r.old_value, warnings: [] }));
+    const confirmed = await showCmsReview({
+      title: last.isUndo ? 'Redo this change?' : 'Undo this save?',
+      intro: 'This puts back what was live before ' + cmsWho(last.by) + '\'s ' + (last.isUndo ? 'undo' : 'save') + ' at ' + cmsWhen(last.at) + '. It goes live within a few seconds.',
+      rows: rows,
+      newTag: 'Goes back to',
+      confirmText: (last.isUndo ? 'Redo ' : 'Undo ') + rows.length + ' change' + (rows.length === 1 ? '' : 's'),
+      danger: true,
+    });
+    if (!confirmed) return false;
+    if (!(await confirmDevPassword())) return false;
+    const res = await cmsRpc('cms_undo_content', { p_history_ids: last.rows.map(r => r.id) });
+    if (!res.ok) {
+      await showAlert(cmsErrorMessage(res, 'undone'));
+      await cmsReloadKeepingDrafts();
+      return false;
+    }
+    last.rows.forEach(r => cmsTouched.delete(r.key));
+    await cmsReloadKeepingDrafts();
+    showToast(last.isUndo ? 'Redone. Live within a few seconds.' : 'Undone. The previous values are live again within a few seconds.');
+    if (typeof renderContentHistory === 'function') renderContentHistory();
+    return true;
+  }
+
+  // Puts back the value a field had before one specific past change,
+  // through the same review + compare-and-swap publish as a normal edit.
+  async function putBackCmsHistoryRow(row) {
+    const field = CMS_FIELD_BY_KEY[row.key];
+    if (!field) { await showAlert('That field isn\'t editable here any more.'); return false; }
+    const current = cmsLive[row.key] === undefined ? null : cmsLive[row.key];
+    const target = row.old_value === undefined ? null : row.old_value;
+    if (target === current) { showToast('That value is already live.'); return false; }
+    const problem = cmsValidate(field, target);
+    if (problem) {
+      await showAlert('That older value doesn\'t pass today\'s checks (' + problem + ') Type the value in fresh instead.');
+      return false;
+    }
+    const confirmed = await showCmsReview({
+      title: 'Put back an earlier value?',
+      intro: 'From ' + cmsWho(row.changed_by) + '\'s change on ' + cmsWhen(row.changed_at) + '. It goes live within a few seconds.',
+      rows: [{ field: field, oldValue: current, newValue: target, warnings: cmsWarnings(field, current, target) }],
+      confirmText: 'Put it back',
+    });
+    if (!confirmed) return false;
+    if (!(await confirmDevPassword())) return false;
+    const res = await cmsRpc('cms_publish_content', { p_changes: [{ key: field.key, expected: current, value: target }] });
+    if (!res.ok) {
+      await showAlert(cmsErrorMessage(res, 'changed'));
+      await cmsReloadKeepingDrafts();
+      return false;
+    }
+    cmsTouched.delete(field.key);
+    await cmsReloadKeepingDrafts();
+    showToast('Put back. Live within a few seconds.');
+    if (typeof renderContentHistory === 'function') renderContentHistory();
+    return true;
+  }
+
+  async function discardCmsEdits() {
+    if (!cmsTouched.size) return;
+    if (!(await showConfirm('Throw away your unsaved edits? Nothing on the live site changes either way.', { confirmText: 'Discard edits', danger: true }))) return;
+    cmsTouched.clear();
+    renderCmsEditor();
+  }
+
+  function cmsCancelFieldEdit(key) {
+    cmsTouched.delete(key);
+    const wrap = document.querySelector('[data-cms-field="' + key + '"]');
+    if (wrap) wrap.outerHTML = cmsFieldHtml(CMS_FIELD_BY_KEY[key]);
+    cmsRefreshFieldState(CMS_FIELD_BY_KEY[key]);
+    cmsRefreshPublishBar();
+  }
+
+  function cmsWireEditor() {
+    const root = document.getElementById('siteContentForm');
+    const onEdit = (e) => {
+      const key = e.target && e.target.getAttribute && e.target.getAttribute('data-cms-key');
+      if (!key || !CMS_FIELD_BY_KEY[key]) return;
+      cmsTouched.add(key);
+      cmsRefreshFieldState(CMS_FIELD_BY_KEY[key]);
+      cmsRefreshPublishBar();
+    };
+    root.addEventListener('input', onEdit);
+    root.addEventListener('change', onEdit);
+    root.addEventListener('click', (e) => {
+      const btn = e.target.closest && e.target.closest('[data-cms-action]');
+      if (!btn) return;
+      const action = btn.getAttribute('data-cms-action');
+      if (action === 'review') saveSiteContent();
+      else if (action === 'discard') discardCmsEdits();
+      else if (action === 'undo-last') undoLastCmsSave();
+      else if (action === 'info') openFieldInfo(btn.getAttribute('data-cms-info'));
+      else if (action === 'cancel-edit') cmsCancelFieldEdit(btn.closest('[data-cms-field]').getAttribute('data-cms-field'));
+      else if (action === 'putback') {
+        const row = cmsHistory.find(r => String(r.id) === btn.getAttribute('data-cms-history-id'));
+        if (row) putBackCmsHistoryRow(row);
+      }
+    });
+    document.getElementById('cmsReviewCancel').addEventListener('click', () => cmsCloseReview(false));
+    document.getElementById('cmsReviewConfirm').addEventListener('click', () => cmsCloseReview(true));
+    document.getElementById('cmsReviewOverlay').addEventListener('click', (e) => { if (e.target.id === 'cmsReviewOverlay') cmsCloseReview(false); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.getElementById('cmsReviewOverlay').classList.contains('is-open')) cmsCloseReview(false);
+    });
+    // Leaving with unpublished edits asks first -- the edits aren't lost
+    // silently, and nothing half-typed was ever live.
+    window.addEventListener('beforeunload', (e) => {
+      if (cmsPendingChanges().some(x => x.draft.dirty)) { e.preventDefault(); e.returnValue = ''; }
+    });
+  }
+
   const FIELD_INFO = {
+    reviews: {
+      title: 'Google rating and review count',
+      description: 'Shown as "5.0 from 7 Google reviews" (with the stars) at the top of the homepage and in its booking section, as the first two numbers in the homepage stats strip, on the booking page, and on the fridge, dishwasher, and washer/dryer repair pages. Also updates the rating Google reads from the homepage\'s search data, so the two always match.',
+      image: null,
+    },
     phone: {
       title: 'Phone number',
       description: 'Appears in the header, the hero "Call" button, the mobile menu, the sticky call button on scroll, the Contact section\'s "Call or Text" card, the footer, all 3 FAQ answers that mention it, and the Terms &amp; Conditions modal -- all of them update together.',
@@ -410,63 +1178,6 @@
     const img = info.image ? '<img src="/images/dev-help/' + info.image + '" alt="" style="max-width:100%; border-radius:8px; margin-top:10px; border:1px solid var(--border);">' : '';
     if (typeof openInfoModal === 'function') openInfoModal(info.title, '<p>' + info.description + '</p>' + img);
   }
-  async function renderSiteContentForm() {
-    const el = document.getElementById('siteContentForm');
-    el.innerHTML = '<p class="tool-sub">Loading...</p>';
-    try {
-      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content?select=key,value', 6000, {
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
-      });
-      const rows = res.ok ? await res.json() : [];
-      const current = {};
-      (Array.isArray(rows) ? rows : []).forEach(r => { current[r.key] = r.value || ''; });
-
-      el.innerHTML = SITE_CONTENT_FIELDS.map(f =>
-        '<div class="tool-form-row"><div class="form-field full"><label style="display:flex; align-items:center; gap:6px;">' + escapeHtml(f.label) +
-        (f.info ? '<button class="dev-info-bubble" onclick="openFieldInfo(\'' + f.info + '\')" title="Where does this appear?" aria-label="Where does this appear?"><svg class="th-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg></button>' : '') +
-        '</label>' +
-        '<input type="text" id="siteContent_' + f.key + '" placeholder="' + escapeAttr(f.placeholder) + '" value="' + escapeAttr(current[f.key] || '') + '"></div></div>'
-      ).join('') +
-      '<div class="form-footer"><button class="primary-btn" id="saveSiteContentBtn" onclick="saveSiteContent()">Save all</button></div>' +
-      '<p class="tool-sub" style="margin-top:8px;">Changes go live on the public site the next time it loads -- no push needed, usually within a few seconds.</p>';
-
-      if (!res.ok) el.insertAdjacentHTML('afterbegin', '<p class="tool-sub" style="color:#e05555;">Could not load current values -- the table below might not exist yet. Run the setup SQL in Supabase first.</p>');
-    } catch (e) {
-      el.innerHTML = '<p class="tool-sub">Could not reach Supabase: ' + escapeHtml(e.message || String(e)) + '</p>';
-    }
-  }
-  async function saveSiteContent() {
-    if (!(await confirmDevPassword())) return;
-    const btn = document.getElementById('saveSiteContentBtn');
-    btn.disabled = true;
-    btn.textContent = 'Saving...';
-    try {
-      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      const rows = SITE_CONTENT_FIELDS.map(f => ({
-        key: f.key,
-        value: document.getElementById('siteContent_' + f.key).value.trim() || null,
-      }));
-      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content?on_conflict=key', 8000, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': 'Bearer ' + getAuthToken(),
-          'Prefer': 'resolution=merge-duplicates',
-        },
-        body: JSON.stringify(rows),
-      });
-      if (!res.ok) throw new Error('Save failed (HTTP ' + res.status + ') -- check that the setup SQL has been run and RLS policies allow this account to write.');
-      showToast('Saved. Live on the site within a few seconds.');
-      renderContentHistory();
-    } catch (e) {
-      showToast(e.message || String(e), { type: 'error' });
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Save all';
-    }
-  }
   async function exportContentBackup() {
     try {
       if (typeof ensureFreshToken === 'function') await ensureFreshToken();
@@ -508,17 +1219,26 @@
       // Terms edits despite both having the exact same trigger-based
       // audit trail built for them.
       const [contentRes, faqRes, termsRes] = await Promise.all([
-        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content_history?select=key,old_value,new_value,changed_by,changed_at&order=changed_at.desc&limit=50', 6000, { headers }),
+        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content_history?select=id,key,old_value,new_value,changed_by,changed_at,action,undo_of&order=id.desc&limit=50', 6000, { headers }),
         fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq_history?select=action,faq_id,question,old_answer,new_answer,changed_by,changed_at&order=changed_at.desc&limit=50', 6000, { headers }),
         fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_terms_history?select=action,term_id,heading,old_body,new_body,changed_by,changed_at&order=changed_at.desc&limit=50', 6000, { headers }),
       ]);
 
       const rows = [];
       if (contentRes.ok) {
-        (await contentRes.json()).forEach(r => rows.push({
-          table: 'content', source: 'Site content', label: r.key, old_value: r.old_value, new_value: r.new_value,
-          changed_by: r.changed_by, changed_at: r.changed_at, action: 'updated',
-        }));
+        // Plain-English field name, and the real action now that the
+        // trigger logs inserts too (the seeded review fields show as
+        // "Added"). historyRow is kept whole so "Restore" can go through
+        // the editor's own review + compare-and-swap publish.
+        (await contentRes.json()).forEach(r => {
+          const field = typeof CMS_FIELD_BY_KEY === 'object' ? CMS_FIELD_BY_KEY[r.key] : null;
+          rows.push({
+            table: 'content', source: 'Site content',
+            label: field ? field.label + (field.kind === 'hours' ? ' hours' : '') : r.key,
+            old_value: r.old_value, new_value: r.new_value,
+            changed_by: r.changed_by, changed_at: r.changed_at, action: r.action || 'update', historyRow: r,
+          });
+        });
       }
       if (faqRes.ok) {
         (await faqRes.json()).forEach(r => rows.push({
@@ -549,7 +1269,9 @@
         // No restore offered for a plain "insert" -- there's no old
         // value to go back to; undoing an insert is a delete, which
         // is already what each editor's own delete button is for.
-        const canRestore = r.action !== 'insert' && r.old_value != null;
+        const canRestore = r.table === 'content'
+          ? (r.action === 'update' && typeof CMS_FIELD_BY_KEY === 'object' && !!CMS_FIELD_BY_KEY[r.historyRow.key])
+          : (r.action !== 'insert' && r.old_value != null);
         return '<div class="dev-check-row" style="align-items:flex-start;"><div>' +
           '<div>' + personDot(r.changed_by) + '<strong>' + escapeHtml(r.source) + ': ' + escapeHtml(r.label) + '</strong> &mdash; ' + escapeHtml(r.changed_by || 'unknown') + ' &mdash; ' + new Date(r.changed_at).toLocaleString() + '</div>' +
           '<div class="dev-check-detail">' + detail + '</div>' +
@@ -563,6 +1285,13 @@
   async function restoreHistoryEntry(index) {
     const entry = (window._contentHistoryRows || [])[index];
     if (!entry) return;
+    // Site content goes through the editor's review step and
+    // cms_publish_content()'s compare-and-swap, so a restore can't
+    // blindly overwrite a newer edit (the old direct upsert here could).
+    if (entry.table === 'content') {
+      await putBackCmsHistoryRow(entry.historyRow);
+      return;
+    }
     if (!(await confirmDevPassword())) return;
     try {
       if (typeof ensureFreshToken === 'function') await ensureFreshToken();
@@ -572,14 +1301,7 @@
         'Authorization': 'Bearer ' + getAuthToken(),
       };
 
-      if (entry.table === 'content') {
-        const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content?on_conflict=key', 8000, {
-          method: 'POST',
-          headers: Object.assign({ 'Prefer': 'resolution=merge-duplicates' }, headers),
-          body: JSON.stringify([{ key: entry.label, value: entry.old_value }]),
-        });
-        if (!res.ok) throw new Error('Restore failed (HTTP ' + res.status + ')');
-      } else if (entry.table === 'faq' || entry.table === 'terms') {
+      if (entry.table === 'faq' || entry.table === 'terms') {
         const tableName = entry.table === 'faq' ? 'site_faq' : 'site_terms';
         const bodyField = entry.table === 'faq' ? 'answer' : 'body';
         const labelField = entry.table === 'faq' ? 'question' : 'heading';
@@ -610,7 +1332,6 @@
       }
       showToast('Restored. Live on the site within a few seconds.');
       renderContentHistory();
-      if (entry.table === 'content' && typeof renderSiteContentForm === 'function') renderSiteContentForm();
       if (entry.table === 'faq' && typeof renderFaqEditor === 'function') renderFaqEditor();
       if (entry.table === 'terms' && typeof renderTermsEditor === 'function') renderTermsEditor();
     } catch (e) {
@@ -832,6 +1553,7 @@
       document.getElementById(allowed ? 'contentMainView' : 'contentBlockedView').style.display = 'block';
       document.getElementById(allowed ? 'contentBlockedView' : 'contentMainView').style.display = 'none';
       if (!allowed) return;
+      if (!window._cmsEditorWired) { cmsWireEditor(); window._cmsEditorWired = true; }
       renderSiteContentForm();
       renderContentHistory();
       renderFaqEditor();
