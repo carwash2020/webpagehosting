@@ -4501,3 +4501,35 @@ New test: `tests/design/reduced-motion-coverage.test.js` (5) covers:
 - the triage and back-to-top scrolls, run in JSDOM with and without reduced motion.
 
 Four of the five fail against the old code.
+
+## What changed, 2026-09-23 -- Keyboard users can skip the menu on every page, and the 404 page is fixed
+
+Public site: about, our-work, the 11 blog pages and the 404 page.
+
+**What was wrong.**
+- **Missing skip links.** Most public pages have a hidden "Skip to main content" link that appears on the first Tab press, so keyboard and screen-reader users can jump past the menu. About, our-work and every blog page didn't have one. On desktop that meant 12-13 Tab presses through the header before reaching the content.
+- **404 page.** It had no main-content landmark, so screen readers had nowhere to jump. Its big orange "404" was a smeared, fake bold: the heading font (Anton) comes in one weight only, and the page never told the browser not to thicken it.
+
+**The fix.**
+- Those 13 pages get the same skip link the rest of the site uses.
+- The 404 page's content now sits in a `<main>`, and the "404" uses Anton's real weight.
+
+**Checked:**
+- On all 13 pages, the first Tab shows the link, and Enter then Tab lands on the first link in the content. Tested in dark and light, at desktop and phone widths.
+- axe: the 404's `landmark-one-main` and `region` failures are gone, and the other pages now pass its `skip-link` rule.
+- Screenshots match main pixel for pixel, apart from the "404" digits.
+
+**Not changed:** `careers.html` still has no skip link, because the careers/privacy scope question is still open. The booking pages belong to the booking lane.
+
+Verified:
+- full suite 3246 of 3247 passing; the one failure is the known `check-links.py` sandbox-proxy test;
+- `check-consistency`, `check-undefined-vars`, `eslint` and `check-visual-snapshot` clean;
+- `check-links.py`: the only failures are the sandbox proxy refusing outside sites, no internal link broken;
+- no CSS, SEO metadata or JSON-LD touched, apart from the 404 page's own inline style.
+
+New test: `tests/design/skip-link-and-main-landmark.test.js` checks every public page that has a header:
+- a skip link before `<header>`;
+- that the link targets the page's single `<main>`, whose id is unique;
+- the 404 page's `<main>` and its heading weight.
+
+Excluded pages each carry their reason. 15 of the tests fail against the old pages.

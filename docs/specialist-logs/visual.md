@@ -1567,4 +1567,12 @@ Found with `document.getAnimations()` under emulated reduced motion. It lists ps
 - **JS `behavior:'smooth'` overrides CSS `scroll-behavior:auto`.** Back-to-top (`index.html`) and the triage result (`js/triage.js`) now pass `'auto'` under reduced motion. The service modal's scroll to `#schedule` is booking-lane code, so it's logged in `features.md`.
 - **Result:** with reduced motion, the probe finds 0 perceptible animations on the homepage, about, a service page, a city page and a blog post (the homepage had 5). Settled screenshots under reduced motion are pixel-identical to before, apart from one strip of live text that differs between two loads of the *old* build too. Normal-motion behaviour is untouched, because the change sits inside the media query.
 
+## 2026-09-23 (late) -- round 5: skip links everywhere, a landmark on 404
+
+- **Skip link pattern:** `<a href="#main" class="skip-link">Skip to main content</a>`, placed straight after `.bg-blueprint` and before `<header>`, with `<main id="main">`. That's the `terms.html`/`privacy.html` pattern; index and the city/service pages use `#home` for the same thing. about, our-work and all 11 blog pages have it now. Before, a keyboard user needed 12-13 Tabs on desktop to get past the header, and 3 on a phone.
+- **No `tabindex="-1"` on `<main>`.** Chromium moves the sequential-focus start to a fragment target without it, so the next Tab lands on the first link in main. Verified on each page, in both themes, at 1440 and 375.
+- **`careers.html` still has no skip link.** It's waiting on the careers/privacy scope question to Connor, and `skip-link-and-main-landmark.test.js` excludes it with that reason. Adding it later is the same two-line edit. The booking pages are excluded too (booking lane).
+- **404:** the content is wrapped in `<main>` (axe's `landmark-one-main` and `region` now pass). `main` repeats body's centred flex column, so nothing else moved. `h1` gets `font-weight:400`. Anton has only one weight, so the default h1 bold made Chrome synthesize a smeared bold. Any new standalone page using `--font-display` on a heading needs the same reset, because it doesn't get styles.css's `h1,h2,h3{font-weight:400}`.
+- **Pixel diff against main:** identical except the 404 digits. Sub-1% gallery-caption noise on our-work also appears between two loads of main (lazy image decode).
+
 <!-- Add new entries above this line -->
