@@ -2830,6 +2830,95 @@ Every Send-Push caller was re-checked before deploy. The 4 trigger functions and
 - The fix is one line: `const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;` and then `behavior: reduced ? 'auto' : 'smooth'`. That's the same fix the visual lane applied to back-to-top and the triage result.
 - It's left for the booking lane because it's in the booking entry point. `tests/design/reduced-motion-coverage.test.js` allowlists this one call, so fixing it won't break that test.
 
+## 2026-09-23 -- Shift clock, part 1: the data layer (Start my day / End my day)
+
+Connor asked for a whole-shift punch clock, like Paylocity: clock in for
+the day, clock out at the end, not tied to any job. It sits **beside**
+part 9's job clock. It doesn't replace it.
+
+**Why a second clock, not a replacement.** The job clock answers "how
+long did this job take" (job costing, the invoice's Labor line). A shift
+answers "how long did I work today", including driving, estimates and
+the time between jobs, none of which the job clock sees. The business is
+still paid per job (`careers.html`: "Pay is per completed job, not
+hourly"), so this is an attendance number, never pay. Replacing the job
+clock would have been a business-model call; nothing points that way.
+
+**Storage** (data-layer.js, Shift clock section; synced key
+`th_shift_log`, tombstones `th_shift_tombstones`):
+- One record per shift: `{ id, email, start, end, hours }`. `startSource`
+  / `endSource` ('entered', or 'job-clock' for a back-dated start) and
+  `editedBy` (someone else changed it) are stored only when they apply.
+  The whole blob is pushed on every edit, so plain punches stay small.
+- **A list of records, not an object keyed by email.** `applySyncData`
+  overwrites a plain object whole, so two people punching in on two
+  phones before either synced would erase each other. A record array
+  merges per record and per field (tested: two people, two devices).
+- On shift means `end === null`: null, never deleted, for the same merge
+  reason as `clockSince`.
+- Hours use the job clock's own `thClockHours` (0.1 h; under a minute is
+  a mis-tap and counts 0) and land on the day the shift started, like
+  Your week's job visits. An overnight call counts on the day it began.
+- **Whose shift** comes from the stored session's email, read the way
+  `tools-tour.js` does, because `getCurrentUserEmail()` returns null
+  whenever the hourly access token has expired.
+
+**Forgotten End my day.** `TH_SHIFT_MAX_HOURS = 14`. A shift still open
+past that "needs an end time":
+- It counts **0 h**. Not 24, and not capped at 14, which would still be
+  wrong by hours.
+- `thEndShift` without an entered time returns `{ needsEnd }` rather than
+  recording now, and `thStartShift` returns `{ needsEnd }` while one is
+  waiting, so the UI must ask "when did you finish?" first.
+- `thShiftSuggestedEnd` offers when the last job clock inside that shift
+  stopped: real evidence, not a guess.
+- Typed-in times are checked by `thShiftTimesProblem`: the end must be
+  after the start, nothing in the future, at most 24 h, and no overlap
+  with that person's other shifts. Messages are in plain words.
+- Two devices that each started a shift offline: the latest open one is
+  current, and the older one needs an end time (or delete it).
+
+**Independent of the job clock.** Neither needs, starts or stops the
+other (tested):
+- Gating the job clock on a shift would cost a job its billable hours
+  the day someone forgets to punch in.
+- End my day doesn't stop a running job clock. The job clock isn't
+  anyone's in particular: one runs at a time for the whole business and
+  nothing records who started it, so stopping "yours" could stop a
+  helper's.
+- Forgot to punch in: `thShiftSuggestedStart` offers the first job-clock
+  start of the day (after your last shift ended) as a back-dated start.
+  It's only offered, never applied.
+
+**Totals** for the Dashboard (part 3):
+- `thShiftWeekSummary(email, now)`: Mon–Sun via `thWeekStart`, with last
+  week, today, on shift and since, plus the shifts that need an end time.
+- `thShiftTeamSummary(now)`: everyone with hours this week or last, on
+  shift, or waiting on an end time.
+
+**Also:**
+- `thEditShift`, `thDeleteShift` (tombstone + Graveyard copy, and Dev
+  Tools' Graveyard can label and restore a `shift`), `thUndoEndShift`
+  (refused once a newer shift has started).
+- Every write dispatches `th-shift-change`.
+
+**Not done here, on purpose:**
+- **Who sees the team's hours:** the plan is `canViewFinance()` (Owner
+  and Developer by default, toggleable per account). A separate
+  permission would need an `account_roles` column.
+- **Privacy:** the blob reaches every signed-in internal account's
+  device, like finance data does, so hiding the team view is UI-only.
+- **Retention:** the log is small (roughly 50 KB per person per year) but
+  never pruned; the job clock's `timeLog` is the same.
+- **The job clock isn't per-person** (one at a time, business-wide). That
+  predates this and is unchanged. It's worth a look if a helper starts
+  using the app day to day.
+
+Tests: `tests/tools/shift-clock.test.js` (18). `tombstone-retention.test.js`
+now counts 15 tombstone functions (it pins the count so each new one is
+checked for pruning). `job-clock.test.js` and `your-week.test.js` are
+untouched and pass.
+
 ## 2026-09-23 -- booking-flow round 2 is live: deploy results
 
 Round 2 (#369) was deployed from `main` in the order its entry above lays out. Every function was re-fetched after deploy and diffed against `main`.

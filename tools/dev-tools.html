@@ -53,14 +53,14 @@
 </script>
 <link rel="stylesheet" href="/styles.css?v=87b1f5227e">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=8fbfc85975">
-<script src="/tools/data-layer.js?v=5bbc0202fd" defer></script>
+<script src="/tools/data-layer.js?v=a6b2da95ff" defer></script>
 <script src="/tools/dev-tools-shared.js?v=5ab33172d1" defer></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
 <script src="/tools/tools-dialogs.js?v=310315eb44" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=d635579dfb" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
-<script src="/tools/sync.js?v=4cfac4b10e" defer></script>
+<script src="/tools/sync.js?v=844eda1750" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -2885,11 +2885,13 @@
     template: { dataKey: 'th_job_templates', tombstoneKey: 'th_template_tombstones', label: r => r.title || 'Template' },
     knownIssue: { dataKey: 'th_known_issues', tombstoneKey: 'th_known_issue_tombstones', label: r => r.title || 'Known issue' },
     prUnit: { dataKey: 'th_parts_reference_units', tombstoneKey: 'th_pr_unit_tombstones', label: r => [r.brand, r.type || r.model].filter(Boolean).join(' ') || 'Appliance Wiki unit' },
+    shift: { dataKey: 'th_shift_log', tombstoneKey: 'th_shift_tombstones', label: r => [r.email, r.start ? new Date(r.start).toLocaleString() : '', r.hours ? r.hours + ' h' : ''].filter(Boolean).join(' -- ') || 'Shift' },
   };
   const GRAVEYARD_TYPE_TITLES = {
     client: 'Client', job: 'Job', expense: 'Expense', income: 'Income', contact: 'Contact',
     contract: 'Contract', invoice: 'Invoice', quote: 'Quote', priceReference: 'Price reference',
     template: 'Job template', knownIssue: 'Known issue', prUnit: 'Appliance Wiki unit', prIssue: 'Appliance Wiki issue',
+    shift: 'Shift',
   };
 
   function graveyardEntryLabel(entry) {
