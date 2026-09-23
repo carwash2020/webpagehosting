@@ -65,3 +65,26 @@ test('blog.css version stamp matches across the index page and all individual po
   }
   assert.equal(versions.size, 1, `expected one shared blog.css version, got ${[...versions].join(', ')}`);
 });
+
+// 2026-09-23: the card markup is also reused outside /blog/ (service
+// pages' "Recent Notes From the Shop"), but its styles live only in
+// blog.css. Four service pages reused the markup without loading that
+// file, and each card's inline SVG icon and arrow grew to fill the
+// page (820x820px on desktop). Any public page that uses the markup
+// has to load blog.css, at the same version the blog itself uses.
+test('every public page that uses the blog card markup also loads blog.css at the shared version', () => {
+  const blogVersion = INDEX.match(/blog\/blog\.css\?v=([a-zA-Z0-9]+)/)[1];
+  const pages = [
+    ...fs.readdirSync(repo()).filter((f) => f.endsWith('.html')),
+    ...['locations', 'services', 'blog'].flatMap((dir) =>
+      fs.readdirSync(repo(dir)).filter((f) => f.endsWith('.html')).map((f) => `${dir}/${f}`)),
+  ];
+  const users = pages.filter((p) => /class="blog-index-/.test(fs.readFileSync(repo(p), 'utf8')));
+  assert.ok(users.length >= 9, `expected the blog index plus the service pages, found ${users.join(', ')}`);
+  for (const page of users) {
+    const html = fs.readFileSync(repo(page), 'utf8');
+    const m = html.match(/<link rel="stylesheet" href="\/blog\/blog\.css\?v=([a-zA-Z0-9]+)">/);
+    assert.ok(m, `${page} uses .blog-index-* markup but never loads /blog/blog.css`);
+    assert.equal(m[1], blogVersion, `${page} loads blog.css?v=${m[1]}, the blog uses ?v=${blogVersion}`);
+  }
+});

@@ -4362,3 +4362,20 @@ Verified:
 - every caller of the push service checked before its lock went on
 
 New tests: `tests/edge-functions/booking-notifications-round2.test.js` (23).
+
+## What changed, 2026-09-23 -- Service pages: the "Recent Notes" cards had giant icons
+
+Public site only. Found in a visual audit by loading the pages in a browser.
+
+**What was wrong.** Four service pages (plumbing, drywall & painting, general handyman repairs, assembly & installation) have a "Recent Notes From the Shop" card linking to one blog post. The card's styles live in `blog/blog.css`, and those four pages never loaded it. So the card's two small icons stretched to fill the page: 820×820px on a computer and 327px on a phone. That's about 1,500px of giant toilet, wrench and arrow shapes in the middle of each page. It had been live since the section was added on 2026-09-16.
+
+**The fix.** Each page now loads `blog.css`, the same one line the other four service pages already had. Nothing else on the pages changes. With the stylesheet switched on and off, every computed style outside the card was compared, and only the section's height moved (each page is now about 1,535px shorter).
+
+Verified:
+- **Card sizes:** icon 22px, badge 42px, arrow 12px on all four pages, the same as the washer & dryer page, which was always right.
+- **Screenshots:** desktop and phone, light and dark mode, and reduced motion.
+- **Accessibility:** WCAG 2.2 AA scan clean on all four pages in both themes.
+- **Layout shift:** unchanged from before the fix.
+- **Checks:** full suite 3173/3174, the only failure being the known `check-links.py` sandbox-proxy test (Unsplash is blocked here). Also clean: `check-consistency`, `check-undefined-vars`, lint, visual snapshot.
+
+New test in `tests/design/blog-index-cards.test.js`: any public page that uses the card markup must load `blog.css` at the blog's own version. The test fails against the old pages.

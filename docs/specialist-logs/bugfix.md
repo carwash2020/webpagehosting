@@ -928,3 +928,9 @@ Tests: `tests/tools/quick-add-anywhere.test.js`.
   since a re-render may have replaced the element meanwhile.
 
 Tests: `tests/tools/job-clock.test.js`.
+
+## 2026-09-23 -- note from the visual lane: three shared public scripts have no cache-bust stamp
+
+- `js/cookie-consent.js` (33 pages), `js/mobile-nav-collapsible.js` (33) and `js/hiring-banner.js` (16) are loaded with no `?v=` at all. Every other shared public script carries a content hash.
+- `check-consistency.js` only polices references that already have a `?v=`, so it can't catch drift on these. An edit to any of them would be served stale from Fastly and browser caches.
+- The visual lane will stamp `hiring-banner.js` if its round-3 banner work touches it. The other two are unowned.

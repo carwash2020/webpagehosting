@@ -1409,4 +1409,39 @@ height).
   check-up panel in the new side column): no horizontal overflow, no
   page errors.
 
+## 2026-09-23 (night) -- public-site audit, then round 1: the service-page blog cards
+
+A fresh audit of every public page in a real browser (1440px and
+375px, dark, light and reduced motion). Findings and the round plan
+went to Connor in chat. Round 1 shipped the worst one.
+
+**Round 1.** Plumbing, drywall, handyman-repairs and assembly use the
+`.blog-index-item` card ("Recent Notes From the Shop") without loading
+`blog/blog.css`. Every rule for that card lives there, so the icon SVG
+and arrow grew to fill the card: 820px on desktop. Each page now loads
+`blog.css`, like the other four service pages. The new test in
+`tests/design/blog-index-cards.test.js` covers any page that uses the
+markup.
+
+**Method notes for the next audit:**
+- **Fonts.** Playwright's Chromium doesn't use the sandbox proxy, so
+  webfonts silently fail and every shot shows fallback faces. The
+  computed `font-family` still says "Anton", so it's easy to miss. Pass
+  the Google Fonts requests through a route handler that fetches them
+  from Node (`NODE_USE_ENV_PROXY=1`). Don't set Playwright's `proxy`
+  option: it sends 127.0.0.1 through the proxy too, and the page comes
+  back as a 405.
+- **Contrast.** axe reports light-mode failures on every page against
+  `#0a0a0a`, the inline anti-flash colour on `<html>`. The real
+  background is the fixed `.bg-blueprint` layer. Override `<html>` to
+  the light `--bg` before running axe. With that done, only one real
+  light-mode failure was left (careers "(optional)", 2.73:1).
+- **Fallback-font timing.** `page.screenshot()` waits for webfonts. To
+  capture the pre-swap frame, use a raw CDP
+  `Page.captureScreenshot`.
+- **Stylesheet isolation.** To prove a stylesheet changes nothing
+  else, snapshot every computed property of every element with the
+  sheet enabled and disabled (`sheet.disabled = true`), then diff.
+  That's more reliable than comparing screenshots.
+
 <!-- Add new entries above this line -->
