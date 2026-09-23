@@ -361,9 +361,25 @@ self.addEventListener('push', (event) => {
   );
 });
 
+// A notification click only ever opens a page on this site. Every real
+// sender (Send-Push and the portal notify functions) passes a same-
+// origin path, so anything else -- an absolute link to another site, a
+// javascript: URL, garbage -- falls back to the default page instead of
+// being opened. Before the 2026-09-23 security audit Send-Push accepted
+// the public anon key, so anyone could push a client an arbitrary link;
+// that caller check is fixed, and this keeps the worker from trusting
+// the payload if a sender ever regresses.
+function safeNotificationUrl(raw, fallback) {
+  try {
+    const resolved = new URL(raw || fallback, self.location.origin);
+    if (resolved.origin === self.location.origin) return resolved.pathname + resolved.search + resolved.hash;
+  } catch (e) { /* unparseable -- fall back below */ }
+  return fallback;
+}
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = (event.notification.data && event.notification.data.url) || '/portal/home.html';
+  const targetUrl = safeNotificationUrl(event.notification.data && event.notification.data.url, '/portal/home.html');
   event.waitUntil(
     self.clients.matchAll({ type: 'window' }).then((clientsList) => {
       for (const client of clientsList) {
