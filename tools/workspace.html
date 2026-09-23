@@ -68,7 +68,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=0511522a0e">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=8fbfc85975">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=4cfac4b10e" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -77,11 +77,11 @@
      manage-booking.html, portal/quotes.html, and portal/jobs.html use. -->
 <script src="/js/business-hours.js?v=5296319b73"></script>
 <script src="/tools/push-notifications.js?v=180abd2a84" defer></script>
-<script src="/tools/data-layer.js?v=3381752d42" defer></script>
+<script src="/tools/data-layer.js?v=5bbc0202fd" defer></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
 <script src="/tools/tools-dialogs.js?v=310315eb44" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=660a55daa1" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=d635579dfb" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <script src="/tools/tools-tour.js?v=118148b9a2" defer></script>
 <style>
@@ -575,6 +575,40 @@
   .today-money-due { color: var(--text-dim); }
   .today-money-due.is-overdue { color: #e05252; }
   .today-money-reminded { display: block; margin-top: 2px; font-size: 12px; color: var(--text-dim); }
+
+  /* Your week (2026-09-23, rework part 11). */
+  .week-card {
+    margin: 0 0 18px; padding: 16px 18px; border-radius: 16px;
+    background: var(--bg-panel); border: 1px solid var(--border);
+  }
+  .week-card:empty { display: none; }
+  .week-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  .week-label { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; }
+  .week-range { color: var(--text-dim); font-size: 12.5px; }
+  .week-body { display: flex; align-items: flex-end; gap: 22px; }
+  .week-bars { flex: 1 1 auto; max-width: 620px; display: grid; grid-template-columns: repeat(7, minmax(26px, 1fr)); gap: 8px; align-items: end; }
+  .week-bar { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .week-bar-h { min-height: 14px; font-size: 10.5px; font-weight: 700; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+  .week-bar-track { position: relative; display: block; width: 100%; height: 84px; border-radius: 7px; background: var(--bg-panel-2); overflow: hidden; }
+  .week-bar-fill { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 7px; background: linear-gradient(180deg, var(--orange-light), var(--orange) 80%); }
+  .week-bar.is-future .week-bar-track { background: transparent; border: 1px dashed var(--border); }
+  .week-bar-day { font-size: 11px; font-weight: 700; color: var(--text-dim); }
+  .week-bar.is-today .week-bar-day, .week-bar.is-today .week-bar-h { color: var(--orange-light); }
+  .week-stats { flex: 0 0 auto; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(120px, auto); gap: 28px; }
+  .week-stat-value { font-family: var(--font-display); font-size: 24px; font-weight: 700; color: var(--white); font-variant-numeric: tabular-nums; line-height: 1.15; }
+  .week-stat-label { display: flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 12.5px; color: var(--text); }
+  .week-stat-last { margin-top: 2px; font-size: 11.5px; color: var(--text-dim); }
+  .week-live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--orange); animation: th-clock-pulse 1.6s ease-out infinite; }
+  .week-hint { margin-top: 12px; font-size: 12.5px; color: var(--text-dim); }
+  @media (prefers-reduced-motion: reduce) { .week-live-dot { animation: none; } }
+  @media (max-width: 720px) {
+    .week-card { padding: 14px 16px; }
+    .week-body { flex-direction: column; align-items: stretch; gap: 14px; }
+    .week-bars { max-width: none; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+    .week-bar-track { height: 72px; }
+    .week-stats { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .week-stat-value { font-size: 21px; }
+  }
   @media (max-width: 720px) {
     .today-next-job { padding: 16px 16px; }
     .today-money, .today-restofday { padding: 14px 16px; }
@@ -665,6 +699,11 @@
   <a class="dash-primary-action" href="/tools/invoice-generator.html#pos" data-tile-perm="can_manage_invoices">Quick charge</a>
   <a class="dash-primary-action" href="/tools/finance.html#expenses" data-tile-perm="can_view_finance">Log expense</a>
 </nav>
+
+<!-- Your week (2026-09-23, Workspace rework part 11): the scoreboard --
+     hours on the clock each day, jobs done, and billed, beside last week.
+     Filled by renderWeekCard() from thWeekSummary() in data-layer.js. -->
+<div class="week-card" id="weekCard" aria-labelledby="weekCardLabel"></div>
 
 <!-- Needs attention (2026-09-21): the ops inbox, open by default and
      directly under the hero -- leads, bookings, work requests, jobs
@@ -951,6 +990,8 @@
       <ul>
         <li><strong>Next Job</strong> &mdash; whatever's next on today's schedule, sorted by priority, with a tap-to-call phone number and a tap-to-open-Maps address, a straight line into that job's own page, and <strong>Route today</strong>: one link that opens the whole day's stops as a Google Maps route.</li>
         <li><strong>Money Owed</strong> &mdash; Current and Overdue, split apart so a client who's simply not due yet never gets lumped in with one who needs a follow-up call. Every unpaid invoice is listed right there (overdue first) with a one-tap <strong>Mark paid</strong> &mdash; confirm, and it's recorded as paid in full.</li>
+        <li><strong>Your week</strong> &mdash; the scoreboard under the daily actions: a bar for each day, Monday to Sunday, of the hours on the clock (today's grows while a clock runs), then jobs done and billed, with last week's number under each. Billed means invoices dated this week plus income you logged by hand; it shows only to accounts that can see finance.</li>
+        <li><strong>Texts that write themselves</strong> &mdash; <strong>On my way</strong> on Next Job, the <strong>Text</strong> button on a job, or <strong>Text</strong> in its sheet on Jobs. You get the texts that job calls for, already written with the client's name: On my way or Running late (pick 10, 20, 30 or 45 minutes), Confirm the visit, a quick Parts run, All done. Edit it if you like and <strong>Send</strong>: it opens your own Messages. The job remembers the last one (&ldquo;On my way sent 12 min ago&rdquo;).</li>
         <li><strong>Remind</strong> &mdash; on any invoice that's due or late (on Money Owed, in an invoice's sheet on Invoices, and on the job). The reminder is already written: their first name, the invoice, what's still owed, how late it is, and &mdash; for an invoice on the client portal &mdash; where to pay by card. Change anything you like, then <strong>Text</strong>, <strong>Email</strong>, or <strong>Copy</strong> it; it goes out from your own phone. Each one is logged on the invoice (&ldquo;Reminded 3 days ago&rdquo;), and the next one is a notch firmer: friendly, then following up, then firm.</li>
         <li><strong>Rest of Today</strong> &mdash; whatever else is on today's schedule after the next job.</li>
         <li><strong>New job / Create invoice / Find client / Calendar / Quick charge / Log expense</strong> &mdash; the six daily actions, one tap each. Quick charge takes a card payment on the spot with no invoice; Log expense opens Finance on the Expenses tab with the receipt form ready. On a phone the bar at the bottom is Home, Jobs, the orange <strong>+</strong>, Clients, and Money (Invoices and Finance, with a switch at the top of either to hop between them); the grid button at the top right opens the rest (Route Planner, Runway, Contracts, Reviews, the Appliance Wiki, Settings). On a computer everything is in the sidebar.</li>
@@ -3077,6 +3118,11 @@
         else thStartClock(btn.dataset.clockJob);
       });
     }
+    // On my way (2026-09-23, rework part 12): the text you send leaving
+    // the last job, written and waiting in the client text sheet.
+    const onMyWayBtn = (job.phone && !clockOn && typeof thOpenTextSheet === 'function')
+      ? '<a class="secondary-btn today-clock-btn" href="sms:' + escapeAttr(String(job.phone).replace(/[^\d+]/g, '')) + '" data-text-job="' + escapeAttr(job.id) + '" data-text-kind="onmyway"><svg class="th-icon" aria-hidden="true"><use href="#icon-message" xlink:href="#icon-message"></use></svg>On my way</a>'
+      : '';
     nextEl.innerHTML = `
       <div class="today-next-job-label">${clockOn ? 'On the clock' : 'Next Job'}</div>
       <p class="today-next-job-title"><span class="badge badge-${job.priority}">${job.priority}</span> ${escapeHtml(job.title)}${job.client ? ' &mdash; ' + escapeHtml(job.client) : ''}</p>
@@ -3086,6 +3132,7 @@
       </div>
       <div class="today-next-job-actions">
         <a href="/tools/job-detail.html?id=${encodeURIComponent(job.id)}" class="primary-btn">Open Job</a>
+        ${onMyWayBtn}
         ${clockBtn}
         ${routeUrl ? `<a href="${escapeAttr(routeUrl)}" class="secondary-btn" target="_blank" rel="noopener" id="todayRouteLink">${routeStops === 1 ? 'Directions' : 'Route today \u00b7 ' + routeStops + ' stops'}</a>` : '<a href="/tools/job-tracker.html" class="secondary-btn">View in Job Tracker</a>'}
       </div>`;
@@ -3102,6 +3149,48 @@
           <div class="dash-list-item-meta">${j.address ? escapeHtml(j.address) : 'No address on file'}</div>
         </div>
       </div>`).join('');
+  }
+
+  // Your week (2026-09-23, Workspace rework part 11). Seven bars of hours
+  // on the clock (today's grows while a clock runs), then jobs done and
+  // billed, each with last week's number beside it rather than an arrow:
+  // on a Tuesday, a full last week always "wins". Billed shows only to an
+  // account that can see finance.
+  let weekCardTick = null;
+  function renderWeekCard() {
+    const el = document.getElementById('weekCard');
+    if (!el || typeof thWeekSummary !== 'function') return;
+    const w = thWeekSummary();
+    const canFinance = typeof canViewFinance !== 'function' || canViewFinance() || !(typeof getCurrentUserRole === 'function' && getCurrentUserRole());
+    const range = w.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' – ' +
+      w.end.toLocaleDateString('en-US', w.end.getMonth() === w.start.getMonth() ? { day: 'numeric' } : { month: 'short', day: 'numeric' });
+    const h = (n) => (n % 1 ? n.toFixed(1) : String(n)) + ' h';
+    const top = Math.max(4, ...w.days.map(d => d.hours));
+    const bars = w.days.map(d =>
+      '<div class="week-bar' + (d.isToday ? ' is-today' : '') + (d.isFuture ? ' is-future' : '') + '">' +
+        '<span class="week-bar-h">' + (d.hours ? (d.hours % 1 ? d.hours.toFixed(1) : d.hours) : '') + '</span>' +
+        '<span class="week-bar-track"><span class="week-bar-fill" style="height:' + Math.round((d.hours / top) * 100) + '%"></span></span>' +
+        '<span class="week-bar-day">' + d.name.charAt(0) + '</span>' +
+      '</div>').join('');
+    const said = w.days.map(d => d.name + ' ' + (d.hours ? h(d.hours) : 'none')).join(', ');
+    const stat = (value, label, last) =>
+      '<div class="week-stat"><div class="week-stat-value">' + value + '</div><div class="week-stat-label">' + label + '</div>' +
+      (last ? '<div class="week-stat-last">' + last + '</div>' : '') + '</div>';
+    const noClockYet = !w.hours && !w.prevHours;
+    el.innerHTML =
+      '<div class="week-head"><span class="week-label" id="weekCardLabel">Your week</span><span class="week-range">' + range + '</span></div>' +
+      '<div class="week-body">' +
+        '<div class="week-bars" role="img" aria-label="' + escapeAttr('Hours on the clock: ' + said) + '">' + bars + '</div>' +
+        '<div class="week-stats">' +
+          stat(h(w.hours), w.running ? '<span class="week-live-dot" aria-hidden="true"></span>On the clock' : 'On the clock', w.prevHours ? 'Last week ' + h(w.prevHours) : '') +
+          stat(String(w.jobsDone), 'Job' + (w.jobsDone === 1 ? '' : 's') + ' done', w.prevJobsDone ? 'Last week ' + w.prevJobsDone : '') +
+          (canFinance ? stat(money(w.billed), 'Billed', w.prevBilled ? 'Last week ' + money(w.prevBilled) : '') : '') +
+        '</div>' +
+      '</div>' +
+      (noClockYet ? '<div class="week-hint">Start the clock on a job and your hours fill in here.</div>' : '');
+    // Today's bar grows while a clock runs; nothing ticks otherwise.
+    if (w.running && !weekCardTick) weekCardTick = setInterval(renderWeekCard, 60000);
+    else if (!w.running && weekCardTick) { clearInterval(weekCardTick); weekCardTick = null; }
   }
 
   // Shares its numbers with Business Snapshot's Outstanding/Overdue
@@ -3266,6 +3355,7 @@
     if (rateEl) rateEl.value = loadSetAsideRate();
     renderGreetingBanner();
     renderTodayHero();
+    renderWeekCard();
     renderMetrics();
     if (!dashSectionClosed('analytics')) {
       renderStatusBars();
@@ -3426,8 +3516,9 @@
       renderWelcomeGreeting();
       renderSnapshotLastUpdated();
       renderMfaNagBanner();
-      window.addEventListener('th-clock-change', renderTodayHero);
+      window.addEventListener('th-clock-change', () => { renderTodayHero(); renderWeekCard(); });
       window.addEventListener('th-invoice-reminded', renderMetrics);
+      window.addEventListener('th-job-texted', renderTodayHero);
       if (typeof startRealtimeSync === 'function') {
         // One status callback shared by both channels -- last status wins,
         // which is fine here since they're on the same underlying connection.

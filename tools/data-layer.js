@@ -1119,6 +1119,125 @@ function thInvoiceRemindedLabel(inv, now) {
   return 'Reminded ' + (d <= 0 ? 'today' : d === 1 ? 'yesterday' : d + ' days ago');
 }
 
+// ---------- Your week (2026-09-23, Workspace rework part 11) ----------
+// The Dashboard's scoreboard, Monday to Sunday: hours on the clock each day
+// (part 9's timeLog, plus a clock still running), jobs finished, and what
+// was billed (invoices dated this week, plus income logged by hand), each
+// beside last week's. Billed, not collected: a card payment through the
+// portal has no local payment date to count by.
+function thWeekStart(d) {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
+  return x;
+}
+function thWeekSummary(now, data) {
+  const at = now === undefined ? new Date() : new Date(now);
+  data = data || {};
+  const jobs = data.jobs || thRead(TH_KEYS.jobs, []);
+  const invoices = data.invoices || thRead(TH_KEYS.invoices, []);
+  const income = (data.income || thRead(TH_KEYS.income, [])).filter(e => e && e.origin !== 'invoice');
+  const start = thWeekStart(at);
+  const dayAt = (n) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + n);
+  const end = dayAt(7), prevStart = dayAt(-7);
+  const today = new Date(at.getFullYear(), at.getMonth(), at.getDate());
+  const names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const days = names.map((name, i) => {
+    const d = dayAt(i);
+    return { date: thLocalDateStr(d), name: name, hours: 0, isToday: d.getTime() === today.getTime(), isFuture: d > today };
+  });
+  const indexOf = (d) => {
+    const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    return day < start || day >= end ? -1 : Math.round((day - start) / 86400000);
+  };
+  const out = { start: start, end: dayAt(6), days: days, hours: 0, prevHours: 0, jobsDone: 0, prevJobsDone: 0, billed: 0, prevBilled: 0, running: false };
+  const addHours = (when, h) => {
+    if (!(h > 0) || isNaN(when.getTime())) return;
+    const i = indexOf(when);
+    if (i >= 0) { days[i].hours += h; out.hours += h; }
+    else if (when >= prevStart && when < start) out.prevHours += h;
+  };
+  (jobs || []).forEach(j => {
+    (Array.isArray(j.timeLog) ? j.timeLog : []).forEach(v => { if (v) addHours(new Date(v.start), Number(v.hours) || 0); });
+    const since = thJobClockSince(j);
+    if (since !== null) { out.running = true; addHours(new Date(since), thJobClockElapsedMs(j, at) / 3600000); }
+    if (j.status === 'done') {
+      const done = thJobDoneDate(j);
+      if (done && indexOf(done) >= 0) out.jobsDone++;
+      else if (done && done >= prevStart && done < start) out.prevJobsDone++;
+    }
+  });
+  const addMoney = (dateStr, amount) => {
+    const d = new Date((dateStr || '') + 'T00:00:00');
+    const n = Number(amount) || 0;
+    if (isNaN(d.getTime()) || !n) return;
+    if (indexOf(d) >= 0) out.billed += n;
+    else if (d >= prevStart && d < start) out.prevBilled += n;
+  };
+  (invoices || []).forEach(inv => { if (inv) addMoney(inv.date, inv.total); });
+  income.forEach(e => addMoney(e.date, e.amount));
+  const r1 = (n) => Math.round(n * 10) / 10;
+  days.forEach(d => { d.hours = r1(d.hours); });
+  out.hours = r1(out.hours);
+  out.prevHours = r1(out.prevHours);
+  out.billed = Math.round(out.billed * 100) / 100;
+  out.prevBilled = Math.round(out.prevBilled * 100) / 100;
+  return out;
+}
+
+// ---------- Client texts (2026-09-23, Workspace rework part 12) ----------
+// The texts sent every day, written from the job: On my way (with a time),
+// Running late, Confirming the visit, a quick parts run, All done. Which
+// ones lead follows the job -- a booked job leads with On my way (or, for
+// a later day, the confirmation), one under way with Running late, a done
+// one with All done. They go out through the phone's own Messages; each is
+// logged on the job (job.texts, the last 20) so the sheet can say what was
+// sent last and when.
+const TH_TEXT_ETAS = [10, 20, 30, 45];
+function thJobVisitWhen(job, now) {
+  const at = now === undefined ? new Date() : new Date(now);
+  const d = new Date((job && job.date ? job.date : '') + 'T00:00:00');
+  if (isNaN(d.getTime())) return '';
+  const days = thDaysBetween(at, d);
+  if (days === 0) return 'today';
+  if (days === 1) return 'tomorrow';
+  if (days < 0) return '';
+  return 'on ' + d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+}
+function thJobTextTemplates(job, opts) {
+  opts = opts || {};
+  const eta = TH_TEXT_ETAS.indexOf(Number(opts.eta)) > -1 ? Number(opts.eta) : 20;
+  const first = String(job.client || '').trim().split(/\s+/)[0];
+  const hi = (first ? 'Hi ' + first : 'Hi') + ", it's Triple H Enterprises. ";
+  const street = String(job.address || '').split(',')[0].trim();
+  const when = thJobVisitWhen(job, opts.now);
+  const all = {
+    onmyway: { label: 'On my way', eta: true, body: hi + "I'm on my way and should be there in about " + eta + ' minutes.' },
+    late: { label: 'Running late', eta: true, body: hi + "I'm running about " + eta + ' minutes behind. Sorry about that, see you soon.' },
+    confirm: { label: 'Confirm the visit', eta: false, body: hi + 'Just confirming your appointment ' + when + (street ? ' at ' + street : '') + '. Reply here if anything changes.' },
+    parts: { label: 'Parts run', eta: true, body: hi + 'I need to pick up a part and will be back in about ' + eta + ' minutes.' },
+    done: { label: 'All done', eta: false, body: hi + 'All done' + (street ? ' at ' + street : '') + '! Your invoice is on its way. Thanks for choosing Triple H.' },
+  };
+  let order;
+  if (job.status === 'done') order = ['done'];
+  else if (job.status === 'in-progress') order = ['late', 'parts', 'done'];
+  else if (when && when !== 'today') order = ['confirm', 'onmyway', 'late'];
+  else order = ['onmyway', 'late'].concat(when ? ['confirm'] : []);
+  return order.map(key => Object.assign({ key: key }, all[key]));
+}
+function thLogJobText(jobId, key, now) {
+  const jobs = thRead(TH_KEYS.jobs, []);
+  const job = jobs.find(j => String(j.id) === String(jobId));
+  if (!job) return null;
+  const at = now === undefined ? new Date() : new Date(now);
+  job.texts = (Array.isArray(job.texts) ? job.texts : []).concat([{ at: at.toISOString(), key: key }]).slice(-20);
+  if (!thWrite(TH_KEYS.jobs, jobs)) return null;
+  return job;
+}
+function thJobLastText(job) {
+  const list = (job && Array.isArray(job.texts) ? job.texts : []).filter(t => t && t.at && !isNaN(new Date(t.at).getTime()));
+  return list.length ? list[list.length - 1] : null;
+}
+
 // Everything for one job in a single call -- the query that makes a real
 // Job Detail view possible, the same way thGetClientBundle() enabled
 // Client Detail. Client resolution prefers job.clientId (written on every
