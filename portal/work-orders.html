@@ -283,27 +283,6 @@
   .schedule-summary { font-size: 13.5px; color: var(--text); margin: 10px 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .schedule-summary button { flex-shrink: 0; }
   .schedule-error { color: #e05252; font-size: 12.5px; margin: 6px 0 0; }
-  /* Whole-window availability (2026-09-22, booking-flow pass round 4):
-     createBookingPicker() (/js/booking-flow.js) labels every day with how
-     many times it has open, from ONE fetch for the strip. Full/closed
-     days stay in the strip (it reads as a calendar) but can't be picked.
-     Same look as booking.html's picker. Page-local like the rest of this
-     picker's CSS (the same block is on quotes/jobs/work-orders). */
-  .date-btn .avail { display: block; margin-top: 3px; font-size: 10px; font-weight: 600; letter-spacing: .3px; color: var(--success-text, #4caf78); white-space: nowrap; min-height: 13px; }
-  .date-btn.is-selected .avail { color: var(--orange-light); }
-  .date-btn .avail.is-loading { width: 30px; height: 7px; min-height: 0; margin: 7px auto 3px; border-radius: 4px; background: var(--border); animation: bookingSkelPulse 1.1s ease-in-out infinite; }
-  .date-btn.is-unavailable { opacity: .45; cursor: not-allowed; }
-  .date-btn.is-unavailable .avail { color: var(--text-dim); }
-  .slot-skel { height: 40px; border-radius: 10px; background: var(--bg-panel); border: 1px solid var(--border); animation: bookingSkelPulse 1.1s ease-in-out infinite; }
-  .slot-skel:nth-child(2) { animation-delay: .12s; } .slot-skel:nth-child(3) { animation-delay: .24s; } .slot-skel:nth-child(4) { animation-delay: .36s; }
-  .booking-picker-msg { grid-column: 1 / -1; margin: 0; padding: 10px 4px; text-align: center; color: var(--text-dim); font-size: 13px; line-height: 1.5; }
-  .booking-picker-msg.is-error { color: #e05252; }
-  .booking-picker-msg a { color: var(--orange-light); text-decoration: underline; text-underline-offset: 2px; }
-  .booking-picker-retry { grid-column: 1 / -1; }
-  @keyframes bookingSkelPulse { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
-  @media (prefers-reduced-motion: reduce) {
-    .date-btn .avail.is-loading, .slot-skel { animation: none; }
-  }
   /* Photo upload row -- thumbnails plus a trailing "Add Photo" tile,
      same square-tile pattern already familiar from the internal
      tools' own job-photo upload, so this doesn't invent a new visual
@@ -449,7 +428,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=0e2521a23c">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=1cd27008d4">
 </head>
 <body class="portal-page">
 

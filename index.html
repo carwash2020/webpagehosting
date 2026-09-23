@@ -696,31 +696,6 @@
       </div>
     </div>
   </section>
-  <script>
-    // Triage -> booking handoff (2026-09-22). Someone who just tapped
-    // "Dryer" then "Runs but won't heat" used to land on a blank booking
-    // page and re-pick the service and retype the problem. The booking
-    // link now carries both: booking.html opens straight on Appliance
-    // Repair's date picker with the symptom already in the notes (fill-
-    // only there, never overwriting anything typed). Delegated on the
-    // grid so it runs after triage.js's own click handlers have set
-    // aria-pressed, and it reads only those two pill labels -- the same
-    // text the visitor just tapped. Every triage appliance is an
-    // appliance-repair visit. Opt-in via data-triage-book-link, so the
-    // city/service pages that share triage.js are unaffected.
-    (function () {
-      const grid = document.getElementById('triageSymptomGrid');
-      const link = document.querySelector('[data-triage-book-link]');
-      if (!grid || !link) return;
-      grid.addEventListener('click', function () {
-        const appliance = grid.querySelector('.triage-appliance-pill[aria-pressed="true"]');
-        const symptom = grid.querySelector('.triage-symptom-pill[aria-pressed="true"]');
-        if (!appliance || !symptom) { link.setAttribute('href', '/booking.html'); return; }
-        const note = appliance.textContent.replace(/\s+/g, ' ').trim() + ': ' + symptom.textContent.replace(/\s+/g, ' ').trim();
-        link.setAttribute('href', '/booking.html?service=appliance&note=' + encodeURIComponent(note.slice(0, 200)));
-      });
-    })();
-  </script>
 
   <!-- The honest half of the repair pitch. A repair company saying plainly
        when NOT to repair is the strongest trust signal it has, and it is
@@ -2505,7 +2480,10 @@
       }
     }
     closeModal();
-    document.getElementById('schedule').scrollIntoView({behavior:'smooth'});
+    // An explicit behavior:'smooth' overrides the CSS scroll-behavior
+    // reset, so reduced motion has to be honoured here too.
+    const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    document.getElementById('schedule').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });
     document.getElementById('name').focus();
   });
 
@@ -3382,7 +3360,7 @@
 
 
 
-<script src="/js/triage.js?v=3a0a8ab5aa" defer></script>
+<script src="/js/triage.js?v=7fe7dd717f" defer></script>
 <script src="/js/analytics-events.js?v=4a6fd9aa19" defer></script>
 <script src="/js/mobile-nav-collapsible.js" defer></script>
 </body>

@@ -1142,4 +1142,34 @@ including ones we would want only internal, certify that and if so fix."
 - **Refunds don't change a PaymentIntent's status**, so any guard or
   alert keyed on `succeeded` has to look at the charge.
 
+## 2026-09-23 (booking lane): round 2 deployed; the new trigger function gets the same EXECUTE lockdown
+
+Cross-logged from `features.md` ("booking-flow round 2 is live"). What that means for security:
+
+- **Deployed and verified:**
+  - Send-Push, the six client-push lookups, `send-booking-email` and `send-appointment-reminder` are live.
+  - Each was diffed against `main` after deploy.
+  - Every function with a service-role check answers the public anon key with 401 and lets the Vault key through. Audit items #3 and #8 are closed live, not just in `main`.
+- **`notify_booking_change_email()` is postgres/service_role only,** like every other trigger function in `public` since `revoke_public_execute_on_internal_only_functions` (2026-09-21).
+  - The migration as first written left it EXECUTE-able by anon/authenticated, the schema's default privileges. That was based on an old note that a revoke once broke lead notifications.
+  - Postgres only checks EXECUTE on a trigger function at CREATE TRIGGER, never when it fires. So the lockdown can't stop a trigger. Proven live in a rolled-back block: a trigger whose function had EXECUTE revoked still fired for an insert running as `authenticated`.
+  - Trigger functions can't be called over the API anyway, so the default grant wasn't exploitable. Revoking it keeps the convention uniform, and keeps the next audit from having to reason about it.
+- **Advisors after deploy:** no new finding. The remaining anon/authenticated SECURITY DEFINER warnings are pre-existing:
+  - the booking RPCs (`create_booking`, `get_booking_availability`, and the token-gated get/cancel/reschedule), which are public on purpose;
+  - the MFA recovery-code functions, which are this lane's.
+
+## 2026-09-23 (booking lane): th_bookings no longer accepts direct inserts from the public
+
+Cross-logged from `features.md` ("booking-flow follow-ups"). It closes the round 2 audit's LOW note on `with check (true)`.
+
+- **Dropped.** "Anyone can submit a booking" (anon + authenticated, `with check (true)`). A direct insert with the public anon key could set any column (`status`, `job_id`, `quote_id`, `checkup_id`, `reminder_sent_at`) and skipped `create_booking()`'s validation. Since public signup is on, "authenticated" included strangers too.
+- **Added.** "Staff can add bookings directly": authenticated, with an `account_roles` email, the same test as the table's SELECT/UPDATE/DELETE policies. It exists for the Dev Tools booking test. The public books through `create_booking()` (SECURITY DEFINER, allowlisted columns, validated times).
+- **Verified live,** before and after, in rolled-back blocks:
+  - anon and non-staff direct inserts → 42501;
+  - the RPC works for both;
+  - staff and the service role can still insert.
+  - A real anon HTTP insert → 401 RLS violation.
+  - No rows were created.
+- **Advisors:** nothing new.
+
 <!-- Add new entries above this line -->

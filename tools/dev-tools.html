@@ -54,7 +54,7 @@
 <link rel="stylesheet" href="/styles.css?v=87b1f5227e">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=6315172f03">
 <script src="/tools/data-layer.js?v=a6b2da95ff" defer></script>
-<script src="/tools/dev-tools-shared.js?v=5ab33172d1" defer></script>
+<script src="/tools/dev-tools-shared.js?v=e6f7bb5803" defer></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
 <script src="/tools/tools-dialogs.js?v=310315eb44" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
@@ -1583,7 +1583,7 @@
       testBookingId = found && found[0] && found[0].id;
       const cancelToken = found && found[0] && found[0].cancel_token;
       if (!testBookingId || !cancelToken) throw new Error('Insert succeeded but could not find the row afterward to continue the test');
-      logStep(true, 'Created test booking (should trigger: new-booking push + email)');
+      logStep(true, 'Created test booking (should trigger: new-booking push + staff email)');
 
       await new Promise(function (r) { setTimeout(r, 1500); });
 
@@ -1593,7 +1593,7 @@
       });
       const reschedRows = reschedRes.ok ? await reschedRes.json() : null;
       const reschedOk = !!(reschedRows && reschedRows[0] && reschedRows[0].ok);
-      logStep(reschedOk, 'Rescheduled test booking (should trigger: rescheduled push)' + (reschedOk ? '' : ' -- ' + (reschedRows && reschedRows[0] && reschedRows[0].message)));
+      logStep(reschedOk, 'Rescheduled test booking (should trigger: rescheduled push + "Booking moved" staff email)' + (reschedOk ? '' : ' -- ' + (reschedRows && reschedRows[0] && reschedRows[0].message)));
 
       await new Promise(function (r) { setTimeout(r, 1500); });
 
@@ -1603,7 +1603,7 @@
       });
       const cancelRows = cancelRes.ok ? await cancelRes.json() : null;
       const cancelOk = !!(cancelRows && cancelRows[0] && cancelRows[0].ok);
-      logStep(cancelOk, 'Cancelled test booking (should trigger: cancelled push)' + (cancelOk ? '' : ' -- ' + (cancelRows && cancelRows[0] && cancelRows[0].message)));
+      logStep(cancelOk, 'Cancelled test booking (should trigger: cancelled push + "Booking cancelled" staff email)' + (cancelOk ? '' : ' -- ' + (cancelRows && cancelRows[0] && cancelRows[0].message)));
 
       resultEl.insertAdjacentHTML('beforeend', '<p class="tool-sub" style="margin-top:8px;">This confirms each step ran and was accepted by the server -- it can\'t directly confirm a push or email was actually received. Check the Send-Push and send-booking-email edge function logs in Supabase if anything above says FAILED, or if nothing arrived despite everything above passing.</p>');
     } catch (e) {

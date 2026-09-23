@@ -152,6 +152,33 @@
     });
   })();
 
+  // ---------- triage -> booking handoff ----------
+  // Someone who just tapped "Dryer" then "Runs but won't heat" used to land
+  // on a blank booking page and re-pick the service and retype the
+  // problem. The result's booking link now carries both: booking.html
+  // opens straight on Appliance Repair's date picker with the symptom
+  // already in the notes (fill-only there, never overwriting anything
+  // typed). Every triage appliance is an appliance-repair visit.
+  //
+  // Opt-in: only a link marked data-triage-book-link is rewritten. Started
+  // as an inline script on the homepage (2026-09-22); moved here on
+  // 2026-09-23 so the city and service pages that load this file get it
+  // too. Delegated on the grid, so it runs after the pill buttons' own
+  // click handlers above have set aria-pressed, and it reads only those
+  // two pill labels -- the same text the visitor just tapped.
+  (function () {
+    const grid = document.getElementById('triageSymptomGrid');
+    const link = document.querySelector('[data-triage-book-link]');
+    if (!grid || !link) return;
+    grid.addEventListener('click', function () {
+      const appliance = grid.querySelector('.triage-appliance-pill[aria-pressed="true"]');
+      const symptom = grid.querySelector('.triage-symptom-pill[aria-pressed="true"]');
+      if (!appliance || !symptom) { link.setAttribute('href', '/booking.html'); return; }
+      const note = appliance.textContent.replace(/\s+/g, ' ').trim() + ': ' + symptom.textContent.replace(/\s+/g, ' ').trim();
+      link.setAttribute('href', '/booking.html?service=appliance&note=' + encodeURIComponent(note.slice(0, 200)));
+    });
+  })();
+
   // ---------- live open / closed ----------
   // Reads the same HOURS_BY_WEEKDAY table booking.html uses via
   // business-hours.js, so this pill can never contradict the booking page.

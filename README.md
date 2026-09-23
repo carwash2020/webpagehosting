@@ -4776,6 +4776,57 @@ Verified:
 Tests: `tests/tools/shift-hours-card.test.js` (8). Your week's and the job
 clock's tests are unchanged and pass.
 
+## What changed, 2026-09-23 -- Booking flow, round 2 is live, plus a gentler scroll on the homepage
+
+Round 2 (the entry "Booking flow, round 2: every change reaches the guest…" above) was built and merged earlier today, but not yet switched on. It is now live. Full results: `docs/specialist-logs/features.md` and `security.md` ("round 2 is live" / "round 2 deployed").
+
+**What's switched on now:**
+- Guests get an email when they move or cancel a visit, and the day-before reminder follows a moved visit.
+- Team alerts go only to Triple H's own accounts, and client notifications go to exactly the right person.
+- The booking email, the reminder and the push service only accept calls from Triple H's own server.
+
+**How it was checked.** Every server function was downloaded again after it went live and compared line by line with the reviewed code: identical. Each one was also called twice. Once with the public site key, which must be refused, and it was. Once the way the real triggers call it, which must work, and it did. The new "booking moved or cancelled" trigger was run end to end on a practice booking inside a transaction that was then undone, so nothing was sent. It queued exactly the right emails and notifications and re-armed the reminder.
+
+**One small hardening.** The new trigger is locked down the same way as every other trigger in the database: nothing but Triple H's own server can run it directly. This was tested first to confirm it can't stop the trigger from firing.
+
+**Homepage.** Visitors who ask their device for reduced motion now jump straight to the booking form after "or schedule online" in a service card, instead of getting an animated scroll.
+
+Verified:
+- full suite 3262 of 3263 passing; the only failure is the known `check-links.py` sandbox-proxy test;
+- `check-consistency`, `check-undefined-vars`, lint and visual snapshot clean;
+- Supabase security advisors: nothing new.
+
+New test: `tests/booking/booking-entry-reduced-motion.test.js` (2; both fail against the old scroll). Updated with reasons: `booking-notifications-round2.test.js` now expects the trigger lockdown, and its lookup-SQL check uses plain text matching (this closes a CodeQL warning).
+
+## What changed, 2026-09-23 -- Booking: one safe way in, the symptom tool books from every page, tidier portal styles
+
+The loose ends from today's booking work. Full reasoning: `docs/specialist-logs/features.md` ("booking-flow follow-ups"), plus `security.md` and `visual.md`.
+
+**Bookings only come in the safe way now.** The online booking page has used a checked, server-side booking step since earlier today. The old back door, which let anyone holding the site's public key write a booking row directly, is now closed. Through it, a booking could be created already cancelled, linked to someone else's job, or marked "reminder sent" so no reminder ever went out. Guests book exactly as before. The Dev Tools booking test still works, and so does portal scheduling. This was tested on the live system before and after, and no booking was created.
+
+**The "is it worth fixing?" tool books from every page.** On the homepage, tapping an appliance and a symptom and then "or book a visit online" already opened the booking page with Appliance Repair picked and the symptom in the notes. The same tool on the 8 city pages and 4 appliance service pages now does the same thing.
+
+**Portal styles in one place.** The styles for the portal's appointment picker were copied onto three pages; there's now one copy. Nothing looks different: every style of every picker element was compared in a browser before and after.
+
+**Checked and dropped:** adding the picker's script to the portal app's offline cache. It turned out it wouldn't be used, and it would have made installed apps show an update prompt every time that script changes.
+
+Verified:
+- full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, lint, visual snapshot;
+- the database change was tested live, before and after, for every kind of caller;
+- Supabase security advisors: nothing new.
+
+New tests:
+- `tests/booking/booking-direct-insert-lockdown.test.js` (6);
+- the triage hand-off on all 13 pages that carry the tool (in `booking-flow-picker-and-confirm.test.js`; all fail against the old script).
+
+Updated with reasons: the round 1 hand-off tests and the round 4 page-style test.
+
+## What changed, 2026-09-23 -- Dev Tools: the booking test explains the emails it sends
+
+Tools only (the Dev Tools page). When you run the booking notification test, moving and cancelling the test booking now also send the team a "Booking moved" and a "Booking cancelled" email. That's the round 2 booking work. The test's description and its step-by-step results now say so, so those emails don't look like a surprise. They also note that the test booking has no email address, so no guest email is sent.
+
+Verified: full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, lint, visual snapshot. New test: `tests/dev-tools/booking-test-copy.test.js` (3).
+
 ## What changed, 2026-09-23 -- Deleted inventory parts no longer come back after a sync
 
 Finance's Inventory tab, and Dev Tools' Graveyard. Nothing else changes.
