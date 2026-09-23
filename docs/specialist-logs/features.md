@@ -2830,4 +2830,38 @@ Every Send-Push caller was re-checked before deploy. The 4 trigger functions and
 - The fix is one line: `const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;` and then `behavior: reduced ? 'auto' : 'smooth'`. That's the same fix the visual lane applied to back-to-top and the triage result.
 - It's left for the booking lane because it's in the booking entry point. `tests/design/reduced-motion-coverage.test.js` allowlists this one call, so fixing it won't break that test.
 
+## 2026-09-23 -- booking-flow follow-ups: direct-insert lockdown, triage hand-off on every page, one copy of the picker CSS
+
+The follow-ups the earlier rounds left, done on request ("do the remaining items").
+
+**1. The public can no longer insert bookings directly** (`sql/booking/restrict_direct_booking_inserts.sql`, applied live).
+- **The problem.** `th_bookings` kept its original "Anyone can submit a booking" policy (anon + authenticated, `with check (true)`). With the public anon key, a direct insert could set ANY column: a row that's already `cancelled`, a `job_id`/`quote_id`/`checkup_id` pointing at someone else's record, a stamped `reminder_sent_at` so no reminder goes out. It also skipped every check `create_booking()` makes. Any signed-in client account could do the same.
+- **The fix.** That policy is gone. A new "Staff can add bookings directly" policy (authenticated + an `account_roles` email, the same test as the table's other three policies) keeps the Dev Tools booking test working. Everyone else books through `create_booking()`.
+- **Who still works:**
+  - `booking.html`, which has used the RPC since round 3; Pages had deployed that version long before;
+  - the portal's two scheduling functions (service role);
+  - the Dev Tools test (a staff session).
+  A new repo scan test pins that these are the only direct inserts.
+- **Checked live, before and after:**
+  - Before, in a rolled-back block: anon inserted a pre-cancelled row, and a non-staff account inserted too.
+  - The same block with the new policy applied inside it, and again after it was committed: anon direct → 42501, anon RPC → OK with the manage token, client direct → 42501, client RPC → OK, staff direct → allowed, service role → allowed.
+  - A real HTTP insert with the anon key → 401 `new row violates row-level security policy`. It was sent with a null name, so it could never have created a row.
+  - `th_bookings` is still empty; advisors show nothing new.
+- **Rolling back.** `booking.html`'s direct insert still only runs when `create_booking()` answers 404 (missing). The SQL file says that dropping the function must restore the old policy in the same change, and carries it commented out.
+
+**2. The triage hand-off now works on the city and service pages too.** In round 1, the homepage triage tool's "or book a visit online" learned to carry the tapped appliance + symptom into `booking.html`. That lived in an inline homepage script.
+- It moved into `js/triage.js`, still opt-in via `data-triage-book-link`.
+- The triage result's Book link on all 12 other pages that load `triage.js` (8 city, 4 service) is now marked.
+- New tests run the real `triage.js` on all 13 real pages in jsdom: tap Dryer → "Runs but won't heat" → the link carries both; tap another appliance → back to the plain link. A page without the marker keeps its links untouched. All 13 fail against the old `triage.js`.
+
+**3. The portal picker CSS has one copy.**
+- **What moved.** The styles for `createBookingPicker()`'s labels, unavailable days, skeletons and messages sat as an identical 15-line page-local block on `quotes.html`, `jobs.html` and `work-orders.html`. They're now section 25 of `portal-polish.css`, and no other portal page uses those classes.
+- **Proven unchanged.** Every computed property of all 729 picker elements was captured in Chromium on each page in four states: loading, loaded, error, and loading with reduced motion. Main and this branch match exactly, except `opacity` on the pulsing skeletons, which differs in the 4th decimal: the animation sampled a few milliseconds apart. The reduced-motion captures, where nothing animates, are identical.
+
+**Dropped, with reason: precaching `booking-flow.js` in the portal service worker.**
+- **It wouldn't be used.** The pages load `booking-flow.js?v=…`, and the worker matches `?v=` requests by exact URL, so a bare-path precache entry is never served. The file is already cached on first use.
+- **It would cost something.** Listing it would fold it into the precache fingerprint, forcing an "update available" prompt in every installed portal app whenever the file changes.
+
+**Still to come:** the Dev Tools booking-test copy (it should mention the new staff "Booking moved"/"Booking cancelled" emails). It waits for the shift-punch-clock branch, which is editing `tools/dev-tools.html` and the tools service worker right now, so as not to hand that session merge conflicts mid-flight.
+
 <!-- Add new entries above this line -->

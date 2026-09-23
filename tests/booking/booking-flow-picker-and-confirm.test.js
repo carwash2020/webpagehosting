@@ -438,37 +438,80 @@ test('a slot taken at the last second sends the visitor back to fresh times WITH
 
 // ---------- index.html: triage -> booking ----------
 
-test('index.html: the triage Book link carries the tapped appliance + symptom into booking.html', () => {
-  const m = INDEX_HTML.match(/<script>\s*\/\/ Triage -> booking handoff[\s\S]*?<\/script>/);
-  assert.ok(m, 'expected the triage handoff script');
-  // Plain slicing, not a tag-stripping regex (CodeQL js/bad-tag-filter):
-  // the match above already guarantees m[0] starts with '<script>' and
-  // ends with '</script>'.
-  const scriptSrc = m[0].slice('<script>'.length, -'</script>'.length);
-  const dom = new JSDOM(
-    '<div id="triageSymptomGrid">' +
-    '<div class="triage-appliance-pills"><button class="triage-appliance-pill" aria-pressed="true"><span class="triage-appliance-pill-icon"><svg></svg></span><span>Dryer</span></button></div>' +
-    '<div class="triage-symptom-pills"><button class="triage-symptom-pill" aria-pressed="false">Runs but won\'t heat</button></div>' +
-    '</div><a href="/booking.html" data-triage-book-link>or book a visit online</a>',
-    { runScripts: 'outside-only' });
-  dom.window.eval(scriptSrc);
-  const link = dom.window.document.querySelector('[data-triage-book-link]');
-  const symptom = dom.window.document.querySelector('.triage-symptom-pill');
-  symptom.setAttribute('aria-pressed', 'true');
-  symptom.dispatchEvent(new dom.window.Event('click', { bubbles: true }));
-  assert.equal(link.getAttribute('href'), '/booking.html?service=appliance&note=' + encodeURIComponent("Dryer: Runs but won't heat"));
+// Changed 2026-09-23: the handoff moved from an inline homepage script
+// into js/triage.js (still opt-in via data-triage-book-link), so the city
+// and service pages that load triage.js get it too. These run the REAL
+// triage.js on each real page, instead of evaluating the old inline block.
 
-  // Picking a different appliance clears the symptom -- back to the plain link.
-  symptom.remove();
-  dom.window.document.querySelector('.triage-appliance-pill').dispatchEvent(new dom.window.Event('click', { bubbles: true }));
-  assert.equal(link.getAttribute('href'), '/booking.html');
+const TRIAGE_JS = fs.readFileSync(repo('js', 'triage.js'), 'utf8');
+const TRIAGE_PAGES = ['index.html',
+  ...fs.readdirSync(repo('locations')).filter((f) => f.endsWith('.html')).map((f) => `locations/${f}`),
+  ...fs.readdirSync(repo('services')).filter((f) => f.endsWith('.html')).map((f) => `services/${f}`),
+].filter((f) => /<script src="\/js\/triage\.js\?v=[a-f0-9]+" defer><\/script>/.test(fs.readFileSync(repo(f), 'utf8')));
+
+function loadTriagePage(file) {
+  const html = fs.readFileSync(repo(file), 'utf8')
+    .replace(/<script src="\/js\/triage\.js\?v=[a-f0-9]+" defer><\/script>/, () => `<script>${TRIAGE_JS}</script>`);
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously',
+    url: 'https://www.triplehenterprisesllc.biz/' + file,
+    beforeParse(window) {
+      window.fetch = () => Promise.reject(new Error('no network in tests'));
+      window.HTMLElement.prototype.scrollIntoView = function () {};
+      window.matchMedia = (q) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} });
+    },
+  });
+  return dom;
+}
+
+test('the homepage and every city/service page that loads triage.js are all covered (13)', () => {
+  assert.equal(TRIAGE_PAGES.length, 13, TRIAGE_PAGES.join(', '));
+  assert.ok(TRIAGE_PAGES.includes('index.html'));
 });
 
-test('index.html: the handoff is opt-in on the triage link only, and triage.js itself is unchanged by it', () => {
-  assert.match(INDEX_HTML, /<a href="\/booking\.html" class="cta-quiet-link" data-triage-book-link>/);
-  assert.equal((INDEX_HTML.match(/data-triage-book-link>/g) || []).length, 1);
-  const triageJs = fs.readFileSync(repo('js', 'triage.js'), 'utf8');
-  assert.doesNotMatch(triageJs, /data-triage-book-link/);
+for (const file of TRIAGE_PAGES) {
+  test(`${file}: the triage Book link carries the tapped appliance + symptom into booking.html`, () => {
+    const dom = loadTriagePage(file);
+    const doc = dom.window.document;
+    const link = doc.querySelector('[data-triage-book-link]');
+    assert.ok(link && link.closest('.triage-actions'), 'the marked link is the triage result\'s own Book link');
+    assert.equal(link.getAttribute('href'), '/booking.html');
+
+    const dryer = [...doc.querySelectorAll('.triage-appliance-pill')].find((b) => /Dryer/.test(b.textContent));
+    dryer.dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+    const noHeat = [...doc.querySelectorAll('.triage-symptom-pill')].find((b) => /won't heat/.test(b.textContent));
+    noHeat.dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+    assert.equal(link.getAttribute('href'), '/booking.html?service=appliance&note=' + encodeURIComponent("Dryer: Runs but won't heat"));
+
+    // A different appliance clears the symptom -- back to the plain link.
+    const washer = [...doc.querySelectorAll('.triage-appliance-pill')].find((b) => /Washer/.test(b.textContent));
+    washer.dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+    assert.equal(link.getAttribute('href'), '/booking.html');
+    dom.window.close();
+  });
+}
+
+test('the handoff is opt-in: exactly one marked link per page, inside the triage result, and no inline copy left on the homepage', () => {
+  for (const file of TRIAGE_PAGES) {
+    const html = fs.readFileSync(repo(file), 'utf8');
+    assert.equal((html.match(/data-triage-book-link/g) || []).length, 1, file);
+    assert.match(html, /<div class="triage-actions">[\s\S]*?<a href="\/booking\.html" class="cta-quiet-link" data-triage-book-link>[\s\S]*?<\/div>/, file);
+  }
+  assert.doesNotMatch(INDEX_HTML, /Triage -> booking handoff/, 'the inline script moved into js/triage.js');
+  assert.match(TRIAGE_JS, /document\.querySelector\('\[data-triage-book-link\]'\)/);
+  assert.match(TRIAGE_JS, /if \(!grid \|\| !link\) return;/, 'a page without the marked link is left alone');
+});
+
+test('a page with the triage tool but no marked link keeps its Book link untouched', () => {
+  const html = fs.readFileSync(repo('index.html'), 'utf8')
+    .replace(' data-triage-book-link>', '>')
+    .replace(/<script src="\/js\/triage\.js\?v=[a-f0-9]+" defer><\/script>/, () => `<script>${TRIAGE_JS}</script>`);
+  const dom = new JSDOM(html, { runScripts: 'dangerously', url: 'https://www.triplehenterprisesllc.biz/', beforeParse(window) { window.fetch = () => Promise.reject(new Error('offline')); window.HTMLElement.prototype.scrollIntoView = function () {}; } });
+  const doc = dom.window.document;
+  doc.querySelector('.triage-appliance-pill').dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+  doc.querySelector('.triage-symptom-pill').dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+  assert.deepEqual([...doc.querySelectorAll('.triage-actions a[href^="/booking.html"]')].map((a) => a.getAttribute('href')), ['/booking.html']);
+  dom.window.close();
 });
 
 // ---------- manage-booking.html ----------

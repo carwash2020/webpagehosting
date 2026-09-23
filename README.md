@@ -4645,3 +4645,26 @@ Verified:
 Tests:
 - `touch-no-sticky-hover.test.js` now also scans `blog/blog.css` (its new check fails against the old file);
 - `blog-index-cards.test.js` checks the hover and focus rules separately.
+
+## What changed, 2026-09-23 -- Booking: one safe way in, the symptom tool books from every page, tidier portal styles
+
+The loose ends from today's booking work. Full reasoning: `docs/specialist-logs/features.md` ("booking-flow follow-ups"), plus `security.md` and `visual.md`.
+
+**Bookings only come in the safe way now.** The online booking page has used a checked, server-side booking step since earlier today. The old back door, which let anyone holding the site's public key write a booking row directly, is now closed. Through it, a booking could be created already cancelled, linked to someone else's job, or marked "reminder sent" so no reminder ever went out. Guests book exactly as before. The Dev Tools booking test still works, and so does portal scheduling. This was tested on the live system before and after, and no booking was created.
+
+**The "is it worth fixing?" tool books from every page.** On the homepage, tapping an appliance and a symptom and then "or book a visit online" already opened the booking page with Appliance Repair picked and the symptom in the notes. The same tool on the 8 city pages and 4 appliance service pages now does the same thing.
+
+**Portal styles in one place.** The styles for the portal's appointment picker were copied onto three pages; there's now one copy. Nothing looks different: every style of every picker element was compared in a browser before and after.
+
+**Checked and dropped:** adding the picker's script to the portal app's offline cache. It turned out it wouldn't be used, and it would have made installed apps show an update prompt every time that script changes.
+
+Verified:
+- full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, lint, visual snapshot;
+- the database change was tested live, before and after, for every kind of caller;
+- Supabase security advisors: nothing new.
+
+New tests:
+- `tests/booking/booking-direct-insert-lockdown.test.js` (6);
+- the triage hand-off on all 13 pages that carry the tool (in `booking-flow-picker-and-confirm.test.js`; all fail against the old script).
+
+Updated with reasons: the round 1 hand-off tests and the round 4 page-style test.

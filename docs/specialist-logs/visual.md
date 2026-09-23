@@ -1625,4 +1625,10 @@ Measured and deliberately left alone. Each needs a call from Connor before anyon
   - the homepage card hover lift is dead code (`[data-reveal]` outranks it);
   - `blog/blog.css` uses a hand-picked stamp outside `check-consistency.js`.
 
+## 2026-09-23 (booking lane): the portal picker's CSS now lives once, in portal-polish.css
+
+- **What moved.** `createBookingPicker()`'s styles, previously an identical page-local block on `quotes.html`, `jobs.html` and `work-orders.html`, are now section 25 of `portal-polish.css`. That covers the day labels (`.avail`), unavailable days, loading skeletons, the message/retry row, the pulse keyframes and the reduced-motion override. Nothing else in the portal uses those classes.
+- **Look unchanged.** Every computed property of all 729 picker elements matches main in Chromium, on each page, loading / loaded / error / reduced motion. The only exception is the skeleton's `opacity` mid-animation, in the 4th decimal.
+- **Where to change it.** The picker's look has one copy now, so edit it here and all three pages follow.
+
 <!-- Add new entries above this line -->

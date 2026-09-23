@@ -968,4 +968,18 @@ Seen during the public-site visual audit. Not fixed there, since it's this lane'
 - `SECURITY.md` ("Content-Security-Policy, on the public site") says the site "can [not] be embedded" because of it. GitHub Pages can't send response headers, and there's no `X-Frame-Options` either, so as far as I can tell the public pages *can* currently be framed.
 - Options for this lane: accept and correct the doc, or add a frame check (e.g. `if (top !== self)`) where clickjacking would matter (booking, the lead forms).
 
+## 2026-09-23 (booking lane): th_bookings no longer accepts direct inserts from the public
+
+Cross-logged from `features.md` ("booking-flow follow-ups"). It closes the round 2 audit's LOW note on `with check (true)`.
+
+- **Dropped.** "Anyone can submit a booking" (anon + authenticated, `with check (true)`). A direct insert with the public anon key could set any column (`status`, `job_id`, `quote_id`, `checkup_id`, `reminder_sent_at`) and skipped `create_booking()`'s validation. Since public signup is on, "authenticated" included strangers too.
+- **Added.** "Staff can add bookings directly": authenticated, with an `account_roles` email, the same test as the table's SELECT/UPDATE/DELETE policies. It exists for the Dev Tools booking test. The public books through `create_booking()` (SECURITY DEFINER, allowlisted columns, validated times).
+- **Verified live,** before and after, in rolled-back blocks:
+  - anon and non-staff direct inserts → 42501;
+  - the RPC works for both;
+  - staff and the service role can still insert.
+  - A real anon HTTP insert → 401 RLS violation.
+  - No rows were created.
+- **Advisors:** nothing new.
+
 <!-- Add new entries above this line -->

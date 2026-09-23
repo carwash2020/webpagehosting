@@ -297,17 +297,33 @@ for (const [name, html] of Object.entries(PAGES)) {
     assert.match(html, /<script src="\/js\/booking-flow\.js\?v=[a-f0-9]{10}"><\/script>/);
   });
 
-  test(`${name} carries the picker's page-local styles (labels, unavailable days, skeletons, messages, reduced motion)`, () => {
-    for (const sel of ['.date-btn .avail', '.date-btn .avail.is-loading', '.date-btn.is-unavailable', '.slot-skel', '.booking-picker-msg', '.booking-picker-msg.is-error', '.booking-picker-retry']) {
-      assert.ok(html.includes('  ' + sel + ' {'), `${name} is missing ${sel}`);
+  // (The shared copy's own content is pinned once, below the loop.)
+  // Changed 2026-09-23: the picker's styles moved from an identical
+  // page-local copy on each of the three pages into portal-polish.css
+  // (section 25), so there's one copy to keep right.
+  test(`${name} gets the picker's styles from portal-polish.css, with no page-local copy left to drift`, () => {
+    assert.match(html, /<link rel="stylesheet" href="\/portal\/portal-polish\.css\?v=[a-f0-9]{10}">/);
+    for (const sel of ['.date-btn .avail', '.slot-skel', '.booking-picker-msg', '.booking-picker-retry', '@keyframes bookingSkelPulse']) {
+      assert.ok(!html.includes(sel + ' {'), `${name} still has its own ${sel}`);
     }
-    assert.match(html, /@media \(prefers-reduced-motion: reduce\) \{\n\s+\.date-btn \.avail\.is-loading, \.slot-skel \{ animation: none; \}/);
   });
 
   test(`${name} uses the shared picker only when it loaded, and keeps its original picker as the fallback`, () => {
     assert.match(html, /const HAS_BOOKING_PICKER = typeof createBookingPicker === 'function';/);
   });
 }
+
+test('portal-polish.css carries the picker styles once (labels, unavailable days, skeletons, messages, reduced motion)', () => {
+  const css = fs.readFileSync(repo('portal', 'portal-polish.css'), 'utf8');
+  const section = css.slice(css.indexOf('/* ---------- 25. booking picker: whole-window availability ---------- */'));
+  assert.ok(section.length > 100, 'expected section 25');
+  for (const sel of ['.date-btn .avail', '.date-btn.is-selected .avail', '.date-btn .avail.is-loading', '.date-btn.is-unavailable', '.date-btn.is-unavailable .avail', '.slot-skel', '.booking-picker-msg', '.booking-picker-msg.is-error', '.booking-picker-msg a', '.booking-picker-retry']) {
+    assert.ok(section.includes('\n' + sel + ' {'), `missing ${sel}`);
+    assert.equal(css.split('\n' + sel + ' {').length - 1, 1, `${sel} defined once`);
+  }
+  assert.match(section, /@keyframes bookingSkelPulse \{ 0%, 100% \{ opacity: \.45; \} 50% \{ opacity: 1; \} \}/);
+  assert.match(section, /@media \(prefers-reduced-motion: reduce\) \{\n\s+\.date-btn \.avail\.is-loading, \.slot-skel \{ animation: none; \}/);
+});
 
 test('quotes.html: opening the schedule panel uses the shared picker, else the untouched original', () => {
   const fn = QUOTES.match(/function toggleScheduleForm\(quoteId\) \{[\s\S]*?\n  \}\n/)[0];
