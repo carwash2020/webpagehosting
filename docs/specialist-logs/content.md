@@ -266,4 +266,9 @@ to the files that exist today.
 Verified: full suite **2575/2575** passing. `check-consistency`/
 `check-undefined-vars`/`check-links.py` all clean.
 
+## 2026-09-23 -- note from the visual lane: the 2026-09-16 "Recent Notes" cards, and hotlinked blog images
+
+- The "Recent Notes From the Shop" section added to plumbing, drywall, handyman-repairs and assembly (PR #257) reused the blog-index card markup. Those pages didn't load `blog/blog.css`, where all the card's styles live, so the icon and arrow rendered at 820px wide. Fixed in the visual lane (each page now loads `blog.css`). `tests/design/blog-index-cards.test.js` now fails for any page that uses the markup without it. If you add the card to another page, add the `blog.css` link too.
+- Blog lead images load from `images.unsplash.com`, not from this site. That's a third-party connection on each post's likely LCP image, with no control over caching or availability. Worth copying them into `images/blog/` as sized WebP. The visual lane couldn't do it: the sandbox's egress policy blocks Unsplash, so the originals can't be downloaded.
+
 <!-- Add new entries above this line -->

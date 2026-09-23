@@ -960,4 +960,12 @@ Cross-logged from `features.md` (round 2 of the booking-flow pass). It closes th
 - **`send-booking-email` and `send-appointment-reminder`** check `!SERVICE_ROLE_KEY || token !== SERVICE_ROLE_KEY` before `req.json()`. Send-Push's existing check gained the same empty-key guard.
 - **Pre-deploy check:** every live Send-Push caller authenticates with the service role (4 trigger functions and 2 cron jobs via the Vault `send_push_service_role_key`, edge functions via `SUPABASE_SERVICE_ROLE_KEY`). Nothing in any page's JavaScript calls it.
 
+## 2026-09-23 -- note from the visual lane: `frame-ancestors` in a `<meta>` CSP does nothing
+
+Seen during the public-site visual audit. Not fixed there, since it's this lane's call.
+
+- Every public page's CSP `<meta>` ends with `frame-ancestors 'none'`. Browsers ignore that directive when it arrives in a `<meta>` tag rather than a response header (CSP3 spec), and Chromium logs "The Content Security Policy directive 'frame-ancestors' is ignored when delivered via a <meta> element" on every page load.
+- `SECURITY.md` ("Content-Security-Policy, on the public site") says the site "can [not] be embedded" because of it. GitHub Pages can't send response headers, and there's no `X-Frame-Options` either, so as far as I can tell the public pages *can* currently be framed.
+- Options for this lane: accept and correct the doc, or add a frame check (e.g. `if (top !== self)`) where clickjacking would matter (booking, the lead forms).
+
 <!-- Add new entries above this line -->
