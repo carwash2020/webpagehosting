@@ -3867,3 +3867,34 @@ from notice, a reply arriving mid-draft, badges clearing on another
 page). New tests: `tests/portal/reply-notice-and-live-unread.test.js`.
 Detail: `docs/specialist-logs/features.md` and `visual.md` (2026-09-22
 entries), `docs/CLIENT-PORTAL.md` (thread reads section).
+
+## What changed, 2026-09-22 (later still) -- Client portal: service history PDF, cancels that tell Triple H
+
+**Service history PDF.** Jobs has a "Download PDF" card: every job
+Triple H has done for the client -- date, what was done (from the
+invoice), invoice number, amount, any unpaid balance, a still-running
+labor warranty, and their check-up plan -- on one branded PDF. The
+record someone hands over when they sell the house or file a claim.
+
+**Cancelling a request now tells Triple H.** Clients could already
+cancel a request Steve hadn't started on, but it was silent -- it just
+left his queue. Now the client can say why (optional), and the cancel
+posts a note on the request's thread, which emails the team like any
+reply. The cancel also can no longer overwrite a status change Steve
+makes at the same moment. Once work has started, "Need to cancel?"
+sends a cancellation request in the thread (instead of "call or text
+us"), and Steve confirms.
+
+**Home cards.** The five account cards no longer leave an empty slot at
+laptop widths (3 + 2 across), and on a phone the fifth spans the row.
+
+Deployed: `cancel-work-order` v3 (live source matches the repo; the
+current portal page keeps working with it -- no reason is sent, so the
+note just says the request was cancelled). Verified: full suite,
+`check-consistency`, `check-undefined-vars`, lint; headless Chromium at
+390/1024/1440 (cards, both cancel flows, the PDF downloaded and
+rendered, including a 4-page history). New tests:
+`tests/portal/service-history-pdf.test.js`; additions to
+`tests/portal/work-order-cancel.test.js`. Detail:
+`docs/specialist-logs/features.md` and `visual.md`,
+`docs/CLIENT-PORTAL.md` (edge function table).

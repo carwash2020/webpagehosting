@@ -1212,4 +1212,19 @@ grouped left now. Rows use a -10px left margin so the text lines up
 with the heading while keeping a padded hover/tap area (44px min
 height).
 
+## 2026-09-22 (later still) -- service history PDF, Home card grid
+
+- **PDF look:** reuses the Invoices receipt band (navy, logo, TRIPLE H /
+  ENTERPRISES, orange doc title right) so a client's paperwork from us
+  reads as one set. Continuation pages get a slim 54pt band with the
+  client's name and a repeated table head; orange rule + "Page N of M"
+  footer on every page. Active warranty in green under the job, UNPAID
+  in small orange caps under the amount.
+- **Home account cards:** five cards never leave a hole now -- 3 + 2
+  across on a 6-track grid (860-1199px), and a lone fifth card spans the
+  row on a phone. `:where()` so the 1200px compact-row layout still wins.
+- **"Need to cancel?"** is a quiet underlined text button, right-aligned
+  under Messages -- not a second full-width button competing with
+  Messages on a card that's otherwise progressing normally.
+
 <!-- Add new entries above this line -->
