@@ -79,7 +79,9 @@ test('billed is invoices dated this week plus income logged by hand -- not the i
 });
 
 function renderWith(summary, perms) {
-  const el = { innerHTML: '' };
+  // Signed out, so no shift: the job clock's card exactly as it was before
+  // the shift clock moved in (shift-week-card.test.js covers the rest).
+  const el = { innerHTML: '', dataset: {}, classList: { toggle() {} }, querySelector: () => null, addEventListener() {} };
   const intervals = [];
   const ctx = dataLayer({
     document: { getElementById: (id) => (id === 'weekCard' ? el : null) },
