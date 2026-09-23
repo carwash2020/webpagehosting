@@ -660,6 +660,14 @@ deleted, restore refuses with a clear message rather than silently
 failing or losing the graveyard entry -- restore the unit first, then
 the issue.
 
+**Restore and the Wiki's sync (2026-09-23, after #393):** Restore marks the
+record's tombstone `restoredAt` (`thLiftTombstone`) and adds one already
+lifted if this device has none, so a server copy of the deletion can't
+win. The Appliance Wiki's push (`pushWikiSync()`) merges the server row
+before posting, like `pushSync()`, so a device that hadn't pulled a
+restore can't overwrite it. `tests/sync/graveyard-restore-every-type.test.js`
+runs the restore-then-sync case for every Graveyard type.
+
 **A real, honest limit, not glossed over:** a deleted expense's
 attached receipt photo is not recoverable through this. The actual
 file removal from Supabase storage happens immediately as part of

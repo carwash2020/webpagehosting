@@ -53,14 +53,14 @@
 </script>
 <link rel="stylesheet" href="/styles.css?v=87b1f5227e">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=9aa2822757">
-<script src="/tools/data-layer.js?v=e3c9241a06" defer></script>
+<script src="/tools/data-layer.js?v=b2586a446b" defer></script>
 <script src="/tools/dev-tools-shared.js?v=f34a6faa86" defer></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
 <script src="/tools/tools-dialogs.js?v=310315eb44" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=7ed9e8d3b4" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
-<script src="/tools/sync.js?v=318a180ab2" defer></script>
+<script src="/tools/sync.js?v=0e885bb435" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -2943,7 +2943,7 @@
       // has the same try/catch protection thWrite() does and calls
       // scheduleWikiSync() internally, so no need to call it again here.
       thWriteWiki('th_parts_reference_units', units);
-      thLiftTombstone('th_pr_issue_tombstones', entry.record.unitId + '::' + entry.record.issue.id, true);
+      thLiftTombstone('th_pr_issue_tombstones', entry.record.unitId + '::' + entry.record.issue.id, true, { unitId: entry.record.unitId, issueId: entry.record.issue.id });
     } else if (entry.recordType === 'prUnit') {
       // Same fix as prIssue above, for the OTHER Wiki-related graveyard
       // type -- otherwise identical to the generic branch below, which

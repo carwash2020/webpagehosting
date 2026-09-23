@@ -404,9 +404,23 @@ function thRemoveFromGraveyard(graveyardId) {
 // applySyncData counts a tombstone only while its deletedAt is later than
 // its restoredAt, so a later delete still sticks. `wiki` routes the write
 // through thWriteWiki, for the Appliance Wiki's own sync.
-function thLiftTombstone(key, id, wiki) {
+//
+// If this device holds no tombstone for the id at all (pruned locally, or
+// the delete was never synced here), one is added already lifted
+// (deletedAt = restoredAt = now), so it doesn't count here and, when it
+// merges with a server copy of the older deletion, the later restoredAt
+// wins there too. Without it, nothing was marked and the server's
+// tombstone deleted the restored record again. `extra` carries a Wiki
+// issue tombstone's unitId/issueId.
+function thLiftTombstone(key, id, wiki, extra) {
   const at = new Date().toISOString();
-  const list = thRead(key, []).map(t => (t && String(t.id) === String(id)) ? Object.assign({}, t, { restoredAt: at }) : t);
+  let found = false;
+  const list = thRead(key, []).map(t => {
+    if (!(t && String(t.id) === String(id))) return t;
+    found = true;
+    return Object.assign({}, t, { restoredAt: at });
+  });
+  if (!found) list.push(Object.assign({ id: id }, extra || {}, { deletedAt: at, restoredAt: at }));
   return wiki ? thWriteWiki(key, list) : thWrite(key, list);
 }
 
@@ -514,7 +528,12 @@ function thBackfillClients() {
   const byKey = {};
   existing.forEach(c => { byKey[thNormalizeClientName(c.name)] = c; });
 
-  const tombstonedNames = new Set(thLoadClientTombstones().map(t => t.normalizedName));
+  // Only tombstones that still count block recreating a client by name --
+  // same rule as applySyncData (sync.js): lifted by Restore (restoredAt at
+  // or after deletedAt) means the client is back, not deleted.
+  const tombstonedNames = new Set(thLoadClientTombstones()
+    .filter(t => !t.restoredAt || new Date(t.deletedAt).getTime() > new Date(t.restoredAt).getTime())
+    .map(t => t.normalizedName));
 
   const discovered = thCollectClientNamesFromExistingData();
   let created = 0;

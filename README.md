@@ -4975,6 +4975,20 @@ New tests, 106 in all, most of them against the real migration SQL running in Po
 
 Updated with reasons: `tests/design/homepage-stats-bar.test.js` (allows the new hook classes).
 
+## What changed, 2026-09-23 -- Graveyard restore: three gaps closed after #393
+
+Dev Tools' Graveyard and the Appliance Wiki's sync. Follows the earlier "Graveyard Restore now survives the next sync" fix (#393).
+
+- **The Appliance Wiki's sync now merges before it sends.** It used to replace the server's copy with whatever the device had. A device that hadn't picked up a restore, or someone else's new Wiki entry, could erase it. It now merges first, the same way the main sync does.
+- **Restoring works on a device that never saw the delete.** Restore used to mark only a "deleted" note already on the device. If there wasn't one, the server's note won and the record disappeared again. Now the device writes its own "restored" note.
+- **A restored client no longer blocks recreating that client by name** when client records are rebuilt from jobs.
+
+Verified:
+- full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint`.
+
+Tests:
+- `tests/sync/graveyard-restore-every-type.test.js` (22, new): every Graveyard type, plus the 3 fixes above, which fail without this change.
+
 ## What changed, 2026-09-23 -- Cron Health: stopped flagging things that aren't cron failures
 
 Dev Tools only. Cron Health was showing a run of "HTTP call failed -- status 401" alerts, reported directly with a screenshot. Checked the actual pg_cron job history: every real cron job run in that window succeeded, and the alerted timestamps didn't line up with any job's schedule. The watchdog was scanning every HTTP call this project's database ever makes -- including the notification triggers (new lead, booking changes, portal messages, etc.), which call the same Postgres extension cron jobs do -- and treating any non-2xx response as a cron failure, whoever actually made the call.

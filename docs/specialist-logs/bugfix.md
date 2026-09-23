@@ -1071,6 +1071,19 @@ Tests:
   kept and marked, not deleted.
 
 
+## 2026-09-23 -- Graveyard follow-up to #393: the Wiki push, and a restore with no local tombstone
+
+#393 fixed the main bug (a restore undone by the next sync). An independent fix of the same bug, written in parallel, found three gaps #393 left open. Each has a test that fails on `main` without this change:
+
+- **`pushWikiSync()` never merged before posting.** It replaced the server's Wiki row with whatever this device held. So a device that hadn't pulled a Graveyard restore could wipe it, and the same went for anyone's new Wiki entry. It now fetches and merges the server row first (`applySyncData(row.data, WIKI_SYNC_KEYS)`), exactly as `pushSync()` does.
+- **`thLiftTombstone` only marked tombstones this device already had.** If the tombstone was pruned locally or the delete never synced here, nothing got marked, and the server's copy deleted the restored record again. It now adds one already lifted (`deletedAt = restoredAt = now`), which doesn't count here and wins the by-time merge with an older server deletion. For a Wiki issue it also carries `unitId`/`issueId` via a new `extra` argument.
+- **`thBackfillClients` still treated a lifted client tombstone as a deletion.** It now applies the same "still counts" rule as `applySyncData`.
+
+Tests: `tests/sync/graveyard-restore-every-type.test.js` (22):
+- the bug's repro for every type in `GRAVEYARD_TYPE_CONFIG` plus the Wiki issue path (all 19 pass on `main`, confirming #393 covers every type);
+- stale-device and re-delete cases;
+- the 3 gaps above (fail on `main`).
+
 ## 2026-09-23 -- Cron Health false positives: net.http_post has more callers than pg_cron
 
 Reported directly, with a screenshot of a run of "HTTP call failed -- status 401" alerts in Dev Tools' Cron Health panel. Worth logging for whoever touches `check_cron_health()` next.

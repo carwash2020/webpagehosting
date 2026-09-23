@@ -1009,6 +1009,29 @@ async function pushWikiSync() {
     if (!fresh) return { ok: false, error: 'session-expired' };
   }
 
+  // Merge the server's current Wiki row in before pushing (2026-09-23),
+  // the same way pushSync() already does for the main blob. Without it,
+  // this POST replaced the server copy with whatever this device held: a
+  // device that hadn't pulled a Graveyard restore (or anyone else's new
+  // Wiki entry) wiped it out on its next push. applySyncData's per-key
+  // merges -- mergePartsReferenceUnits for the units, the by-time
+  // tombstone merge for both tombstone keys -- keep both sides.
+  try {
+    const currentRes = await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${WIKI_SYNC_TABLE}?code=eq.${encodeURIComponent(code)}&select=data,updated_at`, {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${getAuthToken()}`,
+      },
+    });
+    if (currentRes.ok) {
+      const currentRows = await currentRes.json();
+      if (currentRows.length) applySyncData(currentRows[0].data, WIKI_SYNC_KEYS);
+    }
+  } catch (e) {
+    // Couldn't reach the server to merge first -- push local as-is, the
+    // same fallback pushSync() uses, rather than blocking the push.
+  }
+
   const nowIso = new Date().toISOString();
   const body = [{ code, data: collectWikiSyncData(), updated_at: nowIso }];
 
