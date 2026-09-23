@@ -685,7 +685,7 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
               Call <span class="js-phone-text">(435) 414-1667</span>
             </a>
-            <a href="/booking.html" class="cta-quiet-link">
+            <a href="/booking.html" class="cta-quiet-link" data-triage-book-link>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
               or book a visit online
             </a>
@@ -694,6 +694,31 @@
       </div>
     </div>
   </section>
+  <script>
+    // Triage -> booking handoff (2026-09-22). Someone who just tapped
+    // "Dryer" then "Runs but won't heat" used to land on a blank booking
+    // page and re-pick the service and retype the problem. The booking
+    // link now carries both: booking.html opens straight on Appliance
+    // Repair's date picker with the symptom already in the notes (fill-
+    // only there, never overwriting anything typed). Delegated on the
+    // grid so it runs after triage.js's own click handlers have set
+    // aria-pressed, and it reads only those two pill labels -- the same
+    // text the visitor just tapped. Every triage appliance is an
+    // appliance-repair visit. Opt-in via data-triage-book-link, so the
+    // city/service pages that share triage.js are unaffected.
+    (function () {
+      const grid = document.getElementById('triageSymptomGrid');
+      const link = document.querySelector('[data-triage-book-link]');
+      if (!grid || !link) return;
+      grid.addEventListener('click', function () {
+        const appliance = grid.querySelector('.triage-appliance-pill[aria-pressed="true"]');
+        const symptom = grid.querySelector('.triage-symptom-pill[aria-pressed="true"]');
+        if (!appliance || !symptom) { link.setAttribute('href', '/booking.html'); return; }
+        const note = appliance.textContent.replace(/\s+/g, ' ').trim() + ': ' + symptom.textContent.replace(/\s+/g, ' ').trim();
+        link.setAttribute('href', '/booking.html?service=appliance&note=' + encodeURIComponent(note.slice(0, 200)));
+      });
+    })();
+  </script>
 
   <!-- The honest half of the repair pitch. A repair company saying plainly
        when NOT to repair is the strongest trust signal it has, and it is

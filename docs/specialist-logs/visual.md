@@ -1325,4 +1325,45 @@ height).
   under Messages -- not a second full-width button competing with
   Messages on a card that's otherwise progressing normally.
 
+## 2026-09-22 (later still) -- booking flow round 1: availability strip + the "you're booked" moment
+
+- **Date strip.** A second line under each day: `N open` in
+  `--success-text` green, `Full`/`Closed` dimmed. Unavailable days go to
+  0.45 opacity with `cursor:not-allowed`. The selected day turns the
+  count orange. While loading, each count is a pulsing 34x8 bar and the
+  slot grid shows four pulsing skeleton tiles, plus an sr-only "Loading
+  available times...".
+- **Confirmation choreography**, scoped to `.is-celebrating`:
+  - 0s: the existing check pops
+  - .35s: it draws
+  - .55s: a ring pulses out
+  - .45/.55s: headline and lead rise
+  - .7s: the card lands with `stampIn` (1.06 scale, -0.6deg, overshoot)
+  - .9s: the calendar buttons
+  - 1.1-1.4s: the next-steps items stagger in, and the first dot fills orange
+  - 1.5s: everything else
+  - at ~.38s: `bookingCelebrate()` bursts 28 brand-colored flecks (dots
+    and slivers) from the check (Web Animations API), plus a
+    `navigator.vibrate` tap where supported
+
+  Reduced motion skips the burst and the vibrate, and zeroes the
+  delays. The page-wide rule already zeroed the durations.
+- **"Back to site" is now outline**, so Add to calendar is the one
+  primary button on the screen.
+- **Two pre-existing booking.html nits fixed:**
+  - the programmatic focus on step panels drew a white ring around the
+    whole panel on deep links (`.step-panel:focus{outline:none}`; they
+    are screen-reader targets, not controls)
+  - the sticky bar's Book link was underlined, because this page's
+    local copy lacked `text-decoration:none`
+- **manage-booking.html.**
+  - The success badge is the same green circle with a drawn check
+    (`.checkmark.is-success`) instead of the orange hex with a glyph.
+  - "Tomorrow" / "In N days" appears as an orange pill on the booking card.
+  - The reschedule confirm panel is orange-tinted.
+  - The calendar buttons stay on one line and stack under 420px
+    ("GOOGLE CALENDAR" wrapped at 390px).
+- Checked in headless Chromium at 390px and 1440px: no horizontal
+  overflow and no page errors.
+
 <!-- Add new entries above this line -->
