@@ -417,3 +417,34 @@ test('the invoice log and quote log rendering both filter out entries pending de
   assert.match(src, /pendingDeleteInvoiceIds\.size > 0.*filter/, 'renderInvoiceLog should filter pending deletions');
   assert.match(src, /pendingDeleteQuoteIds\.size > 0.*filter/, 'renderQuoteLog should filter pending deletions');
 });
+
+// Parts inventory (bug fix, 2026-09-23): th_inventory had tombstones from
+// the start (thAddInventoryTombstone, both keys in SYNC_DATA_KEYS and
+// MERGE_KEY_FIELD) but applySyncData never read them, so a stale device
+// still holding a deleted part pushed it straight back.
+test('thAddInventoryTombstone records a tombstone by id, and a stale push does not resurrect the deleted part', () => {
+  const window = loadDevTools();
+  window.thAddInventoryTombstone('inv1');
+  assert.equal(window.thLoadInventoryTombstones()[0].id, 'inv1');
+
+  const syncDataKeys = loadSyncFunctions(window);
+  assert.match(syncDataKeys, /'th_inventory_tombstones',\s*\n\s*'th_inventory',/);
+  window.localStorage.setItem('th_inventory', JSON.stringify([{ id: 'inv2', name: 'Door switch', qty: 2 }]));
+  window.applySyncData({
+    th_inventory_tombstones: JSON.stringify([]),
+    th_inventory: JSON.stringify([{ id: 'inv1', name: 'Drain pump', qty: 1 }, { id: 'inv2', name: 'Door switch', qty: 2 }]),
+  });
+  assert.deepEqual(JSON.parse(window.localStorage.getItem('th_inventory')).map(p => p.id), ['inv2'], 'the deleted part stays deleted; the others merge as usual');
+});
+
+test('a tombstone that arrives from another device removes the part here too', () => {
+  const window = loadDevTools();
+  const syncDataKeys = loadSyncFunctions(window);
+  assert.ok(syncDataKeys);
+  window.localStorage.setItem('th_inventory', JSON.stringify([{ id: 'inv1', name: 'Drain pump', qty: 1 }]));
+  window.applySyncData({
+    th_inventory_tombstones: JSON.stringify([{ id: 'inv1', deletedAt: new Date().toISOString() }]),
+    th_inventory: JSON.stringify([]),
+  });
+  assert.deepEqual(JSON.parse(window.localStorage.getItem('th_inventory')), []);
+});
