@@ -5046,3 +5046,7 @@ Tests (31 new, against the real SQL in PGlite):
 Updated with reasons:
 - `tests/security/site-content-and-private-buckets-rls.test.js`: every CMS write is now a `cms_*` RPC sent with the session token, and the test now also fails if a direct table write comes back;
 - `tests/tools/escape-attr-audit.test.js`: FAQ and Terms share one row template, so it pins that template's `escapeAttr` calls.
+
+## What changed, 2026-09-23 -- A booking test no longer fails every evening
+
+Tests only. `tests/portal/booking-picker-round4.test.js` tapped the second time slot of the first day with room. Late in the day, that day is today with only one slot left, so the test failed on main and on every open PR from late afternoon (Denver time) until the day's last slot passed. It now taps the last slot shown. The booking picker itself was never broken.
