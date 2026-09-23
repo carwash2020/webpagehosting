@@ -3219,5 +3219,6 @@ Tests:
   - `404-button-language.test.js`: the Call button's new classes;
   - `skip-link-and-main-landmark.test.js`: only `<script>` may follow 404's `<main>`;
   - the "no token" tests in `manage-booking.test.js` / `manage-job.test.js`. They asserted *no* network call; the intent, per their title, is no RPC. The public phone/email read is allowed; anything else still fails.
+- **CodeQL (2 high, "Bad HTML filtering regexp") on the PR's first push:** two test regexes matched `<script>...</script>` literally. `inlineScripts()` now uses `scripts/check-undefined-vars.js`'s settled pattern: case-insensitive, and `</script` + anything up to `>`. The 404 landmark test checks what follows `<main>` through the DOM instead of a regex. Any new test that picks scripts out of HTML should reuse that pattern.
 
 <!-- Add new entries above this line -->
