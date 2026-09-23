@@ -47,7 +47,12 @@ test('the general-repairs post reuses the exact handyman icon already used by th
 });
 
 test('the card hover-lift reuses the exact transform/shadow values already established by .service-card, not new invented numbers', () => {
-  assert.match(BLOG_CSS, /\.blog-index-item:hover, \.blog-index-item:focus-visible \{\s*transform: translateY\(-4px\);\s*border-color: var\(--blue-text\);\s*box-shadow: 0 14px 28px rgba\(0,0,0,0\.14\);\s*\}/);
+  // Since 2026-09-23 the hover half sits behind @media (hover: hover) (no
+  // sticky hover after a tap on phones) and keyboard focus has its own
+  // rule -- both with the same values.
+  const lift = 'transform: translateY\\(-4px\\);\\s*border-color: var\\(--blue-text\\);\\s*box-shadow: 0 14px 28px rgba\\(0,0,0,0\\.14\\);';
+  assert.match(BLOG_CSS, new RegExp(`@media \\(hover: hover\\) \\{\\s*\\.blog-index-item:hover \\{\\s*${lift}\\s*\\}`));
+  assert.match(BLOG_CSS, new RegExp(`\\n\\.blog-index-item:focus-visible \\{\\s*${lift}\\s*\\}`));
 });
 
 test('each item is revealed via the shared site-wide [data-reveal] mechanism, with a stagger between cards', () => {
