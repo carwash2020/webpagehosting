@@ -596,3 +596,16 @@ test('banners: the editor\'s built-in wording is word for word what js/site-bann
   assert.equal(builtIn[1], shown('siteBanner1'));
   assert.equal(builtIn[2], shown('siteBanner2'));
 });
+
+test('no function name is declared twice in the page -- a second declaration silently replaces the first', () => {
+  // The FAQ/Terms editor and the banner editor were built side by side and
+  // both named a helper cmsShort() with different arguments; whichever came
+  // second would have won for every caller. check-undefined-vars does not
+  // catch a repeated function declaration inside one page.
+  const scripts = [...PAGE_HTML.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]).join('\n');
+  const names = [...scripts.matchAll(/^ {2}(?:async )?function (\w+)\s*\(/gm)].map(m => m[1]);
+  const seen = new Set();
+  const dupes = names.filter(n => (seen.has(n) ? true : (seen.add(n), false)));
+  assert.ok(names.length > 50, `expected to find the page's functions, found ${names.length}`);
+  assert.deepEqual(dupes, []);
+});

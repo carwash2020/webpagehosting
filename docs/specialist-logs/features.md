@@ -3185,6 +3185,6 @@ The owner can now change the Google rating and review count (plus banners, homep
 
 **Proof:** 64/64 element screenshots of both banners on the 16 pages that had them, desktop + phone, byte-identical before/after in Chromium. Header position, layout-shift totals, and page errors unchanged. Live migration verified in a rolled-back block: custom + link + off saved as one batch, undo back to exactly builtin/null, bad link and bad mode 23514.
 
-**Tests:** `cms-site-banners-db.test.js` (10, real SQL), `site-banners-public.test.js` (50, including the no-jump deferral with faked paint and heights, mutation-checked), 9 new flows in `site-content-editor.test.js`. `promo-banner.test.js`, `hiring-banner.test.js`, and `site-banner-no-layout-shift.test.js` now point at the new file with their original assertions, plus the exact old markup.
+**Tests:** `cms-site-banners-db.test.js` (10, real SQL), `site-banners-public.test.js` (50, including the no-jump deferral with faked paint and heights, mutation-checked), 9 new flows in `site-content-editor.test.js`, plus a guard that no function is declared twice in the page (the FAQ/Terms PR had its own `cmsShort()` with other arguments; the banner helper is `cmsPlainValue()`). `promo-banner.test.js`, `hiring-banner.test.js`, and `site-banner-no-layout-shift.test.js` now point at the new file with their original assertions, plus the exact old markup.
 
 <!-- Add new entries above this line -->

@@ -5023,7 +5023,8 @@ Verified:
 New tests:
 - `tests/site-content/cms-site-banners-db.test.js` (10), against the real SQL;
 - `tests/site-content/site-banners-public.test.js` (50): the first frame, the "never jump" rule, dismissing, safe text and links, and the wiring on all 33 pages;
-- 9 new banner flows in `tests/site-content/site-content-editor.test.js`, including save &rarr; undo &rarr; exactly the built-in banner again.
+- 9 new banner flows in `tests/site-content/site-content-editor.test.js`, including save &rarr; undo &rarr; exactly the built-in banner again;
+- a guard in the same file that no function name is declared twice in the page. The FAQ/Terms editor, built alongside this, had its own `cmsShort()`, and a second declaration silently replaces the first.
 
 Updated with reasons:
 - `tests/design/promo-banner.test.js`, `hiring-banner.test.js`, and `site-banner-no-layout-shift.test.js`: pointed at the new `js/site-banners.js`, with every original check kept and the exact old markup pinned;
