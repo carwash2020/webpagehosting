@@ -2983,6 +2983,60 @@ at all, the way the job clock's bar hides on its own job's page.
 Tests: `tests/tools/shift-clock-shell.test.js` (14, jsdom, the same page
 harness as `job-clock.test.js`).
 
+## 2026-09-23 -- Shift clock, part 3: Hours worked on the Dashboard, and the team view
+
+Parts 1 and 2 were the data layer and the shell's button and sheet. This
+part surfaces the totals.
+
+**Where:** `#shiftCard`, directly under Your week (`workspace.html`,
+`renderShiftCard()`). It reuses Your week's layout classes (`week-card`,
+`week-bar*`, `week-stat*`) so the two read as a pair, but in the shift
+clock's green. Orange stays the job clock's colour, so "On the clock" (job
+time, Your week) and "Hours worked" (whole shifts) can't be mistaken for
+each other. Your week and its tests are untouched.
+
+**What it shows:**
+- **The day, with its one button**, which opens the shell's shift sheet:
+  - Not clocked in: Start my day.
+  - On shift since 7:42 AM, "2 h 18 min so far": End my day. While on
+    shift the card re-renders once a minute, in a guarded interval like
+    Your week's.
+  - A shift that needs an end time: Fix it.
+- Seven bars Mon–Sun (`thShiftWeekSummary`), then Today and This week,
+  with last week under it.
+- A hint on an empty week that says what counts (driving, estimates, the
+  time between jobs).
+
+**Team view** (`thShiftTeamSummary`): a table of Who / Today / This week /
+Last week, on shift first:
+- It shows only when `canViewFinance()` is true. It **fails closed**,
+  unlike Your week's Billed, which shows before the role loads, because
+  it's other people's hours, not the business's own numbers. The card
+  re-renders on `th-role-loaded`.
+- It shows only once someone other than you has a shift; otherwise it
+  would repeat your own numbers.
+- Names use your first name for you, and otherwise the email's first
+  word, capitalized ("mike.helper@..." shows as "Mike").
+- A shift that needs an end time says so and counts 0 h, so a helper's
+  forgotten punch-out shows as a flag, not a 24-hour day.
+- **Read-only on purpose.** Fixing a shift is its owner's job, from
+  their own sheet. An owner editing someone else's times would need the
+  sheet to take an email and a permission check; `thEditShift` already
+  records `editedBy` for that day.
+
+**The Dashboard's header button stays.** Part 2 left open whether the
+Dashboard should hide it, the way the job clock's bar hides on its own
+job's page. It stays: on a phone the card sits below the fold, so the
+header is the only at-a-glance status on the Dashboard too. The cost is
+the header wrapping to a second row at 390px while on shift, as it
+already does at 360px.
+
+**Owner decision logged** in `docs/ACTION-ITEMS.md` (#14): who sees the
+team's hours. Today that's the finance permission, and a separate
+permission would be a small follow-up.
+
+Tests: `tests/tools/shift-hours-card.test.js` (8).
+
 ## 2026-09-23 -- booking-flow round 2 is live: deploy results
 
 Round 2 (#369) was deployed from `main` in the order its entry above lays out. Every function was re-fetched after deploy and diffed against `main`.

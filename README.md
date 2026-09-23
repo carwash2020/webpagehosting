@@ -4741,6 +4741,41 @@ Verified:
 Tests: `tests/tools/shift-clock-shell.test.js` (14). The job clock's
 tests are unchanged and pass.
 
+## What changed, 2026-09-23 -- Shift clock, part 3: Hours worked on the Dashboard
+
+The last of three parts. Full reasoning in
+`docs/specialist-logs/features.md`.
+
+**A new card under Your week: Hours worked.**
+- **Your day, with one button:** "Not clocked in" with **Start my day**;
+  "On shift since 7:42 AM, 2 h 18 min so far" with **End my day**; or,
+  if you forgot to clock out, "Your shift from Tue needs an end time"
+  with **Fix it**. Each opens the same sheet as the clock button at the
+  top of the page.
+- **This week in green bars,** Monday to Sunday, then Today and This
+  week, with last week under it. It counts whole shifts: driving,
+  estimates and the time between jobs. Your week, just above, still
+  shows time on the job clock, in orange. The two are separate.
+- **Everyone's hours,** for accounts that can see finance (Owner and
+  Developer by default): who's on shift, and each person's hours today,
+  this week and last week. A forgotten clock-out shows as "Shift needs
+  an end time" and counts nothing, so it can't inflate anyone's week.
+  Everyone else sees only their own. Who gets to see the team is listed
+  in `docs/ACTION-ITEMS.md` for Steve to confirm.
+
+Checked in headless Chromium (local HTTP, fake Supabase), no console
+errors: the card off, on shift and waiting on an end time, and the team
+table (you on shift, Connor off, a helper with a forgotten clock-out).
+
+Verified:
+- full suite 3367 of 3368 passing; the one failure is the known
+  `check-links.py` sandbox-proxy test;
+- `check-consistency`, `check-undefined-vars`, `eslint` and
+  `check-visual-snapshot` clean.
+
+Tests: `tests/tools/shift-hours-card.test.js` (8). Your week's and the job
+clock's tests are unchanged and pass.
+
 ## What changed, 2026-09-23 -- Booking flow, round 2 is live, plus a gentler scroll on the homepage
 
 Round 2 (the entry "Booking flow, round 2: every change reaches the guest…" above) was built and merged earlier today, but not yet switched on. It is now live. Full results: `docs/specialist-logs/features.md` and `security.md` ("round 2 is live" / "round 2 deployed").
