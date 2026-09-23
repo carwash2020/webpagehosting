@@ -34,6 +34,7 @@
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const LEAD_EMAIL_FROM = Deno.env.get("LEAD_EMAIL_FROM") || "";
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const LEAD_EMAIL_TO = (Deno.env.get("LEAD_EMAIL_TO") || "")
   .split(",")
   .map((addr: string) => addr.trim())
@@ -75,6 +76,20 @@ async function sendInternalEmail(subject: string, html: string, text: string): P
 
 Deno.serve(async (req: Request) => {
   try {
+    // Only real caller: the notify_job_status_change() trigger (sql/infra/add_job_cancel_reschedule.sql), which sends the
+    // service_role key from Vault as its bearer token. verify_jwt alone
+    // accepts the public anon key (it checks the signature, not the
+    // role), so without this anyone could POST a fake trigger payload
+    // here. Security audit, 2026-09-23.
+    const authHeader = req.headers.get("Authorization") || "";
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    if (!SERVICE_ROLE_KEY || token !== SERVICE_ROLE_KEY) {
+      return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     const payload = await req.json();
 
     if (payload.type !== "UPDATE" || payload.table !== "jobs") {
