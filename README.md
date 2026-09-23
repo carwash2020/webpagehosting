@@ -4679,7 +4679,7 @@ your day never stops a job clock. The job clock works exactly as before.
   deleted when an old device syncs.
 
 Verified:
-- full suite 3277 of 3278 passing; the one failure is the known
+- full suite 3300 of 3301 passing; the one failure is the known
   `check-links.py` sandbox-proxy test;
 - `check-consistency`, `check-undefined-vars` and `eslint` clean;
 - `check-links.py`: the only failures are the sandbox proxy refusing

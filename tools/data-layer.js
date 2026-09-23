@@ -1372,7 +1372,7 @@ function thEndShift(opts) {
   const endMs = entered ? new Date(opts.end).getTime() : nowMs;
   const problem = thShiftTimesProblem(shift.email, shift.id, startMs, endMs, nowMs, list);
   if (problem) return { error: problem };
-  const undo = { end: null, hours: null, endSource: shift.endSource === undefined ? undefined : shift.endSource, editedBy: shift.editedBy };
+  const undo = { end: null, hours: null, endSource: shift.endSource, editedBy: shift.editedBy };
   shift.end = new Date(endMs).toISOString();
   shift.hours = thClockHours(endMs - startMs);
   if (entered) shift.endSource = 'entered';
