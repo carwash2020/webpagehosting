@@ -269,9 +269,11 @@ test('jobs cards have a deep-link id, and both pages auto-open the thread Home l
 });
 
 test('every portal page with the bottom nav refreshes its unread badges', () => {
+  // portalStartUnreadBadges() (2026-09-22) loads + applies them, then
+  // keeps them current -- see reply-notice-and-live-unread.test.js.
   for (const page of ['quotes', 'dashboard', 'contracts', 'settings']) {
     const src = fs.readFileSync(repo('portal', page + '.html'), 'utf8');
-    assert.match(src, /portalLoadUnreadCounts\(client\)\.then\(portalApplyNavUnreadBadges\);/, `${page}.html`);
+    assert.match(src, /portalStartUnreadBadges\(client\);/, `${page}.html`);
   }
   assert.match(HOME, /portalApplyNavUnreadBadges\(summary\.unread\);/);
 });

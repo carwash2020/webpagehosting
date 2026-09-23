@@ -253,6 +253,19 @@ re-parsed through `new Date()`, which truncates microseconds and would
 leave that message unread forever. Source:
 `sql/portal/create_client_portal_thread_reads.sql`.
 
+How the pages use it (2026-09-22): every signed-in page re-checks
+`get_portal_unread_counts()` via `portalWatchUnread()` in
+`portal/portal-app.js` -- when the tab comes back into view, and on a
+timer while it's visible (every 20s while a conversation is open,
+otherwise every 90s; nothing while hidden). A failed check changes
+nothing. Request and Jobs show a "Triple H replied" bar at the top
+(`#replyNotice`, one row per unread conversation, opens it), and a
+reply to a conversation that's open on screen is pulled in place
+without losing a half-typed message. Deliberately polling rather than
+a Supabase realtime subscription: one small RPC while someone is
+actually looking, no socket to keep alive, and no change to the
+message tables' publication.
+
 ## Edge functions
 
 All deployed and ACTIVE. Source backed up in `edge-functions/`.

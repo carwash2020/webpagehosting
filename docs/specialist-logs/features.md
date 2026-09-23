@@ -2188,6 +2188,44 @@ Tests: `tests/portal/desktop-app-shell.test.js`,
 `tests/portal/settings-menu-and-sections.test.js` (jsdom, drives the real
 routing at phone and desktop widths).
 
+## 2026-09-22 (later still) -- Client portal: never miss a reply
+
+The Request/Jobs tab badge said a reply was waiting, but the page opened
+on a blank request form (or the check-up list) with the conversation
+somewhere below. And unread counts were read once per page load, so a
+portal left open in a tab -- or returned to from the "Triple H replied"
+email -- showed stale badges, and a reply landing in an open
+conversation never appeared.
+
+**Decided: polling, not Supabase realtime.** `portalWatchUnread()`
+re-runs the existing `get_portal_unread_counts()` RPC on return to the
+tab (visibilitychange/focus) and on a timer only while the page is
+visible: 20s while a thread is open (chat-like), 90s otherwise. Realtime
+would need the two message tables added to the publication, a socket
+per open tab, and RLS-on-realtime to be right; polling one RPC that
+already exists and is already RLS-safe needs none of that, and the
+latency difference doesn't matter for a handyman's reply. A failed
+check returns null (`nullOnError`) and changes nothing -- otherwise a
+network blip would wipe every badge.
+
+- **"Triple H replied" bar** at the top of Request and Jobs
+  (`portalReplyNoticeHtml`), one row per unread conversation, newest
+  first, max three. Tapping opens and scrolls to the thread; marking it
+  read removes it. A conversation already open on screen is left out.
+- **Open thread refreshes in place** (`{ quiet: true }`): no skeleton
+  flash, and `portalReplaceThreadKeepingDraft()` keeps a half-typed
+  message and the cursor. It skips while a send is in flight -- the send
+  re-renders the thread itself, and restoring the draft then would put
+  the just-sent text back in the box.
+- **Home** re-renders its attention item and card counts on change;
+  Quotes/Invoices/Contracts/Settings keep their nav badges current via
+  `portalStartUnreadBadges()`.
+- `setBaseline()` after the page itself marks a thread read, so the next
+  check isn't mistaken for news.
+
+Tests: `tests/portal/reply-notice-and-live-unread.test.js` (jsdom; drives
+the watcher and the Request page's unread handling for real).
+
 ## 2026-09-23 -- Workspace rework, part 8: quick add from anywhere
 
 **Why.** Part 7's quick add takes a sentence, but most jobs don't
