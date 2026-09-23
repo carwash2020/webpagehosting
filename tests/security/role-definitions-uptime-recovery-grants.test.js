@@ -43,8 +43,9 @@ test('anon loses EXECUTE on all four recovery-code RPCs; authenticated is not to
     'count_unused_internal_recovery_codes()',
     'delete_internal_recovery_codes()',
   ]) {
-    const escaped = fn.replace(/[()]/g, '\\$&');
-    assert.match(STATEMENTS, new RegExp(`revoke execute on function public\\.${escaped} from anon;`));
+    // Plain substring check: no regex built from `fn`, so nothing in it
+    // needs escaping.
+    assert.ok(STATEMENTS.includes(`revoke execute on function public.${fn} from anon;`), `${fn}: anon EXECUTE revoked`);
   }
   assert.doesNotMatch(STATEMENTS, /from authenticated|from anon, authenticated/);
 });
