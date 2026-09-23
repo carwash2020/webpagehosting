@@ -4645,3 +4645,46 @@ Verified:
 Tests:
 - `touch-no-sticky-hover.test.js` now also scans `blog/blog.css` (its new check fails against the old file);
 - `blog-index-cards.test.js` checks the hover and focus rules separately.
+
+## What changed, 2026-09-23 -- Shift clock, part 1: Start my day / End my day (the data behind it)
+
+The first of three parts. It adds a whole-day punch clock, like
+Paylocity, **beside** the job clock from rework part 9. This part is the
+storage, sync and rules only; the buttons (part 2) and the Dashboard's
+hours card (part 3) come next. Nothing on screen changes yet. Full
+reasoning in `docs/specialist-logs/features.md`.
+
+**Two clocks, two questions.** The job clock says how long a job took,
+and fills the invoice's Labor line. The shift clock says how long you
+worked today, driving, estimates and the time between jobs included.
+They're independent: a job clock never needs you clocked in, and ending
+your day never stops a job clock. The job clock works exactly as before.
+
+**How it works:**
+- **Each person has their own shift**, by the account they're signed in
+  with. Steve and a helper punch in and out separately, and it syncs to
+  every device like jobs do.
+- **Hours round like the job clock** (0.1 h; under a minute is a mis-tap
+  and counts nothing) and count on the day the shift started, so a late
+  call that runs past midnight counts on the day it began.
+- **Forgot to clock out?** A shift still open after 14 hours stops
+  counting and needs an end time. Ending it asks when you finished, and
+  suggests when the last job clock that day stopped, instead of
+  recording 24 hours. Starting the next day asks the same first.
+- **Forgot to clock in?** Start my day can offer to start from when you
+  started the first job clock that day.
+- **Typed-in times are checked:** the end after the start, nothing in the
+  future, no more than 24 hours, and no overlap with your other shifts.
+- A deleted shift can be restored from Dev Tools' Graveyard, and stays
+  deleted when an old device syncs.
+
+Verified:
+- full suite 3300 of 3301 passing; the one failure is the known
+  `check-links.py` sandbox-proxy test;
+- `check-consistency`, `check-undefined-vars` and `eslint` clean;
+- `check-links.py`: the only failures are the sandbox proxy refusing
+  outside sites, no internal link broken.
+
+Tests: `tests/tools/shift-clock.test.js` (18). The job clock's and Your
+week's tests are unchanged and pass.
+
