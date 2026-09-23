@@ -68,7 +68,7 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/portal/portal-app.css?v=202609222300">
+<link rel="stylesheet" href="/portal/portal-app.css?v=202609222345">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -256,8 +256,12 @@
   .quote-visit-when { color: var(--white); font-size: 14.5px; font-weight: 600; margin-top: 2px; line-height: 1.35; }
   .quote-visit-sub { color: var(--text-dim); font-size: 12.5px; margin-top: 3px; line-height: 1.4; }
   .quote-visit-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-  .quote-visit-actions .btn { flex: 1 1 100%; justify-content: center; min-height: 40px; text-decoration: none; display: inline-flex; align-items: center; }
-  @media (min-width: 640px) { .quote-visit-actions .btn { flex-basis: 0; min-width: 180px; } }
+  /* Wrap by the space the card actually has, not the viewport: the
+     same card is phone-width on a phone AND half-width in the desktop
+     two-across grid, and a viewport breakpoint clipped "RESCHEDULE OR
+     CANCEL" in the second case. 280px is about what that uppercase,
+     letter-spaced label needs; below two of those, they stack. */
+  .quote-visit-actions .btn { flex: 1 1 280px; justify-content: center; min-height: 40px; text-decoration: none; display: inline-flex; align-items: center; }
   .schedule-panel { margin-top: 10px; display: none; }
   .schedule-panel.is-open { display: block; }
   .schedule-note { color: #4caf78; font-size: 13px; margin-top: 8px; }
@@ -311,7 +315,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=37f5d0deec">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=0e2521a23c">
 </head>
 <body class="portal-page">
 
@@ -331,13 +335,35 @@
   </div>
 </div>
 
-<nav class="portal-nav" aria-label="Primary">
-  <a href="/portal/home.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/></svg><span>Home</span></a>
-  <a href="/portal/work-orders.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 8.5v7M8.5 12h7"/></svg><span>Request</span></a>
-  <a href="/portal/quotes.html" class="is-active" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h7.5L18 8v12.5H6z"/><path d="M13.5 3.5V8H18"/><path d="M9 12.5h6M9 16h6"/></svg><span>Quotes</span></a>
-  <a href="/portal/dashboard.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9.5 9h5M9.5 13h5"/></svg><span>Invoices</span></a>
-  <a href="/portal/jobs.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8"/></svg><span>Jobs</span></a>
-</nav>
+<!-- Desktop app shell (2026-09-22). On a phone this wrapper is
+     display:contents -- the nav inside stays the fixed bottom tab bar
+     and the extras stay hidden. From 1024px it becomes a real left
+     sidebar, so the portal stops looking like a phone on a monitor.
+     Contracts/Settings live OUTSIDE the <nav> on purpose: the nav is
+     the five-tab bar and must stay exactly five links. -->
+<div class="portal-rail">
+  <a class="portal-rail-brand" href="/portal/home.html">
+    <img src="/images/logo-signature-orange.webp?v=202608142300" alt="">
+    <span><span class="portal-rail-name">Triple H</span><span class="portal-rail-tag">Client portal</span></span>
+  </a>
+  <nav class="portal-nav" aria-label="Primary">
+    <a href="/portal/home.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/></svg><span>Home</span></a>
+    <a href="/portal/work-orders.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 8.5v7M8.5 12h7"/></svg><span>Request</span></a>
+    <a href="/portal/quotes.html" class="is-active" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h7.5L18 8v12.5H6z"/><path d="M13.5 3.5V8H18"/><path d="M9 12.5h6M9 16h6"/></svg><span>Quotes</span></a>
+    <a href="/portal/dashboard.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9.5 9h5M9.5 13h5"/></svg><span>Invoices</span></a>
+    <a href="/portal/jobs.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8"/></svg><span>Jobs</span></a>
+  </nav>
+  <div class="portal-rail-more">
+    <div class="portal-rail-label">Account</div>
+    <a href="/portal/contracts.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h7.5L18 8v12.5H6z"/><path d="M13.5 3.5V8H18"/><path d="M9 12.5h6M9 16h6"/></svg><span>Contracts</span></a>
+    <a href="/portal/settings.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Settings</span></a>
+  </div>
+  <div class="portal-rail-help">
+    <div class="portal-rail-help-title">Need a hand?</div>
+    <p>Calling or texting is the fastest way to reach us.</p>
+    <div class="portal-rail-help-actions"><a href="tel:+14354141667">Call</a><a href="sms:+14354141667">Text</a></div>
+  </div>
+</div>
 
 <div id="quoteList">
   <div class="skeleton-card"><div class="skeleton-line is-title"></div><div class="skeleton-line is-wide"></div><div class="skeleton-line is-narrow"></div></div>
@@ -782,10 +808,10 @@
     let html = '';
     if (pending.length) {
       html += pendingQuotesBannerHtml(pending);
-      html += `<div class="quote-section-title">Needs your response</div>` + pending.map(renderQuoteCard).join('');
+      html += `<div class="quote-section-title">Needs your response</div><div class="card-grid">` + pending.map(renderQuoteCard).join('') + '</div>';
     }
     if (responded.length) {
-      html += `<div class="quote-section-title">Responded</div>` + responded.map(renderQuoteCard).join('');
+      html += `<div class="quote-section-title">Responded</div><div class="card-grid">` + responded.map(renderQuoteCard).join('') + '</div>';
     }
     listEl.innerHTML = html;
     portalScrollToHash();

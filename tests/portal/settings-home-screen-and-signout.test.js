@@ -14,15 +14,18 @@ const html = fs.readFileSync(path.join(__dirname, '..', '..', 'portal', 'setting
 test('the Add to Home Screen card is hidden entirely once already installed, not left visible with a message', () => {
   const fnMatch = html.match(/function renderAddToHomeScreen\(\)[\s\S]*?const isStandalone[\s\S]*?if \(isStandalone\) return;/);
   assert.ok(fnMatch, 'expected to isolate the standalone-detection block');
-  assert.match(fnMatch[0], /card\.style\.display = isStandalone \? 'none' : 'block';/);
+  // '' rather than 'block' (2026-09-22): an inline display beats the
+  // stylesheet, which had silently defeated the desktop hide rule.
+  assert.match(fnMatch[0], /card\.style\.display = isStandalone \? 'none' : '';/);
   assert.doesNotMatch(fnMatch[0], /You're using the installed app already/, 'the old message-based approach should be gone, not just supplemented');
 });
 
 test('the card re-checks and correctly re-shows if somehow not standalone, not just a one-way hide', () => {
   const fnMatch = html.match(/function renderAddToHomeScreen\(\)[\s\S]*?const isStandalone[\s\S]*?if \(isStandalone\) return;/);
-  // The ternary sets 'block' for the non-standalone case explicitly,
-  // rather than only ever setting 'none' and never restoring it.
-  assert.match(fnMatch[0], /isStandalone \? 'none' : 'block'/);
+  // The ternary clears the inline value for the non-standalone case
+  // explicitly, rather than only ever setting 'none' and never
+  // restoring it.
+  assert.match(fnMatch[0], /isStandalone \? 'none' : ''/);
 });
 
 test('no longer references the now-unused subtitle element or variable left behind by the old approach', () => {

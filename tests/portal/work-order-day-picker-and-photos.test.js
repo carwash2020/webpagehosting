@@ -112,7 +112,14 @@ test('photo uploads go to the dedicated work-order-photos bucket, not job-photos
 
 // ---- desktop: Add to Home Screen hidden ----
 
-test('the Add to Home Screen card is hidden on desktop, at the same breakpoint used everywhere else in the portal', () => {
+test('on desktop the Add to Home Screen card only hides its phone-only fallback, at the portal\'s desktop breakpoint', () => {
+  // Revised 2026-09-22: desktop Chrome/Edge offer a real one-tap install
+  // (beforeinstallprompt), so only the generic "look in your browser's
+  // menu" text is hidden on a computer -- at 1024px, where the desktop
+  // shell starts.
   const settingsHtml = fs.readFileSync(repo('portal', 'settings.html'), 'utf8');
-  assert.match(settingsHtml, /@media \(min-width: 860px\) \{\s*#addHomeScreenCard \{ display: none; \}/);
+  assert.match(settingsHtml, /@media \(min-width: 1024px\) \{\s*#addHomeScreenCard\.is-generic \{ display: none; \}/);
+  const fn = settingsHtml.match(/function renderAddToHomeScreen\(\)[\s\S]*?\n  \}\n/)[0];
+  assert.match(fn, /card\.classList\.remove\('is-generic'\);/);
+  assert.match(fn, /card\.classList\.add\('is-generic'\);\s*body\.innerHTML = '<p class="set-card-sub" style="margin:0;">Look for/);
 });

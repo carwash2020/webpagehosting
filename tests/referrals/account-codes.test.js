@@ -129,7 +129,7 @@ test('client-detail.html threads the client phone through createReferralLink so 
 });
 
 test('portal settings.html shows a referral link panel, self-serve via ensure-my-referral-code (2026-09-21 refinement) rather than only displaying a pre-existing row', () => {
-  assert.match(PORTAL_SETTINGS, /Refer a Friend/);
+  assert.match(PORTAL_SETTINGS, /Refer a friend/i);
   assert.match(PORTAL_SETTINGS, /functions\/v1\/ensure-my-referral-code/);
   assert.match(PORTAL_SETTINGS, /Authorization': 'Bearer ' \+ session\.access_token/);
 });

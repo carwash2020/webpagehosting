@@ -518,26 +518,10 @@ body.portal-page details.line-item-details > .line-item-details-wrap > div {
   body.portal-page details.line-item-details > .line-item-details-wrap { transition: none; }
 }
 
-.set-card-header { min-height: 52px; }
-/* The collapsed rows were doing the opposite of what collapsing them was
-   for. Settings was made collapsible to cut the scroll length ("it still
-   looks a little much"), but a collapsed card still measured ~106px --
-   18px card padding + the 52px header tap target + 18px padding + 18px
-   margin -- to show one line of 15px text. Seven of those is ~740px of
-   almost entirely empty panel before you have opened anything.
-   The 52px min-height on the header already guarantees a comfortable tap
-   target on its own, so the card's own vertical padding is doing nothing
-   for reachability while collapsed. Trim it (and the gap) only in that
-   state: ~76px per row instead of ~106px, about 210px less scrolling on
-   the default view, with the tap target and the expanded layout both
-   completely unchanged. */
-.set-card.is-collapsed {
-  padding-top: 6px;
-  padding-bottom: 6px;
-  margin-bottom: 12px;
-}
-.set-card-chevron { transition: transform .22s ease; }
-.set-card.is-collapsed .set-card-chevron { transform: rotate(-90deg); }
+/* (Settings' collapsed-card density rules lived here. The accordion they
+   tuned was replaced on 2026-09-22 by a menu that opens one section at a
+   time -- see portal/settings.html -- so there is nothing collapsed left
+   to tighten.) */
 
 /* ---------- 11. modals ---------- */
 .report-bug-modal,
@@ -832,6 +816,13 @@ body.portal-page details.line-item-details > .line-item-details-wrap > div {
   .portal-nav {
     padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
   }
+
+/* Installed as a desktop app (2026-09-22): the standalone rule above is
+   for the phone's bottom tab bar -- on a desktop window the sidebar
+   replaces that bar, so keep the desktop shell's own spacing. */
+@media (display-mode: standalone) and (min-width: 1024px) {
+  body.portal-page { padding-top: 30px; padding-bottom: 56px; }
+}
   .portal-header {
     padding-left: max(16px, env(safe-area-inset-left, 0px));
     padding-right: max(16px, env(safe-area-inset-right, 0px));
