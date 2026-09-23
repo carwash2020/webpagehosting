@@ -4379,3 +4379,45 @@ Verified:
 - **Checks:** full suite 3173/3174, the only failure being the known `check-links.py` sandbox-proxy test (Unsplash is blocked here). Also clean: `check-consistency`, `check-undefined-vars`, lint, visual snapshot.
 
 New test in `tests/design/blog-index-cards.test.js`: any public page that uses the card markup must load `blog.css` at the blog's own version. The test fails against the old pages.
+
+## What changed, 2026-09-23 -- Pages no longer jump when the fonts load
+
+Public site. Only `styles.css` changes what visitors see; the rest is a checker fix and tests.
+
+**What was wrong.** The site's four fonts (Anton, Oswald, Newsreader, Archivo) load from Google a moment after the page first appears. Until then the browser shows a stand-in font. The 2026-09-10 fix sized the stand-ins by letter *height*. But Anton and Oswald are narrow typefaces, so the stand-ins came out far too *wide*. On a first visit from Windows or a Mac:
+- the homepage headline showed on 4 lines, then snapped to 2 once Anton arrived;
+- everything below it jumped;
+- desktop layout shift (CLS) was 0.22–0.29, where Google's "poor" line is 0.25.
+
+On Android, Linux and ChromeOS the stand-ins never applied at all. The rule named only `local('Arial')`, and those systems have no font by that exact name.
+
+**The fix (`styles.css`).**
+- Each stand-in is now sized by measured text *width*, at the weights and letter case the site really uses. Examples: Anton 71.8% of Arial, Oswald 80%.
+- Each family now has two stand-ins:
+  - an Arial-metric one: Arial on Windows, Mac and iPhone; Liberation Sans on Linux; Arimo on ChromeOS;
+  - a Roboto one for Android.
+- Roboto has to be named `'Roboto Regular'`; `local('Roboto')` matches nothing (checked in the browser).
+- The city/service hero paragraph is capped at `640px` instead of `64ch`. The two are identical once Newsreader loads. But `ch` is measured from whichever font is showing, so the cap itself changed width at the swap.
+- Arrows (→) aren't in Oswald at all, so they're drawn by the stand-in even after load. They keep their old size, so they look the same as before.
+
+**Measured** in headless Chromium, holding the font files back until the page has painted:
+
+| | Before | After |
+|---|---|---|
+| 8 page types × 6 widths, Windows/Mac fonts | CLS 2.953 in total, worst 0.313 | **0.260**, worst 0.087 |
+| Same, Android fonts | 2.133, worst 0.297 | **0.204**, worst 0.051 |
+| Homepage at 51 widths (360–1440px): widths with CLS above 0.1 | 28 | **2** |
+
+**Once the fonts have loaded, nothing moves.** A pixel comparison against production matched exactly under Windows/Mac conditions, on 9 page types in both themes at desktop and phone widths. On Linux and Android the only visible changes make them match Windows and Macs: arrow glyphs, and the homepage estimate form's Service dropdown (39px → 46px tall, as Windows and Macs already show it).
+
+**Also fixed: the cache-bust checker had stopped seeing 16 pages.** The city and service pages moved into `locations/` and `services/` on 2026-09-21. `scripts/check-consistency.js` only scanned the root, `tools/`, `portal/` and `blog/`, so `npm run fix-versions` would have left those 16 pages on a stale `styles.css`. That's the first thing this change would have hit. Both folders are scanned now.
+
+Verified:
+- full suite 3182 of 3183 passing; the one failure is the known `check-links.py` sandbox-proxy test;
+- `check-consistency`, `check-undefined-vars` and `eslint` clean;
+- `check-links.py`: the only failures are the sandbox proxy refusing outside sites (403), no internal link broken;
+- checked at 375px and desktop, dark and light, and with reduced motion on.
+
+New tests:
+- `tests/design/fallback-font-metrics.test.js` (7): condensed faces shrink, every stand-in names fonts that resolve, overrides match the real metrics, stack order, the arrow carve-out, and the lede cap.
+- `tests/site-wide/global-stamp-scan-dirs.test.js` (2): the checker scans both folders, and every city/service page's stamp is current.

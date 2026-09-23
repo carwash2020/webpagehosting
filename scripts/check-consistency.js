@@ -550,7 +550,14 @@ function fixVersions(dir) {
 // directory.
 const GLOBAL_SHARED_FILES = ['styles.css', 'js/triage.js', 'js/business-hours.js', 'js/site-motion.js', 'js/analytics-events.js', 'js/promo-banner.js', 'js/utm-tracking.js', 'signature-pad.js', 'js/booking-flow.js'];
 const BLOG_DIR = path.join(__dirname, '..', 'blog');
-const SCAN_DIRS = [ROOT_DIR, TOOLS_DIR, PORTAL_DIR, BLOG_DIR];
+// locations/ and services/ (2026-09-23): the 16 city and service pages moved
+// out of the root on 2026-09-21, and htmlFilesIn() doesn't recurse, so from
+// then on neither this check nor --fix-versions ever saw their styles.css /
+// site-motion.js / promo-banner.js stamps. Nothing had changed yet, so the
+// gap was silent -- the next styles.css edit would have left all 16 stale.
+const LOCATIONS_DIR = path.join(__dirname, '..', 'locations');
+const SERVICES_DIR = path.join(__dirname, '..', 'services');
+const SCAN_DIRS = [ROOT_DIR, TOOLS_DIR, PORTAL_DIR, BLOG_DIR, LOCATIONS_DIR, SERVICES_DIR];
 
 function htmlFilesIn(dir) {
   return fs.readdirSync(dir).filter(f => f.endsWith('.html')).map(f => path.join(dir, f));
@@ -760,7 +767,7 @@ function main() {
 
     // Real hash-vs-reference freshness (not just "do all tool pages agree
     // with each other") is checkGlobalSharedFileFreshness()'s job now, run
-    // once above across root/tools/portal together -- this just catches
+    // once above across every SCAN_DIRS directory together -- this just catches
     // the narrower case of the ?v= param being dropped entirely.
     if (!/styles\.css\?v=[a-zA-Z0-9]+/.test(html) && /href="\/styles\.css"/.test(html)) {
       problems.push(`${filename}: loads /styles.css with no ?v= cache-busting param`);

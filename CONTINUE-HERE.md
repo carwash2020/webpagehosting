@@ -46,8 +46,10 @@ the file's real content. That's why this bit repeatedly. It's now a
 real sha256-derived hash of the file's actual current bytes, the same
 mechanism every other shared tools/portal file already used, just no
 longer confined to a single directory — `npm run fix-versions`
-recomputes and rewrites every reference across root/tools/portal/blog in
-one pass, and `check-consistency` fails the build if any reference is
+recomputes and rewrites every reference across
+root/tools/portal/blog/locations/services in one pass (locations/ and
+services/ were added 2026-09-23 -- before that their 16 pages were never
+scanned and silently kept stale styles.css stamps), and `check-consistency` fails the build if any reference is
 stale relative to the real file.
 
 This exact mistake cost a full round-trip earlier: a merged PR appeared
