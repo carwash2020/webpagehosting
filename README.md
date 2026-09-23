@@ -4293,6 +4293,47 @@ The SQL function was exercised live in rolled-back transactions.
 Driven in headless Chromium at 390px and 1440px. New tests:
 `tests/booking/booking-manage-link-round3.test.js` (12).
 
+## What changed, 2026-09-22 (later still) -- Booking flow, round 4: scheduling from the client portal, as easy as the booking page
+
+Booking-specific portal code only: scheduling an approved quote's job
+(`quotes.html`), booking a due check-up (`jobs.html`), and picking a
+preferred time on a request (`work-orders.html`). Full reasoning:
+`docs/specialist-logs/features.md` and `visual.md` (2026-09-22 round 4
+entries).
+
+**One picker, three places.** All three now use the same date picker
+as the public booking page (new `createBookingPicker()` in
+`js/booking-flow.js`) instead of three separate copies of the old one:
+- the whole two weeks load at once, and every day says "3 open",
+  "Full" or "Closed"
+- it opens on the first day with room
+- switching days is instant
+- if it can't load, it says so with a Try again button
+
+If the new file ever fails to load, each page quietly uses its old
+picker. Nothing about what gets booked, or how, changed.
+
+**A double-booking slip, fixed.** With two quotes (or two check-ups)
+open at once, a time tapped in one could be booked by the other's
+Confirm button. Picking a time in one now withdraws the other's choice.
+
+**A moment when it's booked.** After scheduling a quote's job or a
+check-up:
+- the new booked card slides into view
+- it gets the same burst of brand-orange flecks as the booking page's
+  confirmation
+- a "confirmation email is on its way" note appears
+
+**"No times", not "Full".** Late in the day, today used to say "Full"
+even with nothing booked. It now says "No times", on the booking page
+too.
+
+Verified: full suite (the only failure is the known `check-links.py`
+sandbox-proxy test), `check-consistency`, `check-undefined-vars`, lint,
+visual snapshot. Driven in headless Chromium at 390px and 1440px on all
+three pages, and again with the new file blocked. New tests:
+`tests/portal/booking-picker-round4.test.js` (27).
+
 ## What changed, 2026-09-23 -- Booking flow, round 2: every change reaches the guest, reminders follow a moved visit, and push notifications stay private
 
 Server side only: edge functions and two SQL files. No page changes. Full reasoning: `docs/specialist-logs/features.md` and `security.md` (2026-09-23 round 2 entries).
