@@ -43,8 +43,12 @@ test('index.html\'s lead insert sends the captured UTM params alongside the exis
 });
 
 test('booking.html\'s booking insert sends the captured UTM params alongside the existing fields', () => {
-  const fnMatch = bookingHtml.match(/fetch\(SUPABASE_URL \+ '\/rest\/v1\/th_bookings', \{[\s\S]*?\n\s*\.then\(function \(res\)/);
-  assert.ok(fnMatch, 'expected to isolate the th_bookings insert body');
+  // Updated 2026-09-22 (booking-flow pass, round 3): the payload is now
+  // built once as bookingPayload and sent by submitBooking() (see
+  // lead-source-tracking.test.js for the matching assertion that both of
+  // submitBooking()'s paths send that same payload).
+  const fnMatch = bookingHtml.match(/const bookingPayload = Object\.assign\(\{[\s\S]*?\n\s*submitBooking\(bookingPayload\)/);
+  assert.ok(fnMatch, 'expected to isolate the booking payload build');
   assert.match(fnMatch[0], /window\.getStoredUtmParams/);
   assert.match(fnMatch[0], /source: formData\.get\('source'\) \|\| null,/);
 });

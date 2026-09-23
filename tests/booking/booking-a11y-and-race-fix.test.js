@@ -152,7 +152,8 @@ test('every wizard step panel is a valid, non-tab-stealing focus target (tabinde
 test('the "check your email" next-step note reflects whether email was actually given, not an unconditional promise manage-booking.html can\'t back up for a phone-only booking', async () => {
   const window = loadPage(async (url) => {
     if (String(url).includes('get_booking_availability')) return { ok: true, json: async () => ([]) };
-    if (String(url).includes('/rest/v1/th_bookings')) return { ok: true };
+    // Round 3: create_booking() RPC first (direct insert is its 404 fallback).
+    if (String(url).includes('/rest/v1/th_bookings') || String(url).includes('/rpc/create_booking')) return { ok: true };
     return { ok: false };
   });
 
@@ -178,7 +179,10 @@ test('the "check your email" next-step note reflects whether email was actually 
 });
 
 test('name/email/address are trimmed before being sent, not just validated after trimming and then sent raw', () => {
-  const submitBlock = BOOKING_HTML_SRC.slice(BOOKING_HTML_SRC.indexOf("fetch(SUPABASE_URL + '/rest/v1/th_bookings'"), BOOKING_HTML_SRC.indexOf("fetch(SUPABASE_URL + '/rest/v1/th_bookings'") + 900);
+  // Round 3 (2026-09-22): the payload is built once as bookingPayload and
+  // sent through submitBooking() (create_booking RPC, direct insert as the
+  // fallback) -- so the fields are checked where they're built now.
+  const submitBlock = BOOKING_HTML_SRC.slice(BOOKING_HTML_SRC.indexOf('const bookingPayload = Object.assign({'), BOOKING_HTML_SRC.indexOf('const bookingPayload = Object.assign({') + 900);
   assert.match(submitBlock, /name:\s*nameVal/);
   assert.match(submitBlock, /email:\s*emailVal \|\| null/);
   assert.match(submitBlock, /address:\s*addressVal/);

@@ -118,11 +118,14 @@ test('a non-OK response from the availability endpoint is never silently treated
   assert.match(src, /if \(!res\.ok\) throw new Error/, 'fetchBookingsForDate should throw on a non-OK response, not silently return []');
 });
 
+// Round 3 (2026-09-22): booking.html submits through the create_booking()
+// RPC first (it returns the manage token); the direct th_bookings insert is
+// only its 404 fallback. The mocks below treat either as "the real insert".
 test('a bot filling in the honeypot field never actually creates a booking, but sees a normal-looking confirmation', async () => {
   let insertCalled = false;
   const window = loadPage(async (url) => {
     if (String(url).includes('get_booking_availability')) return { ok: true, json: async () => ([]) };
-    if (String(url).includes('/rest/v1/th_bookings') && !String(url).includes('availability')) {
+    if ((String(url).includes('/rest/v1/th_bookings') || String(url).includes('/rpc/create_booking')) && !String(url).includes('availability')) {
       insertCalled = true;
       return { ok: true };
     }
@@ -156,7 +159,7 @@ test('a genuine submission (honeypot left empty) reaches the real insert normall
   let insertCalled = false;
   const window = loadPage(async (url) => {
     if (String(url).includes('get_booking_availability')) return { ok: true, json: async () => ([]) };
-    if (String(url).includes('/rest/v1/th_bookings') && !String(url).includes('availability')) {
+    if ((String(url).includes('/rest/v1/th_bookings') || String(url).includes('/rpc/create_booking')) && !String(url).includes('availability')) {
       insertCalled = true;
       return { ok: true };
     }
@@ -216,7 +219,7 @@ test('an incomplete phone number shows a clear inline error and blocks submissio
   let insertCalled = false;
   const window = loadPage(async (url) => {
     if (String(url).includes('get_booking_availability')) return { ok: true, json: async () => ([]) };
-    if (String(url).includes('/rest/v1/th_bookings') && !String(url).includes('availability')) {
+    if ((String(url).includes('/rest/v1/th_bookings') || String(url).includes('/rpc/create_booking')) && !String(url).includes('availability')) {
       insertCalled = true;
       return { ok: true };
     }
@@ -284,7 +287,7 @@ test('leaving email empty is still valid -- it is optional, only a non-empty inv
   let insertCalled = false;
   const window = loadPage(async (url) => {
     if (String(url).includes('get_booking_availability')) return { ok: true, json: async () => ([]) };
-    if (String(url).includes('/rest/v1/th_bookings') && !String(url).includes('availability')) {
+    if ((String(url).includes('/rest/v1/th_bookings') || String(url).includes('/rpc/create_booking')) && !String(url).includes('availability')) {
       insertCalled = true;
       return { ok: true };
     }
@@ -317,7 +320,7 @@ test('leaving email empty is still valid -- it is optional, only a non-empty inv
 test('the compact mobile summary is hidden on step 1, shows service on step 2, adds date/time on step 3, and hides again after confirm', async () => {
   const window = loadPage(async (url) => {
     if (String(url).includes('get_booking_availability')) return { ok: true, json: async () => ([]) };
-    if (String(url).includes('/rest/v1/th_bookings') && !String(url).includes('availability')) {
+    if ((String(url).includes('/rest/v1/th_bookings') || String(url).includes('/rpc/create_booking')) && !String(url).includes('availability')) {
       return { ok: true };
     }
     return { ok: false };
