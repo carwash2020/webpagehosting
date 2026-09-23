@@ -167,19 +167,15 @@ click a setting by hand.
     CRITICAL finding (`docs/specialist-logs/security.md`). Nothing in the
     repo calls `signUp`; portal invites (`send-invite`, service role)
     keep working with signup off.
-12. **Deploy the security-fixed edge functions that are merged but not
-    live** (2026-09-23 audit). Merging never deploys edge functions in
-    this repo. `notify-job-message-email` is already deployed and
-    verified; still to deploy from `main`: `notify-work-order-message-email`,
-    `notify-work-order-scheduled-email`, and `Send-Push` (HIGH), then
-    `notify-new-work-order-email`, `send-lead-email`,
-    `send-job-application-email`, `send-job-status-change-email`,
-    `reconcile-stripe-payments`. After each, a POST with the anon key
-    should return 401.
+12. **Resolved (2026-09-23).** Every security-fixed edge function merged
+    that day is deployed from `main` and verified live (anon -> 401, the
+    triggers' Vault key -> through). Results per function:
+    `docs/specialist-logs/security.md`, "round 3 follow-up".
 13. **Decide on server-side MFA enforcement for internal accounts**
     (2026-09-23 audit, finding #4). Today a stolen password alone
-    reaches all internal data through the API. The proposed design and
-    its lockout risks are in `docs/specialist-logs/security.md`.
+    reaches all internal data through the API, and can mint fresh
+    recovery codes too. The proposed design and its lockout risks are
+    in `docs/specialist-logs/security.md` (round 3, and its follow-up).
 
 14. **Confirm who should see the team's hours** (shift clock, 2026-09-23).
     The Dashboard's Hours worked card shows everyone's shifts only to

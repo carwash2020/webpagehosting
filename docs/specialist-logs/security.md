@@ -749,6 +749,8 @@ open signup it means *anyone*.
 
 ### Findings, by severity
 
+Status as of the first pass. Current status is in the follow-up entry below ("round 3 follow-up").
+
 | # | Sev | Finding | Status |
 |---|---|---|---|
 | 1 | CRITICAL | Any authenticated session (so, any stranger) could edit `site_content`/`site_faq`/`site_terms`, read the CMS history tables, and read/upload/delete every file in `secure-documents` (business-formation, insurance, tax) and `receipts` | **Fixed live + PR #361 (merged)** |
@@ -967,5 +969,177 @@ Seen during the public-site visual audit. Not fixed there, since it's this lane'
 - Every public page's CSP `<meta>` ends with `frame-ancestors 'none'`. Browsers ignore that directive when it arrives in a `<meta>` tag rather than a response header (CSP3 spec), and Chromium logs "The Content Security Policy directive 'frame-ancestors' is ignored when delivered via a <meta> element" on every page load.
 - `SECURITY.md` ("Content-Security-Policy, on the public site") says the site "can [not] be embedded" because of it. GitHub Pages can't send response headers, and there's no `X-Frame-Options` either, so as far as I can tell the public pages *can* currently be framed.
 - Options for this lane: accept and correct the doc, or add a frame check (e.g. `if (top !== self)`) where clickjacking would matter (booking, the lead forms).
+
+## 2026-09-23 (security lane, later): round 3 follow-up -- every merged fix is live, push privacy certified, four more fixed
+
+Follow-up to "Cross-stack audit, round 3" above. That entry's table is
+the first pass; this is where each finding stands now.
+
+| # | Sev | Finding | Status now |
+|---|---|---|---|
+| 1 | CRITICAL | CMS + `secure-documents`/`receipts` open to any session | Fixed live (PR #361) |
+| 2 | HIGH | 8 trigger/cron-only functions took the anon key | **All 8 deployed from `main` and verified live** (below) |
+| 3 | HIGH | `Send-Push` had no caller check; any URL opened on tap | **Live** (v52 from this lane, v53 from the booking lane, same code). Service-worker same-origin guard merged (PR #381) |
+| -- | HIGH | Push privacy: team alerts reached any device with a subscription | **Certified and fixed live**, see "Push notifications" below |
+| 4 | HIGH | MFA enforced in the browser only | **Still needs an owner decision.** One more piece found, below |
+| 5 | MEDIUM | Double charge on one invoice | **Fixed (PR #386), deployed and verified**: `create-payment-intent` v17, `create-bulk-payment-intent` v15, `reconcile-stripe-payments` v9 |
+| 6 | MEDIUM | `manage-saved-card` SetupIntents for any signed-in session | Open. Needs a product call, below |
+| 7 | LOW | Webhook doesn't compare `amount_received` to the invoice total | Narrowed by #386. Open, LOW |
+| 8 | MEDIUM | `send-booking-email` / `send-appointment-reminder` caller check | Fixed and deployed by the booking lane (#369, #383) |
+| 9 | LOW | `role_definitions` / `th_uptime_checks` readable by anyone signed in; anon EXECUTE on recovery-code RPCs | **Fixed live + PR #384.** `work-order-photos` INSERT on `bucket_id` alone is still open (upload spam only) |
+
+### Deploys, and how each was checked
+
+Nothing in this repo deploys edge functions on merge. Each function
+below was deployed from `main` exactly as merged, with `verify_jwt` on
+as before. Each was then called twice from inside the database
+(`net.http_post`) with a harmless `{"type":"AUDIT_PROBE"}` body:
+
+- **With the public anon key:** must return 401.
+- **With the Vault key the real triggers send:** must return
+  `400 Unknown type`. That means it got past the new check and then
+  stopped before sending anything.
+
+| Function | Live | anon | Vault key |
+|---|---|---|---|
+| `notify-work-order-message-email` | v14/v15 | 401 | 400 |
+| `notify-work-order-scheduled-email` | v11/v12 | 401 | 400 |
+| `notify-job-message-email` | v5 | 401 | 400 |
+| `notify-new-work-order-email` | v10 | 401 | 400 |
+| `send-lead-email` | v23 | 401 | 400 |
+| `send-job-application-email` | v3 | 401 | 400 |
+| `send-job-status-change-email` | v4 | 401 | 400 |
+| `reconcile-stripe-payments` | v7, then v9 with #386 | 401 | 200 `{"ok":true,"checked":0,…}` (one real run, on v9) |
+
+- **Reproduced first.** Before the four still-unfixed trigger functions
+  were replaced, the anon key reached their payload check (400, not 401)
+  on the live versions.
+- **Why reconcile got a real run instead of a probe.** It has no payload
+  to reject, so the Vault-key call runs a real reconciliation. That's
+  read-only, and its alerts are de-duplicated, so it was run once after
+  #386 deployed.
+- **Only verified main code was deployed.** Before each deploy, `git log`
+  confirmed `main` differed from the live copy only by #363 (or #369).
+  The booking lane was deploying the same `main` code at the same time;
+  every version either of us left live was re-fetched and matches
+  `main`.
+- **No real caller was rejected.** After the deploys, the only 401s in
+  `net._http_response` were the probes: this lane's, plus one pair from
+  the booking lane on `send-booking-email`. The hourly and half-hourly
+  crons kept returning 200.
+
+### Push notifications -- certified
+
+Asked directly: "right now all push notification go to all clients
+including ones we would want only internal, certify that and if so fix."
+
+- **The code bug was real.** `Send-Push`'s team broadcast
+  (`sendToAllSubscriptions`) read every `push_subscriptions` row. A
+  client who turned on portal push would have got every internal alert:
+  lead details, uptime, reconciliation messages with client emails and
+  amounts.
+- **No client had received one yet.** At the time all 6 live
+  subscriptions belonged to internal accounts.
+- **Fixed live.** The broadcast now reads
+  `get_internal_push_subscriptions()`, which joins to `account_roles`,
+  is service-role only and fails closed.
+  - The read-only `audience-check` type returns `{"internal":6,"total":6}`.
+  - A rolled-back probe added a client-owned subscription and one with
+    no user. Neither was counted, and the audience stayed at 6.
+- **A second bug, also fixed live.** Client pushes looked up the user id
+  with GoTrue's admin list endpoint and a nonexistent `email` filter. That
+  endpoint ignores the filter, so `users[0]` was simply the newest
+  account, and a client's push could land on someone else's phone.
+  - All six client-push functions now use `get_auth_user_id_by_email()`,
+    an exact, case-insensitive, service-role-only match.
+  - Each live copy was re-fetched to confirm it:
+    `notify-work-order-message-email`, `notify-work-order-scheduled-email`,
+    `notify-job-message-email`, `send-invoice-notification`,
+    `send-quote-notification`, `send-contract-notification`.
+- **Service workers.** Both now only open same-origin pages on a
+  notification tap (PR #381). Browsers pick up the change on their next
+  service-worker update check.
+
+### Fixed in this pass
+
+- **Service workers (PR #381).** `safeNotificationUrl()` resolves the
+  payload URL against the worker's origin and falls back to the default
+  page for anything else: another host, `//host`, an http downgrade,
+  `javascript:`, `data:`. The test runs each real worker file in a
+  sandbox: 16 of 23 cases fail on the old handlers. Every sender in the
+  repo uses a same-origin path, which one test also pins.
+- **DB hygiene (PR #384, applied live).**
+  - `role_definitions` and `th_uptime_checks` reads now need
+    `current_user_has_any_role()`: a stranger sees 0 of 3 and 0 of 227
+    rows, and Steve and Connor still see all of them.
+  - Anon lost its auto-granted EXECUTE on the four recovery-code RPCs;
+    authenticated keeps it.
+  - The only browser readers are three `dev-tools.html` fetches, and all
+    send the session token.
+- **Double charge (PR #386).**
+  - `create-payment-intent` and `create-bulk-payment-intent` now look up
+    the PaymentIntent the invoice(s) already point at, expanding
+    `latest_charge`.
+  - Succeeded, processing or requires_capture, and not fully refunded
+    → 409 "…refresh this page before paying again".
+  - Still open for the same amount, currency, customer and invoice set
+    → the same `client_secret` is handed back.
+  - Any lookup failure → a new PaymentIntent, as before, so the guard
+    can't block a real payment.
+  - `reconcile-stripe-payments` alerts once per set ("Possible double
+    charge") on any invoice with two or more succeeded PaymentIntents.
+  - The easiest double charge was not two tabs. `portal/dashboard.html`
+    re-renders 1.8s after a successful payment, so "Pay now" is still
+    showing until the webhook lands.
+  - 38 tests run the real handlers against a routed fake Stripe and
+    Supabase: 14 fail on the old code, and every legitimate path passes
+    both before and after.
+  - Deployed from `main` after merge. Each live copy was checked against
+    `main` first, to be sure it held nothing newer.
+  - Both create functions answer the anon key with 401 "Must be signed
+    in."
+  - reconcile's real run returned 200: no invoice payments in the
+    lookback window, so nothing to flag.
+  - The guard's own paths (409, reuse) can only be exercised with a real
+    client session, so they rest on the tests, and on the fallback that
+    leaves any Stripe lookup failure behaving exactly as before.
+
+### Still open
+
+- **#4, MFA (HIGH), owner decision.** One more piece:
+  `generate_internal_recovery_codes()` works on a password-only
+  (`aal1`) session. Someone holding a stolen password can therefore
+  delete the account's codes and mint fresh ones, then use
+  `verify_and_consume_internal_recovery_code()` on the login page's
+  recovery path. The server-side fix should require `aal2` for
+  generating codes whenever the account already has a verified factor.
+  Recovery itself (aal1 plus a valid code) has to stay possible, or a
+  lost phone locks the owner out.
+- **#6, SetupIntents (MEDIUM).**
+  - Turning signup off (ACTION-ITEMS #11) removes the stranger path
+    entirely.
+  - A server-side "must be a real portal client" gate needs a decision
+    on what counts. `client_account_codes` is empty for all 3 current
+    non-internal accounts, so it can't be the marker. A "has an invoice,
+    quote, job, contract or checkup" check would stop a client who only
+    has a self-submitted work order from adding a card in Settings.
+- **#7, webhook amount (LOW).** #386 only reuses a PaymentIntent whose
+  amount matches the current total, so a raised invoice gets a fresh,
+  correct one. The old, smaller one stays payable from a stale tab, and
+  if it's paid the webhook still settles the invoice short. Either
+  cancel the superseded PaymentIntent in create-payment-intent, or
+  compare `amount_received` in the webhook and alert.
+- **`work-order-photos` INSERT (LOW).** Checks `bucket_id` alone.
+  Upload spam only: there's no read-back and no overwrite.
+
+### Lessons
+
+- **Check what's live before deploying.** Two lanes deploying the same
+  functions at once is harmless only if both deploy `main`. Re-fetching
+  after deploy, and before trusting a version bump, is what showed it.
+- **A version bump doesn't mean the code changed.** Several functions
+  gained versions with the same entrypoint bundle.
+- **Refunds don't change a PaymentIntent's status**, so any guard or
+  alert keyed on `succeeded` has to look at the charge.
 
 <!-- Add new entries above this line -->
