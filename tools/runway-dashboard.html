@@ -47,7 +47,7 @@
      reachable only by the browser back button. Loaded in the same
      position (after tools-dialogs.js, before tools-tour.js) as every
      other tool page for consistency. -->
-<script src="/tools/tools-nav-pwa.js?v=d635579dfb" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=7ed9e8d3b4" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <script src="/tools/tools-tour.js?v=118148b9a2" defer></script>
 <script>
@@ -1053,6 +1053,25 @@
     width: 100%; background: none; border: none; font: inherit;
     margin-bottom: 8px; cursor: pointer;
   }
+  /* ---- Shift clock (2026-09-23) ---- the header button and sidebar row,
+     mirrored from styles-tools.css. No sheet styles: without data-layer.js
+     this page's button opens the sheet on the Dashboard. */
+  .th-hdr-shift[hidden], .th-sidebar-shift[hidden] { display: none; }
+  .th-hdr-shift.is-on {
+    width: auto; padding: 0 12px 0 10px; gap: 6px; border-radius: 999px;
+    border-color: rgba(76, 175, 120, 0.55); background: rgba(76, 175, 120, 0.12); color: var(--white);
+  }
+  .th-hdr-shift.is-on .th-icon { color: #4caf78; }
+  .th-hdr-shift-time { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .th-hdr-shift.is-due::after {
+    content: ''; position: absolute; top: 5px; right: 5px; width: 8px; height: 8px; border-radius: 50%;
+    background: #e6a23c; box-shadow: 0 0 0 2px var(--bg-panel-2);
+  }
+  .th-sidebar-shift { width: 100%; background: none; border: none; font: inherit; margin-bottom: 8px; cursor: pointer; text-align: left; }
+  .th-sidebar-shift.is-on { color: var(--text); }
+  .th-sidebar-shift.is-on .th-hex-icon .th-icon { color: #4caf78; }
+  .th-sidebar-shift.is-due { color: #e6a23c; }
+  .th-sidebar-shift-sub { margin-left: auto; font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .th-sidebar-search-kbd {
     margin-left: auto; font-family: var(--font-ui); font-size: 11px; color: var(--text-dim);
     border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px;

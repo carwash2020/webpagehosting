@@ -932,6 +932,299 @@ function thOpenClockStoppedSheet(r) {
 })();
 
 // ---------------------------------------------------------------------------
+// SHIFT CLOCK (2026-09-23). Start my day / End my day: a whole-day punch for
+// whoever is signed in, beside the job clock above -- neither starts or stops
+// the other (data-layer.js's Shift clock section has the rules). The status
+// sits in the header on a phone (a clock button; on shift it's a green pill
+// with the start time, and an amber dot means a shift needs an end time) and
+// under New in the desktop sidebar. Either opens the shift sheet. It stays
+// quiet beside the job clock's orange bar: no ticking seconds.
+// A page without data-layer.js shows the status straight from storage and
+// opens the sheet on the Dashboard (/tools/workspace.html#shift).
+// ---------------------------------------------------------------------------
+function thShiftTimeLabel(ms) {
+  return new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+// A typed time of day means the latest time it was, at or before now: 11:30
+// PM typed at 1 AM is last night.
+function thShiftTimeInputMs(value, nowMs) {
+  var m = /^(\d{1,2}):(\d{2})/.exec(String(value || ''));
+  if (!m) return NaN;
+  var now = new Date(nowMs);
+  var d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), Number(m[1]), Number(m[2]));
+  if (d.getTime() > nowMs) d.setDate(d.getDate() - 1);
+  return d.getTime();
+}
+// For a datetime-local input: 2026-09-22T17:12, local time.
+function thShiftLocalInputValue(ms) {
+  var d = new Date(ms), p = function (n) { return (n < 10 ? '0' : '') + n; };
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
+// Where the header and sidebar stand: 'on' (since), 'due' (a shift needs an
+// end time) or 'off'. Read straight from storage where data-layer.js isn't.
+function thShiftStatus(now) {
+  var nowMs = now === undefined ? Date.now() : new Date(now).getTime();
+  if (typeof thShiftEmail === 'function' && typeof thActiveShift === 'function') {
+    var who = thShiftEmail();
+    if (!who) return null;
+    if (thShiftsNeedingEnd(who, undefined, nowMs).length) return { state: 'due', email: who };
+    var on = thActiveShift(who, undefined, nowMs);
+    return on ? { state: 'on', email: who, since: new Date(on.start).getTime(), shift: on } : { state: 'off', email: who };
+  }
+  var email = null, list = [];
+  try {
+    var s = JSON.parse(localStorage.getItem('th_auth_session') || sessionStorage.getItem('th_auth_session') || 'null');
+    email = s && s.email ? String(s.email).trim().toLowerCase() : null;
+    list = JSON.parse(localStorage.getItem('th_shift_log') || '[]');
+  } catch (e) { return null; }
+  if (!email || !Array.isArray(list)) return email ? { state: 'off', email: email } : null;
+  var open = list.filter(function (x) { return x && !x.end && String(x.email || '').toLowerCase() === email && !isNaN(new Date(x.start).getTime()); })
+    .sort(function (a, b) { return new Date(b.start) - new Date(a.start); });
+  if (!open.length) return { state: 'off', email: email };
+  var since = new Date(open[0].start).getTime();
+  if (open.length > 1 || nowMs - since > 14 * 3600000) return { state: 'due', email: email };
+  return { state: 'on', email: email, since: since, shift: open[0] };
+}
+
+// The sheet. Opens in whichever mode the day is in -- a shift waiting for an
+// end time first, then End my day while on shift, else Start my day -- and
+// re-renders in place, so closing yesterday's shift leads straight on to
+// starting today's.
+function thOpenShiftSheet() {
+  if (typeof thStartShift !== 'function' || typeof thShiftEmail !== 'function') {
+    window.location.href = '/tools/workspace.html#shift';
+    return false;
+  }
+  var who = thShiftEmail();
+  if (!who) {
+    if (typeof showToast === 'function') showToast('Sign in again to start your day.', { type: 'error' });
+    return false;
+  }
+  if (document.querySelector('.quick-actions-overlay.th-shift')) return true; // already open (a double tap)
+  var esc = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  var hoursLabel = function (h) { return typeof thClockHoursLabel === 'function' ? thClockHoursLabel(h) : h + ' h'; };
+  var dayLabel = function (ms) { return new Date(ms).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); };
+  var opener = document.activeElement;
+  var overlay = document.createElement('div');
+  overlay.className = 'quick-actions-overlay th-remind th-shift';
+  var mode = null, target = null, suggestion = null;
+
+  function jobs() { return typeof thRead === 'function' && typeof TH_KEYS !== 'undefined' ? thRead(TH_KEYS.jobs, []) : []; }
+  function render() {
+    var nowMs = Date.now();
+    var week = thShiftWeekSummary(who, nowMs);
+    var waiting = thShiftsNeedingEnd(who, undefined, nowMs);
+    var active = thActiveShift(who, undefined, nowMs);
+    var html;
+    if (waiting.length) {
+      mode = 'due';
+      target = waiting[0];
+      var startMs = new Date(target.start).getTime();
+      suggestion = thShiftSuggestedEnd(target, nowMs);
+      html =
+        '<div class="th-remind-kicker">Needs an end time</div>' +
+        '<div class="th-remind-title" id="thShiftTitle">When did you finish?</div>' +
+        '<div class="th-remind-meta">Your shift from ' + esc(dayLabel(startMs)) + ' at ' + esc(thShiftTimeLabel(startMs)) + ' is still open, so it isn’t counting.</div>' +
+        (suggestion ? '<button type="button" class="primary-btn th-shift-go" data-shift-act="end-suggested">Finished at ' +
+          esc((new Date(suggestion.at).toDateString() === new Date(startMs).toDateString() ? '' : dayLabel(suggestion.at) + ', ') + thShiftTimeLabel(suggestion.at)) +
+          '<span class="th-shift-go-sub">when the clock on ' + esc(suggestion.job.title || 'a job') + ' stopped</span></button>' : '') +
+        '<label class="th-shift-field"><span>Finished at</span>' +
+          '<input type="datetime-local" class="th-shift-input" data-shift-input="end" min="' + thShiftLocalInputValue(startMs) + '" max="' + thShiftLocalInputValue(Math.min(nowMs, startMs + 24 * 3600000)) + '"' +
+          (suggestion ? ' value="' + thShiftLocalInputValue(suggestion.at) + '"' : '') + '></label>' +
+        '<div class="th-remind-actions"><button type="button" class="' + (suggestion ? 'secondary-btn' : 'primary-btn') + '" data-shift-act="end-at">Save end time</button></div>' +
+        '<button type="button" class="th-shift-link is-danger" data-shift-act="delete">It was a mistake: delete this shift</button>';
+    } else if (active) {
+      mode = 'on';
+      target = active;
+      var since = new Date(active.start).getTime();
+      var running = typeof thRunningJobClock === 'function' ? thRunningJobClock(jobs()) : null;
+      html =
+        '<div class="th-remind-kicker">On shift</div>' +
+        '<div class="th-remind-title" id="thShiftTitle">Since ' + esc(thShiftTimeLabel(since)) + (new Date(since).toDateString() === new Date(nowMs).toDateString() ? '' : ' ' + esc(dayLabel(since))) + '</div>' +
+        '<div class="th-remind-meta">' + esc((typeof thClockDuration === 'function' ? thClockDuration(nowMs - since) : '') + ' so far' + (week.hours ? ' · ' + hoursLabel(week.hours) + ' this week' : '')) + '</div>' +
+        (running ? '<div class="th-remind-note th-shift-note">The clock on ' + esc(running.title || 'a job') + ' keeps running: ending your day doesn’t stop it.</div>' : '') +
+        '<div class="th-remind-actions"><button type="button" class="primary-btn" data-shift-act="end">End my day</button></div>' +
+        '<div class="th-shift-row"><label class="th-shift-field"><span>Finished earlier?</span><input type="time" class="th-shift-input" data-shift-input="end-time"></label>' +
+          '<button type="button" class="secondary-btn" data-shift-act="end-time">End at that time</button></div>';
+    } else {
+      mode = 'off';
+      target = null;
+      suggestion = thShiftSuggestedStart(who, nowMs);
+      html =
+        '<div class="th-remind-kicker">Your day</div>' +
+        '<div class="th-remind-title" id="thShiftTitle">Start my day</div>' +
+        '<div class="th-remind-meta">' + esc(new Date(nowMs).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) + (week.hours ? ' · ' + hoursLabel(week.hours) + ' worked this week' : '')) + '</div>' +
+        '<div class="th-remind-actions"><button type="button" class="primary-btn" data-shift-act="start">Start now · ' + esc(thShiftTimeLabel(nowMs)) + '</button></div>' +
+        (suggestion ? '<button type="button" class="secondary-btn th-shift-go" data-shift-act="start-suggested">Start from ' + esc(thShiftTimeLabel(suggestion.at)) +
+          '<span class="th-shift-go-sub">when you started the clock on ' + esc(suggestion.job.title || 'a job') + '</span></button>' : '') +
+        '<div class="th-shift-row"><label class="th-shift-field"><span>Started earlier?</span><input type="time" class="th-shift-input" data-shift-input="start-time"></label>' +
+          '<button type="button" class="secondary-btn" data-shift-act="start-time">Start from then</button></div>';
+    }
+    overlay.innerHTML =
+      '<div class="quick-actions-sheet th-remind-sheet th-shift-sheet" role="dialog" aria-modal="true" aria-labelledby="thShiftTitle">' +
+        html +
+        '<div class="th-shift-error" role="alert"></div>' +
+        '<button type="button" class="quick-actions-btn quick-actions-cancel">' + (mode === 'on' ? 'Keep working' : 'Not now') + '</button>' +
+      '</div>';
+    var first = overlay.querySelector('[data-shift-act]');
+    if (first) { try { first.focus({ preventScroll: true }); } catch (e) { first.focus(); } }
+  }
+  function fail(msg) {
+    var el = overlay.querySelector('.th-shift-error');
+    if (el) el.textContent = msg || 'Could not save.';
+    if (typeof haptic === 'function') haptic('error');
+  }
+  function close() {
+    document.removeEventListener('keydown', onKey);
+    overlay.classList.remove('is-shown');
+    setTimeout(function () { overlay.remove(); }, 200);
+    if (opener && typeof opener.focus === 'function') { try { opener.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+  }
+  function onKey(e) { if (e.key === 'Escape') close(); }
+  function inputMs(name, asTime) {
+    var el = overlay.querySelector('[data-shift-input="' + name + '"]');
+    if (!el || !el.value) return NaN;
+    return asTime ? thShiftTimeInputMs(el.value, Date.now()) : new Date(el.value).getTime();
+  }
+  function started(r) {
+    if (!r || r.error) return fail(r && r.error);
+    if (r.needsEnd) return render();
+    if (typeof haptic === 'function') haptic('success');
+    if (typeof showToast === 'function') showToast(r.already ? 'You’re already on shift.' : 'Day started at ' + thShiftTimeLabel(new Date(r.shift.start).getTime()) + '.');
+    close();
+  }
+  function ended(r) {
+    if (!r) return fail('Nothing to end.');
+    if (r.error) return fail(r.error);
+    if (r.needsEnd) return render();
+    if (typeof haptic === 'function') haptic('success');
+    var msg = (r.hours ? hoursLabel(r.hours) : 'Under a minute, so nothing') + ' worked ' + (mode === 'due' ? 'on ' + dayLabel(new Date(r.shift.start).getTime()) : 'today') + '.';
+    if (mode === 'due') {
+      if (typeof showToast === 'function') showToast('Saved. ' + msg);
+      render(); // on to the next one, or to starting today
+      return;
+    }
+    if (typeof showUndoToast === 'function') showUndoToast('Day ended. ' + msg, function () { thUndoEndShift(r.shift.id, r.undo); });
+    else if (typeof showToast === 'function') showToast('Day ended. ' + msg);
+    close();
+  }
+  overlay.addEventListener('click', function (e) {
+    if (e.target === overlay || e.target.closest('.quick-actions-cancel')) { close(); return; }
+    var btn = e.target.closest('[data-shift-act]');
+    if (!btn) return;
+    var act = btn.getAttribute('data-shift-act');
+    if (act === 'start') started(thStartShift());
+    else if (act === 'start-suggested' && suggestion) started(thStartShift({ start: suggestion.at, source: 'job-clock' }));
+    else if (act === 'start-time') {
+      var s = inputMs('start-time', true);
+      if (isNaN(s)) return fail('Pick the time you started.');
+      started(thStartShift({ start: s }));
+    } else if (act === 'end') ended(thEndShift({ id: target.id }));
+    else if (act === 'end-time') {
+      var t = inputMs('end-time', true);
+      if (isNaN(t)) return fail('Pick the time you finished.');
+      ended(thEndShift({ id: target.id, end: t }));
+    } else if (act === 'end-suggested' && suggestion) ended(thEndShift({ id: target.id, end: suggestion.at }));
+    else if (act === 'end-at') {
+      var at = inputMs('end', false);
+      if (isNaN(at)) return fail('Pick the day and time you finished.');
+      ended(thEndShift({ id: target.id, end: at }));
+    } else if (act === 'delete') {
+      var doDelete = function () {
+        thDeleteShift(target.id);
+        if (typeof showToast === 'function') showToast('Shift deleted. It’s in Dev Tools’ Graveyard if you need it back.');
+        render();
+      };
+      if (typeof showConfirm === 'function') {
+        showConfirm('Delete the shift from ' + dayLabel(new Date(target.start).getTime()) + '? It won’t count toward any hours.', { danger: true, confirmText: 'Delete shift' })
+          .then(function (ok) { if (ok) doDelete(); });
+      } else doDelete();
+    }
+  });
+  // Enter in a time field presses its own button.
+  var INPUT_ACT = { 'start-time': 'start-time', 'end-time': 'end-time', 'end': 'end-at' };
+  overlay.addEventListener('keydown', function (e) {
+    var name = e.key === 'Enter' && e.target.getAttribute ? e.target.getAttribute('data-shift-input') : null;
+    var go = name ? overlay.querySelector('[data-shift-act="' + INPUT_ACT[name] + '"]') : null;
+    if (go) { e.preventDefault(); go.click(); }
+  });
+  document.addEventListener('keydown', onKey);
+  document.body.appendChild(overlay);
+  render();
+  requestAnimationFrame(function () { overlay.classList.add('is-shown'); });
+  return true;
+}
+
+(function () {
+  'use strict';
+  if (typeof document === 'undefined') return;
+  function clockIcon() { return '<svg class="th-icon" aria-hidden="true"><use href="#icon-clock" xlink:href="#icon-clock"></use></svg>'; }
+  function render() {
+    if (!document.body || /\/login\.html$/.test(window.location.pathname)) return;
+    var st = thShiftStatus();
+    var hdr = document.querySelector('.th-hdr-actions');
+    var side = document.querySelector('.th-desktop-sidebar .th-sidebar-new');
+    var btn = document.getElementById('thShiftBtn');
+    var row = document.getElementById('thShiftSide');
+    if (!st) {
+      if (btn) btn.hidden = true;
+      if (row) row.hidden = true;
+      return;
+    }
+    var since = st.state === 'on' ? thShiftTimeLabel(st.since) : '';
+    var label = st.state === 'on' ? 'On shift since ' + since + '. End my day'
+      : st.state === 'due' ? 'A shift needs an end time' : 'Start my day';
+    if (hdr) {
+      if (!btn) {
+        btn = document.createElement('button');
+        btn.type = 'button';
+        btn.id = 'thShiftBtn';
+        btn.setAttribute('aria-haspopup', 'dialog');
+        btn.addEventListener('click', thOpenShiftSheet);
+        hdr.insertBefore(btn, hdr.firstChild);
+      }
+      btn.hidden = false;
+      btn.className = 'th-hdr-btn th-hdr-shift is-' + st.state;
+      btn.setAttribute('aria-label', label);
+      btn.title = label;
+      btn.innerHTML = clockIcon() + (since ? '<span class="th-hdr-shift-time">' + since + '</span>' : '');
+    }
+    if (side) {
+      if (!row) {
+        row = document.createElement('button');
+        row.type = 'button';
+        row.id = 'thShiftSide';
+        row.setAttribute('aria-haspopup', 'dialog');
+        row.addEventListener('click', thOpenShiftSheet);
+        side.parentNode.insertBefore(row, side.nextSibling);
+      }
+      row.hidden = false;
+      row.className = 'th-sidebar-link th-sidebar-shift is-' + st.state;
+      row.setAttribute('aria-label', label);
+      row.innerHTML = '<span class="th-hex-icon">' + clockIcon() + '</span>' +
+        (st.state === 'on' ? '<span>On shift</span><span class="th-sidebar-shift-sub">since ' + since + '</span>'
+          : st.state === 'due' ? '<span>Shift needs an end time</span>' : '<span>Start my day</span>');
+    }
+  }
+  // Arriving from a page without data-layer.js: open the sheet here.
+  function openFromHash() {
+    if (window.location.hash !== '#shift' || typeof thStartShift !== 'function') return;
+    try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (e) { /* ignore */ }
+    thOpenShiftSheet();
+  }
+  window.addEventListener('th-shift-change', render);
+  window.addEventListener('storage', function (e) { if (!e.key || e.key === 'th_shift_log') render(); });
+  window.addEventListener('th-sync-status', render);
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState !== 'hidden') render(); });
+  function init() { render(); setTimeout(openFromHash, 0); }
+  // After the app shell has put the header and sidebar in (its own
+  // DOMContentLoaded listener is registered earlier in this file).
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+
+// ---------------------------------------------------------------------------
 // PAYMENT REMINDER (2026-09-23, Workspace rework part 10). One sheet for
 // "they haven't paid": the reminder is already written (data-layer.js
 // thInvoiceReminderText -- a notch firmer each time, with the portal's pay
