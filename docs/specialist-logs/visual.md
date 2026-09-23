@@ -1589,4 +1589,20 @@ Found with `document.getAnimations()` under emulated reduced motion. It lists ps
 - **Which button leads:** Call keeps the orange it already had here, now the flat `.btn.orange` fill with the `#c96400` 4px offset shadow. Home becomes the quieter `.btn.outline`. That's the hero's filled-plus-outline pairing, and it doesn't re-rank anything: the orange was already on Call. If Connor would rather Home lead on a 404, it's a two-class swap.
 - **Copied from styles.css, not reinvented:** `.btn` sizing (15px 26px, 1.5px letter-spacing), hover lift, press scale, the site's blue focus ring, and a reduced-motion guard (this page doesn't get the global one). `404-button-language.test.js` compares the orange colours against styles.css's `:root`, so a palette change there fails the test until this copy follows.
 
+## 2026-09-23 (late) -- round 8: no sticky hover on touch screens
+
+- **Convention: any `:hover` that changes a surface goes inside `@media (hover:hover)`.** That means transform, box-shadow, border, background or filter. There are 31 such blocks in styles.css now. A phone applies `:hover` to whatever was last tapped and keeps it, so a tapped card stayed lifted with a blue border. `touch-no-sticky-hover.test.js` scans for unguarded surface hovers, so a new one fails.
+- **Left unconditional on purpose:**
+  - text-colour link hovers (harmless, and the tap usually navigates away);
+  - `.nav-dropdown:hover` (on an iPad in landscape, tapping is how the desktop dropdown opens);
+  - the scrollbar thumb.
+  When a rule combined `:hover` with `:focus-visible`, it was split so keyboard focus still applies everywhere.
+- **Press feedback on touch:** `:active` scale (.97/.98) on chips, pills, area links and gallery tiles, and .94 on the chat bubble. `.btn:active` already existed.
+- **Found, not fixed, needs a call:** the hover *lift* on the homepage service cards, blog teasers and review cards has been dead code for a while. Their `[data-reveal]` rule `html.reveal-ready [data-reveal].is-visible{transform:translateY(0)}` (0,3,1) outranks `.service-card:hover` (0,2,0), so only the border and shadow change on hover; `.service-card:active` is also dead there. Making the lift work would change how the desktop homepage feels, so it's a design decision rather than polish. The city pages' service cards have no `data-reveal`, so theirs do lift.
+- **blog.css not touched:** `.blog-index-item:hover, .blog-index-item:focus-visible` still lifts on tap. `blog-index-cards.test.js` pins that combined selector, so the split needs that test updated too. That's a small follow-up.
+- **Harness notes:**
+  - Playwright contexts with `hasTouch` report `(hover:hover)` false, so the media query can be tested directly.
+  - Headless Chromium never sets `:active` for CDP touch events, even on the existing `.btn:active`. Test `:active` rules with a mouse press instead.
+  - A tap that lifts an element 2px can move it off the tap point and clear `:hover`, which hides stickiness. Removing the lift exposed a colour-only hover (`.hero .btn.outline:hover`) that had been sticking all along.
+
 <!-- Add new entries above this line -->
