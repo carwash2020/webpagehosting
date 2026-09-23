@@ -1200,4 +1200,16 @@ and 1280px (the portal is dark-only; no light theme to check).
   global `body.portal-page details > summary` rule out-specifies a
   page-level one anyway.
 
+## 2026-09-22 (later still) -- "Triple H replied" bar
+
+Orange-tint card with a 3px orange left edge (same language as Home's
+Needs Your Attention), a 34px chat icon tile, a bold heading ("Triple H
+replied", or "... · N new messages"), then one full-width button row per
+conversation: title, orange "N new" pill, "Open ›". The first version
+right-aligned "Open" -- fine on a phone, but on a 1500px desktop bar it
+sat a screen-width away from the title it opens, so title/pill/Open are
+grouped left now. Rows use a -10px left margin so the text lines up
+with the heading while keeping a padded hover/tap area (44px min
+height).
+
 <!-- Add new entries above this line -->

@@ -3844,3 +3844,26 @@ tests: `tests/portal/desktop-app-shell.test.js`,
 `settings-collapsible-sections.test.js`). Full detail:
 `docs/specialist-logs/features.md` and `visual.md` (2026-09-22 entries),
 `docs/CLIENT-PORTAL.md` ("Phone vs desktop").
+
+## What changed, 2026-09-22 (later still) -- Client portal: never miss a reply
+
+The Request and Jobs tabs showed a badge when Triple H replied, but the
+page opened on a blank request form (or the check-up list) with the
+conversation somewhere below. Now a **"Triple H replied"** bar sits at
+the top of both pages, one row per conversation with an unread reply;
+tapping it opens that conversation.
+
+The portal also stops going stale while it's open. Every signed-in page
+re-checks for new replies when you come back to the tab and every 90
+seconds while it's on screen (every 20 seconds while a conversation is
+open), so badges, Home's "New message" item and the reply bar catch up
+without a reload -- and a reply to the conversation you have open
+appears in it, without losing anything you were typing. No checks run
+while the tab is hidden, and a failed check changes nothing.
+
+Verified: full suite, `check-consistency`, `check-undefined-vars`,
+lint; exercised in headless Chromium at 390 and 1440px (notice, open
+from notice, a reply arriving mid-draft, badges clearing on another
+page). New tests: `tests/portal/reply-notice-and-live-unread.test.js`.
+Detail: `docs/specialist-logs/features.md` and `visual.md` (2026-09-22
+entries), `docs/CLIENT-PORTAL.md` (thread reads section).
