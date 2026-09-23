@@ -3868,7 +3868,245 @@ page). New tests: `tests/portal/reply-notice-and-live-unread.test.js`.
 Detail: `docs/specialist-logs/features.md` and `visual.md` (2026-09-22
 entries), `docs/CLIENT-PORTAL.md` (thread reads section).
 
-## What changed, 2026-09-22 (later still) -- Client portal: service history PDF, cancels that tell Triple H
+
+## What changed, 2026-09-23 -- Workspace rework, part 8: a client's text becomes a job
+
+Part 8 of the Workspace rework. Full reasoning in
+`docs/specialist-logs/features.md`.
+
+**Most jobs arrive as a text message. Now the message is the job.**
+Part 7's quick add understood short, typed sentences. It now also takes
+a client's whole message, and you can get the message into it without
+retyping a word:
+- **Android: Share → Triple H.** Long-press the text in Messages, tap
+  Share, pick Triple H. The app opens with the Create sheet up and the
+  message already in quick add. (The installed app is now a share
+  target, via `manifest.json`.)
+- **iPhone, or anywhere: Paste a client's text.** A chip under the
+  field (where the browser can read the clipboard) drops a copied
+  message in. It steps aside once there's text.
+- **Any link or iPhone Shortcut: `?quick=<text>`** on any tools page
+  opens the same thing. A Shortcut that takes the shared text and opens
+  `…/tools/workspace.html?quick=[text]` gives an iPhone the same
+  one-tap share Android has.
+- **Home-screen shortcut:** long-press the app icon → **Quick add**
+  opens straight into an empty field.
+
+**A long message titles itself.** "Hi, this is Sarah. My kitchen sink
+is leaking under the cabinet again. Can you come tomorrow around 2?"
+becomes:
+- title *My kitchen sink is leaking under the cabinet again* (the
+  greeting and the ask are skipped),
+- client Sarah Miller (her phone and address come along),
+- tomorrow, 2:00 PM,
+- and the whole message saved in the job's notes, after the time, so
+  nothing she said is lost.
+
+When the only sentence is the ask ("Can you come look at our water
+heater?"), the title is what's being asked about (*Water heater*). A
+very long sentence is cut at a word, with an ellipsis.
+
+**Reads more of how people write:**
+- "around 2", "at 9", "about 4": a bare hour after at / around / about
+  is a time (1 to 6 means the afternoon). "fix the 2 doors" stays two
+  doors.
+- "this weekend" (the coming Saturday), "next weekend" (the one after),
+  "next week" (its Monday).
+- Punctuation after a word ("tomorrow?", "Friday,") no longer hides it.
+
+**Fixed along the way:**
+- A shared message or `?quick=` link opened on Finance or the job list
+  (pages that load the shell late) crashed quick add. The link is now
+  read one tick later, once the whole file has run.
+- A message shared in before your role had loaded said "Your account
+  can't create invoices" and stayed that way. The preview now rebuilds
+  when the role arrives.
+- A long title filled in on the Jobs form showed its end. It now shows
+  its start.
+
+Verified in a real headless Chromium (local HTTP, fake Supabase):
+- 390px: a share (`?share_text=`) opens the sheet with the preview;
+  Enter lands on the Jobs form with the title, Sarah's phone, tomorrow,
+  and the whole message in the notes.
+- `?quick=invoice tom $220 disposal install` on Finance lands on the
+  invoice form with Tom, a *Disposal install* line at $220, and his
+  job linked.
+- `#quick-add` opens an empty field with the Paste chip.
+- 1440px: Paste with real clipboard permission fills the field and the
+  preview (Tom, Friday).
+- The served manifest carries `share_target` and the new shortcut.
+- No console errors.
+
+New tests: `tests/tools/quick-add-anywhere.test.js` (7).
+
+
+## What changed, 2026-09-23 (later) -- Workspace rework, part 9: On the clock
+
+Part 9 of the Workspace rework. Full reasoning in
+`docs/specialist-logs/features.md`.
+
+**Time the job as you work it, and the invoice bills the time.** Most
+jobs never had their hours logged, so the invoice's Labor line (part 6)
+usually asked "How long did it take?" Now:
+- **Start the clock** on the job's page, on its card in Jobs (the More /
+  long-press sheet now leads with it), or on the Dashboard's Next Job.
+  Starting it moves a Not started job to In progress.
+- **A bar follows you everywhere** while it runs: above the bottom bar
+  on a phone, bottom-right on a computer. It shows the job, the client,
+  the time ticking, and **Stop**. Tap it for the job. It survives
+  closing the app, and a clock started on the phone shows on the
+  computer once it syncs.
+- **Stop saves the time at once** (rounded to 0.1 h; under a minute
+  counts as a mis-tap and adds nothing), then asks what's next:
+  - **Done — create the invoice** marks the job done and opens the
+    invoice, with its Labor line filled from the hours.
+  - **Mark it done.**
+  - **Keep the clock running** (stopped by mistake: undoes the stop).
+  - **Not done yet** (the time is already saved).
+- **The job's page** shows a big live clock while it runs, and a **Time**
+  section listing every visit (day, from–to, hours).
+- **One clock at a time.** Starting another job's clock stops the first
+  and keeps its time. **Mark Done** on a running job stops its clock
+  first, so no time is lost.
+
+**Fixed along the way:** a job's page that re-rendered (live sync, and
+now Start / Stop) turned its Photos grid back into "Loading..." for
+good. The loaded photos are now kept.
+
+Verified in a real headless Chromium (local HTTP, fake Supabase):
+- 390px: Start on the job's page (the job moves to In progress and the
+  big clock ticks); the Dashboard shows the bar clear of the bottom bar,
+  ticking.
+- Stop after 1 h 24 min: the sheet, then **Done — create the invoice**,
+  lands on the invoice with "Labor 1.4 h logged"; the job is Done with
+  1.4 h and one visit.
+- The Jobs sheet leads with **Start the clock**, and the card then says
+  **On the clock**. The job's page lists the visit under Time.
+- 1440px: the bar sits bottom-right, and Next Job reads **On the clock**
+  with **Stop the clock**.
+- No console errors.
+
+New tests: `tests/tools/job-clock.test.js` (15).
+
+
+## What changed, 2026-09-23 (later still) -- Workspace rework, part 10: Get paid
+
+Part 10 of the Workspace rework. Full reasoning in
+`docs/specialist-logs/features.md`.
+
+**A late invoice now has a one-tap reminder, already written.** Chasing
+money used to mean writing the same awkward text yourself.
+- **Remind** shows wherever an invoice is due or late:
+  - Money Owed on the Dashboard, beside Mark paid;
+  - **Send a reminder** in the invoice's sheet on Invoices;
+  - an overdue job's line on its page.
+- **The message writes itself:** their first name, the invoice number,
+  what's still owed (after any part payment), and when it was due. For an
+  invoice on the client portal (one with a client email), it also says
+  where to pay by card online.
+- **Every reminder is a notch firmer than the one before,** and never
+  gentler than how late it is:
+  - Friendly ("Just a friendly reminder...").
+  - Following up ("...now 25 days past due. If anything about the bill
+    looks wrong, just reply"). Two weeks late starts here.
+  - Firm ("Please arrange payment this week"). A month late starts here.
+- **You can edit it,** then **Text** (the phone number comes from the
+  invoice, the client, or the job), **Email** (with a subject line), or
+  **Copy**. It goes out from your own phone's Messages or Mail. Nothing
+  is sent from the app.
+- **It's logged on the invoice.** Money Owed, the invoice row, and the job
+  all say "Reminded 3 days ago", so a second nudge the next morning is a
+  choice, not an accident.
+
+Verified in a real headless Chromium (local HTTP, fake Supabase), at
+390px:
+- Money Owed shows **Remind** only on the late invoice, not the one due
+  in 27 days.
+- The sheet opens as "Following up" for a 25-day-late invoice, with the
+  portal link and Text Bill (his phone from the client list), Email and
+  Copy.
+- After sending: "Reminded today" on the Dashboard row, the invoice row,
+  and the job. The invoice sheet reads "Send a reminder (reminded
+  today)", and the next reminder opens as "Firm reminder · reminder 2".
+- No console errors.
+
+New tests: `tests/tools/payment-reminders.test.js` (9).
+
+
+## What changed, 2026-09-23 (evening) -- Workspace rework, part 11: Your week
+
+Part 11 of the Workspace rework. Full reasoning in
+`docs/specialist-logs/features.md`.
+
+**A scoreboard for the week, right under the daily actions.** Part 9's
+clock records every visit, so the Dashboard can now show how the week is
+going:
+- **Seven bars, Monday to Sunday**, of the hours on the clock each day.
+  Today's is picked out in orange and grows while a clock runs; days to
+  come are dashed outlines.
+- **On the clock** (with a pulsing dot while one runs), **Jobs done**,
+  and **Billed**, each with last week's figure under it. It's a plain
+  figure rather than an up or down arrow, because on a Tuesday a full
+  last week would always "win".
+- **Billed** is invoices dated this week plus income logged by hand. It
+  doesn't include the income log's own copy of each invoice, and it's
+  shown only to accounts that can see finance. It isn't "collected": a
+  card payment through the portal has no local payment date to count by.
+- Before any clock time exists, a line says how to fill it in.
+
+On a phone the card stacks (bars on top, the three figures in a row). On
+a computer the chart spreads across the card with the figures beside it.
+
+Verified in a real headless Chromium (local HTTP, fake Supabase), at
+390px and 1440px:
+- Monday 2.5 h and Tuesday 6 h from logged visits, plus Wednesday 0.8 h
+  from a clock started 50 minutes earlier, came to 9.3 h, with last
+  week's 3.2 h beside it.
+- 1 job done this week and 1 last week, and $640 billed against $160.
+- No console errors.
+
+New tests: `tests/tools/your-week.test.js` (6).
+
+
+## What changed, 2026-09-23 (evening) -- Workspace rework, part 12: texts that write themselves
+
+Part 12 of the Workspace rework. Full reasoning in
+`docs/specialist-logs/features.md`.
+
+**The texts you send every day, already written.**
+- **On my way** is a new button on the Dashboard's Next Job. The job
+  page's **Text** button and a **Text <name>** item in the Jobs sheet
+  open the same sheet.
+- **The texts follow the job:**
+
+  | The job | Texts offered, in order |
+  |---|---|
+  | Booked for today | On my way, Running late, Confirm the visit |
+  | Booked for a later day | Confirm the visit first |
+  | Under way | Running late, Parts run, All done |
+  | Done | All done |
+
+- **Each text is written from the job:** the client's first name, the
+  street ("confirming your appointment tomorrow at 123 Red Cliffs Dr"),
+  and for On my way, Running late and Parts run, a time you pick: 10, 20,
+  30 or 45 minutes.
+- **Edit it, then Send.** It opens your own Messages with the text in
+  place. Copy works everywhere else.
+- **The job remembers the last text it got**, so the sheet says "On my
+  way sent 12 min ago" before you send another.
+
+Verified in a real headless Chromium (local HTTP, fake Supabase), at
+390px:
+- Next Job reads Open Job / On my way / Start the clock / Route today.
+- On my way opens the sheet on that text for Sarah, with 20 minutes
+  picked; choosing 30 rewrites it.
+- Send logs it on the job, and the job page's Text then shows "On my way
+  sent just now".
+- No console errors.
+
+New tests: `tests/tools/client-texts.test.js` (7).
+
+## What changed, 2026-09-23 (evening) -- Client portal: service history PDF, cancels that tell Triple H
 
 **Service history PDF.** Jobs has a "Download PDF" card: every job
 Triple H has done for the client -- date, what was done (from the

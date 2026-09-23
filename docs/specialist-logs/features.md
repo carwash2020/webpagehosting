@@ -2226,7 +2226,259 @@ network blip would wipe every badge.
 Tests: `tests/portal/reply-notice-and-live-unread.test.js` (jsdom; drives
 the watcher and the Request page's unread handling for real).
 
-## 2026-09-22 (later still) -- Client portal: service history PDF, cancels that tell Steve, card grid
+## 2026-09-23 -- Workspace rework, part 8: quick add from anywhere
+
+**Why.** Part 7's quick add takes a sentence, but most jobs don't
+start as a sentence someone types. They start as a text from the
+client, sitting in Messages. Retyping it is the step that gets skipped
+on a busy day, so part 8 lets the message itself come in.
+
+**Three ways in, one landing** (`openQuickAddFromUrl()` in
+tools-nav-pwa.js). Each opens the Create sheet with the text in quick
+add and the preview built, then strips its params with `replaceState`
+so a reload doesn't reopen it. Any other params are kept.
+- `manifest.json` `share_target` (GET → `workspace.html` with
+  `share_title` / `share_text` / `share_url`). Android puts the
+  installed app in the share sheet. A share's title is often the start
+  of its text, so of two pieces where one contains the other, only the
+  longer is kept.
+- `?quick=<text>` on any tools page. iOS has no web share target, so
+  this is what an iPhone Shortcut ("Receive text from Share Sheet →
+  Open URL") calls.
+- `#quick-add`, the new second entry in the manifest's `shortcuts`
+  (long-press the home-screen icon).
+
+The URL check runs a tick after `inject()` (`setTimeout(…, 0)`). On a
+page that loads the shell after the DOM is ready, `inject()` runs during
+the file's own execution, before the QUICK ADD section's top-level
+`var` tables further down have been assigned.
+
+**Paste** (`#thQuickAddPaste`) exists only where
+`navigator.clipboard.readText` does. It sits under the field and hides
+while there's text (`.is-typing`). The browser asks for clipboard
+permission the first time.
+
+**Long messages** (`out.long`, more than one sentence or more than 70
+characters). The field-by-field parse still runs over the whole text,
+so client, date, time and phone come out as before. Only the title is
+chosen differently:
+1. Greetings and self-introductions ("Hi,", "Hey it's Tom!", "this is
+   Sarah.") are stripped from the front.
+2. The text is split into sentences. Sentences that are asks (can /
+   could / would / any chance / please / thanks…) are set aside.
+3. The first remaining statement is the title.
+4. If every sentence is an ask, the ask's lead-in is removed ("can you
+   come look at our …") and what's left is the title.
+5. The title is cut at a word near 60 characters, with "…".
+
+`thQuickEntryHref()` puts the whole message in the job's notes
+(`Their message: “…”`), after `Time:`, so the job keeps what the client
+actually said.
+
+**Parser widening:**
+- Word lookaheads accept trailing punctuation.
+- A bare hour after at / around / about / by is a time; 1 to 6 is
+  read as PM.
+- this / the weekend → the coming Saturday; next weekend → the
+  Saturday after that; next week → its Monday.
+
+**Permissions.** `refreshCreateSheet()` already runs on
+`th-role-loaded`. It now also re-previews a non-empty quick add, so text
+that arrived before the role (a share, a fast typist) gets its button
+instead of a stale "can't create".
+
+## 2026-09-23 (later) -- Workspace rework, part 9: On the clock
+
+**Why.** Part 6 fills an invoice from its job, but its Labor line
+depends on `hoursWorked`, which almost nobody typed in. The comment in
+`jobBillables()` says as much: "Most jobs never get their hours logged."
+A clock you start when you arrive gets the hours without anyone typing
+them.
+
+**State lives on the job.** Running means `job.clockSince` holds an ISO
+time, so there's no separate store to keep in step:
+- it survives closing the app;
+- it syncs, because `th_tracker_jobs` merges per field three ways
+  (`mergeRecordArrays`), so a clock started on the phone and a note
+  edited on the computer both survive (tested);
+- `clockSince` is set to `null` on stop, never deleted, for the same
+  merge reason as `noInvoice`.
+
+**Data layer** (data-layer.js, Job clock section):
+- `thStartJobClock(id, now)` stops any other running clock (committing
+  its time), sets `clockSince`, and moves not-started to in-progress
+  with `statusChangedAt`.
+- `thStopJobClock(id, now)` adds the time to `hoursWorked`, appends
+  `{ start, end, hours }` to `timeLog`, and returns an `undo` snapshot.
+- `thUndoStopJobClock(id, undo)` puts those three fields back.
+- `thFinishJob(id, now)` commits a running clock, then marks the job
+  done.
+
+All four save through `thWrite`, which schedules sync, and then
+`mirrorJobsToRelational`, since status is a relational column. Each
+dispatches `th-clock-change`.
+
+**Rounding.** 0.1 h (6 minutes), at least 0.1 h once a session counts.
+Under a minute adds nothing: that's a mis-tap, not work.
+
+**Shell** (tools-nav-pwa.js, ON THE CLOCK):
+- The display helpers are here, since the shell is the one script every
+  page loads: `thFormatClock` (stopwatch), `thClockDuration` ("1 h 25
+  min"), `thClockHoursLabel`.
+- So are the page-facing actions: `thStartClock`, `thStopClock` and the
+  Stop sheet (`thOpenClockStoppedSheet`).
+- The bar re-renders on `th-clock-change`, on `storage` (other tabs),
+  on `th-sync-status` (a pull), and on returning to the tab. It ticks
+  only while the tab is visible, and hides on the running job's own
+  page.
+- Pages without data-layer.js (Route Planner, Parts, Settings) still
+  show the bar, read straight from storage. Their Stop opens the job.
+
+**Stop sheet.** "Done — create the invoice" appears only when the job
+would land in To invoice (`thJobMoneyStage` of the job as done) and the
+account can manage invoices. `showQuickActionSheet` gained an optional
+`{ cancelLabel }`, so its last button reads "Not done yet" instead of
+Cancel.
+
+**Where you start it:**
+- Job detail: its one self-made write, through the helpers above.
+- The Jobs sheet: Start / Stop the clock first.
+- The Dashboard's Next Job card, through a delegated listener, not an
+  inline handler.
+
+`setJobStatus(…, 'done')` stops a running clock before anything else.
+An open edit form picks up new hours and status on `th-clock-change`,
+so saving it can't write stale ones back.
+
+## 2026-09-23 (later still) -- Workspace rework, part 10: Get paid
+
+**Why.** Parts 4 to 6 made sure every job becomes an invoice. The last
+gap between work and money is the invoice that nobody pays. Chasing it
+meant writing the same awkward text by hand, working out how late it
+was, and remembering whether you'd already asked.
+
+**The message is data-layer logic** (data-layer.js, Payment reminders),
+so every page words it the same way:
+- `thInvoiceReminderText(inv, now)` returns `{ step, body, subject }`.
+  It uses the client's first name, the invoice number, and
+  `thInvoiceBalance` (so a part payment is already taken off). The due
+  date comes from `thInvoiceDueDate`, the same terms rule every money
+  view uses.
+- When `clientEmail` is set, the message adds the portal's sign-in URL.
+  That is the rule `pushInvoicePaidToPortal` already uses for "this
+  invoice is on the portal", where the client can pay by card.
+- **Step** (`thInvoiceReminderStep`) is one past the last reminder sent,
+  and at least 2 once 14 days late or 3 once 30 days late. So a first
+  reminder on a very late invoice isn't cheerful, and each one after is
+  firmer.
+- `thInvoiceNeedsReminder` decides where the button shows: something is
+  owed and it's due today or past due. Earlier than that is nagging.
+
+**Logged, not sent.** `thLogInvoiceReminder(id, channel)` appends
+`{ at, channel, step }` to `inv.reminders` through `thWrite`, so it syncs.
+`thInvoiceRemindedLabel` gives "Reminded 3 days ago" to the Dashboard
+row, the invoice row and the job line. The app sends nothing itself: it
+builds `sms:` and `mailto:` links.
+- The `sms:` separator follows review-request.html: `&body=` on iOS,
+  `?body=` elsewhere.
+- Copy is the fallback that always works, so it's logged too.
+
+**One sheet, any page** (tools-nav-pwa.js, PAYMENT REMINDER). It rides
+on the quick-actions sheet:
+- a kicker with the tone, plus a count from the second reminder on;
+- who, and what's owed;
+- the message in an editable textarea;
+- Text / Email / Copy.
+
+A delegated document listener opens it from any `[data-remind-invoice]`
+element, so the Dashboard, the job page and the invoice list need no
+inline handlers. The phone number comes from the invoice, else the
+client registry, else the linked job.
+
+Focus goes to the first send button, not the textarea, so a phone's
+keyboard doesn't cover the sheet. Escape closes it and focus returns to
+the opener. Sending fires `th-invoice-reminded`, and each page
+re-renders its money list on it.
+
+## 2026-09-23 (evening) -- Workspace rework, part 11: Your week
+
+**Why.** Part 9 gave every job a real time record (`timeLog`), but none
+of it was visible after the invoice went out. A weekly scoreboard turns
+that record into a feel for the business: how many hours, how much work
+finished, how much billed.
+
+**`thWeekSummary(now, data)`** (data-layer.js) is pure, given `data`, and
+reads storage otherwise:
+- **The week** runs Monday to Sunday (`thWeekStart`). Days are built with
+  local calendar arithmetic, not by adding 24-hour blocks, so a DST
+  change can't shift one.
+- **Hours:** each `timeLog` visit counts on the day it started. A running
+  clock adds its elapsed time to the day it started too, so today's bar
+  grows while you work.
+- **Jobs done:** `status === 'done'` with `thJobDoneDate` in the week,
+  the same done-date rule as Ready to invoice.
+- **Billed:** invoice totals dated in the week, plus income entries whose
+  `origin !== 'invoice'`. The income log keeps its own copy of every
+  invoice, so counting both would double every bill.
+- **Last week:** each figure has a last-week version, computed in the
+  same pass.
+
+**Why not "collected".** Invoices carry `paidAmount` but no payment date,
+and portal card payments are settled server-side. Any "collected this
+week" figure would be a guess. Adding a local `paidAt` on Mark paid would
+cover cash and checks from now on, but still not card payments, so it's
+left out rather than shown half-right.
+
+**Rendering** (`renderWeekCard` in workspace.html):
+- It runs with the rest of `renderDashboard`, and on `th-clock-change`.
+- While a clock runs it re-renders once a minute. It's a guarded
+  interval that runs only then, the same care job-detail's clock needed
+  so a jsdom test that loads the page isn't kept alive.
+- Bars scale to the busiest day, with a floor of 4 h, so one short visit
+  doesn't read as a full day.
+- The chart has a `role="img"` label that reads the whole week ("Mon
+  2.5 h, Tue 6 h, … Sun none").
+
+## 2026-09-23 (evening) -- Workspace rework, part 12: texts that write themselves
+
+**Why.** Part 10 wrote the awkward text, the payment reminder. Most texts
+a handyman sends aren't awkward, just constant: on my way, running late,
+see you tomorrow, all done. Typing each one in the truck is the friction.
+
+**Templates are data-layer logic** (`thJobTextTemplates(job, { eta, now })`
+in data-layer.js), so every entry point words them the same way.
+- **Stage order:**
+  - done: All done;
+  - in progress: Running late, Parts run, All done;
+  - booked for a later day: Confirm the visit first;
+  - booked for today, or with no date: On my way, Running late, then
+    Confirm if there's a date.
+- **Visit date:** `thJobVisitWhen` says "today", "tomorrow" or "on Friday,
+  Sep 25", and nothing for a past date, which drops Confirm.
+- **Wording:** only the street part of the address (up to the first
+  comma) goes in, and no name gives "Hi, it's Triple H Enterprises."
+- **ETA:** one of 10/20/30/45. Anything else falls back to 20.
+
+**Logged on the job:** `thLogJobText` appends `{ at, key }` to `job.texts`,
+keeping the last 20, through `thWrite`, so it syncs. `thJobLastText`
+feeds the sheet's "On my way sent 12 min ago".
+
+**One sheet** (tools-nav-pwa.js, CLIENT TEXTS) on the reminder sheet's
+layout:
+- Two chip rows: which text, and the time. The time row hides for texts
+  without one. Chips use `aria-pressed`.
+- The editable message sits under the chips; switching chips rewrites
+  it.
+- Send and Copy share part 10's `thSmsHref`.
+- A delegated listener opens it from any `[data-text-job]` element, with
+  an optional `data-text-kind`, and prevents the click only when the
+  sheet actually opened. So job detail's Text and the Dashboard's On my
+  way keep working as plain `sms:` links on a page without the data
+  layer.
+- The Jobs sheet item escapes the client's name, since
+  `showQuickActionSheet` renders labels as HTML.
+
+## 2026-09-23 (evening) -- Client portal: service history PDF, cancels that tell Steve, card grid
 
 Connor: "Do them all" (the three follow-ups offered after #355).
 

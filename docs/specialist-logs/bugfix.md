@@ -885,3 +885,46 @@ round trip through a row; the `step` attribute).
   focused inside the overlay.
 
 Tests: `tests/tools/quick-add.test.js`.
+
+
+## 2026-09-23 -- quick add crashed on late-loading pages; stale "can't create"; long title showed its end (Workspace rework part 8)
+
+- **Opening a `?quick=` link on Finance or the job list crashed quick
+  add** ("Cannot convert undefined or null to object" in
+  `thParseQuickEntry`).
+  - Those pages load tools-nav-pwa.js after the DOM is ready, so the
+    shell's `inject()` runs straight away, during the file's own
+    execution.
+  - The new URL check ran inside `inject()`, before the QUICK ADD
+    section further down had assigned its `var` tables (declared, so
+    no ReferenceError, but still undefined).
+  - It now runs on the next tick. The jsdom tests only ever dispatched
+    DOMContentLoaded by hand, which hid this. A new `late` mode loads
+    the shell into an already-loaded page, and fails without the fix.
+- **A share that arrived before the role said "can't create" for good.**
+  The preview was built once, while `canManageInvoices()` was still
+  false. `refreshCreateSheet()` (already run on `th-role-loaded`) now
+  re-previews a non-empty quick add.
+- **A long title filled in on the Jobs form showed its end.** Chromium
+  leaves the caret at the end of a programmatically set value, and
+  `#add-job` then focuses the field. `applyQuickAddFields()` now puts
+  the caret at the start.
+
+Tests: `tests/tools/quick-add-anywhere.test.js`.
+
+
+## 2026-09-23 -- Job detail's photos went back to "Loading..." on every re-render (Workspace rework part 9)
+
+- `renderJobDetail()` rebuilds the whole page body, including the
+  Photos grid as a "Loading..." placeholder.
+- Only the first load (`loadPhotosReadOnly`) fills the grid. So any
+  re-render left it saying Loading... for good: a live-sync change from
+  another device, and (the reason it came up) the clock's Start / Stop
+  re-rendering the page.
+- The grid is now marked `data-loaded` once filled, and
+  `renderJobDetail()` carries a loaded grid's contents across the
+  rebuild.
+- `loadPhotosReadOnly()` looks the grid up again after its awaits,
+  since a re-render may have replaced the element meanwhile.
+
+Tests: `tests/tools/job-clock.test.js`.

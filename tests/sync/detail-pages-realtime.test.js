@@ -28,8 +28,11 @@ function loadDetailPage(pageName, queryString, getSyncData) {
   let html = fs.readFileSync(htmlPath, 'utf8');
   const syncSrc = fs.readFileSync(path.join(TOOLS_DIR, 'sync.js'), 'utf8');
   const dataLayerSrc = fs.readFileSync(path.join(TOOLS_DIR, 'data-layer.js'), 'utf8');
-  html = html.replace(/<script src="\/tools\/sync\.js\?v=[^"]*"[^>]*><\/script>/, '<script>' + syncSrc + '</script>');
-  html = html.replace(/<script src="\/tools\/data-layer\.js\?v=[^"]*"[^>]*><\/script>/, '<script>' + dataLayerSrc + '</script>');
+  // A replacer function, not a string: a replacement string reads "$'",
+  // "$&" and friends in the source as match patterns (data-layer.js's
+  // money formatting has '$' + ...), which corrupted the inlined script.
+  html = html.replace(/<script src="\/tools\/sync\.js\?v=[^"]*"[^>]*><\/script>/, () => '<script>' + syncSrc + '</script>');
+  html = html.replace(/<script src="\/tools\/data-layer\.js\?v=[^"]*"[^>]*><\/script>/, () => '<script>' + dataLayerSrc + '</script>');
 
   const dom = new JSDOM(html, {
     runScripts: 'dangerously',

@@ -394,6 +394,7 @@
             '<input type="text" id="thQuickAdd" class="th-qa-input" placeholder="Try: sink leak for Sarah tomorrow" autocomplete="off" autocapitalize="sentences" enterkeyhint="go" aria-label="Quick add: type or say what to create" aria-describedby="thQuickAddPreview">' +
             '<button type="button" class="th-qa-mic" id="thQuickAddMic" aria-label="Say it" title="Say it" hidden>' + iconSvg('mic') + '</button>' +
           '</div>' +
+          '<button type="button" class="th-qa-paste" id="thQuickAddPaste" hidden>' + iconSvg('clipboard') + '<span>Paste a client\u2019s text</span></button>' +
           '<div class="th-qa-preview" id="thQuickAddPreview" aria-live="polite"></div>' +
         '</div>' +
         '<div class="th-create-grid">' +
@@ -485,6 +486,22 @@
       closeSheet('thCreateSheet', false);
       window.location.href = go.getAttribute('href');
     });
+    // Paste (2026-09-23, rework part 8): a client's text message copied from
+    // Messages drops straight in -- the iPhone's way in, since iOS has no
+    // share target for web apps. The browser asks permission the first time.
+    var paste = document.getElementById('thQuickAddPaste');
+    if (paste && navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
+      paste.hidden = false;
+      paste.addEventListener('click', function () {
+        navigator.clipboard.readText().then(function (clip) {
+          clip = String(clip || '').trim();
+          if (!clip) return;
+          input.value = input.value.trim() ? input.value.trim() + ' ' + clip : clip;
+          renderQuickAddPreview();
+          input.focus();
+        }).catch(function () { /* permission refused: nothing to do */ });
+      });
+    }
     // Say it: one utterance, with the words appearing as they're heard
     // (interim results), so the preview builds itself while you talk.
     var Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -521,6 +538,8 @@
   // and every time the sheet opens -- on a page that never loads the role
   // itself, opening the sheet asks for it (once), and th-role-loaded then
   // re-filters, so gated tiles appear a moment later rather than never.
+  // A quick add already typed (or shared in before the role arrived) is
+  // re-previewed too, so its "can't create" turns into the button.
   var roleRequested = false;
   function refreshCreateSheet() {
     var sheet = document.getElementById('thCreateSheet');
@@ -529,6 +548,8 @@
       var perm = tile.getAttribute('data-perm');
       tile.hidden = !!perm && !createAllowed({ perm: perm });
     });
+    var qaInput = document.getElementById('thQuickAdd');
+    if (qaInput && qaInput.value.trim()) renderQuickAddPreview();
   }
   function openCreate(opener) {
     refreshCreateSheet();
@@ -682,6 +703,42 @@
     injectCreateSheet();
     var createBtn = nav.querySelector('.th-bn-create');
     if (createBtn) createBtn.addEventListener('click', function () { openCreate(this); });
+    // Next tick, not now: on a page that loads this file after the DOM is
+    // ready, inject() runs before the QUICK ADD section further down this
+    // file has set its tables, and the parser would throw.
+    setTimeout(openQuickAddFromUrl, 0);
+  }
+
+  // Quick add from outside the app (2026-09-23, Workspace rework part 8).
+  // Three ways in, one landing: Android's share sheet (manifest.json's
+  // share_target sends ?share_title= &share_text= &share_url=), a plain
+  // ?quick=<text> link (an iPhone Shortcut, a bookmark, another app), and
+  // the home-screen shortcut's #quick-add. Each opens the Create sheet with
+  // the text already in quick add and the preview built; the params are
+  // stripped so a reload doesn't open it again.
+  function openQuickAddFromUrl() {
+    var params;
+    try { params = new URLSearchParams(window.location.search); } catch (e) { return; }
+    var fromHash = window.location.hash === '#quick-add';
+    var bits = [];
+    ['quick', 'share_title', 'share_text', 'share_url'].forEach(function (k) {
+      var v = params.get(k);
+      if (v !== null) params.delete(k);
+      if (v && v.trim()) bits.push(v.trim());
+    });
+    if (!bits.length && !fromHash) return;
+    // A share's title is often the first line of its text: keep the longer one.
+    var text = bits.filter(function (b, i) {
+      return !bits.some(function (o, j) { return j !== i && o.length > b.length && o.indexOf(b) > -1; });
+    }).join(' ');
+    var rest = params.toString();
+    try { history.replaceState(null, '', window.location.pathname + (rest ? '?' + rest : '') + (fromHash ? '' : window.location.hash)); } catch (e) { /* ignore */ }
+    openCreate(document.querySelector('.th-sidebar-new') || document.querySelector('.th-bn-create'));
+    var input = document.getElementById('thQuickAdd');
+    if (!input) return;
+    input.value = text;
+    renderQuickAddPreview();
+    setTimeout(function () { try { input.focus({ preventScroll: true }); } catch (e) { input.focus(); } }, 80);
   }
 
   if (document.readyState === 'loading') {
@@ -690,6 +747,421 @@
     inject();
   }
 })();
+
+// ---------------------------------------------------------------------------
+// ON THE CLOCK (2026-09-23, Workspace rework part 9). While a job's clock
+// runs, a bar sits above the bottom nav (bottom-right on a computer) on
+// every tools page: the job, the client, the time ticking, and Stop. Tap
+// the bar for the job. Running is just a field on the job (clockSince --
+// see data-layer.js's Job clock section), so the clock survives closing
+// the app and shows on every device the job syncs to. A page without
+// data-layer.js still shows the bar, read straight from storage; its Stop
+// opens the job instead.
+// ---------------------------------------------------------------------------
+
+// 0:07, 12:40, 1:05:09 -- a stopwatch, not a sentence.
+function thFormatClock(ms) {
+  var s = Math.floor(Math.max(0, ms) / 1000);
+  var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+  return h ? h + ':' + pad(m) + ':' + pad(sec) : m + ':' + pad(sec);
+}
+// 45 min, 1 h, 1 h 25 min -- how long it was, the way you'd say it.
+function thClockDuration(ms) {
+  var mins = Math.round(Math.max(0, ms) / 60000);
+  var h = Math.floor(mins / 60), m = mins % 60;
+  if (!h) return m + ' min';
+  return h + ' h' + (m ? ' ' + m + ' min' : '');
+}
+function thClockHoursLabel(h) {
+  var n = Math.round((Number(h) || 0) * 100) / 100;
+  return (n % 1 ? String(n) : n.toFixed(0)) + ' h';
+}
+
+// Start from anywhere (job detail, the Jobs list, the Dashboard): starts
+// it, and says so when that stopped another job's clock.
+function thStartClock(jobId) {
+  if (typeof thStartJobClock !== 'function') return null;
+  var r = thStartJobClock(jobId);
+  if (!r) return null;
+  if (typeof haptic === 'function') haptic('light');
+  if (r.stopped && typeof showToast === 'function') {
+    showToast('Stopped ' + (r.stopped.job.title || 'the other job') + (r.stopped.hours ? ' (' + thClockHoursLabel(r.stopped.hours) + ' saved)' : '') + '. Clock on ' + (r.job.title || 'this job') + '.');
+  }
+  return r;
+}
+
+// Stop from anywhere: the time is saved the moment Stop is tapped; the
+// sheet only asks what's next. Done -- create the invoice goes straight to
+// the invoice that part 6 fills from the job, now with real hours.
+function thStopClock(jobId) {
+  if (typeof thStopJobClock !== 'function') {
+    window.location.href = '/tools/job-detail.html?id=' + encodeURIComponent(jobId);
+    return null;
+  }
+  var r = thStopJobClock(jobId);
+  if (!r) return null;
+  if (typeof haptic === 'function') haptic('success');
+  thOpenClockStoppedSheet(r);
+  return r;
+}
+function thOpenClockStoppedSheet(r) {
+  var job = r.job;
+  var esc = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  var name = job.title || 'this job';
+  var title = r.hours
+    ? '<span class="th-clock-sheet-head"><strong>' + thClockDuration(r.ms) + '</strong>on ' + esc(name) + '</span>' +
+      '<span class="th-clock-sheet-sub">Added ' + thClockHoursLabel(r.hours) + ' &middot; ' + thClockHoursLabel(r.totalHours) + ' on this job so far</span>'
+    : '<span class="th-clock-sheet-head"><strong>Under a minute</strong>on ' + esc(name) + '</span><span class="th-clock-sheet-sub">Too short to count, so nothing was added.</span>';
+  var keepRunning = { label: 'Keep the clock running', onClick: function () { if (typeof thUndoStopJobClock === 'function') thUndoStopJobClock(job.id, r.undo); } };
+  if (typeof showQuickActionSheet !== 'function') {
+    if (typeof showToast === 'function') showToast(r.hours ? 'Clock stopped: ' + thClockHoursLabel(r.hours) + ' added to ' + name + '.' : 'Clock stopped.');
+    return;
+  }
+  var actions = [];
+  if (job.status !== 'done' && typeof thFinishJob === 'function') {
+    var canInvoice = typeof canManageInvoices !== 'function' || canManageInvoices() || !(typeof getCurrentUserRole === 'function' && getCurrentUserRole());
+    var billable = false;
+    if (canInvoice && typeof thJobMoneyStage === 'function' && typeof thRead === 'function' && typeof TH_KEYS !== 'undefined') {
+      var income = thRead(TH_KEYS.income, []).filter(function (e) { return e.origin !== 'invoice'; });
+      billable = thJobMoneyStage(Object.assign({}, job, { status: 'done' }), thRead(TH_KEYS.invoices, []), income).stage === 'to-invoice';
+    }
+    if (billable) {
+      actions.push({ label: 'Done &mdash; create the invoice', onClick: function () {
+        if (thFinishJob(job.id)) window.location.href = '/tools/invoice-generator.html?jobRef=' + encodeURIComponent(job.id);
+      } });
+    }
+    actions.push({ label: 'Mark it done', onClick: function () {
+      if (!thFinishJob(job.id)) return;
+      if (typeof celebrateCompletion === 'function') celebrateCompletion();
+      if (typeof showToast === 'function') showToast(name + ' marked done.');
+    } });
+  }
+  actions.push(keepRunning);
+  showQuickActionSheet(title, actions, { cancelLabel: job.status === 'done' ? 'OK' : 'Not done yet' });
+}
+
+(function () {
+  'use strict';
+  var tick = null;
+
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function runningJob() {
+    var jobs;
+    try { jobs = JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); } catch (e) { return null; }
+    if (!Array.isArray(jobs)) return null;
+    if (typeof thRunningJobClock === 'function') return thRunningJobClock(jobs);
+    var best = null, bestAt = -Infinity;
+    jobs.forEach(function (j) {
+      var at = j && j.clockSince ? new Date(j.clockSince).getTime() : NaN;
+      if (!isNaN(at) && at > bestAt) { best = j; bestAt = at; }
+    });
+    return best;
+  }
+  function elapsed(since) {
+    var at = new Date(since).getTime();
+    return isNaN(at) ? 0 : Math.max(0, Date.now() - at);
+  }
+  // The job's own page shows its own, bigger clock.
+  function isItsOwnPage(job) {
+    if (!/\/job-detail\.html$/.test(window.location.pathname)) return false;
+    try { return new URLSearchParams(window.location.search).get('id') === String(job.id); } catch (e) { return false; }
+  }
+  function updateTime() {
+    var bar = document.getElementById('thClock');
+    if (!bar || bar.hidden) return;
+    var t = bar.querySelector('.th-clock-time');
+    if (t) t.textContent = thFormatClock(elapsed(bar.getAttribute('data-since')));
+  }
+  function setTicking(on) {
+    if (on && !tick && document.visibilityState !== 'hidden') tick = setInterval(updateTime, 1000);
+    if (!on && tick) { clearInterval(tick); tick = null; }
+  }
+  function render() {
+    if (!document.body) return;
+    var job = runningJob();
+    var bar = document.getElementById('thClock');
+    if (!job || isItsOwnPage(job)) {
+      if (bar) bar.hidden = true;
+      document.body.classList.remove('th-has-clock');
+      setTicking(false);
+      return;
+    }
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.className = 'th-clock';
+      bar.id = 'thClock';
+      bar.setAttribute('role', 'region');
+      bar.setAttribute('aria-label', 'On the clock');
+      document.body.appendChild(bar);
+      bar.addEventListener('click', function (e) {
+        var stop = e.target.closest('.th-clock-stop');
+        if (!stop) return;
+        e.preventDefault();
+        thStopClock(bar.getAttribute('data-job-id'));
+      });
+    }
+    var who = [job.title || 'Job', job.client || ''].filter(Boolean).join(' · ');
+    bar.setAttribute('data-job-id', String(job.id));
+    bar.setAttribute('data-since', job.clockSince);
+    bar.innerHTML =
+      '<a class="th-clock-main" href="/tools/job-detail.html?id=' + encodeURIComponent(job.id) + '">' +
+        '<span class="th-clock-dot" aria-hidden="true"></span>' +
+        '<span class="th-clock-text"><span class="th-clock-label">On the clock</span><span class="th-clock-title">' + esc(who) + '</span></span>' +
+        '<span class="th-clock-time">' + thFormatClock(elapsed(job.clockSince)) + '</span>' +
+      '</a>' +
+      '<button type="button" class="th-clock-stop" aria-label="Stop the clock on ' + esc(job.title || 'this job') + '">' +
+        '<svg class="th-icon" aria-hidden="true"><use href="#icon-stop" xlink:href="#icon-stop"></use></svg><span>Stop</span></button>';
+    bar.hidden = false;
+    document.body.classList.add('th-has-clock');
+    setTicking(true);
+  }
+
+  window.addEventListener('th-clock-change', render);
+  // Another tab, or a sync pull that brought a clock started elsewhere.
+  window.addEventListener('storage', function (e) { if (!e.key || e.key === 'th_tracker_jobs') render(); });
+  window.addEventListener('th-sync-status', render);
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') setTicking(false);
+    else render();
+  });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', render);
+  else render();
+})();
+
+// ---------------------------------------------------------------------------
+// PAYMENT REMINDER (2026-09-23, Workspace rework part 10). One sheet for
+// "they haven't paid": the reminder is already written (data-layer.js
+// thInvoiceReminderText -- a notch firmer each time, with the portal's pay
+// link for an invoice that's on it), you can edit it, and it goes out
+// through the phone's own Messages or Mail. Sending or copying logs it on
+// the invoice, so every money view can say when they were last reminded.
+// Any element with data-remind-invoice="<id>" opens it, on any page.
+// ---------------------------------------------------------------------------
+var TH_REMIND_TONE = ['', 'Friendly reminder', 'Following up', 'Firm reminder'];
+
+function thReminderPhone(inv) {
+  if (inv.clientPhone) return inv.clientPhone;
+  var client = null;
+  if (inv.clientId && typeof thFindClientById === 'function') client = thFindClientById(inv.clientId);
+  if (!client && inv.clientName && typeof thFindClientByName === 'function') client = thFindClientByName(inv.clientName);
+  if (client && client.phone) return client.phone;
+  if (inv.jobRefId && typeof thRead === 'function' && typeof TH_KEYS !== 'undefined') {
+    var job = thRead(TH_KEYS.jobs, []).find(function (j) { return String(j.id) === String(inv.jobRefId); });
+    if (job && job.phone) return job.phone;
+  }
+  return '';
+}
+// iOS has wanted "&body=", Android "?body=" (review-request.html found the
+// same); Copy is the fallback that always works.
+function thSmsHref(phone, body) {
+  var digits = String(phone || '').replace(/\D/g, '');
+  var to = digits.length === 10 ? '1' + digits : digits;
+  var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  return 'sms:' + to + (ios ? '&' : '?') + 'body=' + encodeURIComponent(body);
+}
+function thMailHref(email, subject, body) {
+  return 'mailto:' + String(email || '').replace(/[^\w.@+-]/g, '') + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+}
+function thOpenReminderSheet(invoiceId) {
+  if (typeof thInvoiceReminderText !== 'function' || typeof thRead !== 'function' || typeof TH_KEYS === 'undefined') return false;
+  var inv = thRead(TH_KEYS.invoices, []).find(function (i) { return String(i.id) === String(invoiceId); });
+  if (!inv) return false;
+  var esc = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  var icon = function (name) { return '<svg class="th-icon" aria-hidden="true"><use href="#icon-' + name + '" xlink:href="#icon-' + name + '"></use></svg>'; };
+  var msg = thInvoiceReminderText(inv);
+  var sentBefore = thInvoiceReminders(inv).length;
+  var phone = thReminderPhone(inv);
+  var email = inv.clientEmail || '';
+  var first = String(inv.clientName || '').trim().split(/\s+/)[0] || 'them';
+  var due = thInvoiceDueDate(inv);
+  var late = due ? thDaysBetween(due, new Date()) : 0;
+  var meta = [
+    inv.invoiceNumber ? '#' + inv.invoiceNumber : '',
+    thReminderMoney(thInvoiceBalance(inv)) + ' owed',
+    late > 0 ? late + ' day' + (late === 1 ? '' : 's') + ' overdue' : late === 0 && due ? 'due today' : '',
+    thInvoiceRemindedLabel(inv),
+  ].filter(Boolean).join(' · ');
+
+  var opener = document.activeElement;
+  var overlay = document.createElement('div');
+  overlay.className = 'quick-actions-overlay th-remind';
+  overlay.innerHTML =
+    '<div class="quick-actions-sheet th-remind-sheet" role="dialog" aria-modal="true" aria-labelledby="thRemindTitle">' +
+      '<div class="th-remind-kicker">' + TH_REMIND_TONE[msg.step] + (sentBefore ? ' \u00b7 reminder ' + (sentBefore + 1) : '') + '</div>' +
+      '<div class="th-remind-title" id="thRemindTitle">Remind ' + esc(inv.clientName || 'the client') + '</div>' +
+      '<div class="th-remind-meta">' + esc(meta) + '</div>' +
+      '<textarea class="th-remind-text" rows="6" aria-label="The reminder (you can edit it)">' + esc(msg.body) + '</textarea>' +
+      '<div class="th-remind-actions">' +
+        (phone ? '<a class="primary-btn th-remind-send" data-channel="text" href="#">' + icon('message') + 'Text ' + esc(first) + '</a>' : '') +
+        (email ? '<a class="' + (phone ? 'secondary-btn' : 'primary-btn') + ' th-remind-send" data-channel="email" href="#">' + icon('mail') + 'Email</a>' : '') +
+        '<button type="button" class="secondary-btn th-remind-send" data-channel="copy">' + icon('clipboard') + 'Copy</button>' +
+      '</div>' +
+      (!phone && !email ? '<div class="th-remind-note">No phone or email on file for ' + esc(first) + ': copy it and send it however you reach them.</div>' : '') +
+      '<button type="button" class="quick-actions-btn quick-actions-cancel">Not now</button>' +
+    '</div>';
+
+  function close() {
+    document.removeEventListener('keydown', onKey);
+    overlay.classList.remove('is-shown');
+    setTimeout(function () { overlay.remove(); }, 200);
+    if (opener && typeof opener.focus === 'function') { try { opener.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+  }
+  function onKey(e) { if (e.key === 'Escape') close(); }
+  function logged(channel) {
+    var saved = thLogInvoiceReminder(inv.id, channel);
+    try { window.dispatchEvent(new CustomEvent('th-invoice-reminded', { detail: { invoiceId: inv.id, channel: channel } })); } catch (e) { /* ignore */ }
+    if (typeof showToast === 'function' && saved) {
+      showToast(channel === 'copy' ? 'Copied. Logged as reminded.' : 'Reminder logged. The next one will be a little firmer.');
+    }
+  }
+  overlay.addEventListener('click', function (e) {
+    if (e.target === overlay || e.target.closest('.quick-actions-cancel')) { close(); return; }
+    var send = e.target.closest('.th-remind-send');
+    if (!send) return;
+    var body = overlay.querySelector('.th-remind-text').value.trim() || msg.body;
+    var channel = send.getAttribute('data-channel');
+    if (channel === 'text') send.setAttribute('href', thSmsHref(phone, body)); // the tap itself then opens Messages
+    else if (channel === 'email') send.setAttribute('href', thMailHref(email, msg.subject, body));
+    else {
+      e.preventDefault();
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(body).catch(function () { /* ignore */ });
+    }
+    if (typeof haptic === 'function') haptic('success');
+    logged(channel);
+    close();
+  });
+  document.addEventListener('keydown', onKey);
+  document.body.appendChild(overlay);
+  requestAnimationFrame(function () { overlay.classList.add('is-shown'); });
+  var firstSend = overlay.querySelector('.th-remind-send');
+  if (firstSend) { try { firstSend.focus({ preventScroll: true }); } catch (e) { firstSend.focus(); } }
+  return true;
+}
+document.addEventListener('click', function (e) {
+  var t = e.target && e.target.closest ? e.target.closest('[data-remind-invoice]') : null;
+  if (!t) return;
+  e.preventDefault();
+  thOpenReminderSheet(t.getAttribute('data-remind-invoice'));
+});
+
+// ---------------------------------------------------------------------------
+// CLIENT TEXTS (2026-09-23, Workspace rework part 12). The job's Text
+// button, the Dashboard's On my way, and the Jobs sheet open one sheet:
+// the texts this job calls for (data-layer.js thJobTextTemplates -- On my
+// way, Running late, Confirm, Parts run, All done), a time to pick where it
+// matters, the message to edit, then Send (the phone's Messages) or Copy.
+// Sending logs it on the job. Any element with data-text-job="<id>" opens
+// it (data-text-kind picks the template); where this can't run, that
+// element's own sms: link still works.
+// ---------------------------------------------------------------------------
+function thTextAgo(iso) {
+  var mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (!(mins >= 0)) return '';
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + ' min ago';
+  if (mins < 24 * 60) return Math.round(mins / 60) + ' h ago';
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+function thOpenTextSheet(jobId, kind) {
+  if (typeof thJobTextTemplates !== 'function' || typeof thRead !== 'function' || typeof TH_KEYS === 'undefined') return false;
+  var job = thRead(TH_KEYS.jobs, []).find(function (j) { return String(j.id) === String(jobId); });
+  if (!job) return false;
+  var esc = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  var icon = function (name) { return '<svg class="th-icon" aria-hidden="true"><use href="#icon-' + name + '" xlink:href="#icon-' + name + '"></use></svg>'; };
+  var phone = job.phone || '';
+  if (!phone) {
+    var client = (job.clientId && typeof thFindClientById === 'function' && thFindClientById(job.clientId)) ||
+      (job.client && typeof thFindClientByName === 'function' && thFindClientByName(job.client)) || null;
+    if (client && client.phone) phone = client.phone;
+  }
+  var first = String(job.client || '').trim().split(/\s+/)[0] || 'them';
+  var state = { eta: 20, key: null, edited: false };
+  var list = thJobTextTemplates(job, { eta: state.eta });
+  state.key = (list.find(function (t) { return t.key === kind; }) || list[0]).key;
+  var names = {};
+  list.forEach(function (t) { names[t.key] = t.label; });
+  var last = typeof thJobLastText === 'function' ? thJobLastText(job) : null;
+  var meta = [job.title || '', last && names[last.key] ? names[last.key] + ' sent ' + thTextAgo(last.at) : ''].filter(Boolean).join(' · ');
+
+  var opener = document.activeElement;
+  var overlay = document.createElement('div');
+  overlay.className = 'quick-actions-overlay th-remind th-text';
+  overlay.innerHTML =
+    '<div class="quick-actions-sheet th-remind-sheet" role="dialog" aria-modal="true" aria-labelledby="thTextTitle">' +
+      '<div class="th-remind-title" id="thTextTitle">Text ' + esc(job.client || 'the client') + '</div>' +
+      '<div class="th-remind-meta">' + esc(meta) + '</div>' +
+      '<div class="th-text-kinds" role="group" aria-label="Which text">' +
+        list.map(function (t) { return '<button type="button" class="th-text-chip" data-kind="' + t.key + '">' + esc(t.label) + '</button>'; }).join('') +
+      '</div>' +
+      '<div class="th-text-etas" role="group" aria-label="About how long">' +
+        [10, 20, 30, 45].map(function (m) { return '<button type="button" class="th-text-chip is-eta" data-eta="' + m + '">' + m + ' min</button>'; }).join('') +
+      '</div>' +
+      '<textarea class="th-remind-text" rows="4" aria-label="The text (you can edit it)"></textarea>' +
+      '<div class="th-remind-actions">' +
+        (phone ? '<a class="primary-btn th-text-send" data-channel="text" href="#">' + icon('message') + 'Send to ' + esc(first) + '</a>' : '') +
+        '<button type="button" class="' + (phone ? 'secondary-btn' : 'primary-btn') + ' th-text-send" data-channel="copy">' + icon('clipboard') + 'Copy</button>' +
+      '</div>' +
+      (!phone ? '<div class="th-remind-note">No phone number on this job or its client: copy it and send it however you reach ' + esc(first) + '.</div>' : '') +
+      '<button type="button" class="quick-actions-btn quick-actions-cancel">Not now</button>' +
+    '</div>';
+  var box = overlay.querySelector('.th-remind-text');
+
+  function refresh() {
+    var t = thJobTextTemplates(job, { eta: state.eta }).find(function (x) { return x.key === state.key; });
+    overlay.querySelectorAll('[data-kind]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-kind') === state.key)); });
+    overlay.querySelectorAll('[data-eta]').forEach(function (b) { b.setAttribute('aria-pressed', String(Number(b.getAttribute('data-eta')) === state.eta)); });
+    overlay.querySelector('.th-text-etas').hidden = !t.eta;
+    box.value = t.body;
+    state.edited = false;
+  }
+  function close() {
+    document.removeEventListener('keydown', onKey);
+    overlay.classList.remove('is-shown');
+    setTimeout(function () { overlay.remove(); }, 200);
+    if (opener && typeof opener.focus === 'function') { try { opener.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+  }
+  function onKey(e) { if (e.key === 'Escape') close(); }
+  box.addEventListener('input', function () { state.edited = true; });
+  overlay.addEventListener('click', function (e) {
+    if (e.target === overlay || e.target.closest('.quick-actions-cancel')) { close(); return; }
+    var chip = e.target.closest('.th-text-chip');
+    if (chip) {
+      if (chip.hasAttribute('data-kind')) state.key = chip.getAttribute('data-kind');
+      else state.eta = Number(chip.getAttribute('data-eta'));
+      refresh();
+      return;
+    }
+    var send = e.target.closest('.th-text-send');
+    if (!send) return;
+    var body = box.value.trim();
+    if (!body) { e.preventDefault(); return; }
+    if (send.getAttribute('data-channel') === 'text') send.setAttribute('href', thSmsHref(phone, body)); // the tap itself opens Messages
+    else {
+      e.preventDefault();
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(body).catch(function () { /* ignore */ });
+    }
+    if (typeof thLogJobText === 'function') thLogJobText(job.id, state.key);
+    try { window.dispatchEvent(new CustomEvent('th-job-texted', { detail: { jobId: job.id, key: state.key } })); } catch (err) { /* ignore */ }
+    if (typeof haptic === 'function') haptic('success');
+    if (typeof showToast === 'function') showToast(send.getAttribute('data-channel') === 'copy' ? 'Copied.' : names[state.key] + ' is ready in Messages.');
+    close();
+  });
+  document.addEventListener('keydown', onKey);
+  document.body.appendChild(overlay);
+  refresh();
+  requestAnimationFrame(function () { overlay.classList.add('is-shown'); });
+  var firstSend = overlay.querySelector('.th-text-send');
+  if (firstSend) { try { firstSend.focus({ preventScroll: true }); } catch (e) { firstSend.focus(); } }
+  return true;
+}
+document.addEventListener('click', function (e) {
+  var t = e.target && e.target.closest ? e.target.closest('[data-text-job]') : null;
+  if (!t) return;
+  if (thOpenTextSheet(t.getAttribute('data-text-job'), t.getAttribute('data-text-kind') || undefined)) e.preventDefault();
+});
 
 // ---------------------------------------------------------------------------
 // DISPLAY DENSITY TOGGLE -- added 2026-08-16. A personal display
@@ -852,6 +1324,12 @@ if (typeof document !== 'undefined') {
     '<symbol id="icon-navigate" viewBox="0 0 24 24"><path d="M20.5 3.5L3.5 11l7.2 2.3L13 20.5z"/></symbol>' +
     '<symbol id="icon-chevron" viewBox="0 0 24 24"><polyline points="9.5,5.5 15.5,12 9.5,18.5"/></symbol>' +
 
+    // Payment reminder (2026-09-23, rework part 10).
+    '<symbol id="icon-mail" viewBox="0 0 24 24"><rect x="3.5" y="5.5" width="17" height="13" rx="2"/><polyline points="4 7.5 12 13 20 7.5"/></symbol>' +
+    // Job clock (2026-09-23, rework part 9).
+    '<symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><polyline points="12 7.5 12 12 15.2 14"/></symbol>' +
+    '<symbol id="icon-play" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M8 5.2v13.6a.9.9 0 0 0 1.37.77l10.6-6.8a.9.9 0 0 0 0-1.54L9.37 4.43A.9.9 0 0 0 8 5.2z"/></symbol>' +
+    '<symbol id="icon-stop" viewBox="0 0 24 24"><rect fill="currentColor" stroke="none" x="6" y="6" width="12" height="12" rx="2.5"/></symbol>' +
     '<symbol id="icon-mic" viewBox="0 0 24 24"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5V6a3.5 3.5 0 0 0-7 0v5.5A3.5 3.5 0 0 0 12 15z"/><path d="M6 11.5a6 6 0 0 0 12 0"/><line x1="12" y1="17.5" x2="12" y2="21"/><line x1="8.5" y1="21" x2="15.5" y2="21"/></symbol>' +
 
     '<symbol id="icon-terminal" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M7 9.3l3.3 2.7-3.3 2.7"/><line x1="12" y1="14.7" x2="16.5" y2="14.7"/></symbol>' +
@@ -1183,7 +1661,7 @@ function thParseQuickEntry(text, opts) {
   });
 
   // 2. A phone number.
-  take(/(?:^|\s)(?:\+?1[\s.-]?)?\(?(\d{3})\)?[\s.-]?(\d{3})[\s.-]?(\d{4})(?=\s|[,.;]|$)/, function (m) {
+  take(/(?:^|\s)(?:\+?1[\s.-]?)?\(?(\d{3})\)?[\s.-]?(\d{3})[\s.-]?(\d{4})(?=\s|[,.;:!?)]|$)/, function (m) {
     out.phone = '(' + m[1] + ') ' + m[2] + '-' + m[3];
     out.signals++;
   });
@@ -1212,18 +1690,26 @@ function thParseQuickEntry(text, opts) {
     out.timeLabel = h12 + ':' + String(min).padStart(2, '0') + ' ' + (h < 12 ? 'AM' : 'PM');
     out.signals++;
   };
-  take(/(?:\s(?:at|@|around|by))?\s(\d{1,2})(?::(\d{2}))?\s*([ap])\.?\s?m\.?(?=\s|[,.;]|$)/i, function (m) {
+  take(/(?:\s(?:at|@|around|by))?\s(\d{1,2})(?::(\d{2}))?\s*([ap])\.?\s?m\.?(?=\s|[,.;:!?)]|$)/i, function (m) {
     var h = parseInt(m[1], 10), min = m[2] ? parseInt(m[2], 10) : 0;
     if (h < 1 || h > 12 || min > 59) return false;
     if (m[3].toLowerCase() === 'p' && h < 12) h += 12;
     if (m[3].toLowerCase() === 'a' && h === 12) h = 0;
     setTime(h, min);
-  }) || take(/\s(?:at|@)\s+(\d{1,2}):(\d{2})(?=\s|[,.;]|$)/i, function (m) {
+  }) || take(/\s(?:at|@)\s+(\d{1,2}):(\d{2})(?=\s|[,.;:!?)]|$)/i, function (m) {
     var h = parseInt(m[1], 10), min = parseInt(m[2], 10);
     if (h > 23 || min > 59) return false;
     if (h >= 1 && h <= 6) h += 12; // "at 2:30" on a work day means the afternoon
     setTime(h, min);
-  }) || take(/\s(?:at\s+)?noon\b/i, function () { setTime(12, 0); });
+  }) || take(/\s(?:at\s+)?noon\b/i, function () { setTime(12, 0); })
+    // "around 2", "at 4" -- a bare hour after at/around/about is a time
+    // (workday hours: 1-6 means the afternoon); taken after addresses, so
+    // "at 2 Main St" is already gone by now.
+    || take(/\s(?:at|around|about|by)\s+(\d{1,2})(?:ish)?(?=\s|[,.;:!?)]|$)/i, function (m) {
+      var h = parseInt(m[1], 10);
+      if (h < 1 || h > 12) return false;
+      setTime(h <= 6 || h === 12 ? (h === 12 ? 12 : h + 12) : h, 0);
+    });
 
   // 6. A date.
   var setDate = function (d) { out.date = thQaYmd(d); out.signals++; };
@@ -1244,6 +1730,11 @@ function thParseQuickEntry(text, opts) {
     take(new RegExp(prefix + 'day\\s+after\\s+tomorrow\\b', 'i'), function () { setDate(days(2)); }) ||
     take(new RegExp(prefix + '(tomorrow|tomorow|tmrw|tmr|tmw)\\b', 'i'), function () { setDate(days(1)); }) ||
     take(new RegExp(prefix + 'yesterday\\b', 'i'), function () { setDate(days(-1)); }) ||
+    // Vague on purpose, so a sensible day: next week = its Monday, the
+    // weekend = the coming Saturday, next weekend = the one after.
+    take(new RegExp(prefix + '(?:sometime\\s+)?next\\s+weekend\\b', 'i'), function () { setDate(weekdayFrom(6, true)); }) ||
+    take(new RegExp(prefix + '(?:sometime\\s+)?(?:this|the)\\s+weekend\\b', 'i'), function () { setDate(today.getDay() === 6 ? today : weekdayFrom(6, false)); }) ||
+    take(new RegExp(prefix + '(?:sometime\\s+)?next\\s+week\\b', 'i'), function () { setDate(weekdayFrom(1, true)); }) ||
     take(new RegExp(prefix + 'in\\s+(\\d+|' + Object.keys(TH_QA_NUMBER_WORDS).join('|') + ')\\s+(days?|weeks?)\\b', 'i'), function (m) {
       var n = /^\d+$/.test(m[1]) ? parseInt(m[1], 10) : TH_QA_NUMBER_WORDS[m[1].toLowerCase()];
       setDate(days(/^week/i.test(m[2]) ? n * 7 : n));
@@ -1264,7 +1755,7 @@ function thParseQuickEntry(text, opts) {
     return d;
   };
   if (!dated) {
-    dated = take(new RegExp(prefix + '(\\d{1,2})\\/(\\d{1,2})(?:\\/(\\d{4}|\\d{2}))?(?=\\s|[,.;]|$)', 'i'), function (m) {
+    dated = take(new RegExp(prefix + '(\\d{1,2})\\/(\\d{1,2})(?:\\/(\\d{4}|\\d{2}))?(?=\\s|[,.;:!?)]|$)', 'i'), function (m) {
       var y = m[3] ? (m[3].length === 2 ? 2000 + parseInt(m[3], 10) : parseInt(m[3], 10)) : null;
       var d = pickYear(parseInt(m[1], 10) - 1, parseInt(m[2], 10), y);
       if (!d) return false;
@@ -1300,7 +1791,7 @@ function thParseQuickEntry(text, opts) {
     .sort(function (a, b) { return b.name.length - a.name.length; });
   for (var i = 0; i < clients.length && !out.client; i++) {
     var c = clients[i];
-    take(new RegExp('(?:\\s(?:for|at|with|to|from))?\\s' + thQaEscapeRe(c.name.trim()).replace(/\s+/g, '\\s+') + "(?:'s)?(?=\\s|[,.;]|$)", 'i'), function () {
+    take(new RegExp('(?:\\s(?:for|at|with|to|from))?\\s' + thQaEscapeRe(c.name.trim()).replace(/\s+/g, '\\s+') + "(?:'s)?(?=\\s|[,.;:!?)]|$)", 'i'), function () {
       out.client = { id: c.id || null, name: c.name.trim(), phone: c.phone || '', address: c.address || '', email: c.email || '', known: true };
     });
   }
@@ -1311,7 +1802,7 @@ function thParseQuickEntry(text, opts) {
       if (first.length < 2) return;
       (byFirst[first] = byFirst[first] || []).push(c);
     });
-    var wordRe = /(\s(?:for|at|with|to|from))?\s([A-Za-z][A-Za-z'-]*?)('s)?(?=\s|[,.;]|$)/g;
+    var wordRe = /(\s(?:for|at|with|to|from))?\s([A-Za-z][A-Za-z'-]*?)('s)?(?=\s|[,.;:!?)]|$)/g;
     var wm;
     while ((wm = wordRe.exec(rest)) !== null) {
       var word = wm[2].toLowerCase();
@@ -1328,14 +1819,14 @@ function thParseQuickEntry(text, opts) {
     }
   }
   if (!out.client) {
-    take(/\s(?:for|with)\s+((?:Mr\.?|Mrs\.?|Ms\.?|Dr\.?)\s+)?([A-Z][a-z'-]+(?:\s+[A-Z][a-z'-]+)?)(?:'s)?(?=\s|[,.;]|$)/, function (m) {
+    take(/\s(?:for|with)\s+((?:Mr\.?|Mrs\.?|Ms\.?|Dr\.?)\s+)?([A-Z][a-z'-]+(?:\s+[A-Z][a-z'-]+)?)(?:'s)?(?=\s|[,.;:!?)]|$)/, function (m) {
       out.client = { id: null, name: ((m[1] || '') + m[2]).trim(), phone: '', address: '', email: '', known: false };
     });
   }
   // "quote Dave Carter drywall patch": a new client's first and last name,
   // both capitalised, straight after a money word.
   if (!out.client && explicitIntent && out.intent !== 'job') {
-    take(/^\s+([A-Z][a-z'-]+\s+[A-Z][a-z'-]+)(?:'s)?(?=\s|[,.;]|$)/, function (m) {
+    take(/^\s+([A-Z][a-z'-]+\s+[A-Z][a-z'-]+)(?:'s)?(?=\s|[,.;:!?)]|$)/, function (m) {
       out.client = { id: null, name: m[1], phone: '', address: '', email: '', known: false };
     });
   }
@@ -1346,15 +1837,15 @@ function thParseQuickEntry(text, opts) {
     var vendors = (opts.vendors || []).filter(Boolean).sort(function (a, b) { return b.length - a.length; });
     for (var v = 0; v < vendors.length && !out.vendor; v++) {
       var vendor = vendors[v];
-      take(new RegExp('(?:\\s(?:at|from))?\\s' + thQaEscapeRe(vendor).replace(/\s+/g, '\\s+') + '(?=\\s|[,.;]|$)', 'i'), function () { out.vendor = vendor; });
+      take(new RegExp('(?:\\s(?:at|from))?\\s' + thQaEscapeRe(vendor).replace(/\s+/g, '\\s+') + '(?=\\s|[,.;:!?)]|$)', 'i'), function () { out.vendor = vendor; });
     }
-    if (!out.vendor) take(/\s(?:at|from)\s+([A-Z][\w'&.-]*(?:\s+[A-Z][\w'&.-]*){0,2})(?=\s|[,.;]|$)/, function (m) { out.vendor = m[1]; });
+    if (!out.vendor) take(/\s(?:at|from)\s+([A-Z][\w'&.-]*(?:\s+[A-Z][\w'&.-]*){0,2})(?=\s|[,.;:!?)]|$)/, function (m) { out.vendor = m[1]; });
     if (out.vendor) out.signals++;
   }
 
   // 10. A bare number is the amount for money entries ("invoice sarah 150").
   if (out.amount === null && out.intent !== 'job') {
-    take(/\s(\d{1,5}(?:\.\d{1,2})?)(?=\s|[,.;]|$)/, function (m) { out.amount = parseFloat(m[1]); out.signals++; });
+    take(/\s(\d{1,5}(?:\.\d{1,2})?)(?=\s|[,.;:!?)]|$)/, function (m) { out.amount = parseFloat(m[1]); out.signals++; });
   }
 
   // 11. The job this is about (expenses and invoices), among the client's
@@ -1384,11 +1875,40 @@ function thParseQuickEntry(text, opts) {
     if (mine.length) out.jobId = mine[0].id;
   }
 
-  // 12. What's left is the title: tidy the joins the cuts left behind.
+  // 12. What's left is the title: tidy the joins the cuts left behind. A
+  //     long message (a client's text, shared or pasted in) keeps all of it
+  //     as sourceText -- it goes in the job's notes -- and titles itself
+  //     from its first real sentence, minus the greeting.
+  out.long = original.length > 70 || /[.!?]\s+\S/.test(original);
+  if (out.long) {
+    out.sourceText = original;
+    rest = ' ' + rest.replace(/\s+/g, ' ').trim()
+      .replace(/^(?:(?:hi|hello|hey|hiya|good\s+(?:morning|afternoon|evening))\b[\s,!.]*)+/i, '')
+      .replace(/^(?:(?:this\s+is|it'?s|its)\b[\s,!.]*)+/i, '')
+      .replace(/^[\s,!.]+/, '');
+    // The title is what's wrong, not the ask: skip "can you come..."
+    // sentences, and cut a trailing ", any chance ..." off the one kept.
+    var REQUEST = /^(?:can|could|would|will|are|is|do|does|any\s+chance|when|let\s+me\s+know|please|thanks|thank\s+you)\b/i;
+    var sentences = (rest.match(/[^.!?]+[.!?]*/g) || [rest]).map(function (x) { return x.trim(); })
+      .filter(function (x) { return x.replace(/[.!?,\s]/g, '').length > 3; });
+    // "It's making a noise" says nothing on its own; "can you come look at
+    // our water heater?" does once the ask is peeled off it.
+    var PRONOUN = /^(?:it|it's|its|this|that|they|there|he|she|we)\b/i;
+    var LEAD_IN = /^(?:(?:can|could|would|will)\s+you\s+(?:please\s+)?|any\s+chance\s+you\s+(?:could\s+)?|please\s+)(?:come\s+(?:out\s+)?(?:and\s+)?|stop\s+by\s+(?:and\s+)?|swing\s+by\s+(?:and\s+)?)?(?:take\s+a\s+look\s+at|look\s+at|check\s+(?:out|on)?|fix|repair|replace|install|help\s+(?:me\s+)?with|look\s+into)?\s*(?:our|my|the|a|an)?\s*/i;
+    var statements = sentences.filter(function (x) { return !REQUEST.test(x); });
+    var asked = sentences.filter(function (x) { return REQUEST.test(x); })
+      .map(function (x) { return x.replace(LEAD_IN, ''); })
+      .filter(function (x) { return x.replace(/[.!?,\s]/g, '').length > 3 && !REQUEST.test(x); });
+    var firstReal = statements.filter(function (x) { return !PRONOUN.test(x); })[0] || asked[0] || statements[0] || sentences[0] || rest;
+    firstReal = firstReal.replace(/,\s*(?:any\s+chance|can\s+you|could\s+you|would\s+you|are\s+you|is\s+there|when|let\s+me\s+know|please)\b.*$/i, '')
+      .replace(/[.!?]+$/, '');
+    if (firstReal.length > 60) firstReal = firstReal.slice(0, 60).replace(/\s+\S*$/, '') + '…';
+    rest = ' ' + firstReal + ' ';
+  }
   var title = rest.replace(/\s+/g, ' ').trim()
     .replace(/^(?:(?:for|at|on|to|by|with|and|the job|job|to do|-|,|:)\s+)+/i, '')
     .replace(/(?:\s+(?:for|at|on|to|by|with|and|due|around|from|-|,))+$/i, '')
-    .replace(/\s+([,.;:])/g, '$1').replace(/^[,.;:\s-]+|[,;:\s-]+$/g, '');
+    .replace(/\s+([,.;:!?])/g, '$1').replace(/^[,.;:\s-]+|[,;:\s-]+$/g, '');
   out.title = title ? title.charAt(0).toUpperCase() + title.slice(1) : '';
   return out;
 }
@@ -1418,7 +1938,10 @@ function thQuickEntryHref(p) {
   set('phone', p.phone);
   set('address', p.address);
   set('priority', p.priority);
-  if (p.timeLabel) set('notes', 'Time: ' + p.timeLabel);
+  var notes = [];
+  if (p.timeLabel) notes.push('Time: ' + p.timeLabel);
+  if (p.sourceText) notes.push('Their message: “' + p.sourceText + '”');
+  set('notes', notes.join('\n'));
   q.set('qa', '1');
   return '/tools/job-tracker.html?' + q.toString() + '#add-job';
 }

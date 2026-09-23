@@ -52,17 +52,17 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=e9113fb127">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=8fbfc85975">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=4cfac4b10e" defer></script>
-<script src="/tools/data-layer.js?v=0eeb0b02fa" defer></script>
+<script src="/tools/data-layer.js?v=5bbc0202fd" defer></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
-<script src="/tools/tools-dialogs.js?v=33199ae1d8" defer></script>
+<script src="/tools/tools-dialogs.js?v=310315eb44" defer></script>
 <script src="/signature-pad.js?v=f95f8e1d28" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=686999ec0f" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=d635579dfb" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
-<script src="/tools/tools-tour.js?v=18e0421913" defer></script>
+<script src="/tools/tools-tour.js?v=118148b9a2" defer></script>
 <!-- U15/W18 fix (High-Impact Upgrades, Master Audit, 2026-09-08): the
      masthead/footer/totals-block drawing code below moved into this
      shared file, now also used by job-detail.html's job sheet and
@@ -831,9 +831,10 @@
     // fit beside the amount on a 390px phone, and it is the one line that
     // must not be cut off.
     const num = '#' + escapeHtml(inv.invoiceNumber || '\u2014') + ' &middot; ';
-    const sub = st.status === 'overdue'
+    const reminded = st.status !== 'paid' && typeof thInvoiceRemindedLabel === 'function' ? thInvoiceRemindedLabel(inv) : '';
+    const sub = (st.status === 'overdue'
       ? num + escapeHtml(invoiceShortDate(inv.date)) + '</span><span class="th-row-sub">' + invoiceDueText(inv, st)
-      : num + invoiceDueText(inv, st);
+      : num + invoiceDueText(inv, st)) + (reminded ? ' &middot; ' + reminded.toLowerCase() : '');
     return '<div class="inv-item" data-invoice-id="' + inv.id + '">' +
       '<div class="th-row inv-row">' +
         '<button type="button" class="th-row-link" data-long-press-target onclick="openInvoiceActions(' + inv.id + ')" aria-haspopup="dialog" aria-label="' + invoiceAttr(name + ', ' + amount + ', ' + st.status + '. Actions') + '">' +
@@ -910,6 +911,12 @@
     const st = invoiceState(inv);
     const actions = [];
     actions.push({ label: st.status === 'paid' ? 'Mark Unpaid' : 'Mark Paid', onClick: () => toggleInvoicePaid(id) });
+    // A reminder already written (2026-09-23, rework part 10), a notch
+    // firmer each time; its label says when the last one went out.
+    if (st.status !== 'paid' && st.balance > 0 && typeof thOpenReminderSheet === 'function') {
+      const last = typeof thInvoiceRemindedLabel === 'function' ? thInvoiceRemindedLabel(inv) : '';
+      actions.push({ label: 'Send a reminder' + (last ? ' (' + last.toLowerCase() + ')' : ''), onClick: () => thOpenReminderSheet(id) });
+    }
     if (inv.clientEmail) actions.push({ label: 'Resend to client', onClick: () => resendInvoiceToClient(id) });
     const clientHref = invoiceClientHref(inv);
     if (clientHref) actions.push({ label: 'Open client', onClick: () => { window.location.href = clientHref; } });
@@ -3061,6 +3068,7 @@
       if (typeof renderInvoiceLog === 'function') renderInvoiceLog();
       if (typeof renderQuoteLog === 'function') renderQuoteLog();
       if (typeof initInvoiceLogLongPress === 'function') initInvoiceLogLongPress();
+      window.addEventListener('th-invoice-reminded', () => renderInvoiceLog());
       // The list is the default tab now, so it opens without a tab click --
       // fetch the portal's quote answers for it here instead.
       const recentPanel = document.getElementById('tab-recent');

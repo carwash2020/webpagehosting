@@ -911,6 +911,333 @@ function thSetJobNoInvoice(jobId, value) {
   return thWrite(TH_KEYS.jobs, jobs);
 }
 
+// ---------- Job clock (2026-09-23, Workspace rework part 9) ----------
+// Tap Start on a job and its clock runs: on that page, on every other page
+// (the shell's On the clock bar), and on any other device once it syncs,
+// because "running" is just a field on the job (clockSince). Stop adds the
+// time to hoursWorked -- the number part 6's From this job panel already
+// turns into the invoice's Labor line -- and keeps each visit in timeLog.
+// One clock at a time: starting another job stops the first, keeping its
+// time. Under a minute is a mis-tap and adds nothing; the rest rounds to
+// the nearest 0.1 h (6 minutes).
+const TH_CLOCK_MIN_MS = 60 * 1000;
+
+function thJobClockSince(job) {
+  if (!job || !job.clockSince) return null;
+  const t = new Date(job.clockSince).getTime();
+  return isNaN(t) ? null : t;
+}
+function thJobClockElapsedMs(job, now) {
+  const since = thJobClockSince(job);
+  if (since === null) return 0;
+  return Math.max(0, (now === undefined ? Date.now() : new Date(now).getTime()) - since);
+}
+function thRunningJobClock(jobs) {
+  let best = null;
+  (jobs || []).forEach(j => {
+    const since = thJobClockSince(j);
+    if (since !== null && (!best || since > thJobClockSince(best))) best = j;
+  });
+  return best;
+}
+function thClockHours(ms) {
+  if (!(ms >= TH_CLOCK_MIN_MS)) return 0;
+  return Math.max(0.1, Math.round(ms / 360000) / 10);
+}
+function thClockChanged(jobId) {
+  try { window.dispatchEvent(new CustomEvent('th-clock-change', { detail: { jobId: jobId } })); } catch (e) { /* ignore */ }
+}
+function thSaveClockJobs(jobs) {
+  const ok = thWrite(TH_KEYS.jobs, jobs);
+  // Status can change here, and status is a relational column.
+  if (ok && typeof mirrorJobsToRelational === 'function') mirrorJobsToRelational(jobs);
+  return ok;
+}
+// Stops one job's clock in place (no save): its time goes on the job.
+function thCommitJobClock(job, nowMs) {
+  const ms = thJobClockElapsedMs(job, nowMs);
+  const hours = thClockHours(ms);
+  const start = job.clockSince;
+  job.clockSince = null; // null, not deleted: the sync merge is per field
+  if (hours > 0) {
+    job.hoursWorked = Math.round(((Number(job.hoursWorked) || 0) + hours) * 100) / 100;
+    job.timeLog = (Array.isArray(job.timeLog) ? job.timeLog : []).concat([{ start: start, end: new Date(nowMs).toISOString(), hours: hours }]);
+  }
+  return { ms: ms, hours: hours };
+}
+function thStartJobClock(jobId, now) {
+  const nowMs = now === undefined ? Date.now() : new Date(now).getTime();
+  const jobs = thRead(TH_KEYS.jobs, []);
+  const job = jobs.find(j => String(j.id) === String(jobId));
+  if (!job) return null;
+  if (thJobClockSince(job) !== null) return { job: job, stopped: null };
+  let stopped = null;
+  jobs.forEach(other => {
+    if (other !== job && thJobClockSince(other) !== null) stopped = Object.assign({ job: other }, thCommitJobClock(other, nowMs));
+  });
+  job.clockSince = new Date(nowMs).toISOString();
+  // Starting the clock is starting the job.
+  if (!job.status || job.status === 'not-started') {
+    job.status = 'in-progress';
+    job.statusChangedAt = job.clockSince;
+  }
+  job.lastEditedBy = (typeof getCurrentUserEmail === 'function' && getCurrentUserEmail()) || job.lastEditedBy;
+  if (!thSaveClockJobs(jobs)) return null;
+  thClockChanged(job.id);
+  return { job: job, stopped: stopped };
+}
+// Returns what Stop did, plus `undo` -- the fields as they were, for
+// thUndoStopJobClock() when Stop was a mis-tap.
+function thStopJobClock(jobId, now) {
+  const nowMs = now === undefined ? Date.now() : new Date(now).getTime();
+  const jobs = thRead(TH_KEYS.jobs, []);
+  const job = jobs.find(j => String(j.id) === String(jobId));
+  if (!job || thJobClockSince(job) === null) return null;
+  const undo = { clockSince: job.clockSince, hoursWorked: job.hoursWorked === undefined ? null : job.hoursWorked, timeLog: Array.isArray(job.timeLog) ? job.timeLog.slice() : [] };
+  const result = thCommitJobClock(job, nowMs);
+  job.lastEditedBy = (typeof getCurrentUserEmail === 'function' && getCurrentUserEmail()) || job.lastEditedBy;
+  if (!thSaveClockJobs(jobs)) return null;
+  thClockChanged(job.id);
+  return { job: job, ms: result.ms, hours: result.hours, totalHours: Number(job.hoursWorked) || 0, undo: undo };
+}
+function thUndoStopJobClock(jobId, undo) {
+  if (!undo) return false;
+  const jobs = thRead(TH_KEYS.jobs, []);
+  const job = jobs.find(j => String(j.id) === String(jobId));
+  if (!job) return false;
+  job.clockSince = undo.clockSince;
+  job.hoursWorked = undo.hoursWorked;
+  job.timeLog = undo.timeLog;
+  if (!thSaveClockJobs(jobs)) return false;
+  thClockChanged(job.id);
+  return true;
+}
+// Done from the clock's Stop sheet: stops a still-running clock first, so
+// no time is lost, then marks the job done the way the Jobs list does.
+function thFinishJob(jobId, now) {
+  const nowMs = now === undefined ? Date.now() : new Date(now).getTime();
+  const jobs = thRead(TH_KEYS.jobs, []);
+  const job = jobs.find(j => String(j.id) === String(jobId));
+  if (!job) return null;
+  if (thJobClockSince(job) !== null) thCommitJobClock(job, nowMs);
+  if (job.status !== 'done') {
+    job.status = 'done';
+    job.statusChangedAt = new Date(nowMs).toISOString();
+  }
+  job.lastEditedBy = (typeof getCurrentUserEmail === 'function' && getCurrentUserEmail()) || job.lastEditedBy;
+  if (!thSaveClockJobs(jobs)) return null;
+  thClockChanged(job.id);
+  return job;
+}
+
+// ---------- Payment reminders (2026-09-23, Workspace rework part 10) ----------
+// A reminder that writes itself: who, which invoice, how much, how late,
+// and -- for an invoice on the client portal (it has a client email) --
+// where to pay by card. Each one sent is logged on the invoice
+// (inv.reminders), so the next one is a notch firmer and every money view
+// can say when the client was last reminded. Sending is the phone's own
+// Messages or Mail app; nothing is sent from here.
+const TH_PORTAL_PAY_URL = 'https://www.triplehenterprisesllc.biz/portal/login.html';
+
+function thInvoiceReminders(inv) {
+  return (inv && Array.isArray(inv.reminders) ? inv.reminders : [])
+    .filter(r => r && r.at && !isNaN(new Date(r.at).getTime()))
+    .slice().sort((a, b) => new Date(a.at) - new Date(b.at));
+}
+function thInvoiceLastReminder(inv) {
+  const list = thInvoiceReminders(inv);
+  return list.length ? list[list.length - 1] : null;
+}
+function thDaysBetween(a, b) {
+  return Math.round((new Date(new Date(b).toDateString()) - new Date(new Date(a).toDateString())) / 86400000);
+}
+// 1 friendly, 2 following up, 3 firm: one notch past the last one sent,
+// and never gentler than how late it is (two weeks late starts at 2, a
+// month late at 3).
+function thInvoiceReminderStep(inv, now) {
+  const at = now === undefined ? new Date() : new Date(now);
+  const due = thInvoiceDueDate(inv);
+  const late = due ? thDaysBetween(due, at) : 0;
+  const sent = thInvoiceReminders(inv);
+  const lastStep = sent.length ? (Number(sent[sent.length - 1].step) || sent.length) : 0;
+  let step = Math.min(3, lastStep + 1);
+  if (late >= 30) step = 3;
+  else if (late >= 14) step = Math.max(step, 2);
+  return step;
+}
+function thReminderMoney(n) {
+  return '$' + (Math.round((Number(n) || 0) * 100) / 100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+function thInvoiceReminderText(inv, now) {
+  const at = now === undefined ? new Date() : new Date(now);
+  const first = String(inv.clientName || '').trim().split(/\s+/)[0] || 'there';
+  const which = 'invoice ' + (inv.invoiceNumber ? inv.invoiceNumber + ' ' : '') + 'for ' + thReminderMoney(thInvoiceBalance(inv));
+  const due = thInvoiceDueDate(inv);
+  const late = due ? thDaysBetween(due, at) : 0;
+  const dueWord = due ? due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+  const pay = inv.clientEmail ? ' You can pay online at ' + TH_PORTAL_PAY_URL + ' (sign in with your email).' : '';
+  const step = thInvoiceReminderStep(inv, at);
+  let body;
+  if (step === 1) {
+    const when = !due ? '' : late > 0 ? ' was due ' + dueWord : late === 0 ? ' is due today' : ' is due ' + dueWord;
+    body = 'Hi ' + first + ', this is Triple H Enterprises. Just a friendly reminder that ' + which + when + '.' + pay + ' Thank you!';
+  } else if (step === 2) {
+    body = 'Hi ' + first + ', Triple H Enterprises here, following up on ' + which + (late > 0 ? ', now ' + late + ' day' + (late === 1 ? '' : 's') + ' past due' : '') + '.' + pay +
+      ' If anything about the bill looks wrong, just reply and let me know.';
+  } else {
+    body = 'Hi ' + first + ', ' + which + ' from Triple H Enterprises is now ' + Math.max(late, 0) + ' days past due. Please arrange payment this week' +
+      (inv.clientEmail ? ' at ' + TH_PORTAL_PAY_URL : '') + ', or reply so we can sort it out. Thank you.';
+  }
+  return {
+    step: step,
+    body: body,
+    subject: 'Reminder: invoice ' + (inv.invoiceNumber ? inv.invoiceNumber + ' ' : '') + '(' + thReminderMoney(thInvoiceBalance(inv)) + ')',
+  };
+}
+function thLogInvoiceReminder(invoiceId, channel, now) {
+  const invoices = thRead(TH_KEYS.invoices, []);
+  const inv = invoices.find(i => String(i.id) === String(invoiceId));
+  if (!inv) return null;
+  const at = now === undefined ? new Date() : new Date(now);
+  const step = thInvoiceReminderStep(inv, at);
+  inv.reminders = thInvoiceReminders(inv).concat([{ at: at.toISOString(), channel: channel || 'text', step: step }]);
+  if (!thWrite(TH_KEYS.invoices, invoices)) return null;
+  return inv;
+}
+// Where the Remind button shows: something is still owed and it's due
+// today or past due. Before that, a reminder is just nagging.
+function thInvoiceNeedsReminder(inv, now) {
+  if (!inv || thInvoiceBalance(inv) <= 0) return false;
+  const due = thInvoiceDueDate(inv);
+  return !!due && thDaysBetween(due, now === undefined ? new Date() : now) >= 0;
+}
+// "Reminded today", "Reminded 3 days ago" -- for the money lists.
+function thInvoiceRemindedLabel(inv, now) {
+  const last = thInvoiceLastReminder(inv);
+  if (!last) return '';
+  const d = thDaysBetween(last.at, now === undefined ? new Date() : now);
+  return 'Reminded ' + (d <= 0 ? 'today' : d === 1 ? 'yesterday' : d + ' days ago');
+}
+
+// ---------- Your week (2026-09-23, Workspace rework part 11) ----------
+// The Dashboard's scoreboard, Monday to Sunday: hours on the clock each day
+// (part 9's timeLog, plus a clock still running), jobs finished, and what
+// was billed (invoices dated this week, plus income logged by hand), each
+// beside last week's. Billed, not collected: a card payment through the
+// portal has no local payment date to count by.
+function thWeekStart(d) {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
+  return x;
+}
+function thWeekSummary(now, data) {
+  const at = now === undefined ? new Date() : new Date(now);
+  data = data || {};
+  const jobs = data.jobs || thRead(TH_KEYS.jobs, []);
+  const invoices = data.invoices || thRead(TH_KEYS.invoices, []);
+  const income = (data.income || thRead(TH_KEYS.income, [])).filter(e => e && e.origin !== 'invoice');
+  const start = thWeekStart(at);
+  const dayAt = (n) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + n);
+  const end = dayAt(7), prevStart = dayAt(-7);
+  const today = new Date(at.getFullYear(), at.getMonth(), at.getDate());
+  const names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const days = names.map((name, i) => {
+    const d = dayAt(i);
+    return { date: thLocalDateStr(d), name: name, hours: 0, isToday: d.getTime() === today.getTime(), isFuture: d > today };
+  });
+  const indexOf = (d) => {
+    const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    return day < start || day >= end ? -1 : Math.round((day - start) / 86400000);
+  };
+  const out = { start: start, end: dayAt(6), days: days, hours: 0, prevHours: 0, jobsDone: 0, prevJobsDone: 0, billed: 0, prevBilled: 0, running: false };
+  const addHours = (when, h) => {
+    if (!(h > 0) || isNaN(when.getTime())) return;
+    const i = indexOf(when);
+    if (i >= 0) { days[i].hours += h; out.hours += h; }
+    else if (when >= prevStart && when < start) out.prevHours += h;
+  };
+  (jobs || []).forEach(j => {
+    (Array.isArray(j.timeLog) ? j.timeLog : []).forEach(v => { if (v) addHours(new Date(v.start), Number(v.hours) || 0); });
+    const since = thJobClockSince(j);
+    if (since !== null) { out.running = true; addHours(new Date(since), thJobClockElapsedMs(j, at) / 3600000); }
+    if (j.status === 'done') {
+      const done = thJobDoneDate(j);
+      if (done && indexOf(done) >= 0) out.jobsDone++;
+      else if (done && done >= prevStart && done < start) out.prevJobsDone++;
+    }
+  });
+  const addMoney = (dateStr, amount) => {
+    const d = new Date((dateStr || '') + 'T00:00:00');
+    const n = Number(amount) || 0;
+    if (isNaN(d.getTime()) || !n) return;
+    if (indexOf(d) >= 0) out.billed += n;
+    else if (d >= prevStart && d < start) out.prevBilled += n;
+  };
+  (invoices || []).forEach(inv => { if (inv) addMoney(inv.date, inv.total); });
+  income.forEach(e => addMoney(e.date, e.amount));
+  const r1 = (n) => Math.round(n * 10) / 10;
+  days.forEach(d => { d.hours = r1(d.hours); });
+  out.hours = r1(out.hours);
+  out.prevHours = r1(out.prevHours);
+  out.billed = Math.round(out.billed * 100) / 100;
+  out.prevBilled = Math.round(out.prevBilled * 100) / 100;
+  return out;
+}
+
+// ---------- Client texts (2026-09-23, Workspace rework part 12) ----------
+// The texts sent every day, written from the job: On my way (with a time),
+// Running late, Confirming the visit, a quick parts run, All done. Which
+// ones lead follows the job -- a booked job leads with On my way (or, for
+// a later day, the confirmation), one under way with Running late, a done
+// one with All done. They go out through the phone's own Messages; each is
+// logged on the job (job.texts, the last 20) so the sheet can say what was
+// sent last and when.
+const TH_TEXT_ETAS = [10, 20, 30, 45];
+function thJobVisitWhen(job, now) {
+  const at = now === undefined ? new Date() : new Date(now);
+  const d = new Date((job && job.date ? job.date : '') + 'T00:00:00');
+  if (isNaN(d.getTime())) return '';
+  const days = thDaysBetween(at, d);
+  if (days === 0) return 'today';
+  if (days === 1) return 'tomorrow';
+  if (days < 0) return '';
+  return 'on ' + d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+}
+function thJobTextTemplates(job, opts) {
+  opts = opts || {};
+  const eta = TH_TEXT_ETAS.indexOf(Number(opts.eta)) > -1 ? Number(opts.eta) : 20;
+  const first = String(job.client || '').trim().split(/\s+/)[0];
+  const hi = (first ? 'Hi ' + first : 'Hi') + ", it's Triple H Enterprises. ";
+  const street = String(job.address || '').split(',')[0].trim();
+  const when = thJobVisitWhen(job, opts.now);
+  const all = {
+    onmyway: { label: 'On my way', eta: true, body: hi + "I'm on my way and should be there in about " + eta + ' minutes.' },
+    late: { label: 'Running late', eta: true, body: hi + "I'm running about " + eta + ' minutes behind. Sorry about that, see you soon.' },
+    confirm: { label: 'Confirm the visit', eta: false, body: hi + 'Just confirming your appointment ' + when + (street ? ' at ' + street : '') + '. Reply here if anything changes.' },
+    parts: { label: 'Parts run', eta: true, body: hi + 'I need to pick up a part and will be back in about ' + eta + ' minutes.' },
+    done: { label: 'All done', eta: false, body: hi + 'All done' + (street ? ' at ' + street : '') + '! Your invoice is on its way. Thanks for choosing Triple H.' },
+  };
+  let order;
+  if (job.status === 'done') order = ['done'];
+  else if (job.status === 'in-progress') order = ['late', 'parts', 'done'];
+  else if (when && when !== 'today') order = ['confirm', 'onmyway', 'late'];
+  else order = ['onmyway', 'late'].concat(when ? ['confirm'] : []);
+  return order.map(key => Object.assign({ key: key }, all[key]));
+}
+function thLogJobText(jobId, key, now) {
+  const jobs = thRead(TH_KEYS.jobs, []);
+  const job = jobs.find(j => String(j.id) === String(jobId));
+  if (!job) return null;
+  const at = now === undefined ? new Date() : new Date(now);
+  job.texts = (Array.isArray(job.texts) ? job.texts : []).concat([{ at: at.toISOString(), key: key }]).slice(-20);
+  if (!thWrite(TH_KEYS.jobs, jobs)) return null;
+  return job;
+}
+function thJobLastText(job) {
+  const list = (job && Array.isArray(job.texts) ? job.texts : []).filter(t => t && t.at && !isNaN(new Date(t.at).getTime()));
+  return list.length ? list[list.length - 1] : null;
+}
+
 // Everything for one job in a single call -- the query that makes a real
 // Job Detail view possible, the same way thGetClientBundle() enabled
 // Client Detail. Client resolution prefers job.clientId (written on every

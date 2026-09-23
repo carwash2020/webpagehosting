@@ -1212,7 +1212,105 @@ grouped left now. Rows use a -10px left margin so the text lines up
 with the heading while keeping a padded hover/tap area (44px min
 height).
 
-## 2026-09-22 (later still) -- service history PDF, Home card grid
+## 2026-09-23 -- Paste chip under quick add
+
+- **Paste a client's text:** a 34px pill under the quick add field,
+  with an orange tint, orange text and a clipboard icon. It only renders
+  where the clipboard API exists, and hides while there's text (the
+  same `.is-typing` that hides the tiles).
+- It started as a grey button inside the field. At 390px that squeezed
+  the input to about 20 characters and cut the placeholder mid-word, so
+  it moved under the field and got a label that says what it's for.
+- **Runway Dashboard** mirrors the rule, as with the rest of the shell
+  CSS.
+
+## 2026-09-23 (later) -- the On the clock bar, the job's clock, the Stop sheet
+
+- **The bar:** a 56px frosted pill with an orange border, 94px up from
+  the bottom on a phone (the bottom bar is about 85px tall; at 84px the
+  two touched), full width with 12px gutters.
+  - Contents: a pulsing orange dot, a small-caps orange ON THE CLOCK
+    over the job · client (ellipsis), the time at 20px in tabular
+    figures so it doesn't jitter, and a solid orange Stop.
+  - On a computer: 360px, bottom-right.
+  - While it shows, the page's bottom padding and the toasts move up to
+    clear it.
+- **Job detail:** a card under the tracker. Idle, it's a line ("Time it
+  as you work, and the invoice's labor line fills itself in.") and a
+  secondary **Start the clock** with a play icon. Running, it turns
+  orange-tinted with a 34px ticking time, "On the clock since 9:02 AM",
+  and a primary Stop. A **Time** section lists each visit.
+- **Stop sheet:** the sheet title is normally a small-caps label, which
+  set "1 H 24 MIN" in capitals. For the clock it's a 24px headline
+  duration over "on <job>", then a dim "Added 1.4 h · 2.9 h on this job
+  so far".
+- **Jobs row:** an orange-outlined **On the clock** badge with its own
+  small pulsing dot.
+- New sprite icons: `clock`, `play`, `stop` (the last two filled).
+- Reduced motion turns off every pulse. The Runway Dashboard mirrors
+  the bar's CSS.
+
+## 2026-09-23 (later still) -- Remind, and the reminder sheet
+
+- **Money Owed rows:** a solid orange **REMIND** pill beside the outlined
+  MARK PAID on invoices that are due or late. It's solid because on a
+  late invoice it's the next step. After a reminder, a dim "Reminded
+  today" line sits under the amount line.
+- **The sheet:**
+  - an orange small-caps kicker with the tone (FOLLOWING UP, then FIRM
+    REMINDER · REMINDER 2);
+  - "Remind Bill Adams" at 20px, then a dim "#INV-1041 · $285.00 owed ·
+    25 days overdue";
+  - the message in a 136px editable box at 15px / 1.5, with an orange
+    focus ring;
+  - Text <name> (primary, message icon), Email (mail icon, new in the
+    sprite) and Copy (clipboard icon), three equal 48px buttons side by
+    side. With no phone, Email becomes the primary.
+  - With neither a phone nor an email, only Copy shows, with a line
+    saying why.
+- **Invoice rows and the job line** add "· reminded 3 days ago" in
+  their existing dim text. The overdue job's line leads with a primary
+  **Send a reminder**, and See invoice drops to secondary.
+
+## 2026-09-23 (evening) -- the Your week card
+
+- One card under the daily-actions strip: a dim small-caps YOUR WEEK
+  with the date range on the right, then the chart and the figures.
+- **Bars:** rounded 84px tracks (72px on a phone) in the panel's second
+  tone, filled from the bottom with the orange gradient the Create
+  button uses. Hours sit above each bar in 10.5px tabular figures and
+  the day letter below. Today's letter and figure are orange; days to
+  come are dashed outlines.
+- **Figures:** the display face at 24px (21px on a phone), a 12.5px
+  label, and a dim "Last week …" line. While a clock runs, a small
+  pulsing dot sits before "On the clock" (off under reduced motion).
+- **Layout:**
+  - On a phone the card stacks, with the bars full width in seven equal
+    columns and the three figures in a row.
+  - On a computer the bars stretch (up to 620px) with the figures
+    grouped beside them.
+  - The first desktop version kept the bars at 26px and spread the
+    figures across the full card, which left a wide dead gap; the chart
+    now takes the room instead.
+
+## 2026-09-23 (evening) -- the client text sheet, and On my way
+
+- **The sheet** shares the reminder sheet's head, message box and button
+  row:
+  - "Text Sarah Miller" at 20px, then the job and the last text sent,
+    dim;
+  - a row of pill chips for the texts (36px tall, 14px, semibold);
+  - a row of smaller time chips (32px, tabular figures);
+  - the message box, shorter here (104px), since these texts are one or
+    two lines;
+  - Send to <name> (primary) beside Copy.
+- **Pressed chips** get the same orange as a running clock: an orange-dark
+  border on the orange tint, with orange-light text.
+- **Next Job:** **On my way** (secondary, message icon) sits right after
+  Open Job, before Start the clock. It's hidden while that job's clock is
+  already running.
+
+## 2026-09-23 (evening) -- service history PDF, Home card grid
 
 - **PDF look:** reuses the Invoices receipt band (navy, logo, TRIPLE H /
   ENTERPRISES, orange doc title right) so a client's paperwork from us
