@@ -5013,3 +5013,16 @@ Tests:
 - `tests/tools/website-nav-entry.test.js` (8, new): a site-content manager sees the row. Anyone without the permission never does: not before the permissions load, not after, not with every other permission. Two of the tests run the real `auth.js` against an `account_roles` response. All 8 fail without this change.
 - `tests/tools/app-shell-v2.test.js`: the More drawer's row list now includes Website (hidden for that test's account).
 - `tests/tools/job-tracker-calendar-view.test.js`: the sidebar now has 13 destinations, not 12.
+
+## What changed, 2026-09-23 -- Booking picker test no longer fails between 5:30 and 6 PM
+
+Tests only. Nothing on the site changed.
+
+One test in `tests/portal/booking-picker-round4.test.js` taps the second open time in the client portal's booking picker. The picker opens on the first day with room and hides any time less than 2 hours away. From 5:30 to 6 PM Mountain (3:30 to 4 PM on Sundays), today has one time left, 8 PM (6 PM on Sundays). So the test found no second time and failed with "Cannot read properties of undefined (reading 'click')". CI went red only when a push landed in that half hour.
+
+- The file's picker windows now run on a fixed clock, a Wednesday at 9 AM Mountain, so the time of day no longer matters. The test still taps the second time, then another day, and checks that the page hears its pick no longer stands.
+- If the picker's first day ever has fewer than two times, the test now says so plainly instead of that error.
+
+Verified:
+- reproduced on the real clock at 5:40 PM MDT, and with the clock pinned to 5:45 PM on a weekday and a Saturday and 3:45 PM on a Sunday. The fixed test passes at all of those, and at 9 AM and 7 PM;
+- full suite (3552/3553; the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint` on the changed file.
