@@ -4869,3 +4869,34 @@ Tests: `tests/sync/tombstone-coverage.test.js` (new); 3 more in
 `tombstones-extended.test.js` and `graveyard.test.js`. All of them failed
 before the fix.
 
+## What changed, 2026-09-23 -- Restoring from the Graveyard now sticks
+
+Dev Tools' Graveyard, and sync. Nothing else changes.
+
+**What was wrong.** Restoring anything from the Graveyard (a job, an
+invoice, a client, a part, a shift, an Appliance Wiki entry) only lasted
+until the next sync. Then the record was deleted again, and it showed up
+in the Graveyard again. The same happened to "Delete permanently". So
+with cloud sync on, Restore didn't really work.
+
+**Why.** Restoring erased this device's record that the item was deleted,
+but the cloud copy still had that record. The next sync brought it back,
+and the item was deleted again.
+
+**The fix:**
+- **Restoring keeps the deleted record and marks it restored**, and that
+  mark travels to every device.
+- **Deleting the same item again later still works**, because a newer
+  delete wins over an older restore.
+- **The Graveyard hides entries that were restored or permanently
+  deleted**, and they stay hidden after a sync.
+
+Verified:
+- full suite 3406 of 3407 passing; the one failure is the known
+  `check-links.py` sandbox-proxy test;
+- `check-consistency`, `check-undefined-vars` and `eslint` clean.
+
+Tests: `tests/sync/graveyard-restore-sync.test.js` (new: two devices and a
+cloud copy, restoring, deleting again, and the Graveyard list). All 7
+failed before the fix.
+
