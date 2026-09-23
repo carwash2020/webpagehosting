@@ -1293,4 +1293,21 @@ height).
     figures across the full card, which left a wide dead gap; the chart
     now takes the room instead.
 
+## 2026-09-23 (evening) -- the client text sheet, and On my way
+
+- **The sheet** shares the reminder sheet's head, message box and button
+  row:
+  - "Text Sarah Miller" at 20px, then the job and the last text sent,
+    dim;
+  - a row of pill chips for the texts (36px tall, 14px, semibold);
+  - a row of smaller time chips (32px, tabular figures);
+  - the message box, shorter here (104px), since these texts are one or
+    two lines;
+  - Send to <name> (primary) beside Copy.
+- **Pressed chips** get the same orange as a running clock: an orange-dark
+  border on the orange tint, with orange-light text.
+- **Next Job:** **On my way** (secondary, message icon) sits right after
+  Open Job, before Start the clock. It's hidden while that job's clock is
+  already running.
+
 <!-- Add new entries above this line -->
