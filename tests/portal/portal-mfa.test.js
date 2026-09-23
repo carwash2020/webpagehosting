@@ -17,11 +17,17 @@ const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const LOGIN = fs.readFileSync(repo('portal', 'login.html'), 'utf8');
 const SETTINGS = fs.readFileSync(repo('portal', 'settings.html'), 'utf8');
 
-test('settings.html has a Two-Factor Authentication card, separate from the Security (biometric) card', () => {
+test('settings.html has a Two-Factor Authentication card, separate from the device (biometric) lock card', () => {
+  // Both now live in the "Sign-in & security" section (2026-09-22), but
+  // stay separate cards: 2FA protects the account everywhere, the device
+  // lock only this browser.
   assert.match(SETTINGS, /<span class="set-card-title">Two-Factor Authentication<\/span>/);
-  const securityIdx = SETTINGS.indexOf('<span class="set-card-title">Security</span>');
-  const mfaIdx = SETTINGS.indexOf('<span class="set-card-title">Two-Factor Authentication</span>');
-  assert.ok(securityIdx >= 0 && mfaIdx > securityIdx, 'expected the 2FA card to be its own card after Security');
+  const pane = SETTINGS.slice(SETTINGS.indexOf('id="pane-security"'), SETTINGS.indexOf('id="pane-referral"'));
+  const cards = pane.split('<div class="set-card">').slice(1);
+  const mfaCard = cards.findIndex((c) => c.includes('id="mfaToggleBtn"'));
+  const bioCard = cards.findIndex((c) => c.includes('id="biometricToggleBtn"'));
+  assert.ok(mfaCard >= 0 && bioCard >= 0, 'both toggles live in the security section');
+  assert.notEqual(mfaCard, bioCard, 'expected 2FA and the device lock in separate cards');
 });
 
 test('settings.html enrolls a real TOTP factor via Supabase MFA, not a local-only flag', () => {

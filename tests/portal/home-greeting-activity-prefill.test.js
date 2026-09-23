@@ -133,8 +133,20 @@ test('Home loads the extra columns the feed needs, and renders it after the acco
   assert.match(fn, /select\('id,total,paid,paid_at,invoice_number,invoice_date,client_name'\)/);
   assert.match(fn, /select\('id,status,total,quote_number,quote_date,responded_at,client_name'\)/);
   assert.match(fn, /select\('id,title,job_date'\)/);
-  assert.ok(HOME.indexOf('id="homeCards"') < HOME.indexOf('id="recentActivity"'));
   assert.match(extractFn(HOME, 'init'), /renderRecentActivity\(summary, new Date\(\)\);/);
+});
+
+test('on a phone the feed still reads after the account cards, even though the desktop layout moved it', () => {
+  // The desktop shell (2026-09-22) puts the feed in the main column and
+  // the account cards in the side column, so in the DOM the feed now
+  // comes FIRST. .home-main/.home-side are display:contents on a phone
+  // and flex order puts the cards back above the feed.
+  assert.ok(HOME.indexOf('class="home-main"') < HOME.indexOf('id="recentActivity"'));
+  assert.ok(HOME.indexOf('class="home-side"') < HOME.indexOf('id="homeCards"'));
+  assert.match(HOME, /\.home-main, \.home-side \{ display: contents; \}/);
+  const order = (cls) => Number(HOME.match(new RegExp('\\.' + cls + ' \\{ order: (\\d+); \\}'))[1]);
+  assert.ok(order('home-account') < order('home-activity'), 'account cards come before the feed on a phone');
+  assert.ok(order('home-activity') < order('home-help'), 'and the feed before Need Something');
 });
 
 // ---- Request Work prefill ----

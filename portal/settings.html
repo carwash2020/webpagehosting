@@ -72,7 +72,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/portal/portal-app.css?v=202609222300">
+<link rel="stylesheet" href="/portal/portal-app.css?v=202609222345">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -167,28 +167,120 @@
   }
   .set-card-title { font-family:var(--font-ui); font-weight: 600; font-size: 15px; color: var(--white); margin-bottom: 4px; }
   .set-card-sub { color: var(--text-dim); font-size: 13px; line-height: 1.5; margin-bottom: 14px; }
-  /* Collapsible sections (2026-09-05), requested directly: "we need
-     to revamp the settings it still looks a little much." Every
-     section starts collapsed, showing just its title -- the most
-     direct way to cut down the scroll length this was actually
-     asked to fix, and a client can still reach anything in one tap.
-     A real <button> for the header (not a bare div with onclick),
-     so this stays keyboard- and screen-reader-accessible without
-     extra work. */
-  .set-card-header {
-    display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    width: 100%; background: none; border: none; padding: 0; margin: 0; cursor: pointer;
-    text-align: left; color: inherit; font: inherit;
+  .set-card > .set-card-title,
+  .set-disclosure .set-card-title { display: block; }
+  .set-hint { color: var(--text-dim); font-size: 12.5px; line-height: 1.5; margin: 8px 0 14px; }
+  .set-hint a { color: var(--orange-light); }
+  .set-action { width: 100%; justify-content: center; }
+
+  /* ---- Settings menu + sections (2026-09-22) ----
+     See the comment above .settings-shell in the markup for the why.
+     The menu rows reuse the portal's card surface so the page reads as
+     one app with the rest of the portal, not a separate settings UI. */
+  .settings-index { display: flex; flex-direction: column; gap: 14px; }
+  .settings-link {
+    display: flex; align-items: center; gap: 14px; min-height: 60px;
+    padding: 12px 14px; color: var(--white); text-decoration: none;
+    transition: background .15s ease;
   }
-  .set-card-header .set-card-title { margin-bottom: 0; }
-  .set-card-chevron {
-    color: var(--text-dim); font-size: 11px; flex-shrink: 0; transition: transform 0.18s ease;
+  .settings-link:hover { background: rgba(255, 255, 255, .03); }
+  .settings-link:focus-visible { outline: 2px solid var(--orange-light); outline-offset: -2px; }
+  .settings-link-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+  .settings-link-title { font-size: 15px; font-weight: 600; color: var(--white); }
+  .settings-link-summary {
+    font-size: 13px; line-height: 1.4; color: var(--text-dim);
+    overflow: hidden; overflow-wrap: anywhere;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
   }
-  .set-card.is-collapsed .set-card-chevron { transform: rotate(-90deg); }
-  .set-card-body { margin-top: 14px; }
-  .set-card.is-collapsed .set-card-body { display: none; }
+  .settings-link-summary.is-warning { color: #ff8a80; }
+  .settings-link-summary.is-good { color: #6fcf97; }
+  .settings-chevron {
+    width: 18px; height: 18px; flex-shrink: 0; fill: none; stroke: var(--text-dim);
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  }
+  .settings-icon {
+    width: 36px; height: 36px; flex-shrink: 0; border-radius: 10px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--orange-tint-soft); color: var(--orange-light);
+  }
+  .settings-icon svg {
+    width: 20px; height: 20px; fill: none; stroke: currentColor;
+    stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+  }
+  .settings-profile {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: var(--shadow-resting); min-height: 76px;
+  }
+  .settings-avatar {
+    width: 48px; height: 48px; flex-shrink: 0; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, var(--orange), var(--orange-dark));
+    color: #0a0a0a; font-weight: 700; font-size: 18px; letter-spacing: .5px;
+  }
+  .settings-profile .settings-link-title { font-size: 17px; }
+  .settings-menu {
+    display: flex; flex-direction: column; overflow: hidden;
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: var(--shadow-resting);
+  }
+  .settings-menu .settings-link + .settings-link { border-top: 1px solid var(--border); }
+  #signOutBtnSettings { width: 100%; justify-content: center; }
+  /* Settings already has Sign out at the foot of its menu, so the
+     header's copy would be the same button twice on one screen. It
+     stays in the DOM (and wired) -- only hidden here. */
+  .portal-header #signOutBtn { display: none; }
+
+  .settings-pane[hidden] { display: none !important; }
+  .settings-pane-title {
+    font-family: var(--font-ui); font-weight: 700; font-size: 22px; letter-spacing: .2px;
+    text-transform: none; margin: 0 0 14px; outline: none;
+  }
+  .settings-back {
+    display: inline-flex; align-items: center; gap: 4px; margin: 0 0 10px -6px;
+    min-height: 40px; padding: 6px 10px 6px 4px; border: 0; border-radius: 8px;
+    background: none; color: var(--orange-light); font: inherit; font-size: 14px; font-weight: 600;
+    cursor: pointer;
+  }
+  .settings-back svg {
+    width: 20px; height: 20px; fill: none; stroke: currentColor;
+    stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+  }
+  .settings-back:hover { background: rgba(255, 255, 255, .04); }
+
+  /* Signed Authorizations: a record to look up now and then, so it's a
+     closed disclosure. Uses the portal-wide <summary> chevron from
+     portal-polish.css (the same one as "View details" on invoices and
+     quotes); this only makes the row full-width with a two-line label. */
+  body.portal-page .set-disclosure > summary { display: flex; gap: 12px; cursor: pointer; }
+  body.portal-page .set-disclosure > summary:hover { color: inherit; }
+  body.portal-page .set-disclosure > summary:hover .set-card-title { color: var(--orange-light); }
+  .set-disclosure-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .set-disclosure .set-card-title { margin-bottom: 0; }
+  .set-disclosure-hint { font-size: 13px; color: var(--text-dim); }
+  .set-disclosure[open] > summary { margin-bottom: 10px; }
+
+  /* Phone: the menu IS the page; a chosen section replaces it. */
+  @media not all and (min-width: 1024px) {
+    body[data-settings-view="pane"] .settings-index { display: none; }
+    body[data-settings-view="index"] .settings-panes { display: none; }
+  }
+  /* Desktop: menu on the left, the chosen section on the right. */
+  @media (min-width: 1024px) {
+    .settings-shell {
+      display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 28px; align-items: start;
+    }
+    .settings-index { position: sticky; top: 30px; }
+    .settings-panes { max-width: 720px; }
+    .settings-back { display: none; }
+    .settings-link.is-current { background: var(--orange-tint-soft); }
+    .settings-link.is-current .settings-link-title { color: var(--orange-light); }
+    .settings-link.is-current .settings-chevron { stroke: var(--orange-light); }
+    .settings-pane-title { font-size: 26px; margin-bottom: 18px; }
+    /* A 700px-wide button reads as a banner, not a control. */
+    .set-action { width: auto; min-width: 220px; padding-left: 28px; padding-right: 28px; }
+  }
   @media (prefers-reduced-motion: reduce) {
-    .set-card-chevron { transition: none; }
+    .settings-link { transition: none; }
   }
   .set-row { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
   .set-row:last-child { border-bottom: none; }
@@ -230,19 +322,19 @@
   .set-toggle-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14px; color: var(--white); cursor: pointer; }
   .set-toggle-row:last-of-type { border-bottom: none; }
   .set-toggle-row input[type="checkbox"] { width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--orange-light); cursor: pointer; }
-  /* Hidden on desktop (2026-09-03), requested directly. Matches the
-     same 860px desktop threshold used everywhere else in the portal
-     (the body-width breakpoint) so "computer view" means the same
-     thing consistently across the whole app. The instructions inside
-     this card ("tap the Share button", "look for Add to Home Screen
-     in your browser's menu") are written for a phone's Safari/Chrome
-     UI specifically; desktop installation is a real but different
-     flow (an address-bar icon in Chrome/Edge) that these steps don't
-     describe, so hiding rather than rewriting for both audiences at
-     once keeps the card's instructions accurate for the one it's
-     actually shown to. */
-  @media (min-width: 860px) {
-    #addHomeScreenCard { display: none; }
+  /* Add to Home Screen on desktop (2026-09-03, revised 2026-09-22).
+     Originally hidden outright at 860px+ because its steps ("tap the
+     Share button") are phone instructions. Two things changed:
+     - That hide never actually worked once the page loaded:
+       renderAddToHomeScreen() set an inline display:block, which beats
+       any stylesheet rule. It now clears the inline value instead.
+     - Desktop Chrome/Edge fire the same beforeinstallprompt event
+       Android does, so there IS an honest one-tap "Install app" on a
+       computer. Only the generic "look in your browser's menu" fallback
+       (.is-generic) is hidden on desktop now; a real install button,
+       and the iPad steps (an iPad in landscape is 1024px+), still show. */
+  @media (min-width: 1024px) {
+    #addHomeScreenCard.is-generic { display: none; }
   }
   .report-bug-link { display: block; margin-top: 14px; font-size: 12px; color: var(--text-dim); text-decoration: underline; cursor: pointer; text-align: center; background: none; border: none; font-family: inherit; padding: 0; }
   .report-bug-link:hover { color: var(--orange-light); }
@@ -256,7 +348,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=37f5d0deec">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=0e2521a23c">
 </head>
 <body class="portal-page">
 
@@ -271,244 +363,299 @@
   <button class="secondary-btn" id="signOutBtn">Sign out</button>
 </div>
 
-<nav class="portal-nav" aria-label="Primary">
-  <a href="/portal/home.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/></svg><span>Home</span></a>
-  <a href="/portal/work-orders.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 8.5v7M8.5 12h7"/></svg><span>Request</span></a>
-  <a href="/portal/quotes.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h7.5L18 8v12.5H6z"/><path d="M13.5 3.5V8H18"/><path d="M9 12.5h6M9 16h6"/></svg><span>Quotes</span></a>
-  <a href="/portal/dashboard.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9.5 9h5M9.5 13h5"/></svg><span>Invoices</span></a>
-  <a href="/portal/jobs.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8"/></svg><span>Jobs</span></a>
-</nav>
-
-<div class="set-card is-collapsed">
-  <button type="button" class="set-card-header" onclick="toggleSettingsCard(this)" aria-expanded="false">
-    <span class="set-card-title">Your Details</span>
-    <span class="set-card-chevron" aria-hidden="true">&#9662;</span>
-  </button>
-  <div class="set-card-body">
-  <div class="set-card-sub">Your name and phone are yours to update any time. Email stays locked here -- it's tied to all your invoices and job history, so if that ever needs to change, call or text us at <a href="tel:+14354141667" style="color:var(--orange-light);">(435) 414-1667</a> and we'll update it on our end to keep everything connected.</div>
-  <div class="set-row"><span class="set-row-key">Email</span><span class="set-row-val" id="detailEmailVal"></span></div>
-  <div class="set-field">
-    <label for="detailName">Name</label>
-    <input type="text" id="detailName" placeholder="Your name">
+<!-- Desktop app shell (2026-09-22). On a phone this wrapper is
+     display:contents -- the nav inside stays the fixed bottom tab bar
+     and the extras stay hidden. From 1024px it becomes a real left
+     sidebar, so the portal stops looking like a phone on a monitor.
+     Contracts/Settings live OUTSIDE the <nav> on purpose: the nav is
+     the five-tab bar and must stay exactly five links. -->
+<div class="portal-rail">
+  <a class="portal-rail-brand" href="/portal/home.html">
+    <img src="/images/logo-signature-orange.webp?v=202608142300" alt="">
+    <span><span class="portal-rail-name">Triple H</span><span class="portal-rail-tag">Client portal</span></span>
+  </a>
+  <nav class="portal-nav" aria-label="Primary">
+    <a href="/portal/home.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/></svg><span>Home</span></a>
+    <a href="/portal/work-orders.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 8.5v7M8.5 12h7"/></svg><span>Request</span></a>
+    <a href="/portal/quotes.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h7.5L18 8v12.5H6z"/><path d="M13.5 3.5V8H18"/><path d="M9 12.5h6M9 16h6"/></svg><span>Quotes</span></a>
+    <a href="/portal/dashboard.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9.5 9h5M9.5 13h5"/></svg><span>Invoices</span></a>
+    <a href="/portal/jobs.html"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8"/></svg><span>Jobs</span></a>
+  </nav>
+  <div class="portal-rail-more">
+    <div class="portal-rail-label">Account</div>
+    <a href="/portal/contracts.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h7.5L18 8v12.5H6z"/><path d="M13.5 3.5V8H18"/><path d="M9 12.5h6M9 16h6"/></svg><span>Contracts</span></a>
+    <a href="/portal/settings.html" class="is-current" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Settings</span></a>
   </div>
-  <div class="set-field">
-    <label for="detailPhone">Phone</label>
-    <input type="tel" id="detailPhone" placeholder="(555) 555-5555">
-  </div>
-  <button class="btn blue" style="width:100%; justify-content:center;" id="saveDetailsBtn">Save Details</button>
-  <div class="set-msg" id="detailsMsg" style="display:none;"></div>
-  </div>
-</div>
-
-<!-- Referral link (2026-09-20, direct request: "unique IDs connected
-     to accounts" for the referral promo, help with tracking). Read-
-     only, same principle as everything else on this page -- the code
-     itself is generated server-side (send-invite, the moment this
-     account was created, or earlier by staff if this client was
-     referring people before they ever had a portal login) and this
-     panel only ever displays it, matching client_account_codes' RLS
-     policy which lets a client SELECT their own row but never write
-     to it. -->
-<div class="set-card is-collapsed">
-  <button type="button" class="set-card-header" onclick="toggleSettingsCard(this)" aria-expanded="false">
-    <span class="set-card-title">Refer a Friend</span>
-    <span class="set-card-chevron" aria-hidden="true">&#9662;</span>
-  </button>
-  <div class="set-card-body">
-  <div class="set-card-sub">Share your link -- anyone who books through it is automatically credited to you, and you get $25 once their job is complete and paid.</div>
-  <div id="referralLinkBody"><div class="skeleton-mini"><div class="skeleton-line is-medium"></div></div></div>
+  <div class="portal-rail-help">
+    <div class="portal-rail-help-title">Need a hand?</div>
+    <p>Calling or texting is the fastest way to reach us.</p>
+    <div class="portal-rail-help-actions"><a href="tel:+14354141667">Call</a><a href="sms:+14354141667">Text</a></div>
   </div>
 </div>
 
 <!--
-  Saved card management (2026-09-03), requested directly: "Saved card
-  management (view/remove)." Since invoice payments and POS both now
-  save a card automatically, a client had no way to even know one was
-  on file, let alone remove it.
+  Settings, reworked (2026-09-22), requested directly: "i want the
+  settings reworked and less packed full of things." The page was
+  eleven stacked cards -- collapsed, but still a wall of eleven rows,
+  with Security and Two-Factor split apart and two different Sign out
+  buttons.
+
+  Now it's a short menu of six places, each with a live one-line status
+  ("Visa ending 4242", "All emails on", "Two-factor on"), so most of
+  the time a client can see what they came to check without opening
+  anything:
+  - Phone: the menu is the page. Tapping a row opens just that section
+    (with a back link), the way a phone's own Settings app works. Each
+    section has its own address (#payment, #security...), so the
+    browser's back button closes it and a section can be linked to.
+  - Desktop (1024px+): the menu sits on the left and the chosen
+    section fills the right, opening on Profile.
+  Every field, id and handler from the old cards is unchanged -- only
+  where they sit moved.
 -->
-<div class="set-card is-collapsed">
-  <button type="button" class="set-card-header" onclick="toggleSettingsCard(this)" aria-expanded="false">
-    <span class="set-card-title">Saved Cards</span>
-    <span class="set-card-chevron" aria-hidden="true">&#9662;</span>
-  </button>
-  <div class="set-card-body">
-  <div class="set-card-sub">Cards saved from a past payment, so future charges can be one tap instead of retyping your card.</div>
-  <div id="savedCardsBody"><div class="skeleton-mini"><div class="skeleton-line is-medium"></div></div><div class="skeleton-mini"><div class="skeleton-line is-narrow"></div></div></div>
-  <button class="btn blue" id="addCardBtn" style="width:100%; justify-content:center; margin-top:12px;" onclick="startAddCard()">Add a Card</button>
-  <div id="addCardArea"></div>
-  </div>
-</div>
+<div class="settings-shell">
+  <div class="settings-index">
+    <a class="settings-link settings-profile" href="#profile" data-section="profile">
+      <span class="settings-avatar" id="settingsAvatar" aria-hidden="true"></span>
+      <span class="settings-link-text">
+        <span class="settings-link-title" id="settingsProfileName">Your profile</span>
+        <span class="settings-link-summary" id="summary-profile">Name, phone &amp; email</span>
+      </span>
+      <svg class="settings-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+    </a>
 
-<!--
-  View past signed authorizations (2026-09-03), requested directly:
-  "View past signed authorizations" -- the same transparency
-  reasoning behind showing a receipt for every charge. Read via the
-  Supabase client directly (RLS-protected: clients can only ever see
-  their own rows), no edge function needed for a plain read.
--->
-<div class="set-card is-collapsed">
-  <button type="button" class="set-card-header" onclick="toggleSettingsCard(this)" aria-expanded="false">
-    <span class="set-card-title">Signed Authorizations</span>
-    <span class="set-card-chevron" aria-hidden="true">&#9662;</span>
-  </button>
-  <div class="set-card-body">
-  <div class="set-card-sub">What you've agreed to when a card was saved on your account.</div>
-  <div id="authorizationsBody"><div class="skeleton-mini"><div class="skeleton-line is-medium"></div></div><div class="skeleton-mini"><div class="skeleton-line is-narrow"></div></div></div>
-  </div>
-</div>
+    <nav class="settings-menu" aria-label="Settings sections">
+      <a class="settings-link" href="#payment" data-section="payment">
+        <span class="settings-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h3"/></svg></span>
+        <span class="settings-link-text">
+          <span class="settings-link-title">Payment</span>
+          <span class="settings-link-summary" id="summary-payment">Saved cards &amp; authorizations</span>
+        </span>
+        <svg class="settings-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </a>
+      <a class="settings-link" href="#notifications" data-section="notifications">
+        <span class="settings-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg></span>
+        <span class="settings-link-text">
+          <span class="settings-link-title">Notifications</span>
+          <span class="settings-link-summary" id="summary-notifications">Email &amp; push</span>
+        </span>
+        <svg class="settings-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </a>
+      <a class="settings-link" href="#security" data-section="security">
+        <span class="settings-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg></span>
+        <span class="settings-link-text">
+          <span class="settings-link-title">Sign-in &amp; security</span>
+          <span class="settings-link-summary" id="summary-security">Password &amp; two-factor</span>
+        </span>
+        <svg class="settings-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </a>
+      <a class="settings-link" href="#referral" data-section="referral">
+        <span class="settings-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="8.5" width="17" height="4" rx="1"/><path d="M5 12.5v8h14v-8M12 8.5v12"/><path d="M12 8.5C10.5 5 7 5 7 7s3 1.5 5 1.5S17 9 17 7s-3.5-2-5 1.5z"/></svg></span>
+        <span class="settings-link-text">
+          <span class="settings-link-title">Refer a friend</span>
+          <span class="settings-link-summary" id="summary-referral">Earn a $25 credit</span>
+        </span>
+        <svg class="settings-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </a>
+      <a class="settings-link" href="#app" data-section="app">
+        <span class="settings-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 17.5h2"/></svg></span>
+        <span class="settings-link-text">
+          <span class="settings-link-title">App</span>
+          <span class="settings-link-summary" id="summary-app">Install &amp; updates</span>
+        </span>
+        <svg class="settings-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+      </a>
+    </nav>
 
-<!--
-  Add to Home Screen (2026-09-02), requested directly: "for loyal
-  guests who use us for lots of jobs." A genuinely different
-  experience per platform, not something one button can uniformly
-  provide:
+    <!-- Sign out, also in Settings (2026-09-04), requested directly -- the
+         header's own Sign out button stays exactly as it was; this is the
+         second, natural place to find it, at the foot of the menu the way
+         a phone's own settings screen puts it. Same real sign-out call as
+         the header button, not a separate implementation. -->
+    <button class="secondary-btn" id="signOutBtnSettings" type="button">Sign out</button>
+  </div>
 
-  - Android/Chrome fires a real `beforeinstallprompt` event that can
-    be captured and re-triggered with one tap via event.prompt() --
-    a true one-tap install.
-  - iOS Safari deliberately exposes NO programmatic install trigger
-    at all -- this is an Apple platform restriction, not something
-    any amount of code can work around. The only path is the user's
-    own Share button -> Add to Home Screen, so this shows clear
-    step-by-step instructions instead of a button that would do
-    nothing when tapped.
-  - Already-installed (either platform) is detected directly rather
-    than assumed, so a returning app-mode user sees neither prompt.
--->
-<div class="set-card is-collapsed" id="addHomeScreenCard">
-  <button type="button" class="set-card-header" onclick="toggleSettingsCard(this)" aria-expanded="false">
-    <span class="set-card-title">Add to Home Screen</span>
-    <span class="set-card-chevron" aria-hidden="true">&#9662;</span>
-  </button>
-  <div class="set-card-body">
-  <div class="set-card-sub" id="addHomeScreenSub">Get one-tap access next time -- no re-typing the address or digging through your history.</div>
-  <div id="addHomeScreenBody"></div>
-  </div>
-</div>
+  <div class="settings-panes">
 
-<div class="set-card is-collapsed">
-  <button type="button" class="set-card-header" onclick="toggleSettingsCard(this)" aria-expanded="false">
-    <span class="set-card-title">Change Password</span>
-    <span class="set-card-chevron" aria-hidden="true">&#9662;</span>
-  </button>
-  <div class="set-card-body">
-  <div class="set-card-sub">Pick something at least 8 characters long.</div>
-  <div class="set-field">
-    <label for="newPassword">New password</label>
-    <input type="password" id="newPassword" autocomplete="new-password" placeholder="At least 8 characters">
-  </div>
-  <div class="set-field">
-    <label for="confirmPassword">Confirm new password</label>
-    <input type="password" id="confirmPassword" autocomplete="new-password" placeholder="Type it again">
-  </div>
-  <button class="btn blue" style="width:100%; justify-content:center;" id="savePasswordBtn">Update Password</button>
-  <div class="set-msg" id="passwordMsg" style="display:none;"></div>
-  </div>
-</div>
-
-<div class="set-card is-collapsed">
-  <button type="button" class="set-card-header" onclick="toggleSettingsCard(this)" aria-expanded="false">
-    <span class="set-card-title">Notifications</span>
-    <span class="set-card-chevron" aria-hidden="true">&#9662;</span>
-  </button>
-  <div class="set-card-body">
-  <div class="set-card-sub">Transactional emails only &mdash; no marketing, no newsletters. Turn off anything you consider noise.</div>
-  <label class="set-toggle-row"><input type="checkbox" id="notifyInvoiceQuote"> New invoices &amp; estimates</label>
-  <label class="set-toggle-row"><input type="checkbox" id="notifyWorkOrder"> Work scheduled updates</label>
-  <label class="set-toggle-row"><input type="checkbox" id="notifyMessages"> Replies to your messages</label>
-  <div class="set-msg" id="notifyMsg" style="display:none;"></div>
-
-  <!--
-    Push notifications (2026-09-04), requested directly. A separate,
-    device-level opt-in from the email toggles above -- those are
-    simple database flags, this requires real browser/OS permission
-    and only ever applies to the specific device it was enabled on.
-    Kept in the same card since both answer the same underlying
-    question ("how do you want to hear about these things"), but
-    visually separated with its own border so the device-specific
-    nature is clear.
-  -->
-  <div style="border-top:1px solid var(--border); margin-top:16px; padding-top:16px;">
-    <div class="set-card-sub" style="margin-bottom:10px;">Push notifications on this device, for the same events as the emails above.</div>
-    <button class="btn blue" id="pushToggleBtn" style="width:100%; justify-content:center;">Loading...</button>
-    <div class="set-msg" id="pushMsg" style="display:none;"></div>
-  </div>
-  </div>
-</div>
-
-<!--
-  Biometric unlock (2026-09-05), requested directly. A separate card
-  from Notifications, unlike push -- this is about protecting access
-  to the account on this device, not about how you hear about
-  things, a genuinely different concern. Device-specific, same as
-  push: enabling it here only affects THIS browser/device, not the
-  account everywhere.
--->
-<div class="set-card is-collapsed">
-  <button type="button" class="set-card-header" onclick="toggleSettingsCard(this)" aria-expanded="false">
-    <span class="set-card-title">Security</span>
-    <span class="set-card-chevron" aria-hidden="true">&#9662;</span>
-  </button>
-  <div class="set-card-body">
-  <div class="set-card-sub">Require Face ID, Touch ID, or your device PIN to open the app on this device.</div>
-  <button class="btn blue" id="biometricToggleBtn" style="width:100%; justify-content:center;">Loading...</button>
-  <div class="set-msg" id="biometricMsg" style="display:none;"></div>
-  </div>
-</div>
-
-<!--
-  Two-factor authentication (2026-09-16) -- a real, server-verified
-  second factor via Supabase Auth MFA (TOTP), unlike the biometric
-  toggle above which only locks the app UI on this one device and
-  never touches the account itself. Its own card, not folded into
-  Security above, since it protects the account everywhere it's
-  signed in, not just this device.
--->
-<div class="set-card is-collapsed">
-  <button type="button" class="set-card-header" onclick="toggleSettingsCard(this)" aria-expanded="false">
-    <span class="set-card-title">Two-Factor Authentication</span>
-    <span class="set-card-chevron" aria-hidden="true">&#9662;</span>
-  </button>
-  <div class="set-card-body">
-  <div class="set-card-sub">Add a code from an authenticator app as a second step when you sign in, on top of your password.</div>
-  <button class="btn blue" id="mfaToggleBtn" style="width:100%; justify-content:center;">Loading...</button>
-  <div id="mfaEnrollArea" style="display:none; margin-top:14px;">
-    <div style="text-align:center; margin-bottom:12px;">
-      <img id="mfaQrImg" alt="Scan this QR code with your authenticator app" style="width:180px; height:180px; background:#fff; border-radius:8px; padding:8px;">
+    <div class="settings-pane" id="pane-profile" data-section="profile" role="region" aria-labelledby="pane-profile-title" hidden>
+      <button type="button" class="settings-back" onclick="openSettingsSection(null)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>All settings</button>
+      <h2 class="settings-pane-title" id="pane-profile-title" tabindex="-1">Profile</h2>
+      <div class="set-card">
+        <div class="set-row"><span class="set-row-key">Email</span><span class="set-row-val" id="detailEmailVal"></span></div>
+        <p class="set-hint">Email can't be changed here -- it's tied to all your invoices and job history. Call or text <a href="tel:+14354141667">(435) 414-1667</a> and we'll change it on our end so everything stays connected.</p>
+        <div class="set-field">
+          <label for="detailName">Name</label>
+          <input type="text" id="detailName" placeholder="Your name" autocomplete="name">
+        </div>
+        <div class="set-field">
+          <label for="detailPhone">Phone</label>
+          <input type="tel" id="detailPhone" placeholder="(555) 555-5555" autocomplete="tel">
+        </div>
+        <button class="btn blue set-action" id="saveDetailsBtn">Save Details</button>
+        <div class="set-msg" id="detailsMsg" style="display:none;"></div>
+      </div>
     </div>
-    <div class="set-card-sub" style="margin-bottom:8px;">Scan this with an authenticator app (Google Authenticator, Authy, etc.), then enter the 6-digit code it shows.</div>
-    <input type="text" id="mfaCodeInput" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" maxlength="6" style="width:100%; padding:11px 13px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:8px; color:var(--white); font-size:16px; font-family:inherit; box-sizing:border-box; margin-bottom:10px; letter-spacing:2px; text-align:center;">
-    <div style="display:flex; gap:10px;">
-      <button class="btn secondary-btn" id="mfaEnrollCancelBtn" type="button" style="flex:1; justify-content:center;">Cancel</button>
-      <button class="btn orange" id="mfaEnrollVerifyBtn" type="button" style="flex:1; justify-content:center;">Verify &amp; Turn On</button>
+
+    <!--
+      Saved card management (2026-09-03), requested directly: "Saved card
+      management (view/remove)." Since invoice payments and POS both now
+      save a card automatically, a client had no way to even know one was
+      on file, let alone remove it.
+    -->
+    <div class="settings-pane" id="pane-payment" data-section="payment" role="region" aria-labelledby="pane-payment-title" hidden>
+      <button type="button" class="settings-back" onclick="openSettingsSection(null)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>All settings</button>
+      <h2 class="settings-pane-title" id="pane-payment-title" tabindex="-1">Payment</h2>
+      <div class="set-card">
+        <span class="set-card-title">Saved Cards</span>
+        <div class="set-card-sub">Saved from a past payment, so paying next time is one tap.</div>
+        <div id="savedCardsBody"><div class="skeleton-mini"><div class="skeleton-line is-medium"></div></div><div class="skeleton-mini"><div class="skeleton-line is-narrow"></div></div></div>
+        <button class="btn blue set-action" id="addCardBtn" style="margin-top:12px;" onclick="startAddCard()">Add a Card</button>
+        <div id="addCardArea"></div>
+      </div>
+      <!--
+        View past signed authorizations (2026-09-03), requested directly:
+        "View past signed authorizations" -- the same transparency
+        reasoning behind showing a receipt for every charge. Read via the
+        Supabase client directly (RLS-protected: clients can only ever see
+        their own rows). A disclosure now: it's a record to look up
+        occasionally, not something to read every visit.
+      -->
+      <details class="set-card set-disclosure">
+        <summary><span class="set-disclosure-text"><span class="set-card-title">Signed Authorizations</span><span class="set-disclosure-hint">What you agreed to when a card was saved</span></span></summary>
+        <div id="authorizationsBody"><div class="skeleton-mini"><div class="skeleton-line is-medium"></div></div><div class="skeleton-mini"><div class="skeleton-line is-narrow"></div></div></div>
+      </details>
     </div>
-  </div>
-  <div class="set-msg" id="mfaMsg" style="display:none;"></div>
-  </div>
-</div>
 
-<!--
-  Sign out, also in Settings (2026-09-04), requested directly -- the
-  header's own Sign out button (every portal page has one) stays
-  exactly as it was; this is a second, natural place to find it,
-  matching the common pattern of account actions living at the
-  bottom of a settings screen. Same real sign-out call as the header
-  button, not a separate, second implementation.
--->
-<!-- App version / update. Matters for the INSTALLED app: it can sit
-     unopened for weeks and reopen straight from cache, and before this
-     the only way out of a stale copy was to delete and reinstall it. -->
-<div class="set-card">
-  <div class="set-card-title">App version</div>
-  <p class="set-card-sub">If something looks out of date or a fix you were told about is missing, update here. You will not be signed out, and nothing you have saved is affected.</p>
-  <div class="set-card-body">
-    <button class="btn blue" id="updateAppBtn" style="width:100%; justify-content:center;">Update app</button>
-    <p class="set-msg" id="updateAppMsg" style="margin-top:10px;"></p>
-  </div>
-</div>
+    <div class="settings-pane" id="pane-notifications" data-section="notifications" role="region" aria-labelledby="pane-notifications-title" hidden>
+      <button type="button" class="settings-back" onclick="openSettingsSection(null)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>All settings</button>
+      <h2 class="settings-pane-title" id="pane-notifications-title" tabindex="-1">Notifications</h2>
+      <div class="set-card">
+        <span class="set-card-title">Email</span>
+        <div class="set-card-sub">Transactional emails only &mdash; no marketing, no newsletters.</div>
+        <label class="set-toggle-row"><input type="checkbox" id="notifyInvoiceQuote"> New invoices &amp; estimates</label>
+        <label class="set-toggle-row"><input type="checkbox" id="notifyWorkOrder"> Work scheduled updates</label>
+        <label class="set-toggle-row"><input type="checkbox" id="notifyMessages"> Replies to your messages</label>
+        <div class="set-msg" id="notifyMsg" style="display:none;"></div>
+      </div>
+      <!--
+        Push notifications (2026-09-04), requested directly. A separate,
+        device-level opt-in from the email toggles above -- those are
+        simple database flags, this requires real browser/OS permission
+        and only ever applies to the specific device it was enabled on.
+      -->
+      <div class="set-card">
+        <span class="set-card-title">Push on this device</span>
+        <div class="set-card-sub">The same events as the emails above, as a notification on this phone or computer.</div>
+        <button class="btn blue set-action" id="pushToggleBtn">Loading...</button>
+        <div class="set-msg" id="pushMsg" style="display:none;"></div>
+      </div>
+    </div>
 
-<div class="set-card">
-  <button class="secondary-btn" id="signOutBtnSettings" style="width:100%; justify-content:center;">Sign out</button>
+    <div class="settings-pane" id="pane-security" data-section="security" role="region" aria-labelledby="pane-security-title" hidden>
+      <button type="button" class="settings-back" onclick="openSettingsSection(null)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>All settings</button>
+      <h2 class="settings-pane-title" id="pane-security-title" tabindex="-1">Sign-in &amp; security</h2>
+      <div class="set-card">
+        <span class="set-card-title">Password</span>
+        <div class="set-card-sub">Pick something at least 8 characters long.</div>
+        <div class="set-field">
+          <label for="newPassword">New password</label>
+          <input type="password" id="newPassword" autocomplete="new-password" placeholder="At least 8 characters">
+        </div>
+        <div class="set-field">
+          <label for="confirmPassword">Confirm new password</label>
+          <input type="password" id="confirmPassword" autocomplete="new-password" placeholder="Type it again">
+        </div>
+        <button class="btn blue set-action" id="savePasswordBtn">Update Password</button>
+        <div class="set-msg" id="passwordMsg" style="display:none;"></div>
+      </div>
+      <!--
+        Two-factor authentication (2026-09-16) -- a real, server-verified
+        second factor via Supabase Auth MFA (TOTP), unlike the device lock
+        below which only locks the app UI on this one device and never
+        touches the account itself. Its own card for exactly that reason.
+      -->
+      <div class="set-card">
+        <span class="set-card-title">Two-Factor Authentication</span>
+        <div class="set-card-sub">A code from an authenticator app as a second step when you sign in, on top of your password.</div>
+        <button class="btn blue set-action" id="mfaToggleBtn">Loading...</button>
+        <div id="mfaEnrollArea" style="display:none; margin-top:14px;">
+          <div style="text-align:center; margin-bottom:12px;">
+            <img id="mfaQrImg" alt="Scan this QR code with your authenticator app" style="width:180px; height:180px; background:#fff; border-radius:8px; padding:8px;">
+          </div>
+          <div class="set-card-sub" style="margin-bottom:8px;">Scan this with an authenticator app (Google Authenticator, Authy, etc.), then enter the 6-digit code it shows.</div>
+          <input type="text" id="mfaCodeInput" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" maxlength="6" style="width:100%; padding:11px 13px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:8px; color:var(--white); font-size:16px; font-family:inherit; box-sizing:border-box; margin-bottom:10px; letter-spacing:2px; text-align:center;">
+          <div style="display:flex; gap:10px;">
+            <button class="btn secondary-btn" id="mfaEnrollCancelBtn" type="button" style="flex:1; justify-content:center;">Cancel</button>
+            <button class="btn orange" id="mfaEnrollVerifyBtn" type="button" style="flex:1; justify-content:center;">Verify &amp; Turn On</button>
+          </div>
+        </div>
+        <div class="set-msg" id="mfaMsg" style="display:none;"></div>
+      </div>
+      <!--
+        Biometric unlock (2026-09-05), requested directly. Device-specific:
+        enabling it here only affects THIS browser/device, not the account
+        everywhere -- which is why it's its own card, apart from two-factor.
+      -->
+      <div class="set-card">
+        <span class="set-card-title">Face ID &amp; Touch ID</span>
+        <div class="set-card-sub">Require Face ID, Touch ID, or your device PIN to open the app on this device.</div>
+        <button class="btn blue set-action" id="biometricToggleBtn">Loading...</button>
+        <div class="set-msg" id="biometricMsg" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- Referral link (2026-09-20, direct request: "unique IDs connected
+         to accounts" for the referral promo, help with tracking). Read-
+         only -- the code itself is generated server-side and this panel
+         only ever displays it, matching client_account_codes' RLS policy
+         which lets a client SELECT their own row but never write to it. -->
+    <div class="settings-pane" id="pane-referral" data-section="referral" role="region" aria-labelledby="pane-referral-title" hidden>
+      <button type="button" class="settings-back" onclick="openSettingsSection(null)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>All settings</button>
+      <h2 class="settings-pane-title" id="pane-referral-title" tabindex="-1">Refer a friend</h2>
+      <div class="set-card">
+        <div class="set-card-sub">Share your link -- anyone who books through it is automatically credited to you, and you get $25 once their job is complete and paid.</div>
+        <div id="referralLinkBody"><div class="skeleton-mini"><div class="skeleton-line is-medium"></div></div></div>
+      </div>
+    </div>
+
+    <div class="settings-pane" id="pane-app" data-section="app" role="region" aria-labelledby="pane-app-title" hidden>
+      <button type="button" class="settings-back" onclick="openSettingsSection(null)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>All settings</button>
+      <h2 class="settings-pane-title" id="pane-app-title" tabindex="-1">App</h2>
+      <!--
+        Add to Home Screen (2026-09-02), requested directly: "for loyal
+        guests who use us for lots of jobs." A genuinely different
+        experience per platform, not something one button can uniformly
+        provide:
+
+        - Android/Chrome fires a real `beforeinstallprompt` event that can
+          be captured and re-triggered with one tap via event.prompt() --
+          a true one-tap install.
+        - iOS Safari deliberately exposes NO programmatic install trigger
+          at all -- this is an Apple platform restriction, not something
+          any amount of code can work around. The only path is the user's
+          own Share button -> Add to Home Screen, so this shows clear
+          step-by-step instructions instead of a button that would do
+          nothing when tapped.
+        - Already-installed (either platform) is detected directly rather
+          than assumed, so a returning app-mode user sees neither prompt.
+      -->
+      <div class="set-card" id="addHomeScreenCard">
+        <span class="set-card-title">Add to Home Screen</span>
+        <div class="set-card-sub" id="addHomeScreenSub">One-tap access next time -- no re-typing the address or digging through your history.</div>
+        <div id="addHomeScreenBody"></div>
+      </div>
+      <!-- App version / update. Matters for the INSTALLED app: it can sit
+           unopened for weeks and reopen straight from cache, and before this
+           the only way out of a stale copy was to delete and reinstall it. -->
+      <div class="set-card">
+        <span class="set-card-title">App version</span>
+        <p class="set-card-sub">If something looks out of date or a fix you were told about is missing, update here. You will not be signed out, and nothing you have saved is affected.</p>
+        <button class="btn blue set-action" id="updateAppBtn">Update app</button>
+        <p class="set-msg" id="updateAppMsg" style="margin-top:10px;"></p>
+      </div>
+    </div>
+
+  </div>
 </div>
 
 <script>
@@ -525,12 +672,122 @@
   let stripeInstance = null;
   let elementsInstance = null;
 
-  // Collapsible sections (2026-09-05) -- toggles the ONE card this
-  // header button belongs to, never any other section.
-  function toggleSettingsCard(headerBtn) {
-    const card = headerBtn.closest('.set-card');
-    const collapsed = card.classList.toggle('is-collapsed');
-    headerBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  // Settings sections (2026-09-22). The URL hash is the single source
+  // of truth for which section is open (#payment, #security...), so the
+  // browser's back button, a refresh and a shared link all agree.
+  // Phone: no hash = the menu; a hash = that section alone. Desktop:
+  // menu and section side by side, opening on Profile.
+  const SETTINGS_SECTIONS = ['profile', 'payment', 'notifications', 'security', 'referral', 'app'];
+  const settingsDesktopMq = window.matchMedia('(min-width: 1024px)');
+  let settingsOpenSection = null;
+
+  function currentSettingsSection() {
+    const key = (window.location.hash || '').replace(/^#/, '');
+    return SETTINGS_SECTIONS.includes(key) ? key : null;
+  }
+
+  function renderSettingsSection(opts) {
+    const focus = !!(opts && opts.focus);
+    const previous = settingsOpenSection;
+    const key = currentSettingsSection() || (settingsDesktopMq.matches ? 'profile' : null);
+    settingsOpenSection = key;
+    document.body.dataset.settingsView = key ? 'pane' : 'index';
+    document.querySelectorAll('.settings-pane').forEach((pane) => {
+      pane.hidden = pane.dataset.section !== key;
+    });
+    document.querySelectorAll('.settings-link').forEach((link) => {
+      const current = link.dataset.section === key;
+      link.classList.toggle('is-current', current);
+      if (current) link.setAttribute('aria-current', 'true');
+      else link.removeAttribute('aria-current');
+    });
+    if (key && focus) {
+      const title = document.getElementById('pane-' + key + '-title');
+      if (!settingsDesktopMq.matches) window.scrollTo(0, 0);
+      if (title) title.focus({ preventScroll: true });
+    } else if (!key && previous && !settingsDesktopMq.matches) {
+      // Back on the phone menu: return focus to the row that was open.
+      const link = document.querySelector('.settings-link[data-section="' + previous + '"]');
+      if (link) link.focus({ preventScroll: true });
+    }
+  }
+
+  // Opening a section on a phone is a navigation (back closes it), so it
+  // pushes a history entry; on desktop it's a tab switch, so it replaces
+  // the current one rather than making Back walk through every tab.
+  function openSettingsSection(key) {
+    const base = window.location.pathname + window.location.search;
+    if (key) {
+      if (settingsDesktopMq.matches) history.replaceState(null, '', base + '#' + key);
+      else history.pushState({ settingsSection: key }, '', base + '#' + key);
+    } else if (history.state && history.state.settingsSection) {
+      history.back();
+      return;
+    } else {
+      history.replaceState(null, '', base);
+    }
+    renderSettingsSection({ focus: true });
+  }
+
+  document.querySelectorAll('.settings-link').forEach((link) => {
+    link.addEventListener('click', (e) => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      openSettingsSection(link.dataset.section);
+    });
+  });
+  window.addEventListener('popstate', () => renderSettingsSection());
+  window.addEventListener('hashchange', () => renderSettingsSection());
+  if (settingsDesktopMq.addEventListener) settingsDesktopMq.addEventListener('change', () => renderSettingsSection());
+  else if (settingsDesktopMq.addListener) settingsDesktopMq.addListener(() => renderSettingsSection());
+  renderSettingsSection();
+
+  // The one-line status under each menu row. Starts as a plain
+  // description in the markup and is replaced once the real state is
+  // known -- a failed load just leaves the description, never a blank.
+  function setSettingsSummary(key, text, tone) {
+    const el = document.getElementById('summary-' + key);
+    if (!el || !text) return;
+    el.textContent = text;
+    el.classList.toggle('is-warning', tone === 'warning');
+    el.classList.toggle('is-good', tone === 'good');
+  }
+
+  function settingsInitials(name, email) {
+    const words = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (words.length >= 2) return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+    if (words.length === 1) return words[0][0].toUpperCase();
+    return String(email || '?').charAt(0).toUpperCase();
+  }
+
+  function renderSettingsProfile(name, email) {
+    document.getElementById('settingsAvatar').textContent = settingsInitials(name, email);
+    document.getElementById('settingsProfileName').textContent = name || 'Your profile';
+    setSettingsSummary('profile', email);
+  }
+
+  // Notifications + Security rows combine two independent loads each,
+  // so each load records its half here and the row is re-rendered.
+  const settingsStatus = { emailsOn: null, pushOn: false, mfaOn: null, biometricOn: false };
+
+  function renderNotificationsSummary() {
+    if (settingsStatus.emailsOn === null) return;
+    const n = settingsStatus.emailsOn;
+    let text = n === 3 ? 'All emails on' : n === 0 ? 'Emails off' : n + ' of 3 emails on';
+    if (settingsStatus.pushOn) text += ' \u00b7 push on';
+    setSettingsSummary('notifications', text);
+  }
+
+  function renderSecuritySummary() {
+    if (settingsStatus.mfaOn === null) return;
+    let text = settingsStatus.mfaOn ? 'Two-factor on' : 'Password only';
+    if (settingsStatus.biometricOn) text += ' \u00b7 Face ID on';
+    setSettingsSummary('security', text, settingsStatus.mfaOn ? 'good' : null);
+  }
+
+  function countNotificationEmailsOn() {
+    return ['notifyInvoiceQuote', 'notifyWorkOrder', 'notifyMessages']
+      .filter((id) => document.getElementById(id).checked).length;
   }
 
   function escapeHtml(str) {
@@ -576,6 +833,8 @@
     document.getElementById('notifyInvoiceQuote').checked = data ? data.wants_invoice_quote_emails !== false : true;
     document.getElementById('notifyWorkOrder').checked = data ? data.wants_work_order_emails !== false : true;
     document.getElementById('notifyMessages').checked = data ? data.wants_message_emails !== false : true;
+    settingsStatus.emailsOn = countNotificationEmailsOn();
+    renderNotificationsSummary();
   }
 
   async function saveNotificationPreference() {
@@ -593,6 +852,8 @@
       return;
     }
     showNotifyMsg('Saved.', false);
+    settingsStatus.emailsOn = countNotificationEmailsOn();
+    renderNotificationsSummary();
   }
 
   ['notifyInvoiceQuote', 'notifyWorkOrder', 'notifyMessages'].forEach(id => {
@@ -632,6 +893,7 @@
       return;
     }
     showDetailsMsg('Details saved.', false);
+    renderSettingsProfile(name, session.user.email);
   }
 
   document.getElementById('saveDetailsBtn').addEventListener('click', saveClientProfile);
@@ -740,6 +1002,7 @@
 
       const link = 'https://www.triplehenterprisesllc.biz/booking.html?ref=' + encodeURIComponent(result.code);
       const smsBody = encodeURIComponent("Hey, I've been happy with Triple H Enterprises for handyman/appliance work -- book through my link and we both get taken care of: " + link);
+      if (result.usage_count > 0) setSettingsSummary('referral', 'Used ' + result.usage_count + ' time' + (result.usage_count === 1 ? '' : 's'), 'good');
       const usageNote = result.usage_count > 0
         ? '<p class="set-card-sub" style="margin:10px 0 0;">Used to book ' + result.usage_count + ' time' + (result.usage_count === 1 ? '' : 's') + ' so far.</p>'
         : '';
@@ -774,6 +1037,7 @@
 
   function renderSavedCards(cards) {
     const body = document.getElementById('savedCardsBody');
+    renderPaymentSummary(cards);
     if (!cards.length) {
       body.innerHTML = '<p class="set-card-sub" style="margin:0;">No cards saved yet.</p>';
       return;
@@ -786,6 +1050,18 @@
       return '<div class="set-row"><span class="set-row-key">' + escapeHtml(brandLabel) + ' ending in ' + escapeHtml(c.last4) + ' ' + activeBadge + '<br>' + expHtml + '</span>' +
         '<button class="small-btn danger" onclick="removeSavedCard(\'' + escapeHtml(c.id) + '\')">Remove</button></div>';
     }).join('');
+  }
+
+  // Menu row: the card a payment would actually use (the active one,
+  // else the only one), flagged if it's expired or about to be.
+  function renderPaymentSummary(cards) {
+    if (!cards.length) { setSettingsSummary('payment', 'No card saved'); return; }
+    const card = cards.find((c) => c.is_active) || cards[0];
+    const brand = (card.brand || 'card').charAt(0).toUpperCase() + (card.brand || 'card').slice(1);
+    const exp = cardExpirationStatus(card.exp_month, card.exp_year);
+    let text = cards.length > 1 ? cards.length + ' cards \u00b7 ' + brand + ' ending ' + card.last4 : brand + ' ending ' + card.last4;
+    if (exp.isWarning) text += /expired/.test(exp.label) ? ' \u00b7 expired' : ' \u00b7 expiring soon';
+    setSettingsSummary('payment', text, exp.isWarning ? 'warning' : null);
   }
 
   async function removeSavedCard(paymentMethodId) {
@@ -991,12 +1267,19 @@
     // reappears if a client somehow returns to a non-installed state
     // and disappears the moment they actually install it.
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-    card.style.display = isStandalone ? 'none' : 'block';
+    // '' (not 'block') when showing: an inline display beats the
+    // stylesheet, and the desktop rule for .is-generic has to win.
+    card.style.display = isStandalone ? 'none' : '';
+    card.classList.remove('is-generic');
+    setSettingsSummary('app', isStandalone ? 'Installed on this device' : 'Install & updates');
     if (isStandalone) return;
 
     if (deferredInstallPrompt) {
       // Android/Chrome: a REAL one-tap install, not just instructions.
-      body.innerHTML = '<button class="btn blue" style="width:100%; justify-content:center;" id="installHomeScreenBtn">Add to Home Screen</button>';
+      // Desktop Chrome/Edge fire this too, where "Home Screen" is the
+      // wrong word for what the button does.
+      const installLabel = settingsDesktopMq.matches ? 'Install app' : 'Add to Home Screen';
+      body.innerHTML = '<button class="btn blue" style="width:100%; justify-content:center;" id="installHomeScreenBtn">' + installLabel + '</button>';
       document.getElementById('installHomeScreenBtn').addEventListener('click', async () => {
         const promptEvent = deferredInstallPrompt;
         if (!promptEvent) return;
@@ -1028,6 +1311,7 @@
     // desktop Firefox/Safari, which don't support installable web
     // apps the same way. A generic pointer rather than false-specific
     // steps for a browser this can't actually verify.
+    card.classList.add('is-generic');
     body.innerHTML = '<p class="set-card-sub" style="margin:0;">Look for "Add to Home Screen" or "Install App" in your browser\'s menu.</p>';
   }
 
@@ -1053,13 +1337,15 @@
     const isStandaloneNow = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
     const isIOSNow = /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     if (isIOSNow && !isStandaloneNow) {
-      btn.textContent = 'Add to Home Screen first (see above)';
+      btn.textContent = 'Add to Home Screen first (Settings \u203a App)';
       btn.disabled = true;
       return;
     }
 
     btn.disabled = false;
     const enabled = await isPortalPushEnabled();
+    settingsStatus.pushOn = !!enabled;
+    renderNotificationsSummary();
     btn.textContent = enabled ? 'Turn off push notifications' : 'Enable push notifications';
     btn.onclick = enabled ? handleDisablePush : handleEnablePush;
     msgEl.style.display = 'none';
@@ -1102,6 +1388,8 @@
 
     btn.disabled = false;
     const enabled = portalIsBiometricLockEnabled(email);
+    settingsStatus.biometricOn = !!enabled;
+    renderSecuritySummary();
     btn.textContent = enabled ? 'Turn off biometric unlock' : 'Enable biometric unlock';
     btn.onclick = enabled ? () => handleDisableBiometric(email) : () => handleEnableBiometric(email);
     document.getElementById('biometricMsg').style.display = 'none';
@@ -1153,6 +1441,8 @@
     }
     btn.disabled = false;
     const verified = (data.totp || []).find((f) => f.status === 'verified');
+    settingsStatus.mfaOn = !!verified;
+    renderSecuritySummary();
     if (verified) {
       mfaFactorId = verified.id;
       btn.textContent = 'Turn off two-factor authentication';
@@ -1304,6 +1594,7 @@
 
     document.getElementById('detailName').value = name;
     document.getElementById('detailPhone').value = phone;
+    renderSettingsProfile(name, email);
 
     loadSavedCards();
     loadAuthorizations();

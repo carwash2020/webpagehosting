@@ -2144,6 +2144,50 @@ appears where the API exists.
 - `closePalette()` now blurs the palette's input; before, N right after
   closing search was swallowed as typing.
 
+## 2026-09-22 (later still) -- Client portal: a real desktop layout, and Settings as a menu
+
+Both asked for directly after the visits/unread PR merged: "The computer
+version looks like your looking at a phone on a monitor screen" and "i
+want the settings reworked and less packed full of things."
+
+**Desktop shell.** Decided against a separate desktop nav: the existing
+`<nav class="portal-nav">` is wrapped in a `.portal-rail` div on every
+signed-in page. Below 1024px that wrapper is `display: contents`, so the
+nav is still the same fixed bottom bar (the wrapper can't regress
+phones); from 1024px the wrapper is a fixed sidebar and the nav inside
+is reset to a vertical list. Contracts/Settings and the Call/Text box
+sit in the wrapper but outside the nav, because the nav has to stay
+exactly five links for the phone grid (and
+`tests/portal/portal-usability-pr3.test.js` forbids `is-active` in
+Settings' nav, so the Account links use `is-current`). Two-column pages
+use `.page-split` with the side column FIRST in the DOM where that
+content came first before, so a phone keeps its old reading order. Home
+needed the opposite (feed in the main column, account cards in the
+side, cards still above the feed on a phone) -- done with
+`display: contents` on the column wrappers plus flex `order`.
+
+**Settings.** Eleven collapsed cards became six menu rows with a live
+status line each ("Visa ending 4242 - expiring soon", "2 of 3 emails
+on", "Two-factor on"), so most visits need no tap at all. Section state
+lives in the URL hash only: pushState on a phone (Back closes the
+section), replaceState on desktop (a tab switch shouldn't stack history
+entries). Every id and handler kept; the tests that pinned the
+accordion (`settings-collapsible-sections`, the density rules, the 2FA
+vs "Security" ordering, the A2HS `'block'` literal) were rewritten for
+what they were really protecting.
+
+**Bug fixed on the way.** The Add to Home Screen card was meant to hide
+on desktop, but `renderAddToHomeScreen()` set an inline
+`display: block`, which beats the stylesheet -- the hide never worked
+once the page loaded. It now clears the inline value, and only the
+generic "look in your browser's menu" fallback hides on desktop
+(`.is-generic`); desktop Chrome/Edge get a real one-tap "Install app"
+from the same `beforeinstallprompt` Android uses.
+
+Tests: `tests/portal/desktop-app-shell.test.js`,
+`tests/portal/settings-menu-and-sections.test.js` (jsdom, drives the real
+routing at phone and desktop widths).
+
 ## 2026-09-23 -- Workspace rework, part 8: quick add from anywhere
 
 **Why.** Part 7's quick add takes a sentence, but most jobs don't
