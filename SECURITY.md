@@ -216,6 +216,23 @@ than the finding's title alone.
   review pass; the unindexed-FK and unused-index findings are informational
   and pre-existing, not part of this review's scope.
 
+**2026-09-23, cross-stack audit round 3** (full write-up:
+`docs/specialist-logs/security.md`, same date). Root cause of most
+findings: Supabase Auth's public signup is on, so `authenticated`
+includes any stranger with a mailbox.
+
+- **CRITICAL, fixed live:** CMS writes (`site_content`/`site_faq`/
+  `site_terms`), the CMS history tables, and the `secure-documents` and
+  `receipts` buckets were open to any authenticated session. Now
+  internal-only (`sql/security/restrict_site_content_and_private_buckets_to_internal_accounts.sql`).
+- **HIGH:** 8 trigger/cron-only edge functions accepted the anon key
+  (phishing relay to real clients); fixed in the repo, one deployed so
+  far. Deployed `Send-Push` still has no auth check (repo fix never
+  deployed). Internal MFA is enforced only by `login.html`: an `aal1`
+  token passes every RLS policy.
+- **MEDIUM:** Stripe double-charge path, SetupIntents for any signed-in
+  session, webhook doesn't check amounts. Written up, not yet fixed.
+
 ## Known, accepted gaps (not oversights)
 
 - **Leaked-password protection is now ON** in Supabase Auth (confirmed
@@ -226,6 +243,13 @@ than the finding's title alone.
   client-portal population (see `docs/CLIENT-PORTAL.md`) from
   credential-stuffing using passwords already exposed in public
   breaches. No further action needed here.
+- **MFA is enforced in the browser only (2026-09-23 correction).** The
+  enrollment and login-step UI below is real, but no RLS policy or edge
+  function checks the JWT's `aal`, so someone holding a password can
+  skip the login page and call the Auth and REST APIs directly with an
+  `aal1` token. Proven live for an enrolled internal account; the fix
+  needs an owner decision (see `docs/specialist-logs/security.md`,
+  2026-09-23). The original note follows.
 - ~~**No MFA enforcement**~~ -- **done for both populations now.**
   Enabling MFA availability itself was a one-time dashboard-only
   setting (Authentication -> MFA, which controls whether TOTP/phone
