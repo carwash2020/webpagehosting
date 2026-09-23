@@ -2505,7 +2505,10 @@
       }
     }
     closeModal();
-    document.getElementById('schedule').scrollIntoView({behavior:'smooth'});
+    // An explicit behavior:'smooth' overrides the CSS scroll-behavior
+    // reset, so reduced motion has to be honoured here too.
+    const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    document.getElementById('schedule').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });
     document.getElementById('name').focus();
   });
 

@@ -4645,3 +4645,25 @@ Verified:
 Tests:
 - `touch-no-sticky-hover.test.js` now also scans `blog/blog.css` (its new check fails against the old file);
 - `blog-index-cards.test.js` checks the hover and focus rules separately.
+
+## What changed, 2026-09-23 -- Booking flow, round 2 is live, plus a gentler scroll on the homepage
+
+Round 2 (the entry "Booking flow, round 2: every change reaches the guest…" above) was built and merged earlier today, but not yet switched on. It is now live. Full results: `docs/specialist-logs/features.md` and `security.md` ("round 2 is live" / "round 2 deployed").
+
+**What's switched on now:**
+- Guests get an email when they move or cancel a visit, and the day-before reminder follows a moved visit.
+- Team alerts go only to Triple H's own accounts, and client notifications go to exactly the right person.
+- The booking email, the reminder and the push service only accept calls from Triple H's own server.
+
+**How it was checked.** Every server function was downloaded again after it went live and compared line by line with the reviewed code: identical. Each one was also called twice. Once with the public site key, which must be refused, and it was. Once the way the real triggers call it, which must work, and it did. The new "booking moved or cancelled" trigger was run end to end on a practice booking inside a transaction that was then undone, so nothing was sent. It queued exactly the right emails and notifications and re-armed the reminder.
+
+**One small hardening.** The new trigger is locked down the same way as every other trigger in the database: nothing but Triple H's own server can run it directly. This was tested first to confirm it can't stop the trigger from firing.
+
+**Homepage.** Visitors who ask their device for reduced motion now jump straight to the booking form after "or schedule online" in a service card, instead of getting an animated scroll.
+
+Verified:
+- full suite 3262 of 3263 passing; the only failure is the known `check-links.py` sandbox-proxy test;
+- `check-consistency`, `check-undefined-vars`, lint and visual snapshot clean;
+- Supabase security advisors: nothing new.
+
+New test: `tests/booking/booking-entry-reduced-motion.test.js` (2; both fail against the old scroll). Updated with reasons: `booking-notifications-round2.test.js` now expects the trigger lockdown, and its lookup-SQL check uses plain text matching (this closes a CodeQL warning).

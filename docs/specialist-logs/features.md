@@ -2830,4 +2830,44 @@ Every Send-Push caller was re-checked before deploy. The 4 trigger functions and
 - The fix is one line: `const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;` and then `behavior: reduced ? 'auto' : 'smooth'`. That's the same fix the visual lane applied to back-to-top and the triage result.
 - It's left for the booking lane because it's in the booking entry point. `tests/design/reduced-motion-coverage.test.js` allowlists this one call, so fixing it won't break that test.
 
+## 2026-09-23 -- booking-flow round 2 is live: deploy results
+
+Round 2 (#369) was deployed from `main` in the order its entry above lays out. Every function was re-fetched after deploy and diffed against `main`.
+
+**Byte-for-byte identical to `main`,** with one known exception: a Unicode escape written with a backslash-u in the source arrives as the literal character. That's the middle dot in Send-Push and the en dash in `send-booking-email`, both inside string/template literals, so the runtime strings are the same.
+
+| Function | Live | Probes |
+|---|---|---|
+| `Send-Push` | v53 | anon → 401; Vault-key `audience-check` (earlier) |
+| `send-invoice-notification`, `send-quote-notification`, `send-contract-notification` | v23, v22, v5 | diff only (their user-session check is unchanged) |
+| `notify-work-order-scheduled-email`, `notify-job-message-email`, `notify-work-order-message-email` | v13, v7, v15 | anon → 401 `Unauthorized`; Vault key + unknown payload → 400 `Unknown type`, so the triggers' key passes |
+| `send-booking-email` | v17 | anon → 401; Vault-key UPDATE that isn't a transition → `{ok:true, skipped:true}` (only the new code answers that way) |
+| `send-appointment-reminder` | v5 | anon → 401; Vault key → `{ok:true, checked:0, sent:0, pushed:0}` (`pushed` is new) |
+
+Several of these later picked up version bumps with no source change, during the security lane's own deploy pass. Every one was re-fetched and re-diffed afterwards: still identical to `main`.
+
+**Trigger migration** (`add_booking_change_emails_and_reminder_rearm`), applied after `send-booking-email`. One change first:
+- **The revoke.** The file said "deliberately NO revoke on this trigger function, matching the existing" booking trigger functions. That stopped being true on 2026-09-21: every trigger function in `public` is now EXECUTE-able by postgres and service_role only. Left as written, the new function would have been the one exception, EXECUTE-able by anon.
+- **Why it's safe.** Postgres checks EXECUTE on a trigger function only at CREATE TRIGGER, never when it fires. Proven on the live project first, in a rolled-back block: a trigger whose function had EXECUTE revoked still fired for an insert running as `authenticated`.
+- **The file now matches what was applied.** It revokes from public, anon and authenticated and grants service_role. The test that asserted "no revoke" now asserts the lockdown instead, with the reason.
+
+**Live check after applying:**
+- `on_booking_change_send_email` is enabled with the WHEN clause as written.
+- Both functions are postgres/service_role only.
+- `track_booking_changes()` clears `reminder_sent_at` in the reschedule branch.
+
+**End to end, in a rolled-back block** (pg_net only sends after commit, so nothing went out; the table and queue were empty afterwards):
+- an insert queues `send-booking-email:INSERT` and `Send-Push:INSERT`;
+- a reminder stamp queues nothing;
+- a reschedule queues `send-booking-email:UPDATE` and `Send-Push:UPDATE`, clears `reminder_sent_at` and sets `reschedule_count` to 1. The payload carries both the old and new start time, with the Vault key;
+- a cancel queues both and sets `cancelled_at`.
+
+**Security advisors afterwards:** nothing new. Neither new function nor either lookup function is flagged. The anon-executable findings are pre-existing:
+- the booking RPCs, which are public on purpose (the booking page is anonymous and token-gated);
+- the MFA recovery-code functions, which are the security lane's.
+
+**Also in this PR:** the visual lane's hand-off above is fixed. `index.html`'s "or schedule online" now scrolls with `behavior: reduced ? 'auto' : 'smooth'`. New test: `tests/booking/booking-entry-reduced-motion.test.js` (2, both fail against the old line). It clicks a service card and then the hand-off in jsdom, and checks the scroll behavior, that focus lands on `#name` and that the service is carried over. `reduced-motion-coverage.test.js`'s `BOOKING_LANE` allowlist entry no longer matches anything, so it can be dropped.
+
+**Also:** `booking-notifications-round2.test.js`'s lookup-SQL test now uses plain substring checks. That closes the CodeQL "incomplete string escaping" alert from #369.
+
 <!-- Add new entries above this line -->
