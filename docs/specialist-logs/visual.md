@@ -1612,4 +1612,17 @@ Found with `document.getAnimations()` under emulated reduced motion. It lists ps
 - **blog.css has a hand-picked `?v=` timestamp, not a content hash,** and `check-consistency.js` doesn't track it. So an edit means bumping all 22 references by hand (now `202609231020`). `blog-index-cards.test.js` fails if they disagree. Adding `blog/blog.css` to `GLOBAL_SHARED_FILES` would let `fix-versions` manage it; that's a small checker change for another round.
 - The hover transform reads `none` on these cards too: `[data-reveal]` outranks it, the same as the homepage cards in round 8's note.
 
+## 2026-09-23 (late) -- findings parked for a decision (not changed)
+
+Measured and deliberately left alone. Each needs a call from Connor before anyone builds it.
+
+- **The service-area diagram is unreadable on phones.** The SVG has a 760-unit viewBox, so at 375px every label renders at 8.2px (6.8px at 320px). "West side, near Snow Canyon" collides with "Home base", and the Mesquite note collides with "Leeds". There's a cascade bug too: in the <=760px block, `.radius-figure text{font-size:19px}` (0,1,1) outranks the intended `.radius-note{16px}` and `.radius-hub-name{21px}` (0,1,0). Fixing that alone makes the notes *smaller*, though. Hiding the notes on phones isn't safe either: the 8 city pages and 3 service pages show the diagram without the `.areas-links` list that repeats them. A real fix is a separate phone layout for the diagram. That's a design change tied to the open Leeds/La Verkin geography question.
+- **Gallery weight: `our-work.html` loads ~4.1MB of photos up front on a phone.** 48 of its 61 photos are 1152-1400px wide but shown at ~333px. Eager loading is deliberate (see 2026-09-16: native `loading="lazy"` drops ~40% of photos in the CSS-column masonry). The options are:
+  - a ~720w `srcset` variant per photo (48 new files; helps 1x/2x screens, while 3x phones still pick the original);
+  - an IntersectionObserver lazy-loader (the 09-16 entry rejected that as new machinery).
+- **Header/footer logo: 50-57KB webp at 531-550px, shown at ~96px.** A ~300px variant would save ~40KB per first visit. But the same files are precached by both service workers and used across tools/portal, so it's a public-pages-only `srcset` job that touches ~65 img tags.
+- **Also logged in rounds 8-9:**
+  - the homepage card hover lift is dead code (`[data-reveal]` outranks it);
+  - `blog/blog.css` uses a hand-picked stamp outside `check-consistency.js`.
+
 <!-- Add new entries above this line -->
