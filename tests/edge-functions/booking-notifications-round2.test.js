@@ -179,7 +179,7 @@ function mockReminderWorld({ userId = 'user-uuid-1', emailOk = true } = {}) {
     calls.push({ url, body });
     if (url.includes('/rest/v1/th_bookings?select=')) return new Response(JSON.stringify([BOOKING]), { status: 200 });
     if (url.includes('/rest/v1/th_bookings?id=eq.')) return new Response(null, { status: 204 });
-    if (url.includes('api.resend.com')) return new Response('{}', { status: emailOk ? 200 : 500 });
+    if (new URL(url).hostname === 'api.resend.com') return new Response('{}', { status: emailOk ? 200 : 500 });
     if (url.includes('/rpc/get_auth_user_id_by_email')) return new Response(JSON.stringify(userId), { status: 200 });
     if (url.includes('/functions/v1/Send-Push')) return new Response('{"ok":true}', { status: 200 });
     return new Response('unexpected', { status: 404 });
