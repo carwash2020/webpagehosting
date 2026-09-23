@@ -4465,3 +4465,39 @@ New test: `tests/design/site-banner-no-layout-shift.test.js` checks:
 
 `promo-banner.test.js` and `hiring-banner.test.js` now expect the synchronous, stamped tags.
 
+## What changed, 2026-09-23 -- "Reduce motion" now stops every animation on the public site
+
+Public site: `styles.css`, the homepage's back-to-top button, and `js/triage.js`.
+
+**What was wrong.** Visitors who turn on "reduce motion" (iOS, Android, macOS and Windows all have the setting) are supposed to get a still page. The site's rule for that only reached ordinary elements, not the decorative `::before`/`::after` layers. So for those visitors:
+- the green "open now" dot on the homepage kept pulsing forever;
+- the "how it works" timeline line and the blog/about heading underlines still drew themselves in, over about a second;
+- the service-area diagram's lines and city dots stayed hidden for up to 1.15s and then popped in, because the rule zeroed animation lengths but not their start delays;
+- the back-to-top button and the "what's wrong with it?" answer still scrolled smoothly, because a smooth scroll requested in script overrides the page-wide setting.
+
+**The fix.**
+- The reduced-motion rule now covers `::before`/`::after` and zeroes delays too.
+- Back-to-top and the triage answer jump instead of gliding when reduced motion is on.
+- Nothing changes for everyone else.
+
+**Measured** in Chromium with reduced motion emulated:
+- perceptible animations on the homepage went from 5 to **0**;
+- about, a service page, a city page and a blog post are all at **0**;
+- screenshots of the settled pages are pixel-identical to before, apart from one strip of live text that also differs between two loads of the old build;
+- with reduced motion off, every animation still plays.
+
+One smooth scroll is left for the booking lane: the service pop-up's jump to the schedule form. It's logged in `docs/specialist-logs/features.md`.
+
+Verified:
+- full suite 3211 of 3212 passing; the one failure is the known `check-links.py` sandbox-proxy test;
+- `check-consistency`, `check-undefined-vars`, `eslint` and `check-visual-snapshot` clean;
+- `check-links.py`: the only failures are the sandbox proxy refusing outside sites, no internal link broken;
+- CSP, SEO metadata and JSON-LD untouched.
+
+New test: `tests/design/reduced-motion-coverage.test.js` (5) covers:
+- the rule's selectors, and zeroed durations and delays;
+- that the pseudo-element animations it has to reach still exist;
+- every explicit smooth scroll on the public site, which must have a reduced-motion fallback;
+- the triage and back-to-top scrolls, run in JSDOM with and without reduced motion.
+
+Four of the five fail against the old code.
