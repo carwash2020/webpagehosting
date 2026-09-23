@@ -1384,4 +1384,29 @@ height).
 - Checked in headless Chromium at 390px and 1440px: no horizontal
   overflow and no page errors.
 
+## 2026-09-22 (later still) -- booking flow round 4: the portal pickers
+
+- **Date strip** on `quotes.html`, `jobs.html` and `work-orders.html`:
+  - The same second line as `booking.html`, scaled to the portal's
+    60px day buttons: 10px `N open` in `--success-text` green, turning
+    orange-light on the selected day.
+  - `Full`/`Closed`/`No times` dimmed; those days sit at 0.45 opacity
+    with `cursor:not-allowed`.
+  - A 30x7 pulsing bar while loading, and four 40px pulsing skeleton
+    tiles in the slot grid.
+  - Page-local CSS (`bookingSkelPulse`); reduced motion stops both
+    pulses.
+- **Messages** in the slot grid (`.booking-picker-msg`): 13px dim,
+  centered, spanning the grid. The error is `#e05252`, the same red as
+  `.schedule-error`. Try again is a full-width `.slot-btn`. "Nothing
+  open online" has orange-light underlined Call/Text links.
+- **After scheduling:**
+  - Quotes: the "Job scheduled" card scrolls to center, the quote card
+    runs the existing `.is-highlighted` tint pulse, and the burst fires
+    from the card's date tile at ~120ms.
+  - Jobs: the same burst from the "Visit booked" banner's date tile.
+- Checked in headless Chromium at 390px and 1440px (desktop: the
+  check-up panel in the new side column): no horizontal overflow, no
+  page errors.
+
 <!-- Add new entries above this line -->

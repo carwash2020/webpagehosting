@@ -2669,4 +2669,101 @@ was exercised live inside rolled-back transactions as anon:
 
 Nothing persisted.
 
+## 2026-09-22 (later still) -- Booking flow, round 4: the portal's three self-scheduling spots get the same picker
+
+Booking-specific portal code only: the job scheduler on `quotes.html`
+(schedule on approval), the check-up booker on `jobs.html`, and the
+preferred-time picker on `work-orders.html`. Plus `js/booking-flow.js`
+and one label change that also shows on `booking.html` and
+`manage-booking.html`. Branch `claude/booking-flow-portal-pickers`.
+
+**The gap.** Round 1 fixed the public picker. The portal's three
+schedulers each still carried their own copy of the original one: a
+bare date strip, one fetch per tapped day with "Loading times..." every
+time, and no way to see which day had room. `work-orders.html` opened
+on today, which the 2-hour lead time and afternoon hours usually leave
+empty.
+
+**`createBookingPicker()`** (`js/booking-flow.js`) writes that behavior
+once:
+- one `fetchBookingsForRange()` call for the strip
+- every day labeled, and full or closed days can't be picked
+- it opens on the first day with room, and switching days is instant
+- a skeleton while loading
+- an error with Try again; after a failed window load, a tapped day
+  falls back to the old one-day fetch
+- a stale-response guard
+- a second picker on the same strip (a panel closed and reopened before
+  its load landed) retires the first, so two instances can never write
+  into one strip
+
+The page still owns everything after a pick (`onSelect`/`onClear`): the
+summary line, the Confirm button, the stored preference. So the
+schedule-quote-job and schedule-checkup-visit calls and the work order's
+`preferred_slot_at` are unchanged. The browser run below checked the
+two scheduling calls' payloads, and the existing work-order tests
+cover `preferred_slot_at`.
+Each page checks `typeof createBookingPicker === 'function'` and
+otherwise runs its original picker, left exactly as it was.
+
+**A cross-booking bug, fixed in passing.** `quotes.html` and `jobs.html`
+keep one page-wide `selectedScheduleSlot`/`selectedCheckupSlot`. With
+two approved quotes' (or two due check-ups') panels open, a time tapped
+in the second panel became the time the FIRST panel's still-visible
+Confirm button would book. Now:
+- picking in one panel withdraws the other panel's choice
+- a day change in one panel never wipes the other's choice
+- Confirm refuses a slot picked for a different panel
+
+**The "you're booked" moment in the portal.** After scheduling from a
+quote, the list re-renders, so the panel the client tapped in is gone.
+On a phone the new "Job scheduled" card could land off screen. Now:
+- the card is scrolled into view and tinted with the existing
+  `.is-highlighted` pulse
+- it gets `bookingCelebrate()`'s burst and haptic tap
+- a toast says "Scheduled. A confirmation email is on its way."
+  (schedule-quote-job sends the client's email, so the confirmation
+  goes out)
+
+The re-render is deliberately not awaited inside the `try`: the job is
+already scheduled, so a render hiccup must never read as "Couldn't
+reach the server" with Confirm live again. After a check-up booking,
+the "Visit booked" banner (now `data-checkup-id` for lookup) gets the
+same, after the existing toast.
+
+**"No times" instead of "Full".** `computeSlotsByDate()` now also flags
+`noTimes`: an open day with nothing bookable even with nothing booked,
+i.e. today once its hours (less the lead time) are used up. An evening
+visitor used to see today marked "Full", as if booked solid. This shows
+on `booking.html` and `manage-booking.html` too. A booked-solid day is
+still "Full", and an entry without the flag keeps its old label.
+
+**Deliberately not touched:**
+- `home.html`'s upcoming-visit card already shows the countdown, Add to
+  calendar and the manage link.
+- `portal/service-worker.js` only got the checker's automatic
+  CACHE_NAME bump, since three precached pages changed.
+  `/js/booking-flow.js` isn't added to PRECACHE_URLS: that file is
+  outside this pass's scope, and as a `?v=` asset it's cached
+  cache-first on first use anyway. Follow-up for the portal owner:
+  precache it alongside `/js/business-hours.js`.
+- The picker CSS is page-local on all three pages, matching where this
+  picker's CSS already lived. Follow-up: consolidate into
+  `portal-polish.css`.
+
+**Tests:** `tests/portal/booking-picker-round4.test.js` (27):
+- the picker's behavior in jsdom: one fetch, labels, first open day, no
+  refetch, full days, the fallback, Try again, nothing open, the stale
+  guard, and a tap during loading
+- the three pages' wiring and fallbacks
+- the two-panel guard, run against the pages' own functions
+- both celebrations
+
+Mutation-checked: removing the stale guard or the Confirm guard fails
+them. Existing portal scheduling tests pass unchanged. Driven in
+headless Chromium at 390px and 1440px against a fake Supabase client,
+through pick, confirm and the celebration on all three pages, plus each
+page with `booking-flow.js` blocked (the original picker still books):
+no page errors, no horizontal overflow.
+
 <!-- Add new entries above this line -->

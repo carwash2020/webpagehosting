@@ -1,14 +1,20 @@
-// booking-flow.js -- shared helpers for the public booking pages
-// (booking.html, manage-booking.html), added 2026-09-22 in the
-// booking-flow pass. Loaded AFTER /js/business-hours.js, whose globals
-// (zonedTimeToUtc, addDaysToDateStr, businessWeekday, HOURS_BY_WEEKDAY,
-// computeSlotsForDate, BUSINESS_TIMEZONE) everything here builds on.
+// booking-flow.js -- shared helpers for the pages that book or move an
+// appointment: the public booking pages (booking.html,
+// manage-booking.html) and, since round 4 of the same pass, the client
+// portal's three self-scheduling spots (quotes.html, jobs.html,
+// work-orders.html -- createBookingPicker() below). Added 2026-09-22 in
+// the booking-flow pass. Loaded AFTER /js/business-hours.js, whose
+// globals (zonedTimeToUtc, addDaysToDateStr, businessWeekday,
+// HOURS_BY_WEEKDAY, computeSlotsForDate, fetchBookingsForDate,
+// todayDateStrInBusinessTz, DAYS_AHEAD_SHOWN, BUSINESS_TIMEZONE)
+// everything here builds on.
 //
 // Deliberately a separate file rather than more code in
 // business-hours.js: that file is also loaded by tools/workspace.html
 // and precached by the portal's service worker, so touching it would
 // ripple a version bump into both. These helpers only matter to the
-// pages that book or move an appointment.
+// pages that book or move an appointment, and every one of those pages
+// keeps working (with its original picker) if this file fails to load.
 //
 // No module system -- plain globals, same convention as every other
 // shared script on this site.
@@ -49,14 +55,21 @@ async function fetchBookingsForRange(supabaseUrl, supabaseAnonKey, startDateStr,
 // handed, so giving it the whole window's bookings for each day yields
 // exactly what the old per-day fetch did. `closed` marks a weekday with
 // no business hours at all, so a picker can say "Closed" rather than
-// "Full" for a day nobody could ever book.
+// "Full" for a day nobody could ever book. `noTimes` (2026-09-22, round
+// 4) marks an open day that has nothing left even with NOTHING booked --
+// today, once its hours (less the 2-hour lead time) are used up -- so an
+// evening visitor sees "No times" on today instead of "Full", which read
+// as booked solid when it simply wasn't bookable any more.
 function computeSlotsByDate(startDateStr, days, durationMinutes, bookings) {
   const byDate = {};
   for (let i = 0; i < days; i++) {
     const dateStr = addDaysToDateStr(startDateStr, i);
+    const slots = computeSlotsForDate(dateStr, durationMinutes, bookings);
+    const closed = !HOURS_BY_WEEKDAY[businessWeekday(dateStr)];
     byDate[dateStr] = {
-      slots: computeSlotsForDate(dateStr, durationMinutes, bookings),
-      closed: !HOURS_BY_WEEKDAY[businessWeekday(dateStr)],
+      slots: slots,
+      closed: closed,
+      noTimes: !closed && !slots.length && !computeSlotsForDate(dateStr, durationMinutes, []).length,
     };
   }
   return byDate;
@@ -83,12 +96,234 @@ function firstBookableDate(byDate, preferred) {
   return null;
 }
 
-// Short label under each day in the strip: "3 open", "Full", "Closed".
+// Short label under each day in the strip: "3 open", "Full", "Closed",
+// or "No times" (see computeSlotsByDate's noTimes).
 function bookingDayLabel(entry) {
   if (!entry) return '';
   if (entry.closed) return 'Closed';
   const n = entry.slots.length;
-  return n ? n + ' open' : 'Full';
+  if (n) return n + ' open';
+  return entry.noTimes ? 'No times' : 'Full';
+}
+
+// ---------- one whole-window picker for the client portal ----------
+// The portal's three self-scheduling spots -- quotes.html (schedule the
+// job on approval), jobs.html (book a due check-up) and work-orders.html
+// (a preferred time on a request) -- each carried its own copy of the
+// original picker: a bare date strip, one fetch per tap ("Loading
+// times..." every time), and no way to see which day had room. This is
+// the same whole-window behavior booking.html got, written once so the
+// three can't drift apart again:
+//   - ONE availability fetch for the whole strip; every day says
+//     "3 open" / "Full" / "Closed", and a day with nothing open can't be
+//     picked;
+//   - it opens on the first day that actually has room, not on today
+//     (which the 2-hour lead time and afternoon hours usually empty);
+//   - switching days is instant (no refetch);
+//   - if the window-wide fetch fails, tapping a day falls back to
+//     fetching just that day, exactly as these pickers always did, and
+//     there's a Try again button;
+//   - a stale-response guard, so a slow load never overwrites a newer
+//     one.
+// The page keeps owning everything that happens once a time is picked
+// (onSelect: the summary line, the confirm button, a stored preferred
+// slot) and when a pick stops standing (onClear) -- so none of that
+// changes, and a page that can't load this file keeps its own picker.
+//
+// opts: { dateRowEl, gridEl, emptyEl?, durationMinutes, supabaseUrl,
+//         anonKey, onSelect(slot), onClear()? }
+// slot is computeSlotsForDate()'s own { startUtc, endUtc, label }.
+// Returns { reload, destroy }. reload() re-renders the strip and
+// re-fetches; destroy() makes any load still in flight a no-op. Creating
+// a second picker on the same date row (a panel closed and reopened
+// before its first load landed) destroys the first, so two instances
+// can never write into the same strip.
+function createBookingPicker(opts) {
+  const dateRowEl = opts.dateRowEl;
+  if (dateRowEl._bookingPicker) dateRowEl._bookingPicker.destroy();
+  const gridEl = opts.gridEl;
+  const emptyEl = opts.emptyEl || null;
+  const minutes = opts.durationMinutes || 120;
+  const onSelect = typeof opts.onSelect === 'function' ? opts.onSelect : function () {};
+  const onClear = typeof opts.onClear === 'function' ? opts.onClear : function () {};
+  let windowStart = todayDateStrInBusinessTz();
+  let byDate = null;
+  let loading = false;
+  let selectedDate = null;
+  let requestId = 0;
+
+  function showEmpty(show) {
+    if (emptyEl) emptyEl.style.display = show ? 'block' : 'none';
+  }
+
+  function skeletonHtml() {
+    return '<div class="slot-skel"></div><div class="slot-skel"></div><div class="slot-skel"></div><div class="slot-skel"></div>' +
+      '<span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;">Loading available times...</span>';
+  }
+
+  function errorHtml() {
+    return '<p class="booking-picker-msg is-error">Couldn\'t load available times. Check your connection and try again.</p>' +
+      '<button type="button" class="slot-btn booking-picker-retry">Try again</button>';
+  }
+
+  function wireRetry() {
+    const retry = gridEl.querySelector('.booking-picker-retry');
+    if (retry) retry.addEventListener('click', reload);
+  }
+
+  function renderStrip() {
+    let html = '';
+    for (let i = 0; i < DAYS_AHEAD_SHOWN; i++) {
+      const dateStr = addDaysToDateStr(windowStart, i);
+      const noonUtc = zonedTimeToUtc(dateStr, 12, 0);
+      const dow = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, weekday: 'short' }).format(noonUtc);
+      const dom = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, day: 'numeric' }).format(noonUtc);
+      html += '<button type="button" class="date-btn" data-date="' + dateStr + '" aria-pressed="false"><div class="dow">' + dow + '</div><div class="dom">' + dom + '</div><span class="avail is-loading" aria-hidden="true"></span></button>';
+    }
+    dateRowEl.innerHTML = html;
+    dateRowEl.querySelectorAll('.date-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (btn.getAttribute('aria-disabled') === 'true') return;
+        selectDay(btn.dataset.date);
+      });
+    });
+  }
+
+  function markSelected(dateStr) {
+    dateRowEl.querySelectorAll('.date-btn').forEach(function (b) {
+      const on = b.dataset.date === dateStr;
+      b.classList.toggle('is-selected', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+
+  function applyLabels() {
+    dateRowEl.querySelectorAll('.date-btn').forEach(function (btn) {
+      const entry = byDate[btn.dataset.date];
+      const label = bookingDayLabel(entry);
+      const unavailable = !entry || !entry.slots.length;
+      const availEl = btn.querySelector('.avail');
+      if (availEl) {
+        availEl.classList.remove('is-loading');
+        availEl.textContent = label;
+      }
+      btn.classList.toggle('is-unavailable', unavailable);
+      btn.setAttribute('aria-disabled', unavailable ? 'true' : 'false');
+      const dow = btn.querySelector('.dow') ? btn.querySelector('.dow').textContent : '';
+      const dom = btn.querySelector('.dom') ? btn.querySelector('.dom').textContent : '';
+      btn.setAttribute('aria-label', dow + ' ' + dom + ', ' + (label || 'no times'));
+    });
+  }
+
+  function renderSlots(slots) {
+    if (!slots.length) {
+      gridEl.innerHTML = '';
+      showEmpty(true);
+      return;
+    }
+    showEmpty(false);
+    gridEl.innerHTML = slots.map(function (s, i) {
+      return '<button type="button" class="slot-btn" data-idx="' + i + '" aria-pressed="false">' + s.label + '</button>';
+    }).join('');
+    gridEl.querySelectorAll('.slot-btn').forEach(function (btn, i) {
+      btn.addEventListener('click', function () {
+        gridEl.querySelectorAll('.slot-btn').forEach(function (b) { b.classList.remove('is-selected'); b.setAttribute('aria-pressed', 'false'); });
+        btn.classList.add('is-selected');
+        btn.setAttribute('aria-pressed', 'true');
+        onSelect(slots[i]);
+      });
+    });
+  }
+
+  async function selectDay(dateStr) {
+    selectedDate = dateStr;
+    markSelected(dateStr);
+    onClear();
+    if (loading) {
+      // The window-wide load is still in flight: it renders whichever day
+      // is selected by the time it lands.
+      gridEl.innerHTML = skeletonHtml();
+      showEmpty(false);
+      return;
+    }
+    if (byDate && byDate[dateStr]) {
+      ++requestId; // any older per-day fallback still in flight is now stale
+      renderSlots(byDate[dateStr].slots);
+      return;
+    }
+    // Fallback: the window-wide load failed, so fetch just this day,
+    // exactly as these pickers always used to.
+    const id = ++requestId;
+    gridEl.innerHTML = skeletonHtml();
+    showEmpty(false);
+    let bookings;
+    try {
+      bookings = await fetchBookingsForDate(opts.supabaseUrl, opts.anonKey, dateStr);
+    } catch (e) {
+      if (id !== requestId) return;
+      gridEl.innerHTML = errorHtml();
+      wireRetry();
+      return;
+    }
+    if (id !== requestId) return;
+    renderSlots(computeSlotsForDate(dateStr, minutes, bookings));
+  }
+
+  async function load() {
+    const id = ++requestId;
+    byDate = null;
+    loading = true;
+    gridEl.innerHTML = skeletonHtml();
+    showEmpty(false);
+    let bookings;
+    try {
+      bookings = await fetchBookingsForRange(opts.supabaseUrl, opts.anonKey, windowStart, DAYS_AHEAD_SHOWN);
+    } catch (e) {
+      if (id !== requestId) return;
+      loading = false;
+      // Back to a plain strip: every day tappable, each tap fetching
+      // just that day.
+      dateRowEl.querySelectorAll('.date-btn .avail').forEach(function (a) { a.remove(); });
+      gridEl.innerHTML = errorHtml();
+      wireRetry();
+      return;
+    }
+    if (id !== requestId) return;
+    loading = false;
+    byDate = computeSlotsByDate(windowStart, DAYS_AHEAD_SHOWN, minutes, bookings);
+    applyLabels();
+    const target = firstBookableDate(byDate, selectedDate);
+    if (!target) {
+      selectedDate = null;
+      markSelected(null);
+      showEmpty(false);
+      gridEl.innerHTML = '<p class="booking-picker-msg">Nothing open online in the next two weeks. <a href="tel:+14354141667">Call</a> or <a href="sms:+14354141667">text</a> us and we\'ll find you a time.</p>';
+      return;
+    }
+    selectDay(target);
+    const selectedBtn = dateRowEl.querySelector('.date-btn.is-selected');
+    if (selectedBtn && typeof selectedBtn.scrollIntoView === 'function') {
+      try { selectedBtn.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' }); } catch (e) { /* older browsers */ }
+    }
+  }
+
+  function reload() {
+    windowStart = todayDateStrInBusinessTz();
+    selectedDate = null;
+    onClear();
+    renderStrip();
+    return load();
+  }
+
+  function destroy() {
+    ++requestId; // every load/fetch still in flight is now stale
+    loading = false;
+  }
+
+  const api = { reload: reload, destroy: destroy };
+  dateRowEl._bookingPicker = api;
+  reload();
+  return api;
 }
 
 // ---------- add to calendar ----------
