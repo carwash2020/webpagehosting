@@ -3120,4 +3120,26 @@ The last booking-flow follow-up. It waited until the shift-clock work (#385) had
 - **Mechanical.** fix-versions re-stamped `dev-tools-shared.js` where it loads and bumped the tools service worker's cache name.
 - **New test:** `tests/dev-tools/booking-test-copy.test.js` (3).
 
+## 2026-09-23 -- Site content editor: checked, reviewed, undoable; Google rating + review count move into it
+
+The owner can now change the Google rating and review count (plus banners, homepage hours, phone, email) from `tools/site-content.html` with no branch, PR, or deploy. Everything after this PR merges bypasses review by design, so the safety lives in the tool and the database, not in CI.
+
+**Audit first (why this shape):**
+- Already CMS-backed: phone/email (most pages), hours (index only), banner1/banner2, FAQ (index), Terms (index + terms.html).
+- Hardcoded: rating/count in 11 spots across 5 files; the WELCOME15 promo and hiring banners (`js/promo-banner.js`, `js/hiring-banner.js`), which write into the SAME `#siteBanner1/2` slots a CMS banner overwrites; ~60 policy-amount mentions ($25 referral/trip fee, $50 cancellation); booking hours in `js/business-hours.js`.
+- The old editor: "Save all" wrote all 11 fields every time (a stale tab silently reverted newer edits), no validation (an email went live as Banner 2 for 6 seconds on 2026-08-16 -- it's in `site_content_history`), history only logged UPDATEs, restore was a blind upsert. FAQ/Terms "Save all" deletes and re-inserts every row, so their restore-by-id is broken (PR C).
+- No revisions table existed anywhere. The Graveyard pattern (snapshot + tombstone in the synced blob) was the reference, but it has its own restore bug (restores are undone by the next push -- see bugfix.md), so the idea (keep history, never blindly overwrite) was reused, the storage was not: history lives server-side in `site_content_history`.
+
+**Decisions:**
+- **Database is the last line of defense, not the page.** `sql/site-content/cms_safe_publish_and_undo.sql`: a CHECK constraint (`site_content_value_is_valid`) refuses bad values from any writer; `cms_publish_content(changes)` is all-or-nothing with a compare-and-swap per field (PT409 -> HTTP 409 on a stale "expected"); `cms_undo_content(ids)` reverts a save's batch only if nothing changed since. Both are SECURITY INVOKER, so the existing `can_manage_site_content` RLS still decides who writes. Only existing keys are writable -- a new field ships with a migration.
+- **One save = one batch.** The trigger now logs insert/update/delete with `batch_id` (from a transaction-local setting, minted by the first row if a write didn't come through the RPCs) and `undo_of`.
+- **Tests run the real SQL.** PGlite (Postgres compiled to WASM) is a new devDependency; `tests/site-content/cms-db-harness.js` rebuilds the live schema + RLS around the real migration file. The editor tests run the page's real inline script in jsdom against it, so save -> undo -> original is proven through browser code AND database code together. One shared instance per file, reset from a snapshot per test (a fresh boot or `clone()` per test took 95s; this takes 4s).
+- **Rating/count hooks never add elements.** An extra `<span>` around "7" shifted the following text by a sub-pixel on booking.html (real screenshot diff, 348 pixels). So `.js-review-text` goes on the element that already held the phrase, and `js/review-stats.js` rewrites only the "X from Y Google reviews" phrase inside its existing text node, only when the value differs. Result: 20/20 before/after element screenshots byte-identical at today's 5.0/7.
+- **Search data follows the visible value** (FAQPage precedent): `aggregateRating` is rewritten from the same validated values. The static HTML keeps real values as a fallback.
+- **Below 5.0 the stats label changes** to "Real Google Reviews" (the "5-Star" wording would be false) and the stars round. No change at 5.0.
+- **Left in code on purpose:** policy amounts (a policy change touches Terms + referral logic, not a CMS field), booking hours (drive real slot availability; the editor says so).
+- **Kept the four access layers** (page gate, RLS, MFA, dev password) -- none loosened.
+
+**Next (PR B/C):** promo + hiring banner copy into the CMS without re-introducing the CLS the synchronous banner scripts fixed; the banner-slot collision; banners on pages that skip them; FAQ/Terms in-place save with the same review + undo; a gated "Website" nav entry so the owner doesn't go through Dev Tools; phone hooks on booking/manage-*/404.
+
 <!-- Add new entries above this line -->

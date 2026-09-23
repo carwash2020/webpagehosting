@@ -310,8 +310,8 @@
         </a>
       </div>
       <p class="cta-proof">
-        <span class="cta-proof-stars" aria-hidden="true">★★★★★</span>
-        <span>5.0 from 7 Google reviews &mdash; <span class="cta-proof-quote">&ldquo;Steven was wonderful! Got our washer fixed quickly&hellip;&rdquo;</span></span>
+        <span class="cta-proof-stars js-review-stars" aria-hidden="true">★★★★★</span>
+        <span class="js-review-text">5.0 from 7 Google reviews &mdash; <span class="cta-proof-quote">&ldquo;Steven was wonderful! Got our washer fixed quickly&hellip;&rdquo;</span></span>
         <a href="/#reviews">See reviews</a>
         <a href="https://g.page/r/CVJ0Qr-SsDkgEAI/review" target="_blank" rel="noopener">Leave a Google review</a>
       </p>
@@ -536,7 +536,7 @@
     <div class="wrap">
       <div class="section-head" data-reveal>
         <h2>What Customers Say</h2>
-        <p>5.0 from 7 Google reviews. These are the written quotes; the rest are star-only on Google.</p>
+        <p class="js-review-text">5.0 from 7 Google reviews. These are the written quotes; the rest are star-only on Google.</p>
       </div>
       <div class="reviews-wall">
             <div class="review-card" data-reveal>
@@ -820,6 +820,10 @@
       .then(rows => {
         const map = {};
         (Array.isArray(rows) ? rows : []).forEach(r => { if (r.value) map[r.key] = r.value; });
+        // Google rating + review count (js/review-stats.js). Whichever of
+        // this fetch or that deferred script finishes second applies them.
+        window.__siteContentMap = map;
+        if (typeof applyReviewStats === 'function') applyReviewStats(map);
 
         if (map.phone) {
           document.querySelectorAll('.js-phone-text').forEach(el => { el.textContent = map.phone; });
@@ -837,6 +841,7 @@
       .catch(() => { /* static fallback content already shown is correct */ });
   })();
 </script>
+<script src="/js/review-stats.js?v=226747706e" defer></script>
 <script src="/js/site-motion.js?v=17fb5b611b" defer></script>
 <script src="/js/triage.js?v=7fe7dd717f" defer></script>
 <script src="/js/analytics-events.js?v=4a6fd9aa19" defer></script>
