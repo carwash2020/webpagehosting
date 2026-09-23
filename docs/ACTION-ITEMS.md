@@ -167,19 +167,25 @@ click a setting by hand.
     CRITICAL finding (`docs/specialist-logs/security.md`). Nothing in the
     repo calls `signUp`; portal invites (`send-invite`, service role)
     keep working with signup off.
-12. **Deploy the security-fixed edge functions that are merged but not
-    live** (2026-09-23 audit). Merging never deploys edge functions in
-    this repo. `notify-job-message-email` is already deployed and
-    verified; still to deploy from `main`: `notify-work-order-message-email`,
-    `notify-work-order-scheduled-email`, and `Send-Push` (HIGH), then
-    `notify-new-work-order-email`, `send-lead-email`,
-    `send-job-application-email`, `send-job-status-change-email`,
-    `reconcile-stripe-payments`. After each, a POST with the anon key
-    should return 401.
+12. **Resolved (2026-09-23).** Every security-fixed edge function merged
+    that day is deployed from `main` and verified live (anon -> 401, the
+    triggers' Vault key -> through). Results per function:
+    `docs/specialist-logs/security.md`, "round 3 follow-up".
 13. **Decide on server-side MFA enforcement for internal accounts**
     (2026-09-23 audit, finding #4). Today a stolen password alone
-    reaches all internal data through the API. The proposed design and
-    its lockout risks are in `docs/specialist-logs/security.md`.
+    reaches all internal data through the API, and can mint fresh
+    recovery codes too. The proposed design and its lockout risks are
+    in `docs/specialist-logs/security.md` (round 3, and its follow-up).
+
+14. **Confirm who should see the team's hours** (shift clock, 2026-09-23).
+    The Dashboard's Hours worked card shows everyone's shifts only to
+    accounts with the finance permission (Owner and Developer by
+    default); everyone else sees only their own. Change it per account
+    in Dev Tools -> Account permissions (the finance checkbox). If Steve
+    wants someone to see hours without seeing finance, that needs its
+    own permission (a new `account_roles` column), which is a small
+    follow-up. The hours are an attendance record, not pay: the business
+    still pays per job.
 
 <!-- Add new manual action items above this line -->
 
@@ -690,6 +696,13 @@ reference:
   on a phone. Text us stays on the existing SMS link. Sticky
   Call+Book and AggregateRating (5.0 / 7) unchanged.
 
+- **Shift clock: Start my day / End my day** (2026-09-23) -- a clock
+  button at the top of every tools page (green pill with your start
+  time while on shift, amber dot when a shift needs an end time; a row
+  under New on a computer), one sheet to start or end the day, and an
+  **Hours worked** card under Your week on the Dashboard with this week's
+  bars and, for Owner/Developer, everyone's hours. Separate from the job
+  clock, which is unchanged.
 <!-- Add new visual additions above this line -->
 
 ## Proposed visual improvements (not yet built)
