@@ -4741,3 +4741,39 @@ Verified:
 Tests: `tests/tools/shift-clock-shell.test.js` (14). The job clock's
 tests are unchanged and pass.
 
+## What changed, 2026-09-23 -- Deleted inventory parts no longer come back after a sync
+
+Finance's Inventory tab, and Dev Tools' Graveyard. Nothing else changes.
+
+**What was wrong:**
+- **Deleted parts came back.** Deleting a part recorded that it was
+  deleted, but the sync never checked that record for inventory (it
+  does for every other kind of item). So an older copy on another device
+  put the part back the next time it synced.
+- **A deleted part couldn't be restored.** It went to Dev Tools'
+  Graveyard, where it showed as "inventory: Deleted item", and Restore
+  said "Unknown record type".
+
+**The fix:**
+- Sync now skips inventory parts that were deleted, the same way it
+  already does for jobs, invoices, expenses and the rest.
+- The Graveyard lists a deleted part by name and part number, and
+  Restore puts it back.
+- A new test reads the app's own lists, so any future kind of item that
+  records deletions, or goes to the Graveyard, can't be missed the same
+  way.
+
+**Found, not fixed yet** (details in `docs/specialist-logs/bugfix.md`):
+- Restoring anything from the Graveyard is undone by the next sync.
+- Deleted notes and "Flag this page" items can come back from an older
+  device.
+
+Verified:
+- full suite passing apart from the known `check-links.py` sandbox-proxy
+  test;
+- `check-consistency`, `check-undefined-vars` and `eslint` clean.
+
+Tests: `tests/sync/tombstone-coverage.test.js` (new); 3 more in
+`tombstones-extended.test.js` and `graveyard.test.js`. All of them failed
+before the fix.
+

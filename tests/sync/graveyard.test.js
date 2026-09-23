@@ -219,3 +219,22 @@ test('permanentlyDeleteFromGraveyard removes the entry without touching the live
   assert.equal(window.thLoadGraveyard().length, 0);
   assert.equal(window.thRead('th_job_tombstones', []).length, 1, 'tombstone should be untouched -- permanent deletion is not the same as restoring');
 });
+
+// Bug fix (2026-09-23): Finance's deleteInventoryItem() has always sent
+// deleted parts here as 'inventory', but GRAVEYARD_TYPE_CONFIG had no entry
+// for it, so the row read "inventory: Deleted item" and Restore said
+// "Unknown record type".
+test('a deleted inventory part shows by name in the Graveyard, and Restore puts it back and lifts its tombstone', () => {
+  const window = loadDevTools();
+  const part = { id: 'inv1', name: 'Drain pump', partNumber: 'WPW10348269', qty: 1 };
+  window.thWrite('th_inventory', []);
+  window.thAddInventoryTombstone('inv1');
+  window.thAddToGraveyard('inventory', part);
+  window.renderGraveyard();
+  assert.match(window.document.getElementById('graveyardList').textContent, /Inventory part: Drain pump -- WPW10348269/);
+
+  window.restoreFromGraveyard(window.thLoadGraveyard()[0].graveyardId);
+  assert.equal(JSON.stringify(window.thRead('th_inventory', [])), JSON.stringify([part]));
+  assert.equal(window.thRead('th_inventory_tombstones', []).length, 0);
+  assert.equal(window.thLoadGraveyard().length, 0);
+});

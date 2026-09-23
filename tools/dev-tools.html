@@ -60,7 +60,7 @@
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=7ed9e8d3b4" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
-<script src="/tools/sync.js?v=844eda1750" defer></script>
+<script src="/tools/sync.js?v=e21ac7858a" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -2882,6 +2882,7 @@
     invoice: { dataKey: 'th_invoices', tombstoneKey: 'th_invoice_tombstones', label: r => '#' + (r.invoiceNumber || '') + ' -- ' + (r.clientName || '') },
     quote: { dataKey: 'th_quotes', tombstoneKey: 'th_quote_tombstones', label: r => '#' + (r.quoteNumber || '') + ' -- ' + (r.clientName || '') },
     priceReference: { dataKey: 'th_price_reference', tombstoneKey: 'th_price_ref_tombstones', label: r => r.label || 'Price reference' },
+    inventory: { dataKey: 'th_inventory', tombstoneKey: 'th_inventory_tombstones', label: r => [r.name, r.partNumber].filter(Boolean).join(' -- ') || 'Inventory part' },
     template: { dataKey: 'th_job_templates', tombstoneKey: 'th_template_tombstones', label: r => r.title || 'Template' },
     knownIssue: { dataKey: 'th_known_issues', tombstoneKey: 'th_known_issue_tombstones', label: r => r.title || 'Known issue' },
     prUnit: { dataKey: 'th_parts_reference_units', tombstoneKey: 'th_pr_unit_tombstones', label: r => [r.brand, r.type || r.model].filter(Boolean).join(' ') || 'Appliance Wiki unit' },
@@ -2889,7 +2890,7 @@
   };
   const GRAVEYARD_TYPE_TITLES = {
     client: 'Client', job: 'Job', expense: 'Expense', income: 'Income', contact: 'Contact',
-    contract: 'Contract', invoice: 'Invoice', quote: 'Quote', priceReference: 'Price reference',
+    contract: 'Contract', invoice: 'Invoice', quote: 'Quote', priceReference: 'Price reference', inventory: 'Inventory part',
     template: 'Job template', knownIssue: 'Known issue', prUnit: 'Appliance Wiki unit', prIssue: 'Appliance Wiki issue',
     shift: 'Shift',
   };

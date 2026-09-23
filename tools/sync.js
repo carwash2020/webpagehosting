@@ -678,6 +678,16 @@ function applySyncData(obj, keysToApply) {
           const tombstoneSet = new Set(tombstonedIds);
           finalArr = mergedArr.filter(r => !tombstoneSet.has(r.id));
         }
+      } else if (k === 'th_inventory') {
+        // Bug fix (2026-09-23): th_inventory's tombstones were synced from
+        // the start but never read here, so a stale device still holding a
+        // deleted part pushed it straight back.
+        let tombstonedIds = [];
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_inventory_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        if (tombstonedIds.length) {
+          const tombstoneSet = new Set(tombstonedIds);
+          finalArr = mergedArr.filter(p => !tombstoneSet.has(p.id));
+        }
       } else if (k === 'th_job_templates') {
         let tombstonedIds = [];
         try { tombstonedIds = JSON.parse(localStorage.getItem('th_template_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }

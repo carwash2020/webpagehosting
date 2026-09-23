@@ -950,3 +950,67 @@ Tests: `tests/tools/job-clock.test.js`.
 - Found while adding the shift clock's own branch (`th_shift_log`); left
   alone since it's outside that change.
 
+## 2026-09-23 -- Deleted inventory parts came back after a sync, and couldn't be restored from the Graveyard
+
+Fixes the features-lane note above ("deleted inventory items can come
+back after a sync").
+
+**Root cause 1:** `th_inventory` had tombstones from day one, but nothing
+read them.
+- `thAddInventoryTombstone` existed, and both keys were in
+  `SYNC_DATA_KEYS` and `MERGE_KEY_FIELD`.
+- `applySyncData` had no `th_inventory` filter branch; every other
+  tombstoned array has one.
+- So a stale device still holding a deleted part pushed it back, and the
+  union merge kept it.
+- `inventory-and-job-duration.test.js` only checked that a delete
+  *records* a tombstone, never that a pull *honors* it, which is why this
+  shipped.
+
+**Root cause 2, the same delete path:** `deleteInventoryItem()` sends the
+part to the Graveyard as `'inventory'`. `GRAVEYARD_TYPE_CONFIG` in
+dev-tools.html had no such entry, so the row read "inventory: Deleted
+item" and Restore said "Unknown record type".
+
+**Fix:**
+- The same filter branch the other keys use, in sync.js.
+- An `inventory` entry in the Graveyard config and titles.
+
+**The guard that would have caught both:**
+`tests/sync/tombstone-coverage.test.js`. It reads the lists themselves:
+- every `*_tombstones` key in `SYNC_DATA_KEYS`/`WIKI_SYNC_KEYS` must be
+  read inside `applySyncData`;
+- every `thAddToGraveyard('<type>'` in tools/ must have a config and a
+  title.
+
+Both checks failed on main before the fix and pass after. The audit that
+led to them found inventory was the only gap for each.
+
+**Found while auditing, NOT fixed here** (different root causes):
+- **Graveyard Restore is undone by the next sync, for every record type.**
+  Restore removes the tombstone locally, but the server's copy still
+  holds it. `pushSync()` pulls first (`applySyncData`), the tombstone
+  arrays union-merge, the tombstone comes back, and the filter deletes
+  the just-restored record again. Reproduced directly: restore a job,
+  then apply a pull whose remote still carries the tombstone, and the job
+  is gone with the tombstone back.
+  - `graveyard.test.js`'s "survives a subsequent stale-device sync pull"
+    only simulates a remote with *no* tombstones, so it can't see this.
+  - Fixing it needs a real design choice. One option: records get
+    `restoredAt` and a tombstone only applies when `deletedAt` is later.
+  - Left for its own change, since it touches the core merge.
+- **Notes and "Flag this page" items have no tombstones at all.**
+  `deleteNote()` (job-tracker.html) and `deleteFlaggedItem()` /
+  `thDeleteFlaggedItem()` just filter the array, so a stale device can
+  bring either back. The fix is the usual tombstone key, sync
+  registration and filter branch; the new coverage test would then
+  guard it.
+
+Tests:
+- `tests/sync/tombstone-coverage.test.js` (2, new);
+- `tests/sync/tombstones-extended.test.js` (+2: a stale push doesn't
+  resurrect a deleted part; a tombstone from another device removes it
+  here);
+- `tests/sync/graveyard.test.js` (+1: a deleted part is labelled by name
+  and restores).
+
