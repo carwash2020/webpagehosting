@@ -1083,3 +1083,13 @@ Tests: `tests/sync/graveyard-restore-every-type.test.js` (22):
 - the bug's repro for every type in `GRAVEYARD_TYPE_CONFIG` plus the Wiki issue path (all 19 pass on `main`, confirming #393 covers every type);
 - stale-device and re-delete cases;
 - the 3 gaps above (fail on `main`).
+
+
+## 2026-09-23 -- Found in passing: saved phone/email don't reach every spot (not fixed)
+
+Found by the features lane while wiring booking/manage-*/404 to `site_content`'s phone/email. The spots below keep the built-in (435) 414-1667 / steve@ address if the owner changes them in `tools/site-content.html`. Nothing is wrong today (the saved values ARE the built-in ones), but a real number change would leave these behind. The editor's "Phone and email" intro now names them, and `tests/site-content/contact-hooks-public.test.js` pins the list of affected pages.
+
+- **Shows the new number but dials the old one.** The `tel:` link has no `.js-phone-link`: "Call <span class=js-phone-text>" buttons on index (two of them), about, our-work, careers and all 11 blog pages; also index's "Call Now" and the chat's "Call Instead". Fix: class only; the page's existing fetch already sets the href.
+- **Neither text nor link follows.** "Call (435) 414-1667" buttons with `tel:4354141667` on about, our-work and 10 blog pages. The number shares a text node with "Call ", and those pages' fetch replaces the whole `textContent`, so a class alone would erase "Call ". They need the text-node swap booking.html now uses, not a wrapper span.
+- **Text only:** FAQ answers on the dishwasher, refrigerator and washer/dryer St. George pages (their FAQPage JSON-LD repeats the text), and the careers "Call or text ... or email ..." line (phone and email).
+- **`sms:` links:** no page has a hook for these. They include index's "Text us" buttons, booking's confirmation and "Nothing open online" lines, careers, and washer/dryer.

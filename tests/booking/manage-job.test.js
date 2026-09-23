@@ -123,14 +123,18 @@ test('an unknown token shows a clear, actionable message instead of a blank page
 });
 
 test('no token at all in the URL shows a helpful message rather than attempting any RPC call', async () => {
-  let anyFetchCalled = false;
+  const calls = [];
   const window = loadPage(
     'https://www.triplehenterprisesllc.biz/manage-job.html',
-    async () => { anyFetchCalled = true; return { ok: false }; },
+    async (url) => { calls.push(String(url)); return { ok: false }; },
   );
   await waitFor(200);
   assert.match(window.document.getElementById('content').innerHTML, /missing some information/);
-  assert.equal(anyFetchCalled, false, 'should not attempt any network call without a token');
+  // The page's one public, token-free read -- site_content's phone/email
+  // for the header number (2026-09-23, contact-hooks-public.test.js) --
+  // still happens; nothing that carries or needs a token does.
+  assert.deepEqual(calls.filter((u) => !/\/rest\/v1\/site_content\?select=key,value&key=in\.\(phone,email\)$/.test(u)), [],
+    'should not attempt any RPC call without a token');
 });
 
 test('clicking "Request a different date" reveals a plain date field, not a live slot picker', async () => {

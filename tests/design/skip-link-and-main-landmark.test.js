@@ -52,7 +52,9 @@ for (const page of ALL.filter((p) => !NOT_THIS_LANE[p])) {
 test('404.html: content sits in a <main>, laid out as the same centred column as before', () => {
   const html = read('404.html');
   const body = html.slice(html.indexOf('<body>'), html.indexOf('</body>'));
-  assert.match(body, /^<body>\s*<main>[\s\S]*<h1>404<\/h1>[\s\S]*<\/main>\s*$/);
+  // Only scripts may follow <main> (the site_content phone fetch,
+  // 2026-09-23) -- nothing that renders.
+  assert.match(body, /^<body>\s*<main>[\s\S]*<h1>404<\/h1>[\s\S]*<\/main>\s*(<script>[\s\S]*?<\/script>\s*)*$/);
   assert.match(html, /\bmain\{display:flex; flex-direction:column; align-items:center;\}/);
 });
 

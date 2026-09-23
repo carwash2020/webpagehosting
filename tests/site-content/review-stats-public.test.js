@@ -152,9 +152,12 @@ for (const file of PAGES) {
   });
 }
 
-test('booking.html (which had no site_content fetch) asks only for the two review fields', () => {
+test('booking.html (which had no site_content fetch) asks only for the fields it shows', () => {
+  // Widened 2026-09-23 from the two review fields to phone + email too,
+  // when booking.html started following the saved number
+  // (contact-hooks-public.test.js).
   const html = fs.readFileSync(path.join(ROOT, 'booking.html'), 'utf8');
-  assert.match(html, /\/rest\/v1\/site_content\?select=key,value&key=in\.\(googleRating,googleReviewCount\)/);
+  assert.match(html, /\/rest\/v1\/site_content\?select=key,value&key=in\.\(googleRating,googleReviewCount,phone,email\)'/);
 });
 
 test('the homepage count-up reads data-count-to on every frame, so a value arriving mid-animation still wins', () => {
