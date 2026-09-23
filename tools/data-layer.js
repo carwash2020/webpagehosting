@@ -1184,6 +1184,360 @@ function thWeekSummary(now, data) {
   return out;
 }
 
+// ---------- Shift clock (2026-09-23) ----------
+// Start my day / End my day: a whole-shift punch for each person, beside the
+// job clock above rather than instead of it. The job clock answers "how long
+// did this job take" (job costing, the invoice's Labor line); this answers
+// "how long did I work today", driving, estimates and the time between jobs
+// included. The two are independent: a job clock never needs a shift, since
+// forgetting to punch in mustn't cost a job its billable hours.
+//
+// Each shift is its own record in th_shift_log, kept lean because the whole
+// blob is pushed on every edit:
+//   { id, email, start, end, hours }                    always
+//   startSource 'entered' | 'job-clock', endSource 'entered'   only when typed or back-dated
+//   editedBy                                             only when someone else changed it
+// A list of records, not an object keyed by email: sync.js merges arrays per
+// record and per field, but overwrites plain objects whole, so two people
+// punching in on two phones would erase each other. On shift means end is
+// null -- null, never deleted, for the same merge reason as clockSince.
+// Hours round like the job clock's (thClockHours: 0.1 h, under a minute is a
+// mis-tap and counts 0) and land on the day the shift started.
+//
+// A forgotten End my day: a shift still open TH_SHIFT_MAX_HOURS after it
+// began needs an end time. It counts 0 h until someone says when they
+// finished, and End my day on it asks for that time instead of recording
+// now, so a punch left running overnight can't turn an 8-hour day into 24.
+// So does an older open shift left behind when two devices each started one
+// offline: only the latest open shift is the current one.
+const TH_SHIFTS_KEY = 'th_shift_log';
+const TH_SHIFT_TOMBSTONES_KEY = 'th_shift_tombstones';
+const TH_SHIFT_MAX_HOURS = 14;
+const TH_SHIFT_ENTRY_MAX_HOURS = 24; // the longest shift a typed-in time can make
+const TH_HOUR_MS = 3600000;
+
+function thLoadShiftTombstones() { return thRead(TH_SHIFT_TOMBSTONES_KEY, []); }
+function thAddShiftTombstone(id) {
+  let list = thLoadShiftTombstones();
+  list = thPruneTombstones(list);
+  list.push({ id, deletedAt: new Date().toISOString() });
+  thWrite(TH_SHIFT_TOMBSTONES_KEY, list);
+}
+
+// Whose shift: the signed-in email, read from the stored session first -- it
+// stays there when the access token expires (hourly), when
+// getCurrentUserEmail() returns null (see tools-tour.js's appTourSeenKey).
+function thShiftEmail() {
+  let email = null;
+  try {
+    const s = typeof getStoredSession === 'function' ? getStoredSession() : null;
+    email = (s && s.email) || null;
+  } catch (e) { /* ignore */ }
+  if (!email && typeof getCurrentUserEmail === 'function') email = getCurrentUserEmail();
+  return email ? String(email).trim().toLowerCase() : null;
+}
+function thShiftTime(iso) {
+  if (!iso) return null;
+  const t = new Date(iso).getTime();
+  return isNaN(t) ? null : t;
+}
+function thShiftNowMs(now) { return now === undefined ? Date.now() : new Date(now).getTime(); }
+function thRawShifts() {
+  const list = thRead(TH_SHIFTS_KEY, []);
+  return Array.isArray(list) ? list : [];
+}
+function thLoadShifts() {
+  return thRawShifts().filter(s => s && s.id && thShiftTime(s.start) !== null);
+}
+function thShiftsFor(email, shifts) {
+  const who = String(email || '').trim().toLowerCase();
+  if (!who) return [];
+  return (shifts || thLoadShifts()).filter(s => s && s.id && String(s.email || '').toLowerCase() === who && thShiftTime(s.start) !== null);
+}
+// The latest-started open shift. Can be stale -- see thActiveShift.
+function thCurrentShift(email, shifts) {
+  let best = null;
+  thShiftsFor(email, shifts).forEach(s => {
+    if (!s.end && (!best || thShiftTime(s.start) > thShiftTime(best.start))) best = s;
+  });
+  return best;
+}
+function thShiftIsStale(shift, now) {
+  if (!shift || shift.end) return false;
+  return thShiftNowMs(now) - thShiftTime(shift.start) > TH_SHIFT_MAX_HOURS * TH_HOUR_MS;
+}
+// On shift right now: the current shift, unless it's been open too long.
+function thActiveShift(email, shifts, now) {
+  const s = thCurrentShift(email, shifts);
+  return s && !thShiftIsStale(s, now) ? s : null;
+}
+// Open shifts that count nothing until they get an end time, oldest first.
+function thShiftsNeedingEnd(email, shifts, now) {
+  const list = shifts || thLoadShifts();
+  const current = thCurrentShift(email, list);
+  return thShiftsFor(email, list)
+    .filter(s => !s.end && (!current || s.id !== current.id || thShiftIsStale(s, now)))
+    .sort((a, b) => thShiftTime(a.start) - thShiftTime(b.start));
+}
+// "7:40 AM", or "Sep 22, 7:40 AM" when it isn't today.
+function thShiftClockLabel(ms, now) {
+  const d = new Date(ms);
+  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  return d.toDateString() === new Date(thShiftNowMs(now)).toDateString()
+    ? time
+    : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' + time;
+}
+// Why a start/end pair can't be saved, in plain words, or '' if it can.
+// Shared by a back-dated Start, an entered End time, and Edit. endMs null
+// means still open; `id` is the shift being changed, left out of the
+// overlap check. An open neighbour runs until whenever it ends.
+function thShiftTimesProblem(email, id, startMs, endMs, now, shifts) {
+  const nowMs = thShiftNowMs(now);
+  if (startMs === null || isNaN(startMs)) return 'Pick a start time.';
+  if (startMs > nowMs + 60000) return 'The start can’t be in the future.';
+  if (endMs !== null) {
+    if (isNaN(endMs)) return 'Pick an end time.';
+    if (endMs <= startMs) return 'The end has to be after the start.';
+    if (endMs > nowMs + 60000) return 'The end can’t be in the future.';
+    if (endMs - startMs > TH_SHIFT_ENTRY_MAX_HOURS * TH_HOUR_MS) return 'That’s over ' + TH_SHIFT_ENTRY_MAX_HOURS + ' hours. Check the times.';
+  } else if (nowMs - startMs > TH_SHIFT_MAX_HOURS * TH_HOUR_MS) {
+    return 'That’s more than ' + TH_SHIFT_MAX_HOURS + ' hours ago. Add an end time too.';
+  }
+  const myEnd = endMs === null ? Infinity : endMs;
+  const clash = thShiftsFor(email, shifts).find(s => {
+    if (String(s.id) === String(id)) return false;
+    const a = thShiftTime(s.start);
+    const b = s.end ? thShiftTime(s.end) : null;
+    return startMs < (b === null ? Infinity : b) && a < myEnd;
+  });
+  return clash ? 'That overlaps the shift from ' + thShiftClockLabel(thShiftTime(clash.start), nowMs) + '.' : '';
+}
+function thShiftChanged(shift) {
+  try { window.dispatchEvent(new CustomEvent('th-shift-change', { detail: { shiftId: shift ? shift.id : null, email: shift ? shift.email : null } })); } catch (e) { /* ignore */ }
+}
+function thShiftMarkEditor(shift) {
+  const me = thShiftEmail();
+  if (me && me !== shift.email) shift.editedBy = me;
+}
+
+// Start my day. opts: { now, start (a back-dated start), source, email }.
+// Returns { shift } when started, { shift, already: true } when already on
+// shift, { needsEnd: shift } when an older shift has to be closed first, or
+// { error } with the reason.
+function thStartShift(opts) {
+  opts = opts || {};
+  const nowMs = thShiftNowMs(opts.now);
+  const email = opts.email ? String(opts.email).trim().toLowerCase() : thShiftEmail();
+  if (!email) return { error: 'Sign in again to start your day.' };
+  const list = thRawShifts();
+  const active = thActiveShift(email, list, nowMs);
+  if (active) return { shift: active, already: true };
+  const waiting = thShiftsNeedingEnd(email, list, nowMs);
+  if (waiting.length) return { needsEnd: waiting[0] };
+  const backDated = opts.start !== undefined && opts.start !== null;
+  const startMs = backDated ? new Date(opts.start).getTime() : nowMs;
+  const problem = thShiftTimesProblem(email, null, startMs, null, nowMs, list);
+  if (problem) return { error: problem };
+  const shift = {
+    id: 's_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
+    email: email,
+    start: new Date(startMs).toISOString(),
+    end: null,
+    hours: null,
+  };
+  if (backDated) shift.startSource = opts.source === 'job-clock' ? 'job-clock' : 'entered';
+  thShiftMarkEditor(shift);
+  list.push(shift);
+  if (!thWrite(TH_SHIFTS_KEY, list)) return { error: 'Could not save.' };
+  thShiftChanged(shift);
+  return { shift: shift };
+}
+
+// End my day. opts: { now, end (an entered finish time), id, email } -- id
+// picks a shift other than the current one. Returns { shift, ms, hours,
+// undo }, { needsEnd: shift } when there's no telling when it ended (too
+// long open, or an older duplicate), { error }, or null with nothing to end.
+function thEndShift(opts) {
+  opts = opts || {};
+  const nowMs = thShiftNowMs(opts.now);
+  const list = thRawShifts();
+  const email = opts.email ? String(opts.email).trim().toLowerCase() : thShiftEmail();
+  const shift = opts.id !== undefined
+    ? list.find(s => s && String(s.id) === String(opts.id))
+    : thCurrentShift(email, list);
+  if (!shift || shift.end || thShiftTime(shift.start) === null) return null;
+  const entered = opts.end !== undefined && opts.end !== null;
+  if (!entered && thShiftsNeedingEnd(shift.email, list, nowMs).some(s => s.id === shift.id)) return { needsEnd: shift };
+  const startMs = thShiftTime(shift.start);
+  const endMs = entered ? new Date(opts.end).getTime() : nowMs;
+  const problem = thShiftTimesProblem(shift.email, shift.id, startMs, endMs, nowMs, list);
+  if (problem) return { error: problem };
+  const undo = { end: null, hours: null, endSource: shift.endSource === undefined ? undefined : shift.endSource, editedBy: shift.editedBy };
+  shift.end = new Date(endMs).toISOString();
+  shift.hours = thClockHours(endMs - startMs);
+  if (entered) shift.endSource = 'entered';
+  else if (shift.endSource !== undefined) shift.endSource = null;
+  thShiftMarkEditor(shift);
+  if (!thWrite(TH_SHIFTS_KEY, list)) return { error: 'Could not save.' };
+  thShiftChanged(shift);
+  return { shift: shift, ms: endMs - startMs, hours: shift.hours, undo: undo };
+}
+// Undo an End my day tapped by mistake: the shift runs again from when it
+// really started. Refused once a newer shift has begun.
+function thUndoEndShift(id, undo) {
+  if (!undo) return false;
+  const list = thRawShifts();
+  const shift = list.find(s => s && String(s.id) === String(id));
+  if (!shift || !shift.end) return false;
+  const startMs = thShiftTime(shift.start);
+  if (thShiftsFor(shift.email, list).some(s => s.id !== shift.id && thShiftTime(s.start) > startMs)) return false;
+  shift.end = null;
+  shift.hours = null;
+  if (undo.endSource !== undefined || shift.endSource !== undefined) shift.endSource = undo.endSource === undefined ? null : undo.endSource;
+  if (undo.editedBy !== undefined || shift.editedBy !== undefined) shift.editedBy = undo.editedBy === undefined ? null : undo.editedBy;
+  if (!thWrite(TH_SHIFTS_KEY, list)) return false;
+  thShiftChanged(shift);
+  return true;
+}
+// Fix a shift's times. changes: { start, end } -- either may be left out.
+// Returns { shift } or { error }, or null for an unknown id.
+function thEditShift(id, changes, now) {
+  changes = changes || {};
+  const nowMs = thShiftNowMs(now);
+  const list = thRawShifts();
+  const shift = list.find(s => s && String(s.id) === String(id));
+  if (!shift) return null;
+  const hasStart = changes.start !== undefined && changes.start !== null;
+  const hasEnd = changes.end !== undefined && changes.end !== null;
+  const startMs = hasStart ? new Date(changes.start).getTime() : thShiftTime(shift.start);
+  const endMs = hasEnd ? new Date(changes.end).getTime() : (shift.end ? thShiftTime(shift.end) : null);
+  const problem = thShiftTimesProblem(shift.email, shift.id, startMs, endMs, nowMs, list);
+  if (problem) return { error: problem };
+  if (hasStart) {
+    shift.start = new Date(startMs).toISOString();
+    shift.startSource = 'entered';
+  }
+  if (hasEnd) {
+    shift.end = new Date(endMs).toISOString();
+    shift.endSource = 'entered';
+  }
+  if (endMs !== null) shift.hours = thClockHours(endMs - startMs);
+  thShiftMarkEditor(shift);
+  if (!thWrite(TH_SHIFTS_KEY, list)) return { error: 'Could not save.' };
+  thShiftChanged(shift);
+  return { shift: shift };
+}
+function thDeleteShift(id) {
+  const list = thRawShifts();
+  const target = list.find(s => s && String(s.id) === String(id));
+  if (!target) return false;
+  if (!thWrite(TH_SHIFTS_KEY, list.filter(s => s !== target))) return false;
+  thAddShiftTombstone(target.id);
+  thAddToGraveyard('shift', target);
+  thShiftChanged(target);
+  return true;
+}
+
+// Forgot to punch in: the earliest job-clock start today -- after your last
+// shift ended and within a shift's length of now -- as the likely start of
+// the day. The job clock isn't anyone's in particular, so this is offered,
+// never applied.
+function thShiftSuggestedStart(email, now, jobs, shifts) {
+  const nowMs = thShiftNowMs(now);
+  let floor = Math.max(new Date(new Date(nowMs).toDateString()).getTime(), nowMs - TH_SHIFT_MAX_HOURS * TH_HOUR_MS);
+  thShiftsFor(email, shifts).forEach(s => {
+    const e = s.end ? thShiftTime(s.end) : null;
+    if (e !== null && e > floor && e <= nowMs) floor = e;
+  });
+  let best = null;
+  (jobs || thRead(TH_KEYS.jobs, [])).forEach(j => {
+    if (!j) return;
+    const consider = (ms) => { if (ms !== null && ms >= floor && ms < nowMs && (!best || ms < best.at)) best = { at: ms, job: j }; };
+    (Array.isArray(j.timeLog) ? j.timeLog : []).forEach(v => { if (v) consider(thShiftTime(v.start)); });
+    consider(thJobClockSince(j));
+  });
+  return best;
+}
+// Forgot to punch out: when the last job clock inside the shift stopped --
+// the last sign of work. Nothing to go on, nothing suggested.
+function thShiftSuggestedEnd(shift, now, jobs, shifts) {
+  const startMs = shift ? thShiftTime(shift.start) : null;
+  if (startMs === null) return null;
+  let ceiling = Math.min(thShiftNowMs(now), startMs + TH_SHIFT_MAX_HOURS * TH_HOUR_MS);
+  thShiftsFor(shift.email, shifts).forEach(s => {
+    const t = thShiftTime(s.start);
+    if (s.id !== shift.id && t > startMs && t < ceiling) ceiling = t;
+  });
+  let best = null;
+  (jobs || thRead(TH_KEYS.jobs, [])).forEach(j => {
+    (j && Array.isArray(j.timeLog) ? j.timeLog : []).forEach(v => {
+      const e = thShiftTime(v && v.end);
+      if (e !== null && e > startMs && e <= ceiling && (!best || e > best.at)) best = { at: e, job: j };
+    });
+  });
+  return best;
+}
+
+// One person's hours worked, Monday to Sunday (thWeekStart, the same week
+// as Your week), with last week beside it. A closed shift counts its hours
+// on the day it started; the shift you're on counts its time so far; a
+// shift waiting for an end time counts nothing and is listed in needsEnd.
+function thShiftWeekSummary(email, now, shifts) {
+  const at = now === undefined ? new Date() : new Date(now);
+  const list = shifts || thLoadShifts();
+  const who = String(email || '').trim().toLowerCase();
+  const start = thWeekStart(at);
+  const dayAt = (n) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + n);
+  const end = dayAt(7), prevStart = dayAt(-7);
+  const today = new Date(at.getFullYear(), at.getMonth(), at.getDate());
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((name, i) => {
+    const d = dayAt(i);
+    return { date: thLocalDateStr(d), name: name, hours: 0, isToday: d.getTime() === today.getTime(), isFuture: d > today };
+  });
+  const active = thActiveShift(who, list, at);
+  const needsEnd = thShiftsNeedingEnd(who, list, at);
+  const out = {
+    email: who, start: start, end: dayAt(6), days: days, hours: 0, prevHours: 0, today: 0,
+    onShift: !!active, active: active, since: active ? active.start : null, needsEnd: needsEnd,
+  };
+  thShiftsFor(who, list).forEach(s => {
+    let h;
+    if (s.end) h = Number(s.hours) || 0;
+    else if (active && s.id === active.id) h = Math.max(0, at.getTime() - thShiftTime(s.start)) / TH_HOUR_MS;
+    else return;
+    if (!(h > 0)) return;
+    const began = new Date(thShiftTime(s.start));
+    const day = new Date(began.getFullYear(), began.getMonth(), began.getDate());
+    if (day >= start && day < end) {
+      const i = Math.round((day - start) / 86400000);
+      days[i].hours += h;
+      out.hours += h;
+    } else if (day >= prevStart && day < start) out.prevHours += h;
+  });
+  const r1 = (n) => Math.round(n * 10) / 10;
+  days.forEach(d => { d.hours = r1(d.hours); });
+  const todayRow = days.find(d => d.isToday);
+  out.today = todayRow ? todayRow.hours : 0;
+  out.hours = r1(out.hours);
+  out.prevHours = r1(out.prevHours);
+  return out;
+}
+// Everyone's week, for the team view: one row per account with a shift this
+// week or last, on shift now, or waiting for an end time. On shift first,
+// then the most hours this week.
+function thShiftTeamSummary(now, shifts) {
+  const list = shifts || thLoadShifts();
+  const emails = [];
+  list.forEach(s => {
+    const e = s && String(s.email || '').trim().toLowerCase();
+    if (e && emails.indexOf(e) === -1) emails.push(e);
+  });
+  return emails
+    .map(e => thShiftWeekSummary(e, now, list))
+    .filter(r => r.hours || r.prevHours || r.onShift || r.needsEnd.length)
+    .sort((a, b) => (a.onShift === b.onShift ? b.hours - a.hours : (a.onShift ? -1 : 1)));
+}
+
 // ---------- Client texts (2026-09-23, Workspace rework part 12) ----------
 // The texts sent every day, written from the job: On my way (with a time),
 // Running late, Confirming the visit, a quick parts run, All done. Which
