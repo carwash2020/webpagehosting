@@ -18,6 +18,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
+const { publicHtmlFiles } = require('./public-pages');
 
 const ROOT = path.join(__dirname, '..', '..');
 const read = (...p) => fs.readFileSync(path.join(ROOT, ...p), 'utf8');
@@ -307,18 +308,6 @@ test('booking.html applies phone/email from the same fetch as the review stats, 
   assert.match(contactScript('booking.html'), /window\.__siteContentMap = map;\s*\n\s*if \(typeof applyReviewStats === 'function'\) applyReviewStats\(map\);\s*\n\s*applySiteContact\(map\);/);
 });
 
-test('each page\'s built-in number and email are the ones the editor says a blank field shows', () => {
-  const src = read('tools', 'site-content.html').match(/const CMS_BUILT_IN = \{[\s\S]*?\n {2}\};/)[0];
-  const builtIn = new Function(src + '; return CMS_BUILT_IN;')();
-  assert.equal(builtIn.phone, BUILT_IN_PHONE);
-  assert.equal(builtIn.email, BUILT_IN_EMAIL);
-  for (const file of PAGES) {
-    const doc = new JSDOM(read(file)).window.document;
-    doc.querySelectorAll('.js-phone-text').forEach(el => assert.ok(el.textContent.includes(builtIn.phone), file));
-    doc.querySelectorAll('.js-phone-link').forEach(el => assert.equal(el.getAttribute('href'), 'tel:+1' + builtIn.phone.replace(/\D/g, ''), file));
-  }
-});
-
 // ---------------------------------------------------------------------------
 // Site-wide: the spots the editor still tells the owner about
 // ---------------------------------------------------------------------------
@@ -338,16 +327,6 @@ const KNOWN_UNHOOKED_PAGES = [
   'services/dishwasher-repair-st-george-ut.html', 'services/refrigerator-repair-st-george-ut.html',
   'services/washer-dryer-repair-st-george-ut.html',
 ];
-
-function publicHtmlFiles() {
-  const out = [];
-  for (const dir of ['', 'services', 'locations', 'blog']) {
-    for (const f of fs.readdirSync(path.join(ROOT, dir))) {
-      if (f.endsWith('.html') && !/^google[0-9a-f]+\.html$/.test(f)) out.push(path.posix.join(dir, f));
-    }
-  }
-  return out;
-}
 
 test('the pages with an unhooked number or email are exactly the ones the editor names', () => {
   const unhooked = publicHtmlFiles().filter(file => {

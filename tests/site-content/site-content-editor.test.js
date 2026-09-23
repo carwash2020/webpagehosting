@@ -428,6 +428,16 @@ test('the editor\'s built-in fallbacks match what the public pages really show w
   assert.deepEqual([...phones], [builtIn.phone]);
   const emails = new Set([...indexDom.querySelectorAll('.js-email-text')].map(el => el.textContent.trim()));
   assert.deepEqual([...emails], [builtIn.email]);
+  // The four pages that rewrite only the number inside a longer text
+  // (2026-09-23, contact-hooks-public.test.js): each hook holds the
+  // built-in number and dials it.
+  for (const file of ['booking.html', 'manage-booking.html', 'manage-job.html', '404.html']) {
+    const doc = new JSDOM(fs.readFileSync(path.join(ROOT, file), 'utf8')).window.document;
+    const texts = [...doc.querySelectorAll('.js-phone-text')];
+    assert.ok(texts.length >= 1, file);
+    texts.forEach(el => assert.ok(el.textContent.includes(builtIn.phone), file));
+    doc.querySelectorAll('.js-phone-link').forEach(el => assert.equal(el.getAttribute('href'), 'tel:+1' + builtIn.phone.replace(/\D/g, ''), file));
+  }
 });
 
 // ---------------------------------------------------------------------------
