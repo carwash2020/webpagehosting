@@ -1030,6 +1030,95 @@ function thFinishJob(jobId, now) {
   return job;
 }
 
+// ---------- Payment reminders (2026-09-23, Workspace rework part 10) ----------
+// A reminder that writes itself: who, which invoice, how much, how late,
+// and -- for an invoice on the client portal (it has a client email) --
+// where to pay by card. Each one sent is logged on the invoice
+// (inv.reminders), so the next one is a notch firmer and every money view
+// can say when the client was last reminded. Sending is the phone's own
+// Messages or Mail app; nothing is sent from here.
+const TH_PORTAL_PAY_URL = 'https://www.triplehenterprisesllc.biz/portal/login.html';
+
+function thInvoiceReminders(inv) {
+  return (inv && Array.isArray(inv.reminders) ? inv.reminders : [])
+    .filter(r => r && r.at && !isNaN(new Date(r.at).getTime()))
+    .slice().sort((a, b) => new Date(a.at) - new Date(b.at));
+}
+function thInvoiceLastReminder(inv) {
+  const list = thInvoiceReminders(inv);
+  return list.length ? list[list.length - 1] : null;
+}
+function thDaysBetween(a, b) {
+  return Math.round((new Date(new Date(b).toDateString()) - new Date(new Date(a).toDateString())) / 86400000);
+}
+// 1 friendly, 2 following up, 3 firm: one notch past the last one sent,
+// and never gentler than how late it is (two weeks late starts at 2, a
+// month late at 3).
+function thInvoiceReminderStep(inv, now) {
+  const at = now === undefined ? new Date() : new Date(now);
+  const due = thInvoiceDueDate(inv);
+  const late = due ? thDaysBetween(due, at) : 0;
+  const sent = thInvoiceReminders(inv);
+  const lastStep = sent.length ? (Number(sent[sent.length - 1].step) || sent.length) : 0;
+  let step = Math.min(3, lastStep + 1);
+  if (late >= 30) step = 3;
+  else if (late >= 14) step = Math.max(step, 2);
+  return step;
+}
+function thReminderMoney(n) {
+  return '$' + (Math.round((Number(n) || 0) * 100) / 100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+function thInvoiceReminderText(inv, now) {
+  const at = now === undefined ? new Date() : new Date(now);
+  const first = String(inv.clientName || '').trim().split(/\s+/)[0] || 'there';
+  const which = 'invoice ' + (inv.invoiceNumber ? inv.invoiceNumber + ' ' : '') + 'for ' + thReminderMoney(thInvoiceBalance(inv));
+  const due = thInvoiceDueDate(inv);
+  const late = due ? thDaysBetween(due, at) : 0;
+  const dueWord = due ? due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+  const pay = inv.clientEmail ? ' You can pay online at ' + TH_PORTAL_PAY_URL + ' (sign in with your email).' : '';
+  const step = thInvoiceReminderStep(inv, at);
+  let body;
+  if (step === 1) {
+    const when = !due ? '' : late > 0 ? ' was due ' + dueWord : late === 0 ? ' is due today' : ' is due ' + dueWord;
+    body = 'Hi ' + first + ', this is Triple H Enterprises. Just a friendly reminder that ' + which + when + '.' + pay + ' Thank you!';
+  } else if (step === 2) {
+    body = 'Hi ' + first + ', Triple H Enterprises here, following up on ' + which + (late > 0 ? ', now ' + late + ' day' + (late === 1 ? '' : 's') + ' past due' : '') + '.' + pay +
+      ' If anything about the bill looks wrong, just reply and let me know.';
+  } else {
+    body = 'Hi ' + first + ', ' + which + ' from Triple H Enterprises is now ' + Math.max(late, 0) + ' days past due. Please arrange payment this week' +
+      (inv.clientEmail ? ' at ' + TH_PORTAL_PAY_URL : '') + ', or reply so we can sort it out. Thank you.';
+  }
+  return {
+    step: step,
+    body: body,
+    subject: 'Reminder: invoice ' + (inv.invoiceNumber ? inv.invoiceNumber + ' ' : '') + '(' + thReminderMoney(thInvoiceBalance(inv)) + ')',
+  };
+}
+function thLogInvoiceReminder(invoiceId, channel, now) {
+  const invoices = thRead(TH_KEYS.invoices, []);
+  const inv = invoices.find(i => String(i.id) === String(invoiceId));
+  if (!inv) return null;
+  const at = now === undefined ? new Date() : new Date(now);
+  const step = thInvoiceReminderStep(inv, at);
+  inv.reminders = thInvoiceReminders(inv).concat([{ at: at.toISOString(), channel: channel || 'text', step: step }]);
+  if (!thWrite(TH_KEYS.invoices, invoices)) return null;
+  return inv;
+}
+// Where the Remind button shows: something is still owed and it's due
+// today or past due. Before that, a reminder is just nagging.
+function thInvoiceNeedsReminder(inv, now) {
+  if (!inv || thInvoiceBalance(inv) <= 0) return false;
+  const due = thInvoiceDueDate(inv);
+  return !!due && thDaysBetween(due, now === undefined ? new Date() : now) >= 0;
+}
+// "Reminded today", "Reminded 3 days ago" -- for the money lists.
+function thInvoiceRemindedLabel(inv, now) {
+  const last = thInvoiceLastReminder(inv);
+  if (!last) return '';
+  const d = thDaysBetween(last.at, now === undefined ? new Date() : now);
+  return 'Reminded ' + (d <= 0 ? 'today' : d === 1 ? 'yesterday' : d + ' days ago');
+}
+
 // Everything for one job in a single call -- the query that makes a real
 // Job Detail view possible, the same way thGetClientBundle() enabled
 // Client Detail. Client resolution prefers job.clientId (written on every

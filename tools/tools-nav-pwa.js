@@ -932,6 +932,122 @@ function thOpenClockStoppedSheet(r) {
 })();
 
 // ---------------------------------------------------------------------------
+// PAYMENT REMINDER (2026-09-23, Workspace rework part 10). One sheet for
+// "they haven't paid": the reminder is already written (data-layer.js
+// thInvoiceReminderText -- a notch firmer each time, with the portal's pay
+// link for an invoice that's on it), you can edit it, and it goes out
+// through the phone's own Messages or Mail. Sending or copying logs it on
+// the invoice, so every money view can say when they were last reminded.
+// Any element with data-remind-invoice="<id>" opens it, on any page.
+// ---------------------------------------------------------------------------
+var TH_REMIND_TONE = ['', 'Friendly reminder', 'Following up', 'Firm reminder'];
+
+function thReminderPhone(inv) {
+  if (inv.clientPhone) return inv.clientPhone;
+  var client = null;
+  if (inv.clientId && typeof thFindClientById === 'function') client = thFindClientById(inv.clientId);
+  if (!client && inv.clientName && typeof thFindClientByName === 'function') client = thFindClientByName(inv.clientName);
+  if (client && client.phone) return client.phone;
+  if (inv.jobRefId && typeof thRead === 'function' && typeof TH_KEYS !== 'undefined') {
+    var job = thRead(TH_KEYS.jobs, []).find(function (j) { return String(j.id) === String(inv.jobRefId); });
+    if (job && job.phone) return job.phone;
+  }
+  return '';
+}
+// iOS has wanted "&body=", Android "?body=" (review-request.html found the
+// same); Copy is the fallback that always works.
+function thSmsHref(phone, body) {
+  var digits = String(phone || '').replace(/\D/g, '');
+  var to = digits.length === 10 ? '1' + digits : digits;
+  var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  return 'sms:' + to + (ios ? '&' : '?') + 'body=' + encodeURIComponent(body);
+}
+function thMailHref(email, subject, body) {
+  return 'mailto:' + String(email || '').replace(/[^\w.@+-]/g, '') + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+}
+function thOpenReminderSheet(invoiceId) {
+  if (typeof thInvoiceReminderText !== 'function' || typeof thRead !== 'function' || typeof TH_KEYS === 'undefined') return false;
+  var inv = thRead(TH_KEYS.invoices, []).find(function (i) { return String(i.id) === String(invoiceId); });
+  if (!inv) return false;
+  var esc = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  var icon = function (name) { return '<svg class="th-icon" aria-hidden="true"><use href="#icon-' + name + '" xlink:href="#icon-' + name + '"></use></svg>'; };
+  var msg = thInvoiceReminderText(inv);
+  var sentBefore = thInvoiceReminders(inv).length;
+  var phone = thReminderPhone(inv);
+  var email = inv.clientEmail || '';
+  var first = String(inv.clientName || '').trim().split(/\s+/)[0] || 'them';
+  var due = thInvoiceDueDate(inv);
+  var late = due ? thDaysBetween(due, new Date()) : 0;
+  var meta = [
+    inv.invoiceNumber ? '#' + inv.invoiceNumber : '',
+    thReminderMoney(thInvoiceBalance(inv)) + ' owed',
+    late > 0 ? late + ' day' + (late === 1 ? '' : 's') + ' overdue' : late === 0 && due ? 'due today' : '',
+    thInvoiceRemindedLabel(inv),
+  ].filter(Boolean).join(' · ');
+
+  var opener = document.activeElement;
+  var overlay = document.createElement('div');
+  overlay.className = 'quick-actions-overlay th-remind';
+  overlay.innerHTML =
+    '<div class="quick-actions-sheet th-remind-sheet" role="dialog" aria-modal="true" aria-labelledby="thRemindTitle">' +
+      '<div class="th-remind-kicker">' + TH_REMIND_TONE[msg.step] + (sentBefore ? ' \u00b7 reminder ' + (sentBefore + 1) : '') + '</div>' +
+      '<div class="th-remind-title" id="thRemindTitle">Remind ' + esc(inv.clientName || 'the client') + '</div>' +
+      '<div class="th-remind-meta">' + esc(meta) + '</div>' +
+      '<textarea class="th-remind-text" rows="6" aria-label="The reminder (you can edit it)">' + esc(msg.body) + '</textarea>' +
+      '<div class="th-remind-actions">' +
+        (phone ? '<a class="primary-btn th-remind-send" data-channel="text" href="#">' + icon('message') + 'Text ' + esc(first) + '</a>' : '') +
+        (email ? '<a class="' + (phone ? 'secondary-btn' : 'primary-btn') + ' th-remind-send" data-channel="email" href="#">' + icon('mail') + 'Email</a>' : '') +
+        '<button type="button" class="secondary-btn th-remind-send" data-channel="copy">' + icon('clipboard') + 'Copy</button>' +
+      '</div>' +
+      (!phone && !email ? '<div class="th-remind-note">No phone or email on file for ' + esc(first) + ': copy it and send it however you reach them.</div>' : '') +
+      '<button type="button" class="quick-actions-btn quick-actions-cancel">Not now</button>' +
+    '</div>';
+
+  function close() {
+    document.removeEventListener('keydown', onKey);
+    overlay.classList.remove('is-shown');
+    setTimeout(function () { overlay.remove(); }, 200);
+    if (opener && typeof opener.focus === 'function') { try { opener.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+  }
+  function onKey(e) { if (e.key === 'Escape') close(); }
+  function logged(channel) {
+    var saved = thLogInvoiceReminder(inv.id, channel);
+    try { window.dispatchEvent(new CustomEvent('th-invoice-reminded', { detail: { invoiceId: inv.id, channel: channel } })); } catch (e) { /* ignore */ }
+    if (typeof showToast === 'function' && saved) {
+      showToast(channel === 'copy' ? 'Copied. Logged as reminded.' : 'Reminder logged. The next one will be a little firmer.');
+    }
+  }
+  overlay.addEventListener('click', function (e) {
+    if (e.target === overlay || e.target.closest('.quick-actions-cancel')) { close(); return; }
+    var send = e.target.closest('.th-remind-send');
+    if (!send) return;
+    var body = overlay.querySelector('.th-remind-text').value.trim() || msg.body;
+    var channel = send.getAttribute('data-channel');
+    if (channel === 'text') send.setAttribute('href', thSmsHref(phone, body)); // the tap itself then opens Messages
+    else if (channel === 'email') send.setAttribute('href', thMailHref(email, msg.subject, body));
+    else {
+      e.preventDefault();
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(body).catch(function () { /* ignore */ });
+    }
+    if (typeof haptic === 'function') haptic('success');
+    logged(channel);
+    close();
+  });
+  document.addEventListener('keydown', onKey);
+  document.body.appendChild(overlay);
+  requestAnimationFrame(function () { overlay.classList.add('is-shown'); });
+  var firstSend = overlay.querySelector('.th-remind-send');
+  if (firstSend) { try { firstSend.focus({ preventScroll: true }); } catch (e) { firstSend.focus(); } }
+  return true;
+}
+document.addEventListener('click', function (e) {
+  var t = e.target && e.target.closest ? e.target.closest('[data-remind-invoice]') : null;
+  if (!t) return;
+  e.preventDefault();
+  thOpenReminderSheet(t.getAttribute('data-remind-invoice'));
+});
+
+// ---------------------------------------------------------------------------
 // DISPLAY DENSITY TOGGLE -- added 2026-08-16. A personal display
 // preference (comfortable vs compact row spacing), so it lives in plain
 // localStorage rather than the synced data blob -- there's no reason a
@@ -1092,6 +1208,8 @@ if (typeof document !== 'undefined') {
     '<symbol id="icon-navigate" viewBox="0 0 24 24"><path d="M20.5 3.5L3.5 11l7.2 2.3L13 20.5z"/></symbol>' +
     '<symbol id="icon-chevron" viewBox="0 0 24 24"><polyline points="9.5,5.5 15.5,12 9.5,18.5"/></symbol>' +
 
+    // Payment reminder (2026-09-23, rework part 10).
+    '<symbol id="icon-mail" viewBox="0 0 24 24"><rect x="3.5" y="5.5" width="17" height="13" rx="2"/><polyline points="4 7.5 12 13 20 7.5"/></symbol>' +
     // Job clock (2026-09-23, rework part 9).
     '<symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><polyline points="12 7.5 12 12 15.2 14"/></symbol>' +
     '<symbol id="icon-play" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M8 5.2v13.6a.9.9 0 0 0 1.37.77l10.6-6.8a.9.9 0 0 0 0-1.54L9.37 4.43A.9.9 0 0 0 8 5.2z"/></symbol>' +

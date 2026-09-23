@@ -2819,3 +2819,25 @@ body .th-search-field input { width: 100%; box-sizing: border-box; padding-left:
   body.th-has-clock { padding-bottom: 88px; }
   body.th-has-clock .th-toast-container { bottom: 96px; }
 }
+
+/* ---- Payment reminder sheet (2026-09-23, Workspace rework part 10) ----
+   Rides on the quick-actions sheet: which reminder this is (orange small
+   caps), who, what's owed, the message itself in an editable box, then
+   Text / Email / Copy side by side. */
+.th-remind-sheet { padding-top: 18px; }
+.th-remind-kicker { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--orange-light); }
+.th-remind-title { margin-top: 4px; font-size: 20px; font-weight: 700; color: var(--white); }
+.th-remind-meta { margin-top: 2px; font-size: 13px; color: var(--text-dim); }
+body .th-remind-text, body .th-remind-text:focus {
+  display: block; width: 100%; box-sizing: border-box; margin: 12px 0 0; min-height: 136px; padding: 12px 14px;
+  border-radius: 12px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text);
+  font: inherit; font-size: 15px; line-height: 1.5; text-transform: none; letter-spacing: 0; resize: vertical;
+}
+body .th-remind-text:focus { border-color: var(--orange-light); box-shadow: 0 0 0 3px var(--orange-tint-soft); outline: none; }
+.th-remind-actions { display: flex; gap: 8px; margin: 12px 0 10px; }
+.th-remind-actions > * {
+  flex: 1 1 0; min-width: 0; width: auto; min-height: 48px; padding: 0 12px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;
+}
+.th-remind-actions .th-icon { width: 16px; height: 16px; margin: 0; flex-shrink: 0; }
+.th-remind-note { margin: 0 0 10px; font-size: 13px; color: var(--text-dim); }

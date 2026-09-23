@@ -3987,3 +3987,47 @@ Verified in a real headless Chromium (local HTTP, fake Supabase):
 - No console errors.
 
 New tests: `tests/tools/job-clock.test.js` (15).
+
+
+## What changed, 2026-09-23 (later still) -- Workspace rework, part 10: Get paid
+
+Part 10 of the Workspace rework. Full reasoning in
+`docs/specialist-logs/features.md`.
+
+**A late invoice now has a one-tap reminder, already written.** Chasing
+money used to mean writing the same awkward text yourself.
+- **Remind** shows wherever an invoice is due or late:
+  - Money Owed on the Dashboard, beside Mark paid;
+  - **Send a reminder** in the invoice's sheet on Invoices;
+  - an overdue job's line on its page.
+- **The message writes itself:** their first name, the invoice number,
+  what's still owed (after any part payment), and when it was due. For an
+  invoice on the client portal (one with a client email), it also says
+  where to pay by card online.
+- **Every reminder is a notch firmer than the one before,** and never
+  gentler than how late it is:
+  - Friendly ("Just a friendly reminder...").
+  - Following up ("...now 25 days past due. If anything about the bill
+    looks wrong, just reply"). Two weeks late starts here.
+  - Firm ("Please arrange payment this week"). A month late starts here.
+- **You can edit it,** then **Text** (the phone number comes from the
+  invoice, the client, or the job), **Email** (with a subject line), or
+  **Copy**. It goes out from your own phone's Messages or Mail. Nothing
+  is sent from the app.
+- **It's logged on the invoice.** Money Owed, the invoice row, and the job
+  all say "Reminded 3 days ago", so a second nudge the next morning is a
+  choice, not an accident.
+
+Verified in a real headless Chromium (local HTTP, fake Supabase), at
+390px:
+- Money Owed shows **Remind** only on the late invoice, not the one due
+  in 27 days.
+- The sheet opens as "Following up" for a 25-day-late invoice, with the
+  portal link and Text Bill (his phone from the client list), Email and
+  Copy.
+- After sending: "Reminded today" on the Dashboard row, the invoice row,
+  and the job. The invoice sheet reads "Send a reminder (reminded
+  today)", and the next reminder opens as "Firm reminder · reminder 2".
+- No console errors.
+
+New tests: `tests/tools/payment-reminders.test.js` (9).
