@@ -17,6 +17,25 @@
 // against a double-send if a run is ever retried or overlaps the
 // window twice.
 //
+// 2026-09-22 (booking-flow pass):
+//   - The reminder now carries a calendar (.ics) attachment and an "Add to
+//     Google Calendar" link, same as the confirmation email -- re-sent
+//     without the file if Resend ever rejects it.
+//   - A client who has the portal installed with push turned on also gets
+//     the reminder as a push, on their own device(s) only: the booking's
+//     email is matched EXACTLY to a portal account through
+//     get_auth_user_id_by_email() (service role only), then sent via
+//     Send-Push's per-user "client-notification" branch. No match, no push.
+//   - Reschedules now re-arm this reminder: track_booking_changes() clears
+//     reminder_sent_at whenever a confirmed booking's start time moves
+//     (sql/booking/add_booking_change_emails_and_reminder_rearm.sql).
+//     Before, a guest reminded Monday about Tuesday who moved to Friday
+//     never heard about Friday.
+//   - Auth: the bearer token must be the service role key (the hourly cron
+//     sends the vault's send_push_service_role_key), same check as
+//     Send-Push/send-payment-reminder. Nothing here is callable with the
+//     public anon key anymore.
+//
 // Deploy with: supabase functions deploy send-appointment-reminder
 // Required secrets (all already configured for the lead/booking-email
 // pipeline; no new secrets needed):
@@ -62,6 +81,87 @@ function formatDateRange(startAt: string, endAt: string): { dateLabel: string; t
   return { dateLabel, timeLabel };
 }
 
+const SITE_ORIGIN = "https://www.triplehenterprisesllc.biz";
+
+function manageUrl(booking: Record<string, unknown>): string {
+  return `${SITE_ORIGIN}/manage-booking.html?token=${encodeURIComponent(String(booking.cancel_token || ""))}`;
+}
+
+// Same calendar event as send-booking-email-index.ts's buildBookingIcs()
+// (same UID), so importing it again updates the one event rather than
+// adding a second copy.
+function icsEscape(text: unknown): string {
+  return String(text ?? "")
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\r?\n/g, "\\n");
+}
+
+function icsFold(line: string): string {
+  if (line.length <= 73) return line;
+  const parts = [line.slice(0, 73)];
+  let rest = line.slice(73);
+  while (rest.length) {
+    parts.push(" " + rest.slice(0, 72));
+    rest = rest.slice(72);
+  }
+  return parts.join("\r\n");
+}
+
+function icsUtc(date: Date): string {
+  return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+}
+
+function buildBookingIcs(booking: Record<string, unknown>): string {
+  const desc = [
+    "Questions, or running late? Call or text Triple H at (435) 414-1667.",
+    `Reschedule or cancel: ${manageUrl(booking)}`,
+  ].join("\n");
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Triple H Enterprises//Booking//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:th-booking-${icsEscape(booking.id)}@triplehenterprisesllc.biz`,
+    `DTSTAMP:${icsUtc(new Date())}`,
+    `DTSTART:${icsUtc(new Date(String(booking.start_at)))}`,
+    `DTEND:${icsUtc(new Date(String(booking.end_at)))}`,
+    `SUMMARY:${icsEscape("Triple H Enterprises: " + (booking.service_label || "Service visit"))}`,
+    booking.address ? `LOCATION:${icsEscape(booking.address)}` : "",
+    `DESCRIPTION:${icsEscape(desc)}`,
+    `URL:${manageUrl(booking)}`,
+    "BEGIN:VALARM",
+    "ACTION:DISPLAY",
+    "DESCRIPTION:Triple H visit in 2 hours",
+    "TRIGGER:-PT2H",
+    "END:VALARM",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].filter(Boolean);
+  return lines.map(icsFold).join("\r\n") + "\r\n";
+}
+
+function toBase64(text: string): string {
+  const bytes = new TextEncoder().encode(text);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+function googleCalendarUrl(booking: Record<string, unknown>): string {
+  const params = [
+    "action=TEMPLATE",
+    "text=" + encodeURIComponent("Triple H Enterprises: " + (booking.service_label || "Service visit")),
+    "dates=" + icsUtc(new Date(String(booking.start_at))) + "/" + icsUtc(new Date(String(booking.end_at))),
+    "details=" + encodeURIComponent(`Questions, or running late? Call or text Triple H at (435) 414-1667.\nReschedule or cancel: ${manageUrl(booking)}`),
+  ];
+  if (booking.address) params.push("location=" + encodeURIComponent(String(booking.address)));
+  return "https://calendar.google.com/calendar/render?" + params.join("&");
+}
+
 function buildReminderEmailHtml(booking: Record<string, unknown>): string {
   const { dateLabel, timeLabel } = formatDateRange(String(booking.start_at), String(booking.end_at));
   const firstName = booking.name ? String(booking.name).trim().split(/\s+/)[0] : "";
@@ -105,6 +205,7 @@ function buildReminderEmailHtml(booking: Record<string, unknown>): string {
         <tr>
           <td style="padding: 20px 28px 28px; font-family: -apple-system, Helvetica, Arial, sans-serif;">
             <p style="color: #777; font-size: 13px; line-height: 1.5; margin: 0 0 20px;">This is an estimated time slot. The actual visit may run longer depending on what we find once we're there.</p>
+            <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 20px;">Not on your calendar yet? Open the attached file, or <a href="${escapeHtml(googleCalendarUrl(booking))}" style="color: #ff8000;">add it to Google Calendar</a>.</p>
             <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 20px;">Need to reschedule or cancel? <a href="https://www.triplehenterprisesllc.biz/manage-booking.html?token=${escapeHtml(booking.cancel_token)}" style="color: #ff8000;">Manage your booking here</a>, or just reply to this email or give us a call.</p>
             <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0;">See you soon,<br><strong>Triple H Enterprises</strong></p>
           </td>
@@ -138,6 +239,8 @@ function buildReminderEmailText(booking: Record<string, unknown>): string {
     `Time: ${timeLabel}`,
     "",
     "This is an estimated time slot. The actual visit may run longer depending on what we find once we're there.",
+    "",
+    `Not on your calendar yet? Open the attached file, or add it to Google Calendar: ${googleCalendarUrl(booking)}`,
     "",
     `Need to reschedule or cancel? Manage your booking here: https://www.triplehenterprisesllc.biz/manage-booking.html?token=${booking.cancel_token}`,
     "",
@@ -188,21 +291,27 @@ async function markReminderSent(id: number): Promise<void> {
 async function sendReminder(booking: Record<string, unknown>): Promise<boolean> {
   const guestEmail = booking.email ? String(booking.email).trim() : "";
   if (!guestEmail) return false;
-  try {
-    const res = await fetch("https://api.resend.com/emails", {
+  const body = {
+    from: `Triple H Enterprises <${LEAD_EMAIL_FROM}>`,
+    to: guestEmail,
+    subject: "Reminder: your appointment tomorrow with Triple H Enterprises",
+    html: buildReminderEmailHtml(booking),
+    text: buildReminderEmailText(booking),
+  };
+  async function post(payload: Record<string, unknown>) {
+    return await fetch("https://api.resend.com/emails", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-      },
-      body: JSON.stringify({
-        from: `Triple H Enterprises <${LEAD_EMAIL_FROM}>`,
-        to: guestEmail,
-        subject: "Reminder: your appointment tomorrow with Triple H Enterprises",
-        html: buildReminderEmailHtml(booking),
-        text: buildReminderEmailText(booking),
-      }),
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
+      body: JSON.stringify(payload),
     });
+  }
+  try {
+    // With the calendar file first; if Resend rejects it, the reminder
+    // itself still goes out without the file.
+    const withFile = await post({ ...body, attachments: [{ filename: "triple-h-visit.ics", content: toBase64(buildBookingIcs(booking)) }] });
+    if (withFile.ok) return true;
+    console.error("sendReminder: send with calendar attachment failed, retrying without it:", withFile.status, await withFile.text());
+    const res = await post(body);
     if (!res.ok) {
       console.error("sendReminder: Resend API error:", res.status, await res.text());
       return false;
@@ -214,10 +323,67 @@ async function sendReminder(booking: Record<string, unknown>): Promise<boolean> 
   }
 }
 
-Deno.serve(async (_req: Request) => {
+// Push the same reminder to a portal client's own device(s), if -- and
+// only if -- the booking's email EXACTLY matches a portal account
+// (get_auth_user_id_by_email lower()-compares the whole address; it
+// never guesses). Send-Push's client-notification branch then sends only
+// to that one user's subscriptions. Never throws; a push is a bonus on
+// top of the email, never a reason to fail the run.
+async function sendReminderPush(booking: Record<string, unknown>): Promise<boolean> {
+  const email = booking.email ? String(booking.email).trim() : "";
+  if (!email) return false;
   try {
+    const lookup = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_auth_user_id_by_email`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+      },
+      body: JSON.stringify({ p_email: email }),
+    });
+    if (!lookup.ok) {
+      console.error("sendReminderPush: user lookup failed:", lookup.status, await lookup.text());
+      return false;
+    }
+    const userId = await lookup.json();
+    if (typeof userId !== "string" || !userId) return false; // no portal account for this email
+    const { timeLabel } = formatDateRange(String(booking.start_at), String(booking.end_at));
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/Send-Push`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+      body: JSON.stringify({
+        type: "client-notification",
+        user_id: userId,
+        title: `Tomorrow: ${booking.service_label || "your Triple H visit"}`,
+        body: `${timeLabel}. Need to change it? Tap to reschedule or cancel.`,
+        url: "/portal/home.html",
+      }),
+    });
+    if (!res.ok) console.error("sendReminderPush: Send-Push error:", res.status, await res.text());
+    return res.ok;
+  } catch (err: any) {
+    console.error("sendReminderPush error (non-fatal):", err.message);
+    return false;
+  }
+}
+
+Deno.serve(async (req: Request) => {
+  try {
+    // Service-role callers only: the hourly cron sends the vault's
+    // send_push_service_role_key. Checked before anything is read or sent.
+    const authHeader = req.headers.get("Authorization") || "";
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    if (!SERVICE_ROLE_KEY || token !== SERVICE_ROLE_KEY) {
+      return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     const bookings = await fetchDueBookings();
     let sent = 0;
+    let pushed = 0;
     for (const booking of bookings) {
       const ok = await sendReminder(booking);
       if (ok) {
@@ -228,9 +394,11 @@ Deno.serve(async (_req: Request) => {
         // every future reminder for this booking).
         await markReminderSent(Number(booking.id));
         sent++;
+        // After the mark, so a slow push can never cause a second email.
+        if (await sendReminderPush(booking)) pushed++;
       }
     }
-    return new Response(JSON.stringify({ ok: true, checked: bookings.length, sent }), {
+    return new Response(JSON.stringify({ ok: true, checked: bookings.length, sent, pushed }), {
       headers: { "Content-Type": "application/json" },
     });
   } catch (err: any) {

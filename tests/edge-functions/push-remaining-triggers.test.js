@@ -28,7 +28,13 @@ for (const [name, src] of Object.entries(FILES)) {
   test(`${name}: looks up the real auth user id by email before sending push`, () => {
     const fnMatch = src.match(/async function getUserIdByEmail\([\s\S]*?\n\}\n/);
     assert.ok(fnMatch, `${name}: expected to isolate getUserIdByEmail()`);
-    assert.match(fnMatch[0], /\/auth\/v1\/admin\/users\?email=/);
+    // Updated 2026-09-22: this used to assert GET /auth/v1/admin/users?email=
+    // -- but that endpoint has no `email` filter; it returned every user,
+    // newest first, and users[0] was the wrong account. The lookup is now
+    // an exact match through a service-role-only RPC (see
+    // tests/edge-functions/booking-notifications-round2.test.js).
+    assert.match(fnMatch[0], /\/rest\/v1\/rpc\/get_auth_user_id_by_email/);
+    assert.doesNotMatch(fnMatch[0], /admin\/users|users\[0\]/);
   });
 
   test(`${name}: a missing subscription is silent and non-fatal`, () => {

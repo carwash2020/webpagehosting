@@ -946,4 +946,18 @@ direct-insert fallback).
    (a strict check that has 200s on real cron runs) is what made
    finding #2 safe to fix in one pass.
 
+## 2026-09-23 (booking lane): push broadcasts scoped to staff, client-push lookup fixed, booking functions require the service role
+
+Cross-logged from `features.md` (round 2 of the booking-flow pass). It closes the 2026-09-23 audit's **#8** (`send-booking-email` / `send-appointment-reminder` caller check) and ships the already-merged **#3** fix (Send-Push caller check) together with the change that needed Send-Push redeployed anyway.
+
+- **Internal broadcasts reached every subscriber.**
+  - Send-Push's `sendToAllSubscriptions` read all of `push_subscriptions`, the same table portal clients write to. It now uses `get_internal_push_subscriptions()`, which matches subscriptions to `account_roles` by account email, and it fails closed.
+  - Latent: all 6 live rows belong to the 2 internal accounts. It would have leaked lead and booking names, client names on overdue invoices and the revenue digest to the first client who enabled push.
+- **Client pushes could reach the wrong person.**
+  - Six functions used `GET /auth/v1/admin/users?email=`, which GoTrue ignores. The first page of all users came back, and `users[0]` (the newest account) received another client's invoice, quote or message notification.
+  - They now use `get_auth_user_id_by_email()`: exact, case-insensitive, null when absent.
+- **Both lookup functions are SECURITY DEFINER** (they read `auth.users`), `search_path=public`, and EXECUTE-able by service_role only (revoked from public, anon and authenticated). They were verified live in rolled-back transactions: anon and authenticated get permission denied; service_role gets the 6 internal subscriptions and exact/case-insensitive matches.
+- **`send-booking-email` and `send-appointment-reminder`** check `!SERVICE_ROLE_KEY || token !== SERVICE_ROLE_KEY` before `req.json()`. Send-Push's existing check gained the same empty-key guard.
+- **Pre-deploy check:** every live Send-Push caller authenticates with the service role (4 trigger functions and 2 cron jobs via the Vault `send_push_service_role_key`, edge functions via `SUPABASE_SERVICE_ROLE_KEY`). Nothing in any page's JavaScript calls it.
+
 <!-- Add new entries above this line -->

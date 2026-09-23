@@ -295,7 +295,22 @@ All deployed and ACTIVE. Source backed up in `edge-functions/`.
 | `create-pos-charge` | true | **Internal-only** -- three modes (`check`/`charge_saved`/`new_card`) for the Quick charge tab in `tools/invoice-generator.html` (formerly its own page, `tools/pos.html`, now a redirect stub). Uses its own dedicated, narrowly-scoped Stripe secret (`STRIPE_POS_SECRET_KEY`), not the shared one. Requires a signed authorization before ever saving a new card |
 | `manage-saved-card` | true | Client-facing saved-card self-service -- list, remove, and add a replacement (a Stripe SetupIntent, never a PaymentIntent, since adding a card must never charge anything). Its own dedicated Stripe secret (`STRIPE_CLIENT_CARDS_SECRET_KEY`) |
 
-Two non-obvious things worth not rediscovering the hard way:
+Non-obvious things worth not rediscovering the hard way:
+
+- **Finding a client's user id for a push: use
+  `get_auth_user_id_by_email()`, never `GET /auth/v1/admin/users?email=`.**
+  GoTrue's admin list endpoint has no `email` filter; it silently
+  returns the first page of all users, so `users[0]` is whoever signed
+  up last. The RPC (service_role only) is an exact, case-insensitive
+  match. The six notification functions were moved to it on
+  2026-09-23.
+- **Internal ("broadcast") pushes go through
+  `get_internal_push_subscriptions()`**, which returns only
+  subscriptions whose account email is in `account_roles`, so a
+  client who enables portal push never receives staff alerts. Send-Push
+  fails closed if that lookup errors. Its side-effect-free
+  `{"type": "audience-check"}` reports `{internal, total}` counts for
+  checking this.
 
 - **`sync-invoice-to-portal` forwards the original caller's own auth
   token** to the downstream functions, not the service role key,

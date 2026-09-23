@@ -2766,4 +2766,62 @@ through pick, confirm and the celebration on all three pages, plus each
 page with `booking-flow.js` blocked (the original picker still books):
 no page errors, no horizontal overflow.
 
+## 2026-09-23 -- Booking flow, round 2: the guest hears about every change, reminders follow a moved visit, and push stays private
+
+Edge functions and SQL only: `send-booking-email`, `send-appointment-reminder`, `Send-Push`, and the six notification functions, plus `sql/booking/add_booking_change_emails_and_reminder_rearm.sql` and `sql/security/scope_push_broadcasts_to_internal_accounts.sql`. No page changes. Branch `claude/booking-flow-notifications`.
+
+**A moved visit re-arms its reminder.** `send-appointment-reminder` only emails bookings whose `reminder_sent_at` is null, and nothing ever cleared it. A guest reminded Monday about Tuesday who then moved to Friday never heard about Friday. `track_booking_changes()`, the existing BEFORE UPDATE trigger that already stamps `reschedule_count` on exactly this transition, now also clears `reminder_sent_at`.
+
+**Reschedule and cancel emails.** The only guest email used to be the INSERT-time confirmation, so a guest's inbox kept showing the OLD time.
+- A new AFTER UPDATE trigger, `on_booking_change_send_email`, posts the same UPDATE payload shape Send-Push's booking trigger uses to `send-booking-email`.
+- Its WHEN clause gates it to the two real transitions: confirmed → cancelled, or a confirmed booking's `start_at` moving.
+- Any other update (the reminder stamp, a job conversion) never fires it.
+- The function re-checks the transition and sends:
+  - a move: the guest gets "Your visit has moved" (old time struck through, fresh `.ics`), staff get "Booking moved"
+  - a cancel: the guest gets "Your visit is cancelled", staff get "Booking cancelled"
+  - anything else: `{ok:true, skipped:true}`
+
+It's a separate trigger rather than more code in `notify_booking_status_change`, so a Resend problem and a push problem stay independent failure modes. There's deliberately no REVOKE on the trigger function (the 2026-08-13 `notify_new_lead` incident).
+
+**Calendar files and a push in the reminder.**
+- The confirmation, move and reminder emails attach an `.ics`: two alarms on the confirmation, one 2-hour alarm on the reminder. If Resend rejects the attachment, the email is retried without it.
+- They also carry an Add-to-Google-Calendar link.
+- The reminder also sends a portal push ("Tomorrow: <service>") when the booker has a portal account.
+- The order is email → `reminder_sent_at` → push, so a push failure can never cause a duplicate email.
+
+**Caller checks.** `send-booking-email` and `send-appointment-reminder` now require the service-role bearer (the Vault key their only callers send) before reading the payload, with the same empty-key guard as #363. This closes the audit's booking-lane item #8.
+
+**Push privacy** (requested directly: "the internal alerts go to every push subscriber"):
+- **Internal broadcasts.** Send-Push's "broadcast to the team" read every `push_subscriptions` row. The moment a client turned on portal push, they would have started receiving new-lead and new-booking names, overdue invoices by client name, and the weekly revenue digest.
+  - It now calls `get_internal_push_subscriptions()`, which returns only subscriptions whose account email is in `account_roles`.
+  - It fails CLOSED: a lookup error sends to nobody.
+  - A side-effect-free `audience-check` type reports `{internal, total}` for verification.
+- **Client pushes went to the wrong person.** Six functions (invoice, quote, contract, work-order scheduled, job message, work-order message) looked up a client's user id with `GET /auth/v1/admin/users?email=`.
+  - GoTrue's admin list endpoint has no `email` filter. It returned the newest users, and `users[0]` was whoever signed up last.
+  - They now call `get_auth_user_id_by_email()`: an exact, case-insensitive match that returns null when there's no account.
+  - Both functions are SECURITY DEFINER and service-role-only, explicitly revoked from public, anon and authenticated.
+
+Neither bug had fired: all 6 current subscriptions belong to the 2 internal accounts. Either would have fired on a client's first push.
+
+**Also ships (already merged to `main`, never deployed):**
+- Send-Push's 2026-09-17 caller check (audit item #3), now with the empty-key guard
+- `send-booking-email`'s 2026-09-19 green checkmark (#307)
+- #363's caller checks on the two work-order functions (`notify-job-message-email`'s is already live)
+
+Every Send-Push caller was re-checked before deploy. The 4 trigger functions and 2 cron jobs in the live database all read the Vault `send_push_service_role_key` (no literal JWTs). Every edge-function caller sends its env `SUPABASE_SERVICE_ROLE_KEY`. No browser page or workflow calls it; Dev Tools goes through the trigger on purpose.
+
+**Deploy order, run after this merges** (each step is verified by fetching the live source and diffing it against `main`; the results are recorded in a follow-up entry):
+1. The security SQL.
+2. Send-Push, confirmed with an anon → 401 probe and a Vault-key `audience-check` call.
+3. The six functions.
+4. `send-booking-email` (anon → 401, and an UPDATE non-transition → `skipped`).
+5. Then the trigger migration. The function must exist first, because the old version answered an UPDATE payload with a harmless 400 and sent nothing.
+6. `send-appointment-reminder` last.
+
+**Tests:** `tests/edge-functions/booking-notifications-round2.test.js` (23, plus an empty-key-guard assertion). They run the real handlers with a mocked `Deno` and `fetch`, covering the transitions, the ordering, the attachment retry and the fail-closed broadcast. Updated with reasons: `push-remaining-triggers` and `push-notifications` now expect the RPC lookup instead of `admin/users`. All nine functions were syntax-checked as ES modules after TypeScript stripping. The trigger migration was exercised live in rolled-back transactions:
+- an insert queues 2 requests
+- a reminder stamp or job link queues 0
+- a reschedule queues +2 and clears `reminder_sent_at`
+- a cancel queues +2
+
 <!-- Add new entries above this line -->
