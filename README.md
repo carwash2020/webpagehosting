@@ -4450,7 +4450,12 @@ The banner scripts now block rendering, but the page doesn't paint later. On som
 
 Desktop banners are 45px tall instead of 43px. Nothing else on desktop changes. Checked on the homepage, a service page and a city page, for first visit, both dismissed, and one dismissed, at 1440, 375 and 320px, in dark and light themes with reduced motion. axe finds no target-size, contrast or button-name issues.
 
-Verified: VERIFY_PLACEHOLDER
+Verified:
+- full suite 3206 of 3207 passing; the one failure is the known `check-links.py` sandbox-proxy test;
+- `check-consistency`, `check-undefined-vars`, `eslint` and `check-visual-snapshot` clean;
+- `check-links.py`: the only failures are the sandbox proxy refusing outside sites (403), no internal link broken;
+- CSP untouched: the scripts are same-origin, so `script-src 'self'` covers them;
+- no SEO metadata or JSON-LD touched.
 
 New test: `tests/design/site-banner-no-layout-shift.test.js` checks:
 - placement and stamps on all 16 pages;
