@@ -17,6 +17,13 @@ const PAGE_PATH = path.join(__dirname, '..', '..', 'booking.html');
 const BUSINESS_HOURS_SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'js', 'business-hours.js'), 'utf8')
   + '\nwindow.BUSINESS_TIMEZONE = BUSINESS_TIMEZONE; window.HOURS_BY_WEEKDAY = HOURS_BY_WEEKDAY; window.DAYS_AHEAD_SHOWN = DAYS_AHEAD_SHOWN; window.zonedTimeToUtc = zonedTimeToUtc; window.businessWeekday = businessWeekday; window.todayDateStrInBusinessTz = todayDateStrInBusinessTz; window.addDaysToDateStr = addDaysToDateStr; window.formatHoursLabel = formatHoursLabel; window.fetchBookingsForDate = fetchBookingsForDate; window.computeSlotsForDate = computeSlotsForDate; window.findNextAvailableSlot = findNextAvailableSlot;';
 
+// booking.html and manage-booking.html also load /js/booking-flow.js
+// (2026-09-22: whole-window availability, add to calendar), right after
+// business-hours.js. Evaluated the same way and in the same order a real
+// browser runs the two <script> tags, so the availability path these
+// tests drive is the page's real code.
+const BOOKING_FLOW_SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'js', 'booking-flow.js'), 'utf8');
+
 function loadPage(url, mockFetch) {
   const html = fs.readFileSync(PAGE_PATH, 'utf8');
   const dom = new JSDOM(html, {
@@ -25,6 +32,7 @@ function loadPage(url, mockFetch) {
     beforeParse(w) {
       if (mockFetch) w.fetch = mockFetch;
       w.eval(BUSINESS_HOURS_SRC);
+      w.eval(BOOKING_FLOW_SRC);
     },
   });
   return dom.window;
@@ -100,13 +108,26 @@ test('an unrecognized service key is ignored, leaving the normal step-1 flow in 
   assert.equal(window.document.querySelectorAll('.slot-btn').length, 0, 'should still be sitting on step 1, no slots rendered yet');
 });
 
-test('a malformed date param is ignored -- falls back to today rather than passing a bad string straight to selectDate', async () => {
+test('a malformed date param is ignored -- falls back to the first day with openings rather than passing a bad string straight to selectDate', async () => {
+  // Updated 2026-09-22: the fallback used to be "today" regardless of
+  // whether today had anything left (after the 2-hour lead time it often
+  // doesn't). The picker now opens on the first day that actually has
+  // an open slot, so that's the correct fallback for a bad date too --
+  // computed here with the page's own helpers, so this holds at any
+  // time of day.
   const window = loadPage('https://www.triplehenterprisesllc.biz/booking.html?service=inspection&date=not-a-date', NO_BOOKINGS_FETCH);
-  await waitForCondition(() => window.document.querySelectorAll('.slot-btn').length > 0 || window.document.getElementById('slotsEmpty').style.display === 'block');
+  await waitForCondition(() => window.document.querySelectorAll('.slot-btn').length > 0);
 
+  const today = window.todayDateStrInBusinessTz();
+  let expected = null;
+  for (let i = 0; i < 14 && !expected; i++) {
+    const d = window.addDaysToDateStr(today, i);
+    if (window.computeSlotsForDate(d, 45, []).length) expected = d;
+  }
   const selectedDateBtn = window.document.querySelector('.date-btn.is-selected');
-  assert.ok(selectedDateBtn, 'expected today to be selected as the fallback');
-  assert.equal(selectedDateBtn.dataset.date, window.todayDateStrInBusinessTz());
+  assert.ok(selectedDateBtn, 'expected a date to be selected as the fallback');
+  assert.equal(selectedDateBtn.dataset.date, expected);
+  assert.notEqual(selectedDateBtn.dataset.date, 'not-a-date');
 });
 
 test('no query params at all behaves exactly as before -- step 1, no service preselected', async () => {

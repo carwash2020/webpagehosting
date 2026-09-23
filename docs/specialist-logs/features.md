@@ -2516,4 +2516,75 @@ Tests: `tests/portal/service-history-pdf.test.js` (pagination checked
 against a recording stand-in for jsPDF), additions to
 `tests/portal/work-order-cancel.test.js`.
 
+## 2026-09-22 (later still) -- Booking flow, round 1: the whole two weeks at a glance, and a real "you're booked"
+
+Public booking pages only (`booking.html`, `manage-booking.html`, one
+link on `index.html`); no Supabase or edge-function change this round.
+Branch `claude/booking-flow-picker-and-confirm`.
+
+**One availability fetch, not one per tapped day.** Every picker called
+`fetchBookingsForDate()` only after a day was tapped, so visitors tapped
+day after day to find anything open. `booking.html` opened on today,
+which the 2-hour lead time and afternoon weekday hours usually leave
+empty ("No open times this day" was the first thing most people saw).
+`get_booking_availability` already takes any range, so the new
+`fetchBookingsForRange()` / `computeSlotsByDate()` load all 14 days in
+one call. Each day is labeled "N open" / "Full" / "Closed", full days
+can't be picked, the picker opens on the first open day, and switching
+days is instant. **Why a new file (`js/booking-flow.js`) rather than
+more code in `business-hours.js`:** that file is also loaded by
+`tools/workspace.html` and precached by the portal service worker, so
+any edit would ripple a version bump into `tools/` and both service
+workers. `business-hours.js` is byte-identical to before;
+`fetchBookingsForDate()` stays for its existing callers and as the
+fallback if the new file ever fails to load (both pages degrade to the
+old picker rather than erroring).
+
+**Deep links honor the day asked for.** `firstBookableDate()` picks the
+requested day if it has room; if not, the nearest open day after it,
+then earlier days as a last resort. A visible note says the day was
+full. A day tapped while the load is in flight wins once it lands.
+
+**Triage -> booking handoff.** The homepage triage result's Book link
+now carries `?service=appliance&note=Dryer: Runs but won't heat`.
+`booking.html` skips step 1 and fills the notes (fill-only, control
+characters stripped, 300 chars max, a visible "we filled this in"
+hint). It's opt-in via `data-triage-book-link` on `index.html` only, as
+a small inline delegated listener, so `js/triage.js` is untouched and
+the city/service pages that share it are unaffected. Follow-up: those
+pages can opt in with the same attribute.
+
+**Step 3 shows what's needed.** Name, phone, address, email (now with a
+hint saying why it's worth giving), and "What's going on?" stay visible.
+Referral and how-you-heard sit in a "Referred by someone?" disclosure,
+with the same ids/names (the Dashboard source breakdown and the $25
+ledger read them). It opens by itself when a `?ref=` link filled one in.
+The `bSource` select had no styling at all (browser default, ~13px, so
+it tripped iOS zoom); now on-theme at 16px.
+
+**The confirmation.** The appointment card, Add to calendar (an `.ics`
+with day-before and 2-hour alarms), and a Google Calendar link are
+built from the booked slot. The honeypot path renders the identical
+screen. Step 4 now jumps into view first: on a phone the check used to
+play above the screen, because only steps 1-3 ever scrolled.
+
+**A slot taken at the last second** now says so on step 2, where the
+visitor is bounced back to. The message used to stay behind in step 3's
+form.
+
+**manage-booking.html.** Same strip (this booking's own slot excluded).
+Tapping a time now opens "Move your visit to ...? [Confirm new time]":
+a single mis-tap used to move the real appointment and push a
+"rescheduled" alert to Steve. The success states use the green drawn
+check. Add to calendar is shown for the current time and again for the
+new time, with the manage link in the event. The native `alert()` is
+now an inline error.
+
+**Tests updated with reasons, not deleted:** the 2026-09-21 race test
+now covers the race that can still happen (two overlapping loads, pick
+a service then another). The malformed-date test expects the first open
+day instead of "today"; it only passed at certain hours before. Two
+manage tests click the new confirm button. The four booking test
+loaders also eval `booking-flow.js`, the way a browser runs the two tags.
+
 <!-- Add new entries above this line -->

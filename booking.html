@@ -240,6 +240,9 @@
   }
 
   .step-panel{display:none;}
+  /* The panels are programmatic focus targets for screen readers (see
+     goToStep()), not controls -- no visible ring on the whole panel. */
+  .step-panel:focus{outline:none;}
   .step-panel.is-active{display:block; animation:stepIn .28s ease both;}
   @keyframes stepIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
 
@@ -304,6 +307,24 @@
   .date-btn .dow{font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px;}
   .date-btn .dom{font-size:18px; font-weight:700; margin-top:2px; font-family:var(--font-ui);}
   .date-btn.is-selected{border-color:var(--orange); background:var(--orange-tint-soft); color:var(--orange-light);}
+  /* Whole-window availability (2026-09-22): each day now says how many
+     open times it has, from ONE fetch for the whole strip, instead of a
+     visitor tapping day after day to find out. Full/closed days stay in
+     the strip (the calendar reads as a calendar) but can't be picked. */
+  .date-btn .avail{display:block; margin-top:4px; font-size:10.5px; font-weight:600; letter-spacing:.3px; color:var(--success-text); white-space:nowrap; min-height:14px;}
+  .date-btn.is-selected .avail{color:var(--orange-light);}
+  .date-btn .avail.is-loading{width:34px; height:8px; min-height:0; margin:8px auto 3px; border-radius:4px; background:var(--border); animation:skelPulse 1.1s ease-in-out infinite;}
+  .date-btn.is-unavailable{opacity:.45; cursor:not-allowed; transform:none;}
+  .date-btn.is-unavailable:hover{border-color:var(--border); transform:none;}
+  .date-btn.is-unavailable .avail{color:var(--text-dim);}
+  @keyframes skelPulse{0%,100%{opacity:.45;} 50%{opacity:1;}}
+  .slot-skel{height:44px; border-radius:10px; background:var(--bg-panel-2); border:1px solid var(--border); animation:skelPulse 1.1s ease-in-out infinite;}
+  .slot-skel:nth-child(2){animation-delay:.12s;} .slot-skel:nth-child(3){animation-delay:.24s;} .slot-skel:nth-child(4){animation-delay:.36s;}
+  .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;}
+  .date-jump-note{font-size:13px; color:var(--text-dim); margin:-10px 0 16px;}
+  .date-jump-note strong{color:var(--text); font-weight:600;}
+  .no-availability{grid-column:1/-1; text-align:center; padding:22px 12px; color:var(--text-dim); font-size:14px; line-height:1.5;}
+  .no-availability a{color:var(--orange-light); text-decoration:underline; text-underline-offset:2px;}
 
   .slots-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(104px, 1fr)); gap:10px; margin-bottom:8px;}
   .slot-btn{
@@ -332,6 +353,37 @@
   .field-error{color:#ff8a80; font-size:12.5px; margin:6px 0 0; min-height:0; display:none;}
   .field-error.is-visible{display:block;}
   textarea{resize:vertical; min-height:80px;}
+  /* The "How did you hear about us?" select never had any styling on
+     this page (it rendered as a bare browser-default control on the
+     dark theme, and at the default ~13px font it tripped iOS Safari's
+     zoom-on-focus -- same root cause as the 16px input fix above). */
+  select{
+    width:100%; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:10px;
+    padding:12px 38px 12px 14px; color:var(--text); font-family:var(--font-app); font-size:16px;
+    -webkit-appearance:none; appearance:none; cursor:pointer;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffb347' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 12px center; background-size:16px;
+  }
+  select:focus{outline:2px solid var(--orange); outline-offset:1px; border-color:var(--orange);}
+  /* Step 3 shows only what's needed to book (2026-09-22): the three
+     required fields, email, and what's going on. How-you-heard and
+     who-referred-you sit one tap away -- opened automatically when a
+     referral link already filled one in. */
+  .optional-details{margin-top:20px; border:1px solid var(--border); border-radius:10px; background:var(--bg-panel);}
+  .optional-details summary{
+    list-style:none; cursor:pointer; padding:13px 14px; display:flex; align-items:center; gap:10px;
+    font-family:var(--font-app); font-size:14px; font-weight:600; color:var(--text);
+  }
+  .optional-details summary::-webkit-details-marker{display:none;}
+  .optional-details summary .od-text{display:flex; flex-direction:column; gap:2px; min-width:0;}
+  .optional-details summary .od-sub{font-weight:400; color:var(--text-dim); font-size:13px;}
+  .optional-details summary svg{width:16px; height:16px; margin-left:auto; flex-shrink:0; color:var(--orange-light); transition:transform .2s ease;}
+  .optional-details[open] summary svg{transform:rotate(180deg);}
+  .optional-details summary:focus-visible{outline:2px solid var(--orange-light); outline-offset:2px; border-radius:10px;}
+  .optional-details .od-body{padding:0 14px 16px;}
+  .optional-details .od-body label:first-child{margin-top:4px;}
+  .prefill-note{font-family:var(--font-app); font-size:12.5px; color:var(--success-text); margin:6px 0 0; display:flex; gap:6px; align-items:flex-start; line-height:1.4;}
+  .prefill-note svg{width:14px; height:14px; flex-shrink:0; margin-top:1px;}
 
   .btn{
     display:inline-flex; align-items:center; justify-content:center; gap:8px;
@@ -437,6 +489,52 @@
   }
   .conf-referral p:last-child{margin:0; color:var(--text); font-size:14px; line-height:1.45;}
 
+  /* The "you're booked" moment, choreographed (2026-09-22). The green
+     check already popped in and drew itself; everything around it now
+     arrives in order instead of all at once -- a ring pulses out of the
+     check, the headline rises, the appointment card lands like a stamp,
+     the calendar buttons and next steps follow -- over about 1.4s, with a
+     burst of brand-colored flecks from bookingCelebrate() (js/booking-flow.js)
+     as the check finishes drawing. Only while .is-celebrating is set, so
+     a re-render never replays it, and the reduced-motion block below
+     removes the delays so nobody waits on an animation they opted out of. */
+  .confirmation .checkmark{position:relative;}
+  .confirmation.is-celebrating .checkmark::after{
+    content:''; position:absolute; inset:0; border-radius:50%;
+    border:3px solid var(--success-text); opacity:0;
+    animation:ringPulse .9s ease-out .55s both;
+  }
+  @keyframes ringPulse{0%{opacity:.7; transform:scale(1);} 100%{opacity:0; transform:scale(1.9);}}
+  .confirmation.is-celebrating h2{animation:riseIn .45s ease-out .45s both;}
+  .confirmation.is-celebrating .conf-lead{animation:riseIn .45s ease-out .55s both;}
+  .confirmation.is-celebrating .conf-detail{animation:stampIn .5s cubic-bezier(.2,1.3,.4,1) .7s both;}
+  .confirmation.is-celebrating .conf-actions,
+  .confirmation.is-celebrating .conf-cal-hint{animation:riseIn .4s ease-out .9s both;}
+  .confirmation.is-celebrating .next-steps{animation:riseIn .4s ease-out 1s both;}
+  .confirmation.is-celebrating .next-steps-list li{animation:riseIn .35s ease-out both;}
+  .confirmation.is-celebrating .next-steps-list li:nth-child(1){animation-delay:1.1s;}
+  .confirmation.is-celebrating .next-steps-list li:nth-child(2){animation-delay:1.2s;}
+  .confirmation.is-celebrating .next-steps-list li:nth-child(3){animation-delay:1.3s;}
+  .confirmation.is-celebrating .next-steps-list li:nth-child(4){animation-delay:1.4s;}
+  .confirmation.is-celebrating .next-steps-list li:nth-child(1) .next-steps-dot{animation:dotFill .3s ease-out 1.25s both;}
+  .confirmation.is-celebrating .conf-emergency,
+  .confirmation.is-celebrating .conf-referral,
+  .confirmation.is-celebrating .conf-done{animation:riseIn .4s ease-out 1.5s both;}
+  @keyframes riseIn{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);}}
+  @keyframes stampIn{0%{opacity:0; transform:scale(1.06) rotate(-.6deg);} 60%{opacity:1;} 100%{opacity:1; transform:scale(1) rotate(0);}}
+  @keyframes dotFill{to{background:var(--orange); color:#1a1a1a;}}
+  .conf-detail .conf-when{display:block; font-family:var(--font-ui); font-size:19px; font-weight:700; color:var(--text); letter-spacing:.2px; margin-top:2px;}
+  .conf-detail .conf-sub{display:block; color:var(--text-dim); font-size:13.5px; margin-top:4px;}
+  .conf-actions{display:flex; gap:10px; flex-wrap:wrap; margin:-6px 0 22px;}
+  .conf-actions .btn{flex:1 1 180px; margin-top:0; padding:13px 16px; font-size:12.5px; white-space:nowrap;}
+  .conf-actions .btn.outline{text-decoration:none;}
+  /* display:flex would otherwise beat the hidden attribute. */
+  .conf-actions[hidden], .prefill-note[hidden], .date-jump-note[hidden]{display:none;}
+  .conf-cal-hint{font-size:12.5px; color:var(--text-dim); margin:-14px 0 22px; text-align:left;}
+  @media (prefers-reduced-motion: reduce){
+    .confirmation *, .confirmation *::after{animation-delay:0s !important;}
+  }
+
   @media (max-width:960px){
     .booking-layout{grid-template-columns:1fr; gap:0; padding:24px 20px 0;}
     .booking-sidebar{display:none;}
@@ -494,6 +592,7 @@
     width:auto;
     margin-top:0;
   }
+  .sticky-call a.btn{text-decoration:none;}
   .sticky-call .btn.outline{
     color:#f3d5b0;
     border-color:rgba(255,128,0,.55);
@@ -554,6 +653,10 @@
      can never silently drift on what the real hours actually are.
      See business-hours.js's own header comment for the full reasoning. -->
 <script src="/js/business-hours.js?v=5296319b73"></script>
+<!-- Whole-window availability, add-to-calendar and the confirmation
+     burst (2026-09-22) -- see js/booking-flow.js. Needs business-hours.js
+     above it. -->
+<script src="/js/booking-flow.js?v=74bc606084"></script>
 <script src="/js/cookie-consent.js" defer></script>
 <script src="/js/utm-tracking.js?v=5aa2d867e3" defer></script>
 </head>
@@ -630,6 +733,7 @@
       <div class="booking-summary" id="selectedServiceSummary"></div>
       <label>Choose a date</label>
       <div class="date-row" id="dateRow"></div>
+      <p class="date-jump-note" id="dateJumpNote" hidden></p>
       <label>Choose a time</label>
       <div class="slots-grid" id="slotsGrid" aria-live="polite"></div>
       <div class="slots-empty" id="slotsEmpty" style="display:none;" aria-live="polite">No open times this day. Try another date.</div>
@@ -647,37 +751,49 @@
         <label for="bPhone">Phone</label>
         <input type="tel" id="bPhone" name="phone" required autocomplete="tel" inputmode="numeric" placeholder="(555) 123-4567" pattern="^\(\d{3}\) \d{3}-\d{4}$" maxlength="14" title="Enter a 10-digit phone number">
         <p class="field-error" id="phoneError" aria-live="polite"></p>
-        <label for="bEmail">Email</label>
-        <input type="email" id="bEmail" name="email" autocomplete="email" maxlength="200" placeholder="you@example.com">
-        <p class="field-error" id="emailError" aria-live="polite"></p>
         <label for="bAddress">Address</label>
         <input type="text" id="bAddress" name="address" required autocomplete="street-address" maxlength="200">
-        <label for="bNotes">Anything we should know? (optional)</label>
-        <textarea id="bNotes" name="notes" maxlength="1000"></textarea>
-        <!-- Marketing-source tracking (closes a real audit gap): a
-             general "how did you hear about us" category, separate
-             from the referral program's own name-based field right
-             below -- this shows up as a breakdown on the internal
-             Dashboard, the referral field feeds the $25 reward ledger. -->
-        <label for="bSource">How did you hear about us? (optional)</label>
-        <select id="bSource" name="source">
-          <option value="" selected>Prefer not to say</option>
-          <option>Google Search</option>
-          <option>Yelp / Online Reviews</option>
-          <option>Referral (friend or family)</option>
-          <option>Repeat Customer</option>
-          <option>Saw Our Vehicle or Sign</option>
-          <option>Social Media</option>
-          <option>Other</option>
-        </select>
-        <!-- Referral program (direct request, 2026-09-09): a $25 credit
-             for whoever referred this customer, once this job is
-             complete and paid -- see sql/infra/create_referral_program.sql
-             for the full schema and reward terms. Optional, so it never
-             blocks a booking that doesn't have one. -->
-        <label for="bReferredBy">Who referred you? (optional)</label>
-        <p class="field-hint">They get a $25 credit toward their next service once this job is complete and paid.</p>
-        <input type="text" id="bReferredBy" name="referred_by" autocomplete="off" maxlength="200" placeholder="Their name, so we can credit them">
+        <label for="bEmail">Email</label>
+        <input type="email" id="bEmail" name="email" autocomplete="email" maxlength="200" placeholder="you@example.com" aria-describedby="emailHint">
+        <p class="field-hint" id="emailHint">Optional, but it's how you get your confirmation and a link to reschedule or cancel anytime.</p>
+        <p class="field-error" id="emailError" aria-live="polite"></p>
+        <label for="bNotes">What's going on? (optional)</label>
+        <textarea id="bNotes" name="notes" maxlength="1000" placeholder="e.g. Dryer runs but won't heat"></textarea>
+        <p class="prefill-note" id="notesPrefillNote" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg><span>We filled this in from what you picked. Change anything you like.</span></p>
+        <!-- Step 3 trim (2026-09-22): only the fields needed to book stay
+             in view. The two marketing/referral fields below keep their
+             exact ids and names (the Dashboard's source breakdown and the
+             $25 referral ledger both read them) but sit behind one tap --
+             and open on their own when a referral link filled one in. -->
+        <details class="optional-details" id="optionalDetails">
+          <summary><span class="od-text"><span class="od-title">Referred by someone?</span><span class="od-sub">Or tell us how you found us</span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
+          <div class="od-body">
+            <!-- Referral program (direct request, 2026-09-09): a $25 credit
+                 for whoever referred this customer, once this job is
+                 complete and paid -- see sql/infra/create_referral_program.sql
+                 for the full schema and reward terms. Optional, so it never
+                 blocks a booking that doesn't have one. -->
+            <label for="bReferredBy">Who referred you? (optional)</label>
+            <p class="field-hint">They get a $25 credit toward their next service once this job is complete and paid.</p>
+            <input type="text" id="bReferredBy" name="referred_by" autocomplete="off" maxlength="200" placeholder="Their name, so we can credit them">
+            <!-- Marketing-source tracking (closes a real audit gap): a
+                 general "how did you hear about us" category, separate
+                 from the referral program's own name-based field right
+                 above -- this shows up as a breakdown on the internal
+                 Dashboard, the referral field feeds the $25 reward ledger. -->
+            <label for="bSource">How did you hear about us? (optional)</label>
+            <select id="bSource" name="source">
+              <option value="" selected>Prefer not to say</option>
+              <option>Google Search</option>
+              <option>Yelp / Online Reviews</option>
+              <option>Referral (friend or family)</option>
+              <option>Repeat Customer</option>
+              <option>Saw Our Vehicle or Sign</option>
+              <option>Social Media</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </details>
         <p class="booking-legal">By confirming, you agree to our <a href="/terms.html">Terms &amp; Conditions</a> and <a href="/privacy.html">Privacy Policy</a>.</p>
         <button type="submit" class="btn orange" id="submitBtn">Confirm Booking</button>
         <div class="status-msg" id="statusMsg" aria-live="polite"></div>
@@ -689,8 +805,22 @@
       <div class="confirmation">
         <div class="checkmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 13l5 5L19 7"/></svg></div>
         <h2>You're booked! Your slot is held.</h2>
-        <p>It's on our calendar. A confirmation email is on its way if you gave us one, with a link to reschedule or cancel anytime.</p>
+        <p class="conf-lead" id="confirmationLead">It's on our calendar. A confirmation email is on its way if you gave us one, with a link to reschedule or cancel anytime.</p>
         <div class="conf-detail" id="confirmationDetail"></div>
+
+        <!-- Add to calendar (2026-09-22): the one reminder that needs no
+             account, app or email -- once it's on their own calendar,
+             their phone reminds them the day before and 2 hours before
+             (both alarms are in the file). Google Calendar gets its own
+             link for anyone who'd rather not open a file. -->
+        <div class="conf-actions">
+          <button type="button" class="btn orange" id="addToCalendarBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M12 14v4M10 16h4"/></svg>
+            Add to calendar
+          </button>
+          <a class="btn outline" id="googleCalendarLink" href="https://calendar.google.com/calendar/render" target="_blank" rel="noopener">Google Calendar</a>
+        </div>
+        <p class="conf-cal-hint">Reminds you the day before and 2 hours before.</p>
 
         <div class="next-steps" aria-label="What happens next">
           <p class="next-steps-title">What happens next</p>
@@ -709,7 +839,7 @@
           <p>Know a neighbor who needs a hand? Send them here and have them mention your name. You'll get $25 toward your next visit once their job is complete and paid.</p>
         </div>
 
-        <a href="/" class="btn orange" style="text-decoration:none;">Back to site</a>
+        <a href="/" class="btn outline conf-done" style="text-decoration:none;">Back to site</a>
       </div>
     </section>
   </main>
@@ -799,7 +929,7 @@
         updateSidebar();
         goToStep(2);
         renderDateRow();
-        selectDate(todayDateStrInBusinessTz());
+        loadAvailability(null);
       });
     });
   }
@@ -856,54 +986,184 @@
       const noonUtc = zonedTimeToUtc(dateStr, 12, 0);
       const dow = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, weekday: 'short' }).format(noonUtc);
       const dom = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, day: 'numeric' }).format(noonUtc);
-      html += '<button type="button" class="date-btn" data-date="' + dateStr + '" aria-pressed="false"><div class="dow">' + dow + '</div><div class="dom">' + dom + '</div></button>';
+      // The .avail line starts as a skeleton bar and is filled in by
+      // applyAvailabilityToDateRow() once the one window-wide fetch lands.
+      html += '<button type="button" class="date-btn" data-date="' + dateStr + '" aria-pressed="false"><div class="dow">' + dow + '</div><div class="dom">' + dom + '</div><span class="avail is-loading" aria-hidden="true"></span></button>';
     }
     el.innerHTML = html;
     el.querySelectorAll('.date-btn').forEach(function (btn) {
-      btn.addEventListener('click', function () { selectDate(btn.dataset.date); });
+      btn.addEventListener('click', function () {
+        if (btn.getAttribute('aria-disabled') === 'true') return;
+        const jumpNote = document.getElementById('dateJumpNote');
+        if (jumpNote) jumpNote.hidden = true;
+        selectDate(btn.dataset.date);
+      });
     });
   }
 
   // --- availability + slot computation -------------------------------------
 
+  // Whole-window availability (2026-09-22). One fetch covers every day in
+  // the strip (fetchBookingsForRange/computeSlotsByDate, js/booking-flow.js),
+  // so each day can say "3 open" / "Full" before anyone taps it, the
+  // picker can open on the first day that actually has room instead of
+  // today (usually empty after the 2-hour lead time), and switching days
+  // is instant. availability.byDate is only ever trusted for the service
+  // it was computed for; picking a different service reloads it.
+  const availability = { byDate: null, serviceKey: null, loading: false, failed: false };
+  // If /js/booking-flow.js ever failed to load, fall back to the page's
+  // original one-day-at-a-time picker rather than showing an error --
+  // booking must keep working even when an enhancement doesn't.
+  const HAS_RANGE_AVAILABILITY = typeof fetchBookingsForRange === 'function' && typeof computeSlotsByDate === 'function';
+  if (!HAS_RANGE_AVAILABILITY) console.warn('booking-flow.js did not load -- falling back to one-day-at-a-time availability.');
+
   // selectDateRequestId (2026-09-21, real bug found in an audit, not
-  // reported): selectDate() is async, and nothing previously stopped
-  // two calls from overlapping -- tapping date A then quickly tapping
-  // date B fired two concurrent fetches, and whichever response
-  // landed LAST won, regardless of which date the visitor actually
-  // has selected now. On a slow connection this could silently show
-  // date A's times while the UI says date B is selected, and a slot
-  // click would then book date A. Each call now stamps a request id
-  // before awaiting anything, and bails out after the await if a
-  // newer call has since started -- the stale response is simply
-  // discarded instead of being allowed to render.
+  // reported): an async availability load must never let a stale
+  // response win. Before the whole-window change this guarded two
+  // overlapping one-day fetches; it now guards two overlapping loads
+  // (pick a service, go back, pick another before the first returns)
+  // and the per-day fallback below. Each load stamps a request id before
+  // awaiting anything and bails out afterwards if a newer one has
+  // started -- the stale response is discarded instead of rendered.
   let selectDateRequestId = 0;
 
-  async function selectDate(dateStr) {
-    const requestId = ++selectDateRequestId;
-    selectedDateStr = dateStr;
-    selectedSlot = null;
+  function slotsLoadingHtml() {
+    return '<div class="slot-skel"></div><div class="slot-skel"></div><div class="slot-skel"></div><div class="slot-skel"></div>' +
+      '<span class="sr-only">Loading available times...</span>';
+  }
+
+  function loadErrorHtml() {
+    return '<p style="color:#ff8a80; font-size:13.5px; text-align:center; grid-column:1/-1;">Couldn\'t load available times. Check your connection and try again.</p>' +
+      '<button type="button" class="btn-retry" id="retryDateBtn">' + svgIcon('<path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>') + 'Try again</button>';
+  }
+
+  function markSelectedDate(dateStr) {
     document.querySelectorAll('.date-btn').forEach(function (b) {
       b.classList.toggle('is-selected', b.dataset.date === dateStr);
       b.setAttribute('aria-pressed', b.dataset.date === dateStr ? 'true' : 'false');
     });
-    const grid = document.getElementById('slotsGrid');
-    const emptyEl = document.getElementById('slotsEmpty');
-    grid.innerHTML = '<p style="color:var(--text-dim); font-size:13px;">Loading times...</p>';
-    emptyEl.style.display = 'none';
+  }
 
-    try {
-      existingBookings = await fetchBookingsForDate(SUPABASE_URL, SUPABASE_ANON_KEY, dateStr);
-    } catch (e) {
-      if (requestId !== selectDateRequestId) return; // a newer selectDate() call has already started
-      grid.innerHTML =
-        '<p style="color:#ff8a80; font-size:13.5px; text-align:center; grid-column:1/-1;">Couldn\'t load available times. Check your connection and try again.</p>' +
-        '<button type="button" class="btn-retry" id="retryDateBtn">' + svgIcon('<path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>') + 'Try again</button>';
-      document.getElementById('retryDateBtn').addEventListener('click', function () { selectDate(dateStr); });
+  function applyAvailabilityToDateRow(byDate) {
+    document.querySelectorAll('.date-btn').forEach(function (btn) {
+      const entry = byDate[btn.dataset.date];
+      const label = bookingDayLabel(entry);
+      const unavailable = !entry || !entry.slots.length;
+      const availEl = btn.querySelector('.avail');
+      if (availEl) {
+        availEl.classList.remove('is-loading');
+        availEl.textContent = label;
+      }
+      btn.classList.toggle('is-unavailable', unavailable);
+      btn.setAttribute('aria-disabled', unavailable ? 'true' : 'false');
+      const dow = btn.querySelector('.dow') ? btn.querySelector('.dow').textContent : '';
+      const dom = btn.querySelector('.dom') ? btn.querySelector('.dom').textContent : '';
+      btn.setAttribute('aria-label', dow + ' ' + dom + ', ' + (label || 'no times'));
+    });
+  }
+
+  async function loadAvailability(preferredDateStr) {
+    if (!HAS_RANGE_AVAILABILITY) {
+      availability.byDate = null;
+      availability.loading = false;
+      availability.failed = true;
+      document.querySelectorAll('.date-btn .avail').forEach(function (a) { a.remove(); });
+      selectDate(preferredDateStr || selectedDateStr || todayDateStrInBusinessTz());
       return;
     }
-    if (requestId !== selectDateRequestId) return; // a newer selectDate() call has already started
-    const slots = computeSlotsForDate(dateStr, selectedService.minutes, existingBookings);
+    const requestId = ++selectDateRequestId;
+    const grid = document.getElementById('slotsGrid');
+    const emptyEl = document.getElementById('slotsEmpty');
+    const jumpNote = document.getElementById('dateJumpNote');
+    availability.byDate = null;
+    availability.serviceKey = selectedService.key;
+    availability.loading = true;
+    availability.failed = false;
+    selectedSlot = null;
+    if (preferredDateStr) selectedDateStr = preferredDateStr;
+    if (selectedDateStr) markSelectedDate(selectedDateStr);
+    grid.innerHTML = slotsLoadingHtml();
+    emptyEl.style.display = 'none';
+    if (jumpNote) jumpNote.hidden = true;
+
+    const windowStart = todayDateStrInBusinessTz();
+    let bookings;
+    try {
+      bookings = await fetchBookingsForRange(SUPABASE_URL, SUPABASE_ANON_KEY, windowStart, DAYS_AHEAD_SHOWN);
+    } catch (e) {
+      if (requestId !== selectDateRequestId) return; // a newer load has already started
+      availability.loading = false;
+      availability.failed = true;
+      document.querySelectorAll('.date-btn .avail').forEach(function (a) { a.classList.remove('is-loading'); a.textContent = ''; });
+      grid.innerHTML = loadErrorHtml();
+      document.getElementById('retryDateBtn').addEventListener('click', function () { loadAvailability(selectedDateStr); });
+      return;
+    }
+    if (requestId !== selectDateRequestId) return; // a newer load has already started
+
+    const byDate = computeSlotsByDate(windowStart, DAYS_AHEAD_SHOWN, selectedService.minutes, bookings);
+    availability.byDate = byDate;
+    availability.loading = false;
+    applyAvailabilityToDateRow(byDate);
+
+    // Whatever the visitor has already tapped while this was loading
+    // wins; then a deep link's own date; then the first day with room.
+    const wanted = selectedDateStr || preferredDateStr;
+    const target = firstBookableDate(byDate, wanted);
+    if (!target) {
+      markSelectedDate(null);
+      selectedDateStr = null;
+      grid.innerHTML = '<div class="no-availability">Nothing open online in the next two weeks. <a href="tel:+14354141667" class="js-phone-link">Call</a> or <a href="sms:+14354141667">text</a> us and we\'ll find you a time.</div>';
+      return;
+    }
+    if (jumpNote && wanted && wanted !== target) {
+      const wantedLabel = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, weekday: 'long', month: 'short', day: 'numeric' }).format(zonedTimeToUtc(wanted, 12, 0));
+      jumpNote.innerHTML = '<strong>' + wantedLabel + '</strong> is full, so here\'s the next open day.';
+      jumpNote.hidden = false;
+    }
+    selectDate(target);
+    const selectedBtn = document.querySelector('.date-btn.is-selected');
+    if (selectedBtn && typeof selectedBtn.scrollIntoView === 'function') {
+      try { selectedBtn.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' }); } catch (e) { /* older browsers */ }
+    }
+  }
+
+  async function selectDate(dateStr) {
+    selectedDateStr = dateStr;
+    selectedSlot = null;
+    markSelectedDate(dateStr);
+    const grid = document.getElementById('slotsGrid');
+    const emptyEl = document.getElementById('slotsEmpty');
+
+    // The window-wide load is still in flight: keep the skeleton up; it
+    // renders whichever day is selected by the time it lands.
+    if (availability.loading && availability.serviceKey === selectedService.key) {
+      grid.innerHTML = slotsLoadingHtml();
+      emptyEl.style.display = 'none';
+      return;
+    }
+
+    let slots;
+    if (availability.byDate && availability.serviceKey === selectedService.key && availability.byDate[dateStr]) {
+      ++selectDateRequestId; // any older per-day fallback fetch still in flight is now stale
+      slots = availability.byDate[dateStr].slots;
+    } else {
+      // Fallback: the window-wide load failed (or this day is outside
+      // it), so fetch just this day, exactly as the page always used to.
+      const requestId = ++selectDateRequestId;
+      grid.innerHTML = slotsLoadingHtml();
+      emptyEl.style.display = 'none';
+      try {
+        existingBookings = await fetchBookingsForDate(SUPABASE_URL, SUPABASE_ANON_KEY, dateStr);
+      } catch (e) {
+        if (requestId !== selectDateRequestId) return; // a newer selectDate() call has already started
+        grid.innerHTML = loadErrorHtml();
+        document.getElementById('retryDateBtn').addEventListener('click', function () { loadAvailability(dateStr); });
+        return;
+      }
+      if (requestId !== selectDateRequestId) return; // a newer selectDate() call has already started
+      slots = computeSlotsForDate(dateStr, selectedService.minutes, existingBookings);
+    }
 
     if (slots.length === 0) {
       grid.innerHTML = '';
@@ -967,6 +1227,15 @@
     updateMobileSummary(n);
     updateStickyBook(n);
     if (n <= 3) window.scrollTo({ top: 0, behavior: 'smooth' });
+    // The confirmation used to appear wherever the visitor happened to be
+    // scrolled (usually the bottom of the form on a phone), so the check
+    // and its celebration played above the screen. Jump to it -- instantly,
+    // like a page change, so the moment is in view when it starts.
+    if (n === 4) {
+      const layout = document.querySelector('.booking-main');
+      const top = layout ? layout.getBoundingClientRect().top + window.pageYOffset - 12 : 0;
+      window.scrollTo({ top: Math.max(0, top), behavior: 'auto' });
+    }
     if (n <= 3 && typeof gtag === 'function') gtag('event', 'booking_step_view', { step: n });
   }
 
@@ -988,6 +1257,78 @@
 
   document.getElementById('backToService').addEventListener('click', function () { goToStep(1); });
   document.getElementById('backToDateTime').addEventListener('click', function () { goToStep(2); });
+
+  // --- confirmation ----------------------------------------------------------
+
+  function durationLabel(minutes) {
+    return minutes >= 60 ? (minutes / 60) + ' hr' + (minutes > 60 ? 's' : '') : minutes + ' min';
+  }
+
+  function escapeHtml(value) {
+    const str = value === null || value === undefined ? '' : String(value);
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // The appointment card on the confirmation screen, plus the calendar
+  // file / Google link built from the same booked slot. Shared by the
+  // real success path and the honeypot path, so a caught bot sees a
+  // byte-for-byte normal confirmation.
+  let confirmedVisit = null;
+  function renderConfirmation(addressVal) {
+    const start = selectedSlot.startUtc;
+    const end = selectedSlot.endUtc;
+    const dateLabel = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, weekday: 'long', month: 'long', day: 'numeric' }).format(start);
+    const timeFmt = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, hour: 'numeric', minute: '2-digit' });
+    document.getElementById('confirmationDetail').innerHTML =
+      '<div class="hex-icon">' + svgIcon(selectedService.icon) + '</div>' +
+      '<div><strong>' + selectedService.label + '</strong>' +
+      '<span class="conf-when">' + dateLabel + ' at ' + selectedSlot.label + '</span>' +
+      '<span class="conf-sub">About ' + durationLabel(selectedService.minutes) + ', until around ' + timeFmt.format(end) +
+      (addressVal ? ' &middot; ' + escapeHtml(addressVal) : '') + '</span></div>';
+    confirmedVisit = {
+      uid: 'th-booking-' + start.toISOString().replace(/[^0-9]/g, ''),
+      title: selectedService.label,
+      start: start.toISOString(),
+      end: end.toISOString(),
+      address: addressVal || '',
+    };
+    const googleLink = document.getElementById('googleCalendarLink');
+    const calActions = document.querySelector('#stepConfirmed .conf-actions');
+    const calHint = document.querySelector('#stepConfirmed .conf-cal-hint');
+    const hasCalendar = typeof bookingDownloadIcs === 'function' && typeof bookingGoogleCalendarUrl === 'function';
+    if (calActions) calActions.hidden = !hasCalendar;
+    if (calHint) calHint.hidden = !hasCalendar;
+    if (googleLink && hasCalendar) googleLink.href = bookingGoogleCalendarUrl(confirmedVisit);
+  }
+
+  const addToCalendarBtn = document.getElementById('addToCalendarBtn');
+  if (addToCalendarBtn) {
+    addToCalendarBtn.addEventListener('click', function () {
+      if (!confirmedVisit) return;
+      bookingDownloadIcs(confirmedVisit);
+      if (typeof gtag === 'function') gtag('event', 'booking_add_to_calendar', { method: 'ics' });
+    });
+  }
+  const googleCalendarLink = document.getElementById('googleCalendarLink');
+  if (googleCalendarLink) {
+    googleCalendarLink.addEventListener('click', function () {
+      if (typeof gtag === 'function') gtag('event', 'booking_add_to_calendar', { method: 'google' });
+    });
+  }
+
+  // Replays nothing on its own: .is-celebrating is set once per booking.
+  function celebrateConfirmation() {
+    const conf = document.querySelector('#stepConfirmed .confirmation');
+    if (!conf) return;
+    conf.classList.remove('is-celebrating');
+    void conf.offsetWidth; // restart the CSS animations if this ever runs twice
+    conf.classList.add('is-celebrating');
+    const check = conf.querySelector('.checkmark');
+    setTimeout(function () {
+      if (typeof bookingCelebrate === 'function') bookingCelebrate(check);
+      if (typeof bookingHaptic === 'function') bookingHaptic();
+    }, 380);
+  }
 
   // --- submission ------------------------------------------------------------
 
@@ -1065,11 +1406,9 @@
 
     // Honeypot check -- same proven pattern as index.html's lead form.
     if (formData.get('_gotcha')) {
-      const dateLabel = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, weekday: 'long', month: 'long', day: 'numeric' }).format(selectedSlot.startUtc);
-      document.getElementById('confirmationDetail').innerHTML =
-        '<div class="hex-icon">' + svgIcon(selectedService.icon) + '</div>' +
-        '<div><strong>' + selectedService.label + '</strong>' + dateLabel + ' at ' + selectedSlot.label + '</div>';
+      renderConfirmation((formData.get('address') || '').trim());
       goToStep(4);
+      celebrateConfirmation();
       return;
     }
 
@@ -1123,10 +1462,7 @@
     })
       .then(function (res) {
         if (res.ok) {
-          const dateLabel = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, weekday: 'long', month: 'long', day: 'numeric' }).format(selectedSlot.startUtc);
-          document.getElementById('confirmationDetail').innerHTML =
-            '<div class="hex-icon">' + svgIcon(selectedService.icon) + '</div>' +
-            '<div><strong>' + selectedService.label + '</strong>' + dateLabel + ' at ' + selectedSlot.label + '</div>';
+          renderConfirmation(addressVal);
           // Real gap found in an audit, not reported: this step's text
           // unconditionally promised an email with a reschedule/cancel
           // link, but email is optional and manage-booking.html's
@@ -1142,6 +1478,7 @@
           }
           if (typeof gtag === 'function') gtag('event', 'booking_completed', { service: selectedService.key });
           goToStep(4);
+          celebrateConfirmation();
           return;
         }
         return res.text().then(function (body) {
@@ -1152,7 +1489,18 @@
           statusEl.classList.add('is-visible', 'is-error');
           submitBtn.disabled = false;
           submitBtn.textContent = 'Confirm Booking';
-          if (wasConflict) { goToStep(2); selectDate(selectedDateStr); }
+          if (wasConflict) {
+            // The explanation used to stay behind in step 3's form while
+            // the visitor was bounced to step 2 with no idea why. Say it
+            // where they land, over the freshly reloaded times.
+            goToStep(2);
+            loadAvailability(selectedDateStr).then(function () {
+              const note = document.getElementById('dateJumpNote');
+              if (!note) return;
+              note.textContent = 'That time was just booked by someone else. Here\'s what\'s still open.';
+              note.hidden = false;
+            });
+          }
         });
       })
       .catch(function () {
@@ -1184,6 +1532,22 @@
   // effects here and making exactly one selectDate() call avoids it.
   (function preselectFromQuery() {
     const params = new URLSearchParams(window.location.search);
+    // Triage handoff (2026-09-22): the homepage's "Is it worth fixing?"
+    // tool now links here with ?service=appliance&note=Dryer: runs but
+    // won't heat, so the symptom someone just tapped arrives in the notes
+    // instead of being retyped. Fill-only (never overwrites typing),
+    // control characters stripped, and capped well under the field's own
+    // 1000-character limit. Never used anywhere but that textarea's value.
+    const noteParam = params.get('note');
+    const notesField = document.getElementById('bNotes');
+    if (noteParam && notesField && !notesField.value) {
+      const cleaned = noteParam.replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300);
+      if (cleaned) {
+        notesField.value = cleaned;
+        const prefillNote = document.getElementById('notesPrefillNote');
+        if (prefillNote) prefillNote.hidden = false;
+      }
+    }
     const serviceKey = params.get('service');
     const dateParam = params.get('date');
     const service = SERVICES.find(function (s) { return s.key === serviceKey; });
@@ -1198,7 +1562,7 @@
     updateSidebar();
     goToStep(2);
     renderDateRow();
-    selectDate(validDate ? dateParam : todayDateStrInBusinessTz());
+    loadAvailability(validDate ? dateParam : null);
   })();
 
   // Referral link auto-fill (2026-09-20, expanded from a raw "?ref=Their
@@ -1231,10 +1595,19 @@
         } else {
           referredByField.value = refParam.slice(0, 200);
         }
+        openOptionalDetails();
       })
       .catch(function () {
         if (!referredByField.value) referredByField.value = refParam.slice(0, 200);
+        openOptionalDetails();
       });
+    // The referral field lives inside the collapsed "Referred by
+    // someone?" disclosure (2026-09-22) -- a link that filled it in
+    // opens it, so the name being credited is always visible.
+    function openOptionalDetails() {
+      const details = document.getElementById('optionalDetails');
+      if (details) details.open = true;
+    }
   })();
 })();
 </script>

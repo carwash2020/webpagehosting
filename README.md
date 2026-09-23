@@ -4136,3 +4136,62 @@ rendered, including a 4-page history). New tests:
 `tests/portal/work-order-cancel.test.js`. Detail:
 `docs/specialist-logs/features.md` and `visual.md`,
 `docs/CLIENT-PORTAL.md` (edge function table).
+
+## What changed, 2026-09-22 (later still) -- Booking flow, round 1: see every open day at once, and a "you're booked" worth the name
+
+Public booking pages only: `booking.html`, `manage-booking.html`, and
+the triage tool's Book link on `index.html`. No Supabase or
+edge-function changes. Full reasoning: `docs/specialist-logs/features.md`
+and `visual.md` (2026-09-22 entries).
+
+**Picking a time.** The date strip now loads all 14 days in one request
+(new `js/booking-flow.js`) instead of one request per tapped day.
+- Every day says "3 open", "Full" or "Closed" before anyone taps it.
+- Full days can't be picked.
+- The picker opens on the first day that has room. It used to open on
+  today, which is usually empty after the 2-hour lead time.
+- Switching days is instant.
+- A link to a day that has since filled lands on the next open day and
+  says so.
+- While the times load, a skeleton shows instead of "Loading times...".
+
+If the new file ever fails to load, both pages fall back to the old
+one-day-at-a-time picker.
+
+**From "it won't heat" to booked, less typing.** Tap "Dryer", then
+"Runs but won't heat" in the homepage triage tool, and "book a visit
+online" opens straight on Appliance Repair's dates. The symptom is
+already in the notes.
+
+**Step 3 is shorter.** It shows name, phone, address, email and
+"What's going on?". "Who referred you?" and "How did you hear?" sit
+behind one tap, and open by themselves when a referral link filled them
+in. Email now says why it's worth giving: the confirmation and the
+reschedule link.
+
+**The confirmation moment.** It's a sequence now, not a page swap:
+1. The check draws.
+2. A ring pulses out and a burst of brand-orange flecks fires.
+3. The headline rises.
+4. The appointment card lands like a stamp.
+5. The next steps arrive one by one.
+
+On a phone it now plays on screen; it used to happen above the scroll
+position. New **Add to calendar** (a calendar file with reminders the
+day before and 2 hours before) and **Google Calendar** buttons. Reduced
+motion gets the calm version.
+
+**Rescheduling.** `manage-booking.html` uses the same two-week strip.
+Tapping a time now asks "Move your visit to Friday at 3:00 PM?" before
+anything moves; one mis-tap used to move a real appointment. It also
+has:
+- green-check success screens
+- Add to calendar for the current time and the new one
+- an inline error instead of a browser `alert()`
+
+Verified: full suite (the only failure is the known `check-links.py`
+sandbox-proxy test), `check-consistency`, `check-undefined-vars`, lint,
+`check-links.py` (internal links clean). Driven in headless Chromium at
+390px and 1440px through book, confirm, reschedule and cancel, with
+Supabase intercepted: no page errors, no horizontal overflow. New tests:
+`tests/booking/booking-flow-picker-and-confirm.test.js` (33).

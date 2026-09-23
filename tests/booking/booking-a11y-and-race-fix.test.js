@@ -18,6 +18,13 @@ const BOOKING_HTML_SRC = fs.readFileSync(PAGE_PATH, 'utf8');
 const BUSINESS_HOURS_SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'js', 'business-hours.js'), 'utf8')
   + '\nwindow.BUSINESS_TIMEZONE = BUSINESS_TIMEZONE; window.HOURS_BY_WEEKDAY = HOURS_BY_WEEKDAY; window.DAYS_AHEAD_SHOWN = DAYS_AHEAD_SHOWN; window.zonedTimeToUtc = zonedTimeToUtc; window.businessWeekday = businessWeekday; window.todayDateStrInBusinessTz = todayDateStrInBusinessTz; window.addDaysToDateStr = addDaysToDateStr; window.formatHoursLabel = formatHoursLabel;';
 
+// booking.html and manage-booking.html also load /js/booking-flow.js
+// (2026-09-22: whole-window availability, add to calendar), right after
+// business-hours.js. Evaluated the same way and in the same order a real
+// browser runs the two <script> tags, so the availability path these
+// tests drive is the page's real code.
+const BOOKING_FLOW_SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'js', 'booking-flow.js'), 'utf8');
+
 function loadPage(mockFetch) {
   const dom = new JSDOM(BOOKING_HTML_SRC, {
     runScripts: 'dangerously',
@@ -25,6 +32,7 @@ function loadPage(mockFetch) {
     beforeParse(w) {
       if (mockFetch) w.fetch = mockFetch;
       w.eval(BUSINESS_HOURS_SRC);
+      w.eval(BOOKING_FLOW_SRC);
     },
   });
   return dom.window;
@@ -43,11 +51,48 @@ async function waitForCondition(conditionFn, { timeout = 5000, interval = 20 } =
   throw new Error('waitForCondition: condition never became true within ' + timeout + 'ms');
 }
 
-test('selectDate() discards a stale response when a newer date is picked before the first fetch resolves', async () => {
-  // Real bug found in a fresh audit pass, not reported: nothing
-  // previously stopped two overlapping selectDate() calls, and
-  // whichever fetch happened to resolve LAST won, regardless of
-  // which date the visitor actually has selected now.
+test('a stale availability load never wins: picking a second service before the first load returns only ever renders the second', async () => {
+  // Real bug found in a fresh audit pass (2026-09-21), not reported:
+  // nothing stopped two overlapping availability loads, and whichever
+  // fetch resolved LAST won. Rewritten 2026-09-22 for whole-window
+  // availability: a date tap no longer fetches anything (the whole
+  // two-week strip loads in one call), so the overlap that can still
+  // happen is two LOADS -- pick a service, go back, pick another before
+  // the first returns. The request-id guard must discard the first.
+  const resolvers = [];
+  const window = loadPage(async (url) => {
+    if (String(url).includes('get_booking_availability')) {
+      return new Promise((resolve) => { resolvers.push(resolve); });
+    }
+    return { ok: false };
+  });
+
+  await waitForCondition(() => window.document.querySelectorAll('.service-option').length > 2);
+  const services = window.document.querySelectorAll('.service-option');
+  // Inspection (45 min) first...
+  services[0].dispatchEvent(new window.Event('click', { bubbles: true }));
+  await waitForCondition(() => resolvers.length === 1);
+  window.document.getElementById('backToService').click();
+  // ...then Drywall & Painting (3 hrs), the last one.
+  services[services.length - 1].dispatchEvent(new window.Event('click', { bubbles: true }));
+  await waitForCondition(() => resolvers.length === 2);
+
+  // Resolve the CURRENT (second) load first, then the stale first one --
+  // the exact ordering that silently won before the guard existed.
+  resolvers[1]({ ok: true, json: async () => ([]) });
+  await waitForCondition(() => window.document.querySelectorAll('.slot-btn').length > 0);
+  const slotCountForCurrentService = window.document.querySelectorAll('.slot-btn').length;
+  resolvers[0]({ ok: true, json: async () => ([]) });
+  await waitFor(50);
+
+  // A 3-hour service has fewer open starts in a day than a 45-minute
+  // one; if the stale Inspection load had re-rendered, the grid would
+  // show Inspection's longer list.
+  assert.equal(window.document.querySelectorAll('.slot-btn').length, slotCountForCurrentService, 'the stale first load must not re-render the slots');
+  assert.match(window.document.getElementById('selectedServiceSummary').innerHTML, /Drywall/);
+});
+
+test('tapping a date while the two-week load is still in flight does not start a second fetch, and that date wins once the load lands', async () => {
   const resolvers = [];
   const window = loadPage(async (url) => {
     if (String(url).includes('get_booking_availability')) {
@@ -58,27 +103,17 @@ test('selectDate() discards a stale response when a newer date is picked before 
 
   await waitForCondition(() => window.document.querySelector('.service-option'));
   window.document.querySelector('.service-option').dispatchEvent(new window.Event('click', { bubbles: true }));
-  await waitForCondition(() => window.document.querySelectorAll('.date-btn').length > 1 && resolvers.length === 1);
+  await waitForCondition(() => window.document.querySelectorAll('.date-btn').length > 3 && resolvers.length === 1);
 
   const dateBtns = window.document.querySelectorAll('.date-btn');
-  // The service-selection click already fired one selectDate() (for
-  // today) whose fetch is the first pending resolver; clicking a
-  // second date starts a second, genuinely concurrent one.
-  dateBtns[1].dispatchEvent(new window.Event('click', { bubbles: true }));
-  await waitForCondition(() => resolvers.length === 2);
-
-  // Resolve the STALE (first, earlier-selected date) request last --
-  // the exact ordering that silently won before this fix.
-  resolvers[1]({ ok: true, json: async () => ([]) });
+  dateBtns[3].dispatchEvent(new window.Event('click', { bubbles: true }));
   await waitFor(30);
+  assert.equal(resolvers.length, 1, 'a date tap during the load must not fire its own fetch');
+
   resolvers[0]({ ok: true, json: async () => ([]) });
-  await waitFor(30);
-
-  // Date B (the real, current selection) must still be the one
-  // reflected as selected -- the stale date-A response must not have
-  // been allowed to re-render anything after date B took over.
-  assert.ok(dateBtns[1].classList.contains('is-selected'), 'the most recently clicked date should stay selected');
-  assert.ok(!dateBtns[0].classList.contains('is-selected'), 'the stale date should not be selected');
+  await waitForCondition(() => window.document.querySelectorAll('.slot-btn').length > 0);
+  assert.ok(dateBtns[3].classList.contains('is-selected'), 'the date tapped during the load should be the one shown');
+  assert.equal(dateBtns[3].getAttribute('aria-pressed'), 'true');
 });
 
 test('selecting a service, date, and slot sets aria-pressed correctly and clears it off the previous selection', async () => {

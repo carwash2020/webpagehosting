@@ -548,7 +548,7 @@ function fixVersions(dir) {
 // that one real hash -- the same automatic, no-judgment-call mechanism
 // every other shared file already gets, just no longer scoped to a single
 // directory.
-const GLOBAL_SHARED_FILES = ['styles.css', 'js/triage.js', 'js/business-hours.js', 'js/site-motion.js', 'js/analytics-events.js', 'js/promo-banner.js', 'js/utm-tracking.js', 'signature-pad.js'];
+const GLOBAL_SHARED_FILES = ['styles.css', 'js/triage.js', 'js/business-hours.js', 'js/site-motion.js', 'js/analytics-events.js', 'js/promo-banner.js', 'js/utm-tracking.js', 'signature-pad.js', 'js/booking-flow.js'];
 const BLOG_DIR = path.join(__dirname, '..', 'blog');
 const SCAN_DIRS = [ROOT_DIR, TOOLS_DIR, PORTAL_DIR, BLOG_DIR];
 

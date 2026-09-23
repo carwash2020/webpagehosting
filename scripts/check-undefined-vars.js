@@ -78,6 +78,10 @@ const SHARED_SCRIPT_FILES = [
   // too or every page loading it would show as a flood of false
   // "not defined" positives.
   'js/business-hours.js',
+  // Booking-flow helpers (2026-09-22) -- loaded by booking.html and
+  // manage-booking.html after business-hours.js: whole-window
+  // availability, add-to-calendar, and the confirmation burst.
+  'js/booking-flow.js',
   // UTM campaign-attribution capture (2026-09-15) -- loaded by both
   // public lead-capture forms (index.html, booking.html), same
   // reasoning as business-hours.js just above.
