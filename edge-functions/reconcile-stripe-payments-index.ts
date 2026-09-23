@@ -82,6 +82,31 @@ async function markAlerted(itemKey: string) {
   });
 }
 
+// Double-charge alerts (security audit, 2026-09-23) get their own
+// notif_type and fire ONCE per set of payments, not daily: a refunded
+// duplicate still reads "succeeded" on its PaymentIntent for the whole
+// lookback window, so a daily resend would keep nagging about a problem
+// someone already fixed. The item key includes every PaymentIntent id, so
+// a further payment on the same invoice is a new set and alerts again.
+const DUPLICATE_NOTIF_TYPE = "stripe-duplicate-payment";
+
+async function wasDuplicateAlreadyAlerted(itemKey: string): Promise<boolean> {
+  const res = await supabaseRequest(
+    `/rest/v1/notification_log?notif_type=eq.${DUPLICATE_NOTIF_TYPE}&item_key=eq.${encodeURIComponent(itemKey)}&select=sent_at`,
+  );
+  if (!res.ok) return false;
+  const rows = await res.json();
+  return rows.length > 0;
+}
+
+async function markDuplicateAlerted(itemKey: string) {
+  await supabaseRequest("/rest/v1/notification_log?on_conflict=notif_type,item_key", {
+    method: "POST",
+    headers: { Prefer: "resolution=merge-duplicates" },
+    body: JSON.stringify({ notif_type: DUPLICATE_NOTIF_TYPE, item_key: itemKey, sent_at: new Date().toISOString() }),
+  });
+}
+
 async function sendAlert(title: string, body: string) {
   // Send-Push, exact casing -- Supabase function slugs are
   // case-sensitive; a lowercase call created a genuinely separate,
@@ -168,9 +193,18 @@ Deno.serve(async (req: Request) => {
     // cover it, so a mismatch can be reported with the real amount
     // Stripe actually has on file for it.
     const invoiceIdToPaymentIntent = new Map<number, any>();
+    // Every succeeded PaymentIntent per invoice, not just the last one
+    // seen. Two or more for one invoice means it was charged twice.
+    // stripe-webhook treats the second as an already-processed
+    // redelivery, and the mismatch check below skips paid invoices, so
+    // nothing else would ever notice (security audit, 2026-09-23).
+    const invoiceIdToAllPaymentIntents = new Map<number, any[]>();
     for (const pi of succeeded) {
       for (const invoiceId of extractInvoiceIds(pi.metadata)) {
         invoiceIdToPaymentIntent.set(invoiceId, pi);
+        const all = invoiceIdToAllPaymentIntents.get(invoiceId) || [];
+        if (!all.some((existing: any) => existing.id === pi.id)) all.push(pi);
+        invoiceIdToAllPaymentIntents.set(invoiceId, all);
       }
     }
 
@@ -190,6 +224,21 @@ Deno.serve(async (req: Request) => {
     }
     const invoices = await invoicesRes.json();
 
+    let duplicateCount = 0;
+    for (const invoice of invoices) {
+      const pis = invoiceIdToAllPaymentIntents.get(invoice.id) || [];
+      if (pis.length < 2) continue;
+      const itemKey = `${invoice.id}:${pis.map((p: any) => p.id).sort().join(",")}`;
+      if (await wasDuplicateAlreadyAlerted(itemKey)) continue;
+
+      duplicateCount++;
+      await sendAlert(
+        "Possible double charge",
+        `Invoice #${invoice.invoice_number} (${invoice.client_email}) has ${pis.length} successful Stripe payments (${pis.map((p: any) => money(p.amount)).join(" + ")}). Check Stripe and refund any duplicate.`,
+      );
+      await markDuplicateAlerted(itemKey);
+    }
+
     let mismatchCount = 0;
     for (const invoice of invoices) {
       if (invoice.paid) continue; // already reconciled, nothing to alert about
@@ -206,7 +255,7 @@ Deno.serve(async (req: Request) => {
       await markAlerted(itemKey);
     }
 
-    return new Response(JSON.stringify({ ok: true, checked: invoices.length, mismatches: mismatchCount }), {
+    return new Response(JSON.stringify({ ok: true, checked: invoices.length, mismatches: mismatchCount, duplicates: duplicateCount }), {
       headers: { "Content-Type": "application/json" },
     });
   } catch (err: any) {
