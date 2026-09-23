@@ -4591,3 +4591,36 @@ New test: `tests/design/404-button-language.test.js` (4; all fail against the ol
 - exactly one filled primary (Call) and one outlined partner (Home);
 - the orange fill and shadow use `styles.css`'s own colours;
 - the outline, focus ring and reduced-motion styles match the rest of the site.
+
+## What changed, 2026-09-23 -- Tapping on a phone no longer leaves things "stuck" highlighted
+
+Public site: `styles.css` only. Desktop looks and behaves exactly as before.
+
+**What was wrong.** Phones treat the last thing you tapped as "hovered" and keep it that way until you tap somewhere else. So after a tap:
+- homepage service cards stayed raised with a blue border;
+- review cards did the same, and they aren't even buttons;
+- the Call button in the phone's sticky Call/Book bar stayed tinted;
+- the photo viewer's next/previous arrows stayed highlighted.
+
+It looked as if those items were selected.
+
+**The fix.**
+- Hover effects that change a surface (lifts, shadows, borders, backgrounds, photo brightness) now only apply on devices with a real mouse or trackpad.
+- On touch, the filter chips, "what's wrong" pills, service-area links, gallery photos and chat bubble now shrink slightly while you press them. Buttons already did this.
+- Text-link colour changes and the desktop Services dropdown work as before; iPads open that dropdown by tapping.
+
+**Checked** in Chromium:
+- **Desktop:** mouse-hovering 18 kinds of card, chip, button and link gives exactly the same styles as before.
+- **Touch:** after a tap, none of them keeps a hover look (service cards and review cards did before).
+- **Press feedback:** the new press states apply (checked with a mouse press, because headless Chromium doesn't simulate touch presses).
+
+Verified:
+- full suite 3258 of 3259 passing; the one failure is the known `check-links.py` sandbox-proxy test;
+- `check-consistency`, `check-undefined-vars`, `eslint` and `check-visual-snapshot` clean;
+- `check-links.py`: the only failures are the sandbox proxy refusing outside sites, no internal link broken.
+
+New test: `tests/design/touch-no-sticky-hover.test.js` (4; all fail against the old CSS). It checks:
+- no hover rule that changes a surface is left outside `@media (hover:hover)`;
+- the card, chip and button hovers are all guarded;
+- keyboard focus styles still apply everywhere;
+- the new press states exist.
