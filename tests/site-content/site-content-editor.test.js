@@ -602,7 +602,9 @@ test('no function name is declared twice in the page -- a second declaration sil
   // both named a helper cmsShort() with different arguments; whichever came
   // second would have won for every caller. check-undefined-vars does not
   // catch a repeated function declaration inside one page.
-  const scripts = [...PAGE_HTML.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]).join('\n');
+  // Parsed, not regex-matched: JSDOM without runScripts never executes them.
+  const doc = new JSDOM(PAGE_HTML).window.document;
+  const scripts = [...doc.querySelectorAll('script:not([src])')].map(el => el.textContent).join('\n');
   const names = [...scripts.matchAll(/^ {2}(?:async )?function (\w+)\s*\(/gm)].map(m => m[1]);
   const seen = new Set();
   const dupes = names.filter(n => (seen.has(n) ? true : (seen.add(n), false)));
