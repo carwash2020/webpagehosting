@@ -30,7 +30,10 @@ test('cancelWorkOrder() confirms first, then calls the cancel-work-order edge fu
   const fnMatch = WORK_ORDERS.match(/async function cancelWorkOrder\(id\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate cancelWorkOrder()');
   const body = fnMatch[0];
-  assert.match(body, /portalConfirm\('Cancel this request/);
+  // Confirm + optional reason in one step (2026-09-22): null is "keep it".
+  assert.match(body, /const reason = await portalPromptTextarea\('Cancel this request\?/);
+  assert.match(body, /if \(reason === null\) return;/);
+  assert.match(body, /work_order_id: id, reason/);
   assert.match(body, /functions\/v1\/cancel-work-order/);
   assert.match(body, /'Authorization': `Bearer \$\{session\.access_token\}`/);
   assert.match(body, /work_order_id: id/);
@@ -60,4 +63,43 @@ test('the sql migration only widens the status CHECK constraint -- it does not a
   assert.match(CANCEL_SQL, /work_order_status_valid/);
   assert.match(CANCEL_SQL, /'cancelled'/);
   assert.doesNotMatch(CANCEL_SQL, /create policy/i);
+});
+
+// ---- 2026-09-22: a cancel tells Steve, and in-progress requests can ask ----
+
+test('a cancel posts a note on the request\'s thread -- which is what emails the internal team', () => {
+  assert.match(CANCEL_FN, /const reasonText = typeof reason === "string" \? reason\.trim\(\)\.slice\(0, 500\) : "";/);
+  const insertAt = CANCEL_FN.indexOf('/rest/v1/client_portal_work_order_messages');
+  const patchAt = CANCEL_FN.indexOf('method: "PATCH"');
+  assert.ok(patchAt > 0 && insertAt > patchAt, 'the note is only posted after the cancel itself succeeded');
+  assert.match(CANCEL_FN, /sender_type: "client",\s*sender_email: workOrder\.client_email,\s*message,/);
+  assert.match(CANCEL_FN, /"I've cancelled this request in the portal\." \+ \(reasonText \? `\\n\\nReason: \$\{reasonText\}` : ""\)/);
+  assert.match(CANCEL_FN, /return json\(\{ ok: true, notified \}\);/);
+});
+
+test('the cancel only lands if the request is STILL submitted when it writes -- a race with Steve updates nothing', () => {
+  assert.match(CANCEL_FN, /client_portal_work_orders\?id=eq\.\$\{work_order_id\}&status=eq\.submitted`/);
+  assert.match(CANCEL_FN, /Prefer: "return=representation"/);
+  assert.match(CANCEL_FN, /if \(!Array\.isArray\(updated\) \|\| !updated\.length\) \{\s*return json\(\{ ok: false, error: "This request is already being worked on/);
+});
+
+test('a failed note never turns a successful cancel into an error', () => {
+  const tail = CANCEL_FN.slice(CANCEL_FN.indexOf("const message = \"I've cancelled"));
+  assert.match(tail, /try \{[\s\S]*notified = msgRes\.ok;[\s\S]*\} catch \(err: any\) \{\s*console\.error/);
+  assert.match(extractCancelFn(), /showToast\(result\.notified \? "Request cancelled\. We've let Triple H know\." : 'Request cancelled\.'\);/);
+});
+
+function extractCancelFn() {
+  return WORK_ORDERS.match(/async function cancelWorkOrder\(id\)[\s\S]*?\n  \}\n/)[0];
+}
+
+test('once work has started, "Need to cancel?" asks in the thread instead of changing the status', () => {
+  assert.match(WORK_ORDERS, /const ASK_TO_CANCEL_STATUSES = \['reviewing', 'quoted', 'scheduled'\];/);
+  const card = WORK_ORDERS.match(/function renderRequestCard\(wo\)[\s\S]*?\n  \}\n/)[0];
+  assert.match(card, /\$\{ASK_TO_CANCEL_STATUSES\.includes\(statusKey\) \? `<button type="button" class="wo-cancel-ask" onclick="askToCancelWorkOrder\(\$\{wo\.id\}\)">Need to cancel\?<\/button>` : ''\}/);
+  const ask = WORK_ORDERS.match(/async function askToCancelWorkOrder\(id\)[\s\S]*?\n  \}\n/)[0];
+  assert.match(ask, /if \(reason === null\) return;/);
+  assert.match(ask, /from\('client_portal_work_order_messages'\)\.insert\(\{\s*work_order_id: id,\s*sender_type: 'client',\s*sender_email: session\.user\.email,\s*message: 'Please cancel this request\.' \+ \(reason \? '\\n\\n' \+ reason : ''\),/);
+  assert.doesNotMatch(ask, /cancel-work-order/, 'no status change from the client past submitted');
+  assert.match(ask, /if \(woThreadIsOpen\(id\)\) loadAndRenderThread\(id\);\s*else if \(toggle\) toggleMessages\(id, toggle\);/);
 });

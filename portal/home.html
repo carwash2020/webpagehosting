@@ -341,12 +341,21 @@
   }
   .home-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 26px; }
   /* Five account cards (Invoices, Estimates, Jobs, Requests,
-     Contracts). Two columns on a phone; three on desktop so the
-     last row is 2 cards, never a lone stretched leftover. Contracts
-     used to live only as a footer link -- that hid pending e-sign
-     from the same IA as invoices and quotes. */
+     Contracts). Contracts used to live only as a footer link -- that
+     hid pending e-sign from the same IA as invoices and quotes.
+     No half-empty last row (2026-09-22): three columns left a blank
+     sixth slot beside Work Requests and Contracts at laptop widths,
+     and two columns left Contracts alone on a phone. A 6-track grid
+     lets the last row's two cards share the width (3 + 2 across), and
+     a lone last card spans the row. :where() keeps these at the
+     lowest specificity, so the 1200px side-column layout below still
+     wins without an arms race. */
+  .home-cards > :where(.home-card:last-child:nth-child(odd)) { grid-column: 1 / -1; }
   @media (min-width: 860px) {
-    .home-cards { grid-template-columns: repeat(3, 1fr); }
+    .home-cards { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    .home-cards > :where(.home-card) { grid-column: span 2; }
+    .home-cards > :where(.home-card:nth-last-child(2):nth-child(3n+1), .home-card:last-child:nth-child(3n+2)) { grid-column: span 3; }
+    .home-cards > :where(.home-card:last-child:nth-child(3n+1)) { grid-column: 1 / -1; }
   }
   .home-card {
     background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px;
@@ -419,6 +428,7 @@
        not five big tiles fighting the main column for attention. */
     .home-side .home-cards { grid-template-columns: 1fr; gap: 8px; }
     .home-side .home-card {
+      grid-column: auto;
       display: grid; grid-template-columns: 34px minmax(0, 1fr) auto;
       grid-template-areas: "icon label count" "icon desc count";
       align-items: center; column-gap: 12px; row-gap: 1px; padding: 12px 14px;

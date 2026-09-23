@@ -227,7 +227,14 @@ test('every signed-in portal page widens past 640px on a real desktop screen', (
   }
 });
 
-test('the Home page cards expand to a 3-column row on desktop so five cards (including Contracts) never orphan a stretched leftover', () => {
+test('the Home page cards never leave a half-empty last row -- five cards (including Contracts) go 3 + 2 across on desktop', () => {
+  // Revised 2026-09-22: the plain 3-column grid this used to pin left a
+  // blank sixth slot at laptop widths. A 6-track grid lets the last
+  // row's two cards share the width, and a lone last card spans it.
   const src = fs.readFileSync(repo('portal', 'home.html'), 'utf8');
-  assert.match(src, /@media \(min-width: 860px\) \{\s*\.home-cards \{ grid-template-columns: repeat\(3, 1fr\); \}/);
+  assert.match(src, /@media \(min-width: 860px\) \{\s*\.home-cards \{ grid-template-columns: repeat\(6, minmax\(0, 1fr\)\); \}/);
+  assert.match(src, /\.home-cards > :where\(\.home-card\) \{ grid-column: span 2; \}/);
+  assert.match(src, /\.home-cards > :where\(\.home-card:nth-last-child\(2\):nth-child\(3n\+1\), \.home-card:last-child:nth-child\(3n\+2\)\) \{ grid-column: span 3; \}/);
+  assert.match(src, /\.home-cards > :where\(\.home-card:last-child:nth-child\(odd\)\) \{ grid-column: 1 \/ -1; \}/, 'a lone fifth card spans the row on a phone');
+  assert.match(src, /\.home-side \.home-card \{\s*grid-column: auto;/, 'the 1200px side column resets the spans');
 });

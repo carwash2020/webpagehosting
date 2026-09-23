@@ -2478,4 +2478,42 @@ layout:
 - The Jobs sheet item escapes the client's name, since
   `showQuickActionSheet` renders labels as HTML.
 
+## 2026-09-23 (evening) -- Client portal: service history PDF, cancels that tell Steve, card grid
+
+Connor: "Do them all" (the three follow-ups offered after #355).
+
+**Request withdrawal already existed -- the gap was that it was silent.**
+Worth knowing before anyone "adds cancel" again: `cancel-work-order`
+(2026-09-19) already let a client cancel a still-`submitted` request.
+What it didn't do was tell anyone -- the request just left Steve's
+queue. v3 posts "I've cancelled this request in the portal." (+ an
+optional reason from a `portalPromptTextarea`) as a client message on
+the request's thread. Decided against a new email path: the existing
+`on_work_order_message_send_email` trigger already emails
+`notification_recipients` for any client message, so the cancel rides
+it, and the thread keeps the why. The PATCH is now conditional on
+`status=eq.submitted` (+ `return=representation`, 409 on zero rows) so a
+cancel racing Steve's own status change can't overwrite it. Past
+`submitted`, deliberately NOT a client-side status change (parts may be
+ordered, a time held): "Need to cancel?" posts "Please cancel this
+request." through the normal client message insert, and Steve confirms.
+No tools/ change needed -- the email and thread are the notification.
+
+**Service history PDF** (`portal/jobs.html`). Every job with date, what
+was done (linked invoice description + line items), invoice #, amount,
+UNPAID flag, active 30-day warranty, and the check-up plan. Same pinned
+jsPDF 2.5.1 + SRI as Invoices/Quotes (hash verified against the npm
+build). `buildServiceHistory()` is pure and drops any row whose
+client_email isn't the signed-in one -- an internal account previewing
+the portal can read every client's jobs, and they must never land on
+one client's record. Address is "most recent service address" (latest
+request, else latest quote); jobs don't carry an address themselves.
+
+**Home cards.** 6-track grid so the last row's two cards share the
+width; `:where()` keeps it under the 1200px side-column rules.
+
+Tests: `tests/portal/service-history-pdf.test.js` (pagination checked
+against a recording stand-in for jsPDF), additions to
+`tests/portal/work-order-cancel.test.js`.
+
 <!-- Add new entries above this line -->
