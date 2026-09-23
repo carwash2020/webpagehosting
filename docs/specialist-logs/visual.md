@@ -1444,4 +1444,59 @@ markup.
   sheet enabled and disabled (`sheet.disabled = true`), then diff.
   That's more reliable than comparing screenshots.
 
+## 2026-09-23 (night) -- round 2: width-matched fallback fonts
+
+Reworked the four fallback `@font-face` rules at the top of
+`styles.css`. Full numbers are in README. What to know before touching
+them again:
+
+- **Match width, not cap-height.** CLS comes from line breaks moving,
+  and with explicit line-heights the vertical metrics barely matter.
+  Anton is 0.718 of Arial's width on its real headlines (letter-spacing
+  included) and Oswald about 0.80. The old cap-height values (120% and
+  113%) made the fallback 1.4-1.7x too wide.
+- **Measure widths in the browser, at the real weights, case and
+  letter-spacing.** hmtx averages were off by about 2%, enough to flip
+  H1 wraps. Compare against the *regular* system face: a single-face
+  `local()` fallback synthesizes bold without widening advances.
+- **Oswald has one value but two cases.** Uppercase nav/buttons
+  measure 0.76-0.79, mixed-case chips 0.85-0.90. Above ~80% the desktop
+  nav wraps just above the 960px hamburger breakpoint (CLS 0.23 at
+  1024), which moves the whole page, so the nav decides. The our-work
+  filter chips on phones keep a small shift (0.087).
+- **`local()` matches full or PostScript names only.** `local('Roboto')`
+  resolves to nothing; `'Roboto Regular'`/`'Roboto-Regular'` work.
+  Probe with `new FontFace('x', "local('Name')").load()` before trusting
+  a name.
+- **Chromium multiplies `*-override` by `size-adjust`.** Verified: 100%
+  ascent at 50% size-adjust gives a 50px box. So override = metric ÷
+  size-adjust.
+- **`ch` caps can't be fixed by size-adjust.** The text and the cap
+  scale together. `.hero-lede` moved from `64ch` to its exact final
+  width, `640px`.
+- **Glyphs the webfont lacks are drawn by the fallback forever.** Google's
+  latin subset has ↑ and ↓ but not →. Size those for looks, not width,
+  since they can't cause CLS. Oswald's arrows keep the old 113% via a
+  `unicode-range: U+2190-21FF` face declared after the main one.
+- **A `<select>` sizes its line box from the font stack, not just the
+  glyphs drawn.** Production on Linux/Android rendered the hero Service
+  dropdown 39px tall (unresolved fallback); Windows/Mac 46px. It's 46px
+  everywhere now.
+- **Left alone: a ~16px band around 995px wide on the homepage.** The two
+  hero buttons fit side by side in the fallback and stack in Oswald,
+  because Oswald's digits (the phone number) run ~7% wider relative to
+  Arial than its letters do. A digit-only `unicode-range` face could fix
+  it, but that's more machinery than one band of widths warrants.
+
+**Harness notes:**
+- Hold `fonts.gstatic.com` behind a promise and navigate with
+  `waitUntil:'domcontentloaded'`. `load` waits on the held fonts and
+  deadlocks.
+- Emulate Windows/Mac by serving styles.css with `local('Arial')`
+  rewritten to `local('Liberation Sans')` (metric-identical).
+- Emulate Android with Roboto installed in `~/.local/share/fonts` and
+  the Arial-metric sources renamed so they fail.
+- Pixel-diff the site against itself first. Reveal and decode timing
+  gives 600-900px of noise, so a diff of that size isn't a finding.
+
 <!-- Add new entries above this line -->

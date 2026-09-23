@@ -17,61 +17,132 @@
    exact same cascade order the single combined file always had).
 */
 
-/* Metric-matched fallback fonts (live PageSpeed Insights report,
-   2026-09-10, CLS 0.189): the 4 Google webfonts each reflow the page
-   when they swap in over the browser's default fallback, because
-   Arial's ascent/descent/cap-height don't match theirs -- text set in
-   Arial at the same font-size takes up different vertical space than
-   the same text in Anton/Archivo/Newsreader/Oswald, so the swap moves
-   everything below it.
+/* Metric-matched fallback fonts. Until the 4 Google webfonts arrive, text
+   is set in a local system font re-described under these names, sized so
+   that each line WRAPS the same way the webfont will. Then the swap
+   changes letterforms but not layout (CLS).
 
-   Each of these is a LOCAL Arial, re-described with size-adjust/
-   ascent-override/descent-override/line-gap-override tuned so a line
-   set in "Arial" under this name occupies the same box the real
-   webfont will occupy once it loads -- the swap becomes invisible to
-   layout even though the letterforms themselves still change.
+   Reworked 2026-09-23. The first version (2026-09-10, after a live
+   PageSpeed CLS of 0.189) matched cap-height, which for condensed faces
+   is the wrong axis: it scaled Arial UP (Anton 120%, Oswald 113%) against
+   faces that are much NARROWER than Arial. A Windows/macOS first visit
+   rendered the homepage H1 on 4 lines before snapping to 2 (desktop CLS
+   0.22-0.29, measured). On Linux/ChromeOS/Android local('Arial') matched
+   nothing, since local() matches a font's FULL or PostScript name, not
+   its family, so the fallbacks never applied there at all.
 
-   Values computed from each webfont's own OS/2 and hhea tables (real
-   ascent/descent/capHeight/unitsPerEm, not guessed), against Arial's
-   own well-documented metrics (upm 2048, ascent 1854, descent 434,
-   capHeight 1467 -- the same reference values next/font and most
-   metric-matching tools use, since Arial's own font file isn't
-   fetchable to measure directly in every environment). Formula:
-   size-adjust = webfont capHeight-ratio / Arial capHeight-ratio;
-   each *-override = webfont's own ratio, divided by that size-adjust
-   (since size-adjust scales the whole glyph box, the overrides have
-   to compensate to land back on the webfont's real proportions). */
+   Now:
+   - size-adjust = the webfont's rendered width / the system font's, at
+     the weights and case this site uses (Anton is always uppercase;
+     Oswald is a blend of uppercase nav/buttons and mixed-case labels).
+     Measured in Chromium with real text, not hmtx averages.
+   - *-override = the webfont's own hhea ascent/descent / size-adjust.
+     Chromium scales the overrides by size-adjust (verified), so this
+     lands the line box on the webfont's real proportions.
+   - Two faces per family. Arial-metric (Arial on Windows/macOS/iOS; its
+     metric clones Liberation Sans on Linux and Arimo on ChromeOS) and
+     Roboto (Android), each with its own measured widths. The stacks
+     below list both; if a face matches no local font, the browser just
+     moves on to the next one.
+   - Roboto must be named 'Roboto Regular'/'Roboto-Regular': local('Roboto')
+     matches nothing (verified).
+
+   Measured with a harness that holds the webfont files until the page has
+   painted, over 8 templates x 6 widths: summed CLS 2.953 -> 0.260
+   (Arial-metric) and 2.133 -> 0.204 (Roboto). On the homepage, across 51
+   widths from 360 to 1440px, widths with a shift over 0.1 fell 28 -> 2.
+   What's left are threshold cases no single size-adjust can fix. Around
+   995px the two hero buttons fit side by side in the fallback but not in
+   Oswald, whose digits (the phone number) run ~7% wider relative to
+   Arial's than its letters do. */
 @font-face {
   font-family: 'Anton Fallback';
-  src: local('Arial');
-  size-adjust: 119.97%;
-  ascent-override: 98.04%;
-  descent-override: 27.43%;
-  line-gap-override: 0%;
-}
-@font-face {
-  font-family: 'Archivo Fallback';
-  src: local('Arial');
-  size-adjust: 95.77%;
-  ascent-override: 91.68%;
-  descent-override: 21.93%;
-  line-gap-override: 0%;
-}
-@font-face {
-  font-family: 'Newsreader Fallback';
-  src: local('Arial');
-  size-adjust: 93.54%;
-  ascent-override: 78.58%;
-  descent-override: 28.33%;
+  src: local('Arial'), local('ArialMT'), local('Liberation Sans'), local('Arimo');
+  size-adjust: 71.80%;
+  ascent-override: 163.83%;
+  descent-override: 45.84%;
   line-gap-override: 0%;
 }
 @font-face {
   font-family: 'Oswald Fallback';
-  src: local('Arial');
+  src: local('Arial'), local('ArialMT'), local('Liberation Sans'), local('Arimo');
+  size-adjust: 80.00%;
+  ascent-override: 149.12%;
+  descent-override: 36.12%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Newsreader Fallback';
+  src: local('Arial'), local('ArialMT'), local('Liberation Sans'), local('Arimo');
+  size-adjust: 94.40%;
+  ascent-override: 77.86%;
+  descent-override: 28.07%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Archivo Fallback';
+  src: local('Arial'), local('ArialMT'), local('Liberation Sans'), local('Arimo');
+  size-adjust: 98.10%;
+  ascent-override: 89.50%;
+  descent-override: 21.41%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Anton Fallback Roboto';
+  src: local('Roboto Regular'), local('Roboto-Regular');
+  size-adjust: 77.00%;
+  ascent-override: 152.77%;
+  descent-override: 42.74%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Oswald Fallback Roboto';
+  src: local('Roboto Regular'), local('Roboto-Regular');
+  size-adjust: 85.00%;
+  ascent-override: 140.35%;
+  descent-override: 34.00%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Newsreader Fallback Roboto';
+  src: local('Roboto Regular'), local('Roboto-Regular');
+  size-adjust: 95.60%;
+  ascent-override: 76.88%;
+  descent-override: 27.72%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Archivo Fallback Roboto';
+  src: local('Roboto Regular'), local('Roboto-Regular');
+  size-adjust: 98.60%;
+  ascent-override: 89.05%;
+  descent-override: 21.30%;
+  line-gap-override: 0%;
+}
+/* Arrows (U+2190-21FF) aren't in Oswald at all, so the fallback draws them
+   even AFTER the webfont loads ("See the posting & apply ->"). Since they're
+   drawn by the fallback in both states they can't cause CLS, so these faces
+   are sized for looks instead: cap-height-matched, the 2026-09-10 values,
+   which keeps the arrow the same size it has always been on Windows/macOS.
+   Declared after the main faces so they win inside their unicode-range
+   only; every other character keeps the width-matched face above. */
+@font-face {
+  font-family: 'Oswald Fallback';
+  src: local('Arial'), local('ArialMT'), local('Liberation Sans'), local('Arimo');
   size-adjust: 113.08%;
   ascent-override: 105.50%;
   descent-override: 25.56%;
   line-gap-override: 0%;
+  unicode-range: U+2190-21FF;
+}
+@font-face {
+  font-family: 'Oswald Fallback Roboto';
+  src: local('Roboto Regular'), local('Roboto-Regular');
+  size-adjust: 113.94%;
+  ascent-override: 104.70%;
+  descent-override: 25.36%;
+  line-gap-override: 0%;
+  unicode-range: U+2190-21FF;
 }
 
   :root{
@@ -96,10 +167,10 @@
        keep it clear of Anton. The stack that read flat before (two
        condensed grotesques straight on top of each other) now has a
        serif between them doing the actual reading. */
-    --font-display:'Anton', 'Anton Fallback', sans-serif;
-    --font-body:'Newsreader', 'Newsreader Fallback', Georgia, 'Times New Roman', serif;
-    --font-ui:'Oswald', 'Oswald Fallback', sans-serif;
-    --font-app:'Archivo', 'Archivo Fallback', -apple-system, 'Segoe UI', sans-serif;
+    --font-display:'Anton', 'Anton Fallback', 'Anton Fallback Roboto', sans-serif;
+    --font-body:'Newsreader', 'Newsreader Fallback', 'Newsreader Fallback Roboto', Georgia, 'Times New Roman', serif;
+    --font-ui:'Oswald', 'Oswald Fallback', 'Oswald Fallback Roboto', sans-serif;
+    --font-app:'Archivo', 'Archivo Fallback', 'Archivo Fallback Roboto', -apple-system, 'Segoe UI', sans-serif;
     --bg:#0a0a0a;
     --bg-panel:#141414;
     --bg-panel-2:#1a1a1a;
@@ -4055,7 +4126,12 @@
      replacing the inline style outright -- no attribute-presence
      selector and no !important needed anymore. */
   .hero-lede{
-    max-width:64ch;
+    /* 640px, not 64ch (2026-09-23). The two are identical once Newsreader
+       loads (its "0" is exactly 10px at 18px). But ch is measured from the
+       fallback font's "0" until then, so the cap itself changed width
+       across the swap and re-wrapped the lede -- a CLS no size-adjust can
+       cancel, since the text and its container scale together. */
+    max-width:640px;
     color:var(--text-dim);
     font-size:18px;
     margin-top:16px;
