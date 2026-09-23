@@ -118,7 +118,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/portal/portal-app.js?v=202609230030"></script>
+<script src="/portal/portal-app.js?v=202609231400"></script>
 <style>
   body { background: #0a0a0a; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
   .login-box { max-width: 380px; width: 100%; text-align: center; }
@@ -227,9 +227,44 @@
 
   let forgotPasswordMode = false;
 
-  client.auth.getSession().then(({ data }) => {
-    if (data.session) window.location.replace('/portal/home.html');
+  // The email of the sign-in under way, for the code challenge's success.
+  let signingInEmail = '';
+
+  // Already signed in (2026-09-23): a session that still owes its second
+  // step (password right, 2FA code not entered yet) used to go straight
+  // on to home.html from here -- refreshing this page skipped the code.
+  // Now it stays for the code, unless this device has Face ID set up
+  // for the account, in which case home.html's own check asks for Face
+  // ID instead. ?step=code (the Face ID step's "Use my 2FA code
+  // instead") always asks for the code.
+  client.auth.getSession().then(async ({ data }) => {
+    if (!data.session) return;
+    const email = data.session.user.email;
+    if (await portalSecondStepOwed(email, client)) {
+      const wantsCode = new URLSearchParams(window.location.search).get('step') === 'code' || !portalIsBiometricLockEnabled(email);
+      if (wantsCode) {
+        const factorId = await verifiedTotpFactorId();
+        if (factorId) {
+          signingInEmail = email;
+          openMfaChallenge(factorId);
+          return;
+        }
+        // The factor couldn't be read (offline, or 2FA was just removed on
+        // another device): clear this half-finished session here and stay
+        // on the form. Going on to home.html would only send it straight
+        // back, over and over.
+        await client.auth.signOut({ scope: 'local' });
+        return;
+      }
+    }
+    window.location.replace('/portal/home.html');
   });
+
+  async function verifiedTotpFactorId() {
+    const { data: factors } = await client.auth.mfa.listFactors();
+    const factor = factors && (factors.totp || []).find((f) => f.status === 'verified');
+    return factor ? factor.id : null;
+  }
 
   document.getElementById('forgotLink').addEventListener('click', () => {
     forgotPasswordMode = !forgotPasswordMode;
@@ -292,15 +327,25 @@
     // as before.
     const { data: aal } = await client.auth.mfa.getAuthenticatorAssuranceLevel();
     if (aal && aal.nextLevel === 'aal2' && aal.currentLevel !== 'aal2') {
-      const { data: factors } = await client.auth.mfa.listFactors();
-      const factor = factors && (factors.totp || []).find((f) => f.status === 'verified');
-      if (factor) {
+      const factorId = await verifiedTotpFactorId();
+      if (factorId) {
         btn.disabled = false;
         btn.textContent = 'Sign In';
-        openMfaChallenge(factor.id);
+        signingInEmail = email;
+        // Face ID over the code (2026-09-23): on a device where this
+        // account has Face ID set up, Face ID is the second step; the
+        // code is one tap away if it fails. Anywhere else, the code.
+        if (portalIsBiometricLockEnabled(email)) {
+          await portalFaceIdInsteadOfCode(email, () => openMfaChallenge(factorId));
+          window.location.replace('/portal/home.html');
+          return;
+        }
+        openMfaChallenge(factorId);
         return;
       }
     }
+    // The password was just typed: no Face ID lock straight after it.
+    portalMarkSignedIn(email);
     window.location.replace('/portal/home.html');
   });
 
@@ -333,6 +378,8 @@
         return;
       }
       releaseFocusTrap();
+      // Password and code just done: no Face ID lock straight after.
+      if (signingInEmail) portalMarkSignedIn(signingInEmail);
       window.location.replace('/portal/home.html');
     }
     async function cancel() {

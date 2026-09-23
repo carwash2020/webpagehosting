@@ -40,8 +40,10 @@ test('the lock is stored per-email, so a shared device with multiple portal acco
 
 test('the gate persists across page navigations via sessionStorage, not a module-level flag -- fixed 2026-09-05 after a real reported bug: a module-level flag reset on every page load in this multi-page app, re-prompting on every single tab switch', () => {
   assert.doesNotMatch(JS, /let portalBiometricGatePassed/, 'the old module-level flag should be gone entirely, not just supplemented');
-  const fnMatch = JS.match(/function portalGuardWithBiometricLock\(email, client\)[\s\S]*?\n\}\n/);
-  assert.ok(fnMatch, 'expected to isolate portalGuardWithBiometricLock()');
+  // The lock itself lives in portalBiometricLockGate() since 2026-09-23;
+  // portalGuardWithBiometricLock() now runs the owed-second-step check first.
+  const fnMatch = JS.match(/function portalBiometricLockGate\(email, client\)[\s\S]*?\n\}\n/);
+  assert.ok(fnMatch, 'expected to isolate portalBiometricLockGate()');
   assert.match(fnMatch[0], /if \(sessionStorage\.getItem\(portalBiometricUnlockedSessionKey\(email\)\)\) return Promise\.resolve\(\);/);
 });
 
@@ -52,14 +54,20 @@ test('sessionStorage is the right choice for this specific persistence: survives
 });
 
 test('the gate marks the session unlocked both on an already-disabled lock and on a real successful unlock -- not just one of the two paths', () => {
-  const fnMatch = JS.match(/function portalGuardWithBiometricLock\(email, client\)[\s\S]*?\n\}\n/);
+  const fnMatch = JS.match(/function portalBiometricLockGate\(email, client\)[\s\S]*?\n\}\n/);
   const setCount = (fnMatch[0].match(/sessionStorage\.setItem\(portalBiometricUnlockedSessionKey\(email\), '1'\);/g) || []).length;
   assert.equal(setCount, 2, 'expected sessionStorage set both when the lock is not enabled, and after a real successful unlock');
 });
 
 test('the fallback button genuinely signs out and redirects, not just closes the overlay', () => {
-  const fnMatch = JS.match(/function portalGuardWithBiometricLock\(email, client\)[\s\S]*?\n\}\n/);
+  const fnMatch = JS.match(/function portalBiometricLockGate\(email, client\)[\s\S]*?\n\}\n/);
   assert.match(fnMatch[0], /biometricFallbackBtn['"]?\)\.addEventListener\('click', async \(\) => \{\s*\n\s*await client\.auth\.signOut\(\);\s*\n\s*window\.location\.replace\('\/portal\/login\.html'\);/);
+});
+
+test('the page guard asks for an owed second step first, then the lock -- and Face ID standing in for the code counts as the unlock', () => {
+  const fnMatch = JS.match(/function portalGuardWithBiometricLock\(email, client\)[\s\S]*?\n\}\n/);
+  assert.ok(fnMatch, 'expected to isolate portalGuardWithBiometricLock()');
+  assert.match(fnMatch[0], /return portalRequireSecondStep\(email, client\)\.then\(\(stoodIn\) => \{\s*if \(stoodIn\) return undefined;\s*return portalBiometricLockGate\(email, client\);/);
 });
 
 test('every gated page calls the gate right after confirming a real session, before any content-specific rendering', () => {
