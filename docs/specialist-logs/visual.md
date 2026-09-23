@@ -1212,4 +1212,16 @@ grouped left now. Rows use a -10px left margin so the text lines up
 with the heading while keeping a padded hover/tap area (44px min
 height).
 
+## 2026-09-23 -- Paste chip under quick add
+
+- **Paste a client's text:** a 34px pill under the quick add field,
+  with an orange tint, orange text and a clipboard icon. It only renders
+  where the clipboard API exists, and hides while there's text (the
+  same `.is-typing` that hides the tiles).
+- It started as a grey button inside the field. At 390px that squeezed
+  the input to about 20 characters and cut the placeholder mid-word, so
+  it moved under the field and got a label that says what it's for.
+- **Runway Dashboard** mirrors the rule, as with the rest of the shell
+  CSS.
+
 <!-- Add new entries above this line -->

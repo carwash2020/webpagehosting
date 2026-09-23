@@ -394,6 +394,7 @@
             '<input type="text" id="thQuickAdd" class="th-qa-input" placeholder="Try: sink leak for Sarah tomorrow" autocomplete="off" autocapitalize="sentences" enterkeyhint="go" aria-label="Quick add: type or say what to create" aria-describedby="thQuickAddPreview">' +
             '<button type="button" class="th-qa-mic" id="thQuickAddMic" aria-label="Say it" title="Say it" hidden>' + iconSvg('mic') + '</button>' +
           '</div>' +
+          '<button type="button" class="th-qa-paste" id="thQuickAddPaste" hidden>' + iconSvg('clipboard') + '<span>Paste a client\u2019s text</span></button>' +
           '<div class="th-qa-preview" id="thQuickAddPreview" aria-live="polite"></div>' +
         '</div>' +
         '<div class="th-create-grid">' +
@@ -485,6 +486,22 @@
       closeSheet('thCreateSheet', false);
       window.location.href = go.getAttribute('href');
     });
+    // Paste (2026-09-23, rework part 8): a client's text message copied from
+    // Messages drops straight in -- the iPhone's way in, since iOS has no
+    // share target for web apps. The browser asks permission the first time.
+    var paste = document.getElementById('thQuickAddPaste');
+    if (paste && navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
+      paste.hidden = false;
+      paste.addEventListener('click', function () {
+        navigator.clipboard.readText().then(function (clip) {
+          clip = String(clip || '').trim();
+          if (!clip) return;
+          input.value = input.value.trim() ? input.value.trim() + ' ' + clip : clip;
+          renderQuickAddPreview();
+          input.focus();
+        }).catch(function () { /* permission refused: nothing to do */ });
+      });
+    }
     // Say it: one utterance, with the words appearing as they're heard
     // (interim results), so the preview builds itself while you talk.
     var Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -521,6 +538,8 @@
   // and every time the sheet opens -- on a page that never loads the role
   // itself, opening the sheet asks for it (once), and th-role-loaded then
   // re-filters, so gated tiles appear a moment later rather than never.
+  // A quick add already typed (or shared in before the role arrived) is
+  // re-previewed too, so its "can't create" turns into the button.
   var roleRequested = false;
   function refreshCreateSheet() {
     var sheet = document.getElementById('thCreateSheet');
@@ -529,6 +548,8 @@
       var perm = tile.getAttribute('data-perm');
       tile.hidden = !!perm && !createAllowed({ perm: perm });
     });
+    var qaInput = document.getElementById('thQuickAdd');
+    if (qaInput && qaInput.value.trim()) renderQuickAddPreview();
   }
   function openCreate(opener) {
     refreshCreateSheet();
@@ -682,6 +703,42 @@
     injectCreateSheet();
     var createBtn = nav.querySelector('.th-bn-create');
     if (createBtn) createBtn.addEventListener('click', function () { openCreate(this); });
+    // Next tick, not now: on a page that loads this file after the DOM is
+    // ready, inject() runs before the QUICK ADD section further down this
+    // file has set its tables, and the parser would throw.
+    setTimeout(openQuickAddFromUrl, 0);
+  }
+
+  // Quick add from outside the app (2026-09-23, Workspace rework part 8).
+  // Three ways in, one landing: Android's share sheet (manifest.json's
+  // share_target sends ?share_title= &share_text= &share_url=), a plain
+  // ?quick=<text> link (an iPhone Shortcut, a bookmark, another app), and
+  // the home-screen shortcut's #quick-add. Each opens the Create sheet with
+  // the text already in quick add and the preview built; the params are
+  // stripped so a reload doesn't open it again.
+  function openQuickAddFromUrl() {
+    var params;
+    try { params = new URLSearchParams(window.location.search); } catch (e) { return; }
+    var fromHash = window.location.hash === '#quick-add';
+    var bits = [];
+    ['quick', 'share_title', 'share_text', 'share_url'].forEach(function (k) {
+      var v = params.get(k);
+      if (v !== null) params.delete(k);
+      if (v && v.trim()) bits.push(v.trim());
+    });
+    if (!bits.length && !fromHash) return;
+    // A share's title is often the first line of its text: keep the longer one.
+    var text = bits.filter(function (b, i) {
+      return !bits.some(function (o, j) { return j !== i && o.length > b.length && o.indexOf(b) > -1; });
+    }).join(' ');
+    var rest = params.toString();
+    try { history.replaceState(null, '', window.location.pathname + (rest ? '?' + rest : '') + (fromHash ? '' : window.location.hash)); } catch (e) { /* ignore */ }
+    openCreate(document.querySelector('.th-sidebar-new') || document.querySelector('.th-bn-create'));
+    var input = document.getElementById('thQuickAdd');
+    if (!input) return;
+    input.value = text;
+    renderQuickAddPreview();
+    setTimeout(function () { try { input.focus({ preventScroll: true }); } catch (e) { input.focus(); } }, 80);
   }
 
   if (document.readyState === 'loading') {
@@ -1183,7 +1240,7 @@ function thParseQuickEntry(text, opts) {
   });
 
   // 2. A phone number.
-  take(/(?:^|\s)(?:\+?1[\s.-]?)?\(?(\d{3})\)?[\s.-]?(\d{3})[\s.-]?(\d{4})(?=\s|[,.;]|$)/, function (m) {
+  take(/(?:^|\s)(?:\+?1[\s.-]?)?\(?(\d{3})\)?[\s.-]?(\d{3})[\s.-]?(\d{4})(?=\s|[,.;:!?)]|$)/, function (m) {
     out.phone = '(' + m[1] + ') ' + m[2] + '-' + m[3];
     out.signals++;
   });
@@ -1212,18 +1269,26 @@ function thParseQuickEntry(text, opts) {
     out.timeLabel = h12 + ':' + String(min).padStart(2, '0') + ' ' + (h < 12 ? 'AM' : 'PM');
     out.signals++;
   };
-  take(/(?:\s(?:at|@|around|by))?\s(\d{1,2})(?::(\d{2}))?\s*([ap])\.?\s?m\.?(?=\s|[,.;]|$)/i, function (m) {
+  take(/(?:\s(?:at|@|around|by))?\s(\d{1,2})(?::(\d{2}))?\s*([ap])\.?\s?m\.?(?=\s|[,.;:!?)]|$)/i, function (m) {
     var h = parseInt(m[1], 10), min = m[2] ? parseInt(m[2], 10) : 0;
     if (h < 1 || h > 12 || min > 59) return false;
     if (m[3].toLowerCase() === 'p' && h < 12) h += 12;
     if (m[3].toLowerCase() === 'a' && h === 12) h = 0;
     setTime(h, min);
-  }) || take(/\s(?:at|@)\s+(\d{1,2}):(\d{2})(?=\s|[,.;]|$)/i, function (m) {
+  }) || take(/\s(?:at|@)\s+(\d{1,2}):(\d{2})(?=\s|[,.;:!?)]|$)/i, function (m) {
     var h = parseInt(m[1], 10), min = parseInt(m[2], 10);
     if (h > 23 || min > 59) return false;
     if (h >= 1 && h <= 6) h += 12; // "at 2:30" on a work day means the afternoon
     setTime(h, min);
-  }) || take(/\s(?:at\s+)?noon\b/i, function () { setTime(12, 0); });
+  }) || take(/\s(?:at\s+)?noon\b/i, function () { setTime(12, 0); })
+    // "around 2", "at 4" -- a bare hour after at/around/about is a time
+    // (workday hours: 1-6 means the afternoon); taken after addresses, so
+    // "at 2 Main St" is already gone by now.
+    || take(/\s(?:at|around|about|by)\s+(\d{1,2})(?:ish)?(?=\s|[,.;:!?)]|$)/i, function (m) {
+      var h = parseInt(m[1], 10);
+      if (h < 1 || h > 12) return false;
+      setTime(h <= 6 || h === 12 ? (h === 12 ? 12 : h + 12) : h, 0);
+    });
 
   // 6. A date.
   var setDate = function (d) { out.date = thQaYmd(d); out.signals++; };
@@ -1244,6 +1309,11 @@ function thParseQuickEntry(text, opts) {
     take(new RegExp(prefix + 'day\\s+after\\s+tomorrow\\b', 'i'), function () { setDate(days(2)); }) ||
     take(new RegExp(prefix + '(tomorrow|tomorow|tmrw|tmr|tmw)\\b', 'i'), function () { setDate(days(1)); }) ||
     take(new RegExp(prefix + 'yesterday\\b', 'i'), function () { setDate(days(-1)); }) ||
+    // Vague on purpose, so a sensible day: next week = its Monday, the
+    // weekend = the coming Saturday, next weekend = the one after.
+    take(new RegExp(prefix + '(?:sometime\\s+)?next\\s+weekend\\b', 'i'), function () { setDate(weekdayFrom(6, true)); }) ||
+    take(new RegExp(prefix + '(?:sometime\\s+)?(?:this|the)\\s+weekend\\b', 'i'), function () { setDate(today.getDay() === 6 ? today : weekdayFrom(6, false)); }) ||
+    take(new RegExp(prefix + '(?:sometime\\s+)?next\\s+week\\b', 'i'), function () { setDate(weekdayFrom(1, true)); }) ||
     take(new RegExp(prefix + 'in\\s+(\\d+|' + Object.keys(TH_QA_NUMBER_WORDS).join('|') + ')\\s+(days?|weeks?)\\b', 'i'), function (m) {
       var n = /^\d+$/.test(m[1]) ? parseInt(m[1], 10) : TH_QA_NUMBER_WORDS[m[1].toLowerCase()];
       setDate(days(/^week/i.test(m[2]) ? n * 7 : n));
@@ -1264,7 +1334,7 @@ function thParseQuickEntry(text, opts) {
     return d;
   };
   if (!dated) {
-    dated = take(new RegExp(prefix + '(\\d{1,2})\\/(\\d{1,2})(?:\\/(\\d{4}|\\d{2}))?(?=\\s|[,.;]|$)', 'i'), function (m) {
+    dated = take(new RegExp(prefix + '(\\d{1,2})\\/(\\d{1,2})(?:\\/(\\d{4}|\\d{2}))?(?=\\s|[,.;:!?)]|$)', 'i'), function (m) {
       var y = m[3] ? (m[3].length === 2 ? 2000 + parseInt(m[3], 10) : parseInt(m[3], 10)) : null;
       var d = pickYear(parseInt(m[1], 10) - 1, parseInt(m[2], 10), y);
       if (!d) return false;
@@ -1300,7 +1370,7 @@ function thParseQuickEntry(text, opts) {
     .sort(function (a, b) { return b.name.length - a.name.length; });
   for (var i = 0; i < clients.length && !out.client; i++) {
     var c = clients[i];
-    take(new RegExp('(?:\\s(?:for|at|with|to|from))?\\s' + thQaEscapeRe(c.name.trim()).replace(/\s+/g, '\\s+') + "(?:'s)?(?=\\s|[,.;]|$)", 'i'), function () {
+    take(new RegExp('(?:\\s(?:for|at|with|to|from))?\\s' + thQaEscapeRe(c.name.trim()).replace(/\s+/g, '\\s+') + "(?:'s)?(?=\\s|[,.;:!?)]|$)", 'i'), function () {
       out.client = { id: c.id || null, name: c.name.trim(), phone: c.phone || '', address: c.address || '', email: c.email || '', known: true };
     });
   }
@@ -1311,7 +1381,7 @@ function thParseQuickEntry(text, opts) {
       if (first.length < 2) return;
       (byFirst[first] = byFirst[first] || []).push(c);
     });
-    var wordRe = /(\s(?:for|at|with|to|from))?\s([A-Za-z][A-Za-z'-]*?)('s)?(?=\s|[,.;]|$)/g;
+    var wordRe = /(\s(?:for|at|with|to|from))?\s([A-Za-z][A-Za-z'-]*?)('s)?(?=\s|[,.;:!?)]|$)/g;
     var wm;
     while ((wm = wordRe.exec(rest)) !== null) {
       var word = wm[2].toLowerCase();
@@ -1328,14 +1398,14 @@ function thParseQuickEntry(text, opts) {
     }
   }
   if (!out.client) {
-    take(/\s(?:for|with)\s+((?:Mr\.?|Mrs\.?|Ms\.?|Dr\.?)\s+)?([A-Z][a-z'-]+(?:\s+[A-Z][a-z'-]+)?)(?:'s)?(?=\s|[,.;]|$)/, function (m) {
+    take(/\s(?:for|with)\s+((?:Mr\.?|Mrs\.?|Ms\.?|Dr\.?)\s+)?([A-Z][a-z'-]+(?:\s+[A-Z][a-z'-]+)?)(?:'s)?(?=\s|[,.;:!?)]|$)/, function (m) {
       out.client = { id: null, name: ((m[1] || '') + m[2]).trim(), phone: '', address: '', email: '', known: false };
     });
   }
   // "quote Dave Carter drywall patch": a new client's first and last name,
   // both capitalised, straight after a money word.
   if (!out.client && explicitIntent && out.intent !== 'job') {
-    take(/^\s+([A-Z][a-z'-]+\s+[A-Z][a-z'-]+)(?:'s)?(?=\s|[,.;]|$)/, function (m) {
+    take(/^\s+([A-Z][a-z'-]+\s+[A-Z][a-z'-]+)(?:'s)?(?=\s|[,.;:!?)]|$)/, function (m) {
       out.client = { id: null, name: m[1], phone: '', address: '', email: '', known: false };
     });
   }
@@ -1346,15 +1416,15 @@ function thParseQuickEntry(text, opts) {
     var vendors = (opts.vendors || []).filter(Boolean).sort(function (a, b) { return b.length - a.length; });
     for (var v = 0; v < vendors.length && !out.vendor; v++) {
       var vendor = vendors[v];
-      take(new RegExp('(?:\\s(?:at|from))?\\s' + thQaEscapeRe(vendor).replace(/\s+/g, '\\s+') + '(?=\\s|[,.;]|$)', 'i'), function () { out.vendor = vendor; });
+      take(new RegExp('(?:\\s(?:at|from))?\\s' + thQaEscapeRe(vendor).replace(/\s+/g, '\\s+') + '(?=\\s|[,.;:!?)]|$)', 'i'), function () { out.vendor = vendor; });
     }
-    if (!out.vendor) take(/\s(?:at|from)\s+([A-Z][\w'&.-]*(?:\s+[A-Z][\w'&.-]*){0,2})(?=\s|[,.;]|$)/, function (m) { out.vendor = m[1]; });
+    if (!out.vendor) take(/\s(?:at|from)\s+([A-Z][\w'&.-]*(?:\s+[A-Z][\w'&.-]*){0,2})(?=\s|[,.;:!?)]|$)/, function (m) { out.vendor = m[1]; });
     if (out.vendor) out.signals++;
   }
 
   // 10. A bare number is the amount for money entries ("invoice sarah 150").
   if (out.amount === null && out.intent !== 'job') {
-    take(/\s(\d{1,5}(?:\.\d{1,2})?)(?=\s|[,.;]|$)/, function (m) { out.amount = parseFloat(m[1]); out.signals++; });
+    take(/\s(\d{1,5}(?:\.\d{1,2})?)(?=\s|[,.;:!?)]|$)/, function (m) { out.amount = parseFloat(m[1]); out.signals++; });
   }
 
   // 11. The job this is about (expenses and invoices), among the client's
@@ -1384,11 +1454,40 @@ function thParseQuickEntry(text, opts) {
     if (mine.length) out.jobId = mine[0].id;
   }
 
-  // 12. What's left is the title: tidy the joins the cuts left behind.
+  // 12. What's left is the title: tidy the joins the cuts left behind. A
+  //     long message (a client's text, shared or pasted in) keeps all of it
+  //     as sourceText -- it goes in the job's notes -- and titles itself
+  //     from its first real sentence, minus the greeting.
+  out.long = original.length > 70 || /[.!?]\s+\S/.test(original);
+  if (out.long) {
+    out.sourceText = original;
+    rest = ' ' + rest.replace(/\s+/g, ' ').trim()
+      .replace(/^(?:(?:hi|hello|hey|hiya|good\s+(?:morning|afternoon|evening))\b[\s,!.]*)+/i, '')
+      .replace(/^(?:(?:this\s+is|it'?s|its)\b[\s,!.]*)+/i, '')
+      .replace(/^[\s,!.]+/, '');
+    // The title is what's wrong, not the ask: skip "can you come..."
+    // sentences, and cut a trailing ", any chance ..." off the one kept.
+    var REQUEST = /^(?:can|could|would|will|are|is|do|does|any\s+chance|when|let\s+me\s+know|please|thanks|thank\s+you)\b/i;
+    var sentences = (rest.match(/[^.!?]+[.!?]*/g) || [rest]).map(function (x) { return x.trim(); })
+      .filter(function (x) { return x.replace(/[.!?,\s]/g, '').length > 3; });
+    // "It's making a noise" says nothing on its own; "can you come look at
+    // our water heater?" does once the ask is peeled off it.
+    var PRONOUN = /^(?:it|it's|its|this|that|they|there|he|she|we)\b/i;
+    var LEAD_IN = /^(?:(?:can|could|would|will)\s+you\s+(?:please\s+)?|any\s+chance\s+you\s+(?:could\s+)?|please\s+)(?:come\s+(?:out\s+)?(?:and\s+)?|stop\s+by\s+(?:and\s+)?|swing\s+by\s+(?:and\s+)?)?(?:take\s+a\s+look\s+at|look\s+at|check\s+(?:out|on)?|fix|repair|replace|install|help\s+(?:me\s+)?with|look\s+into)?\s*(?:our|my|the|a|an)?\s*/i;
+    var statements = sentences.filter(function (x) { return !REQUEST.test(x); });
+    var asked = sentences.filter(function (x) { return REQUEST.test(x); })
+      .map(function (x) { return x.replace(LEAD_IN, ''); })
+      .filter(function (x) { return x.replace(/[.!?,\s]/g, '').length > 3 && !REQUEST.test(x); });
+    var firstReal = statements.filter(function (x) { return !PRONOUN.test(x); })[0] || asked[0] || statements[0] || sentences[0] || rest;
+    firstReal = firstReal.replace(/,\s*(?:any\s+chance|can\s+you|could\s+you|would\s+you|are\s+you|is\s+there|when|let\s+me\s+know|please)\b.*$/i, '')
+      .replace(/[.!?]+$/, '');
+    if (firstReal.length > 60) firstReal = firstReal.slice(0, 60).replace(/\s+\S*$/, '') + '…';
+    rest = ' ' + firstReal + ' ';
+  }
   var title = rest.replace(/\s+/g, ' ').trim()
     .replace(/^(?:(?:for|at|on|to|by|with|and|the job|job|to do|-|,|:)\s+)+/i, '')
     .replace(/(?:\s+(?:for|at|on|to|by|with|and|due|around|from|-|,))+$/i, '')
-    .replace(/\s+([,.;:])/g, '$1').replace(/^[,.;:\s-]+|[,;:\s-]+$/g, '');
+    .replace(/\s+([,.;:!?])/g, '$1').replace(/^[,.;:\s-]+|[,;:\s-]+$/g, '');
   out.title = title ? title.charAt(0).toUpperCase() + title.slice(1) : '';
   return out;
 }
@@ -1418,7 +1517,10 @@ function thQuickEntryHref(p) {
   set('phone', p.phone);
   set('address', p.address);
   set('priority', p.priority);
-  if (p.timeLabel) set('notes', 'Time: ' + p.timeLabel);
+  var notes = [];
+  if (p.timeLabel) notes.push('Time: ' + p.timeLabel);
+  if (p.sourceText) notes.push('Their message: “' + p.sourceText + '”');
+  set('notes', notes.join('\n'));
   q.set('qa', '1');
   return '/tools/job-tracker.html?' + q.toString() + '#add-job';
 }

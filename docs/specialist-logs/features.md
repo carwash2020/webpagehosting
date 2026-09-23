@@ -2226,4 +2226,65 @@ network blip would wipe every badge.
 Tests: `tests/portal/reply-notice-and-live-unread.test.js` (jsdom; drives
 the watcher and the Request page's unread handling for real).
 
+## 2026-09-23 -- Workspace rework, part 8: quick add from anywhere
+
+**Why.** Part 7's quick add takes a sentence, but most jobs don't
+start as a sentence someone types. They start as a text from the
+client, sitting in Messages. Retyping it is the step that gets skipped
+on a busy day, so part 8 lets the message itself come in.
+
+**Three ways in, one landing** (`openQuickAddFromUrl()` in
+tools-nav-pwa.js). Each opens the Create sheet with the text in quick
+add and the preview built, then strips its params with `replaceState`
+so a reload doesn't reopen it. Any other params are kept.
+- `manifest.json` `share_target` (GET → `workspace.html` with
+  `share_title` / `share_text` / `share_url`). Android puts the
+  installed app in the share sheet. A share's title is often the start
+  of its text, so of two pieces where one contains the other, only the
+  longer is kept.
+- `?quick=<text>` on any tools page. iOS has no web share target, so
+  this is what an iPhone Shortcut ("Receive text from Share Sheet →
+  Open URL") calls.
+- `#quick-add`, the new second entry in the manifest's `shortcuts`
+  (long-press the home-screen icon).
+
+The URL check runs a tick after `inject()` (`setTimeout(…, 0)`). On a
+page that loads the shell after the DOM is ready, `inject()` runs during
+the file's own execution, before the QUICK ADD section's top-level
+`var` tables further down have been assigned.
+
+**Paste** (`#thQuickAddPaste`) exists only where
+`navigator.clipboard.readText` does. It sits under the field and hides
+while there's text (`.is-typing`). The browser asks for clipboard
+permission the first time.
+
+**Long messages** (`out.long`, more than one sentence or more than 70
+characters). The field-by-field parse still runs over the whole text,
+so client, date, time and phone come out as before. Only the title is
+chosen differently:
+1. Greetings and self-introductions ("Hi,", "Hey it's Tom!", "this is
+   Sarah.") are stripped from the front.
+2. The text is split into sentences. Sentences that are asks (can /
+   could / would / any chance / please / thanks…) are set aside.
+3. The first remaining statement is the title.
+4. If every sentence is an ask, the ask's lead-in is removed ("can you
+   come look at our …") and what's left is the title.
+5. The title is cut at a word near 60 characters, with "…".
+
+`thQuickEntryHref()` puts the whole message in the job's notes
+(`Their message: “…”`), after `Time:`, so the job keeps what the client
+actually said.
+
+**Parser widening:**
+- Word lookaheads accept trailing punctuation.
+- A bare hour after at / around / about / by is a time; 1 to 6 is
+  read as PM.
+- this / the weekend → the coming Saturday; next weekend → the
+  Saturday after that; next week → its Monday.
+
+**Permissions.** `refreshCreateSheet()` already runs on
+`th-role-loaded`. It now also re-previews a non-empty quick add, so text
+that arrived before the role (a share, a fast typist) gets its button
+instead of a stale "can't create".
+
 <!-- Add new entries above this line -->

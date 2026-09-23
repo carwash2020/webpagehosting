@@ -47,9 +47,9 @@
      reachable only by the browser back button. Loaded in the same
      position (after tools-dialogs.js, before tools-tour.js) as every
      other tool page for consistency. -->
-<script src="/tools/tools-nav-pwa.js?v=686999ec0f" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=4b4d783f9a" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
-<script src="/tools/tools-tour.js?v=18e0421913" defer></script>
+<script src="/tools/tools-tour.js?v=118148b9a2" defer></script>
 <script>
   (function () {
     // Tools app light/dark theme (2026-08-20), tucked into Settings.
@@ -570,6 +570,13 @@
     animation: th-qa-listen 1.2s ease-in-out infinite;
   }
   @keyframes th-qa-listen { 50% { box-shadow: 0 0 0 8px var(--orange-tint-soft); } }
+  .th-qa-paste {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 34px; margin: 8px 0 0; padding: 0 14px 0 11px;
+    border-radius: 999px; background: var(--orange-tint-soft); border: 1px solid transparent;
+    color: var(--orange-light); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+  .th-qa-paste[hidden], .th-create-sheet.is-typing .th-qa-paste { display: none; }
+  .th-qa-paste .th-icon { width: 15px; height: 15px; margin: 0; }
   .th-qa-preview:not(.is-shown) { display: none; }
   .th-qa-card { margin-top: 10px; padding: 14px; border-radius: 14px; background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); }
   .th-qa-kind { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-ui); font-size: 11.5px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--orange-light); }

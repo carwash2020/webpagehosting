@@ -3867,3 +3867,74 @@ from notice, a reply arriving mid-draft, badges clearing on another
 page). New tests: `tests/portal/reply-notice-and-live-unread.test.js`.
 Detail: `docs/specialist-logs/features.md` and `visual.md` (2026-09-22
 entries), `docs/CLIENT-PORTAL.md` (thread reads section).
+
+
+## What changed, 2026-09-23 -- Workspace rework, part 8: a client's text becomes a job
+
+Part 8 of the Workspace rework. Full reasoning in
+`docs/specialist-logs/features.md`.
+
+**Most jobs arrive as a text message. Now the message is the job.**
+Part 7's quick add understood short, typed sentences. It now also takes
+a client's whole message, and you can get the message into it without
+retyping a word:
+- **Android: Share → Triple H.** Long-press the text in Messages, tap
+  Share, pick Triple H. The app opens with the Create sheet up and the
+  message already in quick add. (The installed app is now a share
+  target, via `manifest.json`.)
+- **iPhone, or anywhere: Paste a client's text.** A chip under the
+  field (where the browser can read the clipboard) drops a copied
+  message in. It steps aside once there's text.
+- **Any link or iPhone Shortcut: `?quick=<text>`** on any tools page
+  opens the same thing. A Shortcut that takes the shared text and opens
+  `…/tools/workspace.html?quick=[text]` gives an iPhone the same
+  one-tap share Android has.
+- **Home-screen shortcut:** long-press the app icon → **Quick add**
+  opens straight into an empty field.
+
+**A long message titles itself.** "Hi, this is Sarah. My kitchen sink
+is leaking under the cabinet again. Can you come tomorrow around 2?"
+becomes:
+- title *My kitchen sink is leaking under the cabinet again* (the
+  greeting and the ask are skipped),
+- client Sarah Miller (her phone and address come along),
+- tomorrow, 2:00 PM,
+- and the whole message saved in the job's notes, after the time, so
+  nothing she said is lost.
+
+When the only sentence is the ask ("Can you come look at our water
+heater?"), the title is what's being asked about (*Water heater*). A
+very long sentence is cut at a word, with an ellipsis.
+
+**Reads more of how people write:**
+- "around 2", "at 9", "about 4": a bare hour after at / around / about
+  is a time (1 to 6 means the afternoon). "fix the 2 doors" stays two
+  doors.
+- "this weekend" (the coming Saturday), "next weekend" (the one after),
+  "next week" (its Monday).
+- Punctuation after a word ("tomorrow?", "Friday,") no longer hides it.
+
+**Fixed along the way:**
+- A shared message or `?quick=` link opened on Finance or the job list
+  (pages that load the shell late) crashed quick add. The link is now
+  read one tick later, once the whole file has run.
+- A message shared in before your role had loaded said "Your account
+  can't create invoices" and stayed that way. The preview now rebuilds
+  when the role arrives.
+- A long title filled in on the Jobs form showed its end. It now shows
+  its start.
+
+Verified in a real headless Chromium (local HTTP, fake Supabase):
+- 390px: a share (`?share_text=`) opens the sheet with the preview;
+  Enter lands on the Jobs form with the title, Sarah's phone, tomorrow,
+  and the whole message in the notes.
+- `?quick=invoice tom $220 disposal install` on Finance lands on the
+  invoice form with Tom, a *Disposal install* line at $220, and his
+  job linked.
+- `#quick-add` opens an empty field with the Paste chip.
+- 1440px: Paste with real clipboard permission fills the field and the
+  preview (Tom, Friday).
+- The served manifest carries `share_target` and the new shortcut.
+- No console errors.
+
+New tests: `tests/tools/quick-add-anywhere.test.js` (7).
