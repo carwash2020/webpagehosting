@@ -123,6 +123,20 @@ function extractInvoiceIds(metadata: Record<string, string> | undefined): number
 
 Deno.serve(async (req: Request) => {
   try {
+    // Only real caller: the daily-stripe-reconciliation-check cron (sql/infra/add_stripe_reconciliation_cron.sql), which sends the
+    // service_role key from Vault as its bearer token. verify_jwt alone
+    // accepts the public anon key (it checks the signature, not the
+    // role), so without this anyone could POST a fake trigger payload
+    // here. Security audit, 2026-09-23.
+    const authHeader = req.headers.get("Authorization") || "";
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    if (!SERVICE_ROLE_KEY || token !== SERVICE_ROLE_KEY) {
+      return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     if (!STRIPE_RECONCILE_SECRET_KEY) {
       return new Response(JSON.stringify({ ok: false, error: "STRIPE_RECONCILE_SECRET_KEY secret is not set yet." }), {
         status: 500,
