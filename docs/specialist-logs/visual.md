@@ -1631,4 +1631,9 @@ Measured and deliberately left alone. Each needs a call from Connor before anyon
 - **Look unchanged.** Every computed property of all 729 picker elements matches main in Chromium, on each page, loading / loaded / error / reduced motion. The only exception is the skeleton's `opacity` mid-animation, in the 4th decimal.
 - **Where to change it.** The picker's look has one copy now, so edit it here and all three pages follow.
 
+## 2026-09-23 (booking lane): the reduced-motion test's booking exception is gone
+
+- `reduced-motion-coverage.test.js` exempted one line, the homepage's "or schedule online" smooth scroll (`BOOKING_LANE`), until the booking lane fixed it. #383 fixed it, so the exception matched nothing and has been removed, along with the check that used it.
+- **The test is stricter now.** Every explicit smooth scroll on the public site must fall back to `auto` under reduced motion. There are no exceptions left. Putting the old line back into `index.html` makes the test fail and name the line.
+
 <!-- Add new entries above this line -->
