@@ -657,4 +657,293 @@ fix**: don't assume "not deployed yet" explains it away -- check the
 live system directly first. A code fix and a live-only bug can coexist
 in the same feature, and this one did.
 
+## 2026-09-23: Portal -- Face ID stands in for the 2FA code; the code could be skipped by refreshing (fixed)
+
+**The ask.** "Facial recognition AND two factor is way too much. Make it
+pick facial over two factor for the portal, also make two factor
+optional." Two-factor was already opt-in (Settings only; nothing forces
+enrollment). What was "too much" was the sequence for a client with
+both on: password, then the TOTP code, then the Face ID lock as soon as
+home.html loaded.
+
+**What Face ID is here** (unchanged, see portal-app.js's biometric
+header). It's a local-only WebAuthn platform-authenticator check in front
+of an existing session; nothing is verified server-side. Letting it stand
+in for the code therefore means a Face-ID-approved session stays at
+Supabase aal1 (password only) from the server's point of view.
+
+**Why that's acceptable, and what it does and doesn't weaken:**
+- No portal RLS policy, RPC or edge function has ever checked `aal`
+  (grepped `portal/`, `sql/`, `edge-functions/`: no `aal2` anywhere
+  outside login.html). The server-side posture is identical before and
+  after.
+- On a device without this account's Face ID credential (the realistic
+  stolen-password case), the TOTP code is still required.
+- Face ID itself needs the real platform authenticator with user
+  verification. A copied localStorage key doesn't pass
+  `navigator.credentials.get`.
+
+**The real finding: the code could be skipped by refreshing.**
+- `signInWithPassword` persists an aal1 session before the code overlay
+  appears. login.html's on-load `getSession()` then redirected any
+  session straight to home.html, and no portal page checked `aal`.
+- So after a correct password, one refresh (or opening
+  /portal/home.html directly) went straight in with no code.
+- Reproduced on main in a real browser: after the password, a reload
+  landed on home.html with 0 codes verified.
+- Impact: 2FA gave no protection against someone who knew the password,
+  even without API skills.
+- **Fixed:** `portalRequireSecondStep()` runs before every signed-in page
+  renders (via `portalGuardWithBiometricLock`, and directly in Settings).
+  An aal1 session on an account with a verified factor must pass Face ID
+  on a Face ID device, or goes to `login.html?step=code`. login.html's
+  on-load check now stays for the code instead of redirecting.
+  Settings is included, so it isn't a way around the step.
+
+**Still open, not fixed here (needs the owner's decision).** All of this
+is enforced in the browser. Someone with the password who calls the REST
+API directly with the aal1 token still gets whatever RLS allows. Real
+enforcement would be two changes:
+1. RLS on client-data tables requiring `(auth.jwt()->>'aal') = 'aal2'`
+   whenever the user has a verified factor.
+2. That only works together with Face ID becoming a server-verified
+   factor (Supabase WebAuthn MFA or passkeys); otherwise every Face ID
+   sign-in would be locked out.
+
+Both are schema/auth-config changes. They're left for Connor rather
+than done quietly.
+
+**Supabase detail worth remembering.** Unenrolling a verified factor
+requires an aal2 session. A Face-ID-approved session is aal1, so Settings
+now asks for one code before "Turn off two-factor" (it would otherwise
+fail with insufficient_aal).
+
+Tests: `tests/portal/face-id-over-2fa.test.js`, plus an end-to-end
+browser run with a CDP virtual authenticator and mocked Supabase auth
+(scenarios in README's entry).
+
+## 2026-09-23: Cross-stack audit, round 3 -- open signup turned "authenticated" into "anyone"
+
+A fresh full pass across auth, RLS, storage, edge functions, Stripe,
+MFA, and secrets, run against the **live** project (`get_advisors`,
+`pg_policies`, `get_edge_function`, `function_edge_logs`, and probes
+inside rolled-back transactions using simulated JWTs), not only the
+repo. The two earlier rounds (2026-09-16/17/21, above) are not
+re-reported here.
+
+### The root cause behind most of this round
+
+**Public signup is enabled.** The live `/auth/v1/settings` (read from
+inside the database with `net.http_get`, since this sandbox can't reach
+`*.supabase.co`) returns `disable_signup: false`,
+`mailer_autoconfirm: false`. Anyone with a working mailbox can create an
+account, confirm it, and hold a real `authenticated` JWT. Nothing in the
+repo calls `signUp`; portal clients are created by `send-invite` with
+the service role. Several policies and edge functions were written when
+"authenticated" meant "Connor or Steve" (SECURITY.md said so in as many
+words). It stopped meaning that when portal accounts shipped, and with
+open signup it means *anyone*.
+
+**Needs a human, dashboard only:** Authentication -> Sign In / Providers
+-> turn off "Allow new users to sign up". Invites keep working.
+
+### Findings, by severity
+
+| # | Sev | Finding | Status |
+|---|---|---|---|
+| 1 | CRITICAL | Any authenticated session (so, any stranger) could edit `site_content`/`site_faq`/`site_terms`, read the CMS history tables, and read/upload/delete every file in `secure-documents` (business-formation, insurance, tax) and `receipts` | **Fixed live + PR #361 (merged)** |
+| 2 | HIGH | 8 trigger/cron-only edge functions had no caller check; the public anon key could drive them. Worst: `notify-job-message-email` / `notify-work-order-message-email` email a real client (looked up by sequential id) branded text of the caller's choosing -- a phishing relay on Triple H's own domain | **PR #363**. `notify-job-message-email` deployed + verified live. Other 7 **pending deploy approval** |
+| 3 | HIGH | Deployed `Send-Push` (v50) has no auth check -- the 2026-09-17 repo fix (`00338ad1`) was merged but never deployed. Anyone can push arbitrary title/body **and URL** to staff devices or to any client `user_id`, and both service workers `openWindow()` any URL on tap | Repo fix exists; **pending deploy approval**. SW same-origin guard: not started |
+| 4 | HIGH | Internal MFA is enforced only by `login.html`. A password-only (`aal1`) token -- which anyone with the password gets by calling `/auth/v1/token` directly -- passes every RLS policy and every edge-function internal check. Proven live for the enrolled Developer account | **Design proposed, owner decision needed** |
+| 5 | MEDIUM | Double charge: each "Pay" mints a new PaymentIntent and overwrites the stored id; paying two tabs charges twice, the second webhook returns `already_processed`, and `reconcile-stripe-payments` skips paid invoices, so nothing ever flags it | Written up, not fixed |
+| 6 | MEDIUM | `manage-saved-card` `create_setup_intent` needs only a signed-in session: with open signup, strangers can mint Stripe Customers + SetupIntents on the client-cards account (card-testing risk) | Closing signup removes the stranger path; not fixed |
+| 7 | LOW-MED | `stripe-webhook` marks invoices paid without comparing `pi.amount_received` to their totals; a stale smaller PaymentIntent can settle a raised invoice | Written up, not fixed |
+| 8 | MEDIUM | `send-booking-email` (and LOW: `send-appointment-reminder`) lack the same caller check as #2 | **Deferred: booking lane**, see below |
+| 9 | LOW | `role_definitions` and `th_uptime_checks` SELECT `true` for any authenticated; `work-order-photos` INSERT on `bucket_id` alone (no read-back, no overwrite -- upload spam only); the 4 MFA recovery-code RPCs are anon-EXECUTE-able (harmless -- all key on `auth.uid()`) | Not fixed; hygiene migration drafted in this entry's "next steps" |
+
+### 1. CRITICAL -- CMS writes and private buckets open to any session (fixed)
+
+Reproduced live before touching anything: a simulated stranger JWT (no
+`account_roles` row, no client rows) and an invited portal client's JWT
+could both see all 6 `secure-documents` objects and both receipts,
+insert into both buckets, and UPDATE/INSERT every CMS row; properly
+scoped tables (`th_leads`, `invoices`, `workspace_sync`, `job-photos`,
+`invoice-pdfs`) returned 0. Every real caller is an internal `/tools/`
+page; the portal and edge functions never touch these tables/buckets.
+
+Fix (`sql/security/restrict_site_content_and_private_buckets_to_internal_accounts.sql`,
+applied live after a full dry run): CMS writes need
+`account_roles.can_manage_site_content` (the exact column
+`canManageSiteContent()` reads, so the UI and DB agree); history reads
+and both buckets need `current_user_has_any_role()`. Re-probed after
+applying: stranger/client 0 rows and denied; Steve and Connor full
+access; anon public reads unchanged (13/15/16 rows); zero open policies
+left; advisor clean. The public pages render CMS values with
+`textContent`/escaping, so this was defacement + lead hijacking
+(swapping the site-wide phone number) + document exposure, not XSS.
+
+### 2. HIGH -- trigger-only edge functions callable with the anon key
+
+Same class as uptime-alert/send-payment-reminder/send-quote-followup
+(fixed in earlier rounds), missed for these 8:
+`notify-job-message-email`, `notify-work-order-message-email`,
+`notify-work-order-scheduled-email`, `notify-new-work-order-email`,
+`send-lead-email`, `send-job-application-email`,
+`send-job-status-change-email`, `reconcile-stripe-payments`.
+
+Before adding a strict `token !== SERVICE_ROLE_KEY` check, verified it
+can't break the real callers (the thing that bit this project on
+2026-09-16): every live trigger body and `cron.job` command sends the
+Vault secret `send_push_service_role_key`, and the two functions that
+already enforce this exact check returned **200** on their real cron
+runs on 2026-09-22. So the Vault secret matches, and **ACTION-ITEMS
+#7-9 are resolved**. Open PR #362's new cancel path inserts a message
+row with the service role, and the trigger forwards it with the Vault
+key, so it passes too.
+
+PR #363's test runs each real handler (types stripped, `Deno`/`fetch`
+mocked): anon key -> 401 with zero outbound calls; service key ->
+reaches the function's own logic. Against the unpatched code, all 32
+security assertions fail.
+
+**Deploy state.** No workflow deploys edge functions, so a merge alone
+closes nothing live. Reproduced live first with a harmless probe
+(anon key + `{"type":"AUDIT_PROBE"}` -> `400 Unknown type`, meaning the key
+got past the auth layer; nothing is sent). Deployed
+`notify-job-message-email` v3 after confirming the live source
+matched `main`, then re-probed: anon -> **401**, Vault key -> 400
+(past the check). The session's permission policy then blocked further
+production deploys, so the other 7 wait for the owner's go-ahead.
+
+### 3. HIGH -- Send-Push still live without auth
+
+`get_edge_function` on `Send-Push` v50 (deployed 2026-09-16 22:45 UTC)
+has no caller check; the repo fix landed at 2026-09-17 02:29 UTC and
+was never deployed. The anon-key probe returns `400 Unknown type`
+(accepted). Impact is higher than the 2026-09-17 entry assumed because
+`client-notification` takes a caller-supplied `url`, and both
+`service-worker.js` and `portal/service-worker.js` pass it straight to
+`clients.openWindow()`: a branded Triple H push that opens any site.
+Fix: deploy `main`'s `send-push-index.ts`; separately, restrict
+`notificationclick` to same-origin paths in both service workers
+(defense in depth; wasn't started while #362 had `portal/service-worker.js`
+open).
+
+### 4. HIGH -- internal MFA is a login-page gate, not a server gate
+
+`tools/auth.js`'s `skipPersist` comment says it makes MFA "a real gate
+rather than a UI-only speed bump." That's true only for someone using
+the login page. Zero of the 102 live policies check `aal`, and no edge
+function does. Proven: a simulated `aal1` JWT for the MFA-enrolled
+Developer account reads invoices, jobs, the whole `workspace_sync`
+blob, leads, `stripe_customers`, the secure documents, and
+`account_roles` (which that account can also edit). The portal session
+reached the same conclusion for client accounts independently (its
+2026-09-23 "Face ID stands in for the 2FA code" entry in this log); for
+internal accounts the blast radius is everything.
+
+Proposed fix, **not applied, needs the owner** (real lockout risk for
+the only two people who run the business):
+1. `current_user_has_any_role()` also requires `aal2` whenever the caller
+   has a verified factor. Because `account_roles`' own SELECT policy uses
+   that function, every inline `EXISTS (select 1 from account_roles ...)`
+   policy and `current_user_can_manage_roles()` go dark for an `aal1`
+   session too -- one change, all internal RLS. Portal-client policies
+   are unaffected (so Face ID sign-ins aren't locked out).
+2. The 15 internal-gated edge functions (`callerIsInternalAccount()`
+   reads `account_roles` with the service role, bypassing RLS) need the
+   same `aal` check, and each needs a deploy.
+3. Recovery-code sign-in currently leaves an `aal1` session; with (1)
+   that session would see nothing. Consuming a recovery code must also
+   delete the lost factor server-side (a small service-role edge
+   function), after which `login.html`'s mandatory-enrollment gate takes
+   over.
+4. Existing remembered `aal1` sessions for an enrolled account lose
+   internal access at rollout and must sign in again with the code.
+
+### 5-7. Stripe money-correctness (not attacker-for-profit, but real)
+
+- **Double charge (#5):** `create-payment-intent` should reuse the
+  stored PaymentIntent while it's still `requires_payment_method` and
+  the amount matches, instead of minting a new one; the webhook should
+  alert (not silently 200) when a succeeded PaymentIntent lands on an
+  already-paid invoice; `reconcile-stripe-payments` line 195 should
+  report that case instead of `continue`.
+- **Underpayment (#7):** the webhook should compare
+  `pi.amount_received` against the sum of the unpaid rows' totals (in
+  cents) and alert instead of marking paid on a mismatch.
+- **SetupIntents (#6):** require a real portal relationship (an
+  invoice, quote, or job on the caller's email) before minting one.
+All three need deploys of the live payment path and deserve their own
+careful PR with Stripe test-mode verification; not rushed into this
+round.
+
+### Deferred because another lane owns it
+
+`send-booking-email` and `send-appointment-reminder` are booking-lane
+functions. `send-booking-email` also carries an undeployed 2026-09-19
+change of the booking session's in the repo, so redeploying it would
+ship their work too. Patch for whoever owns it: the same guarded check
+PR #363 adds, placed first in `Deno.serve`. For `send-booking-email`
+this is defense in depth only -- the same confirmation email is
+reachable through the anonymous INSERT on `th_bookings` anyway, so real
+relief there needs form rate limiting.
+
+**Second-pass review of open PR #366's new `create_booking(jsonb)`**
+(SECURITY DEFINER, anon-executable, booking lane), per this file's
+"RLS/grant changes get a second pass" rule: **sound.** `search_path` is
+pinned; only allowlisted columns are read from the payload, so
+`status`, `cancel_token`, `quote_id`/`checkup_id`/`job_id` and the
+reminder/reschedule fields can't be set; it returns only the caller's
+own new row's id and token; validation is stricter than the direct
+insert (end after start, 8-hour cap, no past starts, required name,
+length caps). The advisor will list it under lints 0028/0029 --
+expected, same class as the other booking token functions. The weaker
+path is the pre-existing one it deliberately leaves open: the direct
+INSERT policy "Anyone can submit a booking" (`with check (true)`)
+still accepts any column values, e.g. an arbitrarily long booking that
+blocks the calendar through the exclusion constraint. LOW; for the
+booking lane to tighten once `create_booking` is the only path the page
+uses (a `with check` mirroring the function's rules, or dropping the
+direct-insert fallback).
+
+### Looked suspicious, checked, fine (don't re-investigate)
+
+- **Advisor's 11 anon / 15 authenticated SECURITY DEFINER findings:** the
+  booking/job token RPCs are keyed on unguessable UUID tokens and return
+  only what that token's holder should see; `get_my_portal_visits` keys on
+  the caller's *confirmed* auth email, so open signup can't claim someone
+  else's bookings; `next_*_number` self-check internal; the recovery-code
+  RPCs key on `auth.uid()` (null for anon). Codes are 32 random bits,
+  bcrypt-hashed, one-time.
+- **No table in `public` has RLS off**; no views or materialized views.
+- **Secrets:** the whole tree and full git history (after unshallowing)
+  contain only `anon` JWTs; every `sk_live_` hit is a
+  documentation placeholder. Nothing to rotate.
+- **Every edge function except `stripe-webhook` runs with
+  `verify_jwt: true`** (confirmed via `list_edge_functions`), which is what
+  makes the functions' `decodeJwtPayload()` (no signature check of its
+  own) safe. Keep it that way: deploying any of them with
+  `--no-verify-jwt` would let a forged token pass every internal gate.
+- **The orphaned lowercase `send-push` function is gone** from the live
+  project (ACTION-ITEMS #10 resolved).
+- **Public CMS rendering** (FAQ, Terms, banners, phone/email) escapes
+  everything; the JSON-LD rebuild uses `textContent`.
+
+### Lessons for the next round
+
+1. **"authenticated" is not a trust level on this project.** Grep new
+   policies for `using (true)` / `with check (true)` / bucket-only
+   checks, and new edge functions for "any signed-in session is
+   enough".
+2. **The repo is not what's running.** Three separate fixes (uptime-alert
+   on 2026-09-15, Send-Push on 2026-09-17, and this round's) were
+   merged but not deployed, because nothing deploys edge functions. A
+   cheap deploy-drift check (compare `get_edge_function` output
+   against `main` for every slug) would have caught Send-Push a week
+   ago. Worth building.
+3. **Prove the caller path before tightening.** The Vault-key check
+   (a strict check that has 200s on real cron runs) is what made
+   finding #2 safe to fix in one pass.
+
 <!-- Add new entries above this line -->
