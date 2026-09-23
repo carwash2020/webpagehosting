@@ -102,6 +102,49 @@ async function hasSavedCard(customerId: string): Promise<boolean> {
   return (data.data || []).length > 0;
 }
 
+// Double-charge guard (security audit, 2026-09-23). This used to mint a
+// brand-new PaymentIntent on every call, so one invoice could be charged
+// twice: most easily right after a successful payment, because
+// portal/dashboard.html re-renders the list 1.8s later and the invoice
+// still says "Pay now" until stripe-webhook has marked it paid; or from
+// two open tabs. The PaymentIntent the invoice already points at is now
+// checked first. One that went through (or is still processing) blocks a
+// second charge; one still open for the same amount, customer and invoice
+// is handed back instead of a new one, and a single PaymentIntent can only
+// ever be charged once. Anything unexpected from Stripe falls back to the
+// old behavior rather than blocking a real payment --
+// reconcile-stripe-payments flags any invoice paid twice as the backstop.
+const PAID_OR_PAYING_STATUSES = new Set(["succeeded", "processing", "requires_capture"]);
+const REUSABLE_STATUSES = new Set(["requires_payment_method", "requires_confirmation", "requires_action"]);
+
+// A payment that went through and was then fully refunded (say, Steve
+// refunded it and asked the client to pay again with another card) must
+// not block a new one.
+function blocksNewPayment(pi: any): boolean {
+  if (!PAID_OR_PAYING_STATUSES.has(pi.status)) return false;
+  const charge = pi.latest_charge;
+  return !(charge && typeof charge === "object" && charge.refunded === true);
+}
+
+async function retrievePaymentIntent(id: string): Promise<any | null> {
+  try {
+    // latest_charge is expanded so a refunded payment can be told apart
+    // from one that still stands: refunding doesn't change a
+    // PaymentIntent's own status, which stays "succeeded".
+    const res = await fetch(`https://api.stripe.com/v1/payment_intents/${encodeURIComponent(id)}?expand[]=latest_charge`, {
+      headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` },
+    });
+    if (!res.ok) {
+      if (res.status !== 404) console.error(`create-payment-intent: could not retrieve ${id} (HTTP ${res.status}); continuing without the double-charge check`);
+      return null;
+    }
+    return await res.json();
+  } catch (err: any) {
+    console.error(`create-payment-intent: could not retrieve ${id} (${err.message}); continuing without the double-charge check`);
+    return null;
+  }
+}
+
 // Signature capture (2026-09-03), requested directly: "we also need
 // to collect signitures when we collect and create accounts within
 // stripe incase we ever have to handle a dispute." Same
@@ -195,7 +238,7 @@ Deno.serve(async (req: Request) => {
     // operation, since it also needs to write stripe_payment_intent_id
     // back onto the row a moment later regardless).
     const invoiceRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/client_portal_invoices?id=eq.${invoice_id}&select=id,client_email,total,paid`,
+      `${SUPABASE_URL}/rest/v1/client_portal_invoices?id=eq.${invoice_id}&select=id,client_email,total,paid,stripe_payment_intent_id`,
       { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
     );
     if (!invoiceRes.ok) {
@@ -216,6 +259,11 @@ Deno.serve(async (req: Request) => {
     }
     if (invoice.paid) {
       return json({ ok: false, error: "This invoice is already paid." }, 400);
+    }
+
+    const earlierPi = invoice.stripe_payment_intent_id ? await retrievePaymentIntent(invoice.stripe_payment_intent_id) : null;
+    if (earlierPi && blocksNewPayment(earlierPi)) {
+      return json({ ok: false, already_paying: true, error: "A payment for this invoice has already gone through or is still processing. It can take a minute to show as paid, so please refresh this page before paying again." }, 409);
     }
 
     // Stripe amounts are in the smallest currency unit (cents for
@@ -247,6 +295,16 @@ Deno.serve(async (req: Request) => {
     }
 
     const stripeCustomerId = existingCustomerId || await getOrCreateStripeCustomer(claims.email);
+
+    if (
+      earlierPi && REUSABLE_STATUSES.has(earlierPi.status) &&
+      earlierPi.amount === amountCents && earlierPi.currency === "usd" &&
+      earlierPi.customer === stripeCustomerId &&
+      earlierPi.metadata?.client_portal_invoice_id === String(invoice.id) &&
+      typeof earlierPi.client_secret === "string"
+    ) {
+      return json({ ok: true, client_secret: earlierPi.client_secret, reused: true });
+    }
 
     const piRes = await fetch("https://api.stripe.com/v1/payment_intents", {
       method: "POST",
