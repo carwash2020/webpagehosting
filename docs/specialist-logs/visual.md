@@ -1575,4 +1575,12 @@ Found with `document.getAnimations()` under emulated reduced motion. It lists ps
 - **404:** the content is wrapped in `<main>` (axe's `landmark-one-main` and `region` now pass). `main` repeats body's centred flex column, so nothing else moved. `h1` gets `font-weight:400`. Anton has only one weight, so the default h1 bold made Chrome synthesize a smeared bold. Any new standalone page using `--font-display` on a heading needs the same reset, because it doesn't get styles.css's `h1,h2,h3{font-weight:400}`.
 - **Pixel diff against main:** identical except the 404 digits. Sub-1% gallery-caption noise on our-work also appears between two loads of main (lazy image decode).
 
+## 2026-09-23 (late) -- round 6: the mobile menu stays dark in light mode
+
+- **Pattern: pin tokens on an always-dark component.** The header and `.mobile-menu` are dark in both themes, but only their text colours were hardcoded, and everything else read theme tokens. `.mobile-menu` now redefines the four tokens its rules read that change in light mode: `--border`, `--text-dim`, `--bg-panel-3` and `--orange-text-vivid`. `mobile-menu-dark-panel.test.js` derives that list from the CSS, so a new menu rule that reads another themed token fails the test until it's pinned too.
+- **Measure painted pixels, not computed backgrounds, on translucent panels.** `getComputedStyle` walks up to `rgb(10,10,10)` in both themes, but the glass header actually paints `#272727` over the light page. A solid `#2a2a2a` divider measured fine by computed colour and was invisible on screen (1.04:1). `rgba(255,255,255,.13)` paints 1.36:1 in dark mode and 1.49:1 in light.
+- **Cascade bug: `.mobile-menu a` (<=960px, later in the file) out-ranked `.mobile-services-sublist a` by source order.** The sub-links' intended style from 2026-09-10 (13.5px, normal case, dim) never rendered. The links were also inline, so each got a text-width underline and their 14px padding overlapped their neighbours (51px boxes at a 31px pitch). The fix is a `.mobile-menu` prefix plus `display:block; padding:10px 4px`, giving 42px rows at a 44px pitch. Expanded lists get taller, but both start collapsed.
+- **The row divider** under Services/Areas moved from the link to `.mobile-nav-row`, so it runs under the caret too.
+- **Closed-menu pages are pixel-identical to main.** The dark-mode divider moves by one RGB step (42 to 41).
+
 <!-- Add new entries above this line -->

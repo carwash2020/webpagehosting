@@ -4533,3 +4533,35 @@ New test: `tests/design/skip-link-and-main-landmark.test.js` checks every public
 - the 404 page's `<main>` and its heading weight.
 
 Excluded pages each carry their reason. 15 of the tests fail against the old pages.
+
+## What changed, 2026-09-23 -- The phone menu looks right in light mode, and its sub-lists read as sub-lists
+
+Public site: the mobile (hamburger) menu, on every page that has one. CSS only.
+
+**What was wrong.**
+- **Light mode.** The phone menu stays dark in both themes, but its dividers, arrows and theme switch followed the light theme. So light mode drew bright white lines across the dark menu, dimmed the Services/Areas arrows, and turned the Dark Mode switch into a light pill.
+- **Both themes.** The Services and Areas sub-lists were meant to be smaller, normal-case, dimmer links indented under their heading. A later rule overrode that styling, so they looked exactly like the main links (all caps, full size), each with its own uneven underline. Their tap areas also overlapped.
+- **Short dividers.** The line under the Services and Areas rows stopped short of the arrow.
+
+**The fix.**
+- The menu now uses the dark theme's colours in both themes. The dividers are a see-through white, so they show as the same faint line on the menu's slightly different dark in each theme.
+- The sub-links get their intended style back, as full-width 44px rows.
+- The Services and Areas dividers run the full width.
+
+**Measured** with the menu open at 375px:
+- **Dividers, light mode:** 10.6:1 against the panel before (a bright line); 1.5:1 after, a hairline like dark mode's 1.4:1.
+- **Arrows, light mode:** 3.5:1 before, 7:1 after, the same as dark mode.
+- **Sub-links:** 51px boxes overlapping at a 31px pitch before; 42px rows at a 44px pitch after, full width, with no sideways scroll at 320px.
+- **Menu closed:** pages are pixel-identical to before in both themes.
+
+Verified:
+- full suite 3250 of 3251 passing; the one failure is the known `check-links.py` sandbox-proxy test;
+- `check-consistency`, `check-undefined-vars`, `eslint` and `check-visual-snapshot` clean;
+- `check-links.py`: the only failures are the sandbox proxy refusing outside sites, no internal link broken;
+- CSP, SEO metadata and JSON-LD untouched.
+
+New test: `tests/design/mobile-menu-dark-panel.test.js` (4; all fail against the old CSS). It checks:
+- every themed colour token the menu reads is pinned to its dark value (the list is worked out from the CSS itself);
+- the divider is translucent;
+- the row divider spans the arrow;
+- the sub-link rule out-ranks the general menu-link rule.

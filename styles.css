@@ -772,11 +772,20 @@
   .mobile-areas-sublist[hidden]{
     display:none;
   }
-  .mobile-services-sublist a,
-  .mobile-areas-sublist a{
+  /* .mobile-menu in front (2026-09-23): the <=960px `.mobile-menu a`
+     rule further down has the same specificity and comes later, so it
+     silently replaced every one of these -- the sub-links rendered as
+     15px uppercase top-level links, each with its own text-width
+     underline, staggered down the list. Block + 10px padding makes each
+     sub-link a ~44px row instead of an inline run whose padding
+     overlapped its neighbours. */
+  .mobile-menu .mobile-services-sublist a,
+  .mobile-menu .mobile-areas-sublist a{
+    display:block;
     font-family:var(--font-ui); font-size:13.5px; font-weight:500;
-    text-transform:none; color:var(--text-dim);
-    padding:6px 4px;
+    letter-spacing:normal; text-transform:none; color:var(--text-dim);
+    padding:10px 4px;
+    border-bottom:none;
   }
   .mobile-nav-row{
     display:flex; align-items:center; justify-content:space-between;
@@ -872,6 +881,21 @@
   [data-theme="light"] .theme-icon-light{display:block;}
 
   .mobile-menu{
+    /* The header, and this panel inside it, stay dark in both themes
+       (hardcoded text colours, see .nav-links a and the F23 note on
+       .theme-toggle above), but the tokens its borders, carets,
+       sub-links and theme switch use followed the light theme: light
+       mode drew near-white dividers (14:1 against the panel instead of
+       a 1.4:1 hairline), dimmed the carets to 3.5:1 and turned the
+       switch into a light pill. Pinned to the dark theme's values
+       (2026-09-23). The panel is translucent, so it paints #0a0a0a in
+       dark mode but #272727 over the light page; a translucent divider
+       lifts either by the same step (1.38:1 and 1.5:1), where a solid
+       #2a2a2a would vanish (1.04:1) in light mode. */
+    --border:rgba(255,255,255,.13);
+    --text-dim:#9a9a9a;
+    --bg-panel-3:#1f1f1f;
+    --orange-text-vivid:var(--orange);
     display:none;
     flex-direction:column;
     gap:2px;
@@ -957,6 +981,10 @@
       border-bottom:1px solid var(--border);
     }
     .mobile-menu .btn{margin-top:14px; justify-content:center;}
+    /* Services/Areas: the divider belongs to the whole row, or it stops
+       at the link and leaves a gap under the caret. */
+    .mobile-nav-row{border-bottom:1px solid var(--border);}
+    .mobile-menu .mobile-nav-row a{border-bottom:none;}
   }
 
   /* hero */
