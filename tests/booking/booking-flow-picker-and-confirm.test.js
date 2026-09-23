@@ -100,7 +100,15 @@ test('computeSlotsByDate gives each day exactly what the old one-day computation
   for (const d of Object.keys(byDate)) {
     assert.deepEqual(byDate[d].slots.map((s) => s.label), w.computeSlotsForDate(d, 60, bookings).map((s) => s.label), d);
   }
-  assert.ok(byDate[busyDay].slots.length < byDate[start].slots.length, 'the booked afternoon removes slots on that day only');
+  // Compare each day with ITSELF unbooked, not with a neighbouring day.
+  // Opening hours differ by weekday (Saturday runs 7am-10pm), so the old
+  // "busy day has fewer slots than start" check failed every Wednesday
+  // (Mountain time), when start is a Friday and the busy day a Saturday.
+  assert.ok(byDate[busyDay].slots.length < w.computeSlotsForDate(busyDay, 60, []).length, 'the booked afternoon removes slots on the busy day');
+  for (const d of Object.keys(byDate)) {
+    if (d === busyDay) continue;
+    assert.deepEqual(byDate[d].slots.map((s) => s.label), w.computeSlotsForDate(d, 60, []).map((s) => s.label), `${d} is untouched by a booking on another day`);
+  }
 });
 
 test('firstBookableDate prefers the requested day when it has room, otherwise the earliest day that does', () => {
