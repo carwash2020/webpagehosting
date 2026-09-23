@@ -4988,3 +4988,44 @@ Verified:
 
 Tests:
 - `tests/sync/graveyard-restore-every-type.test.js` (22, new): every Graveyard type, plus the 3 fixes above, which fail without this change.
+
+## What changed, 2026-09-23 -- The WELCOME15 offer and the hiring notice can be changed or turned off from the editor
+
+Public site banners and Tools &rarr; Site Content. With nothing changed in the editor, the banners look exactly as before.
+
+**What was wrong:**
+- The WELCOME15 offer and the "We're hiring" notice were written into the code, so changing the offer or ending the hiring push needed a code change.
+- The editor's "Banner 1" and "Banner 2" silently took over the same two spots, dropping the close button and the usual styling, and only on some pages.
+- 17 pages had the banner spots but never showed anything in them: About, Our Work, Careers, Terms, Privacy, the blog, and the St. George page.
+
+**Now, in Tools &rarr; Site Content &rarr; "Banners at the top of the site":**
+- Each banner has three choices: the built-in wording, **My own message** (up to 200 characters, with an optional link to Book online, the Careers page, or Our Work), or **No banner**.
+- Your own message looks exactly like the built-in banners, close button included. Someone who closed an old message still sees a new one.
+- Picking "My own message" without typing one is flagged and can't be published. The review step shows each change next to what's live, with warnings (turning off the offer, replacing the hiring notice).
+- **Undo this save** puts all of it back, the same as every other field.
+- Banners now show on all 33 public pages that have the spots. The hiring notice skips the Careers page itself.
+
+**Why a change shows from the next page:** the banners are drawn before the rest of the page, so they can't wait for the internet. Each page shows what that visitor's browser saw last time, then checks for changes. A change that would make the page jump waits for the next page they open. Pages never jump under a visitor (that jump was fixed earlier today).
+
+**Database** (`sql/site-content/cms_site_banners.sql`, applied live):
+- Adds `banner1Mode`/`banner2Mode` (built-in, custom, or off) and `banner1Link`/`banner2Link`.
+- The database refuses any other choice, or any link that isn't one of the three pages.
+- Both modes start on built-in, which is what the site shows today.
+- Tested live in a transaction that always rolls back: a custom message with a link, plus the hiring notice off, saved as one change; undo put back exactly the built-in banners; a made-up link or mode was refused.
+
+**Proof it looks the same:** 64 screenshots of both banners, taken before and after the change on the 16 pages that had them, at desktop and phone size in real Chromium, are byte-for-byte identical. The header doesn't move, and layout-shift scores are unchanged.
+
+Verified:
+- full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint`;
+- the migration run for real in the test suite and live;
+- before/after screenshots.
+
+New tests:
+- `tests/site-content/cms-site-banners-db.test.js` (10), against the real SQL;
+- `tests/site-content/site-banners-public.test.js` (50): the first frame, the "never jump" rule, dismissing, safe text and links, and the wiring on all 33 pages;
+- 9 new banner flows in `tests/site-content/site-content-editor.test.js`, including save &rarr; undo &rarr; exactly the built-in banner again.
+
+Updated with reasons:
+- `tests/design/promo-banner.test.js`, `hiring-banner.test.js`, and `site-banner-no-layout-shift.test.js`: pointed at the new `js/site-banners.js`, with every original check kept and the exact old markup pinned;
+- `tests/design/reduced-motion-coverage.test.js`: the file list;
+- `tests/site-content/site-content-editor.test.js`: its banner warning test picks "My own message" first.

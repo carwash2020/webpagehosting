@@ -90,6 +90,10 @@ const SHARED_SCRIPT_FILES = [
   // loaded by index.html, booking.html, and the 3 appliance repair pages,
   // which call its applyReviewStats() from their own site_content fetch.
   'js/review-stats.js',
+  // The two banners above the header (2026-09-23) -- loaded by every
+  // public page that has the banner slots, which hand their site_content
+  // rows to its applySiteBanners() from their own fetch.
+  'js/site-banners.js',
   // The client portal push-notifications helper (2026-09-04) -- loaded
   // by portal/settings.html, same reasoning as every other entry
   // here. (Written without any apostrophes deliberately -- the

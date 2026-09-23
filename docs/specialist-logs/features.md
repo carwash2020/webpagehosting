@@ -3172,4 +3172,19 @@ The owner can now change the Google rating and review count (plus banners, homep
 
 **Next (PR B/C):** promo + hiring banner copy into the CMS without re-introducing the CLS the synchronous banner scripts fixed; the banner-slot collision; banners on pages that skip them; FAQ/Terms in-place save with the same review + undo; a gated "Website" nav entry so the owner doesn't go through Dev Tools; phone hooks on booking/manage-*/404.
 
+## 2026-09-23 -- Site banners: the WELCOME15 offer and hiring notice are editable, without bringing back the layout shift
+
+**Problem:** the two bars above the header were two systems fighting over two slots. `promo-banner.js`/`hiring-banner.js` wrote fixed wording into `#siteBanner1/2`; a `banner1`/`banner2` value from Tools > Site Content replaced it with bare text (no close button, different padding) on 19 pages and did nothing on the other 14. Changing the offer or ending the hiring push meant a code deploy.
+
+**What shipped:**
+- **One script, `js/site-banners.js`,** on all 33 pages with the slots (adds about, our-work, careers, terms, privacy, the 11 blog pages, and the St. George city page, which had the slots but never loaded the promo). Each slot is `builtin` (the old wording, byte-identical markup and dismissal keys), `custom` (plain text + an optional link from a fixed list of 3 pages, rendered with `textContent`), or `off`. Old files deleted.
+- **Keys:** `banner1Mode`/`banner2Mode` and `banner1Link`/`banner2Link` join the existing `banner1`/`banner2` text (`sql/site-content/cms_site_banners.sql`, applied live). The CHECK validator refuses any other mode or link. With no mode saved, text alone still means "custom" (the old semantics).
+- **No network in a render-blocking script, so no CLS.** The first frame renders from a localStorage copy of the last-seen rows. The page's own fetch calls `applySiteBanners(rows)`, which saves the new rows and swaps now only if nothing has painted (`performance.getEntriesByType('paint')` empty) or the slot's `offsetHeight` is unchanged. Otherwise it puts the same nodes back in the same task (no frame drawn) and the change lands on the next page. A failed or empty fetch changes nothing.
+- **Dismissal:** built-in banners keep `th-promo-welcome15-dismissed`/`th-hiring-banner-dismissed`. A custom message stores an FNV-1a hash of text+link under `th-bannerN-dismissed`, so a new message reappears. A banner linking to the current page is skipped (no hiring banner on careers.html).
+- **Editor:** per-slot mode picker, with message + link shown only for "My own message", cross-field check (custom needs a message) on whichever field was touched, plain-word history ("built-in wording → no banner"), a next-page note in the review, a Put back guard, and banners grouped one column per slot.
+
+**Proof:** 64/64 element screenshots of both banners on the 16 pages that had them, desktop + phone, byte-identical before/after in Chromium. Header position, layout-shift totals, and page errors unchanged. Live migration verified in a rolled-back block: custom + link + off saved as one batch, undo back to exactly builtin/null, bad link and bad mode 23514.
+
+**Tests:** `cms-site-banners-db.test.js` (10, real SQL), `site-banners-public.test.js` (50, including the no-jump deferral with faked paint and heights, mutation-checked), 9 new flows in `site-content-editor.test.js`. `promo-banner.test.js`, `hiring-banner.test.js`, and `site-banner-no-layout-shift.test.js` now point at the new file with their original assertions, plus the exact old markup.
+
 <!-- Add new entries above this line -->
