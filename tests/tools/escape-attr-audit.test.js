@@ -74,8 +74,10 @@ test('escapeAttr() round-trips 9 adversarial inputs correctly (matches the alrea
 // would just be re-typing the diff), but enough to pin the fix pattern
 // and catch an accidental revert.
 const CASES = [
-  { file: 'tools/site-content.html', pattern: /value="\$\{escapeAttr\(item\.question \|\| ''\)\}"/, label: 'FAQ question value=' },
-  { file: 'tools/site-content.html', pattern: /value="\$\{escapeAttr\(item\.heading \|\| ''\)\}"/, label: 'Terms heading value=' },
+  // FAQ and Terms share one row template since 2026-09-23 (cmsListRenderRows):
+  // item[f.key] is the FAQ question / Terms heading, plus the FAQ category.
+  { file: 'tools/site-content.html', pattern: /value="\$\{escapeAttr\(item\[f\.key\] \|\| ''\)\}"/, label: 'FAQ question / Terms heading value=' },
+  { file: 'tools/site-content.html', pattern: /value="\$\{escapeAttr\(item\.category \|\| ''\)\}"/, label: 'FAQ category value=' },
   // Site Content editor rebuilt 2026-09-23 (cmsFieldInputHtml): the live
   // value is escaped once into `value`, then used in every input's value=.
   { file: 'tools/site-content.html', pattern: /const value = escapeAttr\(live === null \? '' : live\);[\s\S]*?data-cms-part="value" value="' \+ value \+ '"/, label: 'Site Content field value=' },

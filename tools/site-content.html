@@ -54,7 +54,7 @@
 <link rel="stylesheet" href="/styles.css?v=87b1f5227e">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=9aa2822757">
 <script src="/tools/data-layer.js?v=b2586a446b" defer></script>
-<script src="/tools/dev-tools-shared.js?v=f34a6faa86" defer></script>
+<script src="/tools/dev-tools-shared.js?v=e163378ce8" defer></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
 <script src="/tools/tools-dialogs.js?v=310315eb44" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
@@ -298,6 +298,7 @@
   }
   .cms-pending-summary { flex: 1 1 200px; font-size: 13.5px; color: var(--text-dim); }
   .cms-pending-summary.has-error { color: #e05555; }
+  .cms-list-item.has-error { border-color: #e05555; }
   .cms-review-modal { max-width: 560px; }
   .cms-review-intro { margin-bottom: 12px; }
   .cms-diff-row { padding: 12px 0; border-top: 1px solid var(--border); }
@@ -377,10 +378,11 @@
     </div>
     <div class="dev-panel-body">
       <p class="tool-sub" style="margin-bottom:12px;">If an answer mentions the phone number as plain text, it won't update automatically if the phone field above ever changes -- edit that answer directly if the number changes.</p>
+      <div id="faqLastSave"></div>
       <div id="faqEditorList"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div></div>
       <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
         <button class="secondary-btn" onclick="addFaqItem()">+ Add question</button>
-        <button class="primary-btn" id="saveFaqBtn" onclick="saveFaqList()">Save all</button>
+        <button class="primary-btn" id="saveFaqBtn" onclick="saveFaqList()">Review &amp; publish</button>
       </div>
     </div>
   </div>
@@ -393,10 +395,11 @@
     </div>
     <div class="dev-panel-body">
       <p class="tool-sub" style="margin-bottom:12px;">The last section mentions the phone number and email as plain text -- won't update automatically if those fields ever change. Edit it directly if either one changes.</p>
+      <div id="termsLastSave"></div>
       <div id="termsEditorList"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div></div>
       <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
         <button class="secondary-btn" onclick="addTermsItem()">+ Add section</button>
-        <button class="primary-btn" id="saveTermsBtn" onclick="saveTermsList()">Save all</button>
+        <button class="primary-btn" id="saveTermsBtn" onclick="saveTermsList()">Review &amp; publish</button>
       </div>
     </div>
   </div>
@@ -413,8 +416,8 @@
           <li><strong>Website text and numbers</strong> &mdash; the Google rating and review count, 2 announcement banners, the homepage hours, phone, and email. Edit any of them, press <em>Review &amp; publish</em>, check each change against what's live now, then publish. Anything that doesn't look right (a rating over 5.0, a phone number missing a digit) is flagged before you can publish, and the database refuses it too.</li>
           <li><strong>Undo</strong> &mdash; the box at the top always shows the last save with an <em>Undo this save</em> button. Each field also keeps its recent changes, with a button to put back any earlier value. An undo is refused, not forced, if someone has changed that field again since.</li>
           <li><strong>Content edit history</strong> &mdash; every past change to those fields, the FAQ, and Terms: who made it, and when -- a real audit trail from a database trigger.</li>
-          <li><strong>FAQ editor</strong> &mdash; add, edit, reorder, or remove questions on the site's FAQ section directly.</li>
-          <li><strong>Terms &amp; Conditions editor</strong> &mdash; add, edit, reorder, or remove sections of the Terms document directly.</li>
+          <li><strong>FAQ editor</strong> &mdash; add, edit, reorder, or remove questions on the site's FAQ section. <em>Review &amp; publish</em> lists every added, changed, removed, and moved question before anything goes live; a blank question or answer is flagged instead of silently deleting it; and <em>Undo this save</em> puts the whole list back the way it was.</li>
+          <li><strong>Terms &amp; Conditions editor</strong> &mdash; the same, for the sections of the Terms document.</li>
         </ul>
       </div>
     </div>
@@ -1207,6 +1210,17 @@
       showToast('Backup failed: ' + (e.message || String(e)), { type: 'error' });
     }
   }
+  // One line describing an FAQ/Terms history row, from its row images
+  // when it has them (history written before 2026-09-23 doesn't).
+  function cmsListChangeSummary(name, r) {
+    const cfg = CMS_LISTS[name];
+    if (r.action !== 'update' || !r.old_row || !r.new_row) return '';
+    const parts = cfg.fields
+      .filter(f => String(r.old_row[f.key]) !== String(r.new_row[f.key]))
+      .map(f => f.label + ': ' + cmsShort(r.old_row[f.key], 120) + ' \u2192 ' + cmsShort(r.new_row[f.key], 120));
+    if (Number(r.old_row.sort_order) !== Number(r.new_row.sort_order)) parts.push('Moved from #' + r.old_row.sort_order + ' to #' + r.new_row.sort_order);
+    return parts.join(' \u00b7 ');
+  }
   async function renderContentHistory() {
     const el = document.getElementById('contentHistoryList');
     el.innerHTML = '<p class="tool-sub">Loading...</p>';
@@ -1220,8 +1234,8 @@
       // audit trail built for them.
       const [contentRes, faqRes, termsRes] = await Promise.all([
         fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content_history?select=id,key,old_value,new_value,changed_by,changed_at,action,undo_of&order=id.desc&limit=50', 6000, { headers }),
-        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq_history?select=action,faq_id,question,old_answer,new_answer,changed_by,changed_at&order=changed_at.desc&limit=50', 6000, { headers }),
-        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_terms_history?select=action,term_id,heading,old_body,new_body,changed_by,changed_at&order=changed_at.desc&limit=50', 6000, { headers }),
+        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq_history?select=' + CMS_LISTS.faq.historySelect + '&order=id.desc&limit=50', 6000, { headers }),
+        fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_terms_history?select=' + CMS_LISTS.terms.historySelect + '&order=id.desc&limit=50', 6000, { headers }),
       ]);
 
       const rows = [];
@@ -1240,16 +1254,19 @@
           });
         });
       }
+      // FAQ/Terms rows now carry full before/after images (old_row/
+      // new_row, 2026-09-23), so an update that only moved an item or
+      // changed its question/category says so instead of "same -> same".
       if (faqRes.ok) {
         (await faqRes.json()).forEach(r => rows.push({
           table: 'faq', rowId: r.faq_id, source: 'FAQ', label: r.question, old_value: r.old_answer, new_value: r.new_answer,
-          changed_by: r.changed_by, changed_at: r.changed_at, action: r.action,
+          changed_by: r.changed_by, changed_at: r.changed_at, action: r.action, historyRow: r, summary: cmsListChangeSummary('faq', r),
         }));
       }
       if (termsRes.ok) {
         (await termsRes.json()).forEach(r => rows.push({
           table: 'terms', rowId: r.term_id, source: 'Terms', label: r.heading, old_value: r.old_body, new_value: r.new_body,
-          changed_by: r.changed_by, changed_at: r.changed_at, action: r.action,
+          changed_by: r.changed_by, changed_at: r.changed_at, action: r.action, historyRow: r, summary: cmsListChangeSummary('terms', r),
         }));
       }
 
@@ -1265,13 +1282,14 @@
           ? 'Deleted: ' + escapeHtml(r.old_value || '')
           : r.action === 'insert'
           ? 'Added: ' + escapeHtml(r.new_value || '')
+          : r.summary ? escapeHtml(r.summary)
           : escapeHtml(r.old_value || '(blank)') + ' &rarr; ' + escapeHtml(r.new_value || '(blank)');
         // No restore offered for a plain "insert" -- there's no old
         // value to go back to; undoing an insert is a delete, which
         // is already what each editor's own delete button is for.
         const canRestore = r.table === 'content'
           ? (r.action === 'update' && typeof CMS_FIELD_BY_KEY === 'object' && !!CMS_FIELD_BY_KEY[r.historyRow.key])
-          : (r.action !== 'insert' && r.old_value != null);
+          : (r.action === 'update' || r.action === 'delete');
         return '<div class="dev-check-row" style="align-items:flex-start;"><div>' +
           '<div>' + personDot(r.changed_by) + '<strong>' + escapeHtml(r.source) + ': ' + escapeHtml(r.label) + '</strong> &mdash; ' + escapeHtml(r.changed_by || 'unknown') + ' &mdash; ' + new Date(r.changed_at).toLocaleString() + '</div>' +
           '<div class="dev-check-detail">' + detail + '</div>' +
@@ -1285,267 +1303,395 @@
   async function restoreHistoryEntry(index) {
     const entry = (window._contentHistoryRows || [])[index];
     if (!entry) return;
-    // Site content goes through the editor's review step and
-    // cms_publish_content()'s compare-and-swap, so a restore can't
-    // blindly overwrite a newer edit (the old direct upsert here could).
+    // Every restore goes through its editor's review step and a
+    // compare-and-swap publish, so it can't blindly overwrite a newer
+    // edit. The old direct PATCH-by-id here broke for FAQ/Terms anyway:
+    // "Save all" used to re-create every row, so the id was usually gone.
     if (entry.table === 'content') {
       await putBackCmsHistoryRow(entry.historyRow);
-      return;
-    }
-    if (!(await confirmDevPassword())) return;
-    try {
-      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      const headers = {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': 'Bearer ' + getAuthToken(),
-      };
-
-      if (entry.table === 'faq' || entry.table === 'terms') {
-        const tableName = entry.table === 'faq' ? 'site_faq' : 'site_terms';
-        const bodyField = entry.table === 'faq' ? 'answer' : 'body';
-        const labelField = entry.table === 'faq' ? 'question' : 'heading';
-
-        if (entry.action === 'delete') {
-          // Row no longer exists -- re-insert fresh at the end of the list.
-          const listRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/' + tableName + '?select=sort_order&order=sort_order.desc&limit=1', 6000, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': headers.Authorization } });
-          const listData = listRes.ok ? await listRes.json() : [];
-          const nextSort = (listData[0] && typeof listData[0].sort_order === 'number') ? listData[0].sort_order + 1 : 0;
-          const insertBody = {};
-          insertBody[labelField] = entry.label;
-          insertBody[bodyField] = entry.old_value;
-          insertBody.sort_order = nextSort;
-          const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/' + tableName, 8000, {
-            method: 'POST', headers, body: JSON.stringify([insertBody]),
-          });
-          if (!res.ok) throw new Error('Restore (re-insert) failed (HTTP ' + res.status + ')');
-        } else {
-          // 'update' -- the row still exists, restore it in place by id.
-          if (!entry.rowId) throw new Error('Missing row id -- cannot restore safely.');
-          const updateBody = {};
-          updateBody[bodyField] = entry.old_value;
-          const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/' + tableName + '?id=eq.' + entry.rowId, 8000, {
-            method: 'PATCH', headers, body: JSON.stringify(updateBody),
-          });
-          if (!res.ok) throw new Error('Restore failed (HTTP ' + res.status + ')');
-        }
-      }
-      showToast('Restored. Live on the site within a few seconds.');
-      renderContentHistory();
-      if (entry.table === 'faq' && typeof renderFaqEditor === 'function') renderFaqEditor();
-      if (entry.table === 'terms' && typeof renderTermsEditor === 'function') renderTermsEditor();
-    } catch (e) {
-      showToast(e.message || String(e), { type: 'error' });
+    } else if (entry.table === 'faq' || entry.table === 'terms') {
+      await putBackListHistoryRow(entry.table, entry.historyRow);
     }
   }
+  // ---------------------------------------------------------------------
+  // FAQ and Terms editors (rebuilt 2026-09-23)
+  //
+  // Same safety model as the site content editor above, for the two
+  // list-shaped tables. Before this, "Save all" deleted every row and
+  // re-inserted the list (new ids every save, so no edit could ever be
+  // undone), and an item with a cleared question or answer was silently
+  // dropped -- a blank field quietly deleted a live FAQ. Now:
+  //   - a blank or oversized field is flagged on the item and blocks
+  //     publishing (the database refuses it too: site_faq_content_valid);
+  //   - "Review & publish" shows every added, edited, removed, and
+  //     reordered item, live next to new, before anything goes live;
+  //   - cms_publish_faq / cms_publish_terms apply only the differences,
+  //     editing rows in place (ids stay stable), and refuse (409) if the
+  //     list changed since this page loaded it;
+  //   - every save is one batch, and "Undo this save" reverts it through
+  //     cms_undo_faq / cms_undo_terms, refused if anything it touched has
+  //     changed since. See sql/site-content/cms_faq_terms_safe_publish.sql.
+  // ---------------------------------------------------------------------
+  const CMS_LISTS = {
+    faq: {
+      title: 'FAQ', noun: 'question', table: 'site_faq', historyTable: 'site_faq_history',
+      publishFn: 'cms_publish_faq', undoFn: 'cms_undo_faq',
+      select: 'id,question,answer,category,sort_order',
+      historySelect: 'id,action,faq_id,question,old_answer,new_answer,old_row,new_row,changed_by,changed_at,batch_id,undo_of',
+      titleKey: 'question', bodyKey: 'answer',
+      fields: [
+        { key: 'question', label: 'Question', max: 300, oneLine: true, required: true },
+        { key: 'answer', label: 'Answer', max: 4000, required: true },
+        { key: 'category', label: 'Category', max: 80, oneLine: true, required: false, blankValue: 'General' },
+      ],
+      listElId: 'faqEditorList', saveBtnId: 'saveFaqBtn', lastSaveElId: 'faqLastSave',
+    },
+    terms: {
+      title: 'Terms', noun: 'section', table: 'site_terms', historyTable: 'site_terms_history',
+      publishFn: 'cms_publish_terms', undoFn: 'cms_undo_terms',
+      select: 'id,heading,body,sort_order',
+      historySelect: 'id,action,term_id,heading,old_body,new_body,old_row,new_row,changed_by,changed_at,batch_id,undo_of',
+      titleKey: 'heading', bodyKey: 'body',
+      fields: [
+        { key: 'heading', label: 'Section heading', max: 200, oneLine: true, required: true },
+        { key: 'body', label: 'Section text', max: 20000, required: true },
+      ],
+      listElId: 'termsEditorList', saveBtnId: 'saveTermsBtn', lastSaveElId: 'termsLastSave',
+    },
+  };
+  // Working copies (what the editor shows) -- kept under their original
+  // names. Each item: { id (null for a new one), ...fields }.
   let faqItems = [];
-  async function renderFaqEditor() {
-    const el = document.getElementById('faqEditorList');
-    el.innerHTML = '<p class="tool-sub">Loading...</p>';
-    try {
-      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq?select=question,answer,category&order=sort_order.asc', 6000, {
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
-      });
-      if (!res.ok) {
-        el.innerHTML = '<p class="tool-sub" style="color:#e05555;">Could not load current FAQ -- the table might not exist yet. Run the FAQ setup SQL in Supabase first.</p>';
-        faqItems = [];
+  let termsItems = [];
+  // The list exactly as last loaded from the server: the compare-and-swap
+  // "expected" value sent with every publish, and the "live" side of the
+  // review. Plus that table's recent history (for "Undo this save").
+  const cmsListState = { faq: { loaded: [], history: [], loadedOk: false }, terms: { loaded: [], history: [], loadedOk: false } };
+
+  function cmsListItems(name) { return name === 'faq' ? faqItems : termsItems; }
+  function cmsSetListItems(name, items) { if (name === 'faq') faqItems = items; else termsItems = items; }
+  function cmsListClean(cfg, item) {
+    const out = { id: item.id == null ? null : item.id };
+    cfg.fields.forEach(f => {
+      const v = String(item[f.key] == null ? '' : item[f.key]).trim();
+      out[f.key] = v === '' && f.blankValue ? f.blankValue : v;
+    });
+    return out;
+  }
+  function cmsShort(text, n) {
+    const s = String(text == null ? '' : text);
+    return s.length > n ? s.slice(0, n - 1) + '…' : s;
+  }
+
+  // Per-item problems: [{ index, message }]
+  function cmsListValidate(name) {
+    const cfg = CMS_LISTS[name];
+    const problems = [];
+    const seen = new Map();
+    cmsListItems(name).forEach((raw, index) => {
+      const item = cmsListClean(cfg, raw);
+      for (const f of cfg.fields) {
+        const v = item[f.key];
+        if (f.required && !v) { problems.push({ index, message: f.label + ' can\'t be blank. To take this ' + cfg.noun + ' off the site, use the trash button instead.' }); return; }
+        if (v.length > f.max) { problems.push({ index, message: f.label + ' is too long (' + v.length + ' characters; the limit is ' + f.max + ').' }); return; }
+        if (f.oneLine && /[\r\n]/.test(v)) { problems.push({ index, message: f.label + ' has to be on one line.' }); return; }
+      }
+      const title = item[cfg.titleKey];
+      if (seen.has(title)) problems.push({ index, message: 'Same ' + cfg.fields[0].label.toLowerCase() + ' as #' + (seen.get(title) + 1) + ' -- each one has to be different.' });
+      else seen.set(title, index);
+    });
+    return problems;
+  }
+
+  function cmsListRefreshErrors(name) {
+    const cfg = CMS_LISTS[name];
+    const problems = cmsListValidate(name);
+    cmsListItems(name).forEach((item, i) => {
+      const el = document.getElementById(name + 'ItemError_' + i);
+      const p = problems.find(x => x.index === i);
+      if (el) { el.textContent = p ? p.message : ''; el.hidden = !p; }
+      const card = document.getElementById(name + 'Item_' + i);
+      if (card) card.classList.toggle('has-error', !!p);
+    });
+    const btn = document.getElementById(cfg.saveBtnId);
+    if (btn) btn.disabled = !cmsListState[name].loadedOk || problems.length > 0;
+    return problems;
+  }
+
+  // What would change: [{ kind, label, old, new, warnings }], relative to
+  // what's live (cmsListState[name].loaded).
+  function cmsListDiff(name) {
+    const cfg = CMS_LISTS[name];
+    const loaded = cmsListState[name].loaded;
+    const items = cmsListItems(name).map(it => cmsListClean(cfg, it));
+    const byId = new Map(loaded.map(r => [r.id, r]));
+    const keptIds = new Set(items.filter(i => i.id != null).map(i => i.id));
+    const rows = [];
+    items.forEach(item => {
+      if (item.id == null) {
+        rows.push({ kind: 'added', label: 'New ' + cfg.noun + ': ' + cmsShort(item[cfg.titleKey], 80), old: '(not on the site)', new: item[cfg.bodyKey], warnings: [] });
         return;
       }
-      faqItems = await res.json();
-      if (!Array.isArray(faqItems)) faqItems = [];
-      renderFaqEditorRows();
-    } catch (e) {
-      el.innerHTML = '<p class="tool-sub">Could not reach Supabase: ' + escapeHtml(e.message || String(e)) + '</p>';
+      const before = byId.get(item.id);
+      if (!before) return;
+      cfg.fields.forEach(f => {
+        if (String(before[f.key]) !== item[f.key]) {
+          rows.push({ kind: 'edited', label: '“' + cmsShort(before[cfg.titleKey], 60) + '” — ' + f.label.toLowerCase(), old: before[f.key], new: item[f.key], warnings: [] });
+        }
+      });
+    });
+    loaded.forEach(r => {
+      if (!keptIds.has(r.id)) {
+        rows.push({ kind: 'removed', label: 'Removed ' + cfg.noun + ': ' + cmsShort(r[cfg.titleKey], 80), old: r[cfg.bodyKey], new: '(taken off the site)', warnings: ['This ' + cfg.noun + ' disappears from the live site. "Undo this save" can bring it back.'] });
+      }
+    });
+    const liveOrder = loaded.filter(r => keptIds.has(r.id)).map(r => r.id);
+    const newOrder = items.filter(i => i.id != null && byId.has(i.id)).map(i => i.id);
+    if (liveOrder.join(',') !== newOrder.join(',')) {
+      const names = ids => ids.map((id, i) => (i + 1) + '. ' + cmsShort(byId.get(id)[cfg.titleKey], 40)).join(' · ');
+      rows.push({ kind: 'reordered', label: 'Order', old: names(liveOrder), new: names(newOrder), warnings: [] });
     }
+    return rows;
   }
-  function renderFaqEditorRows() {
-    const el = document.getElementById('faqEditorList');
-    if (!faqItems.length) { el.innerHTML = '<p class="tool-sub">No FAQ items yet -- add one below.</p>'; return; }
-    el.innerHTML = faqItems.map((item, i) => `
-      <div class="dev-panel" style="margin-bottom:10px; background:var(--bg-panel-3);">
+
+  async function cmsListLoad(name) {
+    const cfg = CMS_LISTS[name];
+    if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+    const headers = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() };
+    const [listRes, histRes] = await Promise.all([
+      fetchWithTimeout(SUPABASE_URL + '/rest/v1/' + cfg.table + '?select=' + cfg.select + '&order=sort_order.asc,id.asc', 8000, { headers }),
+      fetchWithTimeout(SUPABASE_URL + '/rest/v1/' + cfg.historyTable + '?select=' + cfg.historySelect + '&batch_id=not.is.null&order=id.desc&limit=200', 8000, { headers }),
+    ]);
+    if (!listRes.ok) throw new Error('Could not load the current ' + cfg.title + ' (HTTP ' + listRes.status + ').');
+    const rows = await listRes.json();
+    cmsListState[name].loaded = Array.isArray(rows) ? rows : [];
+    const hist = histRes.ok ? await histRes.json() : [];
+    cmsListState[name].history = Array.isArray(hist) ? hist : [];
+    cmsListState[name].loadedOk = true;
+  }
+
+  function cmsListLastSave(name) {
+    const hist = cmsListState[name].history;
+    const latest = hist.find(h => h.batch_id && h.changed_by);
+    if (!latest) return null;
+    const rows = hist.filter(h => h.batch_id === latest.batch_id);
+    return { batchId: latest.batch_id, rows: rows, by: latest.changed_by, at: latest.changed_at, isUndo: rows.every(h => h.undo_of) };
+  }
+
+  function cmsListRenderLastSave(name) {
+    const cfg = CMS_LISTS[name];
+    const el = document.getElementById(cfg.lastSaveElId);
+    if (!el) return;
+    const last = cmsListLastSave(name);
+    if (!last) { el.innerHTML = '<div class="cms-last-save is-empty">No ' + escapeHtml(cfg.title) + ' saves since undo was added. Your next save will show here, with a button to undo it.</div>'; return; }
+    const counts = { insert: 0, update: 0, delete: 0 };
+    last.rows.forEach(h => { counts[h.action] = (counts[h.action] || 0) + 1; });
+    const parts = [];
+    if (counts.insert) parts.push(counts.insert + ' added');
+    if (counts.update) parts.push(counts.update + ' changed');
+    if (counts.delete) parts.push(counts.delete + ' removed');
+    el.innerHTML = '<div class="cms-last-save">' +
+      '<div><strong>Last ' + escapeHtml(cfg.title) + ' ' + (last.isUndo ? 'undo' : 'save') + ':</strong> ' + escapeHtml(cmsWho(last.by)) + ', ' + escapeHtml(cmsWhen(last.at)) +
+        '<div class="cms-last-save-detail">' + escapeHtml(parts.join(', ')) + '</div></div>' +
+      '<button type="button" class="secondary-btn" onclick="' + (name === 'faq' ? 'undoLastListSave(\'faq\')' : 'undoLastListSave(\'terms\')') + '">' + (last.isUndo ? 'Redo it' : 'Undo this save') + '</button>' +
+    '</div>';
+  }
+
+  function cmsListRenderRows(name) {
+    const cfg = CMS_LISTS[name];
+    const el = document.getElementById(cfg.listElId);
+    const items = cmsListItems(name);
+    if (!items.length) { el.innerHTML = '<p class="tool-sub">No ' + cfg.noun + 's yet -- add one below.</p>'; cmsListRefreshErrors(name); return; }
+    const fn = name === 'faq' ? { move: 'moveFaqItem', del: 'deleteFaqItem', update: 'updateFaqField' } : { move: 'moveTermsItem', del: 'deleteTermsItem', update: 'updateTermsField' };
+    const ariaNoun = name === 'faq' ? 'FAQ item' : 'terms item';
+    el.innerHTML = items.map((item, i) => `
+      <div class="dev-panel cms-list-item" id="${name}Item_${i}" style="margin-bottom:10px; background:var(--bg-panel-3);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <strong style="font-size:13px; color:var(--text-dim);">#${i + 1}</strong>
+          <strong style="font-size:13px; color:var(--text-dim);">#${i + 1}${item.id == null ? ' <span class="cms-dirty-pill">New</span>' : ''}</strong>
           <div>
-            <button class="dev-info-bubble" title="Move up" aria-label="Move FAQ item up" onclick="moveFaqItem(${i}, -1)" ${i === 0 ? 'disabled' : ''}>&#9650;</button>
-            <button class="dev-info-bubble" title="Move down" aria-label="Move FAQ item down" onclick="moveFaqItem(${i}, 1)" ${i === faqItems.length - 1 ? 'disabled' : ''}>&#9660;</button>
-            <button class="dev-info-bubble dev-danger-btn" title="Delete" aria-label="Delete FAQ item" onclick="deleteFaqItem(${i})"><svg class="th-icon" aria-hidden="true"><use href="#icon-trash" xlink:href="#icon-trash"></use></svg></button>
+            <button class="dev-info-bubble" title="Move up" aria-label="Move ${ariaNoun} up" onclick="${fn.move}(${i}, -1)" ${i === 0 ? 'disabled' : ''}>&#9650;</button>
+            <button class="dev-info-bubble" title="Move down" aria-label="Move ${ariaNoun} down" onclick="${fn.move}(${i}, 1)" ${i === items.length - 1 ? 'disabled' : ''}>&#9660;</button>
+            <button class="dev-info-bubble dev-danger-btn" title="Delete" aria-label="Delete ${ariaNoun}" onclick="${fn.del}(${i})"><svg class="th-icon" aria-hidden="true"><use href="#icon-trash" xlink:href="#icon-trash"></use></svg></button>
           </div>
         </div>
+        ${cfg.fields.map(f => f.key === cfg.bodyKey ? `
         <div class="tool-form-row"><div class="form-field full">
-          <label>Question</label>
-          <input type="text" value="${escapeAttr(item.question || '')}" oninput="updateFaqField(${i}, 'question', this.value)">
-        </div></div>
-        <div class="tool-form-row"><div class="form-field full">
-          <label>Answer</label>
-          <textarea rows="3" style="width:100%; resize:vertical;" oninput="updateFaqField(${i}, 'answer', this.value)">${escapeHtml(item.answer || '')}</textarea>
-        </div></div>
+          <label>${escapeHtml(f.label)}</label>
+          <textarea rows="${name === 'faq' ? 3 : 4}" maxlength="${f.max}" style="width:100%; resize:vertical;" oninput="${fn.update}(${i}, '${f.key}', this.value)">${escapeHtml(item[f.key] || '')}</textarea>
+        </div></div>` : f.key === 'category' ? `
         <div class="tool-form-row"><div class="form-field full">
           <label>Category (groups items on the live FAQ; existing categories: Pricing &amp; Payment, Scheduling &amp; Availability, Service Area &amp; Coverage, Policies -- reuse one of these unless a new group is genuinely needed)</label>
-          <input type="text" value="${escapeAttr(item.category || '')}" placeholder="e.g. Pricing & Payment" oninput="updateFaqField(${i}, 'category', this.value)">
-        </div></div>
+          <input type="text" maxlength="${f.max}" value="${escapeAttr(item.category || '')}" placeholder="e.g. Pricing & Payment" oninput="${fn.update}(${i}, 'category', this.value)">
+        </div></div>` : `
+        <div class="tool-form-row"><div class="form-field full">
+          <label>${escapeHtml(f.label)}</label>
+          <input type="text" maxlength="${f.max}" value="${escapeAttr(item[f.key] || '')}" oninput="${fn.update}(${i}, '${f.key}', this.value)">
+        </div></div>`).join('')}
+        <p class="cms-field-error" id="${name}ItemError_${i}" role="alert" hidden></p>
       </div>
     `).join('');
+    cmsListRefreshErrors(name);
   }
-  function updateFaqField(index, field, value) {
-    if (faqItems[index]) faqItems[index][field] = value;
+
+  async function cmsListRender(name, { keepWorkingCopy } = {}) {
+    const cfg = CMS_LISTS[name];
+    const el = document.getElementById(cfg.listElId);
+    try {
+      const previous = cmsListItems(name);
+      await cmsListLoad(name);
+      if (keepWorkingCopy) {
+        // After a conflict: keep the edits, but an item someone else
+        // deleted meanwhile becomes a new item rather than a dangling id.
+        const liveIds = new Set(cmsListState[name].loaded.map(r => r.id));
+        cmsSetListItems(name, previous.map(it => (it.id != null && !liveIds.has(it.id)) ? Object.assign({}, it, { id: null }) : it));
+      } else {
+        cmsSetListItems(name, cmsListState[name].loaded.map(r => Object.assign({}, r)));
+      }
+      cmsListRenderLastSave(name);
+      cmsListRenderRows(name);
+    } catch (e) {
+      cmsListState[name].loadedOk = false;
+      el.innerHTML = '<p class="error-state">Could not load the ' + escapeHtml(cfg.title) + ': ' + escapeHtml(e.message || String(e)) + ' Nothing can be edited until it loads -- reload to try again.</p>';
+      cmsListRefreshErrors(name);
+    }
   }
+
+  async function cmsListPublish(name) {
+    const cfg = CMS_LISTS[name];
+    const problems = cmsListRefreshErrors(name);
+    if (problems.length) {
+      showToast('Fix the highlighted ' + cfg.noun + ' first.', { type: 'error' });
+      const card = document.getElementById(name + 'Item_' + problems[0].index);
+      if (card && card.scrollIntoView) card.scrollIntoView({ block: 'center' });
+      return false;
+    }
+    const diff = cmsListDiff(name);
+    if (!diff.length) { showToast('Nothing has changed -- there\'s nothing to publish.'); return false; }
+    const confirmed = await showCmsReview({
+      title: 'Review ' + cfg.title + ' changes',
+      intro: 'These go live on the public site within a few seconds. Check each one.',
+      rows: diff.map(d => ({ field: { key: name, label: d.label, kind: 'text' }, oldValue: d.old, newValue: d.new, warnings: d.warnings })),
+      confirmText: 'Publish ' + diff.length + ' change' + (diff.length === 1 ? '' : 's'),
+    });
+    if (!confirmed) return false;
+    if (!(await confirmDevPassword())) return false;
+    const btn = document.getElementById(cfg.saveBtnId);
+    if (btn) { btn.disabled = true; btn.textContent = 'Publishing...'; }
+    const items = cmsListItems(name).map(it => {
+      const clean = cmsListClean(cfg, it);
+      if (clean.id == null) delete clean.id;
+      return clean;
+    });
+    const res = await cmsRpc(cfg.publishFn, { p_expected: cmsListState[name].loaded, p_items: items });
+    if (btn) btn.textContent = 'Review & publish';
+    if (!res.ok) {
+      if (res.status === 409) {
+        await showAlert('The ' + cfg.title + ' was changed by someone else after this page loaded. Nothing was published. The latest version is loaded now and your edits are still here -- review and publish again to apply them on top.');
+        await cmsListRender(name, { keepWorkingCopy: true });
+      } else {
+        await showAlert(cmsErrorMessage(res, 'published'));
+        cmsListRefreshErrors(name);
+      }
+      return false;
+    }
+    await cmsListRender(name);
+    showToast(cfg.title + ' published. Live on the site within a few seconds.');
+    if (typeof renderContentHistory === 'function') renderContentHistory();
+    return true;
+  }
+
+  async function undoLastListSave(name) {
+    const cfg = CMS_LISTS[name];
+    const last = cmsListLastSave(name);
+    if (!last) return false;
+    const describe = h => {
+      const row = h.new_row || h.old_row || {};
+      const title = cmsShort(row[cfg.titleKey] || h[cfg.titleKey] || '', 70);
+      if (h.action === 'insert') return { label: 'Remove ' + cfg.noun + ': ' + title, old: row[cfg.bodyKey], new: '(taken off the site)' };
+      if (h.action === 'delete') return { label: 'Bring back ' + cfg.noun + ': ' + title, old: '(not on the site)', new: row[cfg.bodyKey] };
+      const changed = cfg.fields.filter(f => String((h.old_row || {})[f.key]) !== String((h.new_row || {})[f.key]));
+      if (!changed.length) return { label: '“' + title + '” — position', old: '#' + (h.new_row || {}).sort_order, new: '#' + (h.old_row || {}).sort_order };
+      return { label: '“' + title + '” — ' + changed.map(f => f.label.toLowerCase()).join(', '), old: changed.map(f => (h.new_row || {})[f.key]).join(' / '), new: changed.map(f => (h.old_row || {})[f.key]).join(' / ') };
+    };
+    const rows = last.rows.map(h => { const d = describe(h); return { field: { key: name, label: d.label, kind: 'text' }, oldValue: d.old, newValue: d.new, warnings: [] }; });
+    const confirmed = await showCmsReview({
+      title: (last.isUndo ? 'Redo' : 'Undo') + ' this ' + cfg.title + ' save?',
+      intro: 'This puts back what was live before ' + cmsWho(last.by) + '\'s ' + (last.isUndo ? 'undo' : 'save') + ' at ' + cmsWhen(last.at) + '. It goes live within a few seconds.',
+      rows: rows,
+      newTag: 'Goes back to',
+      confirmText: (last.isUndo ? 'Redo' : 'Undo') + ' ' + rows.length + ' change' + (rows.length === 1 ? '' : 's'),
+      danger: true,
+    });
+    if (!confirmed) return false;
+    if (!(await confirmDevPassword())) return false;
+    const res = await cmsRpc(cfg.undoFn, { p_batch_id: last.batchId });
+    if (!res.ok) {
+      await showAlert(res.status === 409
+        ? 'Part of the ' + cfg.title + ' has been changed again since that save, so it can\'t be undone as a whole. Nothing was undone. Edit the ' + cfg.noun + 's back by hand instead.'
+        : cmsErrorMessage(res, 'undone'));
+      await cmsListRender(name);
+      return false;
+    }
+    await cmsListRender(name);
+    showToast(last.isUndo ? 'Redone. Live within a few seconds.' : 'Undone. The previous ' + cfg.title + ' is live again within a few seconds.');
+    if (typeof renderContentHistory === 'function') renderContentHistory();
+    return true;
+  }
+
+  // "Restore" from the Content edit history panel for an FAQ/Terms row:
+  // builds the list as it is now with that one change reversed, and
+  // publishes it through the same review + compare-and-swap.
+  async function putBackListHistoryRow(name, h) {
+    const cfg = CMS_LISTS[name];
+    await cmsListRender(name);
+    const items = cmsListItems(name).map(it => Object.assign({}, it));
+    const idKey = name === 'faq' ? 'faq_id' : 'term_id';
+    const targetId = h.old_row ? Number(h.old_row.id) : Number(h[idKey]);
+    if (h.action === 'update') {
+      const idx = items.findIndex(it => Number(it.id) === targetId);
+      if (idx === -1) { await showAlert('That ' + cfg.noun + ' isn\'t on the site any more, so its old wording can\'t be put back into it.'); return false; }
+      if (h.old_row) cfg.fields.forEach(f => { items[idx][f.key] = h.old_row[f.key]; });
+      else items[idx][cfg.bodyKey] = name === 'faq' ? h.old_answer : h.old_body;
+    } else if (h.action === 'delete') {
+      if (items.some(it => Number(it.id) === targetId)) { showToast('That ' + cfg.noun + ' is already on the site.'); return false; }
+      const revived = { id: null };
+      cfg.fields.forEach(f => { revived[f.key] = h.old_row ? h.old_row[f.key] : (f.key === cfg.titleKey ? h[cfg.titleKey] : f.key === cfg.bodyKey ? (name === 'faq' ? h.old_answer : h.old_body) : (f.blankValue || '')); });
+      const at = h.old_row ? Math.max(0, Math.min(items.length, Number(h.old_row.sort_order) - 1)) : items.length;
+      items.splice(at, 0, revived);
+    } else {
+      return false;
+    }
+    cmsSetListItems(name, items);
+    cmsListRenderRows(name);
+    return cmsListPublish(name);
+  }
+
+  // Original entry points, kept (other code and tests call these names).
+  async function renderFaqEditor() { return cmsListRender('faq'); }
+  function renderFaqEditorRows() { cmsListRenderRows('faq'); }
+  function updateFaqField(index, field, value) { if (faqItems[index]) faqItems[index][field] = value; cmsListRefreshErrors('faq'); }
   function moveFaqItem(index, direction) {
     const target = index + direction;
     if (target < 0 || target >= faqItems.length) return;
     [faqItems[index], faqItems[target]] = [faqItems[target], faqItems[index]];
     renderFaqEditorRows();
   }
-  function deleteFaqItem(index) {
-    faqItems.splice(index, 1);
-    renderFaqEditorRows();
-  }
-  function addFaqItem() {
-    faqItems.push({ question: '', answer: '', category: '' });
-    renderFaqEditorRows();
-  }
-  async function saveFaqList() {
-    if (!(await confirmDevPassword())) return;
-    const btn = document.getElementById('saveFaqBtn');
-    btn.disabled = true;
-    btn.textContent = 'Saving...';
-    try {
-      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      const cleaned = faqItems
-        .map(item => ({
-          question: (item.question || '').trim(),
-          answer: (item.answer || '').trim(),
-          category: (item.category || '').trim() || 'General',
-        }))
-        .filter(item => item.question && item.answer);
+  function deleteFaqItem(index) { faqItems.splice(index, 1); renderFaqEditorRows(); }
+  function addFaqItem() { faqItems.push({ id: null, question: '', answer: '', category: '' }); renderFaqEditorRows(); }
+  async function saveFaqList() { return cmsListPublish('faq'); }
 
-      const delRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq?id=gte.0', 8000, {
-        method: 'DELETE',
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
-      });
-      if (!delRes.ok) throw new Error('Could not clear the old list (HTTP ' + delRes.status + ')');
-
-      if (cleaned.length) {
-        const insertRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_faq', 8000, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': 'Bearer ' + getAuthToken(),
-          },
-          body: JSON.stringify(cleaned.map((item, i) => Object.assign({ sort_order: i }, item))),
-        });
-        if (!insertRes.ok) throw new Error('Could not save the new list (HTTP ' + insertRes.status + ')');
-      }
-      showToast('FAQ saved. Live on the site within a few seconds.');
-      await renderFaqEditor();
-    } catch (e) {
-      showToast(e.message || String(e), { type: 'error' });
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Save all';
-    }
-  }
-  let termsItems = [];
-  async function renderTermsEditor() {
-    const el = document.getElementById('termsEditorList');
-    el.innerHTML = '<p class="tool-sub">Loading...</p>';
-    try {
-      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_terms?select=heading,body&order=sort_order.asc', 6000, {
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
-      });
-      if (!res.ok) {
-        el.innerHTML = '<p class="tool-sub" style="color:#e05555;">Could not load current Terms -- the table might not exist yet. Run the Terms setup SQL in Supabase first.</p>';
-        termsItems = [];
-        return;
-      }
-      termsItems = await res.json();
-      if (!Array.isArray(termsItems)) termsItems = [];
-      renderTermsEditorRows();
-    } catch (e) {
-      el.innerHTML = '<p class="tool-sub">Could not reach Supabase: ' + escapeHtml(e.message || String(e)) + '</p>';
-    }
-  }
-  function renderTermsEditorRows() {
-    const el = document.getElementById('termsEditorList');
-    if (!termsItems.length) { el.innerHTML = '<p class="tool-sub">No sections yet -- add one below.</p>'; return; }
-    el.innerHTML = termsItems.map((item, i) => `
-      <div class="dev-panel" style="margin-bottom:10px; background:var(--bg-panel-3);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <strong style="font-size:13px; color:var(--text-dim);">#${i + 1}</strong>
-          <div>
-            <button class="dev-info-bubble" title="Move up" aria-label="Move terms item up" onclick="moveTermsItem(${i}, -1)" ${i === 0 ? 'disabled' : ''}>&#9650;</button>
-            <button class="dev-info-bubble" title="Move down" aria-label="Move terms item down" onclick="moveTermsItem(${i}, 1)" ${i === termsItems.length - 1 ? 'disabled' : ''}>&#9660;</button>
-            <button class="dev-info-bubble dev-danger-btn" title="Delete" aria-label="Delete terms item" onclick="deleteTermsItem(${i})"><svg class="th-icon" aria-hidden="true"><use href="#icon-trash" xlink:href="#icon-trash"></use></svg></button>
-          </div>
-        </div>
-        <div class="tool-form-row"><div class="form-field full">
-          <label>Section heading</label>
-          <input type="text" value="${escapeAttr(item.heading || '')}" oninput="updateTermsField(${i}, 'heading', this.value)">
-        </div></div>
-        <div class="tool-form-row"><div class="form-field full">
-          <label>Section text</label>
-          <textarea rows="4" style="width:100%; resize:vertical;" oninput="updateTermsField(${i}, 'body', this.value)">${escapeHtml(item.body || '')}</textarea>
-        </div></div>
-      </div>
-    `).join('');
-  }
-  function updateTermsField(index, field, value) {
-    if (termsItems[index]) termsItems[index][field] = value;
-  }
+  async function renderTermsEditor() { return cmsListRender('terms'); }
+  function renderTermsEditorRows() { cmsListRenderRows('terms'); }
+  function updateTermsField(index, field, value) { if (termsItems[index]) termsItems[index][field] = value; cmsListRefreshErrors('terms'); }
   function moveTermsItem(index, direction) {
     const target = index + direction;
     if (target < 0 || target >= termsItems.length) return;
     [termsItems[index], termsItems[target]] = [termsItems[target], termsItems[index]];
     renderTermsEditorRows();
   }
-  function deleteTermsItem(index) {
-    termsItems.splice(index, 1);
-    renderTermsEditorRows();
-  }
-  function addTermsItem() {
-    termsItems.push({ heading: '', body: '' });
-    renderTermsEditorRows();
-  }
-  async function saveTermsList() {
-    if (!(await confirmDevPassword())) return;
-    const btn = document.getElementById('saveTermsBtn');
-    btn.disabled = true;
-    btn.textContent = 'Saving...';
-    try {
-      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      const cleaned = termsItems
-        .map(item => ({ heading: (item.heading || '').trim(), body: (item.body || '').trim() }))
-        .filter(item => item.heading && item.body);
-
-      const delRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_terms?id=gte.0', 8000, {
-        method: 'DELETE',
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
-      });
-      if (!delRes.ok) throw new Error('Could not clear the old list (HTTP ' + delRes.status + ')');
-
-      if (cleaned.length) {
-        const insertRes = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_terms', 8000, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': 'Bearer ' + getAuthToken(),
-          },
-          body: JSON.stringify(cleaned.map((item, i) => Object.assign({ sort_order: i }, item))),
-        });
-        if (!insertRes.ok) throw new Error('Could not save the new list (HTTP ' + insertRes.status + ')');
-      }
-      showToast('Terms saved. Live on the site within a few seconds.');
-      await renderTermsEditor();
-    } catch (e) {
-      showToast(e.message || String(e), { type: 'error' });
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Save all';
-    }
-  }
+  function deleteTermsItem(index) { termsItems.splice(index, 1); renderTermsEditorRows(); }
+  function addTermsItem() { termsItems.push({ id: null, heading: '', body: '' }); renderTermsEditorRows(); }
+  async function saveTermsList() { return cmsListPublish('terms'); }
 
   document.addEventListener('DOMContentLoaded', function () {
     const proceed = () => {

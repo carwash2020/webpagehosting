@@ -1,4 +1,4 @@
-// Real-Postgres harness for the site_content CMS (2026-09-23).
+// Real-Postgres harness for the site_content / site_faq / site_terms CMS (2026-09-23).
 //
 // Runs the actual migration file (sql/site-content/cms_safe_publish_and_undo.sql)
 // inside PGlite -- a real PostgreSQL build compiled to WASM, running
@@ -19,6 +19,7 @@ const fs = require('fs');
 const path = require('path');
 
 const MIGRATION_PATH = path.join(__dirname, '..', '..', 'sql', 'site-content', 'cms_safe_publish_and_undo.sql');
+const LIST_MIGRATION_PATH = path.join(__dirname, '..', '..', 'sql', 'site-content', 'cms_faq_terms_safe_publish.sql');
 
 const OWNER_EMAIL = 'steve@triplehenterprisesllc.biz';
 const DEV_EMAIL = 'connor@triplehenterprisesllc.biz';
@@ -108,6 +109,99 @@ const BASE_SCHEMA = `
   grant select, insert, update, delete on public.site_content_history to anon, authenticated, service_role;
   grant usage, select on sequence public.site_content_history_id_seq to authenticated, service_role;
 
+
+  -- site_faq / site_terms as live before cms_faq_terms_safe_publish.sql
+  -- (site_faq_schema.sql, site_terms_schema.sql, site_faq_add_category.sql,
+  -- the unique constraints from fix_terms_duplicates.sql, and the live
+  -- policies from restrict_site_content_and_private_buckets_to_internal_accounts.sql).
+  create table public.site_faq (
+    id bigserial primary key,
+    question text not null,
+    answer text not null,
+    sort_order int not null default 0,
+    updated_at timestamptz default now(),
+    category text not null default 'General',
+    constraint site_faq_question_unique unique (question)
+  );
+  create table public.site_faq_history (
+    id bigserial primary key, action text not null, faq_id bigint, question text,
+    old_answer text, new_answer text, changed_by text, changed_at timestamptz default now()
+  );
+  create table public.site_terms (
+    id bigserial primary key,
+    heading text not null,
+    body text not null,
+    sort_order int not null default 0,
+    updated_at timestamptz default now(),
+    constraint site_terms_heading_unique unique (heading)
+  );
+  create table public.site_terms_history (
+    id bigserial primary key, action text not null, term_id bigint, heading text,
+    old_body text, new_body text, changed_by text, changed_at timestamptz default now()
+  );
+  alter table public.site_faq enable row level security;
+  alter table public.site_faq_history enable row level security;
+  alter table public.site_terms enable row level security;
+  alter table public.site_terms_history enable row level security;
+
+  create function public.log_site_faq_change() returns trigger language plpgsql security definer set search_path = public as $$
+  begin
+    if (TG_OP = 'DELETE') then
+      insert into public.site_faq_history (action, faq_id, question, old_answer, changed_by) values ('delete', OLD.id, OLD.question, OLD.answer, auth.jwt() ->> 'email');
+    elsif (TG_OP = 'INSERT') then
+      insert into public.site_faq_history (action, faq_id, question, new_answer, changed_by) values ('insert', NEW.id, NEW.question, NEW.answer, auth.jwt() ->> 'email');
+    elsif (TG_OP = 'UPDATE' and OLD.answer is distinct from NEW.answer) then
+      insert into public.site_faq_history (action, faq_id, question, old_answer, new_answer, changed_by) values ('update', NEW.id, NEW.question, OLD.answer, NEW.answer, auth.jwt() ->> 'email');
+    end if;
+    return coalesce(NEW, OLD);
+  end; $$;
+  create trigger site_faq_change_trigger after insert or update or delete on public.site_faq for each row execute function public.log_site_faq_change();
+  create function public.log_site_terms_change() returns trigger language plpgsql security definer set search_path = public as $$
+  begin
+    if (TG_OP = 'DELETE') then
+      insert into public.site_terms_history (action, term_id, heading, old_body, changed_by) values ('delete', OLD.id, OLD.heading, OLD.body, auth.jwt() ->> 'email');
+    elsif (TG_OP = 'INSERT') then
+      insert into public.site_terms_history (action, term_id, heading, new_body, changed_by) values ('insert', NEW.id, NEW.heading, NEW.body, auth.jwt() ->> 'email');
+    elsif (TG_OP = 'UPDATE' and OLD.body is distinct from NEW.body) then
+      insert into public.site_terms_history (action, term_id, heading, old_body, new_body, changed_by) values ('update', NEW.id, NEW.heading, OLD.body, NEW.body, auth.jwt() ->> 'email');
+    end if;
+    return coalesce(NEW, OLD);
+  end; $$;
+  create trigger site_terms_change_trigger after insert or update or delete on public.site_terms for each row execute function public.log_site_terms_change();
+
+  create policy "Anyone can read FAQ" on public.site_faq for select to anon, authenticated using (true);
+  create policy "Anyone can read terms" on public.site_terms for select to anon, authenticated using (true);
+  create policy "Site content managers can insert FAQ" on public.site_faq for insert to authenticated
+    with check (exists (select 1 from public.account_roles ar where ar.email = (select auth.email()) and ar.can_manage_site_content));
+  create policy "Site content managers can update FAQ" on public.site_faq for update to authenticated
+    using (exists (select 1 from public.account_roles ar where ar.email = (select auth.email()) and ar.can_manage_site_content))
+    with check (exists (select 1 from public.account_roles ar where ar.email = (select auth.email()) and ar.can_manage_site_content));
+  create policy "Site content managers can delete FAQ" on public.site_faq for delete to authenticated
+    using (exists (select 1 from public.account_roles ar where ar.email = (select auth.email()) and ar.can_manage_site_content));
+  create policy "Site content managers can insert terms" on public.site_terms for insert to authenticated
+    with check (exists (select 1 from public.account_roles ar where ar.email = (select auth.email()) and ar.can_manage_site_content));
+  create policy "Site content managers can update terms" on public.site_terms for update to authenticated
+    using (exists (select 1 from public.account_roles ar where ar.email = (select auth.email()) and ar.can_manage_site_content))
+    with check (exists (select 1 from public.account_roles ar where ar.email = (select auth.email()) and ar.can_manage_site_content));
+  create policy "Site content managers can delete terms" on public.site_terms for delete to authenticated
+    using (exists (select 1 from public.account_roles ar where ar.email = (select auth.email()) and ar.can_manage_site_content));
+  create policy "Internal accounts can read FAQ history" on public.site_faq_history for select to authenticated using ((select public.current_user_has_any_role()));
+  create policy "Internal accounts can read terms history" on public.site_terms_history for select to authenticated using ((select public.current_user_has_any_role()));
+  grant select, insert, update, delete on public.site_faq, public.site_terms, public.site_faq_history, public.site_terms_history to anon, authenticated, service_role;
+  grant usage, select on sequence public.site_faq_id_seq, public.site_terms_id_seq, public.site_faq_history_id_seq, public.site_terms_history_id_seq to authenticated, service_role;
+
+  -- Sample rows shaped like the live ones (sort_order starts at 1, the way
+  -- they were seeded).
+  insert into public.site_faq (question, answer, category, sort_order) values
+    ('Do you charge a trip fee?', 'Jobs within 15 miles have no trip fee. Beyond 15 miles, a $25 trip fee is added to the total.', 'Pricing & Payment', 1),
+    ('How soon can you come out?', 'Usually within a few days. Same-day is sometimes possible.', 'Scheduling & Availability', 2),
+    ('What areas do you serve?', 'St. George, Hurricane, Washington City, Santa Clara, and Ivins.', 'Service Area & Coverage', 3),
+    ('What is your cancellation policy?', 'A $50 fee may apply for same-day cancellations.', 'Policies', 4);
+  insert into public.site_terms (heading, body, sort_order) values
+    ('Business Information', 'Triple H Enterprises LLC, St. George, Utah.', 1),
+    ('1. Services', 'We provide handyman and appliance repair services.', 2),
+    ('2. Payment', 'Payment is due upon completion.', 3);
+
   -- Live rows (backups/site_content.json, 2026-09-23)
   insert into public.site_content (key, value) values
     ('phone', null), ('email', null), ('hoursLine1', null), ('hoursLine2', null),
@@ -136,6 +230,18 @@ const RESET_SQL = `
   delete from public.site_content_history;
   insert into public.site_content_history select * from test_snapshot_history;
   select setval('public.site_content_history_id_seq', coalesce((select max(id) from public.site_content_history), 0) + 1, false);
+  delete from public.site_faq;
+  insert into public.site_faq select * from test_snapshot_faq;
+  delete from public.site_faq_history;
+  insert into public.site_faq_history select * from test_snapshot_faq_history;
+  delete from public.site_terms;
+  insert into public.site_terms select * from test_snapshot_terms;
+  delete from public.site_terms_history;
+  insert into public.site_terms_history select * from test_snapshot_terms_history;
+  select setval('public.site_faq_id_seq', coalesce((select max(id) from public.site_faq), 0) + 1, false);
+  select setval('public.site_terms_id_seq', coalesce((select max(id) from public.site_terms), 0) + 1, false);
+  select setval('public.site_faq_history_id_seq', coalesce((select max(id) from public.site_faq_history), 0) + 1, false);
+  select setval('public.site_terms_history_id_seq', coalesce((select max(id) from public.site_terms_history), 0) + 1, false);
   set session_replication_role = origin;
 `;
 
@@ -149,9 +255,14 @@ async function buildDb(applyMigration) {
   await db.exec(BASE_SCHEMA);
   if (applyMigration) {
     await db.exec(fs.readFileSync(MIGRATION_PATH, 'utf8'));
+    await db.exec(fs.readFileSync(LIST_MIGRATION_PATH, 'utf8'));
     await db.exec(`
       create table test_snapshot_content as select * from public.site_content;
       create table test_snapshot_history as select * from public.site_content_history;
+      create table test_snapshot_faq as select * from public.site_faq;
+      create table test_snapshot_faq_history as select * from public.site_faq_history;
+      create table test_snapshot_terms as select * from public.site_terms;
+      create table test_snapshot_terms_history as select * from public.site_terms_history;
     `);
   }
   return db;
@@ -208,7 +319,8 @@ async function rpc(db, email, fnName, args) {
   const placeholders = argNames.map((name, i) => `${name} => $${i + 1}`).join(', ');
   const values = argNames.map(name => {
     const v = args[name];
-    if (fnName === 'cms_publish_content' && name === 'p_changes') return JSON.stringify(v);
+    if (v !== null && typeof v === 'object' && !Array.isArray(v)) return JSON.stringify(v);
+    if (Array.isArray(v) && (name === 'p_changes' || name === 'p_expected' || name === 'p_items')) return JSON.stringify(v);
     return v;
   });
   try {
@@ -229,5 +341,5 @@ async function readValue(db, key) {
 
 module.exports = {
   createCmsDb, closeAllCmsDbs, asUser, asAnon, rpc, readValue, httpStatusForError,
-  OWNER_EMAIL, DEV_EMAIL, PORTAL_EMAIL, STAFF_NO_CMS_EMAIL, MIGRATION_PATH,
+  OWNER_EMAIL, DEV_EMAIL, PORTAL_EMAIL, STAFF_NO_CMS_EMAIL, MIGRATION_PATH, LIST_MIGRATION_PATH,
 };
