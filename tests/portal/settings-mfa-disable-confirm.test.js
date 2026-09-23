@@ -17,10 +17,13 @@ test('handleDisableMfa() confirms before unenrolling, same portalConfirm pattern
   const body = fnMatch[0];
   assert.match(body, /await portalConfirm\('Turn off two-factor authentication/);
   assert.match(body, /if \(!confirmed\) return;/);
-  // The confirm gate must come before the actual unenroll call, not after.
+  // The confirm gate must come before the actual unenroll, not after.
+  // Since 2026-09-23 the unenroll itself is unenrollMfa(), reached after a
+  // code step when the session was let through by Face ID.
   const confirmIdx = body.indexOf('portalConfirm(');
-  const unenrollIdx = body.indexOf('client.auth.mfa.unenroll');
+  const unenrollIdx = body.indexOf('await unenrollMfa();');
   assert.ok(confirmIdx > 0 && unenrollIdx > 0 && confirmIdx < unenrollIdx);
+  assert.match(SETTINGS.match(/async function unenrollMfa\(\)[\s\S]*?\n  \}\n/)[0], /client\.auth\.mfa\.unenroll\(\{ factorId: mfaFactorId \}\)/);
 });
 
 test('the mfaFactorId guard still runs before anything else (no confirm dialog for a no-op disable)', () => {

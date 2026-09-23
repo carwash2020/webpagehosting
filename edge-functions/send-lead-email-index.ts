@@ -41,6 +41,7 @@ const LEAD_EMAIL_TO = Deno.env.get("LEAD_EMAIL_TO")!
   .map((addr: string) => addr.trim())
   .filter((addr: string) => addr.length > 0);
 const LEAD_EMAIL_FROM = Deno.env.get("LEAD_EMAIL_FROM")!;
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
 // Publicly hosted on the live site -- email clients fetch images over
 // plain HTTP(S), never from a relative/local path. A palette-quantized
@@ -235,6 +236,20 @@ async function sendGuestConfirmation(lead: Record<string, unknown>): Promise<voi
 
 Deno.serve(async (req: Request) => {
   try {
+    // Only real caller: the notify_new_lead_email() trigger (sql/leads/add_lead_email_notification.sql), which sends the
+    // service_role key from Vault as its bearer token. verify_jwt alone
+    // accepts the public anon key (it checks the signature, not the
+    // role), so without this anyone could POST a fake trigger payload
+    // here. Security audit, 2026-09-23.
+    const authHeader = req.headers.get("Authorization") || "";
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    if (!SERVICE_ROLE_KEY || token !== SERVICE_ROLE_KEY) {
+      return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     const payload = await req.json();
 
     // Same real, fixed webhook shape send-push already relies on --

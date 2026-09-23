@@ -528,8 +528,25 @@
   .conf-actions{display:flex; gap:10px; flex-wrap:wrap; margin:-6px 0 22px;}
   .conf-actions .btn{flex:1 1 180px; margin-top:0; padding:13px 16px; font-size:12.5px; white-space:nowrap;}
   .conf-actions .btn.outline{text-decoration:none;}
+  .conf-manage{font-size:14px; color:var(--text); margin:-10px 0 22px; text-align:left;}
+  .conf-manage a{color:var(--orange-light); text-decoration:underline; text-underline-offset:2px; font-weight:600;}
+  .confirmation.is-celebrating .conf-manage{animation:riseIn .4s ease-out .95s both;}
+  /* "You're already booked" banner (round 3). Green, like the check it
+     echoes -- this is good news, not a warning. */
+  .booked-banner{display:flex; gap:14px; align-items:flex-start; margin:0 0 24px; padding:16px 18px; border-radius:var(--radius);
+    background:rgba(58,214,107,.08); border:1px solid rgba(58,214,107,.35); animation:stepIn .3s ease both;}
+  .booked-banner-icon{width:32px; height:32px; flex-shrink:0; border-radius:50%; background:var(--success-text); display:flex; align-items:center; justify-content:center;}
+  .booked-banner-icon svg{width:18px; height:18px; fill:none; stroke:#0a0a0a; stroke-width:3.5; stroke-linecap:round; stroke-linejoin:round;}
+  .booked-banner-body{min-width:0;}
+  .booked-banner p{margin:0;}
+  .booked-banner-title{font-family:var(--font-ui); font-weight:700; font-size:15px; letter-spacing:.3px; color:var(--text);}
+  .booked-banner-when{font-family:var(--font-app); font-size:14.5px; color:var(--text); margin-top:2px !important;}
+  .booked-banner-when strong{color:var(--success-text);}
+  .booked-banner-actions{font-family:var(--font-app); font-size:13.5px; color:var(--text-dim); margin-top:6px !important;}
+  .booked-banner-actions a{color:var(--orange-light); font-weight:600; text-decoration:underline; text-underline-offset:2px;}
+  .booked-banner-forget{margin-top:8px; padding:0; background:none; border:0; color:var(--text-dim); font-family:var(--font-app); font-size:12.5px; text-decoration:underline; cursor:pointer;}
   /* display:flex would otherwise beat the hidden attribute. */
-  .conf-actions[hidden], .prefill-note[hidden], .date-jump-note[hidden]{display:none;}
+  .conf-actions[hidden], .prefill-note[hidden], .date-jump-note[hidden], .booked-banner[hidden]{display:none;}
   .conf-cal-hint{font-size:12.5px; color:var(--text-dim); margin:-14px 0 22px; text-align:left;}
   @media (prefers-reduced-motion: reduce){
     .confirmation *, .confirmation *::after{animation-delay:0s !important;}
@@ -708,6 +725,20 @@
       <a href="https://g.page/r/CVJ0Qr-SsDkgEAI/review" target="_blank" rel="noopener">Leave a Google review</a>
     </p>
 
+    <!-- Already booked (2026-09-22): shown only when this device booked a
+         visit that the server confirms is still upcoming -- so coming back
+         to this page shows the visit and its manage link, instead of a
+         blank form that invites booking it twice. -->
+    <div class="booked-banner" id="bookedBanner" role="status" hidden>
+      <div class="booked-banner-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 13l5 5L19 7"/></svg></div>
+      <div class="booked-banner-body">
+        <p class="booked-banner-title">You're already booked</p>
+        <p class="booked-banner-when"><span id="bookedBannerWhat"></span> &middot; <strong id="bookedBannerWhen"></strong></p>
+        <p class="booked-banner-actions"><a id="bookedBannerManage" href="/manage-booking.html">Reschedule or cancel</a> &middot; <span>Booking something else? Carry on below.</span></p>
+        <button type="button" class="booked-banner-forget" id="bookedBannerForget">Not you? Forget this device</button>
+      </div>
+    </div>
+
     <div class="step-indicator" role="progressbar" aria-valuemin="1" aria-valuemax="3" aria-valuenow="1" aria-label="Booking step 1 of 3: Service" id="stepIndicator">
       <div class="step-node is-active" data-step="1"><div class="dot">1</div><div class="label">Service</div></div>
       <div class="step-connector" data-connector="1"></div>
@@ -821,6 +852,7 @@
           <a class="btn outline" id="googleCalendarLink" href="https://calendar.google.com/calendar/render" target="_blank" rel="noopener">Google Calendar</a>
         </div>
         <p class="conf-cal-hint">Reminds you the day before and 2 hours before.</p>
+        <p class="conf-manage" id="confManage" hidden>Plans change? <a id="confManageLink" href="/manage-booking.html">Reschedule or cancel this visit</a> anytime. It's saved on this device too.</p>
 
         <div class="next-steps" aria-label="What happens next">
           <p class="next-steps-title">What happens next</p>
@@ -1330,6 +1362,106 @@
     }, 380);
   }
 
+  // --- booking creation + the manage link (round 3, 2026-09-22) ----------
+
+  const RPC_HEADERS = {
+    'Content-Type': 'application/json',
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
+  };
+
+  // create_booking() (sql/booking/add_create_booking_rpc.sql): the same
+  // row, triggers and double-booking constraint as a direct insert, but it
+  // hands back the booking's server-generated manage token -- so EVERY
+  // booker can reschedule or cancel online, not only one who gave an email
+  // (the token used to reach a guest only through that email). A 404 means
+  // the function isn't there (not deployed yet, or rolled back): fall back
+  // to the original direct insert, exactly as before. A 404 can never mean
+  // a booking was created, so the fallback can't double-book.
+  function submitBooking(payload) {
+    return fetch(SUPABASE_URL + '/rest/v1/rpc/create_booking', {
+      method: 'POST',
+      headers: RPC_HEADERS,
+      body: JSON.stringify({ p_booking: payload }),
+    }).then(function (res) {
+      if (res.status === 404) {
+        return fetch(SUPABASE_URL + '/rest/v1/th_bookings', {
+          method: 'POST',
+          headers: RPC_HEADERS,
+          body: JSON.stringify(payload),
+        }).then(function (fallbackRes) { return { res: fallbackRes, created: null }; });
+      }
+      if (!res.ok || typeof res.json !== 'function') return { res: res, created: null };
+      return res.json().then(function (rows) {
+        const row = Array.isArray(rows) ? rows[0] : rows;
+        return { res: res, created: row && row.manage_token ? row : null };
+      }, function () { return { res: res, created: null }; });
+    });
+  }
+
+  // Remembered on this device (never the name, phone or address -- just
+  // what the "you're already booked" banner needs), so coming back to
+  // this page later shows the visit instead of a blank form that invites
+  // booking it twice. The banner re-checks it with the server before
+  // showing anything, so a cancellation made any other way (a call, the
+  // email link on another device) never leaves a stale banner behind.
+  const REMEMBERED_BOOKING_KEY = 'th_upcoming_booking';
+
+  function rememberBooking(token) {
+    if (!token || !confirmedVisit) return;
+    try {
+      localStorage.setItem(REMEMBERED_BOOKING_KEY, JSON.stringify({
+        token: token, title: confirmedVisit.title, start: confirmedVisit.start, end: confirmedVisit.end, savedAt: Date.now(),
+      }));
+    } catch (e) { /* private mode / storage blocked -- the link on screen still works */ }
+  }
+
+  function forgetRememberedBooking() {
+    try { localStorage.removeItem(REMEMBERED_BOOKING_KEY); } catch (e) { /* ignore */ }
+  }
+
+  function showManageLink(token) {
+    if (!token) return;
+    const manageUrl = '/manage-booking.html?token=' + encodeURIComponent(token);
+    if (confirmedVisit) confirmedVisit.manageUrl = manageUrl;
+    const googleLink = document.getElementById('googleCalendarLink');
+    if (googleLink && confirmedVisit && typeof bookingGoogleCalendarUrl === 'function') googleLink.href = bookingGoogleCalendarUrl(confirmedVisit);
+    const wrap = document.getElementById('confManage');
+    const link = document.getElementById('confManageLink');
+    if (wrap && link) {
+      link.href = manageUrl;
+      wrap.hidden = false;
+    }
+    rememberBooking(token);
+  }
+
+  (function showRememberedBooking() {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(REMEMBERED_BOOKING_KEY) || 'null'); } catch (e) { saved = null; }
+    if (!saved || typeof saved.token !== 'string' || !/^[0-9a-f-]{36}$/i.test(saved.token)) return;
+    if (!saved.end || new Date(saved.end) < new Date()) { forgetRememberedBooking(); return; }
+    fetch(SUPABASE_URL + '/rest/v1/rpc/get_booking_by_cancel_token', {
+      method: 'POST', headers: RPC_HEADERS, body: JSON.stringify({ p_token: saved.token }),
+    })
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (rows) {
+        if (rows === null) return; // lookup failed -- say nothing, try again next visit
+        const b = Array.isArray(rows) ? rows[0] : null;
+        if (!b || b.status !== 'confirmed' || new Date(b.end_at) < new Date()) { forgetRememberedBooking(); return; }
+        const banner = document.getElementById('bookedBanner');
+        if (!banner) return;
+        const when = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, weekday: 'long', month: 'short', day: 'numeric' }).format(new Date(b.start_at)) +
+          ' at ' + new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, hour: 'numeric', minute: '2-digit' }).format(new Date(b.start_at));
+        document.getElementById('bookedBannerWhat').textContent = b.service_label;
+        document.getElementById('bookedBannerWhen').textContent = when;
+        document.getElementById('bookedBannerManage').href = '/manage-booking.html?token=' + encodeURIComponent(saved.token);
+        banner.hidden = false;
+        const forget = document.getElementById('bookedBannerForget');
+        if (forget) forget.addEventListener('click', function () { forgetRememberedBooking(); banner.hidden = true; });
+      })
+      .catch(function () { /* offline -- no banner, nothing lost */ });
+  })();
+
   // --- submission ------------------------------------------------------------
 
   // Phone number auto-formatting as the guest types, requested
@@ -1436,33 +1568,29 @@
     submitBtn.disabled = true;
     submitBtn.textContent = 'Booking...';
 
-    fetch(SUPABASE_URL + '/rest/v1/th_bookings', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
-      },
-      body: JSON.stringify(Object.assign({
-        service_key: selectedService.key,
-        service_label: selectedService.label,
-        start_at: selectedSlot.startUtc.toISOString(),
-        end_at: selectedSlot.endUtc.toISOString(),
-        name: nameVal,
-        phone: formData.get('phone'),
-        email: emailVal || null,
-        address: addressVal,
-        notes: formData.get('notes') || null,
-        referred_by: formData.get('referred_by') || null,
-        referred_by_code: referredByCode,
-        source: formData.get('source') || null,
-        // Automatic UTM campaign attribution (utm-tracking.js) -- see
-        // index.html's own identical addition for the full reasoning.
-      }, (typeof window.getStoredUtmParams === 'function' && window.getStoredUtmParams()) || {})),
-    })
-      .then(function (res) {
+    const bookingPayload = Object.assign({
+      service_key: selectedService.key,
+      service_label: selectedService.label,
+      start_at: selectedSlot.startUtc.toISOString(),
+      end_at: selectedSlot.endUtc.toISOString(),
+      name: nameVal,
+      phone: formData.get('phone'),
+      email: emailVal || null,
+      address: addressVal,
+      notes: formData.get('notes') || null,
+      referred_by: formData.get('referred_by') || null,
+      referred_by_code: referredByCode,
+      source: formData.get('source') || null,
+      // Automatic UTM campaign attribution (utm-tracking.js) -- see
+      // index.html's own identical addition for the full reasoning.
+    }, (typeof window.getStoredUtmParams === 'function' && window.getStoredUtmParams()) || {});
+
+    submitBooking(bookingPayload)
+      .then(function (result) {
+        const res = result.res;
         if (res.ok) {
           renderConfirmation(addressVal);
+          if (result.created) showManageLink(result.created.manage_token);
           // Real gap found in an audit, not reported: this step's text
           // unconditionally promised an email with a reschedule/cancel
           // link, but email is optional and manage-booking.html's
@@ -1474,7 +1602,9 @@
           if (emailNoteEl) {
             emailNoteEl.textContent = emailVal
               ? 'Check your email for a confirmation with a reschedule or cancel link'
-              : "We'll text or call to confirm -- call or text us anytime to reschedule or cancel";
+              : result.created
+                ? 'Reschedule or cancel from the link on this page anytime (it\'s saved on this device), or call or text us'
+                : "We'll text or call to confirm -- call or text us anytime to reschedule or cancel";
           }
           if (typeof gtag === 'function') gtag('event', 'booking_completed', { service: selectedService.key });
           goToStep(4);
@@ -1482,7 +1612,10 @@
           return;
         }
         return res.text().then(function (body) {
-          const wasConflict = body.indexOf('23P01') !== -1 || body.indexOf('exclusion') !== -1 || res.status === 409;
+          // create_booking() also rejects a start that has passed while
+          // the form sat open ("in-the-past") -- same fix as a taken slot:
+          // back to fresh times.
+          const wasConflict = body.indexOf('23P01') !== -1 || body.indexOf('exclusion') !== -1 || res.status === 409 || body.indexOf('in-the-past') !== -1;
           statusEl.textContent = wasConflict
             ? 'That time was just booked by someone else. Please pick another.'
             : 'Something went wrong submitting your booking. Please call us at (435) 414-1667.';

@@ -168,6 +168,20 @@ function buildEmailText(clientName: string, title: string, scheduledLabel: strin
 
 Deno.serve(async (req: Request) => {
   try {
+    // Only real caller: the notify_work_order_scheduled_email() trigger, which sends the
+    // service_role key from Vault as its bearer token. verify_jwt alone
+    // accepts the public anon key (it checks the signature, not the
+    // role), so without this anyone could POST a fake trigger payload
+    // here. Security audit, 2026-09-23.
+    const authHeader = req.headers.get("Authorization") || "";
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    if (!SERVICE_ROLE_KEY || token !== SERVICE_ROLE_KEY) {
+      return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     const payload = await req.json();
 
     if (payload.type !== "UPDATE" || payload.table !== "client_portal_work_orders") {

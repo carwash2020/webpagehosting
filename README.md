@@ -4195,3 +4195,100 @@ sandbox-proxy test), `check-consistency`, `check-undefined-vars`, lint,
 390px and 1440px through book, confirm, reschedule and cancel, with
 Supabase intercepted: no page errors, no horizontal overflow. New tests:
 `tests/booking/booking-flow-picker-and-confirm.test.js` (33).
+
+## What changed, 2026-09-23 -- Client portal: Face ID instead of the 2FA code, and two-factor stays optional
+
+Requested directly: "facial recognition AND two factor is way too much.
+Make it pick facial over two factor for the portal, also make two factor
+optional for the portal." Full reasoning:
+`docs/specialist-logs/security.md`.
+
+**Before:** a client with both turned on signed in with their password,
+then typed the 2FA code, then got a Face ID prompt the moment the portal
+opened. That was three steps.
+
+**Now:**
+
+| Setup | Sign-in steps |
+|---|---|
+| 2FA on, Face ID on this device | Password, then **Face ID instead of the code**. One prompt. "Use my 2FA code instead" is one tap away if Face ID fails. |
+| 2FA on, anywhere else (new device, browser without Face ID set up) | Password, then the code, as before. |
+| 2FA off | Password only. |
+
+- **No lock straight after sign-in.** The Face ID lock doesn't prompt
+  again right after a fresh sign-in; it comes back only when the app is
+  opened again later.
+- **Two-factor is optional.** It stays off unless the client turns it on,
+  and Settings now says so and explains that Face ID replaces the code on
+  a Face ID device.
+- **Turning two-factor off** from a session where Face ID stood in for
+  the code asks for the code once. Supabase only removes a factor from a
+  session that proved the code.
+
+**Fixed along the way (security): the 2FA code could be skipped by
+refreshing.** It was only asked for by login.html's own pop-up. After a
+correct password the session already existed, so one refresh (or opening
+any portal page directly) went straight in with no code. This was
+confirmed on main in a real browser. Every signed-in page, Settings
+included, now checks whether the session still owes its second step and
+asks for it: Face ID on a Face ID device, otherwise back to the code.
+
+Verified in a real headless Chromium against the real portal pages
+(local HTTP, Supabase auth mocked, a virtual authenticator standing in
+for Face ID):
+- 2FA plus Face ID: password, then 1 Face ID prompt and 0 codes; no lock
+  after, and none on the next page.
+- 2FA without Face ID: password, then the code; no lock after.
+- Refreshing on the code, or opening home.html directly, still asks for
+  the code.
+- Face ID failing: "Use my 2FA code instead" works.
+- 2FA off: no Face ID right after the password, and a reopened app asks
+  once.
+- Settings: "Turn off two-factor" from a Face ID sign-in asks for the
+  code, then removes it.
+
+New tests: `tests/portal/face-id-over-2fa.test.js` (10). Updated:
+`biometric-unlock.test.js` and `settings-mfa-disable-confirm.test.js`
+(the lock and the unenroll each moved into their own function).
+
+## What changed, 2026-09-22 (later still) -- Booking flow, round 3: every booker can reschedule online, and the page remembers the visit
+
+`booking.html`, `manage-booking.html` and one new SQL function
+(`sql/booking/add_create_booking_rpc.sql`). Full reasoning:
+`docs/specialist-logs/features.md` and `visual.md` (2026-09-22 round 3
+entries).
+
+**A manage link for everyone.** Rescheduling or cancelling online used
+to need the link in the confirmation email. Anyone who booked with only
+a phone number had to call. Bookings now go through
+`create_booking()`, which makes the same booking (same checks, same
+alerts, same double-booking guard) and hands back the visit's private
+manage link:
+- The confirmation screen shows "Plans change? Reschedule or cancel
+  this visit anytime."
+- The calendar file and Google Calendar event include the link too.
+
+`create_booking()` is also stricter than the old direct insert:
+- It always creates a confirmed booking.
+- It can't be used to set internal fields.
+- It rejects impossible times, visits in the past, and a blank name.
+
+If the function is ever missing, the page quietly falls back to the old
+insert.
+
+**The page remembers.** Come back to the booking page on the same phone
+and it says "You're already booked: Appliance Repair, Wednesday at
+2:00 PM", with a Reschedule or cancel link, instead of a blank form that
+invites booking twice.
+- It checks the visit with the server first, so a visit cancelled some
+  other way never shows up.
+- Past visits drop off by themselves.
+- "Forget this device" clears it.
+- Only the link and the time are stored, never a name, phone or
+  address.
+
+Verified: full suite (the only failure is the known `check-links.py`
+sandbox-proxy test), `check-consistency`, `check-undefined-vars`, lint.
+The SQL function was exercised live in rolled-back transactions.
+Driven in headless Chromium at 390px and 1440px. New tests:
+`tests/booking/booking-manage-link-round3.test.js` (12).
