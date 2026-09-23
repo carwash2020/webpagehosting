@@ -2951,6 +2951,15 @@ The follow-ups the earlier rounds left, done on request ("do the remaining items
 - **It wouldn't be used.** The pages load `booking-flow.js?v=…`, and the worker matches `?v=` requests by exact URL, so a bare-path precache entry is never served. The file is already cached on first use.
 - **It would cost something.** Listing it would fold it into the precache fingerprint, forcing an "update available" prompt in every installed portal app whenever the file changes.
 
-**Still to come:** the Dev Tools booking-test copy (it should mention the new staff "Booking moved"/"Booking cancelled" emails). It waits for the shift-punch-clock branch, which is editing `tools/dev-tools.html` and the tools service worker right now, so as not to hand that session merge conflicts mid-flight.
+**Also in this PR:** the Dev Tools booking-test copy (next entry). It was held until the shift-clock work (#385) landed, so as not to hand that session merge conflicts while it was editing `tools/dev-tools.html` and the tools service worker.
+
+## 2026-09-23 -- Dev Tools booking test: the copy says what it really sends
+
+The last booking-flow follow-up. It waited until the shift-clock work (#385) had landed, because that PR was editing `tools/dev-tools.html` and the tools service worker.
+
+- **The problem.** Since round 2, the test's reschedule and cancel steps also send staff a "Booking moved" / "Booking cancelled" email. Its description and step labels still said "rescheduled push" / "cancelled push", so the two extra emails from a test run looked unexplained.
+- **The fix.** `tools/dev-tools-shared.js` (the "?" description) now names each step's push and staff email. It says the test booking has no email address, so no guest email goes out, and that the test writes the booking as the staff account (since the direct-insert lockdown, only staff may). `tools/dev-tools.html`'s three step labels match.
+- **Mechanical.** fix-versions re-stamped `dev-tools-shared.js` where it loads and bumped the tools service worker's cache name.
+- **New test:** `tests/dev-tools/booking-test-copy.test.js` (3).
 
 <!-- Add new entries above this line -->

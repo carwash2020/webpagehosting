@@ -4710,3 +4710,9 @@ New tests:
 - the triage hand-off on all 13 pages that carry the tool (in `booking-flow-picker-and-confirm.test.js`; all fail against the old script).
 
 Updated with reasons: the round 1 hand-off tests and the round 4 page-style test.
+
+## What changed, 2026-09-23 -- Dev Tools: the booking test explains the emails it sends
+
+Tools only (the Dev Tools page). When you run the booking notification test, moving and cancelling the test booking now also send the team a "Booking moved" and a "Booking cancelled" email. That's the round 2 booking work. The test's description and its step-by-step results now say so, so those emails don't look like a surprise. They also note that the test booking has no email address, so no guest email is sent.
+
+Verified: full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, lint, visual snapshot. New test: `tests/dev-tools/booking-test-copy.test.js` (3).
