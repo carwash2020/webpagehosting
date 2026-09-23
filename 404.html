@@ -44,9 +44,15 @@
     text-align:center;
     padding:24px;
   }
+  /* <main> (2026-09-23) gives screen readers a landmark to jump to. It
+     repeats body's centred column, so the layout is unchanged. */
+  main{display:flex; flex-direction:column; align-items:center;}
   img{width:100px; height:auto; margin-bottom:28px;}
   h1{
     font-family:var(--font-display);
+    /* Anton ships a single 400 weight; the browser-default bold on h1
+       made Chrome smear a synthetic bold over it. */
+    font-weight:400;
     font-size:clamp(48px,10vw,90px);
     color:#ff8000;
     margin:0;
@@ -72,6 +78,7 @@
 </style>
 </head>
 <body>
+<main>
   <img src="/images/logo-signature.webp?v=202608010300" alt="Triple H Enterprises logo">
   <h1>404</h1>
   <p>This page took a wrong turn. The page you're looking for doesn't exist or may have moved. If you were trying to reach us, we're still just a call or text away.</p>
@@ -79,5 +86,6 @@
     <a class="btn" href="/">Back to Home</a>
     <a class="btn orange" href="tel:+14354141667">Call (435) 414-1667</a>
   </div>
+</main>
 </body>
 </html>
