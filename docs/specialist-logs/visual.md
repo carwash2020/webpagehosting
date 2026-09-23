@@ -1250,4 +1250,26 @@ height).
 - Reduced motion turns off every pulse. The Runway Dashboard mirrors
   the bar's CSS.
 
+## 2026-09-23 (later still) -- Remind, and the reminder sheet
+
+- **Money Owed rows:** a solid orange **REMIND** pill beside the outlined
+  MARK PAID on invoices that are due or late. It's solid because on a
+  late invoice it's the next step. After a reminder, a dim "Reminded
+  today" line sits under the amount line.
+- **The sheet:**
+  - an orange small-caps kicker with the tone (FOLLOWING UP, then FIRM
+    REMINDER · REMINDER 2);
+  - "Remind Bill Adams" at 20px, then a dim "#INV-1041 · $285.00 owed ·
+    25 days overdue";
+  - the message in a 136px editable box at 15px / 1.5, with an orange
+    focus ring;
+  - Text <name> (primary, message icon), Email (mail icon, new in the
+    sprite) and Copy (clipboard icon), three equal 48px buttons side by
+    side. With no phone, Email becomes the primary.
+  - With neither a phone nor an email, only Copy shows, with a line
+    saying why.
+- **Invoice rows and the job line** add "· reminded 3 days ago" in
+  their existing dim text. The overdue job's line leads with a primary
+  **Send a reminder**, and See invoice drops to secondary.
+
 <!-- Add new entries above this line -->

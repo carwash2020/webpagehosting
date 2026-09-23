@@ -68,7 +68,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=63481e0cf9">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=0511522a0e">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=4cfac4b10e" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -77,11 +77,11 @@
      manage-booking.html, portal/quotes.html, and portal/jobs.html use. -->
 <script src="/js/business-hours.js?v=5296319b73"></script>
 <script src="/tools/push-notifications.js?v=180abd2a84" defer></script>
-<script src="/tools/data-layer.js?v=1bf38c5a61" defer></script>
+<script src="/tools/data-layer.js?v=3381752d42" defer></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
 <script src="/tools/tools-dialogs.js?v=310315eb44" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=b4709f3f09" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=660a55daa1" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <script src="/tools/tools-tour.js?v=118148b9a2" defer></script>
 <style>
@@ -408,6 +408,9 @@
   .paid-toggle-btn.is-paid, .lead-toggle-btn.is-handled { color: #4caf50; border-color: #4caf50; }
   .paid-toggle-btn.is-unpaid, .lead-toggle-btn.is-new { color: var(--orange-light); border-color: var(--orange-light); }
   .paid-toggle-btn.is-overdue { color: #e05252; border-color: #e05252; }
+  /* Remind (2026-09-23, rework part 10): solid, since it's the next step on a late invoice. */
+  .paid-toggle-btn.is-remind { color: #1a0d02; border-color: transparent; background: linear-gradient(165deg, var(--orange-light), var(--orange) 70%); }
+  .dash-list-item-right .paid-toggle-btn + .paid-toggle-btn { margin-left: 6px; }
   /* Ready to invoice rows: Invoice is a link styled like Mark paid, and
      the ⋯ is the shared round icon button's smaller cousin. */
   a.paid-toggle-btn { text-decoration: none; display: inline-flex; align-items: center; }
@@ -571,6 +574,7 @@
      .is-unread treatment; current (not yet due) rows are plain. */
   .today-money-due { color: var(--text-dim); }
   .today-money-due.is-overdue { color: #e05252; }
+  .today-money-reminded { display: block; margin-top: 2px; font-size: 12px; color: var(--text-dim); }
   @media (max-width: 720px) {
     .today-next-job { padding: 16px 16px; }
     .today-money, .today-restofday { padding: 14px 16px; }
@@ -947,6 +951,7 @@
       <ul>
         <li><strong>Next Job</strong> &mdash; whatever's next on today's schedule, sorted by priority, with a tap-to-call phone number and a tap-to-open-Maps address, a straight line into that job's own page, and <strong>Route today</strong>: one link that opens the whole day's stops as a Google Maps route.</li>
         <li><strong>Money Owed</strong> &mdash; Current and Overdue, split apart so a client who's simply not due yet never gets lumped in with one who needs a follow-up call. Every unpaid invoice is listed right there (overdue first) with a one-tap <strong>Mark paid</strong> &mdash; confirm, and it's recorded as paid in full.</li>
+        <li><strong>Remind</strong> &mdash; on any invoice that's due or late (on Money Owed, in an invoice's sheet on Invoices, and on the job). The reminder is already written: their first name, the invoice, what's still owed, how late it is, and &mdash; for an invoice on the client portal &mdash; where to pay by card. Change anything you like, then <strong>Text</strong>, <strong>Email</strong>, or <strong>Copy</strong> it; it goes out from your own phone. Each one is logged on the invoice (&ldquo;Reminded 3 days ago&rdquo;), and the next one is a notch firmer: friendly, then following up, then firm.</li>
         <li><strong>Rest of Today</strong> &mdash; whatever else is on today's schedule after the next job.</li>
         <li><strong>New job / Create invoice / Find client / Calendar / Quick charge / Log expense</strong> &mdash; the six daily actions, one tap each. Quick charge takes a card payment on the spot with no invoice; Log expense opens Finance on the Expenses tab with the receipt form ready. On a phone the bar at the bottom is Home, Jobs, the orange <strong>+</strong>, Clients, and Money (Invoices and Finance, with a switch at the top of either to hop between them); the grid button at the top right opens the rest (Route Planner, Runway, Contracts, Reviews, the Appliance Wiki, Settings). On a computer everything is in the sidebar.</li>
         <li><strong>Create anything</strong> &mdash; the orange <strong>+</strong> in the middle of the bar (or <strong>New</strong> at the top of the sidebar, or the <strong>N</strong> key) starts a job, invoice, quote, quick charge, expense, income entry, contact, contract, or review request from any page. Or type (or say, with the microphone) what you need at the top of it: &ldquo;sink leak for Sarah tomorrow 2pm&rdquo; opens a new job with Sarah Miller's details, the date, and the time filled in; start with <strong>invoice</strong>, <strong>quote</strong>, or <strong>expense</strong> for those (&ldquo;invoice Tom $85&rdquo;, &ldquo;expense $48 Home Depot drain pump&rdquo;). You check it and save it on the form, same as always. Search (Ctrl+K) offers the same thing as its top result. A client texted you? Copy it, then tap <strong>Paste a client&rsquo;s text</strong> under the field, and it pulls out what's wrong, who, and when, and keeps the message itself in the job's notes. On Android, share the text straight to Triple H from Messages. On iPhone, a Shortcut can open <code>/tools/workspace.html?quick=</code> followed by the text. The home-screen icon's <strong>Quick add</strong> shortcut opens it too.</li>
@@ -3123,13 +3128,18 @@
         dueLabel = days < 0 ? `${-days} day${days === -1 ? '' : 's'} overdue` : (days === 0 ? 'Due today' : `Due in ${days} day${days === 1 ? '' : 's'}`);
       }
       const remaining = getRemainingCents(i) / 100;
+      // Remind (2026-09-23, rework part 10): due today or late, one tap to
+      // a reminder already written -- and when the last one went out.
+      const canRemind = typeof thInvoiceNeedsReminder === 'function' && thInvoiceNeedsReminder(i);
+      const reminded = typeof thInvoiceRemindedLabel === 'function' ? thInvoiceRemindedLabel(i) : '';
       return `
       <div class="dash-list-item${overdue ? ' is-unread' : ''}">
         <div>
           <div class="dash-list-item-title">${escapeHtml(i.clientName)}</div>
-          <div class="dash-list-item-meta">#${escapeHtml(i.invoiceNumber || '\u2014')} &middot; ${money(remaining)}${dueLabel ? ' &middot; <span class="today-money-due' + (overdue ? ' is-overdue' : '') + '">' + dueLabel + '</span>' : ''}</div>
+          <div class="dash-list-item-meta">#${escapeHtml(i.invoiceNumber || '\u2014')} &middot; ${money(remaining)}${dueLabel ? ' &middot; <span class="today-money-due' + (overdue ? ' is-overdue' : '') + '">' + dueLabel + '</span>' : ''}${reminded ? '<span class="today-money-reminded">' + reminded + '</span>' : ''}</div>
         </div>
         <div class="dash-list-item-right">
+          ${canRemind ? '<button type="button" class="paid-toggle-btn is-remind" data-remind-invoice="' + escapeAttr(i.id) + '">Remind</button>' : ''}
           ${invoiceMarkPaidButtonHtml(i)}
         </div>
       </div>`;
@@ -3417,6 +3427,7 @@
       renderSnapshotLastUpdated();
       renderMfaNagBanner();
       window.addEventListener('th-clock-change', renderTodayHero);
+      window.addEventListener('th-invoice-reminded', renderMetrics);
       if (typeof startRealtimeSync === 'function') {
         // One status callback shared by both channels -- last status wins,
         // which is fine here since they're on the same underlying connection.

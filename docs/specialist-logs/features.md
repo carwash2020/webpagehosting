@@ -2350,4 +2350,54 @@ Cancel.
 An open edit form picks up new hours and status on `th-clock-change`,
 so saving it can't write stale ones back.
 
+## 2026-09-23 (later still) -- Workspace rework, part 10: Get paid
+
+**Why.** Parts 4 to 6 made sure every job becomes an invoice. The last
+gap between work and money is the invoice that nobody pays. Chasing it
+meant writing the same awkward text by hand, working out how late it
+was, and remembering whether you'd already asked.
+
+**The message is data-layer logic** (data-layer.js, Payment reminders),
+so every page words it the same way:
+- `thInvoiceReminderText(inv, now)` returns `{ step, body, subject }`.
+  It uses the client's first name, the invoice number, and
+  `thInvoiceBalance` (so a part payment is already taken off). The due
+  date comes from `thInvoiceDueDate`, the same terms rule every money
+  view uses.
+- When `clientEmail` is set, the message adds the portal's sign-in URL.
+  That is the rule `pushInvoicePaidToPortal` already uses for "this
+  invoice is on the portal", where the client can pay by card.
+- **Step** (`thInvoiceReminderStep`) is one past the last reminder sent,
+  and at least 2 once 14 days late or 3 once 30 days late. So a first
+  reminder on a very late invoice isn't cheerful, and each one after is
+  firmer.
+- `thInvoiceNeedsReminder` decides where the button shows: something is
+  owed and it's due today or past due. Earlier than that is nagging.
+
+**Logged, not sent.** `thLogInvoiceReminder(id, channel)` appends
+`{ at, channel, step }` to `inv.reminders` through `thWrite`, so it syncs.
+`thInvoiceRemindedLabel` gives "Reminded 3 days ago" to the Dashboard
+row, the invoice row and the job line. The app sends nothing itself: it
+builds `sms:` and `mailto:` links.
+- The `sms:` separator follows review-request.html: `&body=` on iOS,
+  `?body=` elsewhere.
+- Copy is the fallback that always works, so it's logged too.
+
+**One sheet, any page** (tools-nav-pwa.js, PAYMENT REMINDER). It rides
+on the quick-actions sheet:
+- a kicker with the tone, plus a count from the second reminder on;
+- who, and what's owed;
+- the message in an editable textarea;
+- Text / Email / Copy.
+
+A delegated document listener opens it from any `[data-remind-invoice]`
+element, so the Dashboard, the job page and the invoice list need no
+inline handlers. The phone number comes from the invoice, else the
+client registry, else the linked job.
+
+Focus goes to the first send button, not the textarea, so a phone's
+keyboard doesn't cover the sheet. Escape closes it and focus returns to
+the opener. Sending fires `th-invoice-reminded`, and each page
+re-renders its money list on it.
+
 <!-- Add new entries above this line -->

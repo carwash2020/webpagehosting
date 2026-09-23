@@ -52,14 +52,14 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=2e81706c3d">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=63481e0cf9">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=0511522a0e">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=4cfac4b10e" defer></script>
-<script src="/tools/data-layer.js?v=1bf38c5a61" defer></script>
+<script src="/tools/data-layer.js?v=3381752d42" defer></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
 <script src="/tools/tools-dialogs.js?v=310315eb44" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=b4709f3f09" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=660a55daa1" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <!-- U16 fix (High-Impact Upgrades, 2026-09-07): jsPDF for the new
      "Generate Job Sheet" button, same version/CDN as invoice-generator.html
@@ -286,6 +286,7 @@
       startRealtimeSync(onJobRealtimeChange, updateRealtimeBadge);
     }
     window.addEventListener('th-clock-change', onJobRealtimeChange);
+    window.addEventListener('th-invoice-reminded', onJobRealtimeChange);
   });
 
   function updateRealtimeBadge(status) {
@@ -574,8 +575,17 @@
         dueText = days < 0 ? (-days) + ' day' + (days === -1 ? '' : 's') + ' overdue' : days === 0 ? 'due today' : 'due ' + open.due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       }
       tone = m.stage === 'overdue' ? ' is-late' : '';
-      text = '<strong>' + money(m.balance) + ' owed</strong>' + (dueText ? ' &middot; ' + dueText : '') + '.';
-      if (allowed('canManageInvoices')) actions += btn(invoicesHref, m.stage === 'overdue' ? 'Follow up' : 'See invoice', m.stage === 'overdue' ? 'primary-btn' : 'secondary-btn');
+      const reminded = open && typeof thInvoiceRemindedLabel === 'function' ? thInvoiceRemindedLabel(open.inv) : '';
+      text = '<strong>' + money(m.balance) + ' owed</strong>' + (dueText ? ' &middot; ' + dueText : '') + (reminded ? ' &middot; ' + reminded.toLowerCase() : '') + '.';
+      // Send a reminder (2026-09-23, rework part 10) opens the shell's
+      // reminder sheet for the invoice that's due first.
+      const canRemind = open && typeof thOpenReminderSheet === 'function' && typeof thInvoiceNeedsReminder === 'function' && thInvoiceNeedsReminder(open.inv);
+      if (allowed('canManageInvoices') && canRemind) {
+        actions += '<button type="button" class="primary-btn job-next-btn" data-remind-invoice="' + attr(open.inv.id) + '">Send a reminder</button>';
+        actions += btn(invoicesHref, 'See invoice', 'secondary-btn');
+      } else if (allowed('canManageInvoices')) {
+        actions += btn(invoicesHref, m.stage === 'overdue' ? 'Follow up' : 'See invoice', m.stage === 'overdue' ? 'primary-btn' : 'secondary-btn');
+      }
     } else if (m.stage === 'paid') {
       tone = ' is-paid';
       text = '<strong>Paid in full</strong>' + (m.billed ? ' &middot; ' + money(m.billed) : '') + '.';
