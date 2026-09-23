@@ -1583,4 +1583,10 @@ Found with `document.getAnimations()` under emulated reduced motion. It lists ps
 - **The row divider** under Services/Areas moved from the link to `.mobile-nav-row`, so it runs under the caret too.
 - **Closed-menu pages are pixel-identical to main.** The dark-mode divider moves by one RGB step (42 to 41).
 
+## 2026-09-23 (late) -- round 7: the 404 page's buttons join U01
+
+- **Standalone pages miss site-wide style passes.** `404.html` (and `booking.html`, which is booking lane) carry their own copy of the button CSS, so U01's 2026-09-07 "retire the glossy buttons" pass never reached them. The 404 still had two equal-weight gradient pills, blue Home and orange Call.
+- **Which button leads:** Call keeps the orange it already had here, now the flat `.btn.orange` fill with the `#c96400` 4px offset shadow. Home becomes the quieter `.btn.outline`. That's the hero's filled-plus-outline pairing, and it doesn't re-rank anything: the orange was already on Call. If Connor would rather Home lead on a 404, it's a two-class swap.
+- **Copied from styles.css, not reinvented:** `.btn` sizing (15px 26px, 1.5px letter-spacing), hover lift, press scale, the site's blue focus ring, and a reduced-motion guard (this page doesn't get the global one). `404-button-language.test.js` compares the orange colours against styles.css's `:root`, so a palette change there fails the test until this copy follows.
+
 <!-- Add new entries above this line -->

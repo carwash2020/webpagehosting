@@ -60,21 +60,40 @@
   }
   p{color:#9a9a9a; font-size:16px; max-width:420px; margin:16px 0 32px;}
   .btn-row{display:flex; flex-wrap:wrap; gap:14px; justify-content:center;}
+  /* Buttons (2026-09-23): the site's current button language, copied
+     from styles.css's .btn / .btn.orange / .btn.outline because this page
+     doesn't load it. These were still the pre-U01 glossy gradients (two
+     equal-weight filled buttons, blue and orange); U01 (2026-09-07)
+     retired that look site-wide for one flat primary with a solid offset
+     shadow and a quieter outline partner. Call keeps the orange, as it
+     had here before. Keep in step with styles.css. */
   a.btn{
     display:inline-flex;
     align-items:center;
-    gap:8px;
-    padding:14px 26px;
+    gap:10px;
+    padding:15px 26px;
     border-radius:6px;
-    background:linear-gradient(135deg,#7ec4ff,#3aa0ff 60%,#1f5f9e);
-    color:#04101c;
+    border:2px solid transparent;
     font-weight:600;
-    letter-spacing:1px;
+    letter-spacing:1.5px;
     text-transform:uppercase;
     font-size:14px;
     text-decoration:none;
+    white-space:nowrap;
+    transition:transform .15s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease;
   }
-  a.btn.orange{background:linear-gradient(135deg,#ffb347,#ff8000 60%,#c96400); color:#1a1000;}
+  a.btn:hover{transform:translateY(-2px);}
+  a.btn:active{transform:translateY(0) scale(.97);}
+  a.btn:focus-visible{outline:2px solid #7ec4ff; outline-offset:2px; box-shadow:0 0 0 5px rgba(58,160,255,.16);}
+  a.btn.orange{background:#ff8000; color:#161005; box-shadow:4px 4px 0 0 #c96400;}
+  a.btn.orange:hover{box-shadow:6px 6px 0 0 #c96400;}
+  a.btn.orange:active{box-shadow:2px 2px 0 0 #c96400;}
+  a.btn.outline{background:transparent; color:#ff8000; border:1.5px solid rgba(255,128,0,.3);}
+  a.btn.outline:hover{background:rgba(255,128,0,.08); border-color:#ff8000;}
+  @media (prefers-reduced-motion:reduce){
+    a.btn{transition:none;}
+    a.btn:hover, a.btn:active{transform:none;}
+  }
 </style>
 </head>
 <body>
@@ -83,7 +102,7 @@
   <h1>404</h1>
   <p>This page took a wrong turn. The page you're looking for doesn't exist or may have moved. If you were trying to reach us, we're still just a call or text away.</p>
   <div class="btn-row">
-    <a class="btn" href="/">Back to Home</a>
+    <a class="btn outline" href="/">Back to Home</a>
     <a class="btn orange" href="tel:+14354141667">Call (435) 414-1667</a>
   </div>
 </main>
