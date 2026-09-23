@@ -1375,9 +1375,12 @@
   // hands back the booking's server-generated manage token -- so EVERY
   // booker can reschedule or cancel online, not only one who gave an email
   // (the token used to reach a guest only through that email). A 404 means
-  // the function isn't there (not deployed yet, or rolled back): fall back
-  // to the original direct insert, exactly as before. A 404 can never mean
-  // a booking was created, so the fallback can't double-book.
+  // the function isn't there (rolled back): fall back to the original
+  // direct insert. A 404 can never mean a booking was created, so the
+  // fallback can't double-book. Since 2026-09-23 the public can't insert
+  // directly (sql/booking/restrict_direct_booking_inserts.sql), so this
+  // fallback only works again if that rollback restores the old policy
+  // too -- that file says to, in the same change.
   function submitBooking(payload) {
     return fetch(SUPABASE_URL + '/rest/v1/rpc/create_booking', {
       method: 'POST',

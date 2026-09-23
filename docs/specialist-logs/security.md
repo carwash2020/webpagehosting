@@ -984,4 +984,18 @@ Cross-logged from `features.md` ("booking-flow round 2 is live"). What that mean
   - the booking RPCs (`create_booking`, `get_booking_availability`, and the token-gated get/cancel/reschedule), which are public on purpose;
   - the MFA recovery-code functions, which are this lane's.
 
+## 2026-09-23 (booking lane): th_bookings no longer accepts direct inserts from the public
+
+Cross-logged from `features.md` ("booking-flow follow-ups"). It closes the round 2 audit's LOW note on `with check (true)`.
+
+- **Dropped.** "Anyone can submit a booking" (anon + authenticated, `with check (true)`). A direct insert with the public anon key could set any column (`status`, `job_id`, `quote_id`, `checkup_id`, `reminder_sent_at`) and skipped `create_booking()`'s validation. Since public signup is on, "authenticated" included strangers too.
+- **Added.** "Staff can add bookings directly": authenticated, with an `account_roles` email, the same test as the table's SELECT/UPDATE/DELETE policies. It exists for the Dev Tools booking test. The public books through `create_booking()` (SECURITY DEFINER, allowlisted columns, validated times).
+- **Verified live,** before and after, in rolled-back blocks:
+  - anon and non-staff direct inserts → 42501;
+  - the RPC works for both;
+  - staff and the service role can still insert.
+  - A real anon HTTP insert → 401 RLS violation.
+  - No rows were created.
+- **Advisors:** nothing new.
+
 <!-- Add new entries above this line -->
