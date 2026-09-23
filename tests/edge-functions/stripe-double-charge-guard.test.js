@@ -43,6 +43,8 @@ function load(name, state) {
     const u = String(url);
     const method = (init.method || 'GET').toUpperCase();
     calls.push({ url: u, method, body: init.body });
+    const parsed = new URL(u);
+    const stripePath = parsed.hostname === 'api.stripe.com' ? parsed.pathname : null;
     if (u.includes('/rest/v1/client_portal_invoices') && method === 'GET') return j(state.invoices);
     if (u.includes('/rest/v1/client_portal_invoices') && method === 'PATCH') return j([]);
     if (u.includes('/rest/v1/stripe_customers') && method === 'GET') return j(state.customerId ? [{ stripe_customer_id: state.customerId }] : []);
@@ -55,9 +57,9 @@ function load(name, state) {
     }
     if (u.includes('/rest/v1/notification_log') && method === 'POST') return j([], 201);
     if (u.includes('/functions/v1/Send-Push')) return j({ ok: true });
-    if (u.startsWith('https://api.stripe.com/v1/payment_methods')) return j({ data: state.savedCard === false ? [] : [{ id: 'pm_1' }] });
-    if (u === 'https://api.stripe.com/v1/customers') return j({ id: 'cus_new' });
-    if (u.startsWith('https://api.stripe.com/v1/payment_intents?')) return j({ data: state.stripeList || [] });
+    if (stripePath === '/v1/payment_methods') return j({ data: state.savedCard === false ? [] : [{ id: 'pm_1' }] });
+    if (stripePath === '/v1/customers') return j({ id: 'cus_new' });
+    if (stripePath === '/v1/payment_intents' && method === 'GET') return j({ data: state.stripeList || [] });
     const m = u.match(/^https:\/\/api\.stripe\.com\/v1\/payment_intents\/([^/?]+)(\?expand\[\]=latest_charge)?$/);
     if (m && method === 'GET') {
       if (state.retrieveThrows) throw new Error('network down');
@@ -190,7 +192,7 @@ test("single: someone else's invoice is still refused before Stripe is ever aske
   const f = load('create-payment-intent', { invoices: [invoice({ client_email: 'other@example.com', stripe_payment_intent_id: 'pi_old' })], customerId: CUSTOMER, retrieve: { pi_old: openPi() } });
   const r = await f.call({ invoice_id: 7 });
   assert.equal(r.status, 403);
-  assert.equal(f.calls.filter((c) => c.url.startsWith('https://api.stripe.com')).length, 0);
+  assert.equal(f.calls.filter((c) => new URL(c.url).hostname === 'api.stripe.com').length, 0);
 });
 
 test('single: an invoice already marked paid is still refused with the same 400', async () => {
