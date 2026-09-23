@@ -4826,3 +4826,9 @@ Updated with reasons: the round 1 hand-off tests and the round 4 page-style test
 Tools only (the Dev Tools page). When you run the booking notification test, moving and cancelling the test booking now also send the team a "Booking moved" and a "Booking cancelled" email. That's the round 2 booking work. The test's description and its step-by-step results now say so, so those emails don't look like a surprise. They also note that the test booking has no email address, so no guest email is sent.
 
 Verified: full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, lint, visual snapshot. New test: `tests/dev-tools/booking-test-copy.test.js` (3).
+
+## What changed, 2026-09-23 -- Tests: no more booking exception in the reduced-motion check
+
+Tests only, no change to the site. The check that every smooth scroll on the public site respects "reduce motion" had one exception: the homepage's "or schedule online" scroll, which the booking work has since fixed. The exception is removed, so the check now covers every page with no exceptions.
+
+Verified: full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, lint, visual snapshot. Putting the old scroll back makes the check fail.
