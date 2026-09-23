@@ -2919,4 +2919,68 @@ now counts 15 tombstone functions (it pins the count so each new one is
 checked for pruning). `job-clock.test.js` and `your-week.test.js` are
 untouched and pass.
 
+## 2026-09-23 -- Shift clock, part 2: Start my day / End my day in the app shell
+
+Part 1 (#385) was the data layer. This is the button and the sheet.
+
+**Where it lives** (tools-nav-pwa.js, SHIFT CLOCK, right after ON THE
+CLOCK):
+- **Phone and tablet:** a clock button leads `.th-hdr-actions`, before
+  Search and More, since the header is the one place every page shares.
+  - Off: a plain circle.
+  - On shift: a green pill with the start time, with no seconds ticking.
+    "At a glance" was the ask, and a ticking clock would compete with the
+    job clock's bar.
+  - Needs an end time: an amber dot.
+- **Desktop:** a row under New in the sidebar ("On shift · since 7:42 AM"),
+  a `<button>` styled like the Search row beside it.
+- **Why not a second floating bar:** the bottom of a phone already holds
+  the nav plus the job clock's bar, and stacking a third band would eat
+  the screen. The job clock is orange, moving and at the bottom; the
+  shift is green, still and at the top. They read as two different
+  things.
+
+**One sheet, three modes**, chosen fresh each time it opens, and it
+re-renders in place:
+- **Needs an end time** comes first ("When did you finish?"). It offers
+  the job-clock suggestion (`thShiftSuggestedEnd`) as the main button, a
+  `datetime-local` field bounded by the shift's start and start + 24 h,
+  and "It was a mistake: delete this shift" (confirm, tombstone,
+  Graveyard). There is deliberately no "End now", which would record 26
+  hours. Saving one moves straight on to the next, or to Start my day, so
+  the morning after a forgotten punch-out is one flow.
+- **On shift:** End my day, or "Finished earlier?" with a time field.
+  Ending shows an Undo toast (`thUndoEndShift`). A running job clock gets
+  a note ("keeps running: ending your day doesn't stop it"); it isn't
+  stopped, per part 1's reasoning (the job clock isn't anyone's in
+  particular).
+- **Off:** Start now, "Start from 8:12 AM, when you started the clock on
+  Fence" when there's one (`thShiftSuggestedStart`), or "Started earlier?"
+  with a time field.
+
+**Typed times of day** (`thShiftTimeInputMs`) mean the latest time it
+was, at or before now: 11:30 PM typed at 1 AM is last night. Every
+validation message comes from the data layer's `thShiftTimesProblem`
+and shows in a `role="alert"` line. Enter in a field presses its button.
+Focus goes to the main button, not a field, so a phone keyboard doesn't
+cover the sheet (same as the reminder sheet).
+
+**Pages without data-layer.js** (Route Planner, Parts, Settings, Runway):
+- `thShiftStatus` reads `th_shift_log` and the stored session directly,
+  with the same 14-hour and duplicate-shift rules.
+- The button opens `/tools/workspace.html#shift`, and the shell opens the
+  sheet there on arrival, then clears the hash. That's the job clock's
+  pattern (its Stop opens the job there).
+
+**Runway Dashboard** mirrors the header and sidebar CSS only. Its button
+goes to the Dashboard, so it needs no sheet styles.
+
+**Dashboard header at 390px:** the green pill makes its header wrap to a
+second row while on shift (it already wraps at 360px). Part 3's Dashboard
+card is the place to decide whether the Dashboard shows the header button
+at all, the way the job clock's bar hides on its own job's page.
+
+Tests: `tests/tools/shift-clock-shell.test.js` (14, jsdom, the same page
+harness as `job-clock.test.js`).
+
 <!-- Add new entries above this line -->
