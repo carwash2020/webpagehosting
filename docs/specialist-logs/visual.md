@@ -1605,4 +1605,11 @@ Found with `document.getAnimations()` under emulated reduced motion. It lists ps
   - Headless Chromium never sets `:active` for CDP touch events, even on the existing `.btn:active`. Test `:active` rules with a mouse press instead.
   - A tap that lifts an element 2px can move it off the tap point and clear `:hover`, which hides stickiness. Removing the lift exposed a colour-only hover (`.hero .btn.outline:hover`) that had been sticking all along.
 
+## 2026-09-23 (late) -- round 9: blog cards join the no-sticky-hover rule
+
+- `.blog-index-item` is used on the blog index and by the "Recent Notes" cards on 8 service pages. Its `:hover` and `:focus-visible` shared one rule, so a tapped card kept its blue border, deeper shadow and orange title. The hover half now sits in `@media (hover: hover)`. Focus keeps its own rule with identical values.
+- `touch-no-sticky-hover.test.js` now also scans `blog/blog.css`. `blog-index-cards.test.js` checks the guarded hover and the focus rule separately, both still with `.service-card`'s values.
+- **blog.css has a hand-picked `?v=` timestamp, not a content hash,** and `check-consistency.js` doesn't track it. So an edit means bumping all 22 references by hand (now `202609231020`). `blog-index-cards.test.js` fails if they disagree. Adding `blog/blog.css` to `GLOBAL_SHARED_FILES` would let `fix-versions` manage it; that's a small checker change for another round.
+- The hover transform reads `none` on these cards too: `[data-reveal]` outranks it, the same as the homepage cards in round 8's note.
+
 <!-- Add new entries above this line -->

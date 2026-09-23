@@ -13,12 +13,16 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 
-const CSS = fs.readFileSync(path.join(__dirname, '..', '..', 'styles.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+const read = (f) => fs.readFileSync(path.join(__dirname, '..', '..', f), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+const CSS = read('styles.css');
+// blog.css (the blog index cards, also loaded by 8 service pages) follows
+// the same rule since 2026-09-23.
+const BLOG = read('blog/blog.css');
 
 // Walk the stylesheet keeping track of enclosing @media blocks.
-function rules() {
+function rules(css = CSS) {
   const out = []; const stack = [];
-  for (const m of CSS.matchAll(/(@media[^{]+)\{|([^{}]+)\{([^{}]*)\}|\}/g)) {
+  for (const m of css.matchAll(/(@media[^{]+)\{|([^{}]+)\{([^{}]*)\}|\}/g)) {
     if (m[1]) { stack.push(m[1].trim()); continue; }
     if (m[2] !== undefined) { out.push({ sel: m[2].trim().replace(/\s+/g, ' '), body: m[3], media: [...stack] }); continue; }
     stack.pop();
@@ -26,6 +30,7 @@ function rules() {
   return out;
 }
 const ALL = rules();
+const BLOG_RULES = rules(BLOG);
 const SURFACE = /(^|;)\s*(transform|box-shadow|border(-[a-z]+)?(-color)?|background(-color)?|filter)\s*:/;
 const UNGUARDED_OK = [
   /^\.nav-dropdown:hover \.nav-dropdown-menu, \.nav-dropdown:focus-within \.nav-dropdown-menu$/, // opens the menu on iPad
@@ -60,4 +65,15 @@ test('tappable chips, pills, area links, gallery tiles and the chat bubble get :
     assert.ok(r, `missing ${sel}:active`);
     assert.match(r.body, new RegExp(`transform:scale\\(${scale.replace('.', '\\.')}\\);`));
   }
+});
+
+test('blog.css: the blog index cards follow the same rule, and keep their keyboard focus look', () => {
+  const bad = BLOG_RULES.filter((r) => r.sel.includes(':hover') && SURFACE.test(r.body) && !r.media.some((m) => /\(hover:\s*hover\)/.test(m)));
+  assert.deepEqual(bad.map((r) => r.sel), []);
+  const hover = BLOG_RULES.find((r) => r.sel === '.blog-index-item:hover' && r.media.some((m) => /\(hover:\s*hover\)/.test(m)));
+  const focus = BLOG_RULES.find((r) => r.sel === '.blog-index-item:focus-visible' && !r.media.length);
+  assert.ok(hover && focus, 'expected a guarded :hover rule and an unconditional :focus-visible rule');
+  const norm = (b) => b.replace(/\s+/g, ' ').trim();
+  assert.equal(norm(hover.body), norm(focus.body), 'hover and keyboard focus should look the same');
+  assert.ok(BLOG_RULES.some((r) => r.sel === '.blog-index-item:focus-visible .blog-index-item-title' && !r.media.length));
 });

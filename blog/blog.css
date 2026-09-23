@@ -235,7 +235,19 @@
   color: var(--text);
   transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
-.blog-index-item:hover, .blog-index-item:focus-visible {
+/* Hover behind @media (hover:hover) (2026-09-23), the same rule as
+   styles.css: a phone keeps :hover on whatever was last tapped, so a
+   tapped card kept its blue border, deeper shadow and orange title.
+   Keyboard focus keeps the identical look everywhere. */
+@media (hover: hover) {
+  .blog-index-item:hover {
+    transform: translateY(-4px);
+    border-color: var(--blue-text);
+    box-shadow: 0 14px 28px rgba(0,0,0,0.14);
+  }
+  .blog-index-item:hover .blog-index-item-title { color: var(--orange-text); }
+}
+.blog-index-item:focus-visible {
   transform: translateY(-4px);
   border-color: var(--blue-text);
   box-shadow: 0 14px 28px rgba(0,0,0,0.14);
@@ -260,7 +272,7 @@
   margin: 0 0 8px;
   line-height: 1.25;
 }
-.blog-index-item:hover .blog-index-item-title, .blog-index-item:focus-visible .blog-index-item-title {
+.blog-index-item:focus-visible .blog-index-item-title {
   color: var(--orange-text);
 }
 .blog-index-item-dek {

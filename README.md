@@ -4624,3 +4624,24 @@ New test: `tests/design/touch-no-sticky-hover.test.js` (4; all fail against the 
 - the card, chip and button hovers are all guarded;
 - keyboard focus styles still apply everywhere;
 - the new press states exist.
+
+## What changed, 2026-09-23 -- Blog cards no longer stay highlighted after a tap
+
+Public site: `blog/blog.css`, plus its version stamp on the 22 pages that load it. Desktop is unchanged.
+
+**What was wrong.** The same phone quirk as the previous entry, on the one set of cards it didn't reach. On the blog index, and in the "Recent Notes" cards on 8 service pages, a tapped card kept its blue border, deeper shadow and orange title.
+
+**The fix.** The card's hover effect now only applies on devices with a mouse or trackpad. Keyboard focus keeps exactly the same highlight.
+
+**Checked** on the blog index and a service page:
+- mouse hover and keyboard focus look identical to before on desktop;
+- after a tap in touch emulation, the card no longer keeps the hover look.
+
+Verified:
+- full suite 3259 of 3260 passing; the one failure is the known `check-links.py` sandbox-proxy test;
+- `check-consistency`, `check-undefined-vars`, `eslint` and `check-visual-snapshot` clean;
+- `check-links.py`: the only failures are the sandbox proxy refusing outside sites, no internal link broken.
+
+Tests:
+- `touch-no-sticky-hover.test.js` now also scans `blog/blog.css` (its new check fails against the old file);
+- `blog-index-cards.test.js` checks the hover and focus rules separately.
