@@ -493,8 +493,18 @@ function mergeClientErrorLog(localArr, remoteArr, clearedAt) {
 // two devices' independently-capped copies merge together (up to 400).
 // Keeps the most recently deleted entries.
 const GRAVEYARD_MAX_AFTER_MERGE = 200;
+// removedAt (2026-09-23, bug fix) marks an entry restored or permanently
+// deleted. It used to be dropped from the array instead, and this union
+// merge brought it straight back from the server's copy. The mark only
+// ever goes on, never off, so it's kept when either side has it -- this
+// merge has no base to three-way diff against.
 function mergeGraveyard(localArr, remoteArr) {
-  const merged = mergeRecordArrays(localArr, remoteArr, 'graveyardId');
+  const removedAt = new Map();
+  (localArr || []).concat(remoteArr || []).forEach(g => {
+    if (g && g.removedAt && (!removedAt.has(g.graveyardId) || g.removedAt > removedAt.get(g.graveyardId))) removedAt.set(g.graveyardId, g.removedAt);
+  });
+  const merged = mergeRecordArrays(localArr, remoteArr, 'graveyardId')
+    .map(g => (removedAt.has(g.graveyardId) && g.removedAt !== removedAt.get(g.graveyardId)) ? Object.assign({}, g, { removedAt: removedAt.get(g.graveyardId) }) : g);
   merged.sort((a, b) => new Date(b.deletedAt) - new Date(a.deletedAt));
   return merged.slice(0, GRAVEYARD_MAX_AFTER_MERGE);
 }
@@ -528,6 +538,47 @@ function applySyncData(obj, keysToApply) {
   // merge for what actually populates this.
   const newConflicts = [];
   const syncBase = loadSyncBase();
+  // A tombstone counts unless Restore lifted it (2026-09-23, bug fix):
+  // restoredAt at or after its deletedAt (thLiftTombstone, data-layer.js).
+  // Restore used to delete the tombstone locally instead, but tombstone
+  // lists merge as a union, so the server's copy brought it back on the
+  // next pull and the restored record was deleted again. A mark merges per
+  // field like any other edit, so the restore reaches every device; a later
+  // delete adds a newer tombstone, which counts again.
+  const tombstoneCounts = (t) => {
+    if (!t) return false;
+    const restored = t.restoredAt ? new Date(t.restoredAt).getTime() : NaN;
+    if (isNaN(restored)) return true;
+    const deleted = new Date(t.deletedAt).getTime();
+    return !isNaN(deleted) && deleted > restored;
+  };
+  // Tombstone lists merge by time, not field by field: for each id, the
+  // latest deletedAt and the latest restoredAt either side has seen. Both
+  // only ever move forward, so this needs no base. The per-field merge
+  // falls back to "remote wins" without one -- and a device has none for a
+  // tombstone it created until it pulls its own push back, so a restore
+  // made before then was lost to the server's unmarked copy.
+  const laterIso = (a, b) => {
+    const ta = Date.parse(a), tb = Date.parse(b);
+    if (isNaN(ta)) return b || a;
+    if (isNaN(tb)) return a;
+    return tb > ta ? b : a;
+  };
+  const mergeTombstones = (localArr, remoteArr) => {
+    const byId = new Map();
+    localArr.concat(remoteArr).forEach(t => {
+      if (!t || t.id === undefined) return;
+      const seen = byId.get(t.id);
+      if (!seen) { byId.set(t.id, Object.assign({}, t)); return; }
+      const newer = laterIso(seen.deletedAt, t.deletedAt) === t.deletedAt && t.deletedAt !== seen.deletedAt;
+      const merged = newer ? Object.assign({}, seen, t) : Object.assign({}, t, seen);
+      merged.deletedAt = laterIso(seen.deletedAt, t.deletedAt);
+      const restoredAt = laterIso(seen.restoredAt, t.restoredAt);
+      if (restoredAt) merged.restoredAt = restoredAt; else delete merged.restoredAt;
+      byId.set(t.id, merged);
+    });
+    return Array.from(byId.values());
+  };
 
   (keysToApply || SYNC_DATA_KEYS).forEach(k => {
     if (obj[k] === undefined || obj[k] === null) return;
@@ -587,7 +638,9 @@ function applySyncData(obj, keysToApply) {
         localStorage.setItem(k, obj[k]);
         return;
       }
-      const mergedArr = k === 'th_parts_reference_units'
+      const mergedArr = /_tombstones$/.test(k)
+        ? mergeTombstones(localArr, remoteArr)
+        : k === 'th_parts_reference_units'
         ? mergePartsReferenceUnits(localArr, remoteArr)
         : k === 'th_client_errors'
         ? mergeClientErrorLog(localArr, remoteArr, localStorage.getItem('th_client_errors_cleared_at'))
@@ -608,49 +661,49 @@ function applySyncData(obj, keysToApply) {
       let finalArr = mergedArr;
       if (k === 'th_clients') {
         let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_client_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_client_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
         if (tombstonedIds.length) {
           const tombstoneSet = new Set(tombstonedIds);
           finalArr = mergedArr.filter(c => !tombstoneSet.has(c.id));
         }
       } else if (k === 'th_tracker_jobs') {
         let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_job_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_job_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
         if (tombstonedIds.length) {
           const tombstoneSet = new Set(tombstonedIds);
           finalArr = mergedArr.filter(j => !tombstoneSet.has(j.id));
         }
       } else if (k === 'th_expense_log') {
         let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_expense_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_expense_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
         if (tombstonedIds.length) {
           const tombstoneSet = new Set(tombstonedIds);
           finalArr = mergedArr.filter(e => !tombstoneSet.has(e.id));
         }
       } else if (k === 'th_income_log') {
         let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_income_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_income_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
         if (tombstonedIds.length) {
           const tombstoneSet = new Set(tombstonedIds);
           finalArr = mergedArr.filter(i => !tombstoneSet.has(i.id));
         }
       } else if (k === 'th_tracker_contacts') {
         let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_contact_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_contact_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
         if (tombstonedIds.length) {
           const tombstoneSet = new Set(tombstonedIds);
           finalArr = mergedArr.filter(c => !tombstoneSet.has(c.id));
         }
       } else if (k === 'th_contracts') {
         let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_contract_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_contract_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
         if (tombstonedIds.length) {
           const tombstoneSet = new Set(tombstonedIds);
           finalArr = mergedArr.filter(c => !tombstoneSet.has(c.id));
         }
       } else if (k === 'th_invoices') {
         let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_invoice_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_invoice_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
         if (tombstonedIds.length) {
           const tombstoneSet = new Set(tombstonedIds);
           finalArr = mergedArr.filter(i => !tombstoneSet.has(i.id));
@@ -666,14 +719,14 @@ function applySyncData(obj, keysToApply) {
         });
       } else if (k === 'th_quotes') {
         let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_quote_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_quote_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
         if (tombstonedIds.length) {
           const tombstoneSet = new Set(tombstonedIds);
           finalArr = mergedArr.filter(q => !tombstoneSet.has(q.id));
         }
       } else if (k === 'th_price_reference') {
         let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_price_ref_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_price_ref_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
         if (tombstonedIds.length) {
           const tombstoneSet = new Set(tombstonedIds);
           finalArr = mergedArr.filter(r => !tombstoneSet.has(r.id));
@@ -683,44 +736,44 @@ function applySyncData(obj, keysToApply) {
         // the start but never read here, so a stale device still holding a
         // deleted part pushed it straight back.
         let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_inventory_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_inventory_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
         if (tombstonedIds.length) {
           const tombstoneSet = new Set(tombstonedIds);
           finalArr = mergedArr.filter(p => !tombstoneSet.has(p.id));
         }
       } else if (k === 'th_job_templates') {
         let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_template_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_template_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
         if (tombstonedIds.length) {
           const tombstoneSet = new Set(tombstonedIds);
           finalArr = mergedArr.filter(t => !tombstoneSet.has(t.id));
         }
       } else if (k === 'th_known_issues') {
         let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_known_issue_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_known_issue_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
         if (tombstonedIds.length) {
           const tombstoneSet = new Set(tombstonedIds);
           finalArr = mergedArr.filter(i => !tombstoneSet.has(i.id));
         }
       } else if (k === 'th_review_requests_pending') {
         let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_review_requests_pending_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_review_requests_pending_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
         if (tombstonedIds.length) {
           const tombstoneSet = new Set(tombstonedIds);
           finalArr = mergedArr.filter(p => !tombstoneSet.has(p.id));
         }
       } else if (k === 'th_shift_log') {
         let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_shift_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIds = []; }
+        try { tombstonedIds = JSON.parse(localStorage.getItem('th_shift_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
         if (tombstonedIds.length) {
           const tombstoneSet = new Set(tombstonedIds);
           finalArr = mergedArr.filter(s => !tombstoneSet.has(s.id));
         }
       } else if (k === 'th_parts_reference_units') {
         let tombstonedUnitIds = [];
-        try { tombstonedUnitIds = JSON.parse(localStorage.getItem('th_pr_unit_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedUnitIds = []; }
+        try { tombstonedUnitIds = JSON.parse(localStorage.getItem('th_pr_unit_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedUnitIds = []; }
         let tombstonedIssueIds = [];
-        try { tombstonedIssueIds = JSON.parse(localStorage.getItem('th_pr_issue_tombstones') || '[]').map(t => t.id); } catch (e) { tombstonedIssueIds = []; }
+        try { tombstonedIssueIds = JSON.parse(localStorage.getItem('th_pr_issue_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIssueIds = []; }
         const unitTombstoneSet = new Set(tombstonedUnitIds);
         const issueTombstoneSet = new Set(tombstonedIssueIds);
         finalArr = mergedArr

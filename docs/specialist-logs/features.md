@@ -3120,6 +3120,36 @@ The last booking-flow follow-up. It waited until the shift-clock work (#385) had
 - **Mechanical.** fix-versions re-stamped `dev-tools-shared.js` where it loads and bumped the tools service worker's cache name.
 - **New test:** `tests/dev-tools/booking-test-copy.test.js` (3).
 
+## 2026-09-23 -- Shift clock, part 4: Your week and Hours worked are one card
+
+The owner's feedback on part 3: the two Dashboard cards were "basically the
+same" and took two screens on a phone. They're now one card, Your week
+(`renderWeekCard()` in `workspace.html`). `#shiftCard`, `renderShiftCard()`
+and its interval are gone.
+
+**What the card shows:**
+- **The day's status and its one button** at the top, when you're signed
+  in: Start my day, "On shift since 7:42 AM" with End my day, or Fix it for
+  a shift that needs an end time. The button opens the shell's shift sheet,
+  as before.
+- **One bar pair per day** once the week has shift hours: green for hours
+  worked (the whole shift), and a narrower orange bar in front of it for
+  time on the clock (job time). A small legend says which is which. With
+  no shift hours the bars are the old job-only orange, so someone who
+  never punches in sees exactly the card they had.
+- **Stats:** Worked, On the clock, Jobs done, and Billed (finance only).
+  Four stats sit in one row on a laptop and a 2x2 grid on a phone.
+- **The team view** is now a fold-away "Everyone this week" under the
+  stats, closed by default and still finance-only (fails closed). It stays
+  open across the card's once-a-minute refresh.
+
+**Unchanged:** the job clock and every number Your week showed before.
+`your-week.test.js` passes with only its fake element updated (the card
+now toggles a class and wires its buttons once).
+
+Tests: `tests/tools/shift-week-card.test.js` (9) replaces
+`shift-hours-card.test.js`.
+
 ## 2026-09-23 -- Site content editor: checked, reviewed, undoable; Google rating + review count move into it
 
 The owner can now change the Google rating and review count (plus banners, homepage hours, phone, email) from `tools/site-content.html` with no branch, PR, or deploy. Everything after this PR merges bypasses review by design, so the safety lives in the tool and the database, not in CI.

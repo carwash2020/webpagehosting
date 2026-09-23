@@ -1014,3 +1014,59 @@ Tests:
 - `tests/sync/graveyard.test.js` (+1: a deleted part is labelled by name
   and restores).
 
+## 2026-09-23 -- Graveyard Restore was undone by the next sync (every record type)
+
+Logged as found-not-fixed in the inventory entry above; fixed here.
+
+**Root cause.** Restore did two things locally that union merges can't
+carry:
+- It deleted the record's tombstone. The tombstone list merges as a
+  union, so the server's copy put it back on the next pull, and
+  `applySyncData`'s filter deleted the just-restored record again.
+  `pushSync()` pulls before it pushes, so this happened on the very next
+  save.
+- It dropped the Graveyard entry. `mergeGraveyard` is also a union, so
+  restored and permanently-deleted entries reappeared in the Graveyard.
+
+`graveyard.test.js`'s "survives a subsequent sync pull" only simulated a
+remote with *no* tombstones, which never happens after a real delete has
+synced.
+
+**Second gotcha, found while fixing it.** Marking the tombstone instead of
+deleting it wasn't enough by itself. The per-field three-way merge falls
+back to "remote wins" when there's no base entry, and a device has no base
+entry for a tombstone it created until it pulls its own push back:
+`pushSync()` doesn't update the base after a successful push; only a pull
+does. So the unmarked server copy still won.
+
+**Fix:**
+- **`thLiftTombstone(key, id, wiki)`** (data-layer.js): Restore now marks
+  every tombstone for that id `restoredAt` instead of removing it, for
+  every record type including the Wiki's.
+- **`applySyncData`** (sync.js) has two new local helpers:
+  - `tombstoneCounts`: a tombstone counts only while its `deletedAt` is
+    later than its `restoredAt`, so deleting again after a restore still
+    sticks. It's used by all 16 filter reads.
+  - `mergeTombstones`, for every `*_tombstones` key: per id, the latest
+    `deletedAt` and the latest `restoredAt` either side has seen. Both
+    only move forward, so no base is needed.
+  - Both are local to `applySyncData` on purpose: several test harnesses
+    extract that one function on its own.
+- **Graveyard:** restored or permanently deleted entries get
+  `removedAt`. `mergeGraveyard` keeps the mark if either side has it;
+  `thLoadGraveyard()` hides marked entries; writes go through
+  `thLoadGraveyardRaw()` so the marks survive.
+
+**Still true, not changed here:** `pushSync()` never updates the sync base
+after a push. Any record edited twice between pulls, whose server copy
+already has the first edit, is treated as a same-field conflict with
+remote winning (it's logged in `th_sync_conflicts`). Live sync's echo pull
+usually hides this. Tombstones and the Graveyard no longer depend on the
+base, but every other record type still does. It's worth its own look.
+
+Tests:
+- `tests/sync/graveyard-restore-sync.test.js` (7, new; all fail on main):
+  two devices and a server copy, run the way `pushSync` runs;
+- `graveyard.test.js`: its three restore tests now expect the tombstone
+  kept and marked, not deleted.
+
