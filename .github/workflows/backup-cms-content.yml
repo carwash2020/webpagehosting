@@ -18,6 +18,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   backup:
@@ -52,13 +53,42 @@ jobs:
           done
 
       - name: Commit if content actually changed
+        id: commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add backups/
           if git diff --cached --quiet; then
             echo "No content changes since last backup -- nothing to commit."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           else
-            git commit -m "Automated CMS content backup ($(date -u +%Y-%m-%d))"
-            git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
+
+      # main is a protected branch (PR + the "test" status check
+      # required) -- a direct `git push` here fails with
+      # "Protected branch update failed" (GH006), confirmed by 2
+      # consecutive real scheduled-run failures (2026-09-22, 2026-09-23)
+      # after that protection was turned on. Every other workflow in
+      # this repo that commits back to a branch either pushes to a PR's
+      # OWN head branch (auto-fix-cache-bust.yml) or targets a
+      # different, unprotected repo (backup-sensitive-data.yml) --
+      # this was the one job still trying to push straight to main.
+      # Fixed the same way: commit to a fresh branch, open a PR, and
+      # let auto-merge land it once the required "test" check passes --
+      # still fully unattended, just through the same gate every human
+      # and every other bot's change already goes through.
+      - name: Open (and auto-merge) a PR with the backup, if anything changed
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          branch="backup/cms-content-$(date -u +%Y-%m-%d)"
+          git checkout -b "$branch"
+          git commit -m "Automated CMS content backup ($(date -u +%Y-%m-%d))"
+          git push origin "$branch"
+          pr_url=$(gh pr create \
+            --title "Automated CMS content backup ($(date -u +%Y-%m-%d))" \
+            --body "Daily point-in-time backup of site_content, site_faq, and site_terms (see this workflow's own header comment for why: no paid Supabase backup tier, git history on these 3 files IS the backup). Auto-merges once the required \`test\` check passes." \
+            --base main --head "$branch")
+          gh pr merge --auto --squash "$pr_url"
