@@ -401,7 +401,6 @@ test('hours: "Open" with times is saved in the site\'s own format, and a closing
 
 test('the editor\'s built-in fallbacks match what the public pages really show when a field is blank', () => {
   const index = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-  const { window } = new JSDOM(PAGE_HTML.replace(/<script[\s\S]*?<\/script>/g, ''));
   const src = PAGE_HTML.match(/const CMS_BUILT_IN = \{[\s\S]*?\n  \};/)[0];
   const builtIn = new Function(src + '; return CMS_BUILT_IN;')();
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -416,7 +415,6 @@ test('the editor\'s built-in fallbacks match what the public pages really show w
   assert.deepEqual([...phones], [builtIn.phone]);
   const emails = new Set([...indexDom.querySelectorAll('.js-email-text')].map(el => el.textContent.trim()));
   assert.deepEqual([...emails], [builtIn.email]);
-  window.close();
 });
 
 // ---------------------------------------------------------------------------
