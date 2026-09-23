@@ -548,7 +548,7 @@ function fixVersions(dir) {
 // that one real hash -- the same automatic, no-judgment-call mechanism
 // every other shared file already gets, just no longer scoped to a single
 // directory.
-const GLOBAL_SHARED_FILES = ['styles.css', 'js/triage.js', 'js/business-hours.js', 'js/site-motion.js', 'js/analytics-events.js', 'js/promo-banner.js', 'js/hiring-banner.js', 'js/utm-tracking.js', 'signature-pad.js', 'js/booking-flow.js'];
+const GLOBAL_SHARED_FILES = ['styles.css', 'js/triage.js', 'js/business-hours.js', 'js/site-motion.js', 'js/analytics-events.js', 'js/promo-banner.js', 'js/hiring-banner.js', 'js/utm-tracking.js', 'signature-pad.js', 'js/booking-flow.js', 'js/review-stats.js'];
 const BLOG_DIR = path.join(__dirname, '..', 'blog');
 // locations/ and services/ (2026-09-23): the 16 city and service pages moved
 // out of the root on 2026-09-21, and htmlFilesIn() doesn't recurse, so from

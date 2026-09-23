@@ -86,6 +86,10 @@ const SHARED_SCRIPT_FILES = [
   // public lead-capture forms (index.html, booking.html), same
   // reasoning as business-hours.js just above.
   'js/utm-tracking.js',
+  // Google rating and review count from site_content (2026-09-23) --
+  // loaded by index.html, booking.html, and the 3 appliance repair pages,
+  // which call its applyReviewStats() from their own site_content fetch.
+  'js/review-stats.js',
   // The client portal push-notifications helper (2026-09-04) -- loaded
   // by portal/settings.html, same reasoning as every other entry
   // here. (Written without any apostrophes deliberately -- the
