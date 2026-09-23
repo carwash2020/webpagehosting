@@ -225,13 +225,26 @@ includes any stranger with a mailbox.
   `site_terms`), the CMS history tables, and the `secure-documents` and
   `receipts` buckets were open to any authenticated session. Now
   internal-only (`sql/security/restrict_site_content_and_private_buckets_to_internal_accounts.sql`).
-- **HIGH:** 8 trigger/cron-only edge functions accepted the anon key
-  (phishing relay to real clients); fixed in the repo, one deployed so
-  far. Deployed `Send-Push` still has no auth check (repo fix never
-  deployed). Internal MFA is enforced only by `login.html`: an `aal1`
-  token passes every RLS policy.
-- **MEDIUM:** Stripe double-charge path, SetupIntents for any signed-in
-  session, webhook doesn't check amounts. Written up, not yet fixed.
+- **HIGH, fixed live:** 8 trigger/cron-only edge functions accepted the
+  anon key (a phishing relay to real clients). All are deployed from
+  `main` now, and each was verified live: anon gets 401, the Vault key
+  gets through. `Send-Push` is live with its caller check.
+- **HIGH, push privacy, certified and fixed live:** team alerts went to
+  every push subscription, including any client's. No client had
+  subscribed yet, so nothing leaked. The broadcast is internal-only now,
+  and client pushes find their recipient by an exact email match. Both
+  service workers only open same-origin pages on a tap (PR #381).
+- **HIGH, open, owner decision:** internal MFA is enforced only by
+  `login.html`, so an `aal1` token passes every RLS policy. Recovery
+  codes can also be minted at `aal1`.
+- **MEDIUM:** the Stripe double charge is fixed (PR #386: an invoice
+  that's already paid or paying can't be charged again, and the daily
+  reconcile flags any that slip through). Still open: SetupIntents for
+  any signed-in session (closing signup removes the stranger path), and
+  the webhook doesn't compare amounts (LOW).
+- **LOW, fixed live:** `role_definitions` and `th_uptime_checks` reads
+  are staff-only, and anon can no longer EXECUTE the recovery-code RPCs
+  (PR #384).
 
 ## Known, accepted gaps (not oversights)
 
