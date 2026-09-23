@@ -369,11 +369,19 @@ function thAddPrIssueTombstone(unitId, issueId) {
 // without needing to think about it. graveyardId is separate from the
 // record's own id, since two different record types could otherwise
 // collide on the same id value.
+//
+// Restoring or permanently deleting an entry marks it removedAt rather than
+// dropping it (2026-09-23, bug fix): a dropped entry came straight back from
+// the server's copy on the next sync, because the graveyard merges as a
+// union. sync.js's mergeGraveyard keeps the mark whichever side has it.
+// thLoadGraveyard() returns what the Graveyard shows; writes go through the
+// raw list so the marks survive.
 const TH_GRAVEYARD_KEY = 'th_graveyard';
 const TH_GRAVEYARD_MAX = 200;
-function thLoadGraveyard() { return thRead(TH_GRAVEYARD_KEY, []); }
+function thLoadGraveyardRaw() { return thRead(TH_GRAVEYARD_KEY, []); }
+function thLoadGraveyard() { return thLoadGraveyardRaw().filter(g => g && !g.removedAt); }
 function thAddToGraveyard(recordType, record) {
-  const list = thLoadGraveyard();
+  const list = thLoadGraveyardRaw();
   list.push({
     graveyardId: 'gy_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
     recordType,
@@ -384,8 +392,22 @@ function thAddToGraveyard(recordType, record) {
   thWrite(TH_GRAVEYARD_KEY, list);
 }
 function thRemoveFromGraveyard(graveyardId) {
-  const list = thLoadGraveyard().filter(g => g.graveyardId !== graveyardId);
+  const at = new Date().toISOString();
+  const list = thLoadGraveyardRaw().map(g => (g && g.graveyardId === graveyardId && !g.removedAt) ? Object.assign({}, g, { removedAt: at }) : g);
   thWrite(TH_GRAVEYARD_KEY, list);
+}
+
+// Restore's half of a tombstone (2026-09-23, bug fix): marks every tombstone
+// for this id restoredAt now, instead of deleting them. Deleting only ever
+// happened on this device; the server's copy brought the tombstone back on
+// the next pull and the restored record was deleted again. sync.js's
+// applySyncData counts a tombstone only while its deletedAt is later than
+// its restoredAt, so a later delete still sticks. `wiki` routes the write
+// through thWriteWiki, for the Appliance Wiki's own sync.
+function thLiftTombstone(key, id, wiki) {
+  const at = new Date().toISOString();
+  const list = thRead(key, []).map(t => (t && String(t.id) === String(id)) ? Object.assign({}, t, { restoredAt: at }) : t);
+  return wiki ? thWriteWiki(key, list) : thWrite(key, list);
 }
 
 // "Flag this page" queue (2026-08-21), requested directly: a quick way
