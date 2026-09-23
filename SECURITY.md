@@ -28,13 +28,22 @@ vary by what a table is for, and that's deliberate:
   visitors) to `INSERT` -- that's the whole point, since these back
   public-facing forms (the booking flow, the contact form) that
   guests use without ever logging in.
-- `site_content`, `site_faq`, and `site_terms` allow any
-  `authenticated` account full read/write access, not scoped to a
-  specific user. This looks permissive on paper, but the real threat
-  model is: exactly two accounts (Connor, Steve) will ever be
-  `authenticated` at all, and both are already fully trusted with
-  production data. There's no public sign-up path that could ever add
-  a third.
+- `site_content`, `site_faq`, and `site_terms` are readable by anyone
+  (every public page loads them as `anon`), but writes require an
+  internal account with `account_roles.can_manage_site_content` --
+  the same permission `tools/site-content.html` gates its editors on.
+- **`authenticated` does NOT mean "Connor or Steve".** An earlier
+  version of this file said exactly two accounts would ever be
+  `authenticated`, and several policies were written on that basis
+  (`using (true)` for any signed-in session). That stopped being true
+  when client-portal accounts shipped, and was never true in practice:
+  Supabase Auth's public signup was left enabled (confirmed live
+  2026-09-23, `disable_signup: false`), so any stranger with a real
+  mailbox can get an `authenticated` session. Every policy must check
+  `account_roles` (internal), or a row's own `client_email` (portal
+  client), never `authenticated` alone. The 2026-09-23 audit
+  (`docs/specialist-logs/security.md`) found and closed the policies
+  that didn't.
 - Everything else defaults to locked down, checked against the
   `account_roles` table (see "Account roles system" in
   `DISASTER_RECOVERY.md`) rather than a hardcoded email check.
