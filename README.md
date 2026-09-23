@@ -4900,3 +4900,32 @@ Tests: `tests/sync/graveyard-restore-sync.test.js` (new: two devices and a
 cloud copy, restoring, deleting again, and the Graveyard list). All 7
 failed before the fix.
 
+## What changed, 2026-09-23 -- Your week and Hours worked are now one Dashboard card
+
+Dashboard only. The two cards showed almost the same thing and took two
+screens on a phone, so they're merged into Your week.
+
+**What the card shows now:**
+- **Your day at the top:** Start my day, "On shift since 7:42 AM" with
+  End my day, or Fix it for a shift that needs an end time.
+- **One bar per day:** green for the hours you worked, with a narrower
+  orange bar for the time on the clock on jobs. A small key says which
+  is which. If you haven't used Start my day this week, the bars are the
+  same orange job-clock bars as before.
+- **The totals:** Worked, On the clock, Jobs done, and Billed (for anyone
+  who can see finance). They sit two by two on a phone.
+- **Everyone this week:** the team's hours are a fold-away list under the
+  totals, closed until you tap it. It's still only for people who can see
+  finance.
+
+Nothing about the job clock changes.
+
+Verified:
+- full suite passing apart from the known `check-links.py`
+  sandbox-proxy test;
+- `check-consistency`, `check-undefined-vars` and `eslint` clean;
+- checked in a browser at phone and laptop width.
+
+Tests: `tests/tools/shift-week-card.test.js` (9, new) replaces
+`shift-hours-card.test.js`. `your-week.test.js` passes unchanged apart
+from its fake page element.

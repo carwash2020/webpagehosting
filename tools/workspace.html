@@ -586,7 +586,8 @@
   .week-label { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; }
   .week-range { color: var(--text-dim); font-size: 12.5px; }
   .week-body { display: flex; align-items: flex-end; gap: 22px; }
-  .week-bars { flex: 1 1 auto; max-width: 620px; display: grid; grid-template-columns: repeat(7, minmax(26px, 1fr)); gap: 8px; align-items: end; }
+  .week-chart { flex: 1 1 auto; min-width: 0; max-width: 620px; }
+  .week-bars { display: grid; grid-template-columns: repeat(7, minmax(26px, 1fr)); gap: 8px; align-items: end; }
   .week-bar { display: flex; flex-direction: column; align-items: center; gap: 4px; }
   .week-bar-h { min-height: 14px; font-size: 10.5px; font-weight: 700; color: var(--text-dim); font-variant-numeric: tabular-nums; }
   .week-bar-track { position: relative; display: block; width: 100%; height: 84px; border-radius: 7px; background: var(--bg-panel-2); overflow: hidden; }
@@ -601,9 +602,10 @@
   .week-live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--orange); animation: th-clock-pulse 1.6s ease-out infinite; }
   .week-hint { margin-top: 12px; font-size: 12.5px; color: var(--text-dim); }
   @media (prefers-reduced-motion: reduce) { .week-live-dot { animation: none; } }
-  /* Hours worked (2026-09-23, shift clock part 3): Your week's layout, in
-     the shift clock's green -- orange stays the job clock's colour. */
-  .shift-now { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  /* The shift clock in Your week (2026-09-23): the day's status row, and
+     each bar's worked hours in green behind the job clock's orange (made
+     narrower so both show). Orange stays the job clock's colour. */
+  .shift-now { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
   .shift-now-text { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; color: var(--white); }
   .shift-now-sub { display: block; margin-top: 2px; font-size: 12.5px; font-weight: 500; color: var(--text-dim); }
   .shift-now.is-due .shift-now-text { color: #e6a23c; }
@@ -611,10 +613,19 @@
   .shift-dot { flex-shrink: 0; width: 9px; height: 9px; border-radius: 50%; background: #4caf78; }
   .shift-now.is-due .shift-dot { background: #e6a23c; }
   .shift-now.is-off .shift-dot { background: transparent; border: 1.5px solid var(--text-dim); }
-  .shift-card .week-bar-fill { background: linear-gradient(180deg, #7fd3a2, #4caf78 80%); }
-  .shift-card .week-bar.is-today .week-bar-day, .shift-card .week-bar.is-today .week-bar-h { color: #7fd3a2; }
-  .shift-team { width: 100%; margin-top: 16px; border-collapse: collapse; font-size: 13.5px; }
-  .shift-team caption { text-align: left; padding-bottom: 6px; color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; }
+  .week-bar-fill.is-worked { background: linear-gradient(180deg, #7fd3a2, #4caf78 80%); }
+  .week-card.has-worked .week-bar-fill:not(.is-worked) { left: 27%; right: 27%; border-radius: 5px 5px 7px 7px; }
+  .week-legend { display: flex; gap: 14px; margin-top: 8px; font-size: 11.5px; color: var(--text-dim); }
+  .week-key { display: inline-block; width: 9px; height: 9px; margin-right: 5px; border-radius: 3px; vertical-align: -1px; background: var(--orange); }
+  .week-key.is-worked { background: #4caf78; }
+  .week-live-dot.is-worked { background: #4caf78; animation: none; }
+  .week-stats.is-four { gap: 22px; grid-auto-columns: minmax(96px, auto); }
+  .shift-team-wrap { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
+  .shift-team-wrap > summary { cursor: pointer; list-style: none; font-size: 12.5px; color: var(--text-dim); }
+  .shift-team-wrap > summary::-webkit-details-marker { display: none; }
+  .shift-team-wrap > summary::after { content: ' \25B8'; }
+  .shift-team-wrap[open] > summary::after { content: ' \25BE'; }
+  .shift-team { width: 100%; max-width: 640px; margin-top: 8px; border-collapse: collapse; font-size: 13.5px; }
   .shift-team th { text-align: left; padding: 6px 8px 6px 0; font-size: 11.5px; font-weight: 600; color: var(--text-dim); border-bottom: 1px solid var(--border); }
   .shift-team td { padding: 8px 8px 8px 0; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: top; }
   .shift-team tr:last-child td { border-bottom: 0; }
@@ -627,9 +638,11 @@
   @media (max-width: 720px) {
     .week-card { padding: 14px 16px; }
     .week-body { flex-direction: column; align-items: stretch; gap: 14px; }
-    .week-bars { max-width: none; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+    .week-chart { max-width: none; }
+    .week-bars { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
     .week-bar-track { height: 72px; }
     .week-stats { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .week-stats.is-four { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     .week-stat-value { font-size: 21px; }
   }
   @media (max-width: 720px) {
@@ -723,17 +736,12 @@
   <a class="dash-primary-action" href="/tools/finance.html#expenses" data-tile-perm="can_view_finance">Log expense</a>
 </nav>
 
-<!-- Your week (2026-09-23, Workspace rework part 11): the scoreboard --
-     hours on the clock each day, jobs done, and billed, beside last week.
-     Filled by renderWeekCard() from thWeekSummary() in data-layer.js. -->
+<!-- Your week (2026-09-23, Workspace rework part 11, with the shift
+     clock folded in): the scoreboard -- Start my day / End my day, hours
+     worked and hours on the clock each day, jobs done, and billed, beside
+     last week. Filled by renderWeekCard() from thWeekSummary() and
+     thShiftWeekSummary() in data-layer.js. -->
 <div class="week-card" id="weekCard" aria-labelledby="weekCardLabel"></div>
-
-<!-- Hours worked (2026-09-23, shift clock part 3): Start my day / End my
-     day, your hours worked each day this week (whole shifts, not just
-     time on jobs), and -- for an account that can see finance --
-     everyone's. Filled by renderShiftCard() from thShiftWeekSummary() and
-     thShiftTeamSummary() in data-layer.js. -->
-<div class="week-card shift-card" id="shiftCard" aria-labelledby="shiftCardLabel"></div>
 
 <!-- Needs attention (2026-09-21): the ops inbox, open by default and
      directly under the hero -- leads, bookings, work requests, jobs
@@ -1020,8 +1028,7 @@
       <ul>
         <li><strong>Next Job</strong> &mdash; whatever's next on today's schedule, sorted by priority, with a tap-to-call phone number and a tap-to-open-Maps address, a straight line into that job's own page, and <strong>Route today</strong>: one link that opens the whole day's stops as a Google Maps route.</li>
         <li><strong>Money Owed</strong> &mdash; Current and Overdue, split apart so a client who's simply not due yet never gets lumped in with one who needs a follow-up call. Every unpaid invoice is listed right there (overdue first) with a one-tap <strong>Mark paid</strong> &mdash; confirm, and it's recorded as paid in full.</li>
-        <li><strong>Your week</strong> &mdash; the scoreboard under the daily actions: a bar for each day, Monday to Sunday, of the hours on the clock (today's grows while a clock runs), then jobs done and billed, with last week's number under each. Billed means invoices dated this week plus income you logged by hand; it shows only to accounts that can see finance.</li>
-        <li><strong>Hours worked</strong> &mdash; your whole day, not just time on jobs. Tap <strong>Start my day</strong> when you begin work and <strong>End my day</strong> when you're done (here, or with the clock button at the top of any page); driving, estimates and the time between jobs all count. The bars are this week, Monday to Sunday, with today and last week beside them. Forgot to clock out? A shift left open more than 14 hours stops counting until you say when you finished &mdash; it suggests when your last job clock stopped. Accounts that can see finance also see everyone's hours here. It's separate from the job clock: neither starts or stops the other.</li>
+        <li><strong>Your week</strong> &mdash; the scoreboard under the daily actions. At the top, <strong>Start my day</strong> when you begin work and <strong>End my day</strong> when you're done (or use the clock button at the top of any page). Then a bar for each day, Monday to Sunday: the green part is the hours you worked &mdash; driving, estimates and the time between jobs included &mdash; and the orange part inside it is the time on a job's clock. Under the bars: hours worked, hours on the clock, jobs done and billed, with last week's number under each. Billed means invoices dated this week plus income you logged by hand; it shows only to accounts that can see finance, and so does <strong>Everyone this week</strong>, everyone's hours. Forgot to clock out? A shift left open more than 14 hours stops counting until you say when you finished &mdash; it suggests when your last job clock stopped. The shift and the job clock are separate: neither starts or stops the other.</li>
         <li><strong>Texts that write themselves</strong> &mdash; <strong>On my way</strong> on Next Job, the <strong>Text</strong> button on a job, or <strong>Text</strong> in its sheet on Jobs. You get the texts that job calls for, already written with the client's name: On my way or Running late (pick 10, 20, 30 or 45 minutes), Confirm the visit, a quick Parts run, All done. Edit it if you like and <strong>Send</strong>: it opens your own Messages. The job remembers the last one (&ldquo;On my way sent 12 min ago&rdquo;).</li>
         <li><strong>Remind</strong> &mdash; on any invoice that's due or late (on Money Owed, in an invoice's sheet on Invoices, and on the job). The reminder is already written: their first name, the invoice, what's still owed, how late it is, and &mdash; for an invoice on the client portal &mdash; where to pay by card. Change anything you like, then <strong>Text</strong>, <strong>Email</strong>, or <strong>Copy</strong> it; it goes out from your own phone. Each one is logged on the invoice (&ldquo;Reminded 3 days ago&rdquo;), and the next one is a notch firmer: friendly, then following up, then firm.</li>
         <li><strong>Rest of Today</strong> &mdash; whatever else is on today's schedule after the next job.</li>
@@ -3182,108 +3189,98 @@
       </div>`).join('');
   }
 
-  // Your week (2026-09-23, Workspace rework part 11). Seven bars of hours
-  // on the clock (today's grows while a clock runs), then jobs done and
-  // billed, each with last week's number beside it rather than an arrow:
-  // on a Tuesday, a full last week always "wins". Billed shows only to an
-  // account that can see finance.
+  // Your week (2026-09-23, Workspace rework part 11; the shift clock's
+  // Hours worked card folded in the same day). One card for the week,
+  // Monday to Sunday:
+  //  - where your day stands, with its one button: Start my day, End my
+  //    day, or -- for a shift left open -- Fix it. Each opens the shell's
+  //    shift sheet;
+  //  - a bar per day: hours worked (whole shifts) in green, with the job
+  //    clock's hours on the clock inside it in orange -- the gap is driving,
+  //    estimates and the time between jobs. A week with no shifts shows the
+  //    job clock's bars alone, as before;
+  //  - worked, on the clock, jobs done and billed, each with last week's
+  //    number under it rather than an arrow (on a Tuesday, a full last week
+  //    always "wins"). Billed shows only to an account that can see finance;
+  //  - everyone's week, folded away, for an account that can see finance
+  //    once someone else has a shift. It fails closed: no finance
+  //    permission, or no role loaded yet, and it isn't there.
+  // A shift waiting for an end time counts nothing until it's fixed, and
+  // says so.
   let weekCardTick = null;
-  function renderWeekCard() {
-    const el = document.getElementById('weekCard');
-    if (!el || typeof thWeekSummary !== 'function') return;
-    const w = thWeekSummary();
-    const canFinance = typeof canViewFinance !== 'function' || canViewFinance() || !(typeof getCurrentUserRole === 'function' && getCurrentUserRole());
-    const range = w.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' – ' +
-      w.end.toLocaleDateString('en-US', w.end.getMonth() === w.start.getMonth() ? { day: 'numeric' } : { month: 'short', day: 'numeric' });
-    const h = (n) => (n % 1 ? n.toFixed(1) : String(n)) + ' h';
-    const top = Math.max(4, ...w.days.map(d => d.hours));
-    const bars = w.days.map(d =>
-      '<div class="week-bar' + (d.isToday ? ' is-today' : '') + (d.isFuture ? ' is-future' : '') + '">' +
-        '<span class="week-bar-h">' + (d.hours ? (d.hours % 1 ? d.hours.toFixed(1) : d.hours) : '') + '</span>' +
-        '<span class="week-bar-track"><span class="week-bar-fill" style="height:' + Math.round((d.hours / top) * 100) + '%"></span></span>' +
-        '<span class="week-bar-day">' + d.name.charAt(0) + '</span>' +
-      '</div>').join('');
-    const said = w.days.map(d => d.name + ' ' + (d.hours ? h(d.hours) : 'none')).join(', ');
-    const stat = (value, label, last) =>
-      '<div class="week-stat"><div class="week-stat-value">' + value + '</div><div class="week-stat-label">' + label + '</div>' +
-      (last ? '<div class="week-stat-last">' + last + '</div>' : '') + '</div>';
-    const noClockYet = !w.hours && !w.prevHours;
-    el.innerHTML =
-      '<div class="week-head"><span class="week-label" id="weekCardLabel">Your week</span><span class="week-range">' + range + '</span></div>' +
-      '<div class="week-body">' +
-        '<div class="week-bars" role="img" aria-label="' + escapeAttr('Hours on the clock: ' + said) + '">' + bars + '</div>' +
-        '<div class="week-stats">' +
-          stat(h(w.hours), w.running ? '<span class="week-live-dot" aria-hidden="true"></span>On the clock' : 'On the clock', w.prevHours ? 'Last week ' + h(w.prevHours) : '') +
-          stat(String(w.jobsDone), 'Job' + (w.jobsDone === 1 ? '' : 's') + ' done', w.prevJobsDone ? 'Last week ' + w.prevJobsDone : '') +
-          (canFinance ? stat(money(w.billed), 'Billed', w.prevBilled ? 'Last week ' + money(w.prevBilled) : '') : '') +
-        '</div>' +
-      '</div>' +
-      (noClockYet ? '<div class="week-hint">Start the clock on a job and your hours fill in here.</div>' : '');
-    // Today's bar grows while a clock runs; nothing ticks otherwise.
-    if (w.running && !weekCardTick) weekCardTick = setInterval(renderWeekCard, 60000);
-    else if (!w.running && weekCardTick) { clearInterval(weekCardTick); weekCardTick = null; }
-  }
-
-  // Hours worked (2026-09-23, shift clock part 3). The shift clock's
-  // scoreboard: where your day stands with its one button (Start my day,
-  // End my day, or -- for a shift left open -- Fix it, all opening the
-  // shell's shift sheet), seven bars of hours worked this week, today and
-  // last week; then, for an account that can see finance, everyone's week.
-  // A shift waiting for an end time counts nothing anywhere until it's
-  // fixed, and says so. Team hours fail closed: no finance permission (or
-  // no role loaded), no team table.
-  let shiftCardTick = null;
   function shiftPersonName(email) {
     const me = typeof thShiftEmail === 'function' ? thShiftEmail() : null;
     if (me && email === me && typeof getCurrentUserFirstName === 'function' && getCurrentUserFirstName() && getCurrentUserFirstName() !== me) return getCurrentUserFirstName();
     const local = String(email || '').split('@')[0].split(/[._-]+/)[0];
     return local ? local.charAt(0).toUpperCase() + local.slice(1) : email;
   }
-  function renderShiftCard() {
-    const el = document.getElementById('shiftCard');
-    if (!el || typeof thShiftWeekSummary !== 'function' || typeof thShiftEmail !== 'function') return;
-    const who = thShiftEmail();
-    if (!who) { el.innerHTML = ''; return; }
+  function renderWeekCard() {
+    const el = document.getElementById('weekCard');
+    if (!el || typeof thWeekSummary !== 'function') return;
     const now = Date.now();
-    const w = thShiftWeekSummary(who, now);
-    const h = (n) => (n % 1 ? n.toFixed(1) : String(n)) + ' h';
-    const t = (iso) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-    const day = (iso) => new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const w = thWeekSummary(now);
+    const who = typeof thShiftEmail === 'function' ? thShiftEmail() : null;
+    const s = who && typeof thShiftWeekSummary === 'function' ? thShiftWeekSummary(who, now) : null;
+    const canFinance = typeof canViewFinance !== 'function' || canViewFinance() || !(typeof getCurrentUserRole === 'function' && getCurrentUserRole());
     const range = w.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' – ' +
       w.end.toLocaleDateString('en-US', w.end.getMonth() === w.start.getMonth() ? { day: 'numeric' } : { month: 'short', day: 'numeric' });
-    let status;
-    if (w.needsEnd.length) {
-      status = '<div class="shift-now is-due"><span class="shift-dot" aria-hidden="true"></span><span class="shift-now-text">Your shift from ' + escapeHtml(day(w.needsEnd[0].start)) + ' needs an end time' +
+    const h = (n) => (n % 1 ? n.toFixed(1) : String(n)) + ' h';
+    const n1 = (n) => (n % 1 ? n.toFixed(1) : String(n));
+    const t = (iso) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    const day = (iso) => new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+    let status = '';
+    if (s && s.needsEnd.length) {
+      status = '<div class="shift-now is-due"><span class="shift-dot" aria-hidden="true"></span><span class="shift-now-text">Your shift from ' + escapeHtml(day(s.needsEnd[0].start)) + ' needs an end time' +
         '<span class="shift-now-sub">It isn\u2019t counting until you say when you finished.</span></span>' +
         '<button type="button" class="primary-btn" data-shift-open>Fix it</button></div>';
-    } else if (w.onShift) {
-      const soFar = typeof thClockDuration === 'function' ? thClockDuration(now - new Date(w.since).getTime()) + ' so far' : '';
-      status = '<div class="shift-now is-on"><span class="shift-dot" aria-hidden="true"></span><span class="shift-now-text">On shift since ' + escapeHtml(t(w.since)) +
+    } else if (s && s.onShift) {
+      const soFar = typeof thClockDuration === 'function' ? thClockDuration(now - new Date(s.since).getTime()) + ' so far' : '';
+      status = '<div class="shift-now is-on"><span class="shift-dot" aria-hidden="true"></span><span class="shift-now-text">On shift since ' + escapeHtml(t(s.since)) +
         '<span class="shift-now-sub">' + soFar + '</span></span>' +
         '<button type="button" class="secondary-btn" data-shift-open>End my day</button></div>';
-    } else {
+    } else if (s) {
       status = '<div class="shift-now is-off"><span class="shift-dot" aria-hidden="true"></span><span class="shift-now-text">Not clocked in</span>' +
         '<button type="button" class="primary-btn" data-shift-open>Start my day</button></div>';
     }
-    const top = Math.max(4, ...w.days.map(d => d.hours));
-    const bars = w.days.map(d =>
-      '<div class="week-bar' + (d.isToday ? ' is-today' : '') + (d.isFuture ? ' is-future' : '') + '">' +
-        '<span class="week-bar-h">' + (d.hours ? (d.hours % 1 ? d.hours.toFixed(1) : d.hours) : '') + '</span>' +
-        '<span class="week-bar-track"><span class="week-bar-fill" style="height:' + Math.round((d.hours / top) * 100) + '%"></span></span>' +
+
+    // Worked behind on the clock, once there's a shift this week to show.
+    const both = !!s && s.days.some(d => d.hours > 0);
+    const top = Math.max(4, ...w.days.map(d => d.hours), ...(both ? s.days.map(d => d.hours) : []));
+    const pct = (x) => Math.round((x / top) * 100);
+    const bars = w.days.map((d, i) => {
+      const worked = both ? s.days[i].hours : 0;
+      const label = worked || d.hours;
+      return '<div class="week-bar' + (d.isToday ? ' is-today' : '') + (d.isFuture ? ' is-future' : '') + '">' +
+        '<span class="week-bar-h">' + (label ? n1(label) : '') + '</span>' +
+        '<span class="week-bar-track">' +
+          (both ? '<span class="week-bar-fill is-worked" style="height:' + pct(worked) + '%"></span>' : '') +
+          '<span class="week-bar-fill" style="height:' + pct(d.hours) + '%"></span>' +
+        '</span>' +
         '<span class="week-bar-day">' + d.name.charAt(0) + '</span>' +
-      '</div>').join('');
-    const said = w.days.map(d => d.name + ' ' + (d.hours ? h(d.hours) : 'none')).join(', ');
+      '</div>';
+    }).join('');
+    const said = both
+      ? 'Hours this week: ' + w.days.map((d, i) => d.name + ' ' + (s.days[i].hours || d.hours ? h(s.days[i].hours) + ' worked, ' + h(d.hours) + ' on the clock' : 'none')).join('; ')
+      : 'Hours on the clock: ' + w.days.map(d => d.name + ' ' + (d.hours ? h(d.hours) : 'none')).join(', ');
+
     const stat = (value, label, last) =>
       '<div class="week-stat"><div class="week-stat-value">' + value + '</div><div class="week-stat-label">' + label + '</div>' +
       (last ? '<div class="week-stat-last">' + last + '</div>' : '') + '</div>';
-    // Everyone's week, for an account that can see finance -- and only once
-    // someone besides you has a shift, since until then it would repeat
-    // your own numbers.
+    const stats = [];
+    if (s) stats.push(stat(h(s.hours), (s.onShift ? '<span class="week-live-dot is-worked" aria-hidden="true"></span>' : '') + 'Worked', s.prevHours ? 'Last week ' + h(s.prevHours) : ''));
+    stats.push(stat(h(w.hours), (w.running ? '<span class="week-live-dot" aria-hidden="true"></span>' : '') + 'On the clock', w.prevHours ? 'Last week ' + h(w.prevHours) : ''));
+    stats.push(stat(String(w.jobsDone), 'Job' + (w.jobsDone === 1 ? '' : 's') + ' done', w.prevJobsDone ? 'Last week ' + w.prevJobsDone : ''));
+    if (canFinance) stats.push(stat(money(w.billed), 'Billed', w.prevBilled ? 'Last week ' + money(w.prevBilled) : ''));
+
+    // Everyone's week: finance only, and only once someone besides you has
+    // a shift -- until then it would repeat your own numbers.
     let team = '';
-    if (typeof canViewFinance === 'function' && canViewFinance() && typeof thShiftTeamSummary === 'function') {
+    if (s && typeof canViewFinance === 'function' && canViewFinance() && typeof thShiftTeamSummary === 'function') {
       const rows = thShiftTeamSummary(now);
       if (rows.some(r => r.email !== who)) {
-        team = '<table class="shift-team"><caption>Everyone this week</caption>' +
+        team = '<details class="shift-team-wrap"><summary>Everyone this week &middot; ' + rows.length + ' people</summary>' +
+          '<table class="shift-team">' +
           '<thead><tr><th scope="col">Who</th><th scope="col" class="is-num">Today</th><th scope="col" class="is-num">This week</th><th scope="col" class="is-num is-last-week">Last week</th></tr></thead><tbody>' +
           rows.map(r => {
             const state = r.needsEnd.length ? '<span class="shift-team-state is-due">Shift needs an end time</span>'
@@ -3294,31 +3291,35 @@
               '<td class="is-num">' + h(r.hours) + '</td>' +
               '<td class="is-num is-last-week">' + (r.prevHours ? h(r.prevHours) : '&ndash;') + '</td></tr>';
           }).join('') +
-          '</tbody></table>';
+          '</tbody></table></details>';
       }
     }
-    const nothingYet = !w.hours && !w.prevHours && !w.onShift && !w.needsEnd.length;
+    const nothingYet = !w.hours && !w.prevHours && !(s && (s.hours || s.prevHours || s.onShift || s.needsEnd.length));
+    // Keep the team table open across the once-a-minute re-render.
+    const teamOpen = !!el.querySelector && !!el.querySelector('.shift-team-wrap[open]');
+    el.classList.toggle('has-worked', both);
     el.innerHTML =
-      '<div class="week-head"><span class="week-label" id="shiftCardLabel">Hours worked</span><span class="week-range">' + range + '</span></div>' +
+      '<div class="week-head"><span class="week-label" id="weekCardLabel">Your week</span><span class="week-range">' + range + '</span></div>' +
       status +
       '<div class="week-body">' +
-        '<div class="week-bars" role="img" aria-label="' + escapeAttr('Hours worked: ' + said) + '">' + bars + '</div>' +
-        '<div class="week-stats">' +
-          stat(h(w.today), 'Today') +
-          stat(h(w.hours), 'This week', w.prevHours ? 'Last week ' + h(w.prevHours) : '') +
+        '<div class="week-chart">' +
+          '<div class="week-bars" role="img" aria-label="' + escapeAttr(said) + '">' + bars + '</div>' +
+          (both ? '<div class="week-legend" aria-hidden="true"><span><span class="week-key is-worked"></span>Worked</span><span><span class="week-key"></span>On the clock</span></div>' : '') +
         '</div>' +
+        '<div class="week-stats' + (stats.length > 3 ? ' is-four' : '') + '">' + stats.join('') + '</div>' +
       '</div>' +
-      team +
-      (nothingYet ? '<div class="week-hint">Start my day counts your whole day \u2014 driving, estimates and the time between jobs \u2014 not just time on the job clock.</div>' : '');
+      (team && teamOpen ? team.replace('<details class="shift-team-wrap">', '<details class="shift-team-wrap" open>') : team) +
+      (nothingYet ? '<div class="week-hint">' + (s ? 'Tap Start my day to count your whole day, and start the clock on a job to time it.' : 'Start the clock on a job and your hours fill in here.') + '</div>' : '');
     if (!el.dataset.shiftWired) {
       el.dataset.shiftWired = '1';
       el.addEventListener('click', (e) => {
         if (e.target.closest('[data-shift-open]') && typeof thOpenShiftSheet === 'function') thOpenShiftSheet();
       });
     }
-    // The shift you're on grows once a minute; nothing ticks otherwise.
-    if (w.onShift && !shiftCardTick) shiftCardTick = setInterval(renderShiftCard, 60000);
-    else if (!w.onShift && shiftCardTick) { clearInterval(shiftCardTick); shiftCardTick = null; }
+    // Today's bar grows while a clock or a shift runs; nothing ticks otherwise.
+    const ticking = w.running || !!(s && s.onShift);
+    if (ticking && !weekCardTick) weekCardTick = setInterval(renderWeekCard, 60000);
+    else if (!ticking && weekCardTick) { clearInterval(weekCardTick); weekCardTick = null; }
   }
 
   // Shares its numbers with Business Snapshot's Outstanding/Overdue
@@ -3484,7 +3485,6 @@
     renderGreetingBanner();
     renderTodayHero();
     renderWeekCard();
-    renderShiftCard();
     renderMetrics();
     if (!dashSectionClosed('analytics')) {
       renderStatusBars();
@@ -3646,8 +3646,8 @@
       renderSnapshotLastUpdated();
       renderMfaNagBanner();
       window.addEventListener('th-clock-change', () => { renderTodayHero(); renderWeekCard(); });
-      window.addEventListener('th-shift-change', renderShiftCard);
-      window.addEventListener('th-role-loaded', renderShiftCard);
+      window.addEventListener('th-shift-change', renderWeekCard);
+      window.addEventListener('th-role-loaded', renderWeekCard);
       window.addEventListener('th-invoice-reminded', renderMetrics);
       window.addEventListener('th-job-texted', renderTodayHero);
       if (typeof startRealtimeSync === 'function') {
