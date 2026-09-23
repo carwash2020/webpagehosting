@@ -1048,6 +1048,122 @@ document.addEventListener('click', function (e) {
 });
 
 // ---------------------------------------------------------------------------
+// CLIENT TEXTS (2026-09-23, Workspace rework part 12). The job's Text
+// button, the Dashboard's On my way, and the Jobs sheet open one sheet:
+// the texts this job calls for (data-layer.js thJobTextTemplates -- On my
+// way, Running late, Confirm, Parts run, All done), a time to pick where it
+// matters, the message to edit, then Send (the phone's Messages) or Copy.
+// Sending logs it on the job. Any element with data-text-job="<id>" opens
+// it (data-text-kind picks the template); where this can't run, that
+// element's own sms: link still works.
+// ---------------------------------------------------------------------------
+function thTextAgo(iso) {
+  var mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (!(mins >= 0)) return '';
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + ' min ago';
+  if (mins < 24 * 60) return Math.round(mins / 60) + ' h ago';
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+function thOpenTextSheet(jobId, kind) {
+  if (typeof thJobTextTemplates !== 'function' || typeof thRead !== 'function' || typeof TH_KEYS === 'undefined') return false;
+  var job = thRead(TH_KEYS.jobs, []).find(function (j) { return String(j.id) === String(jobId); });
+  if (!job) return false;
+  var esc = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  var icon = function (name) { return '<svg class="th-icon" aria-hidden="true"><use href="#icon-' + name + '" xlink:href="#icon-' + name + '"></use></svg>'; };
+  var phone = job.phone || '';
+  if (!phone) {
+    var client = (job.clientId && typeof thFindClientById === 'function' && thFindClientById(job.clientId)) ||
+      (job.client && typeof thFindClientByName === 'function' && thFindClientByName(job.client)) || null;
+    if (client && client.phone) phone = client.phone;
+  }
+  var first = String(job.client || '').trim().split(/\s+/)[0] || 'them';
+  var state = { eta: 20, key: null, edited: false };
+  var list = thJobTextTemplates(job, { eta: state.eta });
+  state.key = (list.find(function (t) { return t.key === kind; }) || list[0]).key;
+  var names = {};
+  list.forEach(function (t) { names[t.key] = t.label; });
+  var last = typeof thJobLastText === 'function' ? thJobLastText(job) : null;
+  var meta = [job.title || '', last && names[last.key] ? names[last.key] + ' sent ' + thTextAgo(last.at) : ''].filter(Boolean).join(' · ');
+
+  var opener = document.activeElement;
+  var overlay = document.createElement('div');
+  overlay.className = 'quick-actions-overlay th-remind th-text';
+  overlay.innerHTML =
+    '<div class="quick-actions-sheet th-remind-sheet" role="dialog" aria-modal="true" aria-labelledby="thTextTitle">' +
+      '<div class="th-remind-title" id="thTextTitle">Text ' + esc(job.client || 'the client') + '</div>' +
+      '<div class="th-remind-meta">' + esc(meta) + '</div>' +
+      '<div class="th-text-kinds" role="group" aria-label="Which text">' +
+        list.map(function (t) { return '<button type="button" class="th-text-chip" data-kind="' + t.key + '">' + esc(t.label) + '</button>'; }).join('') +
+      '</div>' +
+      '<div class="th-text-etas" role="group" aria-label="About how long">' +
+        [10, 20, 30, 45].map(function (m) { return '<button type="button" class="th-text-chip is-eta" data-eta="' + m + '">' + m + ' min</button>'; }).join('') +
+      '</div>' +
+      '<textarea class="th-remind-text" rows="4" aria-label="The text (you can edit it)"></textarea>' +
+      '<div class="th-remind-actions">' +
+        (phone ? '<a class="primary-btn th-text-send" data-channel="text" href="#">' + icon('message') + 'Send to ' + esc(first) + '</a>' : '') +
+        '<button type="button" class="' + (phone ? 'secondary-btn' : 'primary-btn') + ' th-text-send" data-channel="copy">' + icon('clipboard') + 'Copy</button>' +
+      '</div>' +
+      (!phone ? '<div class="th-remind-note">No phone number on this job or its client: copy it and send it however you reach ' + esc(first) + '.</div>' : '') +
+      '<button type="button" class="quick-actions-btn quick-actions-cancel">Not now</button>' +
+    '</div>';
+  var box = overlay.querySelector('.th-remind-text');
+
+  function refresh() {
+    var t = thJobTextTemplates(job, { eta: state.eta }).find(function (x) { return x.key === state.key; });
+    overlay.querySelectorAll('[data-kind]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-kind') === state.key)); });
+    overlay.querySelectorAll('[data-eta]').forEach(function (b) { b.setAttribute('aria-pressed', String(Number(b.getAttribute('data-eta')) === state.eta)); });
+    overlay.querySelector('.th-text-etas').hidden = !t.eta;
+    box.value = t.body;
+    state.edited = false;
+  }
+  function close() {
+    document.removeEventListener('keydown', onKey);
+    overlay.classList.remove('is-shown');
+    setTimeout(function () { overlay.remove(); }, 200);
+    if (opener && typeof opener.focus === 'function') { try { opener.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+  }
+  function onKey(e) { if (e.key === 'Escape') close(); }
+  box.addEventListener('input', function () { state.edited = true; });
+  overlay.addEventListener('click', function (e) {
+    if (e.target === overlay || e.target.closest('.quick-actions-cancel')) { close(); return; }
+    var chip = e.target.closest('.th-text-chip');
+    if (chip) {
+      if (chip.hasAttribute('data-kind')) state.key = chip.getAttribute('data-kind');
+      else state.eta = Number(chip.getAttribute('data-eta'));
+      refresh();
+      return;
+    }
+    var send = e.target.closest('.th-text-send');
+    if (!send) return;
+    var body = box.value.trim();
+    if (!body) { e.preventDefault(); return; }
+    if (send.getAttribute('data-channel') === 'text') send.setAttribute('href', thSmsHref(phone, body)); // the tap itself opens Messages
+    else {
+      e.preventDefault();
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(body).catch(function () { /* ignore */ });
+    }
+    if (typeof thLogJobText === 'function') thLogJobText(job.id, state.key);
+    try { window.dispatchEvent(new CustomEvent('th-job-texted', { detail: { jobId: job.id, key: state.key } })); } catch (err) { /* ignore */ }
+    if (typeof haptic === 'function') haptic('success');
+    if (typeof showToast === 'function') showToast(send.getAttribute('data-channel') === 'copy' ? 'Copied.' : names[state.key] + ' is ready in Messages.');
+    close();
+  });
+  document.addEventListener('keydown', onKey);
+  document.body.appendChild(overlay);
+  refresh();
+  requestAnimationFrame(function () { overlay.classList.add('is-shown'); });
+  var firstSend = overlay.querySelector('.th-text-send');
+  if (firstSend) { try { firstSend.focus({ preventScroll: true }); } catch (e) { firstSend.focus(); } }
+  return true;
+}
+document.addEventListener('click', function (e) {
+  var t = e.target && e.target.closest ? e.target.closest('[data-text-job]') : null;
+  if (!t) return;
+  if (thOpenTextSheet(t.getAttribute('data-text-job'), t.getAttribute('data-text-kind') || undefined)) e.preventDefault();
+});
+
+// ---------------------------------------------------------------------------
 // DISPLAY DENSITY TOGGLE -- added 2026-08-16. A personal display
 // preference (comfortable vs compact row spacing), so it lives in plain
 // localStorage rather than the synced data blob -- there's no reason a

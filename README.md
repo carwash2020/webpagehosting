@@ -4066,3 +4066,42 @@ Verified in a real headless Chromium (local HTTP, fake Supabase), at
 - No console errors.
 
 New tests: `tests/tools/your-week.test.js` (6).
+
+
+## What changed, 2026-09-23 (evening) -- Workspace rework, part 12: texts that write themselves
+
+Part 12 of the Workspace rework. Full reasoning in
+`docs/specialist-logs/features.md`.
+
+**The texts you send every day, already written.**
+- **On my way** is a new button on the Dashboard's Next Job. The job
+  page's **Text** button and a **Text <name>** item in the Jobs sheet
+  open the same sheet.
+- **The texts follow the job:**
+
+  | The job | Texts offered, in order |
+  |---|---|
+  | Booked for today | On my way, Running late, Confirm the visit |
+  | Booked for a later day | Confirm the visit first |
+  | Under way | Running late, Parts run, All done |
+  | Done | All done |
+
+- **Each text is written from the job:** the client's first name, the
+  street ("confirming your appointment tomorrow at 123 Red Cliffs Dr"),
+  and for On my way, Running late and Parts run, a time you pick: 10, 20,
+  30 or 45 minutes.
+- **Edit it, then Send.** It opens your own Messages with the text in
+  place. Copy works everywhere else.
+- **The job remembers the last text it got**, so the sheet says "On my
+  way sent 12 min ago" before you send another.
+
+Verified in a real headless Chromium (local HTTP, fake Supabase), at
+390px:
+- Next Job reads Open Job / On my way / Start the clock / Route today.
+- On my way opens the sheet on that text for Sarah, with 20 minutes
+  picked; choosing 30 rewrites it.
+- Send logs it on the job, and the job page's Text then shows "On my way
+  sent just now".
+- No console errors.
+
+New tests: `tests/tools/client-texts.test.js` (7).

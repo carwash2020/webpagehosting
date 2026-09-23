@@ -2841,3 +2841,17 @@ body .th-remind-text:focus { border-color: var(--orange-light); box-shadow: 0 0 
 }
 .th-remind-actions .th-icon { width: 16px; height: 16px; margin: 0; flex-shrink: 0; }
 .th-remind-note { margin: 0 0 10px; font-size: 13px; color: var(--text-dim); }
+
+/* ---- Client text sheet (2026-09-23, Workspace rework part 12) ----
+   The reminder sheet's layout, plus two rows of chips: which text, and
+   (for On my way, Running late, Parts run) about how long. */
+.th-text-kinds, .th-text-etas { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.th-text-etas[hidden] { display: none; }
+.th-text-chip {
+  min-height: 36px; padding: 0 14px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--bg-panel); color: var(--text);
+  font: inherit; font-size: 14px; font-weight: 600;
+}
+.th-text-chip.is-eta { min-height: 32px; padding: 0 12px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.th-text-chip[aria-pressed="true"] { border-color: var(--orange-dark); background: var(--orange-tint-soft); color: var(--orange-light); }
+.th-text .th-remind-text { min-height: 104px; }

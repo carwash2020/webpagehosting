@@ -1184,6 +1184,60 @@ function thWeekSummary(now, data) {
   return out;
 }
 
+// ---------- Client texts (2026-09-23, Workspace rework part 12) ----------
+// The texts sent every day, written from the job: On my way (with a time),
+// Running late, Confirming the visit, a quick parts run, All done. Which
+// ones lead follows the job -- a booked job leads with On my way (or, for
+// a later day, the confirmation), one under way with Running late, a done
+// one with All done. They go out through the phone's own Messages; each is
+// logged on the job (job.texts, the last 20) so the sheet can say what was
+// sent last and when.
+const TH_TEXT_ETAS = [10, 20, 30, 45];
+function thJobVisitWhen(job, now) {
+  const at = now === undefined ? new Date() : new Date(now);
+  const d = new Date((job && job.date ? job.date : '') + 'T00:00:00');
+  if (isNaN(d.getTime())) return '';
+  const days = thDaysBetween(at, d);
+  if (days === 0) return 'today';
+  if (days === 1) return 'tomorrow';
+  if (days < 0) return '';
+  return 'on ' + d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+}
+function thJobTextTemplates(job, opts) {
+  opts = opts || {};
+  const eta = TH_TEXT_ETAS.indexOf(Number(opts.eta)) > -1 ? Number(opts.eta) : 20;
+  const first = String(job.client || '').trim().split(/\s+/)[0];
+  const hi = (first ? 'Hi ' + first : 'Hi') + ", it's Triple H Enterprises. ";
+  const street = String(job.address || '').split(',')[0].trim();
+  const when = thJobVisitWhen(job, opts.now);
+  const all = {
+    onmyway: { label: 'On my way', eta: true, body: hi + "I'm on my way and should be there in about " + eta + ' minutes.' },
+    late: { label: 'Running late', eta: true, body: hi + "I'm running about " + eta + ' minutes behind. Sorry about that, see you soon.' },
+    confirm: { label: 'Confirm the visit', eta: false, body: hi + 'Just confirming your appointment ' + when + (street ? ' at ' + street : '') + '. Reply here if anything changes.' },
+    parts: { label: 'Parts run', eta: true, body: hi + 'I need to pick up a part and will be back in about ' + eta + ' minutes.' },
+    done: { label: 'All done', eta: false, body: hi + 'All done' + (street ? ' at ' + street : '') + '! Your invoice is on its way. Thanks for choosing Triple H.' },
+  };
+  let order;
+  if (job.status === 'done') order = ['done'];
+  else if (job.status === 'in-progress') order = ['late', 'parts', 'done'];
+  else if (when && when !== 'today') order = ['confirm', 'onmyway', 'late'];
+  else order = ['onmyway', 'late'].concat(when ? ['confirm'] : []);
+  return order.map(key => Object.assign({ key: key }, all[key]));
+}
+function thLogJobText(jobId, key, now) {
+  const jobs = thRead(TH_KEYS.jobs, []);
+  const job = jobs.find(j => String(j.id) === String(jobId));
+  if (!job) return null;
+  const at = now === undefined ? new Date() : new Date(now);
+  job.texts = (Array.isArray(job.texts) ? job.texts : []).concat([{ at: at.toISOString(), key: key }]).slice(-20);
+  if (!thWrite(TH_KEYS.jobs, jobs)) return null;
+  return job;
+}
+function thJobLastText(job) {
+  const list = (job && Array.isArray(job.texts) ? job.texts : []).filter(t => t && t.at && !isNaN(new Date(t.at).getTime()));
+  return list.length ? list[list.length - 1] : null;
+}
+
 // Everything for one job in a single call -- the query that makes a real
 // Job Detail view possible, the same way thGetClientBundle() enabled
 // Client Detail. Client resolution prefers job.clientId (written on every
