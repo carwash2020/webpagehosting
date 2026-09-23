@@ -136,7 +136,7 @@ test('bulkDeleteJobs now records a real tombstone per job -- a genuine pre-exist
 
 // --- Full restore flow, flat case (job) -----------------------------------
 
-test('restoring a job from the graveyard puts it back, removes the tombstone, and it survives a subsequent stale-device sync pull', () => {
+test('restoring a job from the graveyard puts it back, marks its tombstone restored, and it survives a subsequent stale-device sync pull', () => {
   const window = loadDevTools();
   const jobRecord = { id: 'j1', title: 'Original Job', client: 'Test Client' };
 
@@ -155,11 +155,14 @@ test('restoring a job from the graveyard puts it back, removes the tombstone, an
   window.restoreFromGraveyard(entry.graveyardId);
 
   assert.equal(JSON.stringify(window.thRead('th_tracker_jobs', [])), JSON.stringify([jobRecord]), 'job should be back');
-  assert.equal(window.thRead('th_job_tombstones', []).length, 0, 'tombstone should be gone');
+  // Kept and marked, not deleted (2026-09-23): a deleted tombstone came
+  // straight back from the server's copy -- see graveyard-restore-sync.test.js.
+  const [tomb] = window.thRead('th_job_tombstones', []);
+  assert.ok(tomb.restoredAt, 'tombstone should be marked restored');
   assert.equal(window.thLoadGraveyard().length, 0, 'graveyard entry should be gone');
 
   // A stale device pushing back an empty jobs list must NOT re-delete
-  // the just-restored job -- only holds if the tombstone is really gone.
+  // the just-restored job.
   window.applySyncData({ th_tracker_jobs: JSON.stringify([]), th_job_tombstones: JSON.stringify([]) });
   assert.equal(JSON.stringify(window.thRead('th_tracker_jobs', [])), JSON.stringify([jobRecord]), 'restored job must survive a subsequent sync pull');
 });
@@ -178,7 +181,7 @@ test('restoring does not create a duplicate if the record somehow already exists
 
 // --- Special nested case: prIssue ----------------------------------------
 
-test('restoring a prIssue puts it back into its parent unit\'s issues array and removes the composite-keyed tombstone', () => {
+test('restoring a prIssue puts it back into its parent unit\'s issues array and marks the composite-keyed tombstone restored', () => {
   const window = loadDevTools();
   const issue = { id: 555, symptom: 'Test symptom' };
   window.thWrite('th_parts_reference_units', [{ id: 'unitA', brand: 'GE', issues: [] }]);
@@ -190,7 +193,10 @@ test('restoring a prIssue puts it back into its parent unit\'s issues array and 
 
   const units = window.thRead('th_parts_reference_units', []);
   assert.equal(JSON.stringify(units[0].issues), JSON.stringify([issue]));
-  assert.equal(window.thRead('th_pr_issue_tombstones', []).length, 0);
+  const tombs = window.thRead('th_pr_issue_tombstones', []);
+  assert.equal(tombs.length, 1);
+  assert.equal(tombs[0].id, 'unitA::555');
+  assert.ok(tombs[0].restoredAt);
   assert.equal(window.thLoadGraveyard().length, 0);
 });
 
@@ -235,6 +241,6 @@ test('a deleted inventory part shows by name in the Graveyard, and Restore puts 
 
   window.restoreFromGraveyard(window.thLoadGraveyard()[0].graveyardId);
   assert.equal(JSON.stringify(window.thRead('th_inventory', [])), JSON.stringify([part]));
-  assert.equal(window.thRead('th_inventory_tombstones', []).length, 0);
+  assert.ok(window.thRead('th_inventory_tombstones', [])[0].restoredAt, 'its tombstone is marked restored');
   assert.equal(window.thLoadGraveyard().length, 0);
 });
