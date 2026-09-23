@@ -89,12 +89,17 @@ begin
 end;
 $$;
 
--- Deliberately NO revoke on this trigger function, matching the existing
--- notify_new_booking_email/notify_booking_status_change: a `returns
--- trigger` function can't be called over the API at all, and revoking
--- EXECUTE on notify_new_lead() once broke live lead notifications
--- (2026-08-13, see the tripleh-business notes) -- not a risk worth taking
--- on the booking path for no real gain.
+-- Same EXECUTE lockdown every other trigger function in public already
+-- has (revoke_public_execute_on_internal_only_functions, 2026-09-21):
+-- postgres and service_role only. New public functions otherwise inherit
+-- anon/authenticated EXECUTE from the schema's default privileges.
+-- Postgres checks EXECUTE on a trigger function only when the trigger is
+-- CREATED, never when it fires -- proven on the live project before this
+-- was applied (2026-09-23): a BEFORE INSERT trigger whose function had
+-- EXECUTE revoked still fired for an insert running as `authenticated`,
+-- inside a rolled-back block. So this can't stop the email firing.
+revoke all on function public.notify_booking_change_email() from public, anon, authenticated;
+grant execute on function public.notify_booking_change_email() to service_role;
 
 drop trigger if exists on_booking_change_send_email on public.th_bookings;
 create trigger on_booking_change_send_email

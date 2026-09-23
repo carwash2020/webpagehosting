@@ -261,7 +261,20 @@ test('the change-email trigger only fires on a real cancellation or a moved star
   assert.match(trig, /after update on public\.th_bookings/);
   assert.match(trig, /\(old\.status = 'confirmed' and new\.status = 'cancelled'\)/);
   assert.match(trig, /\(old\.status = 'confirmed' and new\.status = 'confirmed' and old\.start_at is distinct from new\.start_at\)/);
-  assert.doesNotMatch(sql, /revoke[^;]*notify_booking_change_email/i, 'no EXECUTE revoke on a trigger function (that once broke lead notifications)');
+});
+
+test('the change-email trigger function gets the same postgres/service_role-only EXECUTE as every other trigger function', () => {
+  // Changed 2026-09-23: this used to assert there was NO revoke (an old
+  // note blamed one for breaking lead notifications). By then every other
+  // trigger function in public had been locked down to postgres and
+  // service_role (2026-09-21), and a rolled-back probe on the live project
+  // showed Postgres never checks EXECUTE when a trigger fires -- only at
+  // CREATE TRIGGER. So the lockdown can't stop the email, and leaving it
+  // off made this the one trigger function anon could EXECUTE.
+  const sql = read('sql', 'booking', 'add_booking_change_emails_and_reminder_rearm.sql');
+  assert.ok(sql.includes('revoke all on function public.notify_booking_change_email() from public, anon, authenticated;'));
+  assert.ok(sql.includes('grant execute on function public.notify_booking_change_email() to service_role;'));
+  assert.ok(sql.indexOf('revoke all on function public.notify_booking_change_email()') > sql.indexOf('create or replace function public.notify_booking_change_email()'), 'revoked after it exists');
 });
 
 // ---------- push privacy ----------
@@ -308,8 +321,10 @@ for (const fn of LOOKUP_FUNCTIONS) {
 test('the lookup SQL: service-role only, exact case-insensitive match, internal-only subscriptions', () => {
   const sql = read('sql', 'security', 'scope_push_broadcasts_to_internal_accounts.sql');
   for (const sig of ['get_internal_push_subscriptions()', 'get_auth_user_id_by_email(text)']) {
-    assert.match(sql, new RegExp('revoke all on function public\\.' + sig.replace(/[()]/g, '\\$&') + ' from public, anon, authenticated;'));
-    assert.match(sql, new RegExp('grant execute on function public\\.' + sig.replace(/[()]/g, '\\$&') + ' to service_role;'));
+    // Plain substring checks: no regex built from `sig`, so nothing in it
+    // needs escaping (CodeQL flagged the old escape of only "(" and ")").
+    assert.ok(sql.includes('revoke all on function public.' + sig + ' from public, anon, authenticated;'), sig + ' revoked');
+    assert.ok(sql.includes('grant execute on function public.' + sig + ' to service_role;'), sig + ' granted to service_role');
   }
   assert.match(sql, /lower\(u\.email\) = lower\(trim\(p_email\)\)/);
   assert.match(sql, /exists \(\s*select 1 from public\.account_roles ar\s*where lower\(ar\.email\) = lower\(u\.email\)/);
