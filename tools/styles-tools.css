@@ -2887,6 +2887,18 @@ body .th-remind-text:focus { border-color: var(--orange-light); box-shadow: 0 0 
 .th-shift-row { display: flex; align-items: flex-end; gap: 8px; margin: 12px 0 4px; }
 .th-shift-row .th-shift-field { flex: 1; min-width: 0; margin: 0; }
 .th-shift-row > button { flex-shrink: 0; min-height: 48px; padding: 0 14px; }
+/* Reported directly, with a screenshot on a real iPhone (2026-09-23):
+   the "Start from then" button overlapped the time field beside it. A
+   native <input type="time"> has a browser-enforced minimum rendering
+   width that ignores CSS width/flex-shrink -- real iOS Safari's is
+   wide enough to overflow this row's available space next to a button,
+   even though Chromium's own (narrower) time input hides the bug in
+   preview. Stacking below a phone-width breakpoint sidesteps the native
+   control's minimum width entirely, rather than fighting it with CSS. */
+@media (max-width: 420px) {
+  .th-shift-row { flex-direction: column; align-items: stretch; }
+  .th-shift-row > button { width: 100%; }
+}
 /* 16px so iOS doesn't zoom into the field. */
 body .th-shift-input {
   width: 100%; box-sizing: border-box; min-height: 48px; padding: 0 12px; border-radius: 12px;
