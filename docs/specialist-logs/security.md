@@ -657,4 +657,69 @@ fix**: don't assume "not deployed yet" explains it away -- check the
 live system directly first. A code fix and a live-only bug can coexist
 in the same feature, and this one did.
 
+## 2026-09-23: Portal -- Face ID stands in for the 2FA code; the code could be skipped by refreshing (fixed)
+
+**The ask.** "Facial recognition AND two factor is way too much. Make it
+pick facial over two factor for the portal, also make two factor
+optional." Two-factor was already opt-in (Settings only; nothing forces
+enrollment). What was "too much" was the sequence for a client with
+both on: password, then the TOTP code, then the Face ID lock as soon as
+home.html loaded.
+
+**What Face ID is here** (unchanged, see portal-app.js's biometric
+header). It's a local-only WebAuthn platform-authenticator check in front
+of an existing session; nothing is verified server-side. Letting it stand
+in for the code therefore means a Face-ID-approved session stays at
+Supabase aal1 (password only) from the server's point of view.
+
+**Why that's acceptable, and what it does and doesn't weaken:**
+- No portal RLS policy, RPC or edge function has ever checked `aal`
+  (grepped `portal/`, `sql/`, `edge-functions/`: no `aal2` anywhere
+  outside login.html). The server-side posture is identical before and
+  after.
+- On a device without this account's Face ID credential (the realistic
+  stolen-password case), the TOTP code is still required.
+- Face ID itself needs the real platform authenticator with user
+  verification. A copied localStorage key doesn't pass
+  `navigator.credentials.get`.
+
+**The real finding: the code could be skipped by refreshing.**
+- `signInWithPassword` persists an aal1 session before the code overlay
+  appears. login.html's on-load `getSession()` then redirected any
+  session straight to home.html, and no portal page checked `aal`.
+- So after a correct password, one refresh (or opening
+  /portal/home.html directly) went straight in with no code.
+- Reproduced on main in a real browser: after the password, a reload
+  landed on home.html with 0 codes verified.
+- Impact: 2FA gave no protection against someone who knew the password,
+  even without API skills.
+- **Fixed:** `portalRequireSecondStep()` runs before every signed-in page
+  renders (via `portalGuardWithBiometricLock`, and directly in Settings).
+  An aal1 session on an account with a verified factor must pass Face ID
+  on a Face ID device, or goes to `login.html?step=code`. login.html's
+  on-load check now stays for the code instead of redirecting.
+  Settings is included, so it isn't a way around the step.
+
+**Still open, not fixed here (needs the owner's decision).** All of this
+is enforced in the browser. Someone with the password who calls the REST
+API directly with the aal1 token still gets whatever RLS allows. Real
+enforcement would be two changes:
+1. RLS on client-data tables requiring `(auth.jwt()->>'aal') = 'aal2'`
+   whenever the user has a verified factor.
+2. That only works together with Face ID becoming a server-verified
+   factor (Supabase WebAuthn MFA or passkeys); otherwise every Face ID
+   sign-in would be locked out.
+
+Both are schema/auth-config changes. They're left for Connor rather
+than done quietly.
+
+**Supabase detail worth remembering.** Unenrolling a verified factor
+requires an aal2 session. A Face-ID-approved session is aal1, so Settings
+now asks for one code before "Turn off two-factor" (it would otherwise
+fail with insufficient_aal).
+
+Tests: `tests/portal/face-id-over-2fa.test.js`, plus an end-to-end
+browser run with a CDP virtual authenticator and mocked Supabase auth
+(scenarios in README's entry).
+
 <!-- Add new entries above this line -->
