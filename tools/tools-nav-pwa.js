@@ -97,7 +97,10 @@
     // tab (the portal admin console) on canManageInvoices instead.
     '/tools/contract-generator.html': function () { return typeof canManageContracts === 'function' && canManageContracts(); },
     '/tools/review-request.html': function () { return typeof canManageReviews === 'function' && canManageReviews(); },
-    '/tools/dev-tools.html': function () { return typeof hasDevToolsAccess === 'function' && hasDevToolsAccess(); }
+    '/tools/dev-tools.html': function () { return typeof hasDevToolsAccess === 'function' && hasDevToolsAccess(); },
+    // Website (2026-09-23): the same check site-content.html gates on.
+    // Listed in SIDEBAR_DESTS with hideUntilAllowed -- see below.
+    '/tools/site-content.html': function () { return typeof canManageSiteContent === 'function' && canManageSiteContent(); }
   };
 
   // Hides specific already-injected nav/sidebar links by href, rather
@@ -112,9 +115,24 @@
   // The Money tab is skipped here and handled by applyMoneyPermissions()
   // instead: its href is one of two gated pages, and hiding it because
   // ONE of them is off-limits would be wrong when the other is allowed.
+  //
+  // A destination marked hideUntilAllowed in SIDEBAR_DESTS works the other
+  // way round: it is injected already hidden and only shown here, once the
+  // check passes, so an account without the permission never sees it --
+  // not even for the moment before the role arrives, and not on a page
+  // where the role never loads. Only the shell's own links are touched,
+  // so a page's own link to the same place (Dev Tools' Content jump link)
+  // is left alone.
   function hideRestrictedNavLinks() {
     Object.keys(NAV_PERMISSION_CHECKS).forEach(function (href) {
-      if (NAV_PERMISSION_CHECKS[href]()) return;
+      var allowed = NAV_PERMISSION_CHECKS[href]();
+      if (HIDDEN_UNTIL_ALLOWED[href]) {
+        document.querySelectorAll('a.th-sidebar-link[href="' + href + '"], a.th-more-sheet-link[href="' + href + '"]').forEach(function (el) {
+          el.style.display = allowed ? '' : 'none';
+        });
+        return;
+      }
+      if (allowed) return;
       document.querySelectorAll('a[href="' + href + '"]:not(.th-bn-money)').forEach(function (el) {
         el.style.display = 'none';
       });
@@ -155,6 +173,10 @@
   // day, as the Quick charge tab inside Invoices
   // (/tools/invoice-generator.html#pos). Pages and permissions are
   // otherwise unchanged.
+  // Website (2026-09-23) is the site content editor, which used to be
+  // reachable only through Dev Tools > Content. hideUntilAllowed: shown
+  // only to accounts with the Site content permission (see
+  // hideRestrictedNavLinks() above).
   var SIDEBAR_DESTS = [
     { group: 'Work',   href: '/tools/workspace.html',          icon: 'home',     label: 'Dashboard' },
     { group: 'Work',   href: '/tools/job-tracker.html',        icon: 'wrench',   label: 'Job Tracker' },
@@ -166,9 +188,12 @@
     { group: 'Office', href: '/tools/contract-generator.html', icon: 'scroll',   label: 'Contracts' },
     { group: 'Office', href: '/tools/review-request.html',     icon: 'star',     label: 'Reviews' },
     { group: 'Office', href: '/tools/parts-reference.html',    icon: 'book',     label: 'Appliance Wiki' },
+    { group: 'Office', href: '/tools/site-content.html',       icon: 'globe',    label: 'Website', hideUntilAllowed: true },
     { group: 'Office', href: '/tools/dev-tools.html',          icon: 'terminal', label: 'Dev Tools' },
     { group: 'Office', href: '/tools/settings.html',           icon: 'gear',     label: 'Settings' }
   ];
+  var HIDDEN_UNTIL_ALLOWED = {};
+  SIDEBAR_DESTS.forEach(function (d) { if (d.hideUntilAllowed) HIDDEN_UNTIL_ALLOWED[d.href] = true; });
 
   // Everything the sidebar lists that the bar does not -- the bar's own
   // links plus both Money pages (the Money tab covers them) -- goes in
@@ -215,7 +240,8 @@
       }
       var active = path === d.href ? ' is-active' : '';
       var current = path === d.href ? ' aria-current="page"' : '';
-      html += '<a href="' + d.href + '" class="th-sidebar-link' + active + '"' + current + '>' +
+      var hidden = d.hideUntilAllowed ? ' style="display: none"' : '';
+      html += '<a href="' + d.href + '" class="th-sidebar-link' + active + '"' + current + hidden + '>' +
         '<span class="th-hex-icon">' + iconSvg(d.icon) + '</span>' +
         '<span>' + d.label + '</span></a>';
     });
@@ -343,7 +369,7 @@
     sheet.id = 'thMoreSheet';
     sheet.className = 'th-more-sheet th-sheet';
     sheet.setAttribute('hidden', '');
-    var tiles = MORE_DESTS.map(function (d) { return { href: d.href, icon: d.icon, label: d.label }; });
+    var tiles = MORE_DESTS.map(function (d) { return { href: d.href, icon: d.icon, label: d.label, hideUntilAllowed: d.hideUntilAllowed }; });
     sheet.innerHTML =
       '<div class="th-more-sheet-backdrop th-sheet-backdrop" data-th-sheet-close="1"></div>' +
       '<div class="th-more-sheet-panel th-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="thMoreSheetTitle">' +
@@ -703,6 +729,10 @@
     injectCreateSheet();
     var createBtn = nav.querySelector('.th-bn-create');
     if (createBtn) createBtn.addEventListener('click', function () { openCreate(this); });
+    // A role that loaded before the shell was built fired th-role-loaded
+    // with nothing to act on yet: apply it now, or a hideUntilAllowed link
+    // would wait for an event that has already happened.
+    if (typeof getCurrentUserRole === 'function' && getCurrentUserRole()) hideRestrictedNavLinks();
     // Next tick, not now: on a page that loads this file after the DOM is
     // ready, inject() runs before the QUICK ADD section further down this
     // file has set its tables, and the parser would throw.

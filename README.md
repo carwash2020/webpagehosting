@@ -160,7 +160,7 @@ upside to offset the cost.
 | `tools/parts-reference.html` | **Appliance Wiki** — quick lookup for common appliance issues: what part it usually is, the part number, roughly what it costs. |
 | `tools/settings.html` | Account info, display density and color theme, push notifications, tour replay (the tour is a 24-step tutorial as of 2026-09-22 -- every page and tab, about two minutes), password reset, **Backup & Restore** (moved here from the Dashboard on 2026-09-21 — the same full JSON export/import, no hop through another page), sign out. |
 | `tools/dev-tools.html` | Site diagnostics and maintenance utilities, organized into 6 tabs (Health, Access, Session, Notifications, Deploy, Reports) as of 2026-08-25 -- replaced the old scroll-to-anchor nav, which no longer scaled once this page reached 22 panels (now 26, after Booking notification test and the 3 new Reports panels). Access is role-gated (`account_roles` table, see `DISASTER_RECOVERY.md`); an Owner-role account only sees the Access tab (Client Registry, Account Roles), while a Developer-role account sees all 6 tabs. Also supports swiping left/right between tabs on mobile, scoped to the panel content area so it doesn't fight with the tab bar's own horizontal scroll. |
-| `tools/site-content.html` | Edits the public site's changeable text and numbers with no deploy: Google star rating and review count, banners, homepage hours, phone, email, FAQ, Terms. Fields are checked as you type, every publish shows live-vs-new first, and **Undo this save** / per-field history put back earlier values (rebuilt 2026-09-23, backed by `cms_publish_content()` / `cms_undo_content()` in `sql/site-content/cms_safe_publish_and_undo.sql`). Reached from Dev Tools &rarr; Content; needs the "Site content" permission. Split out of `dev-tools.html` on 2026-08-20. |
+| `tools/site-content.html` | Edits the public site's changeable text and numbers with no deploy: Google star rating and review count, banners, homepage hours, phone, email, FAQ, Terms. Fields are checked as you type, every publish shows live-vs-new first, and **Undo this save** / per-field history put back earlier values (rebuilt 2026-09-23, backed by `cms_publish_content()` / `cms_undo_content()` in `sql/site-content/cms_safe_publish_and_undo.sql`). Reached from **Website** in the sidebar and the More drawer (shown only to accounts with the "Site content" permission, since 2026-09-23) or Dev Tools &rarr; Content; needs that permission. Split out of `dev-tools.html` on 2026-08-20. |
 | `tools/client-detail.html` | Full history for one client (jobs, invoices, quotes, contracts) — reached from workspace.html or job-detail.html, not linked from the main nav directly. |
 | `tools/job-detail.html` | Full detail view for one job (photos, linked invoices, margin) — reached from job-tracker.html or finance.html, not linked from the main nav directly. |
 | `tools/login.html` | Auth entry point for the whole suite. |
@@ -4989,6 +4989,31 @@ Verified:
 Tests:
 - `tests/sync/graveyard-restore-every-type.test.js` (22, new): every Graveyard type, plus the 3 fixes above, which fail without this change.
 
+## What changed, 2026-09-23 -- Cron Health: stopped flagging things that aren't cron failures
+
+Dev Tools only. Cron Health was showing a run of "HTTP call failed -- status 401" alerts, reported directly with a screenshot. Checked the actual pg_cron job history: every real cron job run in that window succeeded, and the alerted timestamps didn't line up with any job's schedule. The watchdog was scanning every HTTP call this project's database ever makes -- including the notification triggers (new lead, booking changes, portal messages, etc.), which call the same Postgres extension cron jobs do -- and treating any non-2xx response as a cron failure, whoever actually made the call.
+
+Fixed by having each cron job record which job made a given HTTP call before it fires, so the health check can only ever alert on a response to a call a cron job actually made. The alert now also names which job failed, instead of a bare "HTTP call failed." The already-open false-positive alerts were marked resolved; a real cron failure still alerts exactly as before.
+
+Verified: full suite (3522/3523, the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, and a fresh admin re-run of the health check against the live database confirmed 0 open alerts. New tests: `tests/dev-tools/cron-health-scoped-to-cron.test.js` (8).
+
+## What changed, 2026-09-23 -- Website in the tools menu for whoever edits the site
+
+The site content editor (`tools/site-content.html`: Google rating and review count, banners, hours, phone, email, FAQ, Terms) now has its own **Website** row in the tools menu: the desktop sidebar and the phone/tablet More drawer, between Appliance Wiki and Dev Tools. Until now the only way in was Dev Tools &rarr; Content, which still works.
+
+- **Only for accounts that can edit the site.** The row uses the same check the editor page uses (`canManageSiteContent()`, the "Site content" permission, `account_roles.can_manage_site_content`). Owner and Developer accounts (Steve, Connor) see it. Anyone else never does.
+- **Hidden until confirmed.** The other permission-gated rows are drawn visible and hidden once the account's permissions arrive. This one works the other way: it starts hidden and appears only after the permissions confirm it. So it never flashes up for someone who can't use it, and it stays hidden if the permissions can't be checked (offline, for example).
+- **Nothing else changed.** The editor keeps all its own access checks. The row is a shortcut, not a new way past them.
+
+Verified:
+- full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint` on the changed files;
+- `npm run fix-versions` re-stamped `tools-nav-pwa.js` where it loads and bumped the tools service worker's cache name.
+
+Tests:
+- `tests/tools/website-nav-entry.test.js` (8, new): a site-content manager sees the row. Anyone without the permission never does: not before the permissions load, not after, not with every other permission. Two of the tests run the real `auth.js` against an `account_roles` response. All 8 fail without this change.
+- `tests/tools/app-shell-v2.test.js`: the More drawer's row list now includes Website (hidden for that test's account).
+- `tests/tools/job-tracker-calendar-view.test.js`: the sidebar now has 13 destinations, not 12.
+
 ## What changed, 2026-09-23 -- The booking, manage-booking, and not-found pages follow the saved phone number
 
 Public site (`booking.html`, `manage-booking.html`, `manage-job.html`, `404.html`) and `tools/site-content.html`. Nothing looks different today.
@@ -5016,8 +5041,8 @@ Verified:
 - `fix-versions` bumped the service worker's cache name.
 
 Tests:
-- `tests/site-content/contact-hooks-public.test.js` (37, new; 32 fail on main): the real script on the real pages. Today's values and every kind of failed answer leave each page byte-for-byte unchanged. A new number reaches every spot and nothing else; the error messages and "Nothing open online" are driven end to end.
-- `site-content-editor.test.js` (+1): the rendered "Phone and email" note.
+- `tests/site-content/contact-hooks-public.test.js` (36, new; 32 fail on main): the real script on the real pages. Today's values and every kind of failed answer leave each page byte-for-byte unchanged. A new number reaches every spot and nothing else; the error messages and "Nothing open online" are driven end to end.
+- `site-content-editor.test.js` (+1): the rendered "Phone and email" note. Its built-in-fallback check now covers the four pages too.
 - Updated with reasons:
   - `review-stats-public.test.js`: booking's wider fetch;
   - `404-button-language.test.js`: the Call button's new classes;
