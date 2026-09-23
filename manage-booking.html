@@ -371,6 +371,22 @@
     if (gLink && typeof bookingGoogleCalendarUrl === 'function') gLink.href = bookingGoogleCalendarUrl(visit);
   }
 
+  // booking.html remembers a visit booked on this device (round 3,
+  // 2026-09-22) so it can say "you're already booked" next time. Keep that
+  // in step with what happens here: a reschedule updates its time, a
+  // cancellation forgets it. Only ever touches the record for THIS token.
+  function syncRememberedBooking(token, newTimes) {
+    try {
+      const key = 'th_upcoming_booking';
+      const saved = JSON.parse(localStorage.getItem(key) || 'null');
+      if (!saved || saved.token !== token) return;
+      if (!newTimes) { localStorage.removeItem(key); return; }
+      saved.start = newTimes.start;
+      saved.end = newTimes.end;
+      localStorage.setItem(key, JSON.stringify(saved));
+    } catch (e) { /* storage blocked -- nothing to keep in sync */ }
+  }
+
   function renderBooking(booking, token) {
     if (booking.status === 'cancelled') {
       renderState(
@@ -615,6 +631,7 @@
           '<a href="' + manageUrl + '" class="btn ghost">Done</a>'
         );
         wireCalendarButtons(visitFor(newStart, newEnd));
+        syncRememberedBooking(token, { start: newStart, end: newEnd });
         window.scrollTo({ top: 0, behavior: 'auto' }); // the check plays in view, not above it
       } else if (row && row.message === 'slot-taken') {
         await loadAvailability(selectedDateStr);
@@ -662,6 +679,7 @@
           successMsg('Your booking has been cancelled.', 'Your time has been released. Whenever you need us again, booking takes about a minute.') +
           '<a href="/booking.html" class="btn orange">Book a new appointment</a>'
         );
+        syncRememberedBooking(token, null);
         window.scrollTo({ top: 0, behavior: 'auto' });
       } else if (row && row.message === 'already-cancelled') {
         renderState('<div class="state-msg"><p>This booking was already cancelled.</p></div><a href="/booking.html" class="btn orange">Book a new appointment</a>');

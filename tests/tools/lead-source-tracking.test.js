@@ -31,9 +31,19 @@ test('index.html\'s lead form has a "How did you hear about us?" field, sent to 
 
 test('booking.html\'s booking form has the same field, sent to th_bookings', () => {
   assert.match(bookingHtml, /<select id="bSource" name="source">/);
-  const fnMatch = bookingHtml.match(/fetch\(SUPABASE_URL \+ '\/rest\/v1\/th_bookings', \{[\s\S]*?\n\s*\.then\(function \(res\)/);
-  assert.ok(fnMatch, 'expected to isolate the th_bookings insert body');
+  // Updated 2026-09-22 (booking-flow pass, round 3): the payload is now
+  // built once as bookingPayload and handed to submitBooking(), which
+  // sends it to create_booking() (falling back to the same direct
+  // th_bookings insert on a 404) -- so the field is asserted where the
+  // payload is built, and submitBooking() is asserted to send that exact
+  // payload down both paths.
+  const fnMatch = bookingHtml.match(/const bookingPayload = Object\.assign\(\{[\s\S]*?\n\s*submitBooking\(bookingPayload\)/);
+  assert.ok(fnMatch, 'expected to isolate the booking payload build');
   assert.match(fnMatch[0], /source: formData\.get\('source'\) \|\| null,/);
+  const submitFn = bookingHtml.match(/function submitBooking\(payload\) \{[\s\S]*?\n  \}\n/);
+  assert.ok(submitFn, 'expected to isolate submitBooking()');
+  assert.match(submitFn[0], /JSON\.stringify\(\{ p_booking: payload \}\)/);
+  assert.match(submitFn[0], /fetch\(SUPABASE_URL \+ '\/rest\/v1\/th_bookings', \{[\s\S]*?body: JSON\.stringify\(payload\)/);
 });
 
 test('both forms offer the same source options, so the Dashboard breakdown never has to reconcile two different vocabularies', () => {

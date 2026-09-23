@@ -1366,4 +1366,22 @@ height).
 - Checked in headless Chromium at 390px and 1440px: no horizontal
   overflow and no page errors.
 
+## 2026-09-22 (later still) -- booking flow round 3: the manage link and the "already booked" banner
+
+- **Confirmation.** A `.conf-manage` line sits under the appointment
+  card: 14px body text with an orange-light underlined link. It rises
+  in at .95s with the rest of the choreography, between the card
+  (.7s) and the calendar buttons.
+- **"You're already booked" banner** at the top of `booking.html`:
+  - a green-tinted panel with a 32px `--success-text` circle holding a
+    drawn check
+  - the title in the UI font, then "Service · **day at time**" with
+    the time in green
+  - "Reschedule or cancel" as an orange-light underlined link, then a
+    small dim "Not you? Forget this device" text button
+  - `role="status"` and `[hidden]` until the server confirms the visit,
+    so it never flashes on a stale record
+- Checked in headless Chromium at 390px and 1440px: no horizontal
+  overflow and no page errors.
+
 <!-- Add new entries above this line -->

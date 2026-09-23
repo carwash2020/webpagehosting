@@ -380,7 +380,7 @@ async function fillAndSubmit(w, address) {
 test('confirming shows the booked time, address (escaped), Add to calendar, and a filled-in Google Calendar link, and starts the celebration', async () => {
   const w = loadHtml(BOOKING_HTML, BOOKING_URL, async (url) => {
     if (String(url).includes('get_booking_availability')) return { ok: true, json: async () => ([]) };
-    if (String(url).includes('/rest/v1/th_bookings')) return { ok: true };
+    if (String(url).includes('/rpc/create_booking')) return { ok: true, json: async () => ([{ booking_id: 1, manage_token: '11111111-2222-3333-4444-555555555555' }]) };
     return { ok: false };
   });
   await bookThroughToConfirmation(w, '12 Elm <img src=x onerror=alert(1)>');
@@ -418,7 +418,7 @@ test('a slot taken at the last second sends the visitor back to fresh times WITH
   let availabilityCalls = 0;
   const w = loadHtml(BOOKING_HTML, BOOKING_URL, async (url) => {
     if (String(url).includes('get_booking_availability')) { availabilityCalls++; return { ok: true, json: async () => ([]) }; }
-    if (String(url).includes('/rest/v1/th_bookings')) return { ok: false, status: 409, text: async () => '{"code":"23P01","message":"conflicting key value violates exclusion constraint"}' };
+    if (String(url).includes('/rpc/create_booking')) return { ok: false, status: 409, text: async () => '{"code":"23P01","message":"conflicting key value violates exclusion constraint"}' };
     return { ok: false };
   });
   await fillAndSubmit(w, '1 A St');

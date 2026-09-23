@@ -4195,3 +4195,45 @@ sandbox-proxy test), `check-consistency`, `check-undefined-vars`, lint,
 390px and 1440px through book, confirm, reschedule and cancel, with
 Supabase intercepted: no page errors, no horizontal overflow. New tests:
 `tests/booking/booking-flow-picker-and-confirm.test.js` (33).
+
+## What changed, 2026-09-22 (later still) -- Booking flow, round 3: every booker can reschedule online, and the page remembers the visit
+
+`booking.html`, `manage-booking.html` and one new SQL function
+(`sql/booking/add_create_booking_rpc.sql`). Full reasoning:
+`docs/specialist-logs/features.md` and `visual.md` (2026-09-22 round 3
+entries).
+
+**A manage link for everyone.** Rescheduling or cancelling online used
+to need the link in the confirmation email. Anyone who booked with only
+a phone number had to call. Bookings now go through
+`create_booking()`, which makes the same booking (same checks, same
+alerts, same double-booking guard) and hands back the visit's private
+manage link:
+- The confirmation screen shows "Plans change? Reschedule or cancel
+  this visit anytime."
+- The calendar file and Google Calendar event include the link too.
+
+`create_booking()` is also stricter than the old direct insert:
+- It always creates a confirmed booking.
+- It can't be used to set internal fields.
+- It rejects impossible times, visits in the past, and a blank name.
+
+If the function is ever missing, the page quietly falls back to the old
+insert.
+
+**The page remembers.** Come back to the booking page on the same phone
+and it says "You're already booked: Appliance Repair, Wednesday at
+2:00 PM", with a Reschedule or cancel link, instead of a blank form that
+invites booking twice.
+- It checks the visit with the server first, so a visit cancelled some
+  other way never shows up.
+- Past visits drop off by themselves.
+- "Forget this device" clears it.
+- Only the link and the time are stored, never a name, phone or
+  address.
+
+Verified: full suite (the only failure is the known `check-links.py`
+sandbox-proxy test), `check-consistency`, `check-undefined-vars`, lint.
+The SQL function was exercised live in rolled-back transactions.
+Driven in headless Chromium at 390px and 1440px. New tests:
+`tests/booking/booking-manage-link-round3.test.js` (12).
