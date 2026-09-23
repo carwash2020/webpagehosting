@@ -4930,6 +4930,12 @@ Tests: `tests/tools/shift-week-card.test.js` (9, new) replaces
 `shift-hours-card.test.js`. `your-week.test.js` passes unchanged apart
 from its fake page element.
 
+## What changed, 2026-09-23 -- Start my day: the time field no longer overlaps its button on a real phone
+
+Workspace tools only. On a real iPhone, the "Start my day" sheet's "STARTED EARLIER?" time field and its "Start from then" button could overlap -- reported directly with a screenshot. Local testing in Chromium never showed it: real iOS Safari's native time picker has a minimum width that CSS can't shrink, wide enough to overflow that row next to the button, while Chromium's own (narrower) time input hid the problem. Fixed by stacking the field above the button on phone-width screens instead of trying to out-shrink the native control.
+
+Verified: full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`. Checked visually at 390x844 with the sheet open -- the field and button now sit on separate rows. No test file references these classes, so no test changes were needed.
+
 
 ## What changed, 2026-09-23 -- Site content: a safe editor with real undo, and the Google rating + review count move into it
 
