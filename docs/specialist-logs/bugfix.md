@@ -934,3 +934,4 @@ Tests: `tests/tools/job-clock.test.js`.
 - `js/cookie-consent.js` (33 pages), `js/mobile-nav-collapsible.js` (33) and `js/hiring-banner.js` (16) are loaded with no `?v=` at all. Every other shared public script carries a content hash.
 - `check-consistency.js` only polices references that already have a `?v=`, so it can't catch drift on these. An edit to any of them would be served stale from Fastly and browser caches.
 - The visual lane will stamp `hiring-banner.js` if its round-3 banner work touches it. The other two are unowned.
+- Update, same day: `hiring-banner.js` is stamped and in `GLOBAL_SHARED_FILES` now (visual round 3). `cookie-consent.js` and `mobile-nav-collapsible.js` are still unstamped and unowned.

@@ -1499,4 +1499,59 @@ them again:
 - Pixel-diff the site against itself first. Reveal and decode timing
   gives 600-900px of noise, so a diff of that size isn't a finding.
 
+## 2026-09-23 (late) -- round 3: banners without the page jump
+
+The WELCOME15 and hiring banners now load synchronously, directly after
+the two banner divs, and each fits on one row with a 44px close button.
+Numbers are in README. Worth knowing before touching them again:
+
+- **`defer` was the shift.** Deferred scripts run after parsing finishes,
+  and the browser paints in between, so the first paint had empty
+  banners. Filling them afterwards pushed the header and hero down 85px
+  on desktop (CLS 0.059 on every first visit). A parser-blocking script
+  right after the divs runs before `<header>` exists. Everything above
+  it (`.bg-blueprint`, `.skip-link`, `.motto-rail`) is out of flow, so
+  the first paint that includes the header already has the banners at
+  full size.
+- **Keep both files tiny and network-free, and never add defer or async
+  back.** They now block rendering. Each has a header comment saying so.
+- **The `?v=` stamp is part of the fix.** The root service worker serves
+  stamped requests cache-first and sends unstamped ones to the network
+  with `cache:'reload'`. `hiring-banner.js` had no stamp, so as a
+  blocking script it would have cost a network trip on every page view.
+  It's stamped and in `GLOBAL_SHARED_FILES` now. Verified: both banner
+  files come from the service worker cache on a return visit.
+- **The Site Content override still wins.** An admin-set banner1/banner2
+  is written as plain text by the page's own `site_content` fetch, and it
+  now always arrives after the script, so the order is deterministic.
+  The one-row padding sits behind `.site-banner:has(> .site-banner-inner)`,
+  so that plain text keeps its original `10px 20px` / `7px 14px`. When
+  it arrives late it still shifts the page by the same amount as before;
+  that's inherent to a fetched banner.
+- **Mobile.** The inner row used to `flex-wrap`, which dropped the 21x20px
+  close button onto its own centred line, making each banner 89px tall.
+  Now the text stays left-aligned beside a 44x44px button, 47px per
+  banner at both 375px and 320px. The focus ring is inset (`-2px`),
+  because the global `+2px` offset would hide its bottom edge under the
+  next banner. `.site-banner-keep` stops "$35–$100+" from breaking after
+  the en dash.
+- **Residual.** At 375px, about 0.002-0.004 of text reflows sideways
+  when Oswald loads, with no change in banner height. That's the font
+  swap; round 2 already made the fallback width-matched.
+- **Not changed:** `locations/handyman-st-george-ut.html` has the
+  banner divs but has never loaded either banner script (true since
+  before the /locations/ move). Adding them is a product call.
+
+**Harness notes:**
+- Playwright runs the **last** matching `route()`. Register a
+  catch-all abort before a specific stub, otherwise the stub never
+  fires.
+- An rAF loop that records each banner's computed `display` shows the
+  parse order directly: `none/none → flex/none → flex/flex+H` means both
+  banners were filled before the header existed.
+- Don't read first-contentful-paint alone after a change like this. The
+  banner text can now paint on its own first (FCP 2.1s → 1.5s on some
+  runs), which is a different element, not a faster page. Compare LCP
+  entries for the hero: 2.10s → 2.01s, no slower.
+
 <!-- Add new entries above this line -->

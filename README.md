@@ -4421,3 +4421,47 @@ Verified:
 New tests:
 - `tests/design/fallback-font-metrics.test.js` (7): condensed faces shrink, every stand-in names fonts that resolve, overrides match the real metrics, stack order, the arrow carve-out, and the lede cap.
 - `tests/site-wide/global-stamp-scan-dirs.test.js` (2): the checker scans both folders, and every city/service page's stamp is current.
+
+## What changed, 2026-09-23 -- The top banners no longer push the page down, and fit on phones
+
+Public site: the homepage, the 7 city pages and the 8 service pages, which are the 16 pages that show the WELCOME15 and "we're hiring" banners.
+
+**What was wrong.**
+- **Desktop.** Both banners were filled in by scripts that ran only after the page had painted. On every first visit, the header and hero jumped down 85px a moment after appearing. That's a layout shift (CLS) of 0.059 on its own, before anything else on the page.
+- **Phones.** Each banner wrapped its close button (×) onto a line of its own under the text, making each one 89px tall. Together they took 178px of the first screen. The × was a 21×20px target.
+
+**The fix.**
+- The two banner scripts now run the instant their empty boxes are read, before the header exists. The first paint already has the banners at full size, so nothing below them moves. Visitors who dismissed a banner never see it flash.
+- `hiring-banner.js` now has a cache-bust stamp like every other shared script, and `npm run fix-versions` tracks it. Without the stamp, the service worker would have fetched it from the network before every page view. With it, return visits load both banners from the service worker's cache (checked).
+- Phone layout: text on the left, the × on the right on the same row, and a 44×44px tap target. The text is unchanged. The one tweak is that "$35–$100+" no longer breaks across two lines.
+- A banner set in **Tools > Site Content** still replaces the promo text and looks exactly as before.
+
+**Measured** in headless Chromium, throttled (150ms latency, 1.6 Mbps, 4× CPU) with the fonts delayed 1s:
+
+| | Before | After |
+|---|---|---|
+| Desktop first visit, service page: CLS from the banners | 0.059 | **0.0006** |
+| Hero text first painted, same runs (3-run average) | 2.10s | 2.01s: no slower |
+| Banner height at 375px / 320px | 89px / 89px | **47px / 47px** |
+| Both banners at 375px | 178px | **94px** |
+| Close button | 21×20px, on its own line | **44×44px**, beside the text |
+
+The banner scripts now block rendering, but the page doesn't paint later. On some runs the banner text paints on its own about 0.5s before the rest, which makes raw first-contentful-paint look faster than it really is. The hero row is the fair comparison.
+
+Desktop banners are 45px tall instead of 43px. Nothing else on desktop changes. Checked on the homepage, a service page and a city page, for first visit, both dismissed, and one dismissed, at 1440, 375 and 320px, in dark and light themes with reduced motion. axe finds no target-size, contrast or button-name issues.
+
+Verified:
+- full suite 3206 of 3207 passing; the one failure is the known `check-links.py` sandbox-proxy test;
+- `check-consistency`, `check-undefined-vars`, `eslint` and `check-visual-snapshot` clean;
+- `check-links.py`: the only failures are the sandbox proxy refusing outside sites (403), no internal link broken;
+- CSP untouched: the scripts are same-origin, so `script-src 'self'` covers them;
+- no SEO metadata or JSON-LD touched.
+
+New test: `tests/design/site-banner-no-layout-shift.test.js` checks:
+- placement and stamps on all 16 pages;
+- parse-time behaviour for first visit, both dismissed, and one dismissed;
+- that the Site Content override still wins;
+- the one-row CSS.
+
+`promo-banner.test.js` and `hiring-banner.test.js` now expect the synchronous, stamped tags.
+
