@@ -4804,8 +4804,8 @@ Finance's Inventory tab, and Dev Tools' Graveyard. Nothing else changes.
   device.
 
 Verified:
-- full suite passing apart from the known `check-links.py` sandbox-proxy
-  test;
+- full suite 3372 of 3373 passing; the one failure is the known
+  `check-links.py` sandbox-proxy test;
 - `check-consistency`, `check-undefined-vars` and `eslint` clean.
 
 Tests: `tests/sync/tombstone-coverage.test.js` (new); 3 more in
