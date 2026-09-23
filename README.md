@@ -4988,3 +4988,11 @@ Verified:
 
 Tests:
 - `tests/sync/graveyard-restore-every-type.test.js` (22, new): every Graveyard type, plus the 3 fixes above, which fail without this change.
+
+## What changed, 2026-09-23 -- Cron Health: stopped flagging things that aren't cron failures
+
+Dev Tools only. Cron Health was showing a run of "HTTP call failed -- status 401" alerts, reported directly with a screenshot. Checked the actual pg_cron job history: every real cron job run in that window succeeded, and the alerted timestamps didn't line up with any job's schedule. The watchdog was scanning every HTTP call this project's database ever makes -- including the notification triggers (new lead, booking changes, portal messages, etc.), which call the same Postgres extension cron jobs do -- and treating any non-2xx response as a cron failure, whoever actually made the call.
+
+Fixed by having each cron job record which job made a given HTTP call before it fires, so the health check can only ever alert on a response to a call a cron job actually made. The alert now also names which job failed, instead of a bare "HTTP call failed." The already-open false-positive alerts were marked resolved; a real cron failure still alerts exactly as before.
+
+Verified: full suite (3522/3523, the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, and a fresh admin re-run of the health check against the live database confirmed 0 open alerts. New tests: `tests/dev-tools/cron-health-scoped-to-cron.test.js` (8).
