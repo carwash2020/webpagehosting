@@ -36,7 +36,8 @@ const PAGES_WITH_BANNER = [
 for (const page of PAGES_WITH_BANNER) {
   test(`${page} loads promo-banner.js`, () => {
     const html = fs.readFileSync(repo(page), 'utf8');
-    assert.match(html, /<script src="\/js\/promo-banner\.js\?v=[a-f0-9]+" defer><\/script>/);
+    // Synchronous since 2026-09-23 (no defer) -- see site-banner-no-layout-shift.test.js.
+    assert.match(html, /<script src="\/js\/promo-banner\.js\?v=[a-f0-9]{10}"><\/script>/);
     assert.match(html, /<div id="siteBanner1" class="site-banner" style="display:none;"><\/div>/);
   });
 }

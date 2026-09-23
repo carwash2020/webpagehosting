@@ -5,6 +5,14 @@
 // as a fully separate script/key/element so the two can show or be
 // dismissed independently -- a visitor who closes the discount offer
 // should still see the hiring push, and vice versa.
+//
+// Loaded SYNCHRONOUSLY (2026-09-23), directly after the two banner divs and
+// before <header>, so the banner is already full-size in the first frame
+// the header paints in. Loaded with defer it filled in after that first
+// paint, pushing the whole page down 85px on desktop (CLS 0.059). So this
+// file blocks rendering: keep it tiny, dependency-free, and free of network
+// calls, and never add defer/async back. The ?v= stamp matters too -- the
+// service worker only serves stamped requests from cache.
 (function () {
   var DISMISS_KEY = 'th-hiring-banner-dismissed';
   var banner = document.getElementById('siteBanner2');
@@ -22,7 +30,7 @@
   banner.innerHTML =
     '<div class="site-banner-inner">' +
       '<p class="site-banner-text">' +
-        '<strong>We\'re hiring.</strong> Part-time handyman helper, flexible hours, $35–$100+ per job. ' +
+        '<strong>We\'re hiring.</strong> Part-time handyman helper, flexible hours, <span class="site-banner-keep">$35–$100+</span> per job. ' +
         '<a href="/careers.html">See the posting &amp; apply &rarr;</a>' +
       '</p>' +
       '<button type="button" class="site-banner-close" aria-label="Dismiss this notice">&times;</button>' +

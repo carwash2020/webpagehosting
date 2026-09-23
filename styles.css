@@ -543,19 +543,36 @@
     border-bottom:1px solid var(--orange-tint-border);
     text-align:center;
   }
+  /* Banner row (2026-09-23): text and a 44x44px close button share one
+     row that never wraps. Before this, the inner flex-wrapped, so on a
+     phone the ~20px-wide close button fell onto its own centred line
+     under the text and each banner was 89px tall (two banners = 178px
+     of the first screen). The 44px button now sets the row height; the
+     banner keeps its left padding and drops its vertical padding, so
+     desktop stays ~45px and a 375px phone drops to ~47px per banner.
+     The :has() rules only apply while the script's .site-banner-inner is
+     present -- a Tools > Site Content banner (plain text written by the
+     page's site_content fetch) keeps the original padding. */
+  .site-banner:has(> .site-banner-inner){padding:0 4px 0 20px;}
   .site-banner-inner{
     display:flex;
     align-items:center;
     justify-content:center;
-    gap:14px;
-    flex-wrap:wrap;
+    gap:4px;
+    flex-wrap:nowrap;
+    min-width:0;
     max-width:var(--maxw-nav);
     width:100%;
   }
   .site-banner-text{
+    flex:0 1 auto;
+    min-width:0;
     margin:0;
+    padding:6px 0;
     font-family:var(--font-ui);
     font-size:13.5px;
+    line-height:1.4;
+    text-wrap:pretty;
     color:var(--text);
   }
   .site-banner-text b{color:var(--orange-text-vivid);}
@@ -566,20 +583,36 @@
     text-underline-offset:2px;
   }
   .site-banner-text a:hover{color:var(--text);}
+  /* Keeps a range like "$35–$100+" on one line -- a phone-width wrap
+     otherwise breaks right after the en dash. */
+  .site-banner-keep{white-space:nowrap;}
   .site-banner-close{
+    flex:0 0 44px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:44px;
+    height:44px;
+    margin:0;
+    padding:0;
+    border-radius:6px;
     background:none;
     border:none;
     color:var(--text-dim);
-    font-size:20px;
+    font-size:22px;
     line-height:1;
     cursor:pointer;
-    padding:0 4px;
-    flex-shrink:0;
   }
   .site-banner-close:hover{color:var(--text);}
+  /* Inset ring: the banner is 44px tall, so the global 2px outside
+     offset would push the bottom of the ring under the next banner or
+     the sticky header. */
+  .site-banner-close:focus-visible{outline-offset:-2px;}
   @media (max-width:600px){
     .site-banner{padding:7px 14px;}
-    .site-banner-text{font-size:12.5px;}
+    .site-banner:has(> .site-banner-inner){padding:0 0 0 14px;}
+    .site-banner-inner{justify-content:space-between;}
+    .site-banner-text{font-size:12.5px; line-height:1.35; text-align:left;}
   }
 
   /* header */
@@ -1983,7 +2016,8 @@
           cover H1/CTAs. Lifted above the Call/Book bar when both show.
        9. lightbox / modal      z-index:9999
      Promo .site-banner is in-flow above the header, not fixed -- it
-     consumes first-screen height but does not compete for the bottom
+     consumes first-screen height (~47px each at 375px, ~45px on
+     desktop, since 2026-09-23) but does not compete for the bottom
      safe area. .motto-rail is z-index:55, pointer-events:none.
      Safe-area: sticky-call padding-bottom includes
      env(safe-area-inset-bottom). Chat / back-to-top / cookie bottom
