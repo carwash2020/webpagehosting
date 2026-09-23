@@ -107,6 +107,10 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=a494344e8c">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/portal/portal-app.js?v=202609230030"></script>
+<!-- jsPDF for the service history download (2026-09-22) -- the same
+     pinned version and integrity hash Invoices and Quotes load for
+     their PDFs. async: it's only needed when the button is tapped. -->
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
 <!-- Shared business-hours data (2026-09-03) -- see business-hours.js's
      own header comment. This page used to keep its own FIFTH
      independent hand-typed copy of these exact constants. -->
@@ -183,6 +187,16 @@
   .job-warranty.is-active { background: rgba(76,175,80,0.15); color: #4caf50; }
   .job-warranty.is-expired { background: var(--bg-panel); color: var(--text-dim); }
   /* Warranty overview (2026-09-03). */
+  .history-download {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 16px; margin-bottom: 16px;
+  }
+  .history-download[hidden] { display: none; }
+  .history-download-text { flex: 1 1 240px; min-width: 0; }
+  .history-download-title { font-weight: 700; font-size: 15px; color: var(--white); }
+  .history-download-sub { font-size: 13px; line-height: 1.45; color: var(--text-dim); margin-top: 2px; }
+  .history-download-btn { flex: 0 0 auto; justify-content: center; }
   .warranty-overview { background: rgba(76,175,80,0.1); border: 1px solid rgba(76,175,80,0.3); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; }
   .warranty-overview-title { font-size: 14px; font-weight: 600; color: #4caf50; margin-bottom: 8px; }
   .warranty-overview-row { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; font-size: 13px; color: var(--white); }
@@ -341,6 +355,16 @@
 <div id="warrantyOverview"></div>
 </div>
 <div class="page-split-main">
+<!-- Service history (2026-09-22): every job on one PDF, for selling
+     the house, an insurance claim, or just keeping records. Shown once
+     there's at least one job. -->
+<div class="history-download" id="historyDownload" hidden>
+  <div class="history-download-text">
+    <div class="history-download-title">Your service history</div>
+    <div class="history-download-sub">Every job we've done, with dates and invoices, as one PDF -- handy when you sell the house or file a claim.</div>
+  </div>
+  <button type="button" class="btn secondary-btn history-download-btn" id="historyDownloadBtn" onclick="downloadServiceHistory()">Download PDF</button>
+</div>
 <div id="jobList">
   <div class="skeleton-card"><div class="skeleton-line is-title"></div><div class="skeleton-line is-wide"></div><div class="skeleton-line is-narrow"></div></div>
   <div class="skeleton-card"><div class="skeleton-line is-title"></div><div class="skeleton-line is-wide"></div><div class="skeleton-line is-narrow"></div></div>
@@ -694,6 +718,255 @@
       '</div>';
   }
 
+  // ---- Service history PDF (2026-09-22) ----
+  // Everything below reads only what this client can already see in
+  // the portal (their jobs, the invoices those jobs link to, their
+  // check-up plan) -- nothing internal, nothing invented.
+  let currentJobs = [];
+
+  function historyMoney(n) {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(n) || 0);
+  }
+  function historyDate(d) {
+    if (!d) return '';
+    const date = new Date(String(d).length <= 10 ? d + 'T12:00:00' : d);
+    return isNaN(date.getTime()) ? '' : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  // Pure: shapes the rows the PDF draws. Newest job first, each with its
+  // linked invoice's amount and what was done (the invoice description
+  // when it adds something, then its line items), plus a note while
+  // the 30-day labor warranty is still running. Only jobs belonging to
+  // `email` -- an internal account previewing the portal can read every
+  // client's rows, and must never get them on one client's record.
+  function buildServiceHistory({ jobs, invoices, checkups, email, name, address, now }) {
+    const mine = (row) => !row.client_email || String(row.client_email).toLowerCase() === String(email || '').toLowerCase();
+    const invoiceByNumber = {};
+    (invoices || []).filter(mine).forEach(inv => { if (inv.invoice_number) invoiceByNumber[inv.invoice_number] = inv; });
+    const today = new Date(new Date(now).toDateString());
+    const rows = (jobs || []).filter(mine)
+      .slice()
+      .sort((a, b) => String(b.job_date || '').localeCompare(String(a.job_date || '')))
+      .map(j => {
+        const inv = j.linked_invoice_number ? invoiceByNumber[j.linked_invoice_number] : null;
+        const details = [];
+        if (inv && inv.description && inv.description.trim() && inv.description.trim() !== String(j.title || '').trim()) details.push(inv.description.trim());
+        (inv && Array.isArray(inv.line_items) ? inv.line_items : []).forEach(li => {
+          const desc = String(li && li.desc || '').trim();
+          if (desc) details.push(desc + (Number(li.qty) > 1 ? ' (x' + Number(li.qty) + ')' : ''));
+        });
+        let warranty = '';
+        const done = new Date(j.job_date + 'T00:00:00');
+        if (!isNaN(done.getTime())) {
+          const daysLeft = 30 - Math.round((today - done) / 86400000);
+          if (daysLeft >= 0) {
+            const until = new Date(done.getTime() + 30 * 86400000);
+            warranty = 'Labor warranty active until ' + until.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          }
+        }
+        return {
+          date: historyDate(j.job_date),
+          title: j.title || 'Service visit',
+          invoice: inv ? inv.invoice_number : (j.linked_invoice_number || ''),
+          amount: inv ? Number(inv.total) || 0 : null,
+          paid: inv ? !!inv.paid : null,
+          details,
+          warranty,
+        };
+      });
+    const total = rows.reduce((sum, r) => sum + (r.amount || 0), 0);
+    const dated = (jobs || []).filter(mine).map(j => j.job_date).filter(Boolean).sort();
+    return {
+      name: name || '',
+      address: address || '',
+      email: email || '',
+      generated: historyDate(new Date(now).toISOString()),
+      since: dated.length ? new Date(dated[0] + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '',
+      rows,
+      total,
+      checkups: (checkups || []).filter(mine).map(c => ({
+        title: c.title || 'Check-up',
+        every: Number(c.interval_months) === 12 ? 'Every year' : Number(c.interval_months) === 1 ? 'Every month' : 'Every ' + Number(c.interval_months) + ' months',
+        last: historyDate(c.last_created_date),
+      })),
+    };
+  }
+
+  function historyLoadImage(src, timeoutMs = 3000) {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('Image load timed out')), timeoutMs);
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        clearTimeout(timer);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        canvas.getContext('2d').drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = () => { clearTimeout(timer); reject(new Error('Image failed to load')); };
+      img.src = src;
+    });
+  }
+
+  // Same header band, colours and type as the invoice/receipt PDF on
+  // Invoices, so the client's paperwork from us looks like one set.
+  function drawServiceHistoryPdf(doc, model, logoData) {
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const NAVY = [26, 26, 26], ORANGE = [224, 123, 30], GRAY = [90, 90, 90], LIGHT = [236, 236, 236], GREEN = [46, 139, 87];
+    const L = 40, R = pageW - 40;
+    const COL = { date: L, work: L + 78, invoice: R - 150, amount: R };
+    const workW = COL.invoice - COL.work - 14;
+
+    function band(first) {
+      doc.setFillColor(...NAVY);
+      doc.rect(0, 0, pageW, first ? 100 : 54, 'F');
+      if (first) {
+        if (logoData) { try { doc.addImage(logoData, 'PNG', 40, 15, 65, 60); } catch (e) { /* optional */ } }
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(255, 255, 255);
+        doc.text('TRIPLE H', 118, 45);
+        doc.setTextColor(...ORANGE);
+        doc.text('ENTERPRISES', 118 + doc.getTextWidth('TRIPLE H ') + 4, 45);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(207, 207, 207);
+        doc.text('Honesty.  Hustle.  Helpfulness.', 118, 62);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(...ORANGE);
+        doc.text('SERVICE HISTORY', R, 30, { align: 'right' });
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(255, 255, 255);
+        doc.text('(435) 414-1667', R, 46, { align: 'right' });
+        doc.text('steve@triplehenterprisesllc.biz', R, 58, { align: 'right' });
+        doc.text('www.triplehenterprisesllc.biz', R, 70, { align: 'right' });
+      } else {
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(255, 255, 255);
+        doc.text('TRIPLE H ENTERPRISES', L, 32);
+        doc.setTextColor(...ORANGE);
+        doc.text('SERVICE HISTORY' + (model.name ? ' \u00b7 ' + model.name : ''), R, 32, { align: 'right' });
+      }
+    }
+    function tableHead(y) {
+      doc.setFillColor(...LIGHT);
+      doc.rect(L, y, R - L, 20, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(...GRAY);
+      doc.text('DATE', COL.date + 6, y + 13);
+      doc.text('WORK DONE', COL.work, y + 13);
+      doc.text('INVOICE', COL.invoice, y + 13);
+      doc.text('AMOUNT', COL.amount - 6, y + 13, { align: 'right' });
+      return y + 28;
+    }
+    let y;
+    function ensure(space) {
+      if (y + space <= pageH - 60) return;
+      doc.addPage();
+      band(false);
+      y = tableHead(76);
+    }
+
+    band(true);
+    y = 128;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...ORANGE);
+    doc.text('PREPARED FOR', L, y);
+    doc.text('SUMMARY', pageW / 2 + 20, y);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(...NAVY);
+    let ly = y + 16;
+    [model.name, model.address, model.email].filter(Boolean).forEach(line => {
+      doc.splitTextToSize(line, pageW / 2 - 60).forEach(part => { doc.text(part, L, ly); ly += 15; });
+    });
+    let ry = y + 16;
+    const jobsLine = model.rows.length + ' job' + (model.rows.length === 1 ? '' : 's') + (model.since ? ' since ' + model.since : '');
+    [jobsLine, 'Invoiced total ' + historyMoney(model.total), 'Generated ' + model.generated].forEach(line => { doc.text(line, pageW / 2 + 20, ry); ry += 15; });
+    y = Math.max(ly, ry) + 14;
+
+    y = tableHead(y);
+    model.rows.forEach((row, i) => {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+      const titleLines = doc.splitTextToSize(row.title, workW);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+      const detailLines = [].concat(...row.details.map(d => doc.splitTextToSize('\u2022 ' + d, workW)));
+      const height = titleLines.length * 13 + detailLines.length * 11 + (row.warranty ? 12 : 0) + 12;
+      ensure(height);
+      if (i > 0) { doc.setDrawColor(...LIGHT); doc.line(L, y - 9, R, y - 9); }
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(...GRAY);
+      doc.text(row.date, COL.date + 6, y);
+      doc.text(row.invoice || '\u2014', COL.invoice, y);
+      doc.setTextColor(...NAVY);
+      doc.text(row.amount === null ? '\u2014' : historyMoney(row.amount), COL.amount - 6, y, { align: 'right' });
+      if (row.paid === false) { doc.setFontSize(7.5); doc.setTextColor(...ORANGE); doc.text('UNPAID', COL.amount - 6, y + 11, { align: 'right' }); }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...NAVY);
+      let wy = y;
+      titleLines.forEach(t => { doc.text(t, COL.work, wy); wy += 13; });
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(...GRAY);
+      detailLines.forEach(t => { doc.text(t, COL.work, wy); wy += 11; });
+      if (row.warranty) { doc.setTextColor(...GREEN); doc.text(row.warranty, COL.work, wy); wy += 12; }
+      y = wy + 12;
+    });
+
+    if (model.checkups.length) {
+      ensure(40 + model.checkups.length * 15);
+      y += 6;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...ORANGE);
+      doc.text('ONGOING MAINTENANCE', L, y);
+      y += 16;
+      doc.setFontSize(10);
+      model.checkups.forEach(c => {
+        doc.setFont('helvetica', 'bold'); doc.setTextColor(...NAVY);
+        doc.text(c.title, L, y);
+        doc.setFont('helvetica', 'normal'); doc.setTextColor(...GRAY);
+        doc.text(c.every + (c.last ? ', last ' + c.last : ''), R, y, { align: 'right' });
+        y += 15;
+      });
+    }
+
+    const pages = doc.internal.getNumberOfPages();
+    for (let p = 1; p <= pages; p++) {
+      doc.setPage(p);
+      doc.setDrawColor(...ORANGE); doc.setLineWidth(1.5);
+      doc.line(L, pageH - 44, R, pageH - 44);
+      doc.setLineWidth(0.5);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+      doc.text('Triple H Enterprises LLC \u00b7 St. George, Utah \u00b7 30-day labor warranty from each job date', L, pageH - 30);
+      doc.text('Page ' + p + ' of ' + pages, R, pageH - 30, { align: 'right' });
+    }
+  }
+
+  async function downloadServiceHistory() {
+    const btn = document.getElementById('historyDownloadBtn');
+    if (!window.jspdf) { showToast('Still finishing loading. Give it a second and try again.', { type: 'error' }); return; }
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) { window.location.replace('/portal/login.html'); return; }
+    const email = session.user.email;
+    btn.disabled = true;
+    const label = btn.textContent;
+    btn.textContent = 'Preparing...';
+    try {
+      const [invoices, checkups, profile, lastRequest, lastQuote, logoData] = await Promise.all([
+        client.from('client_portal_invoices').select('client_email,client_name,invoice_number,invoice_date,description,total,paid,line_items').eq('client_email', email),
+        client.from('client_portal_checkups').select('client_email,title,interval_months,last_created_date').eq('client_email', email),
+        client.from('client_profiles').select('display_name').eq('client_email', email).maybeSingle(),
+        client.from('client_portal_work_orders').select('address').eq('client_email', email).not('address', 'is', null).order('created_at', { ascending: false }).limit(1),
+        client.from('client_portal_quotes').select('client_address').eq('client_email', email).not('client_address', 'is', null).order('quote_date', { ascending: false }).limit(1),
+        historyLoadImage('/images/logo-signature-orange.webp').catch(() => null),
+      ]);
+      if (invoices.error) throw invoices.error;
+      const invoiceRows = invoices.data || [];
+      const name = (profile.data && profile.data.display_name) ||
+        (invoiceRows.find(i => i.client_name) || {}).client_name ||
+        (currentJobs.find(j => j.client_name) || {}).client_name || '';
+      const address = (lastRequest.data && lastRequest.data[0] && lastRequest.data[0].address) ||
+        (lastQuote.data && lastQuote.data[0] && lastQuote.data[0].client_address) || '';
+      const model = buildServiceHistory({ jobs: currentJobs, invoices: invoiceRows, checkups: checkups.data || [], email, name, address, now: Date.now() });
+      const doc = new window.jspdf.jsPDF({ unit: 'pt', format: 'letter' });
+      drawServiceHistoryPdf(doc, model, logoData);
+      doc.save('Triple-H-service-history-' + new Date().toISOString().slice(0, 10) + '.pdf');
+    } catch (e) {
+      console.error(e);
+      showToast("Couldn't build your service history just now. Please try again.", { type: 'error' });
+    } finally {
+      btn.disabled = false;
+      btn.textContent = label;
+    }
+  }
+
   function renderJobCard(j) {
     const hasPhotos = Array.isArray(j.photo_storage_paths) && j.photo_storage_paths.length > 0;
     return `
@@ -1011,6 +1284,8 @@
       return;
     }
     renderWarrantyOverview(jobs);
+    currentJobs = jobs;
+    document.getElementById('historyDownload').hidden = false;
     listEl.innerHTML = jobs.map(renderJobCard).join('');
     jobs.forEach(j => {
       if (Array.isArray(j.photo_storage_paths) && j.photo_storage_paths.length) loadJobPhotos(j.id);
