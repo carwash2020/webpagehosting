@@ -156,7 +156,12 @@ test('tapping a time hands the page the exact computed slot, marked pressed; cha
   const p = makePicker(w);
   await waitForCondition(() => w.document.querySelector('#grid .slot-btn'));
   const clearsBeforeTap = p.clears();
-  const slotBtn = w.document.querySelectorAll('#grid .slot-btn')[1];
+  // The picker opens on the first day with room, and this test runs on the
+  // real clock. Late in the day that's today with a single slot left (seen
+  // 2026-09-23 at 5:42 PM Denver: one 8:00 PM slot), so a hard-coded
+  // second slot was undefined and every PR's CI went red in the evening.
+  const slots = w.document.querySelectorAll('#grid .slot-btn');
+  const slotBtn = slots[slots.length - 1];
   slotBtn.click();
   assert.equal(p.picked.length, 1);
   assert.ok(p.picked[0].startUtc instanceof w.Date && p.picked[0].endUtc instanceof w.Date);

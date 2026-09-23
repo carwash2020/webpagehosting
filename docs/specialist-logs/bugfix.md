@@ -1095,3 +1095,11 @@ Fixed in `sql/infra/fix_cron_health_false_positives.sql`: a `cron_tracked_http_r
 **Caught by the security advisor immediately, not by me first:** `cron_tracked_http_post` is `SECURITY DEFINER` and does `net.http_post` to a caller-controlled url/headers/body -- exactly the shape of an SSRF primitive if anyone but pg_cron's own execution role could call it. `revoke all ... from public` right after creating it looked sufficient but wasn't: Supabase's default privileges grant EXECUTE on every new public-schema function to `anon`/`authenticated` separately from the PUBLIC grant, and `get_advisors` flagged it as callable by both roles via `/rest/v1/rpc/cron_tracked_http_post` within the same session, before this ever shipped. Fixed with an explicit `revoke execute ... from anon, authenticated`. **Worth remembering for any future `SECURITY DEFINER` function in this project:** revoking from PUBLIC is not enough on its own -- always run `get_advisors` (security) right after creating one and check for `anon_security_definer_function_executable`/`authenticated_security_definer_function_executable` before considering it done, the same way this project already treats RLS-on-a-new-table as needing that same follow-up check.
 
 Tests: `tests/dev-tools/cron-health-scoped-to-cron.test.js` (8, new).
+
+## 2026-09-23 -- Portal booking picker test failed every evening (it assumed a second time slot)
+
+**Symptom:** `tests/portal/booking-picker-round4.test.js` "tapping a time hands the page the exact computed slot..." failed with `Cannot read properties of undefined (reading 'click')`. It failed on main and on every open PR, starting in the late afternoon Denver time.
+
+**Root cause:** the test runs on the real clock, and the picker opens on the first day with room. Late in the day that's today, with a single slot left. At 5:42 PM Denver on 2026-09-23 the first day was 2026-09-23 with one 8:00 PM slot. The test tapped `querySelectorAll('#grid .slot-btn')[1]`, a second slot that didn't exist. Earlier in the day there are several slots, so it passed.
+
+**Fix:** tap the last slot shown instead. Nothing the test checks depends on which slot it is. The other two tests that tap a later slot (`booking-manage-link-round3`, `booking-flow-picker-and-confirm`) already wait until that many slots exist, and pass.

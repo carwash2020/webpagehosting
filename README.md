@@ -5013,3 +5013,7 @@ Tests:
 - `tests/tools/website-nav-entry.test.js` (8, new): a site-content manager sees the row. Anyone without the permission never does: not before the permissions load, not after, not with every other permission. Two of the tests run the real `auth.js` against an `account_roles` response. All 8 fail without this change.
 - `tests/tools/app-shell-v2.test.js`: the More drawer's row list now includes Website (hidden for that test's account).
 - `tests/tools/job-tracker-calendar-view.test.js`: the sidebar now has 13 destinations, not 12.
+
+## What changed, 2026-09-23 -- A booking test no longer fails every evening
+
+Tests only. `tests/portal/booking-picker-round4.test.js` tapped the second time slot of the first day with room. Late in the day, that day is today with only one slot left, so the test failed on main and on every open PR from late afternoon (Denver time) until the day's last slot passed. It now taps the last slot shown. The booking picker itself was never broken.
