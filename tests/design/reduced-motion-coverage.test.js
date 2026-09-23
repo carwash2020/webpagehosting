@@ -46,10 +46,6 @@ const PUBLIC_FILES = [
   ...fs.readdirSync(repo('services')).filter((f) => f.endsWith('.html')).map((f) => `services/${f}`),
   'js/site-motion.js', 'js/promo-banner.js', 'js/hiring-banner.js', 'js/analytics-events.js', 'js/triage.js', 'js/business-hours.js', 'js/utm-tracking.js',
 ];
-// Owned by the booking lane (index.html's service modal -> #schedule
-// form hand-off), logged for them rather than changed here. If they fix
-// it, this entry simply stops matching -- the test doesn't require it.
-const BOOKING_LANE = [/document\.getElementById\('schedule'\)\.scrollIntoView\(\{behavior:'smooth'\}\)/];
 
 test('every explicit smooth scroll on the public site falls back to auto under reduced motion', () => {
   const unguarded = [];
@@ -59,7 +55,6 @@ test('every explicit smooth scroll on the public site falls back to auto under r
       if (!/behavior\s*:\s*'smooth'/.test(line)) return;
       if (/^\s*\/\//.test(line)) return; // a comment, not a call
       if (/reduced \? 'auto' : 'smooth'/.test(line)) return;
-      if (BOOKING_LANE.some((re) => re.test(line))) return;
       unguarded.push(`${f}:${i + 1}: ${line.trim()}`);
     });
   }

@@ -4827,6 +4827,12 @@ Tools only (the Dev Tools page). When you run the booking notification test, mov
 
 Verified: full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, lint, visual snapshot. New test: `tests/dev-tools/booking-test-copy.test.js` (3).
 
+## What changed, 2026-09-23 -- Tests: no more booking exception in the reduced-motion check
+
+Tests only, no change to the site. The check that every smooth scroll on the public site respects "reduce motion" had one exception: the homepage's "or schedule online" scroll, which the booking work has since fixed. The exception is removed, so the check now covers every page with no exceptions.
+
+Verified: full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, lint, visual snapshot. Putting the old scroll back makes the check fail.
+
 ## What changed, 2026-09-23 -- Deleted inventory parts no longer come back after a sync
 
 Finance's Inventory tab, and Dev Tools' Graveyard. Nothing else changes.
