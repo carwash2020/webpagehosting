@@ -982,7 +982,7 @@ the first pass; this is where each finding stands now.
 | 3 | HIGH | `Send-Push` had no caller check; any URL opened on tap | **Live** (v52 from this lane, v53 from the booking lane, same code). Service-worker same-origin guard merged (PR #381) |
 | -- | HIGH | Push privacy: team alerts reached any device with a subscription | **Certified and fixed live**, see "Push notifications" below |
 | 4 | HIGH | MFA enforced in the browser only | **Still needs an owner decision.** One more piece found, below |
-| 5 | MEDIUM | Double charge on one invoice | **Fixed (PR #386), deployed and verified**, below |
+| 5 | MEDIUM | Double charge on one invoice | **Fixed (PR #386), deployed and verified**: `create-payment-intent` v17, `create-bulk-payment-intent` v15, `reconcile-stripe-payments` v9 |
 | 6 | MEDIUM | `manage-saved-card` SetupIntents for any signed-in session | Open. Needs a product call, below |
 | 7 | LOW | Webhook doesn't compare `amount_received` to the invoice total | Narrowed by #386. Open, LOW |
 | 8 | MEDIUM | `send-booking-email` / `send-appointment-reminder` caller check | Fixed and deployed by the booking lane (#369, #383) |
@@ -1009,14 +1009,15 @@ as before. Each was then called twice from inside the database
 | `send-lead-email` | v23 | 401 | 400 |
 | `send-job-application-email` | v3 | 401 | 400 |
 | `send-job-status-change-email` | v4 | 401 | 400 |
-| `reconcile-stripe-payments` | v7 | 401 | not probed |
+| `reconcile-stripe-payments` | v7, then v9 with #386 | 401 | 200 `{"ok":true,"checked":0,…}` (one real run, on v9) |
 
 - **Reproduced first.** Before the four still-unfixed trigger functions
   were replaced, the anon key reached their payload check (400, not 401)
   on the live versions.
-- **Why reconcile wasn't probed with the Vault key.** That call would run
-  a real reconciliation. Its daily cron (06:00 UTC) sends the same Vault
-  key that passed the identical check on the seven functions above.
+- **Why reconcile got a real run instead of a probe.** It has no payload
+  to reject, so the Vault-key call runs a real reconciliation. That's
+  read-only, and its alerts are de-duplicated, so it was run once after
+  #386 deployed.
 - **Only verified main code was deployed.** Before each deploy, `git log`
   confirmed `main` differed from the live copy only by #363 (or #369).
   The booking lane was deploying the same `main` code at the same time;
@@ -1093,6 +1094,15 @@ including ones we would want only internal, certify that and if so fix."
   - 38 tests run the real handlers against a routed fake Stripe and
     Supabase: 14 fail on the old code, and every legitimate path passes
     both before and after.
+  - Deployed from `main` after merge. Each live copy was checked against
+    `main` first, to be sure it held nothing newer.
+  - Both create functions answer the anon key with 401 "Must be signed
+    in."
+  - reconcile's real run returned 200: no invoice payments in the
+    lookback window, so nothing to flag.
+  - The guard's own paths (409, reuse) can only be exercised with a real
+    client session, so they rest on the tests, and on the fallback that
+    leaves any Stripe lookup failure behaving exactly as before.
 
 ### Still open
 
