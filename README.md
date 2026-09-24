@@ -5272,6 +5272,25 @@ Tests:
 - `site-content-editor.test.js`: the new note; the built-in-value check covers every public page.
 - Updated: `conversion-polish-sticky-sms-faq.test.js` (the sticky Text button's new class).
 
+## What changed, 2026-09-24 -- Clients: a Delete button on the client page
+
+Tools only. A client can now be deleted from their own page (Clients &rarr; a client), which was only possible before from Dev Tools' Client registry.
+
+- **Where:** the last block on the page, after Contracts, set apart with a red border. It is deliberately not next to Call, Text, or New job.
+- **What it removes:** only the client record. Their jobs, invoices, quotes, and contracts stay exactly as they are. The confirm says what stays ("Their 1 job and 1 invoice stay on file."). This is the same delete Dev Tools already used, so the client stays gone after a sync and isn't rebuilt from their jobs.
+- **Undo:** after deleting, the page shows "was deleted" with **Undo** and **Back to Clients**. Undo brings back the same client, still linked to their jobs. Later, Dev Tools &rarr; Data &rarr; Graveyard can restore them.
+- **Graveyard fixed:** Dev Tools' Graveyard list was always blank because nothing drew it when the page opened, so there was no Restore button. It now shows every deleted record with Restore.
+
+Verified:
+
+- full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint`;
+- in headless Chromium at 430px, dark and light: the button (44px tall), the confirm (Cancel focused), delete, Undo, and a reload of Clients showing the deleted client gone while their job stays;
+- `npm run fix-versions` bumped the tools service worker's cache name.
+
+Tests:
+
+- `tests/tools/client-delete.test.js` (8, new; all fail without this change).
+
 ## What changed, 2026-09-24 -- Finance's Income tab: the active tab no longer overlaps the header
 
 Workspace tools only. Reported directly with a screenshot: on Finance's Income tab, the active tab's label bled up behind the sticky header once scrolled. Confirmed live: the mobile header is 109px tall (its content row is a full 44px, since every header button is a 44px tap target), but `.tabs.tabs-sticky`'s sticky position was set 4px above that, on every page sharing this tab bar (Finance, Job Tracker, Invoice Generator, Clients, Review Request). Fixed by correcting the offset to match the header's real height. `#mainContent`'s "skip to main content" scroll offset had the identical stale assumption and got the same fix.

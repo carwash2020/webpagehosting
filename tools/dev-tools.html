@@ -3711,6 +3711,10 @@
       // their own /tools/clients.html, which has its own init.
       renderKnownIssues();
       renderFlaggedItems();
+      // The Graveyard used to be left for an "on demand" render that
+      // nothing ever triggered, so its list stayed blank and there was
+      // no Restore button (2026-09-24). It renders with the page now.
+      renderGraveyard();
       renderUptimeStatus();
       renderDeployStatus();
       renderChangelog();
@@ -3747,10 +3751,9 @@
     // main initSyncOnLoad() above, not instead of it. Re-renders Wiki
     // Health once fresh data actually arrives (proceed() above already
     // renders it once with whatever was already in localStorage, which
-    // could be stale or missing entirely). The Graveyard itself renders
-    // lazily on demand rather than on load, so it doesn't need a
-    // matching re-render call here -- it'll read fresh localStorage
-    // whenever it's actually opened.
+    // could be stale or missing entirely). The Graveyard renders in
+    // proceed() with the rest of the page, and pull-to-refresh re-runs
+    // proceed(), so a restore or delete made elsewhere shows up there.
     if (typeof initWikiSyncOnLoad === 'function') {
       initWikiSyncOnLoad().then(() => { if (typeof renderWikiHealth === 'function') renderWikiHealth(); }).catch(() => {});
     }

@@ -135,6 +135,18 @@
   .referral-link-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
   .referral-link-code { flex: 1; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-family: var(--font-mono, monospace); font-size: 12.5px; color: var(--orange-light); word-break: break-all; }
   .referral-link-hint { color: var(--text-dim); font-size: 12px; margin-top: 6px; }
+
+  /* Delete (2026-09-24): its own block at the very end of the page, the
+     way a phone's contacts app keeps "Delete Contact" away from Call and
+     Text -- never next to the everyday buttons, where a stray tap lands. */
+  /* margin-top sets it apart from the records above; margin-bottom keeps
+     it clear of the phone's bottom nav, which is taller (85px) than the
+     76px the shared th-has-bottomnav padding reserves. */
+  body .section-block.client-delete-zone { border-color: rgba(224,82,82,0.3); margin-top: 22px; margin-bottom: 28px; }
+  .client-delete-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 13.5px; }
+  .client-delete-row .small-btn.danger { flex-shrink: 0; }
+  [data-theme="light"] .client-delete-row .small-btn.danger { color: #b3261e; border-color: rgba(179,38,30,0.45); }
+  .client-deleted-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 </style>
 </head>
 <body>
@@ -167,8 +179,20 @@
   <a href="/tools/clients.html" class="secondary-btn" style="text-decoration:none;">Back to Clients</a>
 </div>
 
+<!-- Shown right after this page deletes the client (2026-09-24), instead
+     of "not found": says what was kept and offers an immediate Undo. -->
+<div id="clientDeletedState" style="display:none; text-align:center; padding:60px 20px;">
+  <div id="clientDeletedText" style="color:var(--text-dim); font-size:14px; line-height:1.6; margin-bottom:16px;"></div>
+  <div class="client-deleted-actions">
+    <button type="button" class="secondary-btn" id="undoDeleteClientBtn" onclick="undoDeleteClient()">Undo</button>
+    <a href="/tools/clients.html" class="primary-btn" style="text-decoration:none;">Back to Clients</a>
+  </div>
+</div>
+
 <script>
   let currentClientId = null;
+  // The client this page just deleted, kept for Undo (see deleteThisClient).
+  let lastDeletedClient = null;
 
   document.addEventListener('DOMContentLoaded', async () => {
     if (typeof initSyncOnLoad === 'function') { try { await initSyncOnLoad(); } catch (e) { /* renders with whatever local data exists */ } }
@@ -227,6 +251,9 @@
   function onClientRealtimeChange() {
     const bundle = (currentClientId && typeof thGetClientBundle === 'function') ? thGetClientBundle(currentClientId) : null;
     if (!bundle) {
+      // Deleted from this page: keep the "deleted -- Undo" state rather
+      // than swapping it for "not found" when the sync echo arrives.
+      if (lastDeletedClient) return;
       document.getElementById('clientDetailView').style.display = 'none';
       document.getElementById('clientNotFound').style.display = '';
       return;
@@ -347,8 +374,85 @@
       href: '/tools/contract-generator.html?search=' + encodeURIComponent(c.name),
     })), 'No contracts on file for this client yet.');
 
+    html += '<div class="section-block client-delete-zone">' +
+      '<div class="client-delete-row">' +
+        '<div><div class="client-record-title">Delete client</div>' +
+        '<div class="client-record-meta">Removes ' + escapeHtml(c.name) + ' from Clients. Their jobs, invoices, quotes, and contracts stay on file.</div></div>' +
+        '<button type="button" class="small-btn danger" id="deleteClientBtn" onclick="deleteThisClient()">Delete</button>' +
+      '</div>' +
+    '</div>';
+
     document.getElementById('clientContent').innerHTML = html;
     loadReferralLink(c);
+  }
+
+  // Delete (2026-09-24), requested directly: there was no way to delete a
+  // client outside Dev Tools' Client registry. thDeleteClient() is the
+  // same call that one uses: it removes only the client record, records a
+  // tombstone so neither a sync nor the rebuild-from-jobs brings the
+  // client back, and keeps a copy in Dev Tools' Graveyard. The client's
+  // jobs, invoices, quotes and contracts are real records of their own and
+  // are left exactly as they are.
+  function countPhrase(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+
+  async function deleteThisClient() {
+    const bundle = (currentClientId && typeof thGetClientBundle === 'function') ? thGetClientBundle(currentClientId) : null;
+    if (!bundle || typeof thDeleteClient !== 'function') return;
+    const c = bundle.client;
+    const kept = [
+      bundle.jobs.length ? countPhrase(bundle.jobs.length, 'job', 'jobs') : '',
+      bundle.invoices.length ? countPhrase(bundle.invoices.length, 'invoice', 'invoices') : '',
+      bundle.quotes.length ? countPhrase(bundle.quotes.length, 'quote', 'quotes') : '',
+      bundle.contracts.length ? countPhrase(bundle.contracts.length, 'contract', 'contracts') : '',
+    ].filter(Boolean);
+    // "1 job stays" / "1 job and 1 invoice stay": one thing, or several.
+    const keptList = kept.length > 1 ? kept.slice(0, -1).join(', ') + ' and ' + kept[kept.length - 1] : (kept[0] || '');
+    const keptOne = kept.length === 1 && /^1 /.test(kept[0]);
+    const keptText = kept.length
+      ? 'Their ' + keptList + (keptOne ? ' stays' : ' stay') + ' on file. Only the client record is removed.'
+      : 'Nothing else is on file for them.';
+    const confirmed = await showConfirm('Delete ' + c.name + '? ' + keptText, { danger: true, confirmText: 'Delete client' });
+    if (!confirmed) return;
+
+    thDeleteClient(c.id);
+    lastDeletedClient = c;
+    document.getElementById('clientDetailView').style.display = 'none';
+    document.getElementById('clientNotFound').style.display = 'none';
+    document.getElementById('clientDeletedText').textContent = c.name + ' was deleted. ' +
+      (kept.length ? 'Their ' + keptList + (keptOne ? ' is' : ' are') + ' still on file. ' : '') +
+      'Undo puts them back; later, Dev Tools → Data → Graveyard can restore them.';
+    document.getElementById('clientDeletedState').style.display = '';
+    const undoBtn = document.getElementById('undoDeleteClientBtn');
+    if (undoBtn) undoBtn.focus();
+  }
+
+  // Undo: the Graveyard's own restore for a client (dev-tools.html's
+  // restoreFromGraveyard), so a deletion undone here behaves exactly like
+  // one restored there -- same record and id back, its tombstone marked
+  // restored (not deleted, or the server's copy would delete it again on
+  // the next pull), and its Graveyard entry cleared.
+  function undoDeleteClient() {
+    const c = lastDeletedClient;
+    if (!c) return;
+    const list = thLoadClients();
+    if (!list.some(x => x.id === c.id)) {
+      list.push(c);
+      thSaveClients(list);
+    }
+    thLiftTombstone(TH_CLIENT_TOMBSTONES_KEY, c.id);
+    const entry = thLoadGraveyard().filter(g => g.recordType === 'client' && g.record && g.record.id === c.id).pop();
+    if (entry) thRemoveFromGraveyard(entry.graveyardId);
+    lastDeletedClient = null;
+
+    document.getElementById('clientDeletedState').style.display = 'none';
+    const bundle = thGetClientBundle(c.id);
+    if (!bundle) {
+      document.getElementById('clientNotFound').style.display = '';
+      return;
+    }
+    document.getElementById('clientDetailView').style.display = '';
+    renderClientDetail(bundle);
+    if (typeof showToast === 'function') showToast(c.name + ' is back.');
   }
 
   // Account codes (direct request, 2026-09-20): "unique IDs connected
