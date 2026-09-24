@@ -144,6 +144,19 @@ test('loads the live values into the right inputs, with plain-English labels and
   assert.match(w.document.querySelector('.cms-last-save').textContent, /No edits yet/, 'the migration seed rows are not offered as an "undo"');
 });
 
+test('the "Phone and email" intro no longer tells the owner the booking, manage-booking, and not-found pages keep the built-in number', async () => {
+  // Those four pages follow site_content's phone/email since 2026-09-23
+  // (tests/site-content/contact-hooks-public.test.js). The spots that
+  // still don't are named, and that test keeps the list honest.
+  const { w } = await loadEditor();
+  const intro = w.document.querySelector('.cms-group[data-cms-group="contact"] .cms-group-intro').textContent;
+  assert.doesNotMatch(intro, /still show the number built into the site/);
+  assert.doesNotMatch(intro, /not-found page/);
+  assert.match(intro, /^Changes the number and email address visitors see and tap on the website, the booking and manage-booking pages included\./);
+  assert.match(intro, /every "text us" link/);
+  assert.match(intro, /Ask Connor to update those too if the number ever changes\.$/);
+});
+
 test('the live Sunday value "2:00 pm - 8:00 pm" loads as Open 2 PM to 8 PM and is NOT counted as an edit', async () => {
   const { w } = await loadEditor();
   assert.equal(field(w, 'hoursSunday', 'mode').value, 'open');
@@ -419,6 +432,16 @@ test('the editor\'s built-in fallbacks match what the public pages really show w
   assert.deepEqual([...phones], [builtIn.phone]);
   const emails = new Set([...indexDom.querySelectorAll('.js-email-text')].map(el => el.textContent.trim()));
   assert.deepEqual([...emails], [builtIn.email]);
+  // The four pages that rewrite only the number inside a longer text
+  // (2026-09-23, contact-hooks-public.test.js): each hook holds the
+  // built-in number and dials it.
+  for (const file of ['booking.html', 'manage-booking.html', 'manage-job.html', '404.html']) {
+    const doc = new JSDOM(fs.readFileSync(path.join(ROOT, file), 'utf8')).window.document;
+    const texts = [...doc.querySelectorAll('.js-phone-text')];
+    assert.ok(texts.length >= 1, file);
+    texts.forEach(el => assert.ok(el.textContent.includes(builtIn.phone), file));
+    doc.querySelectorAll('.js-phone-link').forEach(el => assert.equal(el.getAttribute('href'), 'tel:+1' + builtIn.phone.replace(/\D/g, ''), file));
+  }
 });
 
 // ---------------------------------------------------------------------------

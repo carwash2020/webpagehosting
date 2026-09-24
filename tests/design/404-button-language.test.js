@@ -23,7 +23,9 @@ test('404: no glossy gradient buttons left', () => {
 });
 
 test('404: exactly one filled primary (Call) and one outline partner (Back to Home)', () => {
-  const buttons = [...PAGE.matchAll(/<a class="btn ([\w-]+)" href="([^"]+)">/g)].map((m) => [m[1], m[2]]);
+  // Call also carries the js-phone-link / js-phone-text hooks (2026-09-23),
+  // so it follows the phone number saved in tools/site-content.html.
+  const buttons = [...PAGE.matchAll(/<a class="btn ([\w-]+)(?: js-phone-link js-phone-text)?" href="([^"]+)">/g)].map((m) => [m[1], m[2]]);
   assert.deepEqual(buttons, [['outline', '/'], ['orange', 'tel:+14354141667']]);
 });
 
