@@ -3240,4 +3240,16 @@ Tests:
   - the "no token" tests in `manage-booking.test.js` / `manage-job.test.js`. They asserted *no* network call; the intent, per their title, is no RPC. The public phone/email read is allowed; anything else still fails.
 - **CodeQL (2 high, "Bad HTML filtering regexp") on the PR's first push:** two test regexes matched `<script>...</script>` literally. `inlineScripts()` now uses `scripts/check-undefined-vars.js`'s settled pattern: case-insensitive, and `</script` + anything up to `>`. The 404 landmark test checks what follows `<main>` through the DOM instead of a regex. Any new test that picks scripts out of HTML should reuse that pattern.
 
+## 2026-09-23 -- FAQ/Terms editors: in-place publish, review, undo (PR C of the site-editor work)
+
+Same model as the site_content editor (entry above), for the two list tables.
+
+- **The list is the unit.** `cms_publish_faq(expected, items)` takes the whole desired list plus the list exactly as the editor loaded it. The compare-and-swap is "does the live list still equal what you loaded", compared field by field in SQL; no hashing, so there's nothing for the client to compute. The function then diffs in place: update by id, insert new, delete removed, renumber `sort_order`. Ids stay stable, which is what makes history and restore meaningful.
+- **Unique question/heading constraints became DEFERRABLE INITIALLY IMMEDIATE.** Two questions swapping wording inside one save would otherwise trip the constraint mid-transaction. Outside the publish functions it still checks immediately.
+- **History stores full row images** (`old_row`/`new_row`, jsonb) because undo has to restore order, category, and deleted rows, not just the answer text. The old history rows have no images, so `cms_undo_*` refuses them rather than guessing.
+- **Blank fields now block publishing.** The old editor filtered blank items out before saving, which silently deleted a live FAQ. That filter is gone.
+- **The history panel's Restore for FAQ/Terms** rebuilds the current list with that one change reversed and runs it through the same review and CAS. The old blind PATCH-by-id couldn't work after delete-and-reinsert saves anyway.
+- **Kept the old function names** (`renderFaqEditor`, `saveFaqList`, …) as wrappers around one shared list editor (`CMS_LISTS`), since `tests/workspace/finance-split.test.js` pins them.
+- **CI hang on Node 24, fixed in the test.** `faq-terms-editor.test.js` ended its last test right after a publish, while the page was still reloading its lists and history. `after()` then closed the shared PGlite mid-query, which never resolves on Node 24 (Node 22 got away with it), so the CI `test` job ran for hours. The file now tracks the page's in-flight requests, lets them settle after each test, then closes the window. It exits in about 6s on both versions, and the other four PGlite files pass on Node 24 as they were.
+
 <!-- Add new entries above this line -->

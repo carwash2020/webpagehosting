@@ -135,10 +135,15 @@ test('tools/site-content.html gates its editors on canManageSiteContent(), which
 
 test('site-content.html writes with the signed-in session token, never the anon key alone', () => {
   const page = read('tools', 'site-content.html');
-  const writes = page.match(/\/rest\/v1\/site_(content|faq|terms)[^'"]*['"][^)]*?method:\s*'(POST|PATCH|DELETE)'/g) || [];
-  // Upsert of site_content (twice: save + restore), FAQ delete+insert, terms delete+insert.
-  assert.ok(writes.length >= 4, `expected the CMS write call sites to still exist, found ${writes.length}`);
-  assert.match(page, /'Authorization': 'Bearer ' \+ getAuthToken\(\)/);
+  // Since 2026-09-23 every CMS write is one RPC (cms_publish_* / cms_undo_*)
+  // through cmsRpc(), which sends cmsHeaders(): the session token. No page
+  // code writes the tables directly any more.
+  const directWrites = page.match(/\/rest\/v1\/site_(content|faq|terms)[^'"]*['"][^)]*?method:\s*'(POST|PATCH|DELETE)'/g) || [];
+  assert.deepEqual(directWrites, [], 'writes go through the cms_* RPCs, not straight to the tables');
+  assert.match(page, /fetchWithTimeout\(SUPABASE_URL \+ '\/rest\/v1\/rpc\/' \+ fnName, 10000, \{\s*method: 'POST', headers: cmsHeaders\(true\)/);
+  assert.match(page, /function cmsHeaders\(json\) \{\s*const h = \{ 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' \+ getAuthToken\(\) \};/);
+  for (const fn of ['cms_publish_content', 'cms_undo_content']) assert.match(page, new RegExp(`cmsRpc\\('${fn}'`), fn);
+  for (const fn of ['cms_publish_faq', 'cms_undo_faq', 'cms_publish_terms', 'cms_undo_terms']) assert.match(page, new RegExp(`Fn: '${fn}'`), fn);
 });
 
 test('no portal page or public page writes to the CMS tables or touches the private buckets', () => {
