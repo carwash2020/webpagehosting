@@ -5014,7 +5014,7 @@ Tests:
 - `tests/tools/app-shell-v2.test.js`: the More drawer's row list now includes Website (hidden for that test's account).
 - `tests/tools/job-tracker-calendar-view.test.js`: the sidebar now has 13 destinations, not 12.
 
-## What changed, 2026-09-23 -- Booking picker tests no longer fail in the evening
+## What changed, 2026-09-23 -- Tests that failed every evening now pass at any hour
 
 Tests only. Nothing on the site changed.
 
@@ -5023,8 +5023,10 @@ One test in `tests/portal/booking-picker-round4.test.js` taps the second open ti
 - The file's picker windows now run on a fixed clock, a Wednesday at 9 AM Mountain, so the time of day no longer matters. The test still taps the second time, then another day, and checks that the page hears its pick no longer stands.
 - If the picker's first day ever has fewer than two times, the test now says so plainly instead of that error.
 - Two more booking tests had the same problem later in the evening. Both reschedule a 45-minute visit and wait for a third or a second open time. They timed out from 6 to 7 PM and from 6:30 to 7 PM Mountain (4 to 5 and 4:30 to 5 on Sundays). If the first day is short, they now move on to the next open day: `tests/booking/booking-manage-link-round3.test.js` and `tests/booking/booking-flow-picker-and-confirm.test.js`.
+- The shift clock's test (`tests/tools/shift-clock-shell.test.js`) failed from 6 to 9 PM Mountain, when it's after midnight on CI's UTC clock and "3 hours ago" is yesterday. It also never finished once a test had failed: a job-clock timer kept running, so CI sat for hours instead of reporting. Its windows now run at a fixed noon, and every window is closed after each test, pass or fail.
 
 Verified:
 - reproduced on the real clock at 5:40 PM MDT, and with the clock pinned to 5:45 PM on a weekday and a Saturday and 3:45 PM on a Sunday. The fixed test passes at all of those, and at 9 AM and 7 PM;
 - the two rescheduling tests: the round-3 one failed on the real clock at 6:14 PM MDT. With the clock pinned, the old versions failed at 6:15 and 6:45 PM on a weekday and at 4:15 and 4:45 PM on a Sunday. The fixed ones pass at those times and at 6:59 PM. All three files pass at every half hour from 1:15 to 10:45 PM on a Wednesday and a Sunday, and on the real clock at 6:35 PM;
-- full suite (3538/3539 on the real clock at 6:36 to 6:43 PM MDT, inside both windows. The only failure is the known `check-links.py` sandbox-proxy test. `tools/shift-clock-shell.test.js` was left out: on `main` it fails and hangs from 6 to 9 PM Mountain, a separate problem described in the bugfix log), `check-consistency`, `check-undefined-vars`, `eslint` on the changed files.
+- the shift clock test: on the real clock at 8:13 PM MDT (02:13 UTC), the old file hung until killed; the fixed one passes 14/14 in 3 seconds, also under Mountain time, pinned to 10 AM, 7:30 PM, 11:30 PM and 1 AM, and it exits in 2 seconds when a test is forced to fail;
+- full suite (3552/3553 on the real clock at 8:14 to 8:21 PM MDT, inside the shift clock's window; the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint` on the changed files.
