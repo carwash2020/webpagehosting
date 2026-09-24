@@ -3261,7 +3261,7 @@ Follow-up to the entry above. It left the remaining spots in `bugfix.md` ("Found
   - Chromium flags `--run-all-compositor-stages-before-draw`, `--disable-partial-raster`, `--disable-low-res-tiling`, `--num-raster-threads=1`, among others.
 - **Residual noise:** two runs of the old tree still differed in 6 of 658 files. All were viewport shots, all in the top band under the sticky header's `backdrop-filter`, which has two raster states.
 - **Result:** 657/658 files byte-identical to one of the two old-tree runs; the booking confirmation screen matched 35/35. The last file was that header band; retaken twice from each tree, the new tree reproduced the old bytes exactly. DOM signatures were identical on all 66 page sizes.
-- TBD_NEW_NUMBER
+- **A run with a different saved number and email** (`(435) 555-0142`, `office@example.com`): all 263 visible spot captures showed the new values, and every `tel:`/`sms:`/`mailto:` pointed at them (sms `?body=` kept). None kept the old ones.
 
 Tests:
 - `tests/site-content/contact-hooks-public.test.js`: 37 -> 119. The byte-identity, new-number and hook checks now cover all 22 pages. New tests cover the Call buttons, sms `?body=`, the FAQ + FAQPage pair, the Careers line, the index pop-up/chat links, and the desktop chat note (all scripts running). `KNOWN_UNHOOKED_PAGES` is now empty and the site-wide check includes `sms:` links. 39 of the 119 fail on the previous commit; the rest are byte-identity guards that hold on both.

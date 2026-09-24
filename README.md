@@ -5080,7 +5080,7 @@ Result:
 - 657 of 658 files are byte-for-byte the same as a run of the old pages, and so is the confirmation screen (35 of 35).
 - The one other file is a whole-screen shot whose top strip, under the sticky header's blur, varies between runs of the old pages too (6 of 658 did). Retaken, the new pages gave the old bytes exactly.
 - The rendered page is identical at all 66 page sizes, so nothing but the added classes changed.
-- TBD_NEW_NUMBER
+- **With a different saved number and email,** every spot at every size (263 captures) showed the new ones and called, texted, or emailed them. None kept the old ones.
 
 **Also fixed (tests only):** two manage-booking tests assumed the day still had two or three open times. They failed every evening, on `main` too. They now pick any open time.
 
