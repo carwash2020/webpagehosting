@@ -5,14 +5,44 @@
         "updated_at": "2026-08-13T21:53:46.452147+00:00"
     },
     {
+        "key": "banner1Link",
+        "value": null,
+        "updated_at": "2026-09-23T22:16:54.048645+00:00"
+    },
+    {
+        "key": "banner1Mode",
+        "value": "builtin",
+        "updated_at": "2026-09-23T22:16:54.048645+00:00"
+    },
+    {
         "key": "banner2",
         "value": null,
         "updated_at": "2026-08-13T21:53:46.452147+00:00"
     },
     {
+        "key": "banner2Link",
+        "value": null,
+        "updated_at": "2026-09-23T22:16:54.048645+00:00"
+    },
+    {
+        "key": "banner2Mode",
+        "value": "builtin",
+        "updated_at": "2026-09-23T22:16:54.048645+00:00"
+    },
+    {
         "key": "email",
         "value": null,
         "updated_at": "2026-08-13T22:18:59.847616+00:00"
+    },
+    {
+        "key": "googleRating",
+        "value": "5.0",
+        "updated_at": "2026-09-23T20:12:37.512292+00:00"
+    },
+    {
+        "key": "googleReviewCount",
+        "value": "7",
+        "updated_at": "2026-09-23T20:12:37.512292+00:00"
     },
     {
         "key": "hoursFriday",
