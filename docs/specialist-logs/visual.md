@@ -1677,3 +1677,7 @@ Layout/cleanup only; every panel's markup moved as-is (a script lifted each bloc
 - **Phone gutter is 12px** (`body.th-tool-page` in styles-tools.css beats this page's own `body { padding: 44px 14px }`). The tab bar's `-14px` margin overflowed 2px each side; now `-12px`. At 320px the 8-item bar still scrolls inside itself, same as before.
 - Moved "Run full health check" from above every tab into the Health tab's lead row (it's a Health action; Owner no longer sees a button for checks they can't see).
 - `initDevToolsTabs()` now looks for visible `.dev-panel`s inside a tab (tabs hold sections now) and hides a section whose panels are all hidden. `#backup` switches to `data`.
+
+## 2026-09-24 (from the features lane, not fixed) -- the phone bottom nav covers the last ~9px of every tool page
+
+Measured in Chromium at 430px while adding Delete to `client-detail.html`: `.th-bottom-nav` is 85px tall, but `body.th-has-bottomnav` (styles-tools.css, `@media (max-width: 1023px)`) reserves `calc(76px + env(safe-area-inset-bottom))`. Scrolled to the very bottom, the last card on client-detail, job-detail and the rest ends ~9px under the bar, and the raised (+) hex covers more in the middle. Fixed only locally for the new Delete block (its own `margin-bottom`). The shared fix is to raise the reserved padding to the bar's real height (or measure it), then re-check the `th-has-clock` variant (158px) too.

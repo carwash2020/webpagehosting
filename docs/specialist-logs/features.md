@@ -3301,4 +3301,18 @@ Tests:
 - `conversion-polish-sticky-sms-faq.test.js`: the sticky Text button's class string gains `js-sms-link`.
 - The built-in-value check (moved to `site-content-editor.test.js` by #402) now covers every public page, including `sms:` links and the old `tel:4354141667` form.
 
+## 2026-09-24 -- Delete a client from the client page (plus the Graveyard now renders)
+
+Requested directly with a screenshot of `client-detail.html`: there was no way to delete a client. The only delete was Dev Tools' Client registry, which isn't where anyone looks.
+
+- **Same delete as Dev Tools, not a new one.** The button calls `thDeleteClient()`. That removes only the client record, adds a tombstone (by id for sync, by normalized name for `thBackfillClients`), and copies the record to the Graveyard. Jobs, invoices, quotes and contracts are real records of their own and are left alone. The confirm names what stays ("Their 1 job and 1 invoice stay on file. Only the client record is removed.").
+- **Decided against cascading.** Deleting a client's invoices or jobs with it was considered and rejected: those are the business's financial and work history, and every other screen keys them by name/clientId independently. Deleting the person should never silently delete money records. If Steve wants those gone too, that's a separate, explicit ask.
+- **Placement: its own block at the end of the page**, after Contracts, with a red-tinted border -- the phone-contacts convention ("Delete Contact" is never next to Call/Text). Not in the hero with New job / Invoice / Quote, where a stray tap lands.
+- **Undo, local to the page.** After deleting, the page shows "X was deleted -- Undo / Back to Clients" instead of "not found". Undo is the Graveyard's own restore for a client (dev-tools.html `restoreFromGraveyard`): same record and id back (so jobs stay linked by clientId), tombstone lifted with `thLiftTombstone` (marked restored, never removed, or the server's copy would delete it again on the next pull), Graveyard entry marked removed. Kept page-local rather than a new `data-layer.js` helper so the change doesn't restamp ~25 pages while other sessions are open.
+- **No permission gate**, same as job delete: anyone who can open the client can delete it, and it's recoverable.
+- **Graveyard fix riding along (unblocks the feature).** The confirm and the deleted screen point at the Graveyard for later recovery, but `renderGraveyard()` was never called on load, so the list was always blank and had no Restore button. `proceed()` now calls it. Logged as a bug by the visual lane earlier the same day.
+- **Not done:** no Delete on the Clients list's long-press sheet (its Open leads to the page that has it). Easy to add with the same function if wanted.
+
+Tests: `tests/tools/client-delete.test.js` (8, new; all fail on main): Delete block placement, confirm wording and Cancel, what's removed vs. kept, no rebuild from jobs, the Undo state surviving a live-sync refresh, Undo restoring the same id with a lifted tombstone, singular/plural copy, light-mode colour, and the Graveyard rendering on Dev Tools' load.
+
 <!-- Add new entries above this line -->
