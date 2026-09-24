@@ -859,7 +859,7 @@
         { key: 'status', label: 'Status', width: 0.2 },
         { key: 'total', label: 'Total', width: 0.25, align: 'right', bold: true },
       ],
-      rows: p.quotes.map(q => ({ num: '#' + (q.quote_number || '?'), date: q.quote_date || '', status: q.status || '', total: pdfMoney(q.total) })),
+      rows: p.quotes.map(q => ({ num: '#' + (q.quote_number || '?'), date: q.quote_date || '', status: String(q.status || '').replace(/_/g, ' ').toUpperCase(), total: pdfMoney(q.total) })),
     });
 
     section('Work orders', p.workOrders.length, {
@@ -868,7 +868,7 @@
         { key: 'date', label: 'Submitted', width: 0.25, muted: true },
         { key: 'status', label: 'Status', width: 0.2 },
       ],
-      rows: p.workOrders.map(wo => ({ title: wo.title || '(untitled)', date: wo.created_at ? new Date(wo.created_at).toLocaleDateString() : '', status: wo.status || '' })),
+      rows: p.workOrders.map(wo => ({ title: wo.title || '(untitled)', date: wo.created_at ? new Date(wo.created_at).toLocaleDateString() : '', status: String(wo.status || '').replace(/_/g, ' ').toUpperCase() })),
     });
 
     // Authorization text is a full sentence -- it wraps inside its own

@@ -264,7 +264,7 @@
 // window.alert() on the error/validation paths across dashboard.html,
 // quotes.html and settings.html, item 8; plus the line-item disclosure's
 // animated open/close CSS). All six are in PRECACHE_URLS.
-const CACHE_NAME = 'th-portal-v135'; // precache-fingerprint:7cd4ee5733c8
+const CACHE_NAME = 'th-portal-v136'; // precache-fingerprint:00ada328af0e
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
@@ -276,6 +276,13 @@ const PRECACHE_URLS = [
   '/portal/portal-update.js',
   '/styles.css', '/js/business-hours.js',
   '/portal/push-notifications.js',
+  // The shared PDF document system and its embedded fonts (2026-09-24),
+  // so a receipt, quote or service history downloaded offline still
+  // gets the brand type instead of falling back to Helvetica.
+  '/js/pdf-layout.js',
+  '/fonts/pdf/Anton-Regular.ttf', '/fonts/pdf/Oswald-Medium.ttf',
+  '/fonts/pdf/Archivo-Regular.ttf', '/fonts/pdf/Archivo-SemiBold.ttf',
+  '/images/logo-signature-orange.png',
   '/images/logo-signature-orange.webp', '/images/icon-192.png', '/images/icon-512.png', '/images/apple-touch-icon.png',
 ];
 
