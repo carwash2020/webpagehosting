@@ -38,12 +38,35 @@ const PICKER_DOM = '<!DOCTYPE html><html><body>' +
   '<div class="slots-empty" id="empty" style="display:none;">No open times that day.</div>' +
   '</body></html>';
 
+// The picker reads the wall clock: the 2-hour lead time decides how many
+// of today's slots are left, and whether it opens on today at all. So
+// every picker window runs at one fixed moment, the suite's shared weekday
+// morning (tests/fixed-clock.js), when today still has all its afternoon
+// slots. That helper pins this process's Date, which a jsdom window
+// doesn't share, so the same moment is pinned inside each window here.
+// Fixed 2026-09-23: on the real clock, today has exactly one slot left
+// every weekday and Saturday from 5:30 to 6 PM Mountain (Sunday 3:30 to
+// 4), so the second-slot test below had nothing to tap and CI went red in
+// that half hour. #404 made it tap the last slot instead; the fixed clock
+// lets it tap the second one again, which is what it was written to check.
+const PINNED_NOW = require('../fixed-clock').WEEKDAY_MORNING;
+const PIN_CLOCK_SRC = `(function () {
+  const RealDate = Date;
+  const now = RealDate.parse(${JSON.stringify(PINNED_NOW)});
+  class PinnedDate extends RealDate {
+    constructor(...a) { if (a.length === 0) super(now); else super(...a); }
+    static now() { return now; }
+  }
+  window.Date = PinnedDate;
+})();`;
+
 function pickerWindow(mockFetch, html) {
   const dom = new JSDOM(html || PICKER_DOM, {
     runScripts: 'dangerously',
     url: 'https://www.triplehenterprisesllc.biz/portal/quotes.html',
     beforeParse(w) {
       w.fetch = mockFetch;
+      w.eval(PIN_CLOCK_SRC);
       w.eval(BUSINESS_HOURS_SRC);
       w.eval(FLOW_SRC);
     },
@@ -156,12 +179,9 @@ test('tapping a time hands the page the exact computed slot, marked pressed; cha
   const p = makePicker(w);
   await waitForCondition(() => w.document.querySelector('#grid .slot-btn'));
   const clearsBeforeTap = p.clears();
-  // The picker opens on the first day with room, and this test runs on the
-  // real clock. Late in the day that's today with a single slot left (seen
-  // 2026-09-23 at 5:42 PM Denver: one 8:00 PM slot), so a hard-coded
-  // second slot was undefined and every PR's CI went red in the evening.
-  const slots = w.document.querySelectorAll('#grid .slot-btn');
-  const slotBtn = slots[slots.length - 1];
+  const slotBtns = w.document.querySelectorAll('#grid .slot-btn');
+  assert.ok(slotBtns.length >= 2, 'the day it opens on needs a second time to tap');
+  const slotBtn = slotBtns[1];
   slotBtn.click();
   assert.equal(p.picked.length, 1);
   assert.ok(p.picked[0].startUtc instanceof w.Date && p.picked[0].endUtc instanceof w.Date);
