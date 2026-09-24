@@ -3185,6 +3185,25 @@ Follow-up to the site content editor rebuild (#395), which listed "a gated 'Webs
 
 Tests: `tests/tools/website-nav-entry.test.js` (8). Includes an end-to-end pass through the real `auth.js` with a mocked `account_roles` response. All 8 fail on the old nav, and 5 fail on a fail-open version of the row.
 
+## 2026-09-23 (from the visual lane) -- Home could render from local data before the sync
+
+`workspace.html` renders the dashboard only after `initSyncOnLoad()` (role load + sync pull, two network round trips). So every return to Home shows a skeleton first; before 2026-09-23 it showed empty cards and a made-up "0 jobs today". Rendering once from localStorage at DOMContentLoaded, then again after the pull, would make Home instant in the common case. Not done from the visual lane because it's an init-order change with a permission angle. `getCurrentUserRole()` is null until the role loads, and a few checks treat null as "allowed", so an Employee could briefly see Money Owed.
+
+## 2026-09-23 -- Site banners: the WELCOME15 offer and hiring notice are editable, without bringing back the layout shift
+
+**Problem:** the two bars above the header were two systems fighting over two slots. `promo-banner.js`/`hiring-banner.js` wrote fixed wording into `#siteBanner1/2`; a `banner1`/`banner2` value from Tools > Site Content replaced it with bare text (no close button, different padding) on 19 pages and did nothing on the other 14. Changing the offer or ending the hiring push meant a code deploy.
+
+**What shipped:**
+- **One script, `js/site-banners.js`,** on all 33 pages with the slots (adds about, our-work, careers, terms, privacy, the 11 blog pages, and the St. George city page, which had the slots but never loaded the promo). Each slot is `builtin` (the old wording, byte-identical markup and dismissal keys), `custom` (plain text + an optional link from a fixed list of 3 pages, rendered with `textContent`), or `off`. Old files deleted.
+- **Keys:** `banner1Mode`/`banner2Mode` and `banner1Link`/`banner2Link` join the existing `banner1`/`banner2` text (`sql/site-content/cms_site_banners.sql`, applied live). The CHECK validator refuses any other mode or link. With no mode saved, text alone still means "custom" (the old semantics).
+- **No network in a render-blocking script, so no CLS.** The first frame renders from a localStorage copy of the last-seen rows. The page's own fetch calls `applySiteBanners(rows)`, which saves the new rows and swaps now only if nothing has painted (`performance.getEntriesByType('paint')` empty) or the slot's `offsetHeight` is unchanged. Otherwise it puts the same nodes back in the same task (no frame drawn) and the change lands on the next page. A failed or empty fetch changes nothing.
+- **Dismissal:** built-in banners keep `th-promo-welcome15-dismissed`/`th-hiring-banner-dismissed`. A custom message stores an FNV-1a hash of text+link under `th-bannerN-dismissed`, so a new message reappears. A banner linking to the current page is skipped (no hiring banner on careers.html).
+- **Editor:** per-slot mode picker, with message + link shown only for "My own message", cross-field check (custom needs a message) on whichever field was touched, plain-word history ("built-in wording → no banner"), a next-page note in the review, a Put back guard, and banners grouped one column per slot.
+
+**Proof:** 64/64 element screenshots of both banners on the 16 pages that had them, desktop + phone, byte-identical before/after in Chromium. Header position, layout-shift totals, and page errors unchanged. Live migration verified in a rolled-back block: custom + link + off saved as one batch, undo back to exactly builtin/null, bad link and bad mode 23514.
+
+**Tests:** `cms-site-banners-db.test.js` (10, real SQL), `site-banners-public.test.js` (50, including the no-jump deferral with faked paint and heights, mutation-checked), 9 new flows in `site-content-editor.test.js`, plus a guard that no function is declared twice in the page (the FAQ/Terms PR had its own `cmsShort()` with other arguments; the banner helper is `cmsPlainValue()`). `promo-banner.test.js`, `hiring-banner.test.js`, and `site-banner-no-layout-shift.test.js` now point at the new file with their original assertions, plus the exact old markup.
+
 ## 2026-09-23 -- Phone + email: booking, manage-booking, manage-job and 404 follow site_content
 
 The "phone hooks on booking/manage-*/404" item from the site-content entry above. These four pages showed only the built-in (435) 414-1667, and `tools/site-content.html` told the owner so.
@@ -3268,6 +3287,5 @@ Tests:
 - `site-content-editor.test.js`: the intro test now checks the new wording.
 - `conversion-polish-sticky-sms-faq.test.js`: the sticky Text button's class string gains `js-sms-link`.
 - The built-in-value check (moved to `site-content-editor.test.js` by #402) now covers every public page, including `sms:` links and the old `tel:4354141667` form.
-- Two evening-only test failures on `main`, fixed (see bugfix.md): `booking-manage-link-round3` and `booking-flow-picker-and-confirm` assumed today still had 2-3 open slots.
 
 <!-- Add new entries above this line -->

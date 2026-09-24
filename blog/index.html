@@ -91,6 +91,7 @@
 
 <div id="siteBanner1" class="site-banner" style="display:none;"></div>
 <div id="siteBanner2" class="site-banner" style="display:none;"></div>
+<script src="/js/site-banners.js?v=4d43f541ed"></script>
 
 <header>
   <nav class="nav">
@@ -472,6 +473,7 @@
       .then(rows => {
         const map = {};
         (Array.isArray(rows) ? rows : []).forEach(r => { if (r.value) map[r.key] = r.value; });
+        if (typeof applySiteBanners === 'function') applySiteBanners(rows);
         applySiteContact(map);
       })
       .catch(() => {});

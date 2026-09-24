@@ -47,7 +47,7 @@
      reachable only by the browser back button. Loaded in the same
      position (after tools-dialogs.js, before tools-tour.js) as every
      other tool page for consistency. -->
-<script src="/tools/tools-nav-pwa.js?v=151ee293de" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=27378ed01d" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <script src="/tools/tools-tour.js?v=118148b9a2" defer></script>
 <script>
@@ -1098,6 +1098,43 @@
     ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) {
       animation-duration: 0.001ms !important;
     }
+  }
+  /* Page hand-off (2026-09-23), mirrored from styles-tools.css -- see
+     that file's own comment. Holds the outgoing frame until
+     tools-nav-pwa.js has built this page's shell, then crossfades. */
+  @keyframes th-vt-hold { from, to { opacity: 1; } }
+  @keyframes th-vt-hold-wait { from, to { opacity: 1; } }
+  @keyframes th-vt-hidden { from, to { opacity: 0; } }
+  html:has(> head > script[src*="/tools/tools-nav-pwa.js"]):not(:has(body.th-tool-page))::view-transition-old(root) { animation: th-vt-hold-wait 1.2s linear; }
+  html:has(> head > script[src*="/tools/tools-nav-pwa.js"]):not(:has(body.th-tool-page))::view-transition-new(root) { animation: th-vt-hidden 1.2s linear; }
+  html:has(> head > script[src*="/tools/tools-nav-pwa.js"]):not(:has(body.th-tool-page))::view-transition-old(th-app-bottomnav):only-child,
+  html:has(> head > script[src*="/tools/tools-nav-pwa.js"]):not(:has(body.th-tool-page))::view-transition-old(th-app-sidebar):only-child { animation: th-vt-hold-wait 1.2s linear; }
+  html:has(.th-bottom-nav)::view-transition-old(th-app-bottomnav):only-child,
+  html:has(.th-desktop-sidebar)::view-transition-old(th-app-sidebar):only-child { animation: th-vt-hold .28s linear; }
+  @media (prefers-reduced-motion: reduce) {
+    html:has(> head > script[src*="/tools/tools-nav-pwa.js"]):not(:has(body.th-tool-page))::view-transition-old(root),
+    html:has(> head > script[src*="/tools/tools-nav-pwa.js"]):not(:has(body.th-tool-page))::view-transition-new(root),
+    html:has(> head > script[src*="/tools/tools-nav-pwa.js"]):not(:has(body.th-tool-page))::view-transition-old(th-app-bottomnav):only-child,
+    html:has(> head > script[src*="/tools/tools-nav-pwa.js"]):not(:has(body.th-tool-page))::view-transition-old(th-app-sidebar):only-child {
+      animation-duration: 1.2s !important;
+    }
+  }
+  .th-nav-progress {
+    position: fixed; top: max(env(safe-area-inset-top, 0px), 44px); left: 0; right: 0; height: 3px;
+    z-index: 10001; overflow: hidden; pointer-events: none;
+    opacity: 0; transition: opacity .2s ease;
+  }
+  @media (min-width: 1024px) { .th-nav-progress { top: 0; } }
+  html.th-nav-slow .th-nav-progress { opacity: 1; }
+  .th-nav-progress::after {
+    content: ''; position: absolute; top: 0; left: 0; height: 100%; width: 40%;
+    border-radius: 0 2px 2px 0; background: linear-gradient(90deg, rgba(255,128,0,0), var(--orange) 45%, var(--orange-light));
+    transform: translateX(-100%);
+  }
+  html.th-nav-slow .th-nav-progress::after { animation: thNavProgress 1.1s cubic-bezier(.45,0,.25,1) infinite; }
+  @keyframes thNavProgress { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+  @media (prefers-reduced-motion: reduce) {
+    html.th-nav-slow .th-nav-progress::after { animation: none; transform: none; width: 100%; background: var(--orange); opacity: .75; }
   }
 </style>
 </head>

@@ -75,6 +75,20 @@ function loadJobTracker(jobs, url) {
 // that settle inside the test instead of firing after it ends.
 const settle = () => new Promise(r => setTimeout(r, 20));
 
+// The page keeps its calendar month in `let` bindings, so setting
+// w.viewYear / w.viewMonth never reached it: the calendar opened on the
+// current month, and the September 2026 tests below passed only during
+// September 2026 (from Oct 1 UTC they failed on every run). Step to the
+// month with the page's own arrows instead, one month per call as a
+// click does.
+function showMonth(w, year, month) {
+  const today = new w.Date();
+  let delta = (year - today.getFullYear()) * 12 + (month - today.getMonth());
+  while (delta > 0) { w.changeMonth(1); delta--; }
+  while (delta < 0) { w.changeMonth(-1); delta++; }
+  assert.equal(w.document.getElementById('calMonthLabel').textContent, new Date(year, month, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }));
+}
+
 test('Job Tracker has a three-way view switch (List / Board / Calendar) and a calendar wrapper inside the Jobs tab, with the old page\'s ids intact', () => {
   assert.match(JT, /id="jobViewSwitch"/);
   for (const v of ['list', 'board', 'calendar']) assert.match(JT, new RegExp(`data-view="${v}" onclick="setJobViewMode\\('${v}'\\)"`));
@@ -106,7 +120,7 @@ test('the view preference persists per device under the existing key, and only k
 
 test('the calendar shows every dated job regardless of the old Show on Calendar flag, skips undated ones, and grays out done jobs', async () => {
   const w = loadJobTracker(SAMPLE_JOBS);
-  w.viewYear = 2026; w.viewMonth = 8; // September 2026
+  showMonth(w, 2026, 8); // September 2026
   w.setJobViewMode('calendar');
   const dots = [...w.document.querySelectorAll('#calGrid .cal-day-dot')];
   assert.equal(dots.length, 3, 'three dated jobs -> three dots; the undated job gets none');
@@ -121,7 +135,7 @@ test('the calendar shows every dated job regardless of the old Show on Calendar 
 
 test('the calendar honors the same search box as the list (one page, one filter)', async () => {
   const w = loadJobTracker(SAMPLE_JOBS);
-  w.viewYear = 2026; w.viewMonth = 8;
+  showMonth(w, 2026, 8);
   w.document.getElementById('jobSearch').value = 'alice';
   w.renderJobs();
   assert.equal(w.document.querySelectorAll('#calGrid .cal-day-dot').length, 1);

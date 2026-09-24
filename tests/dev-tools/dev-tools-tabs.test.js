@@ -53,24 +53,26 @@ test('an "info bubble" click on any panel actually opens the shared help modal w
   assert.equal(window.document.querySelector('#helpModalOverlay h3').innerHTML, 'Live consistency check');
 });
 
-test('a Developer account sees all 6 tab buttons, with "health" active by default', () => {
+test('a Developer account sees all 7 tab buttons, with "health" active by default', () => {
   const window = loadAs(true);
   const tabBtns = Array.from(window.document.querySelectorAll('.dev-tab-btn'));
-  // 6 as of 2026-09-03: the Portal tab split off onto its own
-  // /tools/clients.html, a genuine daily operational tool rather than
-  // a Dev Tools diagnostics tab.
-  assert.equal(tabBtns.length, 6, 'expected exactly 6 tab buttons');
+  // 7 as of 2026-09-24: the regroup (Health, Data, Sync, Notifications,
+  // Ops, Reports, Access) replaced the old 6 (Health, Access, Session,
+  // Notifications, Deploy, Reports), whose tabs mixed panels that had
+  // nothing to do with each other.
+  assert.deepEqual(tabBtns.map(b => b.getAttribute('data-tab')),
+    ['health', 'data', 'sync', 'notifications', 'ops', 'reports', 'access']);
   tabBtns.forEach(btn => {
     assert.notEqual(btn.style.display, 'none', 'tab "' + btn.getAttribute('data-tab') + '" should be visible for a Developer');
   });
 
   const healthBtn = tabBtns.find(b => b.getAttribute('data-tab') === 'health');
   assert.ok(healthBtn.classList.contains('is-active'), 'health tab button should start active');
-  const healthGrid = window.document.querySelector('.dev-panels-grid[data-tab-panel="health"]');
+  const healthGrid = window.document.querySelector('.dev-tab-panel[data-tab-panel="health"]');
   assert.ok(healthGrid.classList.contains('is-active-tab-panel'), 'health panel group should start active');
 
-  const otherGrids = window.document.querySelectorAll('.dev-panels-grid[data-tab-panel]:not([data-tab-panel="health"])');
-  assert.equal(otherGrids.length, 5, 'expected 5 other tab-panel groups');
+  const otherGrids = window.document.querySelectorAll('.dev-tab-panel[data-tab-panel]:not([data-tab-panel="health"])');
+  assert.equal(otherGrids.length, 6, 'expected 6 other tab-panel groups');
   otherGrids.forEach(grid => {
     assert.ok(!grid.classList.contains('is-active-tab-panel'), 'tab-panel "' + grid.getAttribute('data-tab-panel') + '" should not be active initially');
   });
@@ -78,38 +80,44 @@ test('a Developer account sees all 6 tab buttons, with "health" active by defaul
 
 test('switching tabs actually shows the target panel group and hides the rest, for a Developer account', () => {
   const window = loadAs(true);
-  window.switchDevToolsTab('deploy');
+  window.switchDevToolsTab('ops');
 
-  const deployGrid = window.document.querySelector('.dev-panels-grid[data-tab-panel="deploy"]');
-  assert.ok(deployGrid.classList.contains('is-active-tab-panel'), 'deploy panel group should be active after switching to it');
+  const opsGrid = window.document.querySelector('.dev-tab-panel[data-tab-panel="ops"]');
+  assert.ok(opsGrid.classList.contains('is-active-tab-panel'), 'ops panel group should be active after switching to it');
 
-  const deployBtn = window.document.querySelector('.dev-tab-btn[data-tab="deploy"]');
-  assert.ok(deployBtn.classList.contains('is-active'), 'deploy tab button should be marked active after switching to it');
+  const opsBtn = window.document.querySelector('.dev-tab-btn[data-tab="ops"]');
+  assert.ok(opsBtn.classList.contains('is-active'), 'ops tab button should be marked active after switching to it');
 
-  const healthGrid = window.document.querySelector('.dev-panels-grid[data-tab-panel="health"]');
+  const healthGrid = window.document.querySelector('.dev-tab-panel[data-tab-panel="health"]');
   assert.ok(!healthGrid.classList.contains('is-active-tab-panel'), 'health panel group should no longer be active after switching away from it');
   const healthBtn = window.document.querySelector('.dev-tab-btn[data-tab="health"]');
   assert.ok(!healthBtn.classList.contains('is-active'), 'health tab button should no longer be marked active after switching away from it');
 });
 
-test('an account without the full-technical permission sees only the Access tab button, landing on it', () => {
-  // Rewritten 2026-09-03: Portal (an Owner's previous landing tab) was
-  // split off onto its own /tools/clients.html. With it gone, Access
-  // is now the first (and only) visible tab for an Owner -- Health
-  // stays entirely technical and hidden, exactly as before.
+test('an account without the full-technical permission sees only the Data and Access tab buttons, landing on Data with just Client registry showing', () => {
+  // Rewritten 2026-09-24: Client registry moved from Access to Data
+  // (What's stored) in the regroup -- it is a view of client records,
+  // not an access setting. So an Owner now sees two tabs, Data (Client
+  // registry only) and Access (Account permissions), and lands on Data,
+  // the first of them. Health stays entirely technical and hidden.
   const window = loadAs(false);
   const tabBtns = Array.from(window.document.querySelectorAll('.dev-tab-btn'));
+  const visible = tabBtns.filter(b => b.style.display !== 'none').map(b => b.getAttribute('data-tab'));
+  assert.deepEqual(visible, ['data', 'access']);
 
-  const accessBtn = tabBtns.find(b => b.getAttribute('data-tab') === 'access');
-  assert.notEqual(accessBtn.style.display, 'none', 'Access tab button should be visible for an Owner');
-  assert.ok(accessBtn.classList.contains('is-active'), 'Access should be the landing tab for an Owner, since it is the first visible tab now that Portal is gone');
+  const dataBtn = tabBtns.find(b => b.getAttribute('data-tab') === 'data');
+  assert.ok(dataBtn.classList.contains('is-active'), 'Data should be the landing tab for an Owner, since it is the first visible tab');
 
-  const healthBtn = tabBtns.find(b => b.getAttribute('data-tab') === 'health');
-  assert.equal(healthBtn.style.display, 'none', 'Health is entirely technical and should be hidden for an Owner');
-
-  const otherBtns = tabBtns.filter(b => b.getAttribute('data-tab') !== 'access');
-  assert.equal(otherBtns.length, 5, 'expected 5 remaining tab buttons besides Access');
-  otherBtns.forEach(btn => {
+  tabBtns.filter(b => !['data', 'access'].includes(b.getAttribute('data-tab'))).forEach(btn => {
     assert.equal(btn.style.display, 'none', 'tab "' + btn.getAttribute('data-tab') + '" should be hidden for an Owner, since every one of its panels is dev-owner-hidden');
   });
+
+  // No orphaned subheading: on Data, only the section holding Client
+  // registry is shown; its two developer-only neighbours (Appliance Wiki
+  // health, Storage browser) are hidden inside it.
+  const dataTab = window.document.querySelector('.dev-tab-panel[data-tab-panel="data"]');
+  const shownSections = Array.from(dataTab.querySelectorAll('.dev-section')).filter(s => s.style.display !== 'none');
+  assert.equal(shownSections.length, 1);
+  const shownPanels = Array.from(shownSections[0].querySelectorAll('.dev-panel')).filter(p => p.style.display !== 'none');
+  assert.deepEqual(shownPanels.map(p => p.querySelector('h2').textContent), ['Client registry']);
 });

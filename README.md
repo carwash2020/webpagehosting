@@ -159,7 +159,7 @@ upside to offset the cost.
 | `tools/runway-dashboard.html` | Personal + business financial runway tracking — debts, income, expenses, month-by-month. Pulls revenue/expenses straight from Finance (`finance.html`), no double entry. |
 | `tools/parts-reference.html` | **Appliance Wiki** — quick lookup for common appliance issues: what part it usually is, the part number, roughly what it costs. |
 | `tools/settings.html` | Account info, display density and color theme, push notifications, tour replay (the tour is a 24-step tutorial as of 2026-09-22 -- every page and tab, about two minutes), password reset, **Backup & Restore** (moved here from the Dashboard on 2026-09-21 — the same full JSON export/import, no hop through another page), sign out. |
-| `tools/dev-tools.html` | Site diagnostics and maintenance utilities, organized into 6 tabs (Health, Access, Session, Notifications, Deploy, Reports) as of 2026-08-25 -- replaced the old scroll-to-anchor nav, which no longer scaled once this page reached 22 panels (now 26, after Booking notification test and the 3 new Reports panels). Access is role-gated (`account_roles` table, see `DISASTER_RECOVERY.md`); an Owner-role account only sees the Access tab (Client Registry, Account Roles), while a Developer-role account sees all 6 tabs. Also supports swiping left/right between tabs on mobile, scoped to the panel content area so it doesn't fight with the tab bar's own horizontal scroll. |
+| `tools/dev-tools.html` | Site diagnostics and maintenance utilities, regrouped on 2026-09-24 into 7 tabs by the question each answers: Health (is anything broken right now), Data (is the business data clean, and can it come back), Sync (this device), Notifications, Ops (deploys, the to-do lists, shortcuts), Reports, and Access. Each tab is split into named sections; live panels are open cards, and the tools you only reach for now and then are collapsed one-line rows. 32 panels. Access is role-gated (`account_roles` table, see `DISASTER_RECOVERY.md`); an account without "Dev Tools (full technical)" (Steve's Owner account) sees only Client registry (Data tab) and Account permissions (Access tab), while a Developer-role account sees all 7 tabs. `#backup` lands on Data &rarr; Backup & restore. Also supports swiping left/right between tabs on mobile, scoped to the panel content area so it doesn't fight with the tab bar's own horizontal scroll. |
 | `tools/site-content.html` | Edits the public site's changeable text and numbers with no deploy: Google star rating and review count, banners, homepage hours, phone, email, FAQ, Terms. Fields are checked as you type, every publish shows live-vs-new first, and **Undo this save** / per-field history put back earlier values (rebuilt 2026-09-23, backed by `cms_publish_content()` / `cms_undo_content()` in `sql/site-content/cms_safe_publish_and_undo.sql`). Reached from **Website** in the sidebar and the More drawer (shown only to accounts with the "Site content" permission, since 2026-09-23) or Dev Tools &rarr; Content; needs that permission. Split out of `dev-tools.html` on 2026-08-20. |
 | `tools/client-detail.html` | Full history for one client (jobs, invoices, quotes, contracts) — reached from workspace.html or job-detail.html, not linked from the main nav directly. |
 | `tools/job-detail.html` | Full detail view for one job (photos, linked invoices, margin) — reached from job-tracker.html or finance.html, not linked from the main nav directly. |
@@ -199,7 +199,7 @@ Most business data (jobs, invoices, contracts, quotes, clients, expenses, income
 
 The real tradeoff that comes with a union merge: it can't tell "this record never existed here" apart from "this record existed here and was deliberately deleted," so a device that hasn't yet pulled a deletion can push its old copy right back and resurrect it. **Fixed with a tombstone per record type that supports deletion** -- every job, client, expense, income entry, contact, contract, invoice, and quote deletion now records one, and every sync pull filters against it. Full detail, the complete list of which record types are covered, and exactly how to extend this to a new one later: see "Deletion resurrection / tombstones" in `DISASTER_RECOVERY.md`.
 
-Deleting something also snapshots it into a separate "Graveyard" (Dev Tools → Session & Sync), so a genuine mistake can actually be restored -- not just prevented from silently reappearing, which is all the tombstones above do. See "Graveyard" in `DISASTER_RECOVERY.md` for the full detail, including the one real limit (a deleted expense's receipt photo isn't recoverable, since that file is gone from cloud storage immediately).
+Deleting something also snapshots it into a separate "Graveyard" (Dev Tools → Data → Get it back), so a genuine mistake can actually be restored -- not just prevented from silently reappearing, which is all the tombstones above do. See "Graveyard" in `DISASTER_RECOVERY.md` for the full detail, including the one real limit (a deleted expense's receipt photo isn't recoverable, since that file is gone from cloud storage immediately).
 
 ## Booking system (added 2026-08-25, replaces Cal.com entirely)
 
@@ -238,7 +238,7 @@ the assistant's GitHub token was never granted):
 - `weekly-business-digest` — Monday mornings, one summary push AND email (jobs completed, invoiced, new leads, outstanding balance, weekly uptime %) rather than a specific alert — trend awareness, not task nagging. The email half (`REPORTS_EMAIL_FROM` secret) is optional and gracefully skips if not configured, without ever blocking the push half.
 - `archive-old-notification-log` — monthly, deletes `notification_log` rows older than 3700 days. That number isn't arbitrary: two of the 11 daily checks use a 3650-day resend interval specifically to nudge only once, ever — retention has to stay longer than the longest resend interval in use, or a "one-time" nudge would silently start repeating once its log row got archived.
 
-**Dev Tools panels** (`tools/dev-tools.html`, organized into 5 tabs as of 2026-08-25 — see the table above) — Storage browser (file counts/sizes across all 3 buckets), Data integrity check (job-photo records vs. actual files, in both directions, plus contact-less leads), Trigger workflows (runs any GitHub Actions workflow on demand via the `trigger-workflow` Edge Function — never a GitHub token in this file), Uptime monitoring (current status, 24h/7d uptime %, recent incidents), and Recent bookings (last 20 bookings regardless of conversion status).
+**Dev Tools panels** (`tools/dev-tools.html`, 7 tabs since the 2026-09-24 regroup — see the table above) — Storage browser (file counts/sizes across all 3 buckets), Data integrity check (job-photo records vs. actual files, in both directions, plus contact-less leads), Trigger workflows (runs any GitHub Actions workflow on demand via the `trigger-workflow` Edge Function — never a GitHub token in this file), Uptime monitoring (current status, 24h/7d uptime %, recent incidents), and Recent bookings (last 20 bookings regardless of conversion status).
 
 ## ⚠️ Do not delete
 
@@ -5014,6 +5014,85 @@ Tests:
 - `tests/tools/app-shell-v2.test.js`: the More drawer's row list now includes Website (hidden for that test's account).
 - `tests/tools/job-tracker-calendar-view.test.js`: the sidebar now has 13 destinations, not 12.
 
+## What changed, 2026-09-23 -- Tests no longer fail every evening and night
+
+Tests only; nothing on the site or in the tools changed. Five tests depended on the time of day, so from late afternoon (Denver time) until about 10 PM, CI failed on main and on every open PR:
+- **Three booking tests** tapped the second or third time slot of the first day with room. Late in the day that day is today, with only one slot left. They now tap the last slot shown:
+  - `tests/portal/booking-picker-round4.test.js`;
+  - `tests/booking/booking-manage-link-round3.test.js`;
+  - `tests/booking/booking-flow-picker-and-confirm.test.js`.
+- **Two Start my day / End my day tests** (`tests/tools/shift-clock-shell.test.js`) built shifts that started "3 hours ago". From midnight to 3 AM UTC (CI runs in UTC) that start was yesterday, so they failed. That file now runs in a fixed-offset time zone where it's always about midday.
+- **A failing test there also hung CI for 40+ minutes** instead of failing. Its open page kept the test run alive. Every page that file opens is now closed after each test, pass or fail.
+
+## What changed, 2026-09-23 -- Tools: page changes no longer flash, and going back Home no longer looks like the app starting up
+
+Tools (`tools/`) only: `styles-tools.css`, `tools-nav-pwa.js`, `workspace.html`, and `runway-dashboard.html`'s own copy of the shell CSS. No page's data or logic changes.
+
+**Checked first:** a real in-place page swap (an SPA-style app shell) was weighed and turned down on 2026-09-21, because every tool page relies on a full unload to clean up its realtime channels, timers, and page state (`docs/specialist-logs/features.md`). What shipped then was the cross-document view transition. It was supposed to hide the reload, but it didn't, for the reason below. No other app-shell work exists in any branch or PR. So this fixes the transition rather than replacing it.
+
+**Why it flashed.** The transition captures the new page at its first frame. On every tool page, that frame arrived before `tools-nav-pwa.js` had built the bottom bar, sidebar, header buttons, and page padding, because the script waits in line behind supabase-js, sync.js, and five other scripts. Measured in Chromium at 4x CPU slowdown, the shell was missing at that first frame on 15 of 15 navigations and arrived 150-220ms later. So the old bar faded out with nothing under it, and then the new one popped in.
+
+**What changed:**
+- **The old screen holds until the new one is complete, then crossfades.** It's pure CSS: nothing blocks rendering, and the new page keeps loading underneath. The hold ends when the shell is in, or after 1.2s at most; past that, the page shows the way it used to. The bottom bar and sidebar stay solid the whole way, so the shell never dips.
+- **The tab you tap lights up immediately.** If the next page takes longer than 150ms, a thin orange line runs along the top until it arrives, so short hops never show it. The line clears if you come back with the back button, or if you answer "Stay" on Site content's unsaved-changes prompt.
+- **"Welcome back" shows once per session.** The full-screen card with the logo used to appear on every return to the Dashboard. It showed up after the page had loaded and took every tap for 1.7s. It now appears on the first open of the session, and again when a different person signs in.
+- **The Dashboard's first frame is a skeleton, not wrong numbers.** It used to open on "Good morning." and "0 jobs today" whatever the time and the real count, with empty cards that jumped to full height once the sync finished. Next Job, Money Owed, Rest of Today, and the greeting now open on the same shimmer used by the Finance, Invoices, and Contracts lists.
+- **Reduced motion** follows the site's standard. Everything that moves happens instantly, but the hold still applies, so the cut goes straight to a finished page. The loading line becomes a still line.
+
+Nothing waits longer than before. In the same measurement, a complete first frame arrived as early as it used to or earlier, and the link itself behaves exactly as it did.
+
+**Not tested here:** Safari. The hold is standard CSS (view transitions, `:has()`, `:only-child`) that Safari 18.2+ supports, but only Chromium could be run here. Browsers without view transitions navigate exactly as before.
+
+Verified:
+- full suite: the only failure is the known `check-links.py` sandbox-proxy test. The clock-dependent booking and shift-clock tests that failed overnight were fixed in #404, which merged first;
+- `check-consistency`, `check-undefined-vars`, `check-visual-snapshot`, `eslint`;
+- frame-by-frame screencasts in Chromium at 390px and 1440px, in dark and light themes, with and without reduced motion.
+
+Tests:
+- `tests/tools/page-handoff.test.js` (18, new): the hold rules and their reduced-motion override in both stylesheets, the shell adding its class in one synchronous pass, the tap feedback and loading line in jsdom (including back-button restores and a cancelled leave), the once-per-session welcome, and the Dashboard skeletons, which the first render always replaces.
+
+## What changed, 2026-09-23 -- The WELCOME15 offer and the hiring notice can be changed or turned off from the editor
+
+Public site banners and Tools &rarr; Site Content. With nothing changed in the editor, the banners look exactly as before.
+
+**What was wrong:**
+- The WELCOME15 offer and the "We're hiring" notice were written into the code, so changing the offer or ending the hiring push needed a code change.
+- The editor's "Banner 1" and "Banner 2" silently took over the same two spots, dropping the close button and the usual styling, and only on some pages.
+- 17 pages had the banner spots but never showed anything in them: About, Our Work, Careers, Terms, Privacy, the blog, and the St. George page.
+
+**Now, in Tools &rarr; Site Content &rarr; "Banners at the top of the site":**
+- Each banner has three choices: the built-in wording, **My own message** (up to 200 characters, with an optional link to Book online, the Careers page, or Our Work), or **No banner**.
+- Your own message looks exactly like the built-in banners, close button included. Someone who closed an old message still sees a new one.
+- Picking "My own message" without typing one is flagged and can't be published. The review step shows each change next to what's live, with warnings (turning off the offer, replacing the hiring notice).
+- **Undo this save** puts all of it back, the same as every other field.
+- Banners now show on all 33 public pages that have the spots. The hiring notice skips the Careers page itself.
+
+**Why a change shows from the next page:** the banners are drawn before the rest of the page, so they can't wait for the internet. Each page shows what that visitor's browser saw last time, then checks for changes. A change that would make the page jump waits for the next page they open. Pages never jump under a visitor (that jump was fixed earlier today).
+
+**Database** (`sql/site-content/cms_site_banners.sql`, applied live):
+- Adds `banner1Mode`/`banner2Mode` (built-in, custom, or off) and `banner1Link`/`banner2Link`.
+- The database refuses any other choice, or any link that isn't one of the three pages.
+- Both modes start on built-in, which is what the site shows today.
+- Tested live in a transaction that always rolls back: a custom message with a link, plus the hiring notice off, saved as one change; undo put back exactly the built-in banners; a made-up link or mode was refused.
+
+**Proof it looks the same:** 64 screenshots of both banners, taken before and after the change on the 16 pages that had them, at desktop and phone size in real Chromium, are byte-for-byte identical. The header doesn't move, and layout-shift scores are unchanged.
+
+Verified:
+- full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint`;
+- the migration run for real in the test suite and live;
+- before/after screenshots.
+
+New tests:
+- `tests/site-content/cms-site-banners-db.test.js` (10), against the real SQL;
+- `tests/site-content/site-banners-public.test.js` (50): the first frame, the "never jump" rule, dismissing, safe text and links, and the wiring on all 33 pages;
+- 9 new banner flows in `tests/site-content/site-content-editor.test.js`, including save &rarr; undo &rarr; exactly the built-in banner again;
+- a guard in the same file that no function name is declared twice in the page. The FAQ/Terms editor, built alongside this, had its own `cmsShort()`, and a second declaration silently replaces the first.
+
+Updated with reasons:
+- `tests/design/promo-banner.test.js`, `hiring-banner.test.js`, and `site-banner-no-layout-shift.test.js`: pointed at the new `js/site-banners.js`, with every original check kept and the exact old markup pinned;
+- `tests/design/reduced-motion-coverage.test.js`: the file list;
+- `tests/site-content/site-content-editor.test.js`: its banner warning test picks "My own message" first.
+
 ## What changed, 2026-09-23 -- The booking, manage-booking, and not-found pages follow the saved phone number
 
 Public site (`booking.html`, `manage-booking.html`, `manage-job.html`, `404.html`) and `tools/site-content.html`. Nothing looks different today.
@@ -5049,6 +5128,69 @@ Tests:
   - `skip-link-and-main-landmark.test.js`: a script may follow 404's `<main>`, nothing that renders;
   - the "no token" tests in `manage-booking.test.js` and `manage-job.test.js`: still no RPC call without a token, but the public phone/email read now happens.
 
+## What changed, 2026-09-24 -- Dev Tools: regrouped so the thing you need is quick to find
+
+Tools only (the Dev Tools page). A layout and cleanup pass: no check, button, or list works any differently.
+
+The page had 32 panels under 6 tabs, and several tabs mixed panels that didn't belong together (Known issues, Graveyard, and Flagged pages under Notifications; Storage browser under Deploy; Client registry under Access). Each panel now sits with the others that answer the same question:
+
+- **Health** -- is anything broken right now? Run full health check (moved here from above every tab), then Uptime monitoring, Cron health, and Client errors, which load by themselves, plus Live consistency check and Advisor health.
+- **Data** -- is the business data clean, and can it come back? Data quality check and Data integrity check; the Graveyard and Backup & restore; and what's stored: Client registry, Appliance Wiki health, Storage browser.
+- **Sync** -- this device: Session & sync, Sync conflicts, Local data snapshot, Service worker & cache, Device info.
+- **Notifications** -- the push and booking tests, Push notification history, Recent bookings.
+- **Ops** -- Deploy history, Regression checker, What's new; the to-do lists (Known issues, Flagged pages); Trigger workflows and Quick links.
+- **Reports** is unchanged. **Access** is now just Account permissions.
+
+Inside each tab:
+
+- **Named sections.** Each tab is split into a few labelled groups, such as "Live status" and "Run a check", instead of one stack of identical cards.
+- **Live panels are cards, tools are rows.** Panels that show live information stay open. Tools you only reach for now and then are collapsed one-line rows with a short hint, such as "Data quality check: Duplicate client names, jobs missing a date or client". Click a row to open it. It stays open for the rest of the browser session. Four panels that used to be always open are now rows: Appliance Wiki health, Local data snapshot, Service worker & cache, and Device info.
+
+Also:
+
+- **Steve's view.** An account without "Dev Tools (full technical)" now sees two tabs: Data (Client registry only) and Access (Account permissions). Both panels used to share the Access tab.
+- **Links keep working.** `#backup` (from Settings and the Dashboard) now opens the Data tab at Backup & restore. The old `#nav-content` link still goes to the site content page.
+- **Phones.** The tab bar used to stick out 2px past each screen edge, so the page could be dragged sideways. It now fits.
+- The page's own help text, two panels' "?" texts, and the Dev Tools locations in `DISASTER_RECOVERY.md` now match the new layout.
+
+Verified:
+
+- full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint`;
+- in headless Chromium, dark and light, desktop and 390px: every tab, the Owner view, and `#backup`. Clicked through the old and new pages side by side (full health check, a data check, a "?" on a collapsed row, the permissions editor, backup download, the Graveyard list): same results on both;
+- `npm run fix-versions` re-stamped `dev-tools-shared.js` where it loads and bumped the tools service worker's cache name.
+
+Tests:
+
+- `tests/dev-tools/dev-tools-regroup.test.js` (9, new): the exact tab, section, and panel layout; all 32 panels present once; every element a panel writes into still on the page; the full health check on the Health tab; `#backup` landing on Data; every row wired the same way; no empty section heading for an Owner; no `<section>` elements; the phone tab bar width. 8 of the 9 fail against the old page. The 9th (every element still present) is a guard and passes on both.
+- `tests/dev-tools/dev-tools-tabs.test.js` and `tests/dev-tools/dev-tools-reports.test.js`: updated for the new tab names and order, and for the Owner now seeing Data and Access.
+
+## What changed, 2026-09-24 -- CI no longer fails on Mondays or from October on, and a stuck test run stops after 20 minutes
+
+Tests and CI only; nothing on the site changes. Follows #404, which fixed the evening failures.
+
+- **The Dashboard week-card test failed all day every Monday.** In UTC, the timezone CI runs in, that's roughly 8 PM Sunday to 8 PM Monday Mountain. The test starts a shift "2 hours ago" and expected Monday to show only an earlier, finished shift. On a Monday the new shift counts toward Monday too. The file now runs on a pinned Thursday-morning clock (`tests/fixed-clock.js`), so it gives the same answer any day.
+- **Two Job Tracker calendar tests would have started failing on Sep 30 at 6 PM Mountain, and never stopped.** They meant to show September 2026, where their sample jobs are, but only ever saw the current month. They passed only because they were written in September. They now step to September 2026 with the calendar's own month arrows.
+- **The CI `test` job now stops after 20 minutes.** A normal run takes about 7. A test that never finished used to hold the job, and block the PR, for GitHub's 6-hour default.
+
+Verified:
+- the week-card test fails on `main` on Mondays (Sep 28, Oct 5, Nov 2) and passes with the fix at every time checked;
+- the calendar tests fail on `main` in every month but September 2026 (checked through September 2027) and pass with the fix in all of them;
+- the whole suite, run under a faked clock at 18 moments, has nothing else that depends on the hour, day or month. Those moments cover every day of the week, a month boundary, the Nov 1 time change, New Year 2027 and March 2027;
+- full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint`.
+
+## What changed, 2026-09-24 -- The booking picker test taps the second time again
+
+Tests only. Nothing on the site changed.
+
+The "Tests no longer fail every evening and night" change above (#404) fixed `tests/portal/booking-picker-round4.test.js` by tapping the last open time instead of the second. This puts the second time back, which is what the test was written to check, without the evening failure:
+
+- The file's picker windows now run on a fixed clock, the suite's shared weekday morning from `tests/fixed-clock.js` (Thursday, October 1, 9 AM Mountain), so the time of day no longer matters. On the real clock, today has one time left from 5:30 to 6 PM Mountain (3:30 to 4 PM on Sundays), which is why a second time couldn't be tapped.
+- If the picker's first day ever has fewer than two times, the test now says so plainly instead of failing with "Cannot read properties of undefined".
+
+Verified:
+- the original failure reproduced on the real clock at 5:40 PM MDT, and with the clock pinned to 5:45 PM on a weekday and a Saturday and 3:45 PM on a Sunday. The fixed file passes at those times, at every half hour from 1:15 to 10:45 PM on a Wednesday and a Sunday, and on the real clock inside the window;
+- full suite on the branch merged with main (3703/3704 on the real clock at 8:49 to 8:56 PM MDT; the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint` on the changed file.
+
 ## What changed, 2026-09-24 -- Every Call, Text, and Email spot on the public site follows the saved phone number and email
 
 Public site (homepage, About, Our Work, Careers, all 11 blog pages, the 3 St. George appliance-repair pages, plus booking/manage-booking/manage-job/404) and `tools/site-content.html`. Nothing looks different today.
@@ -5082,8 +5224,6 @@ Result:
 - The rendered page is identical at all 66 page sizes, so nothing but the added classes changed.
 - **With a different saved number and email,** every spot at every size (263 captures) showed the new ones and called, texted, or emailed them. None kept the old ones.
 
-**Also fixed (tests only):** two manage-booking tests assumed the day still had two or three open times. They failed every evening, on `main` too. They now pick any open time.
-
 Verified:
 - TBD_README_VERIFIED
 
@@ -5094,4 +5234,4 @@ Tests:
   - new tests cover each spot above, plus the rule that a hook on a whole button or sentence only goes where the number-only rewrite runs;
   - the list of pages with unhooked spots is now empty, and the check includes Text links.
 - `site-content-editor.test.js`: the new note; the built-in-value check covers every public page.
-- Updated: `conversion-polish-sticky-sms-faq.test.js` (the sticky Text button's new class), and the two evening-only tests above.
+- Updated: `conversion-polish-sticky-sms-faq.test.js` (the sticky Text button's new class).

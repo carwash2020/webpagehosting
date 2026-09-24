@@ -199,8 +199,7 @@
 
 <div id="siteBanner1" class="site-banner" style="display:none;"></div>
 <div id="siteBanner2" class="site-banner" style="display:none;"></div>
-<script src="/js/promo-banner.js?v=d43c6c7f2e"></script>
-<script src="/js/hiring-banner.js?v=5a577f8587"></script>
+<script src="/js/site-banners.js?v=4d43f541ed"></script>
 
 <header>
   <nav class="nav">
@@ -880,16 +879,13 @@
       .then(rows => {
         const map = {};
         (Array.isArray(rows) ? rows : []).forEach(r => { if (r.value) map[r.key] = r.value; });
+        if (typeof applySiteBanners === 'function') applySiteBanners(rows);
         // Google rating + review count (js/review-stats.js). Whichever of
         // this fetch or that deferred script finishes second applies them.
         window.__siteContentMap = map;
         if (typeof applyReviewStats === 'function') applyReviewStats(map);
 
         applySiteContact(map);
-        ['banner1', 'banner2'].forEach(key => {
-          const el = document.getElementById('site' + key.charAt(0).toUpperCase() + key.slice(1));
-          if (el && map[key]) { el.textContent = map[key]; el.style.display = 'block'; }
-        });
       })
       .catch(() => { /* static fallback content already shown is correct */ });
   })();

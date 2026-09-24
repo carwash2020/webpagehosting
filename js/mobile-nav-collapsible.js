@@ -13,9 +13,9 @@
 // click handling; several other pages use a shorter inline version) --
 // this only needs the caret buttons themselves to exist, so it works
 // the same everywhere it's included, regardless of which flavor of
-// inline script that page also carries. Loaded with `defer`, same as
-// promo-banner.js/hiring-banner.js, so the DOM is already parsed by the
-// time this runs -- no DOMContentLoaded wrapper needed.
+// inline script that page also carries. Loaded with `defer`, so the DOM
+// is already parsed by the time this runs -- no DOMContentLoaded wrapper
+// needed.
 (function () {
   document.querySelectorAll('.mobile-nav-caret').forEach(function (btn) {
     btn.addEventListener('click', function () {

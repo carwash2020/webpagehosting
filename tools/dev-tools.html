@@ -52,13 +52,13 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=87b1f5227e">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=9aa2822757">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=9c0fadebb0">
 <script src="/tools/data-layer.js?v=b2586a446b" defer></script>
-<script src="/tools/dev-tools-shared.js?v=f34a6faa86" defer></script>
+<script src="/tools/dev-tools-shared.js?v=648dd29b5f" defer></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
 <script src="/tools/tools-dialogs.js?v=310315eb44" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=151ee293de" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=27378ed01d" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <script src="/tools/sync.js?v=0e885bb435" defer></script>
 <style>
@@ -88,13 +88,66 @@
     display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 20px; align-items: start;
   }
-  /* Tab show/hide -- a tab-panel group is hidden unless it carries
-     is-active-tab-panel, at which point it's restored to the exact
-     same grid display the un-tabbed version always used. */
-  .dev-panels-grid[data-tab-panel] { display: none; }
-  .dev-panels-grid[data-tab-panel].is-active-tab-panel { display: grid; animation: devTabIn .2s ease both; }
+  /* Tab show/hide -- a tab's panel group is hidden unless it carries
+     is-active-tab-panel. Since the 2026-09-24 regroup a tab holds
+     sections (a subheading plus its own panel grid) rather than one
+     flat grid of every panel. */
+  .dev-tab-panel { display: none; }
+  .dev-tab-panel.is-active-tab-panel { display: block; animation: devTabIn .2s ease both; }
   @keyframes devTabIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  @media (prefers-reduced-motion: reduce) {
+    .dev-tab-panel.is-active-tab-panel { animation: none; }
+  }
   .dev-panel-wide { grid-column: 1 / -1; }
+
+  /* Sections (2026-09-24 regroup). A small label with a hairline, so a
+     tab reads as a few named groups instead of one wall of cards. It is
+     deliberately quieter than a panel title: the label marks the group,
+     the cards stay the thing you read. */
+  .dev-section + .dev-section { margin-top: 30px; }
+  .dev-section-head {
+    display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px;
+    margin: 0 2px 12px;
+  }
+  .dev-section-head::after {
+    content: ''; flex: 1 1 40px; align-self: center; height: 1px;
+    background: var(--border); order: 1;
+  }
+  .dev-section-title {
+    font-family: var(--font-ui); font-size: 13px; font-weight: 600;
+    letter-spacing: 1.4px; text-transform: uppercase; color: var(--text);
+    margin: 0; order: 0;
+  }
+  .dev-section-sub { margin: 0; font-size: 12.5px; color: var(--text-dim); order: 2; }
+  .dev-section .dev-panels-grid { gap: 14px; }
+  /* Sections made only of collapsible rows stack like a list. */
+  .dev-section .dev-panels-grid.dev-row-list { gap: 8px; }
+
+  /* Collapsible panels are the "open it when you need it" tools. They
+     always take a full row, so opening one never reflows the cards
+     beside it, and while closed they shrink to a one-line row: a
+     smaller title, a one-line hint, no divider. Always-open cards keep
+     the full treatment, which is what gives a tab its hierarchy. */
+  .dev-panel.is-collapsible { grid-column: 1 / -1; }
+  .dev-panel.is-collapsible h2 { font-size: 15px; }
+  .dev-panel.is-collapsed { padding-top: 12px; padding-bottom: 12px; transition: border-color .15s ease; }
+  .dev-panel.is-collapsed:hover { border-color: var(--orange-tint-border); }
+  .dev-panel.is-collapsed .dev-panel-heading { border-bottom: none; border-image: none; padding-bottom: 0; }
+  .dev-panel-hint {
+    flex: 1 1 0; min-width: 0; font-size: 12.5px; color: var(--text-dim);
+    /* The heading row carries letter-spacing for its all-caps title;
+       the hint is plain sentence text. */
+    letter-spacing: normal; text-transform: none; font-weight: 400;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .dev-panel.is-collapsible:not(.is-collapsed) .dev-panel-hint { visibility: hidden; }
+
+  /* Health tab's lead row: the one button that runs the page's main
+     checks together, with what it covers said next to it. */
+  .dev-health-run { margin-bottom: 26px; }
+  .dev-health-run-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; }
+  .dev-health-run-note { font-size: 12.5px; color: var(--text-dim); }
+  #fullHealthCheckResults:empty { display: none; }
 
   .dev-panel {
     background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: var(--radius);
@@ -275,7 +328,11 @@
     body { padding: 44px 14px 60px; }
     .dev-panel { padding: 14px; }
     .dev-panels-grid { gap: 14px; }
-    .dev-tab-bar { padding: 8px 10px; margin: 0 -14px 16px; gap: 2px; }
+    /* -12px, matching the 12px phone gutter styles-tools.css actually
+       applies (body.th-tool-page wins over this page's own 14px body
+       padding above). -14px pushed the bar 2px past each screen edge,
+       so the whole page could be dragged sideways on a phone. */
+    .dev-tab-bar { padding: 8px 10px; margin: 0 -12px 16px; gap: 2px; }
     .dev-tab-btn, .dev-tab-bar > a { min-height: 40px; padding: 8px 6px; font-size: 11.5px; }
     /* Icons dropped on mobile specifically -- without this, 5 tabs
        with icons genuinely don't fit on one row at real phone widths,
@@ -299,13 +356,16 @@
     color: var(--orange-light);
   }
 
-  /* Collapsible panels -- used for the 4 large CMS editors, which are
-     enormous on a phone. They already sit at the very end of the page
-     for that reason; collapsing them by default means the diagnostics
-     above are actually reachable without a long scroll past them.
-     State is remembered per-panel in sessionStorage. */
+  /* Collapsible panels -- first used for the 4 large CMS editors (since
+     moved to site-content.html); now every run-it-when-you-need-it tool
+     on this page. Collapsed by default so the live panels are reachable
+     without scrolling past them. State is remembered per-panel in
+     sessionStorage. */
   .dev-panel.is-collapsible .dev-panel-heading { cursor: pointer; user-select: none; }
-  .dev-panel.is-collapsible .dev-panel-heading h2 { flex: 1 1 auto; }
+  /* The title keeps its natural width and the one-line hint beside it
+     takes the rest of the row, so "?" and the caret still sit at the
+     right edge. */
+  .dev-panel.is-collapsible .dev-panel-heading h2 { flex: 0 1 auto; }
   .dev-collapse-caret {
     flex: 0 0 auto; width: 18px; height: 18px; display: inline-flex;
     align-items: center; justify-content: center; color: var(--text-dim);
@@ -314,6 +374,21 @@
   .dev-panel.is-collapsed .dev-collapse-caret { transform: rotate(-90deg); }
   .dev-panel.is-collapsed .dev-panel-body { display: none; }
   .dev-panel.is-collapsed .dev-panel-heading { margin-bottom: 0; }
+
+  /* Phone layout for the 2026-09-24 sections and rows. Kept after the
+     collapsible-panel rules above so these win on source order. A
+     collapsed row's hint drops to its own line under the title (22px in
+     = the kicker bar plus its gap, so it lines up with the title text)
+     instead of being squeezed to an ellipsis. */
+  @media (max-width: 720px) {
+    .dev-panel.is-collapsible .dev-panel-heading { flex-wrap: wrap; row-gap: 2px; }
+    .dev-panel.is-collapsible .dev-panel-heading h2 { flex: 1 1 auto; }
+    .dev-panel-hint { order: 5; flex: 1 0 100%; white-space: normal; padding-left: 22px; }
+    .dev-panel.is-collapsible:not(.is-collapsed) .dev-panel-hint { display: none; }
+    .dev-section + .dev-section { margin-top: 24px; }
+    .dev-section-sub { flex-basis: 100%; }
+    .dev-health-run { margin-bottom: 20px; }
+  }
 </style>
 </head>
 <body>
@@ -336,7 +411,7 @@
       <a href="/tools/workspace.html" class="help-btn" aria-label="Back to Dashboard" title="Back to Dashboard" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
     </div>
   </div>
-  <p class="hub-sub">Site diagnostics and maintenance utilities. Visible to any account with the "Dev Tools" permission checked &mdash; see the Account permissions panel below to change who has access.</p>
+  <p class="hub-sub">Site diagnostics and maintenance. Visible to any account with the "Dev Tools" permission &mdash; change who has access in Access &rarr; Account permissions.</p>
 
   <div id="devIdentityBadge" class="dev-identity" style="display:none;"></div>
 
@@ -353,73 +428,31 @@
 
   <nav class="dev-tab-bar" id="devTabBar">
     <button type="button" class="dev-tab-btn" data-tab="health" onclick="switchDevToolsTab('health')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-flask" xlink:href="#icon-flask"></use></svg></span>Health</button>
-    <!-- Portal tab removed (2026-09-03) -- split out onto its own
-         /tools/clients.html, requested directly: "lets split the
-         portal out of tools and add it as its own [tool]." -->
-    <button type="button" class="dev-tab-btn" data-tab="access" onclick="switchDevToolsTab('access')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-lock" xlink:href="#icon-lock"></use></svg></span>Access</button>
-    <button type="button" class="dev-tab-btn" data-tab="session" onclick="switchDevToolsTab('session')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg></span>Session</button>
-    <button type="button" class="dev-tab-btn" data-tab="notifications" onclick="switchDevToolsTab('notifications')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-bolt" xlink:href="#icon-bolt"></use></svg></span>Notifications</button>
-    <button type="button" class="dev-tab-btn" data-tab="deploy" onclick="switchDevToolsTab('deploy')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-rocket" xlink:href="#icon-rocket"></use></svg></span>Deploy</button>
+    <button type="button" class="dev-tab-btn" data-tab="data" onclick="switchDevToolsTab('data')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-folder" xlink:href="#icon-folder"></use></svg></span>Data</button>
+    <button type="button" class="dev-tab-btn" data-tab="sync" onclick="switchDevToolsTab('sync')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-shuffle" xlink:href="#icon-shuffle"></use></svg></span>Sync</button>
+    <button type="button" class="dev-tab-btn" data-tab="notifications" onclick="switchDevToolsTab('notifications')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-bell" xlink:href="#icon-bell"></use></svg></span>Notifications</button>
+    <button type="button" class="dev-tab-btn" data-tab="ops" onclick="switchDevToolsTab('ops')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-rocket" xlink:href="#icon-rocket"></use></svg></span>Ops</button>
     <button type="button" class="dev-tab-btn" data-tab="reports" onclick="switchDevToolsTab('reports')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-trending" xlink:href="#icon-trending"></use></svg></span>Reports</button>
+    <button type="button" class="dev-tab-btn" data-tab="access" onclick="switchDevToolsTab('access')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-lock" xlink:href="#icon-lock"></use></svg></span>Access</button>
     <a href="/tools/site-content.html"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-note" xlink:href="#icon-note"></use></svg></span>Content</a>
   </nav>
 
-  <div style="margin-bottom:20px;">
-    <button class="secondary-btn" id="fullHealthCheckBtn" onclick="runFullHealthCheck()">Run full health check</button>
+  <div class="dev-tab-panel" data-tab-panel="health">
+
+  <div class="dev-health-run">
+    <div class="dev-health-run-row">
+      <button class="secondary-btn" id="fullHealthCheckBtn" onclick="runFullHealthCheck()">Run full health check</button>
+      <span class="dev-health-run-note">Consistency check, service worker, Supabase, latest deploy, and cron health in one pass.</span>
+    </div>
     <div id="fullHealthCheckResults" style="margin-top:12px;"></div>
   </div>
 
-  <div class="dev-panels-grid" data-tab-panel="health">
-
-  <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="consistency">
-    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
-      <h2>Live consistency check</h2>
-      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('consistency')" aria-label="What does this do?" title="What does this do?">?</button>
-      <span class="dev-collapse-caret">&#9660;</span>
-    </div>
-    <div class="dev-panel-body">
-      <button class="secondary-btn" onclick="runLiveConsistencyCheck()" id="runCheckBtn">Run check</button>
-      <div id="consistencyResults" style="margin-top:16px;"></div>
-    </div>
+  <div class="dev-section" role="group" aria-labelledby="devSecHealthLive">
+  <div class="dev-section-head">
+    <h2 class="dev-section-title" id="devSecHealthLive">Live status</h2>
+    <p class="dev-section-sub">Loads by itself every time this page opens.</p>
   </div>
-
-  <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="dataquality">
-    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
-      <h2>Data quality check</h2>
-      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('dataquality')" aria-label="What does this do?" title="What does this do?">?</button>
-      <span class="dev-collapse-caret">&#9660;</span>
-    </div>
-    <div class="dev-panel-body">
-      <button class="secondary-btn" onclick="runDataQualityCheck()" id="runDataQualityBtn">Run check</button>
-      <div id="dataQualityResults" style="margin-top:16px;"></div>
-    </div>
-  </div>
-
-  <div class="dev-panel dev-owner-hidden">
-    <div class="dev-panel-heading">
-      <h2>Appliance Wiki health</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('wikihealth')" aria-label="What does this do?" title="What does this do?">?</button>
-    </div>
-    <div id="wikiHealth"></div>
-  </div>
-
-  <div class="dev-panel dev-owner-hidden">
-    <div class="dev-panel-heading">
-      <h2>Client errors</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('clienterrors')" aria-label="What does this do?" title="What does this do?">?</button>
-    </div>
-    <div id="clientErrorLog"></div>
-    <button class="secondary-btn" style="margin-top:12px;" onclick="clearClientErrorLog()">Clear log</button>
-  </div>
-
-  <div class="dev-panel dev-owner-hidden">
-    <div class="dev-panel-heading">
-      <h2>Sync conflicts</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('syncconflicts')" aria-label="What does this do?" title="What does this do?">?</button>
-    </div>
-    <div id="syncConflictLog"></div>
-    <button class="secondary-btn" style="margin-top:12px;" onclick="clearSyncConflictLog()">Clear log</button>
-  </div>
+  <div class="dev-panels-grid">
 
   <div class="dev-panel dev-owner-hidden dev-panel-wide">
     <div class="dev-panel-heading">
@@ -428,21 +461,6 @@
     </div>
     <div id="uptimeStatus"></div>
     <div id="uptimeIncidentsList" class="dev-scrollable-list" style="margin-top:10px;"></div>
-  </div>
-
-  <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="advisorhealth">
-    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
-      <h2>Advisor health</h2>
-      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('advisorhealth')" aria-label="What does this do?" title="What does this do?">?</button>
-      <span class="dev-collapse-caret">&#9660;</span>
-    </div>
-    <div class="dev-panel-body">
-      <div class="dev-status-chip" style="margin-bottom:12px;" id="advisorSetupNotice">
-        Needs the MANAGEMENT_API_PAT secret in Supabase (Edge Functions -> Secrets) to work -- click Refresh to check.
-      </div>
-      <button class="secondary-btn" style="margin-bottom:12px;" onclick="renderAdvisorHealth()">Refresh</button>
-      <div id="advisorHealthResults"></div>
-    </div>
   </div>
 
   <!-- Cron Health (closes a real audit gap: every pg_cron job that
@@ -459,9 +477,85 @@
     <div id="cronHealthResults"></div>
   </div>
 
+  <div class="dev-panel dev-owner-hidden dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>Client errors</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('clienterrors')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div id="clientErrorLog"></div>
+    <button class="secondary-btn" style="margin-top:12px;" onclick="clearClientErrorLog()">Clear log</button>
+  </div>
+
+  </div>
+  </div>
+
+  <div class="dev-section" role="group" aria-labelledby="devSecHealthChecks">
+  <div class="dev-section-head">
+    <h2 class="dev-section-title" id="devSecHealthChecks">Run a check</h2>
+    <p class="dev-section-sub">Open one to run it.</p>
+  </div>
+  <div class="dev-panels-grid dev-row-list">
+
+  <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="consistency">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>Live consistency check</h2>
+      <span class="dev-panel-hint">Login gate, CSP, manifest, and styles version on every tool page</span>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('consistency')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <button class="secondary-btn" onclick="runLiveConsistencyCheck()" id="runCheckBtn">Run check</button>
+      <div id="consistencyResults" style="margin-top:16px;"></div>
+    </div>
+  </div>
+
+  <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="advisorhealth">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>Advisor health</h2>
+      <span class="dev-panel-hint">Supabase security and performance findings</span>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('advisorhealth')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <div class="dev-status-chip" style="margin-bottom:12px;" id="advisorSetupNotice">
+        Needs the MANAGEMENT_API_PAT secret in Supabase (Edge Functions -> Secrets) to work -- click Refresh to check.
+      </div>
+      <button class="secondary-btn" style="margin-bottom:12px;" onclick="renderAdvisorHealth()">Refresh</button>
+      <div id="advisorHealthResults"></div>
+    </div>
+  </div>
+
+  </div>
+  </div>
+
+  </div>
+
+  <div class="dev-tab-panel" data-tab-panel="data">
+
+  <div class="dev-section" role="group" aria-labelledby="devSecDataChecks">
+  <div class="dev-section-head">
+    <h2 class="dev-section-title" id="devSecDataChecks">Check the data</h2>
+    <p class="dev-section-sub">Open one to run it.</p>
+  </div>
+  <div class="dev-panels-grid dev-row-list">
+
+  <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="dataquality">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>Data quality check</h2>
+      <span class="dev-panel-hint">Duplicate client names, jobs missing a date or client</span>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('dataquality')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <button class="secondary-btn" onclick="runDataQualityCheck()" id="runDataQualityBtn">Run check</button>
+      <div id="dataQualityResults" style="margin-top:16px;"></div>
+    </div>
+  </div>
+
   <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="dataintegrity">
     <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
       <h2>Data integrity check</h2>
+      <span class="dev-panel-hint">Photos vs. stored files, leads with no contact, booking links</span>
       <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('dataintegrity')" aria-label="What does this do?" title="What does this do?">?</button>
       <span class="dev-collapse-caret">&#9660;</span>
     </div>
@@ -472,77 +566,21 @@
   </div>
 
   </div>
-
-  <div class="dev-panels-grid" data-tab-panel="access">
-
-  <div class="dev-panel dev-panel-wide">
-    <div class="dev-panel-heading">
-      <h2>Client registry</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('clientregistry')" aria-label="What does this do?" title="What does this do?">?</button>
-    </div>
-    <button class="secondary-btn" onclick="renderClientRegistry()" id="clientRegistryBtn">Show registry</button>
-    <div id="clientRegistryResults" style="margin-top:16px;"></div>
   </div>
 
-  <div class="dev-panel dev-panel-wide">
-    <div class="dev-panel-heading">
-      <h2>Account permissions</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('roles')" aria-label="What does this do?" title="What does this do?">?</button>
-    </div>
-    <div id="accountRolesList"></div>
-    <div id="permCategoriesRow" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;"></div>
-    <div id="permCategoryPanel" style="margin-top:10px;"></div>
-    <p id="permNonManagerNote" class="tool-sub" style="display:none; margin-top:8px;">Only an account with "Manage permissions" can change this.</p>
-    <div id="addAccountForm" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--border);">
-      <label style="display:block; margin-bottom:8px;">Add an account
-        <input type="email" id="newAccountEmail" placeholder="name@example.com" style="margin-top:4px;">
-      </label>
-      <label style="display:block; margin-bottom:10px; font-size:13px; color:var(--text-dim);">Start from a preset (optional)
-        <select id="newAccountPreset" style="margin-top:4px;"><option value="">None -- start with everything unchecked</option></select>
-      </label>
-      <button class="secondary-btn" onclick="addAccount()">Add account</button>
-    </div>
+  <div class="dev-section" role="group" aria-labelledby="devSecDataRecover">
+  <div class="dev-section-head">
+    <h2 class="dev-section-title" id="devSecDataRecover">Get it back</h2>
+    <p class="dev-section-sub">Undo a delete, or restore a whole backup file.</p>
   </div>
+  <div class="dev-panels-grid">
 
-  </div>
-
-  <div class="dev-panels-grid" data-tab-panel="session">
-
-  <div class="dev-panel dev-owner-hidden">
+  <div class="dev-panel dev-owner-hidden dev-panel-wide">
     <div class="dev-panel-heading">
-      <h2>Session &amp; sync</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('session')" aria-label="What does this do?" title="What does this do?">?</button>
+      <h2>Graveyard</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('graveyard')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
-    <div id="sessionInfo"></div>
-    <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
-      <button class="secondary-btn" onclick="devPushNow()">Push now</button>
-      <button class="secondary-btn" onclick="devPullNow()">Pull now</button>
-    </div>
-  </div>
-
-  <div class="dev-panel dev-owner-hidden">
-    <div class="dev-panel-heading">
-      <h2>Local data snapshot</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('localdata')" aria-label="What does this do?" title="What does this do?">?</button>
-    </div>
-    <div id="localDataSnapshot" class="dev-scrollable-list"></div>
-  </div>
-
-  <div class="dev-panel dev-owner-hidden">
-    <div class="dev-panel-heading">
-      <h2>Device info</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('device')" aria-label="What does this do?" title="What does this do?">?</button>
-    </div>
-    <div id="deviceInfo"></div>
-  </div>
-
-  <div class="dev-panel dev-owner-hidden">
-    <div class="dev-panel-heading">
-      <h2>Service worker &amp; cache</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('serviceworker')" aria-label="What does this do?" title="What does this do?">?</button>
-    </div>
-    <div id="swInfo"></div>
-    <button class="secondary-btn" style="margin-top:12px;" onclick="clearServiceWorkerAndCaches()">Clear cache &amp; unregister</button>
+    <div id="graveyardList" class="dev-scrollable-list"></div>
   </div>
 
   <!-- Backup & Restore -- moved here from Settings (2026-09-22). A full
@@ -578,12 +616,149 @@
   </div>
 
   </div>
+  </div>
 
-  <div class="dev-panels-grid" data-tab-panel="notifications">
+  <div class="dev-section" role="group" aria-labelledby="devSecDataStored">
+  <div class="dev-section-head">
+    <h2 class="dev-section-title" id="devSecDataStored">What's stored</h2>
+    <p class="dev-section-sub">What is on file right now.</p>
+  </div>
+  <div class="dev-panels-grid">
+
+  <div class="dev-panel dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>Client registry</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('clientregistry')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <button class="secondary-btn" onclick="renderClientRegistry()" id="clientRegistryBtn">Show registry</button>
+    <div id="clientRegistryResults" style="margin-top:16px;"></div>
+  </div>
+
+  <div class="dev-panel dev-owner-hidden is-collapsible" data-collapse-key="wikihealth">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>Appliance Wiki health</h2>
+      <span class="dev-panel-hint">Brands, entries, and issues logged on this device</span>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('wikihealth')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <div id="wikiHealth"></div>
+    </div>
+  </div>
+
+  <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="storagebrowser">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>Storage browser</h2>
+      <span class="dev-panel-hint">File counts and sizes in all 3 buckets</span>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('storagebrowser')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <button class="secondary-btn" style="margin-bottom:12px;" onclick="renderStorageBrowser()">Refresh</button>
+      <div id="storageBrowserResults"><p class="tool-sub">Click Refresh to scan all 3 buckets.</p></div>
+    </div>
+  </div>
+
+  </div>
+  </div>
+
+  </div>
+
+  <div class="dev-tab-panel" data-tab-panel="sync">
+
+  <div class="dev-section" role="group" aria-labelledby="devSecSync">
+  <div class="dev-section-head">
+    <h2 class="dev-section-title" id="devSecSync">Sync</h2>
+    <p class="dev-section-sub">This device's session and its last push or pull.</p>
+  </div>
+  <div class="dev-panels-grid">
+
+  <div class="dev-panel dev-owner-hidden">
+    <div class="dev-panel-heading">
+      <h2>Session &amp; sync</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('session')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div id="sessionInfo"></div>
+    <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
+      <button class="secondary-btn" onclick="devPushNow()">Push now</button>
+      <button class="secondary-btn" onclick="devPullNow()">Pull now</button>
+    </div>
+  </div>
+
+  <div class="dev-panel dev-owner-hidden">
+    <div class="dev-panel-heading">
+      <h2>Sync conflicts</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('syncconflicts')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div id="syncConflictLog"></div>
+    <button class="secondary-btn" style="margin-top:12px;" onclick="clearSyncConflictLog()">Clear log</button>
+  </div>
+
+  </div>
+  </div>
+
+  <div class="dev-section" role="group" aria-labelledby="devSecDevice">
+  <div class="dev-section-head">
+    <h2 class="dev-section-title" id="devSecDevice">This device</h2>
+    <p class="dev-section-sub">What the browser is holding on to.</p>
+  </div>
+  <div class="dev-panels-grid dev-row-list">
+
+  <div class="dev-panel dev-owner-hidden is-collapsible" data-collapse-key="localdata">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>Local data snapshot</h2>
+      <span class="dev-panel-hint">Every stored key on this device, with its size</span>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('localdata')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <div id="localDataSnapshot" class="dev-scrollable-list"></div>
+    </div>
+  </div>
+
+  <div class="dev-panel dev-owner-hidden is-collapsible" data-collapse-key="serviceworker">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>Service worker &amp; cache</h2>
+      <span class="dev-panel-hint">Registration, cache names, storage used</span>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('serviceworker')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <div id="swInfo"></div>
+      <button class="secondary-btn" style="margin-top:12px;" onclick="clearServiceWorkerAndCaches()">Clear cache &amp; unregister</button>
+    </div>
+  </div>
+
+  <div class="dev-panel dev-owner-hidden is-collapsible" data-collapse-key="deviceinfo">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>Device info</h2>
+      <span class="dev-panel-hint">Screen, viewport, online status, browser</span>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('device')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <div id="deviceInfo"></div>
+    </div>
+  </div>
+
+  </div>
+  </div>
+
+  </div>
+
+  <div class="dev-tab-panel" data-tab-panel="notifications">
+
+  <div class="dev-section" role="group" aria-labelledby="devSecNotifyTest">
+  <div class="dev-section-head">
+    <h2 class="dev-section-title" id="devSecNotifyTest">Send a test</h2>
+    <p class="dev-section-sub">Runs a real test through the pipeline, then cleans up after itself.</p>
+  </div>
+  <div class="dev-panels-grid dev-row-list">
 
   <div class="dev-panel dev-owner-hidden is-collapsible" data-collapse-key="pushtest">
     <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
       <h2>Push notification test</h2>
+      <span class="dev-panel-hint">Sends a test lead, then deletes it</span>
       <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('pushtest')" aria-label="What does this do?" title="What does this do?">?</button>
       <span class="dev-collapse-caret">&#9660;</span>
     </div>
@@ -593,20 +768,10 @@
     </div>
   </div>
 
-  <div class="dev-panel dev-owner-hidden is-collapsible" data-collapse-key="pushhistory">
-    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
-      <h2>Push notification history</h2>
-      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('pushhistory')" aria-label="What does this do?" title="What does this do?">?</button>
-      <span class="dev-collapse-caret">&#9660;</span>
-    </div>
-    <div class="dev-panel-body">
-      <div id="pushHistoryList" class="dev-scrollable-list"><p class="tool-sub">Loading...</p></div>
-    </div>
-  </div>
-
   <div class="dev-panel dev-owner-hidden is-collapsible" data-collapse-key="bookingtest">
     <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
       <h2>Booking notification test</h2>
+      <span class="dev-panel-hint">Books, moves, and cancels a test booking</span>
       <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('bookingtest')" aria-label="What does this do?" title="What does this do?">?</button>
       <span class="dev-collapse-caret">&#9660;</span>
     </div>
@@ -616,9 +781,31 @@
     </div>
   </div>
 
+  </div>
+  </div>
+
+  <div class="dev-section" role="group" aria-labelledby="devSecNotifySent">
+  <div class="dev-section-head">
+    <h2 class="dev-section-title" id="devSecNotifySent">What went out</h2>
+  </div>
+  <div class="dev-panels-grid dev-row-list">
+
+  <div class="dev-panel dev-owner-hidden is-collapsible" data-collapse-key="pushhistory">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>Push notification history</h2>
+      <span class="dev-panel-hint">The last 30 pushes sent</span>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('pushhistory')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <div id="pushHistoryList" class="dev-scrollable-list"><p class="tool-sub">Loading...</p></div>
+    </div>
+  </div>
+
   <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="recentbookings">
     <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
       <h2>Recent bookings</h2>
+      <span class="dev-panel-hint">The last 20 bookings, any status</span>
       <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('recentbookings')" aria-label="What does this do?" title="What does this do?">?</button>
       <span class="dev-collapse-caret">&#9660;</span>
     </div>
@@ -628,33 +815,19 @@
     </div>
   </div>
 
-  <div class="dev-panel dev-owner-hidden dev-panel-wide">
-    <div class="dev-panel-heading">
-      <h2>Known issues</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('knownissues')" aria-label="What does this do?" title="What does this do?">?</button>
-    </div>
-    <div id="knownIssuesList"></div>
   </div>
-
-  <div class="dev-panel dev-owner-hidden dev-panel-wide">
-    <div class="dev-panel-heading">
-      <h2>Graveyard</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('graveyard')" aria-label="What does this do?" title="What does this do?">?</button>
-    </div>
-    <div id="graveyardList" class="dev-scrollable-list"></div>
-  </div>
-
-  <div class="dev-panel dev-owner-hidden dev-panel-wide">
-    <div class="dev-panel-heading">
-      <h2>Flagged pages</h2>
-      <button class="dev-info-bubble" onclick="openDevInfo('flaggedpages')" aria-label="What does this do?" title="What does this do?">?</button>
-    </div>
-    <div id="flaggedItemsList"></div>
   </div>
 
   </div>
 
-  <div class="dev-panels-grid" data-tab-panel="deploy">
+  <div class="dev-tab-panel" data-tab-panel="ops">
+
+  <div class="dev-section" role="group" aria-labelledby="devSecOpsDeploys">
+  <div class="dev-section-head">
+    <h2 class="dev-section-title" id="devSecOpsDeploys">Deploys</h2>
+    <p class="dev-section-sub">GitHub Actions runs and recent commits.</p>
+  </div>
+  <div class="dev-panels-grid">
 
   <div class="dev-panel dev-owner-hidden dev-panel-wide">
     <div class="dev-panel-heading">
@@ -668,6 +841,7 @@
   <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="regressioncheck">
     <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
       <h2>Regression checker</h2>
+      <span class="dev-panel-hint">What disappeared since an earlier commit</span>
       <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('regressioncheck')" aria-label="What does this do?" title="What does this do?">?</button>
       <span class="dev-collapse-caret">&#9660;</span>
     </div>
@@ -687,6 +861,7 @@
   <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="changelog">
     <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
       <h2>What's new</h2>
+      <span class="dev-panel-hint">Recent commits, grouped by day</span>
       <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('changelog')" aria-label="What does this do?" title="What does this do?">?</button>
       <span class="dev-collapse-caret">&#9660;</span>
     </div>
@@ -695,26 +870,45 @@
     </div>
   </div>
 
-  <div class="dev-panel dev-owner-hidden is-collapsible" data-collapse-key="quicklinks">
-    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
-      <h2>Quick links</h2>
-      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('links')" aria-label="What does this do?" title="What does this do?">?</button>
-      <span class="dev-collapse-caret">&#9660;</span>
-    </div>
-    <div class="dev-panel-body">
-      <div class="dev-links">
-        <a href="https://github.com/carwash2020/webpagehosting" target="_blank" rel="noopener"><svg class="th-icon" aria-hidden="true"><use href="#icon-folder" xlink:href="#icon-folder"></use></svg> Repo</a>
-        <a href="https://github.com/carwash2020/webpagehosting/actions" target="_blank" rel="noopener"><svg class="th-icon" aria-hidden="true"><use href="#icon-bolt" xlink:href="#icon-bolt"></use></svg> Actions</a>
-        <a href="https://supabase.com/dashboard/project/csvfqdjuobylgafgolho" target="_blank" rel="noopener"><svg class="th-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg> Supabase</a>
-        <a href="#" onclick="switchDevToolsTab('health'); return false;"><svg class="th-icon" aria-hidden="true"><use href="#icon-signal" xlink:href="#icon-signal"></use></svg> Uptime</a>
-        <a href="https://www.triplehenterprisesllc.biz/" target="_blank" rel="noopener"><svg class="th-icon" aria-hidden="true"><use href="#icon-globe" xlink:href="#icon-globe"></use></svg> Live site</a>
-      </div>
-    </div>
   </div>
+  </div>
+
+  <div class="dev-section" role="group" aria-labelledby="devSecOpsTodo">
+  <div class="dev-section-head">
+    <h2 class="dev-section-title" id="devSecOpsTodo">To-do</h2>
+    <p class="dev-section-sub">Open issues, and pages someone flagged for a look later.</p>
+  </div>
+  <div class="dev-panels-grid">
+
+  <div class="dev-panel dev-owner-hidden dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>Known issues</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('knownissues')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div id="knownIssuesList"></div>
+  </div>
+
+  <div class="dev-panel dev-owner-hidden dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>Flagged pages</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('flaggedpages')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div id="flaggedItemsList"></div>
+  </div>
+
+  </div>
+  </div>
+
+  <div class="dev-section" role="group" aria-labelledby="devSecOpsShortcuts">
+  <div class="dev-section-head">
+    <h2 class="dev-section-title" id="devSecOpsShortcuts">Shortcuts</h2>
+  </div>
+  <div class="dev-panels-grid dev-row-list">
 
   <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="triggerworkflows">
     <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
       <h2>Trigger workflows</h2>
+      <span class="dev-panel-hint">Run a GitHub Actions workflow now</span>
       <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('triggerworkflows')" aria-label="What does this do?" title="What does this do?">?</button>
       <span class="dev-collapse-caret">&#9660;</span>
     </div>
@@ -730,21 +924,37 @@
     </div>
   </div>
 
-  <div class="dev-panel dev-owner-hidden dev-panel-wide is-collapsible" data-collapse-key="storagebrowser">
+  <div class="dev-panel dev-owner-hidden is-collapsible" data-collapse-key="quicklinks">
     <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
-      <h2>Storage browser</h2>
-      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('storagebrowser')" aria-label="What does this do?" title="What does this do?">?</button>
+      <h2>Quick links</h2>
+      <span class="dev-panel-hint">Repo, Actions, Supabase, Uptime, live site</span>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('links')" aria-label="What does this do?" title="What does this do?">?</button>
       <span class="dev-collapse-caret">&#9660;</span>
     </div>
     <div class="dev-panel-body">
-      <button class="secondary-btn" style="margin-bottom:12px;" onclick="renderStorageBrowser()">Refresh</button>
-      <div id="storageBrowserResults"><p class="tool-sub">Click Refresh to scan all 3 buckets.</p></div>
+      <div class="dev-links">
+        <a href="https://github.com/carwash2020/webpagehosting" target="_blank" rel="noopener"><svg class="th-icon" aria-hidden="true"><use href="#icon-folder" xlink:href="#icon-folder"></use></svg> Repo</a>
+        <a href="https://github.com/carwash2020/webpagehosting/actions" target="_blank" rel="noopener"><svg class="th-icon" aria-hidden="true"><use href="#icon-bolt" xlink:href="#icon-bolt"></use></svg> Actions</a>
+        <a href="https://supabase.com/dashboard/project/csvfqdjuobylgafgolho" target="_blank" rel="noopener"><svg class="th-icon" aria-hidden="true"><use href="#icon-chart" xlink:href="#icon-chart"></use></svg> Supabase</a>
+        <a href="#" onclick="switchDevToolsTab('health'); return false;"><svg class="th-icon" aria-hidden="true"><use href="#icon-signal" xlink:href="#icon-signal"></use></svg> Uptime</a>
+        <a href="https://www.triplehenterprisesllc.biz/" target="_blank" rel="noopener"><svg class="th-icon" aria-hidden="true"><use href="#icon-globe" xlink:href="#icon-globe"></use></svg> Live site</a>
+      </div>
     </div>
   </div>
 
   </div>
+  </div>
 
-  <div class="dev-panels-grid" data-tab-panel="reports">
+  </div>
+
+  <div class="dev-tab-panel" data-tab-panel="reports">
+
+  <div class="dev-section" role="group" aria-labelledby="devSecReports">
+  <div class="dev-section-head">
+    <h2 class="dev-section-title" id="devSecReports">Last 8 weeks</h2>
+    <p class="dev-section-sub">Press Refresh on a report to load it.</p>
+  </div>
+  <div class="dev-panels-grid">
 
   <div class="dev-panel dev-owner-hidden dev-panel-wide">
     <div class="dev-panel-heading">
@@ -771,6 +981,37 @@
     </div>
     <button class="secondary-btn" style="margin-bottom:12px;" onclick="renderUptimeTrendReport()">Refresh</button>
     <div id="uptimeTrendReport"><p class="tool-sub">Click Refresh to load.</p></div>
+  </div>
+
+  </div>
+  </div>
+
+  </div>
+
+  <div class="dev-tab-panel" data-tab-panel="access">
+
+  <div class="dev-panels-grid">
+
+  <div class="dev-panel dev-panel-wide">
+    <div class="dev-panel-heading">
+      <h2>Account permissions</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('roles')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div id="accountRolesList"></div>
+    <div id="permCategoriesRow" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;"></div>
+    <div id="permCategoryPanel" style="margin-top:10px;"></div>
+    <p id="permNonManagerNote" class="tool-sub" style="display:none; margin-top:8px;">Only an account with "Manage permissions" can change this.</p>
+    <div id="addAccountForm" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--border);">
+      <label style="display:block; margin-bottom:8px;">Add an account
+        <input type="email" id="newAccountEmail" placeholder="name@example.com" style="margin-top:4px;">
+      </label>
+      <label style="display:block; margin-bottom:10px; font-size:13px; color:var(--text-dim);">Start from a preset (optional)
+        <select id="newAccountPreset" style="margin-top:4px;"><option value="">None -- start with everything unchecked</option></select>
+      </label>
+      <button class="secondary-btn" onclick="addAccount()">Add account</button>
+    </div>
+  </div>
+
   </div>
 
   </div>
@@ -1730,7 +1971,7 @@
   const DEV_TAB_KEY = 'th_dev_tools_active_tab';
 
   function switchDevToolsTab(name) {
-    document.querySelectorAll('.dev-panels-grid[data-tab-panel]').forEach(grid => {
+    document.querySelectorAll('.dev-tab-panel[data-tab-panel]').forEach(grid => {
       grid.classList.toggle('is-active-tab-panel', grid.getAttribute('data-tab-panel') === name);
     });
     document.querySelectorAll('.dev-tab-btn').forEach(btn => {
@@ -1754,7 +1995,7 @@
     const HORIZONTAL_RATIO = 1.5; // deltaX must be at least this many times deltaY
 
     document.addEventListener('touchstart', function (e) {
-      if (!e.target.closest('.dev-panels-grid[data-tab-panel]')) { active = false; return; }
+      if (!e.target.closest('.dev-tab-panel[data-tab-panel]')) { active = false; return; }
       if (e.touches.length !== 1) { active = false; return; }
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
@@ -1786,18 +2027,27 @@
 
   // Runs after applyOwnerRestrictedView, so it can tell which tabs
   // actually still have visible content for the current role -- an
-  // Owner account ends up with every panel hidden except Access and
-  // Portal bug reports (within Health), so every other tab button is
-  // hidden here too rather than left clickable-but-empty, and the
-  // initial tab shown is always one that genuinely has something in it.
+  // account without "Dev Tools (full technical)" ends up with every
+  // panel hidden except Client registry (Data) and Account permissions
+  // (Access), so every other tab button is hidden here too rather than
+  // left clickable-but-empty, and the initial tab shown is always one
+  // that genuinely has something in it. Since the 2026-09-24 regroup a
+  // tab holds sections, so this looks at the panels inside them, and a
+  // section left with no visible panel is hidden too (no orphaned
+  // subheading above nothing).
   function initDevToolsTabs() {
+    const isShown = el => el.style.display !== 'none';
+    document.querySelectorAll('.dev-section').forEach(section => {
+      section.style.display = Array.from(section.querySelectorAll('.dev-panel')).some(isShown) ? '' : 'none';
+    });
+
     const tabBtns = Array.from(document.querySelectorAll('.dev-tab-btn'));
     const visibleTabNames = [];
 
     tabBtns.forEach(btn => {
       const name = btn.getAttribute('data-tab');
-      const grid = document.querySelector('.dev-panels-grid[data-tab-panel="' + name + '"]');
-      const hasVisiblePanel = grid && Array.from(grid.children).some(child => child.style.display !== 'none');
+      const grid = document.querySelector('.dev-tab-panel[data-tab-panel="' + name + '"]');
+      const hasVisiblePanel = grid && Array.from(grid.querySelectorAll('.dev-panel')).some(isShown);
       btn.style.display = hasVisiblePanel ? '' : 'none';
       if (hasVisiblePanel) visibleTabNames.push(name);
     });
@@ -3478,9 +3728,10 @@
       // Backup & Restore moved here from Settings (2026-09-22) -- an old
       // #backup bookmark/link (Settings' own former section, or the
       // Dashboard's #backup hop before that) should land directly on the
-      // panel, not just on the page.
+      // panel, not just on the page. The panel lives on the Data tab
+      // (Get it back) since the 2026-09-24 regroup.
       if (window.location.hash === '#backup') {
-        switchDevToolsTab('session');
+        switchDevToolsTab('data');
         document.getElementById('backup')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     };
@@ -3515,14 +3766,15 @@
     <button class="help-modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
     <h3>How to Use: Dev Tools</h3>
     <div class="help-modal-body">
-      <p>Site diagnostics and maintenance utilities -- grouped into 6 tabs.</p>
-      <p><strong>Health</strong> -- automated technical checks: Live consistency check, Data quality check, Appliance Wiki health, Client errors, Uptime monitoring, Advisor health, and Data integrity check. Entirely Developer-only; an Owner account doesn't see this tab at all.</p>
-      <p><strong>Access</strong> -- Client registry and Account permissions. Fully visible to an Owner account -- this is where Steve lands, since Health (the only tab before it) is hidden for him.</p>
-      <p><strong>Session</strong> -- Session &amp; sync, Local data snapshot, Device info, Service worker &amp; cache, and Backup &amp; restore (a full account-wide export/restore, moved here from Settings since it's an admin action, not a per-device diagnostic like the rest of this tab).</p>
-      <p><strong>Notifications</strong> -- Push notification test and history, Known issues, and Flagged pages.</p>
-      <p><strong>Deploy</strong> -- Deploy history, Regression checker, What's new, Quick links, Trigger workflows, and Storage browser.</p>
+      <p>Site diagnostics and maintenance, grouped into 7 tabs, each split into a few named sections. Panels that show live information are open cards; tools you only reach for now and then are one-line rows -- click a row to open it. An open row stays open for the rest of this browser session.</p>
+      <p><strong>Health</strong> -- is anything broken right now? Run full health check, then Uptime monitoring, Cron health, and Client errors (these load by themselves), plus Live consistency check and Advisor health.</p>
+      <p><strong>Data</strong> -- is the business data clean, and can it come back? Data quality check and Data integrity check; the Graveyard and Backup &amp; restore; and what's stored: Client registry, Appliance Wiki health, Storage browser.</p>
+      <p><strong>Sync</strong> -- this device: Session &amp; sync, Sync conflicts, Local data snapshot, Service worker &amp; cache, and Device info.</p>
+      <p><strong>Notifications</strong> -- Push notification test, Booking notification test, Push notification history, and Recent bookings.</p>
+      <p><strong>Ops</strong> -- Deploy history, Regression checker, and What's new; the to-do lists (Known issues, Flagged pages); and Trigger workflows and Quick links.</p>
       <p><strong>Reports</strong> -- Booking funnel health, Lead response time, and Uptime trend, over rolling 8-week windows.</p>
-      <p>Each panel's own "?" bubble explains that specific one in more detail. Site content, FAQ, and Terms editing live on their own page (Content, in the tab bar above).</p>
+      <p><strong>Access</strong> -- Account permissions: who can open which tools.</p>
+      <p>An account without the "Dev Tools (full technical)" permission (Steve's Owner account) sees only Client registry, on the Data tab, and Access. Each panel's own "?" bubble explains that one in more detail. Site content, FAQ, and Terms editing live on their own page (Content, in the tab bar above).</p>
     </div>
   </div>
 </div>
