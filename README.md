@@ -5223,6 +5223,7 @@ Result:
 - The one other file is a whole-screen shot whose top strip, under the sticky header's blur, varies between runs of the old pages too (6 of 658 did). Retaken, the new pages gave the old bytes exactly.
 - The rendered page is identical at all 66 page sizes, so nothing but the added classes changed.
 - **With a different saved number and email,** every spot at every size (263 captures) showed the new ones and called, texted, or emailed them. None kept the old ones.
+- **After merging main** (which brought the banner change into the same pages), 7 of the pages were re-shot against current main at all 3 sizes, confirmation screen included: 264 of 265 files identical. The other was the same header strip, and main's own runs produced both versions of it.
 
 Verified:
 - full suite after merging main: 3786 of 3787 pass. The only failure is the known `check-links.py` sandbox-proxy test.
