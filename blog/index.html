@@ -91,6 +91,7 @@
 
 <div id="siteBanner1" class="site-banner" style="display:none;"></div>
 <div id="siteBanner2" class="site-banner" style="display:none;"></div>
+<script src="/js/site-banners.js?v=4d43f541ed"></script>
 
 <header>
   <nav class="nav">
@@ -411,6 +412,7 @@
       .then(rows => {
         const map = {};
         (Array.isArray(rows) ? rows : []).forEach(r => { if (r.value) map[r.key] = r.value; });
+        if (typeof applySiteBanners === 'function') applySiteBanners(rows);
         if (map.phone) {
           document.querySelectorAll('.js-phone-text').forEach(el => { el.textContent = map.phone; });
           document.querySelectorAll('.js-phone-link').forEach(el => { el.href = 'tel:+1' + map.phone.replace(/\D/g, ''); });
