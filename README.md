@@ -160,7 +160,7 @@ upside to offset the cost.
 | `tools/parts-reference.html` | **Appliance Wiki** — quick lookup for common appliance issues: what part it usually is, the part number, roughly what it costs. |
 | `tools/settings.html` | Account info, display density and color theme, push notifications, tour replay (the tour is a 24-step tutorial as of 2026-09-22 -- every page and tab, about two minutes), password reset, **Backup & Restore** (moved here from the Dashboard on 2026-09-21 — the same full JSON export/import, no hop through another page), sign out. |
 | `tools/dev-tools.html` | Site diagnostics and maintenance utilities, organized into 6 tabs (Health, Access, Session, Notifications, Deploy, Reports) as of 2026-08-25 -- replaced the old scroll-to-anchor nav, which no longer scaled once this page reached 22 panels (now 26, after Booking notification test and the 3 new Reports panels). Access is role-gated (`account_roles` table, see `DISASTER_RECOVERY.md`); an Owner-role account only sees the Access tab (Client Registry, Account Roles), while a Developer-role account sees all 6 tabs. Also supports swiping left/right between tabs on mobile, scoped to the panel content area so it doesn't fight with the tab bar's own horizontal scroll. |
-| `tools/site-content.html` | Edits the public site's changeable text and numbers with no deploy: Google star rating and review count, banners, homepage hours, phone, email, FAQ, Terms. Fields are checked as you type, every publish shows live-vs-new first, and **Undo this save** / per-field history put back earlier values (rebuilt 2026-09-23, backed by `cms_publish_content()` / `cms_undo_content()` in `sql/site-content/cms_safe_publish_and_undo.sql`). Reached from Dev Tools &rarr; Content; needs the "Site content" permission. Split out of `dev-tools.html` on 2026-08-20. |
+| `tools/site-content.html` | Edits the public site's changeable text and numbers with no deploy: Google star rating and review count, banners, homepage hours, phone, email, FAQ, Terms. Fields are checked as you type, every publish shows live-vs-new first, and **Undo this save** / per-field history put back earlier values (rebuilt 2026-09-23, backed by `cms_publish_content()` / `cms_undo_content()` in `sql/site-content/cms_safe_publish_and_undo.sql`). Reached from **Website** in the sidebar and the More drawer (shown only to accounts with the "Site content" permission, since 2026-09-23) or Dev Tools &rarr; Content; needs that permission. Split out of `dev-tools.html` on 2026-08-20. |
 | `tools/client-detail.html` | Full history for one client (jobs, invoices, quotes, contracts) — reached from workspace.html or job-detail.html, not linked from the main nav directly. |
 | `tools/job-detail.html` | Full detail view for one job (photos, linked invoices, margin) — reached from job-tracker.html or finance.html, not linked from the main nav directly. |
 | `tools/login.html` | Auth entry point for the whole suite. |
@@ -4997,6 +4997,23 @@ Fixed by having each cron job record which job made a given HTTP call before it 
 
 Verified: full suite (3522/3523, the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, and a fresh admin re-run of the health check against the live database confirmed 0 open alerts. New tests: `tests/dev-tools/cron-health-scoped-to-cron.test.js` (8).
 
+## What changed, 2026-09-23 -- Website in the tools menu for whoever edits the site
+
+The site content editor (`tools/site-content.html`: Google rating and review count, banners, hours, phone, email, FAQ, Terms) now has its own **Website** row in the tools menu: the desktop sidebar and the phone/tablet More drawer, between Appliance Wiki and Dev Tools. Until now the only way in was Dev Tools &rarr; Content, which still works.
+
+- **Only for accounts that can edit the site.** The row uses the same check the editor page uses (`canManageSiteContent()`, the "Site content" permission, `account_roles.can_manage_site_content`). Owner and Developer accounts (Steve, Connor) see it. Anyone else never does.
+- **Hidden until confirmed.** The other permission-gated rows are drawn visible and hidden once the account's permissions arrive. This one works the other way: it starts hidden and appears only after the permissions confirm it. So it never flashes up for someone who can't use it, and it stays hidden if the permissions can't be checked (offline, for example).
+- **Nothing else changed.** The editor keeps all its own access checks. The row is a shortcut, not a new way past them.
+
+Verified:
+- full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint` on the changed files;
+- `npm run fix-versions` re-stamped `tools-nav-pwa.js` where it loads and bumped the tools service worker's cache name.
+
+Tests:
+- `tests/tools/website-nav-entry.test.js` (8, new): a site-content manager sees the row. Anyone without the permission never does: not before the permissions load, not after, not with every other permission. Two of the tests run the real `auth.js` against an `account_roles` response. All 8 fail without this change.
+- `tests/tools/app-shell-v2.test.js`: the More drawer's row list now includes Website (hidden for that test's account).
+- `tests/tools/job-tracker-calendar-view.test.js`: the sidebar now has 13 destinations, not 12.
+
 ## What changed, 2026-09-23 -- Tools: page changes no longer flash, and going back Home no longer looks like the app starting up
 
 Tools (`tools/`) only: `styles-tools.css`, `tools-nav-pwa.js`, `workspace.html`, and `runway-dashboard.html`'s own copy of the shell CSS. No page's data or logic changes.
@@ -5017,9 +5034,13 @@ Nothing waits longer than before. In the same measurement, a complete first fram
 **Not tested here:** Safari. The hold is standard CSS (view transitions, `:has()`, `:only-child`) that Safari 18.2+ supports, but only Chromium could be run here. Browsers without view transitions navigate exactly as before.
 
 Verified:
-- full suite: 3561 of 3563 pass. The 2 failures also fail on clean `main`: the known `check-links.py` sandbox-proxy test, and a booking test that runs out of open slots late in the day. Late in the day, `booking-picker-round4` fails the same way. Just after midnight, `shift-clock-shell` fails and then hangs the run. Its 14 tests pass at other hours. All are logged in `docs/specialist-logs/bugfix.md`;
+- full suite: the only failure is the known `check-links.py` sandbox-proxy test;
 - `check-consistency`, `check-undefined-vars`, `check-visual-snapshot`, `eslint`;
 - frame-by-frame screencasts in Chromium at 390px and 1440px, in dark and light themes, with and without reduced motion.
+
+**Two tests fixed on the way, both of which also failed on `main`:**
+- `tests/tools/shift-clock-shell.test.js` builds times like "3 hours ago" and expects them to be today. Just after midnight they weren't, so "Start my day" and "End my day" failed. The failure also left a ticking clock behind, so `npm test` hung until CI's 6-hour limit, on every PR, every night. The file now runs in a fixed-offset time zone where it's about noon.
+- `tests/booking/booking-manage-link-round3.test.js`'s reschedule test tapped a third time slot that doesn't exist late in the day. It now taps the last slot shown, the same fix #404 makes for the portal picker's test.
 
 Tests:
 - `tests/tools/page-handoff.test.js` (18, new): the hold rules and their reduced-motion override in both stylesheets, the shell adding its class in one synchronous pass, the tap feedback and loading line in jsdom (including back-button restores and a cancelled leave), the once-per-session welcome, and the Dashboard skeletons, which the first render always replaces.

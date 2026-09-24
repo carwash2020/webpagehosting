@@ -9,6 +9,19 @@ const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
 
+// These tests build times relative to now ("a job clock 50 minutes ago", "a
+// shift started 3 hours ago") and expect them to fall on today. Just after
+// midnight they didn't: "Start my day" and "End my day" failed, and the
+// failed assertion left a window's 1-second clock ticking, so the whole
+// `npm test` run hung until CI's 6-hour limit (2026-09-24). Run the file in
+// a fixed-offset zone where it is about noon right now, so the clock can't
+// matter. Each test file runs in its own process, and jsdom's Date shares
+// Node's timezone, so this reaches the page scripts and nothing else.
+process.env.TZ = (() => {
+  const ahead = 12 - new Date().getUTCHours(); // -11..12 hours from UTC
+  return 'Etc/GMT' + (ahead > 0 ? '-' : '+') + Math.abs(ahead); // Etc/GMT signs are inverted
+})();
+
 const TOOLS = path.join(__dirname, '..', '..', 'tools');
 const read = (f) => fs.readFileSync(path.join(TOOLS, f), 'utf8');
 const DL = read('data-layer.js');

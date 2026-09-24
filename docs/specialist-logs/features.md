@@ -3172,6 +3172,19 @@ The owner can now change the Google rating and review count (plus banners, homep
 
 **Next (PR B/C):** promo + hiring banner copy into the CMS without re-introducing the CLS the synchronous banner scripts fixed; the banner-slot collision; banners on pages that skip them; FAQ/Terms in-place save with the same review + undo; a gated "Website" nav entry so the owner doesn't go through Dev Tools; phone hooks on booking/manage-*/404.
 
+## 2026-09-23 -- Website nav entry for site-content managers
+
+Follow-up to the site content editor rebuild (#395), which listed "a gated 'Website' nav entry so the owner doesn't go through Dev Tools" as next.
+
+- **Where:** one `SIDEBAR_DESTS` row in `tools/tools-nav-pwa.js` (`/tools/site-content.html`, globe icon, label "Website", Office group between Appliance Wiki and Dev Tools). `MORE_DESTS` derives from it, so the phone/tablet More drawer gets it too. The bottom bar's five slots are unchanged.
+- **Gate:** `NAV_PERMISSION_CHECKS['/tools/site-content.html']` calls `canManageSiteContent()`, the same check `site-content.html` uses (reads `account_roles.can_manage_site_content`). No separate or looser check.
+- **Why it fails closed when the other rows don't:** every other gated row is drawn visible and hidden on `th-role-loaded`. That flashes for a moment before the role arrives, and stays visible on a page whose role never loads. The ask was "accounts without the permission must not see it at all", so the row is marked `hideUntilAllowed: true`. It is injected with `style="display: none"` (the same hiding mechanism, which the drawer's focus selector already skips) and `hideRestrictedNavLinks()` shows or hides it on every role load. The existing rows were left fail-open on purpose. Switching them is a separate call: it would add a delay before every gated row appears for accounts that can use it.
+- **Scoped to shell links:** hideUntilAllowed rows only touch `.th-sidebar-link` / `.th-more-sheet-link`, so a page's own link to the same place (Dev Tools' Content jump link) is never revealed or hidden by the shell.
+- **Role already loaded before inject:** `inject()` now re-applies the gates when `getCurrentUserRole()` is already set. Otherwise a role that resolved first would leave a hideUntilAllowed row hidden for good on that page load.
+- **Not done:** no command-palette entry (the palette has no Dev Tools or Content entry either). Easy to add with `perm: 'canManageSiteContent'` if wanted.
+
+Tests: `tests/tools/website-nav-entry.test.js` (8). Includes an end-to-end pass through the real `auth.js` with a mocked `account_roles` response. All 8 fail on the old nav, and 5 fail on a fail-open version of the row.
+
 ## 2026-09-23 (from the visual lane) -- Home could render from local data before the sync
 
 `workspace.html` renders the dashboard only after `initSyncOnLoad()` (role load + sync pull, two network round trips). So every return to Home shows a skeleton first; before 2026-09-23 it showed empty cards and a made-up "0 jobs today". Rendering once from localStorage at DOMContentLoaded, then again after the pull, would make Home instant in the common case. Not done from the visual lane because it's an init-order change with a permission angle. `getCurrentUserRole()` is null until the role loads, and a few checks treat null as "allowed", so an Employee could briefly see Money Owed.

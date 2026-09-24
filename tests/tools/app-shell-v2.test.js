@@ -170,7 +170,9 @@ test('the More drawer is an app grid of the remaining pages plus two utility row
   const w = shellOn('job-tracker.html', { perms: ALL });
   const sheet = w.document.getElementById('thMoreSheet');
   const labels = [...sheet.querySelectorAll('.th-more-sheet-link')].map(a => a.textContent.trim());
-  assert.deepEqual(labels, ['Route Planner', 'Runway Dashboard', 'Contracts', 'Reviews', 'Appliance Wiki', 'Dev Tools', 'Settings']);
+  // Website is in the DOM for everyone but hidden unless the account can
+  // manage site content -- see website-nav-entry.test.js.
+  assert.deepEqual(labels, ['Route Planner', 'Runway Dashboard', 'Contracts', 'Reviews', 'Appliance Wiki', 'Website', 'Dev Tools', 'Settings']);
   let helped = 0;
   w.openHelpModal = () => { helped++; };
   sheet.querySelector('[data-th-util="help"]').click();
