@@ -18,7 +18,7 @@
     },
     dataquality: {
       title: 'Data quality check',
-      body: `<p>A different concern from the check above this one -- that one asks "is the site configured right," this one asks "is the actual business data clean." Flags client names that only differ by capitalization or spacing (like "Sarah Miller" vs. "sarah miller"), since Top Clients and Job Density both group by exact name match -- a near-duplicate silently splits one client's real numbers into two smaller, wrong-looking entries instead of one accurate one.</p><p>Also flags jobs with no date or no client name on file, since those are the two fields several other features (weekday density, the client leaderboard, follow-up reminders) all quietly depend on being present.</p>`,
+      body: `<p>A different concern from the Live consistency check on the Health tab -- that one asks "is the site configured right," this one asks "is the actual business data clean." Flags client names that only differ by capitalization or spacing (like "Sarah Miller" vs. "sarah miller"), since Top Clients and Job Density both group by exact name match -- a near-duplicate silently splits one client's real numbers into two smaller, wrong-looking entries instead of one accurate one.</p><p>Also flags jobs with no date or no client name on file, since those are the two fields several other features (weekday density, the client leaderboard, follow-up reminders) all quietly depend on being present.</p>`,
     },
     clientregistry: {
       title: 'Client registry',
@@ -54,7 +54,7 @@
     },
     backup: {
       title: 'Backup & restore',
-      body: `<p>A full export of every job, invoice, expense, contact, note, quote, and everything else stored on this account -- one JSON file, independent of cloud sync entirely.</p><p>Moved here from Settings (2026-09-22) -- a full account-wide export/restore is a real, destructive-capable admin action (Restore REPLACES everything currently on this device), not something a regular Employee account needs day to day. Developer-only, same tier as the other data-management panels on this tab, matching this page's existing Owner-sees-Access-tab-only convention rather than a special one-off exception.</p><p>"Download backup" saves everything as one timestamped file. "Restore from a backup file" replaces the data on THIS device with the file's contents, then syncs it to the cloud -- confirmed before it runs, since it can't be undone.</p>`,
+      body: `<p>A full export of every job, invoice, expense, contact, note, quote, and everything else stored on this account -- one JSON file, independent of cloud sync entirely.</p><p>Moved here from Settings (2026-09-22) -- a full account-wide export/restore is a real, destructive-capable admin action (Restore REPLACES everything currently on this device), not something a regular Employee account needs day to day. Developer-only, same tier as the Graveyard and the other data-management panels on this tab, rather than a special one-off exception.</p><p>"Download backup" saves everything as one timestamped file. "Restore from a backup file" replaces the data on THIS device with the file's contents, then syncs it to the cloud -- confirmed before it runs, since it can't be undone.</p>`,
     },
     clienterrors: {
       title: 'Client errors',

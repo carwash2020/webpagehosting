@@ -115,21 +115,21 @@ test('a real horizontal swipe left advances to the next tab', () => {
   window.initDevToolsTabs();
   assert.equal(window.document.querySelector('.dev-tab-btn.is-active').getAttribute('data-tab'), 'health');
 
-  const panel = window.document.querySelector('.dev-panels-grid[data-tab-panel].is-active-tab-panel');
+  const panel = window.document.querySelector('.dev-tab-panel[data-tab-panel].is-active-tab-panel');
   dispatchTouch(window, panel, 'touchstart', 200, 100);
   dispatchTouch(window, panel, 'touchend', 50, 100);
 
-  // Access sits right after Health as of 2026-09-03 -- Portal (which
-  // used to sit here) split off onto its own /tools/clients.html.
-  assert.equal(window.document.querySelector('.dev-tab-btn.is-active').getAttribute('data-tab'), 'access');
+  // Data sits right after Health as of the 2026-09-24 regroup (Access,
+  // which used to sit here, moved to the end of the bar).
+  assert.equal(window.document.querySelector('.dev-tab-btn.is-active').getAttribute('data-tab'), 'data');
 });
 
 test('a real horizontal swipe right goes back to the previous tab', () => {
   const window = loadPage(async () => ({ ok: false }));
   window.initDevToolsTabs();
-  window.switchDevToolsTab('access');
+  window.switchDevToolsTab('data');
 
-  const panel = window.document.querySelector('.dev-panels-grid[data-tab-panel].is-active-tab-panel');
+  const panel = window.document.querySelector('.dev-tab-panel[data-tab-panel].is-active-tab-panel');
   dispatchTouch(window, panel, 'touchstart', 50, 100);
   dispatchTouch(window, panel, 'touchend', 200, 100);
 
@@ -141,7 +141,7 @@ test('a swipe never wraps past the first or last tab', () => {
   window.initDevToolsTabs();
   assert.equal(window.document.querySelector('.dev-tab-btn.is-active').getAttribute('data-tab'), 'health');
 
-  const panel = window.document.querySelector('.dev-panels-grid[data-tab-panel].is-active-tab-panel');
+  const panel = window.document.querySelector('.dev-tab-panel[data-tab-panel].is-active-tab-panel');
   dispatchTouch(window, panel, 'touchstart', 50, 100);
   dispatchTouch(window, panel, 'touchend', 200, 100); // swipe right on the very first tab
 
@@ -152,7 +152,7 @@ test('a mostly-vertical gesture is never treated as a tab-changing swipe', () =>
   const window = loadPage(async () => ({ ok: false }));
   window.initDevToolsTabs();
 
-  const panel = window.document.querySelector('.dev-panels-grid[data-tab-panel].is-active-tab-panel');
+  const panel = window.document.querySelector('.dev-tab-panel[data-tab-panel].is-active-tab-panel');
   dispatchTouch(window, panel, 'touchstart', 200, 100);
   dispatchTouch(window, panel, 'touchend', 130, 300); // deltaX=70, deltaY=200 -- vertical-dominant
 
@@ -163,7 +163,7 @@ test('a short horizontal drag below the minimum distance does not trigger a tab 
   const window = loadPage(async () => ({ ok: false }));
   window.initDevToolsTabs();
 
-  const panel = window.document.querySelector('.dev-panels-grid[data-tab-panel].is-active-tab-panel');
+  const panel = window.document.querySelector('.dev-tab-panel[data-tab-panel].is-active-tab-panel');
   dispatchTouch(window, panel, 'touchstart', 200, 100);
   dispatchTouch(window, panel, 'touchend', 170, 100); // only 30px -- below the real minimum
 
