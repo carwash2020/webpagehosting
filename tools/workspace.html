@@ -438,9 +438,31 @@
 
   .lead-card { padding: 14px 0; border-bottom: 1px solid var(--border); }
   .lead-card:last-child { border-bottom: none; }
-  .lead-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 6px; }
+  /* Reported directly, with a screenshot showing the Delete button cut
+     off past the right edge on a phone: this row never wrapped
+     (flex-wrap defaulted to nowrap) and its button group is
+     flex-shrink: 0 (.dash-list-item-right), so once a real name/phone/
+     email combination didn't fit next to Handled + Delete in the
+     available width -- which the ops-lane/section padding this sits
+     inside narrows well below the viewport -- the row was forced
+     wider than its container instead of shrinking or wrapping.
+     flex-wrap: wrap matches the exact fix .dash-list-item already
+     uses for the same "row of text + a right-aligned control group"
+     shape, letting the buttons drop to their own line rather than
+     spill off-screen. */
+  .lead-card-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 6px; }
+  /* min-width: 0 on the name/meta column so a long, unbroken string
+     (an email address) can still wrap onto its own line instead of
+     forcing this flex item to its full intrinsic content width --
+     the other half of the fix above, since flex-wrap: wrap alone
+     only wraps the ROW, not a too-wide item within it. */
+  .lead-card-top > div:first-child { min-width: 0; }
   .lead-card-name { color: var(--white); font-family:var(--font-ui); font-size: 15px; }
-  .lead-card-meta { color: var(--text-dim); font-size: 12.5px; margin: 2px 0; }
+  /* overflow-wrap: anywhere (matching .th-qa-title's own fix for the
+     same shape of problem) so a long email address -- one unbroken
+     string, no spaces to wrap at -- can still break instead of
+     forcing this line past the card's edge. */
+  .lead-card-meta { color: var(--text-dim); font-size: 12.5px; margin: 2px 0; overflow-wrap: anywhere; }
   .lead-card-details { color: var(--text); font-size: 13.5px; margin-top: 6px; font-style: italic; }
 
   .gallery-queue-grid { display: flex; flex-wrap: wrap; gap: 14px; }
