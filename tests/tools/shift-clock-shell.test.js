@@ -3,6 +3,19 @@
 // on shift, an amber dot when a shift needs an end time), a row under New in
 // the desktop sidebar, and one sheet that opens in whichever mode the day is
 // in. The data rules are part 1's (tests/tools/shift-clock.test.js).
+//
+// Midday, whatever the real time (2026-09-24). The shell decides "today"
+// in local time, and these tests build shifts from the real clock ("started
+// 3 hours ago"). From midnight to 3 AM that start is yesterday, so the sheet
+// took another path and two tests failed every night on CI, which runs in
+// UTC. Each test file runs in its own process, and Node and jsdom share its
+// timezone, so this file runs in the fixed-offset zone where it's about
+// noon right now. Etc/GMT zones have no DST; their sign is inverted
+// (Etc/GMT-12 is UTC+12).
+{
+  const hoursAhead = 12 - new Date().getUTCHours(); // -11 .. +12
+  process.env.TZ = 'Etc/GMT' + (hoursAhead > 0 ? '-' + hoursAhead : hoursAhead < 0 ? '+' + -hoursAhead : '');
+}
 const { test, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
@@ -19,26 +32,14 @@ const RUNWAY = read('runway-dashboard.html');
 const STEVE = 'steve@triplehenterprisesllc.biz';
 const MIN = 60 * 1000;
 const HOUR = 60 * MIN;
-// Every window runs at one fixed local noon, and the fixtures below are
-// times relative to it, so "3 hours ago" is always earlier today.
-// Fixed 2026-09-23: on the real clock a UTC runner crossed midnight between
-// 6 and 9 PM Mountain. Two tests failed, and a failed test never reached
-// w.close(), so the job clock's 1-second interval kept the file (and CI)
-// running for hours.
-const NOW = new Date(2026, 8, 23, 12, 0).getTime();
-const PIN_CLOCK_SRC = `(function () {
-  const RealDate = Date;
-  class PinnedDate extends RealDate {
-    constructor(...a) { if (a.length === 0) super(${NOW}); else super(...a); }
-    static now() { return ${NOW}; }
-  }
-  window.Date = PinnedDate;
-})();`;
-// Close every window after each test, passed or failed.
-const openWindows = [];
-afterEach(() => { while (openWindows.length) openWindows.pop().close(); });
 const iso = (ms) => new Date(ms).toISOString();
 const timeLabel = (ms) => new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+// Every window a test opened is closed after it, pass or fail. A failed
+// assertion skips the test's own w.close(), and an open window's timers kept
+// the whole node --test run alive for 40+ minutes instead of failing.
+const OPEN_WINDOWS = [];
+afterEach(() => { while (OPEN_WINDOWS.length) OPEN_WINDOWS.pop().close(); });
 
 // A tools page with the shell (and, unless withDL is false, the data layer),
 // signed in as Steve. Toasts, undo toasts and confirms are recorded.
@@ -46,7 +47,6 @@ function page(url, { shifts, jobs, withDL = true, signedIn = true, setup } = {})
   const dom = new JSDOM('<!DOCTYPE html><html><body><div class="hub-header"><div class="hub-header-right"></div></div></body></html>', {
     runScripts: 'dangerously', url,
     beforeParse(w) {
-      w.eval(PIN_CLOCK_SRC);
       if (signedIn) w.localStorage.setItem('th_auth_session', JSON.stringify({ email: STEVE, access_token: 'x', expires_at: 1 }));
       w.localStorage.setItem('th_shift_log', JSON.stringify(shifts || []));
       w.localStorage.setItem('th_tracker_jobs', JSON.stringify(jobs || []));
@@ -63,7 +63,7 @@ function page(url, { shifts, jobs, withDL = true, signedIn = true, setup } = {})
     },
   });
   const w = dom.window;
-  openWindows.push(w);
+  OPEN_WINDOWS.push(w);
   for (const src of (withDL ? [DL, NAV] : [NAV])) { const s = w.document.createElement('script'); s.textContent = src; w.document.body.appendChild(s); }
   w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
   return w;
@@ -89,7 +89,7 @@ test('off: a clock button leads the header actions and a Start my day row sits u
 });
 
 test('on shift: a pill with the start time -- and the sidebar says since when', () => {
-  const start = NOW - 2 * HOUR;
+  const start = Date.now() - 2 * HOUR;
   const w = page('https://example.com/tools/finance.html', { shifts: [{ id: 's1', email: STEVE, start: iso(start), end: null, hours: null }] });
   const btn = w.document.getElementById('thShiftBtn');
   assert.equal(btn.className, 'th-hdr-btn th-hdr-shift is-on');
@@ -102,7 +102,7 @@ test('on shift: a pill with the start time -- and the sidebar says since when', 
 });
 
 test('a shift left open past 14 h: an amber "needs an end time", not a pill counting all night', () => {
-  const w = page('https://example.com/tools/job-tracker.html', { shifts: [{ id: 's1', email: STEVE, start: iso(NOW - 20 * HOUR), end: null, hours: null }] });
+  const w = page('https://example.com/tools/job-tracker.html', { shifts: [{ id: 's1', email: STEVE, start: iso(Date.now() - 20 * HOUR), end: null, hours: null }] });
   const btn = w.document.getElementById('thShiftBtn');
   assert.equal(btn.className, 'th-hdr-btn th-hdr-shift is-due');
   assert.equal(btn.getAttribute('aria-label'), 'A shift needs an end time');
@@ -111,7 +111,7 @@ test('a shift left open past 14 h: an amber "needs an end time", not a pill coun
 });
 
 test('someone else\'s shift is not yours; signed out, nothing shows', () => {
-  const w = page('https://example.com/tools/job-tracker.html', { shifts: [{ id: 's1', email: 'connor@triplehenterprisesllc.biz', start: iso(NOW - HOUR), end: null, hours: null }] });
+  const w = page('https://example.com/tools/job-tracker.html', { shifts: [{ id: 's1', email: 'connor@triplehenterprisesllc.biz', start: iso(Date.now() - HOUR), end: null, hours: null }] });
   assert.match(w.document.getElementById('thShiftBtn').className, /is-off/);
   w.close();
   const out = page('https://example.com/tools/job-tracker.html', { signedIn: false });
@@ -120,10 +120,10 @@ test('someone else\'s shift is not yours; signed out, nothing shows', () => {
 });
 
 test('a page without data-layer.js reads the status straight from storage, and its button opens the sheet on the Dashboard', () => {
-  const start = NOW - HOUR;
+  const start = Date.now() - HOUR;
   const w = page('https://example.com/tools/route-planner.html', { withDL: false, shifts: [{ id: 's1', email: STEVE, start: iso(start), end: null, hours: null }] });
   assert.equal(w.document.getElementById('thShiftBtn').querySelector('.th-hdr-shift-time').textContent, timeLabel(start));
-  assert.equal(w.thShiftStatus(NOW + 15 * HOUR).state, 'due', 'the 14-hour rule holds without the data layer too');
+  assert.equal(w.thShiftStatus(Date.now() + 15 * HOUR).state, 'due', 'the 14-hour rule holds without the data layer too');
   assert.equal(w.thShiftStatus().state, 'on');
   w.close();
   const dup = page('https://example.com/tools/settings.html', { withDL: false, shifts: [
@@ -136,7 +136,7 @@ test('a page without data-layer.js reads the status straight from storage, and i
 });
 
 test('Start my day: now, from the day\'s first job clock, or from a typed time; the header turns into the pill', () => {
-  const jobs = [{ id: 7, title: 'Fence', status: 'in-progress', timeLog: [{ start: iso(NOW - 50 * MIN), end: iso(NOW - 20 * MIN), hours: 0.5 }] }];
+  const jobs = [{ id: 7, title: 'Fence', status: 'in-progress', timeLog: [{ start: iso(Date.now() - 50 * MIN), end: iso(Date.now() - 20 * MIN), hours: 0.5 }] }];
   const w = page('https://example.com/tools/job-tracker.html', { jobs });
   w.document.getElementById('thShiftBtn').click();
   w.document.getElementById('thShiftBtn').click();
@@ -160,7 +160,7 @@ test('Start my day: now, from the day\'s first job clock, or from a typed time; 
   typed.document.getElementById('thShiftBtn').click();
   act(typed, 'start-time').click();
   assert.equal(typed.document.querySelector('.th-shift-error').textContent, 'Pick the time you started.');
-  const at = new Date(NOW - 90 * MIN);
+  const at = new Date(Date.now() - 90 * MIN);
   typed.document.querySelector('[data-shift-input="start-time"]').value = String(at.getHours()).padStart(2, '0') + ':' + String(at.getMinutes()).padStart(2, '0');
   act(typed, 'start-time').click();
   assert.equal(new Date(stored(typed)[0].start).getMinutes(), at.getMinutes());
@@ -169,8 +169,8 @@ test('Start my day: now, from the day\'s first job clock, or from a typed time; 
 });
 
 test('End my day: saved at once with an Undo; a running job clock is mentioned, never stopped', () => {
-  const start = NOW - 3 * HOUR;
-  const jobs = [{ id: 9, title: 'Sink leak', status: 'in-progress', clockSince: iso(NOW - 40 * MIN) }];
+  const start = Date.now() - 3 * HOUR;
+  const jobs = [{ id: 9, title: 'Sink leak', status: 'in-progress', clockSince: iso(Date.now() - 40 * MIN) }];
   const w = page('https://example.com/tools/job-tracker.html', { jobs, shifts: [{ id: 's1', email: STEVE, start: iso(start), end: null, hours: null }] });
   w.document.getElementById('thShiftBtn').click();
   assert.equal(w.document.getElementById('thShiftTitle').textContent, 'Since ' + timeLabel(start));
@@ -188,7 +188,7 @@ test('End my day: saved at once with an Undo; a running job clock is mentioned, 
 });
 
 test('forgot to clock out: the sheet asks when you finished, suggests when the last job clock stopped, then goes on to today', () => {
-  const start = NOW - 26 * HOUR;
+  const start = Date.now() - 26 * HOUR;
   const stopped = start + 8 * HOUR + 42 * MIN;
   const jobs = [{ id: 1, title: 'Sink leak', status: 'done', timeLog: [{ start: iso(start + HOUR), end: iso(stopped), hours: 7.7 }] }];
   const w = page('https://example.com/tools/job-tracker.html', { jobs, shifts: [{ id: 's1', email: STEVE, start: iso(start), end: null, hours: null }] });
@@ -209,7 +209,7 @@ test('forgot to clock out: the sheet asks when you finished, suggests when the l
 });
 
 test('a typed finish time that can\'t be right shows the data layer\'s reason and saves nothing', () => {
-  const start = NOW - 2 * HOUR;
+  const start = Date.now() - 2 * HOUR;
   const w = page('https://example.com/tools/job-tracker.html', { shifts: [{ id: 's1', email: STEVE, start: iso(start), end: null, hours: null }] });
   w.document.getElementById('thShiftBtn').click();
   const before = new Date(start - HOUR);
@@ -223,7 +223,7 @@ test('a typed finish time that can\'t be right shows the data layer\'s reason an
 });
 
 test('a shift started by mistake can be deleted from the sheet, after a confirm', async () => {
-  const w = page('https://example.com/tools/job-tracker.html', { shifts: [{ id: 's1', email: STEVE, start: iso(NOW - 30 * HOUR), end: null, hours: null }] });
+  const w = page('https://example.com/tools/job-tracker.html', { shifts: [{ id: 's1', email: STEVE, start: iso(Date.now() - 30 * HOUR), end: null, hours: null }] });
   w.document.getElementById('thShiftBtn').click();
   act(w, 'delete').click();
   await new Promise(r => setTimeout(r, 0));
@@ -268,8 +268,8 @@ test('the look: a green pill and an amber dot in the header, a sidebar row like 
 
 test('the job clock\'s bar is untouched: a running job clock and a shift show side by side', () => {
   const w = page('https://example.com/tools/finance.html', {
-    jobs: [{ id: 42, title: 'Sink leak', client: 'Sarah Miller', status: 'in-progress', clockSince: iso(NOW - 5 * MIN) }],
-    shifts: [{ id: 's1', email: STEVE, start: iso(NOW - HOUR), end: null, hours: null }],
+    jobs: [{ id: 42, title: 'Sink leak', client: 'Sarah Miller', status: 'in-progress', clockSince: iso(Date.now() - 5 * MIN) }],
+    shifts: [{ id: 's1', email: STEVE, start: iso(Date.now() - HOUR), end: null, hours: null }],
   });
   assert.ok(!w.document.getElementById('thClock').hidden);
   assert.equal(w.document.querySelector('.th-clock-label').textContent, 'On the clock');

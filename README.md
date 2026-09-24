@@ -5014,19 +5014,129 @@ Tests:
 - `tests/tools/app-shell-v2.test.js`: the More drawer's row list now includes Website (hidden for that test's account).
 - `tests/tools/job-tracker-calendar-view.test.js`: the sidebar now has 13 destinations, not 12.
 
-## What changed, 2026-09-23 -- Tests that failed every evening now pass at any hour
+## What changed, 2026-09-23 -- Tests no longer fail every evening and night
+
+Tests only; nothing on the site or in the tools changed. Five tests depended on the time of day, so from late afternoon (Denver time) until about 10 PM, CI failed on main and on every open PR:
+- **Three booking tests** tapped the second or third time slot of the first day with room. Late in the day that day is today, with only one slot left. They now tap the last slot shown:
+  - `tests/portal/booking-picker-round4.test.js`;
+  - `tests/booking/booking-manage-link-round3.test.js`;
+  - `tests/booking/booking-flow-picker-and-confirm.test.js`.
+- **Two Start my day / End my day tests** (`tests/tools/shift-clock-shell.test.js`) built shifts that started "3 hours ago". From midnight to 3 AM UTC (CI runs in UTC) that start was yesterday, so they failed. That file now runs in a fixed-offset time zone where it's always about midday.
+- **A failing test there also hung CI for 40+ minutes** instead of failing. Its open page kept the test run alive. Every page that file opens is now closed after each test, pass or fail.
+
+## What changed, 2026-09-23 -- Tools: page changes no longer flash, and going back Home no longer looks like the app starting up
+
+Tools (`tools/`) only: `styles-tools.css`, `tools-nav-pwa.js`, `workspace.html`, and `runway-dashboard.html`'s own copy of the shell CSS. No page's data or logic changes.
+
+**Checked first:** a real in-place page swap (an SPA-style app shell) was weighed and turned down on 2026-09-21, because every tool page relies on a full unload to clean up its realtime channels, timers, and page state (`docs/specialist-logs/features.md`). What shipped then was the cross-document view transition. It was supposed to hide the reload, but it didn't, for the reason below. No other app-shell work exists in any branch or PR. So this fixes the transition rather than replacing it.
+
+**Why it flashed.** The transition captures the new page at its first frame. On every tool page, that frame arrived before `tools-nav-pwa.js` had built the bottom bar, sidebar, header buttons, and page padding, because the script waits in line behind supabase-js, sync.js, and five other scripts. Measured in Chromium at 4x CPU slowdown, the shell was missing at that first frame on 15 of 15 navigations and arrived 150-220ms later. So the old bar faded out with nothing under it, and then the new one popped in.
+
+**What changed:**
+- **The old screen holds until the new one is complete, then crossfades.** It's pure CSS: nothing blocks rendering, and the new page keeps loading underneath. The hold ends when the shell is in, or after 1.2s at most; past that, the page shows the way it used to. The bottom bar and sidebar stay solid the whole way, so the shell never dips.
+- **The tab you tap lights up immediately.** If the next page takes longer than 150ms, a thin orange line runs along the top until it arrives, so short hops never show it. The line clears if you come back with the back button, or if you answer "Stay" on Site content's unsaved-changes prompt.
+- **"Welcome back" shows once per session.** The full-screen card with the logo used to appear on every return to the Dashboard. It showed up after the page had loaded and took every tap for 1.7s. It now appears on the first open of the session, and again when a different person signs in.
+- **The Dashboard's first frame is a skeleton, not wrong numbers.** It used to open on "Good morning." and "0 jobs today" whatever the time and the real count, with empty cards that jumped to full height once the sync finished. Next Job, Money Owed, Rest of Today, and the greeting now open on the same shimmer used by the Finance, Invoices, and Contracts lists.
+- **Reduced motion** follows the site's standard. Everything that moves happens instantly, but the hold still applies, so the cut goes straight to a finished page. The loading line becomes a still line.
+
+Nothing waits longer than before. In the same measurement, a complete first frame arrived as early as it used to or earlier, and the link itself behaves exactly as it did.
+
+**Not tested here:** Safari. The hold is standard CSS (view transitions, `:has()`, `:only-child`) that Safari 18.2+ supports, but only Chromium could be run here. Browsers without view transitions navigate exactly as before.
+
+Verified:
+- full suite: the only failure is the known `check-links.py` sandbox-proxy test. The clock-dependent booking and shift-clock tests that failed overnight were fixed in #404, which merged first;
+- `check-consistency`, `check-undefined-vars`, `check-visual-snapshot`, `eslint`;
+- frame-by-frame screencasts in Chromium at 390px and 1440px, in dark and light themes, with and without reduced motion.
+
+Tests:
+- `tests/tools/page-handoff.test.js` (18, new): the hold rules and their reduced-motion override in both stylesheets, the shell adding its class in one synchronous pass, the tap feedback and loading line in jsdom (including back-button restores and a cancelled leave), the once-per-session welcome, and the Dashboard skeletons, which the first render always replaces.
+
+## What changed, 2026-09-23 -- The WELCOME15 offer and the hiring notice can be changed or turned off from the editor
+
+Public site banners and Tools &rarr; Site Content. With nothing changed in the editor, the banners look exactly as before.
+
+**What was wrong:**
+- The WELCOME15 offer and the "We're hiring" notice were written into the code, so changing the offer or ending the hiring push needed a code change.
+- The editor's "Banner 1" and "Banner 2" silently took over the same two spots, dropping the close button and the usual styling, and only on some pages.
+- 17 pages had the banner spots but never showed anything in them: About, Our Work, Careers, Terms, Privacy, the blog, and the St. George page.
+
+**Now, in Tools &rarr; Site Content &rarr; "Banners at the top of the site":**
+- Each banner has three choices: the built-in wording, **My own message** (up to 200 characters, with an optional link to Book online, the Careers page, or Our Work), or **No banner**.
+- Your own message looks exactly like the built-in banners, close button included. Someone who closed an old message still sees a new one.
+- Picking "My own message" without typing one is flagged and can't be published. The review step shows each change next to what's live, with warnings (turning off the offer, replacing the hiring notice).
+- **Undo this save** puts all of it back, the same as every other field.
+- Banners now show on all 33 public pages that have the spots. The hiring notice skips the Careers page itself.
+
+**Why a change shows from the next page:** the banners are drawn before the rest of the page, so they can't wait for the internet. Each page shows what that visitor's browser saw last time, then checks for changes. A change that would make the page jump waits for the next page they open. Pages never jump under a visitor (that jump was fixed earlier today).
+
+**Database** (`sql/site-content/cms_site_banners.sql`, applied live):
+- Adds `banner1Mode`/`banner2Mode` (built-in, custom, or off) and `banner1Link`/`banner2Link`.
+- The database refuses any other choice, or any link that isn't one of the three pages.
+- Both modes start on built-in, which is what the site shows today.
+- Tested live in a transaction that always rolls back: a custom message with a link, plus the hiring notice off, saved as one change; undo put back exactly the built-in banners; a made-up link or mode was refused.
+
+**Proof it looks the same:** 64 screenshots of both banners, taken before and after the change on the 16 pages that had them, at desktop and phone size in real Chromium, are byte-for-byte identical. The header doesn't move, and layout-shift scores are unchanged.
+
+Verified:
+- full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint`;
+- the migration run for real in the test suite and live;
+- before/after screenshots.
+
+New tests:
+- `tests/site-content/cms-site-banners-db.test.js` (10), against the real SQL;
+- `tests/site-content/site-banners-public.test.js` (50): the first frame, the "never jump" rule, dismissing, safe text and links, and the wiring on all 33 pages;
+- 9 new banner flows in `tests/site-content/site-content-editor.test.js`, including save &rarr; undo &rarr; exactly the built-in banner again;
+- a guard in the same file that no function name is declared twice in the page. The FAQ/Terms editor, built alongside this, had its own `cmsShort()`, and a second declaration silently replaces the first.
+
+Updated with reasons:
+- `tests/design/promo-banner.test.js`, `hiring-banner.test.js`, and `site-banner-no-layout-shift.test.js`: pointed at the new `js/site-banners.js`, with every original check kept and the exact old markup pinned;
+- `tests/design/reduced-motion-coverage.test.js`: the file list;
+- `tests/site-content/site-content-editor.test.js`: its banner warning test picks "My own message" first.
+
+## What changed, 2026-09-23 -- The booking, manage-booking, and not-found pages follow the saved phone number
+
+Public site (`booking.html`, `manage-booking.html`, `manage-job.html`, `404.html`) and `tools/site-content.html`. Nothing looks different today.
+
+**Before:** changing the phone number in Dev Tools &rarr; Content left these four pages on the built-in (435) 414-1667, and the editor told the owner to ask Connor to change them by hand.
+
+**Now they follow it, like the other pages.** That covers the header number, the confirmation screen's "call or text" line, the 404 Call button, every Call link, and the error messages these pages show ("Please call us at ..."). If the fetch fails, each page keeps the built-in number exactly as before.
+- Only classes were added to the existing links. No new elements, since an extra `<span>` once shifted the booking page's text by a fraction of a pixel.
+- The number is rewritten inside the link's own text, so the header's phone icon and the 404 button's "Call" stay put. Nothing is rewritten at all when the saved number is the built-in one.
+
+**Proven identical in real Chromium, desktop and phone:**
+- 27 element screenshots of every spot on the four pages, including the confirmation screen, the error messages, "Nothing open online", and the 404 hover state;
+- 18 whole-screen screenshots of the same states, so a spot that moved on the page would show too.
+
+Main and this change are byte-for-byte the same with the fetch failing, with today's saved values, and with reduced motion (135 of 135). So are each spot's position, text, and link. With a different saved number, all 27 spots show it and none shows the old one.
+
+**The editor's "Phone and email" note** no longer names these four pages. It now names the spots that still keep the built-in number, found while doing this:
+- every "text us" link;
+- some Call buttons and sentences on the homepage, About, Our Work, Careers, blog, and appliance-repair pages.
+
+A new test fails if that list of pages changes, so the note stays accurate. Details are in `docs/specialist-logs/bugfix.md`; fixing them is a separate change.
+
+Verified:
+- full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint`;
+- `fix-versions` bumped the service worker's cache name.
+
+Tests:
+- `tests/site-content/contact-hooks-public.test.js` (36, new; 32 fail on main): the real script on the real pages. Today's values and every kind of failed answer leave each page byte-for-byte unchanged. A new number reaches every spot and nothing else; the error messages and "Nothing open online" are driven end to end.
+- `site-content-editor.test.js` (+1): the rendered "Phone and email" note. Its built-in-fallback check now covers the four pages too.
+- Updated with reasons:
+  - `review-stats-public.test.js`: booking's wider fetch;
+  - `404-button-language.test.js`: the Call button's new classes;
+  - `skip-link-and-main-landmark.test.js`: a script may follow 404's `<main>`, nothing that renders;
+  - the "no token" tests in `manage-booking.test.js` and `manage-job.test.js`: still no RPC call without a token, but the public phone/email read now happens.
+
+## What changed, 2026-09-24 -- The booking picker test taps the second time again
 
 Tests only. Nothing on the site changed.
 
-One test in `tests/portal/booking-picker-round4.test.js` taps the second open time in the client portal's booking picker. The picker opens on the first day with room and hides any time less than 2 hours away. From 5:30 to 6 PM Mountain (3:30 to 4 PM on Sundays), today has one time left, 8 PM (6 PM on Sundays). So the test found no second time and failed with "Cannot read properties of undefined (reading 'click')". CI went red only when a push landed in that half hour.
+The "Tests no longer fail every evening and night" change above (#404) fixed `tests/portal/booking-picker-round4.test.js` by tapping the last open time instead of the second. This puts the second time back, which is what the test was written to check, without the evening failure:
 
-- The file's picker windows now run on a fixed clock, a Wednesday at 9 AM Mountain, so the time of day no longer matters. The test still taps the second time, then another day, and checks that the page hears its pick no longer stands.
-- If the picker's first day ever has fewer than two times, the test now says so plainly instead of that error.
-- Two more booking tests had the same problem later in the evening. Both reschedule a 45-minute visit and wait for a third or a second open time. They timed out from 6 to 7 PM and from 6:30 to 7 PM Mountain (4 to 5 and 4:30 to 5 on Sundays). If the first day is short, they now move on to the next open day: `tests/booking/booking-manage-link-round3.test.js` and `tests/booking/booking-flow-picker-and-confirm.test.js`.
-- The shift clock's test (`tests/tools/shift-clock-shell.test.js`) failed from 6 to 9 PM Mountain, when it's after midnight on CI's UTC clock and "3 hours ago" is yesterday. It also never finished once a test had failed: a job-clock timer kept running, so CI sat for hours instead of reporting. Its windows now run at a fixed noon, and every window is closed after each test, pass or fail.
+- The file's picker windows now run on a fixed clock, a Wednesday at 9 AM Mountain, so the time of day no longer matters. On the real clock, today has one time left from 5:30 to 6 PM Mountain (3:30 to 4 PM on Sundays), which is why a second time couldn't be tapped.
+- If the picker's first day ever has fewer than two times, the test now says so plainly instead of failing with "Cannot read properties of undefined".
 
 Verified:
-- reproduced on the real clock at 5:40 PM MDT, and with the clock pinned to 5:45 PM on a weekday and a Saturday and 3:45 PM on a Sunday. The fixed test passes at all of those, and at 9 AM and 7 PM;
-- the two rescheduling tests: the round-3 one failed on the real clock at 6:14 PM MDT. With the clock pinned, the old versions failed at 6:15 and 6:45 PM on a weekday and at 4:15 and 4:45 PM on a Sunday. The fixed ones pass at those times and at 6:59 PM. All three files pass at every half hour from 1:15 to 10:45 PM on a Wednesday and a Sunday, and on the real clock at 6:35 PM;
-- the shift clock test: on the real clock at 8:13 PM MDT (02:13 UTC), the old file hung until killed; the fixed one passes 14/14 in 3 seconds, also under Mountain time, pinned to 10 AM, 7:30 PM, 11:30 PM and 1 AM, and it exits in 2 seconds when a test is forced to fail;
-- full suite (3552/3553 on the real clock at 8:14 to 8:21 PM MDT, inside the shift clock's window; the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint` on the changed files.
+- the original failure reproduced on the real clock at 5:40 PM MDT, and with the clock pinned to 5:45 PM on a weekday and a Saturday and 3:45 PM on a Sunday. The fixed file passes at those times, at every half hour from 1:15 to 10:45 PM on a Wednesday and a Sunday, and on the real clock inside the window;
+- full suite on the branch merged with main (3694/3695 on the real clock at 8:30 to 8:37 PM MDT; the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint` on the changed file.

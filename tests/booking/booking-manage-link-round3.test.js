@@ -245,15 +245,13 @@ test('manage-booking.html: rescheduling updates the remembered visit\'s time', a
   await until(() => w.document.getElementById('startRescheduleBtn'));
   const before = JSON.parse(w.localStorage.getItem(KEY)).start;
   w.document.getElementById('startRescheduleBtn').click();
-  await until(() => w.document.querySelectorAll('.slot-btn').length > 0);
-  // The picker opens on the first day with room, on the real clock. From 6
-  // to 7 PM Mountain (4 to 5 on Sundays) that's today with only one or two
-  // of this 45-minute visit's times left, so move on to the next open day.
-  if (w.document.querySelectorAll('.slot-btn').length < 3) {
-    Array.from(w.document.querySelectorAll('.date-btn')).find((b) => b.getAttribute('aria-disabled') === 'false' && !b.classList.contains('is-selected')).click();
-  }
-  await until(() => w.document.querySelectorAll('.slot-btn').length > 2);
-  w.document.querySelectorAll('.slot-btn')[2].click();
+  // The picker opens on the first day with room, on the real clock: late in
+  // the day that's today with one slot left (2026-09-23, 6:40 PM Denver: a
+  // single 9:00 PM slot), so waiting for a third slot never ended. Any slot
+  // moves the visit -- the saved one is two days out -- so tap the last.
+  await until(() => w.document.querySelector('.slot-btn'));
+  const slots = w.document.querySelectorAll('.slot-btn');
+  slots[slots.length - 1].click();
   w.document.getElementById('confirmRescheduleBtn').click();
   await until(() => w.document.getElementById('content').innerHTML.includes('has been rescheduled'));
   const after = JSON.parse(w.localStorage.getItem(KEY));

@@ -42,10 +42,11 @@ const PICKER_DOM = '<!DOCTYPE html><html><body>' +
 // of today's slots are left, and whether it opens on today at all. So
 // every picker window runs at one fixed moment, a Wednesday at 9:00 AM
 // Mountain, when today still has all its afternoon slots.
-// Fixed 2026-09-23: on the real clock the second-slot test below failed
+// Fixed 2026-09-23: on the real clock, today has exactly one slot left
 // every weekday and Saturday from 5:30 to 6 PM Mountain (Sunday 3:30 to
-// 4), when today has exactly one slot left, so CI went red only when a
-// push landed in that half hour.
+// 4), so the second-slot test below had nothing to tap and CI went red in
+// that half hour. #404 made it tap the last slot instead; the fixed clock
+// lets it tap the second one again, which is what it was written to check.
 const PINNED_NOW = '2026-09-23T15:00:00Z';
 const PIN_CLOCK_SRC = `(function () {
   const RealDate = Date;
