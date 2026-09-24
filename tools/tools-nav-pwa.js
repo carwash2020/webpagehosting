@@ -2023,7 +2023,9 @@ function showThBanner(message, actionLabel, onAction, onDismiss) {
 // a real update this page is missing. Worker-only bumps, and updates the
 // page already picked up on load, stay silent. Offline, a failed fetch,
 // or a response that isn't a page also stay silent -- the banner never
-// guesses. Known gap, accepted: a pure markup change with no script or
+// guesses. Relies on the host serving identical bytes per request, as
+// GitHub Pages does; a proxy that injects per-request inline scripts
+// (e.g. a CDN challenge token) would make every check look changed. Known gap, accepted: a pure markup change with no script or
 // style change isn't detected (the running DOM has been changed by the
 // page's own scripts, so it can't be compared to the raw HTML); the next
 // navigation, which is network-first, picks it up regardless.
