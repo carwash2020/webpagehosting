@@ -5024,6 +5024,33 @@ Tests only; nothing on the site or in the tools changed. Five tests depended on 
 - **Two Start my day / End my day tests** (`tests/tools/shift-clock-shell.test.js`) built shifts that started "3 hours ago". From midnight to 3 AM UTC (CI runs in UTC) that start was yesterday, so they failed. That file now runs in a fixed-offset time zone where it's always about midday.
 - **A failing test there also hung CI for 40+ minutes** instead of failing. Its open page kept the test run alive. Every page that file opens is now closed after each test, pass or fail.
 
+## What changed, 2026-09-23 -- Tools: page changes no longer flash, and going back Home no longer looks like the app starting up
+
+Tools (`tools/`) only: `styles-tools.css`, `tools-nav-pwa.js`, `workspace.html`, and `runway-dashboard.html`'s own copy of the shell CSS. No page's data or logic changes.
+
+**Checked first:** a real in-place page swap (an SPA-style app shell) was weighed and turned down on 2026-09-21, because every tool page relies on a full unload to clean up its realtime channels, timers, and page state (`docs/specialist-logs/features.md`). What shipped then was the cross-document view transition. It was supposed to hide the reload, but it didn't, for the reason below. No other app-shell work exists in any branch or PR. So this fixes the transition rather than replacing it.
+
+**Why it flashed.** The transition captures the new page at its first frame. On every tool page, that frame arrived before `tools-nav-pwa.js` had built the bottom bar, sidebar, header buttons, and page padding, because the script waits in line behind supabase-js, sync.js, and five other scripts. Measured in Chromium at 4x CPU slowdown, the shell was missing at that first frame on 15 of 15 navigations and arrived 150-220ms later. So the old bar faded out with nothing under it, and then the new one popped in.
+
+**What changed:**
+- **The old screen holds until the new one is complete, then crossfades.** It's pure CSS: nothing blocks rendering, and the new page keeps loading underneath. The hold ends when the shell is in, or after 1.2s at most; past that, the page shows the way it used to. The bottom bar and sidebar stay solid the whole way, so the shell never dips.
+- **The tab you tap lights up immediately.** If the next page takes longer than 150ms, a thin orange line runs along the top until it arrives, so short hops never show it. The line clears if you come back with the back button, or if you answer "Stay" on Site content's unsaved-changes prompt.
+- **"Welcome back" shows once per session.** The full-screen card with the logo used to appear on every return to the Dashboard. It showed up after the page had loaded and took every tap for 1.7s. It now appears on the first open of the session, and again when a different person signs in.
+- **The Dashboard's first frame is a skeleton, not wrong numbers.** It used to open on "Good morning." and "0 jobs today" whatever the time and the real count, with empty cards that jumped to full height once the sync finished. Next Job, Money Owed, Rest of Today, and the greeting now open on the same shimmer used by the Finance, Invoices, and Contracts lists.
+- **Reduced motion** follows the site's standard. Everything that moves happens instantly, but the hold still applies, so the cut goes straight to a finished page. The loading line becomes a still line.
+
+Nothing waits longer than before. In the same measurement, a complete first frame arrived as early as it used to or earlier, and the link itself behaves exactly as it did.
+
+**Not tested here:** Safari. The hold is standard CSS (view transitions, `:has()`, `:only-child`) that Safari 18.2+ supports, but only Chromium could be run here. Browsers without view transitions navigate exactly as before.
+
+Verified:
+- full suite: the only failure is the known `check-links.py` sandbox-proxy test. The clock-dependent booking and shift-clock tests that failed overnight were fixed in #404, which merged first;
+- `check-consistency`, `check-undefined-vars`, `check-visual-snapshot`, `eslint`;
+- frame-by-frame screencasts in Chromium at 390px and 1440px, in dark and light themes, with and without reduced motion.
+
+Tests:
+- `tests/tools/page-handoff.test.js` (18, new): the hold rules and their reduced-motion override in both stylesheets, the shell adding its class in one synchronous pass, the tap feedback and loading line in jsdom (including back-button restores and a cancelled leave), the once-per-session welcome, and the Dashboard skeletons, which the first render always replaces.
+
 ## What changed, 2026-09-23 -- The WELCOME15 offer and the hiring notice can be changed or turned off from the editor
 
 Public site banners and Tools &rarr; Site Content. With nothing changed in the editor, the banners look exactly as before.
