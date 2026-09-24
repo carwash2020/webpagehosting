@@ -3252,4 +3252,53 @@ Same model as the site_content editor (entry above), for the two list tables.
 - **Kept the old function names** (`renderFaqEditor`, `saveFaqList`, …) as wrappers around one shared list editor (`CMS_LISTS`), since `tests/workspace/finance-split.test.js` pins them.
 - **CI hang on Node 24, fixed in the test.** `faq-terms-editor.test.js` ended its last test right after a publish, while the page was still reloading its lists and history. `after()` then closed the shared PGlite mid-query, which never resolves on Node 24 (Node 22 got away with it), so the CI `test` job ran for hours. The file now tracks the page's in-flight requests, lets them settle after each test, then closes the window. It exits in about 6s on both versions, and the other four PGlite files pass on Node 24 as they were.
 
+## 2026-09-24 -- Phone + email: every public-site spot follows site_content
+
+Follow-up to the entry above. It left the remaining spots in `bugfix.md` ("Found in passing: saved phone/email don't reach every spot"), and the editor's intro named them. They all follow now, and the intro names only the two places that still don't.
+
+**What follows now:**
+- **"Call <span class=js-phone-text>" buttons** (index x2, About, Our Work, Careers, all 11 blog pages), index's "Call Now" (service pop-up) and the chat's "Call Instead": `.js-phone-link` added. They showed the saved number but dialed the built-in one.
+- **"Call (435) 414-1667" buttons** with `href="tel:4354141667"` (About, Our Work, 10 blog posts): `js-phone-link js-phone-text` on the button itself.
+- **Sentences:** the St. George dishwasher/refrigerator/washer-dryer same-day FAQ answer (`<p class="js-phone-text">`) and the Careers "Call or text ... or email ..." line (`js-phone-text js-email-text`).
+- **Every `sms:` link:** the new `.js-sms-link` hook. Index (hero "Text us", sticky "Text", chat "Text Us Now"), Careers, the washer/dryer St. George sticky bar, booking's confirmation line. Script-built "text" links in booking's and manage-booking's "Nothing open online" use `window.__siteOverridePhone`, like their Call links.
+
+**How:**
+- **One text-node swap everywhere but index.** booking.html's `applySiteContact()` now runs on 21 pages: the four above, About, Our Work, Careers, the 11 blog pages, and the 3 St. George pages. Those pages' old whole-`textContent` swap would have erased "Call " and the rest of a sentence. The test keeps all 21 copies identical, requires exactly those pages to carry it, and requires a hook on an element holding more than the number to be on one of them.
+- **`swapHref` keeps any `?query`** (an sms `?body=`, a mailto `?subject=`) and changes only what comes before it.
+- **Nothing is touched when the value is unchanged.** A link that already dials the saved number is left as written. `tel:4354141667` and `tel:+14354141667` ring the same phone, so the 12 old-format buttons keep their static `href` byte for byte.
+- **`window.__siteOverrideEmail`** is set too. careers.html's apply-form error message already read it and `__siteOverridePhone`, but nothing on that page set either, so it always showed the built-in values.
+
+**Decisions:**
+- **FAQPage search data follows the visible answer**, the way review-stats rewrites `aggregateRating`. Google's structured-data rules want the two to match. The swap is limited to FAQPage blocks and to the number itself, done on the JSON text, so the rest of the block stays byte-identical. The LocalBusiness/Service `telephone`/`email` blocks are left alone (not in scope, and not visible).
+- **index.html keeps its own `site_content` script.** Its FAQPage is rebuilt from `site_faq` rows by a separate fetch. A generic FAQ-schema swap there could land after that rebuild and make the schema disagree with the CMS accordion. index got the classes, a `.js-sms-link` block written like its `.js-email-mailto` one, and the chat-note fix below.
+- **No class on JSON-LD `<script>` tags.** Several SEO tests find blocks by the exact `<script type="application/ld+json">` string.
+
+**Found and fixed while here:** index's desktop chat note ("Prefer to text? Message us from your phone at ...") is written as the page loads, before the fetch lands, so it never showed a saved number. index's phone block now swaps the number in it. It is guarded: nothing happens at the built-in value, and the phone version of the note has no number. Few visitors see this note: CSS hides the chat for `(pointer: fine)`, so it only shows where the pointer is neither fine nor coarse.
+
+**Still built-in (the editor intro names both):**
+- **The client portal.** `portal/*.html` never reads `site_content`; its Call/Text links, and `js/booking-flow.js`'s `createBookingPicker()` "Nothing open online" message (used only by the portal), are hard-coded.
+- **Each page's LocalBusiness/Service JSON-LD** `telephone` and `email`.
+- index's FAQ answers and the Terms contact section are CMS free text, covered by those sections' own editor notes.
+
+**Proof it looks the same:** real Chromium (Playwright 1.56), desktop 1280x800, phone 390x844 @2x, touch tablet 820x1180 @2x.
+- **Coverage:** every `tel:`/`sms:`/`mailto:` link, plus every element whose own text holds the number or address, on the 22 pages. That's 98 spots, 263 element + 263 viewport shots, plus a DOM signature per page and size (every node and attribute except `class`, with inline script source left out).
+- **Opened states:** index's service pop-up (`[data-service]`) and chat panel (tablet only: hidden for a fine pointer, and behind the sticky bar on phones), the St. George `<details>`, the phone/tablet menu, and booking's confirmation screen reached through the real flow with stubbed RPCs.
+- **Determinism** (each piece was needed):
+  - `clock.install()` then `pauseAt()`, advanced only by `runFor()`. `setFixedTime()` alone left rAF/timers on the real clock, and index's header edge varied by ±1.
+  - seeded `Math.random`, and Google Fonts served from a local cache;
+  - service workers blocked, and the cookie choice preset (the banner hides the chat widget);
+  - instant scrolls: `scroll-behavior: smooth` made `scrollTo` animate into the shot;
+  - `img.decode()`, and a shoot-until-two-captures-match loop;
+  - Chromium flags `--run-all-compositor-stages-before-draw`, `--disable-partial-raster`, `--disable-low-res-tiling`, `--num-raster-threads=1`, among others.
+- **Residual noise:** two runs of the old tree still differed in 6 of 658 files. All were viewport shots, all in the top band under the sticky header's `backdrop-filter`, which has two raster states.
+- **Result:** 657/658 files byte-identical to one of the two old-tree runs; the booking confirmation screen matched 35/35. The last file was that header band; retaken twice from each tree, the new tree reproduced the old bytes exactly. DOM signatures were identical on all 66 page sizes.
+- **A run with a different saved number and email** (`(435) 555-0142`, `office@example.com`): all 263 visible spot captures showed the new values, and every `tel:`/`sms:`/`mailto:` pointed at them (sms `?body=` kept). None kept the old ones.
+- **Post-merge re-check against main** (after #399's banners landed in the same scripts): About, a blog post, the blog index, Careers, index, the washer/dryer St. George page, and booking with its confirmation, at all 3 sizes. 264/265 files were identical. The odd one out, `mobile/about/02-tel-vp.png`'s header band, came out in both versions from main alone and from the branch alone across repeat runs.
+
+Tests:
+- `tests/site-content/contact-hooks-public.test.js`: 37 -> 119. The byte-identity, new-number and hook checks now cover all 22 pages. New tests cover the Call buttons, sms `?body=`, the FAQ + FAQPage pair, the Careers line, the index pop-up/chat links, and the desktop chat note (all scripts running). `KNOWN_UNHOOKED_PAGES` is now empty and the site-wide check includes `sms:` links. 39 of the 119 fail on the previous commit; the rest are byte-identity guards that hold on both.
+- `site-content-editor.test.js`: the intro test now checks the new wording.
+- `conversion-polish-sticky-sms-faq.test.js`: the sticky Text button's class string gains `js-sms-link`.
+- The built-in-value check (moved to `site-content-editor.test.js` by #402) now covers every public page, including `sms:` links and the old `tel:4354141667` form.
+
 <!-- Add new entries above this line -->

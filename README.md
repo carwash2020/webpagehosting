@@ -5223,3 +5223,51 @@ Tests (31 new, against the real SQL in PGlite):
 Updated with reasons:
 - `tests/security/site-content-and-private-buckets-rls.test.js`: every CMS write is now a `cms_*` RPC sent with the session token, and the test now also fails if a direct table write comes back;
 - `tests/tools/escape-attr-audit.test.js`: FAQ and Terms share one row template, so it pins that template's `escapeAttr` calls.
+
+## What changed, 2026-09-24 -- Every Call, Text, and Email spot on the public site follows the saved phone number and email
+
+Public site (homepage, About, Our Work, Careers, all 11 blog pages, the 3 St. George appliance-repair pages, plus booking/manage-booking/manage-job/404) and `tools/site-content.html`. Nothing looks different today.
+
+**Before:** changing the phone number or email in the site content editor missed some spots. The editor's "Phone and email" note listed them:
+- some Call buttons showed the new number but dialed the old one (the homepage's two, About, Our Work, Careers, every blog page, the homepage's "Call Now" and the chat's "Call Instead");
+- the "Call (435) 414-1667" buttons at the end of About, Our Work, and the blog posts didn't change at all;
+- neither did the same-day FAQ answer on the dishwasher, fridge, and washer/dryer St. George pages, or the Careers "Call or text ... or email ..." line;
+- no "Text us" link followed.
+
+**Now all of them follow.** If the fetch fails, every page keeps the built-in number and email exactly as before.
+- **Classes only, on the elements that already hold the number.** No new elements.
+- **Only the number itself is rewritten**, inside the button's or sentence's own text, so "Call " and the rest of a sentence stay put. Nothing is rewritten at all when the saved number is the built-in one.
+- **Text links keep their pre-filled message.** Only the number before `?body=` changes.
+- **Google's copy of those FAQ answers changes with them,** so search results never show a different number than the page (the same approach as the Google rating).
+- **Also fixed:**
+  - the homepage chat panel's "Prefer to text? Message us from your phone at ..." note never followed (few visitors see it: the panel is hidden for a mouse pointer);
+  - the Careers form's error message always showed the built-in number and email;
+  - the "text" link in the booking pages' "Nothing open online" message used the built-in number.
+
+**The editor's "Phone and email" note** now says every Call, Text, and Email button follows. It names the only two places that don't: the client portal, and the business details Google reads behind the scenes on each page.
+
+**Proven identical in real Chromium** at desktop (1280&times;800), phone (390&times;844) and touch-tablet (820&times;1180) sizes:
+- **Every spot on the 22 pages:** 98 of them. That's 263 close-up screenshots and 263 whole-screen screenshots, plus the rendered page at each size (every element, attribute, and text, leaving out only class names and script code).
+- **Opened states too:** the homepage's service pop-up and chat panel, the St. George FAQ answers, the phone menu, and booking's confirmation screen after a real booking.
+- **Repeatable:** fonts come from a local cache, `Math.random` is seeded, and the page clock is paused and moved forward in fixed steps. Scrolling and the cookie notice settle first, and each shot is retaken until two captures match.
+
+Result:
+- 657 of 658 files are byte-for-byte the same as a run of the old pages, and so is the confirmation screen (35 of 35).
+- The one other file is a whole-screen shot whose top strip, under the sticky header's blur, varies between runs of the old pages too (6 of 658 did). Retaken, the new pages gave the old bytes exactly.
+- The rendered page is identical at all 66 page sizes, so nothing but the added classes changed.
+- **With a different saved number and email,** every spot at every size (263 captures) showed the new ones and called, texted, or emailed them. None kept the old ones.
+- **After merging main** (which brought the banner change into the same pages), 7 of the pages were re-shot against current main at all 3 sizes, confirmation screen included: 264 of 265 files identical. The other was the same header strip, and main's own runs produced both versions of it.
+
+Verified:
+- full suite after merging main: 3786 of 3787 pass. The only failure is the known `check-links.py` sandbox-proxy test.
+- `check-consistency`, `check-undefined-vars`, `eslint`: clean.
+- `fix-versions` bumped the service worker's cache name.
+
+Tests:
+- `tests/site-content/contact-hooks-public.test.js` (now 119; 39 fail on the previous commit):
+  - today's values and every failed answer leave all 22 pages byte-for-byte unchanged;
+  - a new number and email reach every shown spot and every Call/Text/Email link, and nothing else changes;
+  - new tests cover each spot above, plus the rule that a hook on a whole button or sentence only goes where the number-only rewrite runs;
+  - the list of pages with unhooked spots is now empty, and the check includes Text links.
+- `site-content-editor.test.js`: the new note; the built-in-value check covers every public page.
+- Updated: `conversion-polish-sticky-sms-faq.test.js` (the sticky Text button's new class).

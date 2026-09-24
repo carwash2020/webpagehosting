@@ -1125,6 +1125,8 @@ Found by the features lane while wiring booking/manage-*/404 to `site_content`'s
 - **Text only:** FAQ answers on the dishwasher, refrigerator and washer/dryer St. George pages (their FAQPage JSON-LD repeats the text), and the careers "Call or text ... or email ..." line (phone and email).
 - **`sms:` links:** no page has a hook for these. They include index's "Text us" buttons, booking's confirmation and "Nothing open online" lines, careers, and washer/dryer.
 
+**Fixed 2026-09-24** by the features lane: every spot above now follows, plus index's desktop chat note, which was missed here. Details are in `features.md` ("Phone + email: every public-site spot follows site_content"). What still keeps the built-in values on purpose: the client portal, and each page's LocalBusiness/Service JSON-LD `telephone`/`email`.
+
 ## 2026-09-24 (from the visual lane, not fixed) -- Dev Tools' Graveyard list never fills in
 
 Found while regrouping `tools/dev-tools.html` (visual-only PR, so left as-is). `renderGraveyard()` is only ever called from inside `restoreFromGraveyard()` and `permanentlyDeleteFromGraveyard()` -- nothing calls it on page load, on tab switch, or on pull-to-refresh, so `#graveyardList` stays empty and there is no Restore button to press even when `th_graveyard` has entries. The init comment in `proceed()` ("renders lazily on demand ... whenever it's actually opened") describes an open/expand trigger that no longer exists; the panel isn't collapsible. Confirmed in headless Chromium with a seeded `th_graveyard`: blank until `renderGraveyard()` is called by hand, then it lists the entry with Restore. Likely fix: call `renderGraveyard()` in `proceed()` next to `renderKnownIssues()`, plus a test that loads the page with a seeded graveyard.
