@@ -1636,4 +1636,31 @@ Measured and deliberately left alone. Each needs a call from Connor before anyon
 - `reduced-motion-coverage.test.js` exempted one line, the homepage's "or schedule online" smooth scroll (`BOOKING_LANE`), until the booking lane fixed it. #383 fixed it, so the exception matched nothing and has been removed, along with the check that used it.
 - **The test is stricter now.** Every explicit smooth scroll on the public site must fall back to `auto` under reduced motion. There are no exceptions left. Putting the old line back into `index.html` makes the test fail and name the line.
 
+## 2026-09-23 (night) -- tool page changes: the hold, tap feedback, Home without the splash
+
+Asked for a branded loading state between tool pages, and a smooth return to Workspace. Findings and decisions:
+
+- **Checked for app-shell work first.** An SPA-style content swap was rejected on 2026-09-21 (features.md: every page relies on full unload for cleanup). No branch or PR since has touched it. The view-transition "persistent shell" from that day was the thing that was meant to hide the reload.
+- **Why that transition didn't hide it.** The transition snapshots the new page at `pagereveal`, and `tools-nav-pwa.js` runs after that point. It's the 8th deferred script, behind supabase-js. At 4x CPU in Chromium, the shell was missing at reveal on 15 of 15 navigations and arrived 150-220ms later, so the named bar/sidebar groups were exit-only.
+  - Harness: `pagereveal` / MutationObserver timings plus a per-frame `document.getAnimations()` sampler on the `::view-transition-*` pseudos, and CDP screencast frames.
+- **Tried `blocking="render"` on the nav-pwa tag.** It works in Chromium (shell present at reveal on 15 of 15), and removing the attribute on a timer releases the block, which I checked with a 3s stalled script.
+  - Not shipped, for two reasons. It makes first paint wait on the whole deferred chain, CDN script included. And WebKit ignores `blocking`, and that's where the phones are.
+  - Moving nav-pwa earlier in the defer order was also rejected. Its load-time renders (clock bar, shift button) quietly switch to storage-only paths when data-layer.js isn't loaded yet.
+- **Shipped: a CSS hold keyed on `html:not(:has(body.th-tool-page))`.**
+  - `inject()` adds that class in the same synchronous pass as the shell, and login.html gets it too.
+  - While the selector matches, old(root) and old-only shell groups hold at opacity 1, and new(root) stays at 0. When the class lands, the UA fade-in/out start fresh (confirmed `@0/280` in the sampler).
+  - The old-only bar keeps `th-vt-hold .28s`, gated by `html:has(.th-bottom-nav)` so login still fades it out. `:only-child` keeps this off paired groups, where plus-lighter would over-brighten them.
+  - **Gotcha: the hold needs its own keyframe name (`th-vt-hold-wait`).** Changing only `animation-duration` on a running animation keeps its elapsed time, so the bar would vanish at release.
+  - Capped at 1.2s, the valve. Reduced motion keeps the hold with `!important` at higher specificity and leaves the crossfade at 0.001ms.
+- **Tap feedback.** The tapped tab lights before `pageswap` captures the old state, so the held bar already shows the right tab and nothing flips at the end. Without it, the active tab visibly jumped on the last frame.
+  - The loading line appears after 150ms. It uses a transform sweep, like `.upload-progress-bar`, and holds still under reduced motion.
+  - `env(safe-area-inset-top)` needs `max(..., 44px)`: `finance-split.test.js` enforces this on every use in styles-tools.css. It resets to `top: 0` at >=1024px, where the header has no notch.
+- **Home.** `showWelcomeOverlay()` ran on every dashboard load, after sync, at z-index 9999 for 1.7s, and it blocked taps too: Playwright's click had to wait it out.
+  - Now it shows once per `getCurrentUserEmail()` per sessionStorage.
+  - Skeletons are baked into Next Job / Money Owed / Rest of Today and the greeting. The week card was left alone: it relies on `:empty { display:none }`, and `your-week.test.js` pins it empty.
+- **Not verified:** Safari (only Chromium here). Everything used is standard in Safari 18.2+.
+- **Parked, not changed:**
+  - Light mode renders the Needs attention lane headers (`<header class="ops-lane-header">`) as black bars with dark text. The public site's bare `header{position:sticky...}` and its `::before` background in styles.css match them. Pre-existing; a one-selector fix for another round.
+  - For a restricted role, the Money tab shows at first paint and hides when the role loads. That's fail-open by design (`applyMoneyPermissions`), but it's a small shell flicker.
+
 <!-- Add new entries above this line -->
