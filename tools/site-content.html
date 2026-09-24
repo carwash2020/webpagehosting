@@ -54,7 +54,7 @@
 <link rel="stylesheet" href="/styles.css?v=87b1f5227e">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=9c0fadebb0">
 <script src="/tools/data-layer.js?v=b2586a446b" defer></script>
-<script src="/tools/dev-tools-shared.js?v=f34a6faa86" defer></script>
+<script src="/tools/dev-tools-shared.js?v=9025d32d83" defer></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
 <script src="/tools/tools-dialogs.js?v=310315eb44" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
@@ -258,11 +258,13 @@
   .cms-field-live { font-size: 12.5px; color: var(--text-dim); margin: 6px 0 0; word-break: break-word; }
   .cms-field-live strong { color: var(--text); font-weight: 600; }
   .cms-field-input { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
-  .cms-field-input > input, .cms-hours select, .cms-hours input {
+  .cms-field-input > input, .cms-field-input > select, .cms-hours select, .cms-hours input {
     padding: 9px 11px; border-radius: 8px; border: 1px solid var(--border);
     background: var(--bg); color: var(--text); font-size: 16px; font-family: inherit;
   }
-  .cms-field-input > input { flex: 1 1 180px; min-width: 0; }
+  .cms-field-input > input, .cms-field-input > select { flex: 1 1 180px; min-width: 0; }
+  .cms-banner-slot { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .cms-field-sub { margin-left: 14px; }
   .cms-field-hours .cms-field-input { margin-top: 6px; }
   .cms-hours { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; flex: 1 1 auto; }
   .cms-hours select { flex: 1 1 200px; min-width: 0; }
@@ -410,7 +412,7 @@
       <div class="help-modal-body">
         <p>Edits the public website's changeable text and numbers directly, with no code push. Only accounts with the "Site content" permission can open this page or save anything from it.</p>
         <ul>
-          <li><strong>Website text and numbers</strong> &mdash; the Google rating and review count, 2 announcement banners, the homepage hours, phone, and email. Edit any of them, press <em>Review &amp; publish</em>, check each change against what's live now, then publish. Anything that doesn't look right (a rating over 5.0, a phone number missing a digit) is flagged before you can publish, and the database refuses it too.</li>
+          <li><strong>Website text and numbers</strong> &mdash; the Google rating and review count, the two banners at the top of the site (the WELCOME15 offer and the hiring notice), the homepage hours, phone, and email. Edit any of them, press <em>Review &amp; publish</em>, check each change against what's live now, then publish. Anything that doesn't look right (a rating over 5.0, a phone number missing a digit) is flagged before you can publish, and the database refuses it too.</li>
           <li><strong>Undo</strong> &mdash; the box at the top always shows the last save with an <em>Undo this save</em> button. Each field also keeps its recent changes, with a button to put back any earlier value. An undo is refused, not forced, if someone has changed that field again since.</li>
           <li><strong>Content edit history</strong> &mdash; every past change to those fields, the FAQ, and Terms: who made it, and when -- a real audit trail from a database trigger.</li>
           <li><strong>FAQ editor</strong> &mdash; add, edit, reorder, or remove questions on the site's FAQ section directly.</li>
@@ -495,8 +497,8 @@
   const SITE_CONTENT_GROUPS = [
     { id: 'reviews', title: 'Google reviews',
       intro: 'Update these when a new Google review comes in. They show on the homepage (top section, the stats strip, and the booking section), the booking page, and the fridge, dishwasher, and washer/dryer repair pages.' },
-    { id: 'banners', title: 'Announcement banners',
-      intro: 'A one-line bar across the very top of the site. Leave blank for no banner. On the homepage, service pages, and city pages, Banner 1 takes the place of the WELCOME15 new-customer offer and Banner 2 takes the place of the hiring notice while they\'re set.' },
+    { id: 'banners', title: 'Banners at the top of the site',
+      intro: 'The two bars above the header on every public page. The top one normally shows the WELCOME15 new-customer offer, and the second one the hiring notice. Keep either one, swap in your own message (a holiday closure, a new offer), or turn it off. Visitors see a change from the next page they open, so a page someone is already reading never jumps.' },
     { id: 'hours', title: 'Hours on the homepage',
       intro: 'The hours listed in the homepage\'s contact section and footer. This changes the text only: online booking times and the "Open now" badge still follow the schedule built into the site (Mon–Fri 2–10 PM, Sat 7 AM–10 PM, Sun 2–8 PM). If the real schedule changes, ask Connor to change that too.' },
     { id: 'contact', title: 'Phone and email',
@@ -507,11 +509,17 @@
       label: 'Star rating on Google', help: 'Your average rating, with one decimal place, exactly as Google shows it (for example 4.9).' },
     { key: 'googleReviewCount', group: 'reviews', kind: 'count', required: true, info: 'reviews',
       label: 'Number of Google reviews', help: 'The total number of reviews on your Google Business Profile.' },
-    { key: 'banner1', group: 'banners', kind: 'banner', info: 'banner1',
-      label: 'Banner 1 (orange bar)', help: 'Shown at the very top of every page. Up to 200 characters, one line.' },
-    { key: 'banner2', group: 'banners', kind: 'banner', info: 'banner2',
-      label: 'Banner 2 (blue bar)', help: 'Shown right under Banner 1. Up to 200 characters, one line.' },
-  ].concat(CMS_HOURS_DAYS.map(day => ({
+  ].concat([1, 2].map(slot => {
+    const name = slot === 1 ? 'Top banner' : 'Second banner';
+    return [
+      { key: 'banner' + slot + 'Mode', group: 'banners', kind: 'bannerMode', slot: slot, info: 'banner' + slot,
+        label: name, help: '' },
+      { key: 'banner' + slot, group: 'banners', kind: 'banner', slot: slot,
+        label: name + ': your message', help: 'Up to 200 characters, one line. Shown exactly as you type it.' },
+      { key: 'banner' + slot + 'Link', group: 'banners', kind: 'bannerLink', slot: slot,
+        label: name + ': link at the end', help: 'Optional. Only pages on this site, so a banner can never send visitors somewhere else.' },
+    ];
+  }).flat()).concat(CMS_HOURS_DAYS.map(day => ({
     key: 'hours' + day, group: 'hours', kind: 'hours', day: day, info: 'hours', label: day, help: '',
   }))).concat([
     { key: 'phone', group: 'contact', kind: 'phone', info: 'phone',
@@ -521,6 +529,32 @@
   ]);
   const CMS_FIELD_BY_KEY = {};
   SITE_CONTENT_FIELDS.forEach(f => { CMS_FIELD_BY_KEY[f.key] = f; });
+
+  // Banners. The built-in wording lives in js/site-banners.js; these are
+  // its words as a visitor reads them, for the editor to show.
+  // tests/site-content/site-banners-editor.test.js keeps both lists in
+  // step with that file (and BANNER_LINKS with the database check in
+  // sql/site-content/cms_site_banners.sql).
+  const BANNER_BUILT_IN = {
+    1: 'New customer? Mention code WELCOME15 when you book and get 15% off your first service call.',
+    2: 'We\'re hiring. Part-time handyman helper, flexible hours, $35–$100+ per job. See the posting & apply →',
+  };
+  const BANNER_LINKS = {
+    '/booking.html': 'Book online →',
+    '/careers.html': 'See the job & apply →',
+    '/our-work.html': 'See our work →',
+  };
+  const BANNER_MODES = ['builtin', 'custom', 'off'];
+  function cmsBannerField(slot, kind) {
+    return SITE_CONTENT_FIELDS.find(f => f.slot === slot && f.kind === kind);
+  }
+  // What a slot really shows for a saved mode and message -- the same
+  // rule js/site-banners.js applies. No mode saved: a message on its own
+  // replaced the built-in banner (how banner1/banner2 worked before modes).
+  function cmsBannerEffectiveMode(mode, text) {
+    if (!BANNER_MODES.includes(mode)) return text !== null ? 'custom' : 'builtin';
+    return mode === 'custom' && text === null ? 'builtin' : mode;
+  }
 
   // ---- pure helpers: normalize / validate / warn / display --------------
 
@@ -601,6 +635,8 @@
       if (value.length > 200) return 'Keep it to 200 characters or fewer (' + value.length + ' now).';
       return '';
     }
+    if (field.kind === 'bannerMode') return BANNER_MODES.includes(value) ? '' : 'Pick one of the options.';
+    if (field.kind === 'bannerLink') return Object.prototype.hasOwnProperty.call(BANNER_LINKS, value) ? '' : 'Pick one of the pages in the list.';
     if (field.kind === 'hours') {
       if (value.length > 60) return 'Keep it to 60 characters or fewer.';
       if (/[\r\n]/.test(value)) return 'Keep it on one line.';
@@ -625,20 +661,44 @@
     if (field.kind === 'banner' && newValue !== null) {
       if (/@/.test(newValue)) out.push('This looks like it has an email address in it. The banner shows exactly this text at the top of every page -- make sure it belongs here.');
       if (/\d{3}\D{0,2}\d{3}\D?\d{4}/.test(newValue)) out.push('This has a phone number in it. If the number ever changes, remember to update this banner too.');
-      if (oldValue === null) out.push('Adding this banner hides the ' + (field.key === 'banner1' ? 'WELCOME15 offer' : 'hiring notice') + ' on the homepage, service pages, and city pages until you clear it.');
     }
-    if (field.kind === 'banner' && newValue === null && oldValue !== null) {
-      out.push('The banner will disappear. The ' + (field.key === 'banner1' ? 'WELCOME15 offer' : 'hiring notice') + ' shows in its place again.');
+    if (field.kind === 'bannerMode' && newValue !== oldValue) {
+      const builtIn = field.slot === 1 ? 'WELCOME15 new-customer offer' : 'hiring notice';
+      if (newValue === 'off') {
+        out.push(field.slot === 1
+          ? 'No offer banner shows at all. Anyone who already saw the WELCOME15 code can still mention it when they book.'
+          : 'The hiring notice disappears from every page. The Careers page itself stays as it is.');
+      } else if (newValue === 'custom') {
+        out.push('Your message replaces the ' + builtIn + ' on every page until you switch back.');
+      } else if (newValue === 'builtin') {
+        out.push('The built-in wording comes back: "' + BANNER_BUILT_IN[field.slot] + '"');
+      }
     }
     if (field.kind === 'phone') out.push('Every call and text button will use this number. Call it once after publishing to make sure it rings.');
     if (field.kind === 'email') out.push('Every email link will use this address. Send yourself a test email after publishing.');
     return out;
   }
 
+  // A value in a history line or button: short, in plain words.
+  function cmsPlainValue(field, value) {
+    if (field && field.kind === 'bannerMode') return { builtin: 'built-in wording', custom: 'your own message', off: 'no banner' }[value] || 'not set';
+    if (field && field.kind === 'bannerLink') return value === null ? 'no link' : (BANNER_LINKS[value] || value);
+    return value === null ? 'blank' : value;
+  }
+
   function cmsDisplay(field, value) {
+    if (field.kind === 'bannerMode') {
+      if (value === 'builtin') return 'Built-in: ' + BANNER_BUILT_IN[field.slot];
+      if (value === 'custom') return 'Your own message';
+      if (value === 'off') return 'No banner';
+      return 'Not set (the built-in wording, or your message if one is saved)';
+    }
+    if (field.kind === 'bannerLink') {
+      if (value === null || value === undefined) return 'No link';
+      return (BANNER_LINKS[value] || value) + ' (' + value + ')';
+    }
     if (value === null || value === undefined) {
       if (CMS_BUILT_IN[field.key]) return 'Blank (the site shows its built-in ' + (field.kind === 'hours' ? 'hours: ' : '') + CMS_BUILT_IN[field.key] + ')';
-      if (field.kind === 'banner') return 'Blank (no banner)';
       return 'Blank';
     }
     return value;
@@ -672,13 +732,32 @@
     return { value: cmsFormatHours(open, close), error: '' };
   }
 
-  // The draft for one field: its live value unless the user touched it.
-  function cmsDraft(field) {
+  // The draft for one field on its own: its live value unless the user
+  // touched it.
+  function cmsFieldDraft(field) {
     const live = cmsLive[field.key] === undefined ? null : cmsLive[field.key];
     if (!cmsTouched.has(field.key)) return { value: live, error: '', dirty: false };
     const read = cmsReadInput(field);
     const error = read.error || cmsValidate(field, read.value);
     return { value: read.value, error: error, dirty: !read.error && read.value !== live };
+  }
+
+  // A rule across fields: a banner set to "My own message" needs a
+  // message. Flagged on whichever of the two the user touched.
+  function cmsCrossFieldError(field) {
+    if (!field.slot || !cmsTouched.has(field.key)) return '';
+    const mode = cmsFieldDraft(cmsBannerField(field.slot, 'bannerMode')).value;
+    const text = cmsFieldDraft(cmsBannerField(field.slot, 'banner')).value;
+    if (mode !== 'custom' || text !== null) return '';
+    if (field.kind === 'bannerMode') return 'Type your message below, or pick another option.';
+    if (field.kind === 'banner') return 'Type your message, or pick another option above.';
+    return '';
+  }
+
+  function cmsDraft(field) {
+    const draft = cmsFieldDraft(field);
+    if (!draft.error) draft.error = cmsCrossFieldError(field);
+    return draft;
   }
 
   function cmsPendingChanges() {
@@ -813,12 +892,26 @@
         '<input type="text" maxlength="60" class="cms-hours-custom" ' + attrs + ' data-cms-part="custom" value="' + escapeAttr(parsed.text || '') + '" placeholder="e.g. By appointment"' + (parsed.mode === 'custom' ? '' : ' hidden') + ' aria-label="' + escapeAttr(field.day + ' custom hours text') + '">' +
       '</div>';
     }
+    if (field.kind === 'bannerMode') {
+      const text = cmsLive['banner' + field.slot] === undefined ? null : cmsLive['banner' + field.slot];
+      const current = cmsBannerEffectiveMode(live, text);
+      const labels = { builtin: field.slot === 1 ? 'The WELCOME15 new-customer offer' : 'The hiring notice', custom: 'My own message', off: 'No banner' };
+      return '<select id="' + id + '" ' + attrs + ' data-cms-part="value">' +
+        BANNER_MODES.map(m => '<option value="' + m + '"' + (m === current ? ' selected' : '') + '>' + escapeHtml(labels[m]) + '</option>').join('') +
+      '</select>';
+    }
+    if (field.kind === 'bannerLink') {
+      return '<select id="' + id + '" ' + attrs + ' data-cms-part="value">' +
+        '<option value=""' + (live === null ? ' selected' : '') + '>No link</option>' +
+        Object.keys(BANNER_LINKS).map(path => '<option value="' + escapeAttr(path) + '"' + (path === live ? ' selected' : '') + '>' + escapeHtml(BANNER_LINKS[path]) + '</option>').join('') +
+      '</select>';
+    }
     const value = escapeAttr(live === null ? '' : live);
     if (field.kind === 'rating') return '<input id="' + id + '" type="number" inputmode="decimal" min="1" max="5" step="0.1" ' + attrs + ' data-cms-part="value" value="' + value + '">';
     if (field.kind === 'count') return '<input id="' + id + '" type="number" inputmode="numeric" min="1" max="99999" step="1" ' + attrs + ' data-cms-part="value" value="' + value + '">';
     if (field.kind === 'phone') return '<input id="' + id + '" type="tel" autocomplete="off" ' + attrs + ' data-cms-part="value" value="' + value + '" placeholder="' + escapeAttr(CMS_BUILT_IN.phone) + '">';
     if (field.kind === 'email') return '<input id="' + id + '" type="email" autocomplete="off" ' + attrs + ' data-cms-part="value" value="' + value + '" placeholder="' + escapeAttr(CMS_BUILT_IN.email) + '">';
-    return '<input id="' + id + '" type="text" maxlength="200" ' + attrs + ' data-cms-part="value" value="' + value + '" placeholder="Blank = no banner">';
+    return '<input id="' + id + '" type="text" maxlength="200" ' + attrs + ' data-cms-part="value" value="' + value + '" placeholder="The message visitors will see">';
   }
 
   function cmsFieldHistoryHtml(field) {
@@ -828,8 +921,8 @@
     return '<details class="cms-field-history"><summary>Recent changes (' + rows.length + ')</summary><ul>' +
       rows.map(r =>
         '<li><span class="cms-hist-meta">' + escapeHtml(cmsWhen(r.changed_at)) + ' &middot; ' + escapeHtml(cmsWho(r.changed_by)) + (r.undo_of ? ' &middot; undo' : '') + '</span>' +
-        '<span class="cms-hist-change">' + escapeHtml(r.old_value === null ? 'blank' : r.old_value) + ' &rarr; ' + escapeHtml(r.new_value === null ? 'blank' : r.new_value) + '</span>' +
-        (r.old_value !== live ? '<button type="button" class="small-btn" data-cms-action="putback" data-cms-history-id="' + escapeAttr(String(r.id)) + '">Put back ' + escapeHtml(r.old_value === null ? 'blank' : '"' + r.old_value + '"') + '</button>' : '') +
+        '<span class="cms-hist-change">' + escapeHtml(cmsPlainValue(field, r.old_value)) + ' &rarr; ' + escapeHtml(cmsPlainValue(field, r.new_value)) + '</span>' +
+        (r.old_value !== live ? '<button type="button" class="small-btn" data-cms-action="putback" data-cms-history-id="' + escapeAttr(String(r.id)) + '">Put back ' + escapeHtml(r.old_value === null ? cmsPlainValue(field, null) : '"' + cmsPlainValue(field, r.old_value) + '"') + '</button>' : '') +
         '</li>'
       ).join('') + '</ul></details>';
   }
@@ -839,7 +932,8 @@
     const infoBtn = field.info && field.kind !== 'hours'
       ? '<button type="button" class="dev-info-bubble" data-cms-action="info" data-cms-info="' + escapeAttr(field.info) + '" title="Where does this appear?" aria-label="Where does this appear?"><svg class="th-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg></button>'
       : '';
-    return '<div class="cms-field' + (field.kind === 'hours' ? ' cms-field-hours' : '') + '" data-cms-field="' + escapeAttr(field.key) + '">' +
+    const isBannerPart = field.kind === 'banner' || field.kind === 'bannerLink';
+    return '<div class="cms-field' + (field.kind === 'hours' ? ' cms-field-hours' : '') + (isBannerPart ? ' cms-field-sub' : '') + '" data-cms-field="' + escapeAttr(field.key) + '"' + (isBannerPart && cmsBannerModeShown(field.slot) !== 'custom' ? ' hidden' : '') + '>' +
       '<div class="cms-field-head"><label for="siteContent_' + escapeAttr(field.key) + '">' + escapeHtml(field.label) + '</label>' + infoBtn +
         '<span class="cms-dirty-pill" hidden>Edited</span></div>' +
       (field.help ? '<p class="cms-field-help">' + escapeHtml(field.help) + '</p>' : '') +
@@ -856,13 +950,23 @@
     if (!last) return '<div class="cms-last-save is-empty">No edits yet. Your first save will show here, with a button to undo it.</div>';
     const summary = last.rows.map(r => {
       const f = CMS_FIELD_BY_KEY[r.key];
-      return (f ? f.label + (f.kind === 'hours' ? ' hours' : '') : r.key) + ': ' + (r.old_value === null ? 'blank' : r.old_value) + ' → ' + (r.new_value === null ? 'blank' : r.new_value);
+      return (f ? f.label + (f.kind === 'hours' ? ' hours' : '') : r.key) + ': ' + cmsPlainValue(f, r.old_value) + ' → ' + cmsPlainValue(f, r.new_value);
     }).join(' · ');
     return '<div class="cms-last-save">' +
       '<div><strong>Last ' + (last.isUndo ? 'undo' : 'save') + ':</strong> ' + escapeHtml(cmsWho(last.by)) + ', ' + escapeHtml(cmsWhen(last.at)) +
         '<div class="cms-last-save-detail">' + escapeHtml(summary) + '</div></div>' +
       '<button type="button" class="secondary-btn" data-cms-action="undo-last">' + (last.isUndo ? 'Redo it' : 'Undo this save') + '</button>' +
     '</div>';
+  }
+
+  // Banners go one column per banner (its mode, then its message and
+  // link under it); every other group is a plain grid of fields.
+  function cmsGroupFieldsHtml(groupId) {
+    const fields = SITE_CONTENT_FIELDS.filter(f => f.group === groupId);
+    if (groupId !== 'banners') return fields.map(cmsFieldHtml).join('');
+    return [1, 2].map(slot =>
+      '<div class="cms-banner-slot">' + fields.filter(f => f.slot === slot).map(cmsFieldHtml).join('') + '</div>'
+    ).join('');
   }
 
   function renderCmsEditor() {
@@ -873,7 +977,7 @@
         '<div class="cms-group" data-cms-group="' + escapeAttr(g.id) + '">' +
           '<h3 class="cms-group-title">' + escapeHtml(g.title) + '</h3>' +
           '<p class="cms-group-intro">' + escapeHtml(g.intro) + '</p>' +
-          '<div class="cms-group-fields">' + SITE_CONTENT_FIELDS.filter(f => f.group === g.id).map(cmsFieldHtml).join('') + '</div>' +
+          '<div class="cms-group-fields">' + cmsGroupFieldsHtml(g.id) + '</div>' +
         '</div>'
       ).join('') +
       '<div class="cms-publish-bar">' +
@@ -904,6 +1008,18 @@
       wrap.querySelector('.cms-hours-times').hidden = mode !== 'open';
       wrap.querySelector('.cms-hours-custom').hidden = mode !== 'custom';
     }
+    // A banner's message and link only matter for "My own message".
+    if (field.kind === 'banner' || field.kind === 'bannerLink') wrap.hidden = cmsBannerModeShown(field.slot) !== 'custom';
+  }
+
+  // The option a banner's mode picker shows right now (the live mode until
+  // the user picks another).
+  function cmsBannerModeShown(slot) {
+    const field = cmsBannerField(slot, 'bannerMode');
+    const select = document.querySelector('[data-cms-key="' + field.key + '"][data-cms-part="value"]');
+    if (select && cmsTouched.has(field.key)) return select.value;
+    const text = cmsLive['banner' + slot] === undefined ? null : cmsLive['banner' + slot];
+    return cmsBannerEffectiveMode(cmsLive[field.key] === undefined ? null : cmsLive[field.key], text);
   }
 
   function cmsRefreshPublishBar() {
@@ -960,8 +1076,10 @@
         const wrap = document.querySelector('[data-cms-field="' + key + '"]');
         if (wrap) wrap.outerHTML = cmsFieldHtml(CMS_FIELD_BY_KEY[key]);
       }
-      cmsRefreshFieldState(CMS_FIELD_BY_KEY[key]);
     });
+    // Every field, not just the restored ones: a restored banner mode
+    // decides whether its message and link fields show.
+    SITE_CONTENT_FIELDS.forEach(cmsRefreshFieldState);
     cmsRefreshPublishBar();
   }
 
@@ -983,9 +1101,11 @@
       const oldValue = cmsLive[x.field.key] === undefined ? null : cmsLive[x.field.key];
       return { field: x.field, oldValue: oldValue, newValue: x.draft.value, warnings: cmsWarnings(x.field, oldValue, x.draft.value) };
     });
+    const touchesBanners = rows.some(r => r.field.slot);
     const confirmed = await showCmsReview({
       title: 'Review before publishing',
-      intro: 'These go live on the public site within a few seconds. Check each one against what you meant to type.',
+      intro: 'These go live on the public site within a few seconds. Check each one against what you meant to type.' +
+        (touchesBanners ? ' Banner changes show from the next page a visitor opens.' : ''),
       rows: rows,
       confirmText: 'Publish ' + rows.length + ' change' + (rows.length === 1 ? '' : 's'),
     });
@@ -1056,6 +1176,15 @@
       await showAlert('That older value doesn\'t pass today\'s checks (' + problem + ') Type the value in fresh instead.');
       return false;
     }
+    if (field.slot) {
+      const liveOf = key => (cmsLive[key] === undefined ? null : cmsLive[key]);
+      const mode = field.kind === 'bannerMode' ? target : liveOf('banner' + field.slot + 'Mode');
+      const text = field.kind === 'banner' ? target : liveOf('banner' + field.slot);
+      if (mode === 'custom' && text === null) {
+        await showAlert('That would leave "' + cmsBannerField(field.slot, 'bannerMode').label + '" set to your own message with no message. Change it in the editor instead.');
+        return false;
+      }
+    }
     const confirmed = await showCmsReview({
       title: 'Put back an earlier value?',
       intro: 'From ' + cmsWho(row.changed_by) + '\'s change on ' + cmsWhen(row.changed_at) + '. It goes live within a few seconds.',
@@ -1088,8 +1217,14 @@
     cmsTouched.delete(key);
     const wrap = document.querySelector('[data-cms-field="' + key + '"]');
     if (wrap) wrap.outerHTML = cmsFieldHtml(CMS_FIELD_BY_KEY[key]);
-    cmsRefreshFieldState(CMS_FIELD_BY_KEY[key]);
+    cmsRelatedFields(CMS_FIELD_BY_KEY[key]).forEach(cmsRefreshFieldState);
     cmsRefreshPublishBar();
+  }
+
+  // A field plus any field whose state depends on it (a banner's mode,
+  // message, and link go together).
+  function cmsRelatedFields(field) {
+    return field.slot ? SITE_CONTENT_FIELDS.filter(f => f.slot === field.slot) : [field];
   }
 
   function cmsWireEditor() {
@@ -1098,7 +1233,7 @@
       const key = e.target && e.target.getAttribute && e.target.getAttribute('data-cms-key');
       if (!key || !CMS_FIELD_BY_KEY[key]) return;
       cmsTouched.add(key);
-      cmsRefreshFieldState(CMS_FIELD_BY_KEY[key]);
+      cmsRelatedFields(CMS_FIELD_BY_KEY[key]).forEach(cmsRefreshFieldState);
       cmsRefreshPublishBar();
     };
     root.addEventListener('input', onEdit);
@@ -1152,13 +1287,13 @@
       image: 'help-contact-cards.webp',
     },
     banner1: {
-      title: 'Banner 1',
-      description: 'Shows as an orange bar across the very top of the site, above the header -- the first thing a visitor sees. Completely hidden when this field is blank.',
+      title: 'Top banner',
+      description: 'The bar across the very top of every public page, above the header -- the first thing a visitor sees. Normally it shows the new-customer offer (code WELCOME15, 15% off the first service call). Switch it to your own message for something like a holiday closure or a new offer, or turn it off. Visitors can close it with the &times;. A new message shows again even to someone who closed an earlier one.',
       image: null,
     },
     banner2: {
-      title: 'Banner 2',
-      description: 'Shows as a blue bar directly below Banner 1 (or at the top if Banner 1 is blank). Completely hidden when this field is blank.',
+      title: 'Second banner',
+      description: 'The bar just below the top banner (or at the very top if that one is off). Normally it shows the hiring notice, with a link to the Careers page -- it doesn\'t show on the Careers page itself. Switch it to your own message or turn it off the same way.',
       image: null,
     },
     faq: {
@@ -1232,10 +1367,12 @@
         // the editor's own review + compare-and-swap publish.
         (await contentRes.json()).forEach(r => {
           const field = typeof CMS_FIELD_BY_KEY === 'object' ? CMS_FIELD_BY_KEY[r.key] : null;
+          // Banner modes and links read as words ("no banner"), not codes.
+          const shown = v => (v != null && field && (field.kind === 'bannerMode' || field.kind === 'bannerLink') ? cmsPlainValue(field, v) : v);
           rows.push({
             table: 'content', source: 'Site content',
             label: field ? field.label + (field.kind === 'hours' ? ' hours' : '') : r.key,
-            old_value: r.old_value, new_value: r.new_value,
+            old_value: shown(r.old_value), new_value: shown(r.new_value),
             changed_by: r.changed_by, changed_at: r.changed_at, action: r.action || 'update', historyRow: r,
           });
         });

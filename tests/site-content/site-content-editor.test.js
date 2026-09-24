@@ -286,15 +286,19 @@ test('"5" is tidied to "5.0" and a phone number typed any way is saved in the si
 test('the review step warns about a review count going down and an email address typed into a banner (the 2026-08-16 incident)', async () => {
   const { w } = await loadEditor();
   typeInto(w, 'googleReviewCount', '4');
+  // Banners have a mode since 2026-09-23 (site-banners-editor.test.js):
+  // "My own message" is what replaces the hiring notice.
+  typeInto(w, 'banner2Mode', 'custom');
   typeInto(w, 'banner2', 'Steve@triplehenterprisesllc.biz');
   const p = w.saveSiteContent();
   await waitForReview(w);
   const rows = reviewRows(w);
   const count = rows.find(r => r.label === 'Number of Google reviews');
-  const banner = rows.find(r => /Banner 2/.test(r.label));
+  const banner = rows.find(r => r.label === 'Second banner: your message');
+  const mode = rows.find(r => r.label === 'Second banner');
   assert.ok(count.warnings.some(x => /almost never go down/.test(x)));
   assert.ok(banner.warnings.some(x => /email address/.test(x)));
-  assert.ok(banner.warnings.some(x => /hiring notice/.test(x)));
+  assert.ok(mode.warnings.some(x => /hiring notice/.test(x)));
   await cancelReview(w);
   await p;
 });
@@ -437,4 +441,173 @@ test('the Content edit history panel\'s Restore for a site content row goes thro
   const restore = PAGE_HTML.match(/async function restoreHistoryEntry[\s\S]*?\n  \}/)[0];
   assert.match(restore, /putBackCmsHistoryRow\(entry\.historyRow\)/);
   assert.doesNotMatch(restore, /site_content\?/);
+});
+
+// ---------------------------------------------------------------------------
+// Banners (2026-09-23): each banner has a mode -- the built-in wording,
+// your own message (with an optional link from a fixed list), or off.
+// The public side is tests/site-content/site-banners-public.test.js.
+// ---------------------------------------------------------------------------
+
+function isShown(w, key) { return !w.document.querySelector(`[data-cms-field="${key}"]`).hidden; }
+async function bannerValues(db, slot) {
+  return {
+    mode: await readValue(db, `banner${slot}Mode`),
+    text: await readValue(db, `banner${slot}`),
+    link: await readValue(db, `banner${slot}Link`),
+  };
+}
+
+test('banners: both start on their built-in wording, with the message and link fields out of the way', async () => {
+  const { w } = await loadEditor();
+  for (const slot of [1, 2]) {
+    assert.equal(field(w, `banner${slot}Mode`).value, 'builtin');
+    assert.ok(!isShown(w, `banner${slot}`));
+    assert.ok(!isShown(w, `banner${slot}Link`));
+  }
+  const live = w.document.querySelector('[data-cms-field="banner1Mode"] .cms-field-live').textContent;
+  assert.match(live, /Built-in: New customer\? Mention code WELCOME15/);
+  typeInto(w, 'banner1Mode', 'custom');
+  assert.ok(isShown(w, 'banner1') && isShown(w, 'banner1Link'));
+  assert.ok(!isShown(w, 'banner2'), 'the other banner is untouched');
+  typeInto(w, 'banner1Mode', 'off');
+  assert.ok(!isShown(w, 'banner1'));
+});
+
+test('banners: "My own message" with no message blocks publishing until one is typed', async () => {
+  const { w, state } = await loadEditor();
+  typeInto(w, 'banner1Mode', 'custom');
+  assert.match(fieldError(w, 'banner1Mode'), /Type your message below/);
+  assert.ok(publishDisabled(w));
+  assert.equal(await w.saveSiteContent(), false);
+  assert.equal(rpcCalls(state, 'cms_publish_content').length, 0);
+  typeInto(w, 'banner1', 'Closed Thanksgiving Day');
+  assert.equal(fieldError(w, 'banner1Mode'), '');
+  assert.ok(!publishDisabled(w));
+});
+
+test('banners: SAVE then UNDO -- a custom message with a link publishes as one save, and undo puts back exactly the built-in banner', async () => {
+  const { w, db, state } = await loadEditor();
+  const before = await bannerValues(db, 1);
+  assert.deepEqual(before, { mode: 'builtin', text: null, link: null });
+
+  typeInto(w, 'banner1Mode', 'custom');
+  typeInto(w, 'banner1', '  Closed Thanksgiving   Day -- back Friday.  ');
+  typeInto(w, 'banner1Link', '/booking.html');
+  const p = w.saveSiteContent();
+  await waitForReview(w);
+  assert.match(w.document.getElementById('cmsReviewIntro').textContent, /Banner changes show from the next page a visitor opens/);
+  const rows = reviewRows(w);
+  assert.deepEqual(rows.map(r => [r.label, r.old, r.new]), [
+    ['Top banner', 'Built-in: New customer? Mention code WELCOME15 when you book and get 15% off your first service call.', 'Your own message'],
+    ['Top banner: your message', 'Blank', 'Closed Thanksgiving Day -- back Friday.'],
+    ['Top banner: link at the end', 'No link', 'Book online → (/booking.html)'],
+  ]);
+  assert.ok(rows[0].warnings.some(x => /replaces the WELCOME15 new-customer offer/.test(x)));
+  await confirmReview(w);
+  assert.equal(await p, true);
+  assert.deepEqual(await bannerValues(db, 1), { mode: 'custom', text: 'Closed Thanksgiving Day -- back Friday.', link: '/booking.html' });
+  assert.equal(rpcCalls(state, 'cms_publish_content').length, 1, 'one save');
+
+  const u = w.undoLastCmsSave();
+  await waitForReview(w);
+  assert.equal(reviewRows(w).length, 3);
+  await confirmReview(w);
+  assert.equal(await u, true);
+  assert.deepEqual(await bannerValues(db, 1), before);
+  assert.equal(field(w, 'banner1Mode').value, 'builtin');
+  assert.ok(!isShown(w, 'banner1'));
+});
+
+test('banners: turning the hiring notice off warns what disappears, and undo brings it back', async () => {
+  const { w, db } = await loadEditor();
+  typeInto(w, 'banner2Mode', 'off');
+  const p = w.saveSiteContent();
+  await waitForReview(w);
+  const [row] = reviewRows(w);
+  assert.deepEqual([row.label, row.new], ['Second banner', 'No banner']);
+  assert.ok(row.warnings.some(x => /hiring notice disappears from every page/.test(x)));
+  await confirmReview(w);
+  assert.equal(await p, true);
+  assert.equal(await readValue(db, 'banner2Mode'), 'off');
+  const u = w.undoLastCmsSave();
+  await confirmReview(w);
+  assert.equal(await u, true);
+  assert.equal(await readValue(db, 'banner2Mode'), 'builtin');
+});
+
+test('banners: clearing the message of a banner that is live on "My own message" is refused', async () => {
+  const { w, db, state } = await loadEditor();
+  await rpc(db, OWNER_EMAIL, 'cms_publish_content', { p_changes: [
+    { key: 'banner1Mode', expected: 'builtin', value: 'custom' },
+    { key: 'banner1', expected: null, value: 'Closed Monday' },
+  ] });
+  await w.renderSiteContentForm();
+  assert.ok(isShown(w, 'banner1'));
+  typeInto(w, 'banner1', '');
+  assert.match(fieldError(w, 'banner1'), /Type your message, or pick another option above/);
+  assert.ok(publishDisabled(w));
+  assert.equal(await w.saveSiteContent(), false);
+  assert.equal(rpcCalls(state, 'cms_publish_content').length, 0);
+});
+
+test('banners: "Put back" can\'t leave a banner on "My own message" with no message', async () => {
+  const { w, db, state } = await loadEditor();
+  await rpc(db, OWNER_EMAIL, 'cms_publish_content', { p_changes: [
+    { key: 'banner1Mode', expected: 'builtin', value: 'custom' },
+    { key: 'banner1', expected: null, value: 'Closed Monday' },
+  ] });
+  await w.renderSiteContentForm();
+  const btn = w.document.querySelector('[data-cms-field="banner1"] [data-cms-action="putback"]');
+  assert.equal(btn.textContent, 'Put back blank');
+  btn.click();
+  for (let i = 0; i < 100 && !state.alerts.length; i++) await tick(5);
+  assert.match(state.alerts[0], /no message/);
+  assert.equal(rpcCalls(state, 'cms_publish_content').length, 0);
+  assert.equal(await readValue(db, 'banner1'), 'Closed Monday');
+});
+
+test('banners: a message saved before modes existed shows as "My own message", the way the site shows it', async () => {
+  const { w, db } = await loadEditor();
+  await asUser(db, OWNER_EMAIL, tx => tx.query("update public.site_content set value = case key when 'banner2' then 'Closed Monday' else null end where key in ('banner2', 'banner2Mode')"));
+  await w.renderSiteContentForm();
+  assert.equal(field(w, 'banner2Mode').value, 'custom');
+  assert.ok(isShown(w, 'banner2'));
+  assert.equal(field(w, 'banner2').value, 'Closed Monday');
+});
+
+test('banners: the recent-changes list says what a mode change means, not its code word', async () => {
+  const { w } = await loadEditor();
+  typeInto(w, 'banner2Mode', 'off');
+  const p = w.saveSiteContent();
+  await confirmReview(w);
+  assert.equal(await p, true);
+  const change = w.document.querySelector('[data-cms-field="banner2Mode"] .cms-hist-change').textContent;
+  assert.equal(change, 'built-in wording → no banner');
+  assert.match(w.document.querySelector('.cms-last-save-detail').textContent, /Second banner: built-in wording → no banner/);
+});
+
+test('banners: the editor\'s built-in wording is word for word what js/site-banners.js shows', () => {
+  const js = fs.readFileSync(path.join(ROOT, 'js', 'site-banners.js'), 'utf8');
+  const dom = new JSDOM('<!DOCTYPE html><body><div id="siteBanner1"></div><div id="siteBanner2"></div></body>', { runScripts: 'outside-only', url: 'https://example.com/' });
+  dom.window.eval(js);
+  const shown = (id) => dom.window.document.querySelector(`#${id} .site-banner-text`).textContent;
+  const builtIn = new Function(PAGE_HTML.match(/const BANNER_BUILT_IN = (\{[\s\S]*?\});/)[1].replace(/^/, 'return '))();
+  assert.equal(builtIn[1], shown('siteBanner1'));
+  assert.equal(builtIn[2], shown('siteBanner2'));
+});
+
+test('no function name is declared twice in the page -- a second declaration silently replaces the first', () => {
+  // The FAQ/Terms editor and the banner editor were built side by side and
+  // both named a helper cmsShort() with different arguments; whichever came
+  // second would have won for every caller. check-undefined-vars does not
+  // catch a repeated function declaration inside one page.
+  // Parsed, not regex-matched: JSDOM without runScripts never executes them.
+  const doc = new JSDOM(PAGE_HTML).window.document;
+  const scripts = [...doc.querySelectorAll('script:not([src])')].map(el => el.textContent).join('\n');
+  const names = [...scripts.matchAll(/^ {2}(?:async )?function (\w+)\s*\(/gm)].map(m => m[1]);
+  const seen = new Set();
+  const dupes = names.filter(n => (seen.has(n) ? true : (seen.add(n), false)));
+  assert.ok(names.length > 50, `expected to find the page's functions, found ${names.length}`);
+  assert.deepEqual(dupes, []);
 });
