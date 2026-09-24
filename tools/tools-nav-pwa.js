@@ -795,18 +795,32 @@
 // asks one), and after 10s for anything else that never navigated.
 // ---------------------------------------------------------------------------
 
-// True when this click will load another tool page: an ordinary left click
-// on a same-origin /tools/ link that isn't a download, a new tab, or only a
-// #hash move on this page.
+// Keys that send a link to a new tab or window instead of this one.
+var TH_NEW_TAB_KEYS = ['metaKey', 'ctrlKey', 'shiftKey', 'altKey'];
+
+// An ordinary left click the page itself hasn't already handled.
+function thIsPlainClick(e) {
+  if (e.defaultPrevented || e.button !== 0) return false;
+  return !TH_NEW_TAB_KEYS.some(function (k) { return e[k]; });
+}
+
+// The link's URL when it is a same-origin tool page, else null.
+function thToolsUrl(a) {
+  var url;
+  try { url = new URL(a.href, window.location.href); } catch (err) { return null; }
+  var sameApp = url.origin === window.location.origin && url.pathname.indexOf('/tools/') === 0;
+  return sameApp ? url : null;
+}
+
+// True when this click will load another tool page: a plain click on a
+// tool-page link that isn't a download, a new tab, or only a #hash move on
+// this page.
 function thLinkLeavesPage(a, e) {
-  if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return false;
-  if (a.hasAttribute('download')) return false;
+  if (!thIsPlainClick(e) || a.hasAttribute('download')) return false;
   var target = a.getAttribute('target');
   if (target && target !== '_self') return false;
-  var url;
-  try { url = new URL(a.href, window.location.href); } catch (err) { return false; }
-  if (url.origin !== window.location.origin || url.pathname.indexOf('/tools/') !== 0) return false;
-  return !(url.pathname === window.location.pathname && url.search === window.location.search);
+  var url = thToolsUrl(a);
+  return !!url && url.pathname + url.search !== window.location.pathname + window.location.search;
 }
 
 // Lights a tapped tab, sidebar row or Money segment, and returns what it
