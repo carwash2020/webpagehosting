@@ -1096,6 +1096,26 @@ Fixed in `sql/infra/fix_cron_health_false_positives.sql`: a `cron_tracked_http_r
 
 Tests: `tests/dev-tools/cron-health-scoped-to-cron.test.js` (8, new).
 
+## 2026-09-23 -- Clock-dependent tests failed every evening and night (and one hung CI)
+
+**Symptom:** `tests/portal/booking-picker-round4.test.js` "tapping a time hands the page the exact computed slot..." failed with `Cannot read properties of undefined (reading 'click')`. It failed on main and on every open PR, starting in the late afternoon Denver time.
+
+**Root cause:** the test runs on the real clock, and the picker opens on the first day with room. Late in the day that's today, with a single slot left. At 5:42 PM Denver on 2026-09-23 the first day was 2026-09-23 with one 8:00 PM slot. The test tapped `querySelectorAll('#grid .slot-btn')[1]`, a second slot that didn't exist. Earlier in the day there are several slots, so it passed.
+
+**Fix:** tap the last slot shown instead. Nothing the test checks depends on which slot it is.
+
+**Same shape, found the same night (2026-09-24, 00:25-00:40 UTC):**
+- `booking-manage-link-round3` › "rescheduling updates the remembered visit's time" waited for more than 2 slots, then tapped `[2]`.
+- `booking-flow-picker-and-confirm` › "tapping a time never moves the booking by itself" waited for more than 1, then tapped `[1]`.
+- Both reschedule pickers showed one 9:00 PM slot for today (probed). Both now wait for any slot and tap the last. The saved visit is 48 h out, so any slot still moves it.
+
+**`tests/tools/shift-clock-shell.test.js`**, "Start my day…" and "End my day…":
+- **Why it failed:** fixtures come from the real clock (`Date.now() - 3 h`, a typed time 90 min ago). The shell decides "today" in local time (`thShiftClockLabel`'s `toDateString()`). CI runs in UTC, so from 00:00 to 03:00 UTC the start is yesterday. The title became "Since Sep 23, 9:25 PM" instead of "Since 9:25 PM", and the sheet took another path.
+- **Fix:** before anything else, the file sets `process.env.TZ` to the `Etc/GMT` zone where it is about noon now (`12 - getUTCHours()`, always -11..+12, no DST). Each test file is its own process, and Node and jsdom share the zone, so no Date faking is needed.
+- **Proof:** forced back to UTC at 00:43 UTC, exactly those two tests fail. With the fix, all 14 pass.
+
+**The hang:** a failed assertion skipped the test's own `w.close()`. The page's timers kept the `node --test` child alive, so CI's `test` job sat "in progress" for 40+ minutes instead of failing. An `afterEach` now closes every window the file opened. Forced to UTC, the file fails in 3 s instead of hanging.
+
 ## 2026-09-23 -- Found in passing: saved phone/email don't reach every spot (not fixed)
 
 Found by the features lane while wiring booking/manage-*/404 to `site_content`'s phone/email. The spots below keep the built-in (435) 414-1667 / steve@ address if the owner changes them in `tools/site-content.html`. Nothing is wrong today (the saved values ARE the built-in ones), but a real number change would leave these behind. The editor's "Phone and email" intro now names them, and `tests/site-content/contact-hooks-public.test.js` pins the list of affected pages.
