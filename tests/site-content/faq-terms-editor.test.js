@@ -2,13 +2,23 @@
 // real inline script in jsdom, every Supabase request answered by the
 // real SQL (cms_faq_terms_safe_publish.sql) running in PGlite.
 
-const { test, after } = require('node:test');
+const { test, after, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
 const { createCmsDb, closeAllCmsDbs, asUser, rpc, OWNER_EMAIL, DEV_EMAIL } = require('./cms-db-harness');
 
+// A page keeps working after its test's last assert (a publish reloads the
+// lists and history in the background). Let those requests finish before
+// the next test resets the shared database, and before after() closes it:
+// closing PGlite mid-query never resolves on Node 24, so CI hung.
+const OPEN_WINDOWS = [];
+const IN_FLIGHT = new Set();
+afterEach(async () => {
+  do { await Promise.allSettled([...IN_FLIGHT]); await new Promise(r => setTimeout(r, 20)); } while (IN_FLIGHT.size);
+  while (OPEN_WINDOWS.length) OPEN_WINDOWS.pop().close();
+});
 after(closeAllCmsDbs);
 
 const ROOT = path.join(__dirname, '..', '..');
@@ -31,7 +41,7 @@ const toJson = (rows) => rows.map(r => {
 });
 
 function makeFetch(db, state) {
-  return async (url, opts = {}) => {
+  const answer = async (url, opts = {}) => {
     const u = new URL(url);
     const method = (opts.method || 'GET').toUpperCase();
     state.requests.push({ method, path: u.pathname, body: opts.body || null });
@@ -47,6 +57,12 @@ function makeFetch(db, state) {
     }
     if (method !== 'GET') throw new Error('Unexpected write from the editor: ' + method + ' ' + u.pathname);
     return respond(200, []);
+  };
+  return (url, opts) => {
+    const p = answer(url, opts);
+    IN_FLIGHT.add(p);
+    p.then(() => IN_FLIGHT.delete(p), () => IN_FLIGHT.delete(p));
+    return p;
   };
 }
 
@@ -75,6 +91,7 @@ async function loadEditor({ email = OWNER_EMAIL } = {}) {
     },
   });
   const w = dom.window;
+  OPEN_WINDOWS.push(w);
   const s = w.document.createElement('script');
   s.textContent = DIALOGS_SRC;
   w.document.head.appendChild(s);
