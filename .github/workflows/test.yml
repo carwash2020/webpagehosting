@@ -13,6 +13,10 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # A normal run takes ~7 minutes. Without a limit, a test file whose
+    # process never exits (2026-09-23: a failed shift-clock test left the
+    # page's timers running) held the job for GitHub's 6-hour default.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 

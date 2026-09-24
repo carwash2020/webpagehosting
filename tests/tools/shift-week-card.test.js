@@ -10,6 +10,10 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+// Pinned to a Thursday morning in St. George: the "on shift" test expects
+// Monday to hold only the finished shift, and failed all day every Monday
+// (UTC) when the open shift landed on Monday too. See tests/fixed-clock.js.
+require('../fixed-clock').install();
 
 const TOOLS = path.join(__dirname, '..', '..', 'tools');
 const read = (f) => fs.readFileSync(path.join(TOOLS, f), 'utf8');
