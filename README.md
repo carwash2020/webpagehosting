@@ -5177,3 +5177,16 @@ Verified:
 - the calendar tests fail on `main` in every month but September 2026 (checked through September 2027) and pass with the fix in all of them;
 - the whole suite, run under a faked clock at 18 moments, has nothing else that depends on the hour, day or month. Those moments cover every day of the week, a month boundary, the Nov 1 time change, New Year 2027 and March 2027;
 - full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint`.
+
+## What changed, 2026-09-24 -- The booking picker test taps the second time again
+
+Tests only. Nothing on the site changed.
+
+The "Tests no longer fail every evening and night" change above (#404) fixed `tests/portal/booking-picker-round4.test.js` by tapping the last open time instead of the second. This puts the second time back, which is what the test was written to check, without the evening failure:
+
+- The file's picker windows now run on a fixed clock, the suite's shared weekday morning from `tests/fixed-clock.js` (Thursday, October 1, 9 AM Mountain), so the time of day no longer matters. On the real clock, today has one time left from 5:30 to 6 PM Mountain (3:30 to 4 PM on Sundays), which is why a second time couldn't be tapped.
+- If the picker's first day ever has fewer than two times, the test now says so plainly instead of failing with "Cannot read properties of undefined".
+
+Verified:
+- the original failure reproduced on the real clock at 5:40 PM MDT, and with the clock pinned to 5:45 PM on a weekday and a Saturday and 3:45 PM on a Sunday. The fixed file passes at those times, at every half hour from 1:15 to 10:45 PM on a Wednesday and a Sunday, and on the real clock inside the window;
+- full suite on the branch merged with main (3703/3704 on the real clock at 8:49 to 8:56 PM MDT; the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint` on the changed file.
