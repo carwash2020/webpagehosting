@@ -1115,3 +1115,14 @@ Found by the features lane: `booking-manage-link-round3.test.js` ("rescheduling 
 - **Cause:** the reschedule picker opens on the first day with an open slot. Late in the day that is today, with only the last slot or two left (8:30 PM and 9:00 PM at the time). The test waited for more than 2 `.slot-btn`s and clicked the third, so it timed out. `booking-flow-picker-and-confirm.test.js` ("tapping a time never moves the booking by itself") had the same assumption with a second slot, so it would fail later in the evening, once only one slot is left today.
 - **Not a site bug.** The picker is right to offer today's last slots.
 - **Fix:** both tests wait for any slot and click the last one. The visit in the fixture is 30 hours out, so any open time is a real move. Both files pass.
+
+
+## 2026-09-24 -- Found in passing: two shift-clock tests fail on main from 00:00 to about 03:00 UTC (not fixed)
+
+Found by the features lane during a full-suite run at 00:25 UTC. `tests/tools/shift-clock-shell.test.js` fails 2 of 14 on `main` and on every branch, identically:
+- "Start my day: now, from the day's first job clock, ...": `act(w, 'start-suggested')` is null (`Cannot read properties of null (reading 'textContent')`, around line 130);
+- "End my day: saved at once with an Undo; ...".
+
+**Likely cause:** both run on the real clock in the runner's timezone (UTC in CI and in cloud containers). One puts a job clock 50 minutes ago and expects it to count as today's first; the other starts the shift 3 hours ago and expects "3 h worked today". Shortly after midnight in the runner's timezone those times fall on yesterday, so the app rightly leaves them out. That makes `test.yml` red on every open PR from 6 to about 9 PM in St. George. Other sessions' #404/#405 and this lane's #406 fixed booking tests of the same kind.
+
+**Fix direction (tools lane):** pin the page clock in these tests (override `Date` in the JSDOM window from `beforeParse`) to a fixed midday time. Don't change the app's day logic unless it is really wrong for Steve's Mountain-time use.
