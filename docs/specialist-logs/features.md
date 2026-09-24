@@ -3185,6 +3185,10 @@ Follow-up to the site content editor rebuild (#395), which listed "a gated 'Webs
 
 Tests: `tests/tools/website-nav-entry.test.js` (8). Includes an end-to-end pass through the real `auth.js` with a mocked `account_roles` response. All 8 fail on the old nav, and 5 fail on a fail-open version of the row.
 
+## 2026-09-23 (from the visual lane) -- Home could render from local data before the sync
+
+`workspace.html` renders the dashboard only after `initSyncOnLoad()` (role load + sync pull, two network round trips). So every return to Home shows a skeleton first; before 2026-09-23 it showed empty cards and a made-up "0 jobs today". Rendering once from localStorage at DOMContentLoaded, then again after the pull, would make Home instant in the common case. Not done from the visual lane because it's an init-order change with a permission angle. `getCurrentUserRole()` is null until the role loads, and a few checks treat null as "allowed", so an Employee could briefly see Money Owed.
+
 ## 2026-09-23 -- FAQ/Terms editors: in-place publish, review, undo (PR C of the site-editor work)
 
 Same model as the site_content editor (entry above), for the two list tables.
