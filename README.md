@@ -159,7 +159,7 @@ upside to offset the cost.
 | `tools/runway-dashboard.html` | Personal + business financial runway tracking — debts, income, expenses, month-by-month. Pulls revenue/expenses straight from Finance (`finance.html`), no double entry. |
 | `tools/parts-reference.html` | **Appliance Wiki** — quick lookup for common appliance issues: what part it usually is, the part number, roughly what it costs. |
 | `tools/settings.html` | Account info, display density and color theme, push notifications, tour replay (the tour is a 24-step tutorial as of 2026-09-22 -- every page and tab, about two minutes), password reset, **Backup & Restore** (moved here from the Dashboard on 2026-09-21 — the same full JSON export/import, no hop through another page), sign out. |
-| `tools/dev-tools.html` | Site diagnostics and maintenance utilities, organized into 6 tabs (Health, Access, Session, Notifications, Deploy, Reports) as of 2026-08-25 -- replaced the old scroll-to-anchor nav, which no longer scaled once this page reached 22 panels (now 26, after Booking notification test and the 3 new Reports panels). Access is role-gated (`account_roles` table, see `DISASTER_RECOVERY.md`); an Owner-role account only sees the Access tab (Client Registry, Account Roles), while a Developer-role account sees all 6 tabs. Also supports swiping left/right between tabs on mobile, scoped to the panel content area so it doesn't fight with the tab bar's own horizontal scroll. |
+| `tools/dev-tools.html` | Site diagnostics and maintenance utilities, regrouped on 2026-09-24 into 7 tabs by the question each answers: Health (is anything broken right now), Data (is the business data clean, and can it come back), Sync (this device), Notifications, Ops (deploys, the to-do lists, shortcuts), Reports, and Access. Each tab is split into named sections; live panels are open cards, and the tools you only reach for now and then are collapsed one-line rows. 32 panels. Access is role-gated (`account_roles` table, see `DISASTER_RECOVERY.md`); an account without "Dev Tools (full technical)" (Steve's Owner account) sees only Client registry (Data tab) and Account permissions (Access tab), while a Developer-role account sees all 7 tabs. `#backup` lands on Data &rarr; Backup & restore. Also supports swiping left/right between tabs on mobile, scoped to the panel content area so it doesn't fight with the tab bar's own horizontal scroll. |
 | `tools/site-content.html` | Edits the public site's changeable text and numbers with no deploy: Google star rating and review count, banners, homepage hours, phone, email, FAQ, Terms. Fields are checked as you type, every publish shows live-vs-new first, and **Undo this save** / per-field history put back earlier values (rebuilt 2026-09-23, backed by `cms_publish_content()` / `cms_undo_content()` in `sql/site-content/cms_safe_publish_and_undo.sql`). Reached from **Website** in the sidebar and the More drawer (shown only to accounts with the "Site content" permission, since 2026-09-23) or Dev Tools &rarr; Content; needs that permission. Split out of `dev-tools.html` on 2026-08-20. |
 | `tools/client-detail.html` | Full history for one client (jobs, invoices, quotes, contracts) — reached from workspace.html or job-detail.html, not linked from the main nav directly. |
 | `tools/job-detail.html` | Full detail view for one job (photos, linked invoices, margin) — reached from job-tracker.html or finance.html, not linked from the main nav directly. |
@@ -199,7 +199,7 @@ Most business data (jobs, invoices, contracts, quotes, clients, expenses, income
 
 The real tradeoff that comes with a union merge: it can't tell "this record never existed here" apart from "this record existed here and was deliberately deleted," so a device that hasn't yet pulled a deletion can push its old copy right back and resurrect it. **Fixed with a tombstone per record type that supports deletion** -- every job, client, expense, income entry, contact, contract, invoice, and quote deletion now records one, and every sync pull filters against it. Full detail, the complete list of which record types are covered, and exactly how to extend this to a new one later: see "Deletion resurrection / tombstones" in `DISASTER_RECOVERY.md`.
 
-Deleting something also snapshots it into a separate "Graveyard" (Dev Tools → Session & Sync), so a genuine mistake can actually be restored -- not just prevented from silently reappearing, which is all the tombstones above do. See "Graveyard" in `DISASTER_RECOVERY.md` for the full detail, including the one real limit (a deleted expense's receipt photo isn't recoverable, since that file is gone from cloud storage immediately).
+Deleting something also snapshots it into a separate "Graveyard" (Dev Tools → Data → Get it back), so a genuine mistake can actually be restored -- not just prevented from silently reappearing, which is all the tombstones above do. See "Graveyard" in `DISASTER_RECOVERY.md` for the full detail, including the one real limit (a deleted expense's receipt photo isn't recoverable, since that file is gone from cloud storage immediately).
 
 ## Booking system (added 2026-08-25, replaces Cal.com entirely)
 
@@ -238,7 +238,7 @@ the assistant's GitHub token was never granted):
 - `weekly-business-digest` — Monday mornings, one summary push AND email (jobs completed, invoiced, new leads, outstanding balance, weekly uptime %) rather than a specific alert — trend awareness, not task nagging. The email half (`REPORTS_EMAIL_FROM` secret) is optional and gracefully skips if not configured, without ever blocking the push half.
 - `archive-old-notification-log` — monthly, deletes `notification_log` rows older than 3700 days. That number isn't arbitrary: two of the 11 daily checks use a 3650-day resend interval specifically to nudge only once, ever — retention has to stay longer than the longest resend interval in use, or a "one-time" nudge would silently start repeating once its log row got archived.
 
-**Dev Tools panels** (`tools/dev-tools.html`, organized into 5 tabs as of 2026-08-25 — see the table above) — Storage browser (file counts/sizes across all 3 buckets), Data integrity check (job-photo records vs. actual files, in both directions, plus contact-less leads), Trigger workflows (runs any GitHub Actions workflow on demand via the `trigger-workflow` Edge Function — never a GitHub token in this file), Uptime monitoring (current status, 24h/7d uptime %, recent incidents), and Recent bookings (last 20 bookings regardless of conversion status).
+**Dev Tools panels** (`tools/dev-tools.html`, 7 tabs since the 2026-09-24 regroup — see the table above) — Storage browser (file counts/sizes across all 3 buckets), Data integrity check (job-photo records vs. actual files, in both directions, plus contact-less leads), Trigger workflows (runs any GitHub Actions workflow on demand via the `trigger-workflow` Edge Function — never a GitHub token in this file), Uptime monitoring (current status, 24h/7d uptime %, recent incidents), and Recent bookings (last 20 bookings regardless of conversion status).
 
 ## ⚠️ Do not delete
 
@@ -5013,3 +5013,39 @@ Tests:
 - `tests/tools/website-nav-entry.test.js` (8, new): a site-content manager sees the row. Anyone without the permission never does: not before the permissions load, not after, not with every other permission. Two of the tests run the real `auth.js` against an `account_roles` response. All 8 fail without this change.
 - `tests/tools/app-shell-v2.test.js`: the More drawer's row list now includes Website (hidden for that test's account).
 - `tests/tools/job-tracker-calendar-view.test.js`: the sidebar now has 13 destinations, not 12.
+
+## What changed, 2026-09-24 -- Dev Tools: regrouped so the thing you need is quick to find
+
+Tools only (the Dev Tools page). A layout and cleanup pass: no check, button, or list works any differently.
+
+The page had 32 panels under 6 tabs, and several tabs mixed panels that didn't belong together (Known issues, Graveyard, and Flagged pages under Notifications; Storage browser under Deploy; Client registry under Access). Each panel now sits with the others that answer the same question:
+
+- **Health** -- is anything broken right now? Run full health check (moved here from above every tab), then Uptime monitoring, Cron health, and Client errors, which load by themselves, plus Live consistency check and Advisor health.
+- **Data** -- is the business data clean, and can it come back? Data quality check and Data integrity check; the Graveyard and Backup & restore; and what's stored: Client registry, Appliance Wiki health, Storage browser.
+- **Sync** -- this device: Session & sync, Sync conflicts, Local data snapshot, Service worker & cache, Device info.
+- **Notifications** -- the push and booking tests, Push notification history, Recent bookings.
+- **Ops** -- Deploy history, Regression checker, What's new; the to-do lists (Known issues, Flagged pages); Trigger workflows and Quick links.
+- **Reports** is unchanged. **Access** is now just Account permissions.
+
+Inside each tab:
+
+- **Named sections.** Each tab is split into a few labelled groups, such as "Live status" and "Run a check", instead of one stack of identical cards.
+- **Live panels are cards, tools are rows.** Panels that show live information stay open. Tools you only reach for now and then are collapsed one-line rows with a short hint, such as "Data quality check: Duplicate client names, jobs missing a date or client". Click a row to open it. It stays open for the rest of the browser session. Four panels that used to be always open are now rows: Appliance Wiki health, Local data snapshot, Service worker & cache, and Device info.
+
+Also:
+
+- **Steve's view.** An account without "Dev Tools (full technical)" now sees two tabs: Data (Client registry only) and Access (Account permissions). Both panels used to share the Access tab.
+- **Links keep working.** `#backup` (from Settings and the Dashboard) now opens the Data tab at Backup & restore. The old `#nav-content` link still goes to the site content page.
+- **Phones.** The tab bar used to stick out 2px past each screen edge, so the page could be dragged sideways. It now fits.
+- The page's own help text, two panels' "?" texts, and the Dev Tools locations in `DISASTER_RECOVERY.md` now match the new layout.
+
+Verified:
+
+- full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint`;
+- in headless Chromium, dark and light, desktop and 390px: every tab, the Owner view, and `#backup`. Clicked through the old and new pages side by side (full health check, a data check, a "?" on a collapsed row, the permissions editor, backup download, the Graveyard list): same results on both;
+- `npm run fix-versions` re-stamped `dev-tools-shared.js` where it loads and bumped the tools service worker's cache name.
+
+Tests:
+
+- `tests/dev-tools/dev-tools-regroup.test.js` (9, new): the exact tab, section, and panel layout; all 32 panels present once; every element a panel writes into still on the page; the full health check on the Health tab; `#backup` landing on Data; every row wired the same way; no empty section heading for an Owner; no `<section>` elements; the phone tab bar width. 8 of the 9 fail against the old page. The 9th (every element still present) is a guard and passes on both.
+- `tests/dev-tools/dev-tools-tabs.test.js` and `tests/dev-tools/dev-tools-reports.test.js`: updated for the new tab names and order, and for the Owner now seeing Data and Access.
