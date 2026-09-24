@@ -1664,3 +1664,16 @@ Asked for a branded loading state between tool pages, and a smooth return to Wor
   - For a restricted role, the Money tab shows at first paint and hides when the role loads. That's fail-open by design (`applyMoneyPermissions`), but it's a small shell flicker.
 
 <!-- Add new entries above this line -->
+
+## 2026-09-24 -- Dev Tools regroup: 7 tabs by question, named sections, cards vs. rows
+
+Layout/cleanup only; every panel's markup moved as-is (a script lifted each block and re-emitted it, then a check confirmed 14 panels byte-identical, 13 differing only by the added hint line, 5 with the deliberate changes below).
+
+- **Grouping is by the question a panel answers**, not who can see it. Health (broken right now?), Data (clean, and can it come back?), Sync (this device), Notifications, Ops (deploys, to-do lists, shortcuts), Reports, Access. Client registry moved Access -> Data: it had only been on Access because it and Account permissions were the two Owner-visible panels. Owner now sees Data (Client registry only) + Access, lands on Data.
+- **Two visual tiers inside a tab.** Always-open panels stay full cards (17px title, divider). `is-collapsible` panels are the tools: a full grid row each (so expanding never reflows neighbours), 15px title, no divider while closed, a one-line `.dev-panel-hint`. Made 4 more panels collapsible (Wiki health, Local data snapshot, SW & cache, Device info) using the exact existing wiring. Don't make Cron health, Flagged pages, or Backup & restore collapsible without updating tests that pin their exact markup (`onclick="openDevInfo('cronhealth')"`, the Flagged pages class string, `id="backup"` class string).
+- **Section labels are `div role="group"`, never `<section>`**: styles.css gives every `section` 88px padding and a `section + section` border (the public site's layout). Hit this on the first render -- huge gaps and a stray rule between sections.
+- **Hint letter-spacing**: `.dev-panel-heading` carries `.8px` letter-spacing for its all-caps title; the hint needs `letter-spacing: normal` or it looks tracked-out.
+- **Source order trap**: the page's phone `@media` block sits above the collapsible-panel rules, so phone overrides for rows had to go in a second `@media` block at the end of the `<style>`.
+- **Phone gutter is 12px** (`body.th-tool-page` in styles-tools.css beats this page's own `body { padding: 44px 14px }`). The tab bar's `-14px` margin overflowed 2px each side; now `-12px`. At 320px the 8-item bar still scrolls inside itself, same as before.
+- Moved "Run full health check" from above every tab into the Health tab's lead row (it's a Health action; Owner no longer sees a button for checks they can't see).
+- `initDevToolsTabs()` now looks for visible `.dev-panel`s inside a tab (tabs hold sections now) and hides a section whose panels are all hidden. `#backup` switches to `data`.

@@ -143,8 +143,8 @@ ALTER TABLE public.<table> ADD CONSTRAINT <name>_unique UNIQUE (<label column>);
 ## Scenario 5: Supabase itself has a problem (data missing, RLS blocking everything, project inaccessible)
 
 1. **Check Supabase's own status page** first: https://status.supabase.com
-2. **RLS blocking something that should work:** Dev Tools → Session &
-   Sync now has a live "Supabase right now" check (separate from the
+2. **RLS blocking something that should work:** Dev Tools → Sync →
+   Session & sync now has a live "Supabase right now" check (separate from the
    last sync attempt) -- confirms actual reachability. If reachable
    but a specific action fails, get the exact error from the browser's
    Network tab (Response body, not just the status code) -- a 401 with
@@ -337,7 +337,7 @@ the live site the way a real visitor would.
 
 ## Scenario 9: A sync stops working / data won't save across devices
 
-1. Dev Tools → Session & Sync → check "Last sync attempt" and its
+1. Dev Tools → Sync → Session & sync → check "Last sync attempt" and its
    History dropdown -- shows the actual error, not just pass/fail.
 2. **A real historical bug, already fixed, worth knowing about:**
    `pushSync()` used to include `keepalive: true`, which caps the total
@@ -348,7 +348,7 @@ the live site the way a real visitor would.
    failure ever recurs, check whether some *other* growing piece of
    data got added to the sync bundle without being capped.
 3. Each device's own local data can be inspected directly: Dev Tools →
-   Local Data Snapshot.
+   Sync → Local data snapshot (a collapsed row -- click it to open).
 4. If the specific symptom is "a deleted record keeps coming back"
    rather than data failing to save at all, that's not this scenario --
    see "Deletion resurrection / tombstones" below instead.
@@ -635,8 +635,8 @@ itself, in a separate synced key (`th_graveyard`), so a genuine
 mistake can actually be undone rather than merely prevented from
 silently reappearing.
 
-**Where it lives:** Dev Tools → Session & Sync tab → "Graveyard"
-panel. Lists every deleted job, client, expense, contact, and so on
+**Where it lives:** Dev Tools → Data tab → "Get it back" →
+"Graveyard" panel. Lists every deleted job, client, expense, contact, and so on
 (newest first), each with a Restore button and a permanent-delete
 button. Capped at the most recent 200 entries -- `mergeGraveyard()` in
 `sync.js` re-applies this cap after merging two devices' copies
