@@ -245,13 +245,11 @@ test('manage-booking.html: rescheduling updates the remembered visit\'s time', a
   await until(() => w.document.getElementById('startRescheduleBtn'));
   const before = JSON.parse(w.localStorage.getItem(KEY)).start;
   w.document.getElementById('startRescheduleBtn').click();
-  // The picker opens on the first day with room. Late in the day that is
-  // today with only one or two times left (6:45 PM Denver on 2026-09-23: a
-  // single 9:00 PM slot), so a fixed third slot didn't always exist, and the
-  // test failed every evening on main. Tap the last one shown: nothing below
-  // depends on which slot it is. #404 made the same fix for the portal
-  // picker's test.
-  await until(() => w.document.querySelectorAll('.slot-btn').length > 0);
+  // The picker opens on the first day with room, on the real clock: late in
+  // the day that's today with one slot left (2026-09-23, 6:40 PM Denver: a
+  // single 9:00 PM slot), so waiting for a third slot never ended. Any slot
+  // moves the visit -- the saved one is two days out -- so tap the last.
+  await until(() => w.document.querySelector('.slot-btn'));
   const slots = w.document.querySelectorAll('.slot-btn');
   slots[slots.length - 1].click();
   w.document.getElementById('confirmRescheduleBtn').click();

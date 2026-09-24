@@ -5014,6 +5014,16 @@ Tests:
 - `tests/tools/app-shell-v2.test.js`: the More drawer's row list now includes Website (hidden for that test's account).
 - `tests/tools/job-tracker-calendar-view.test.js`: the sidebar now has 13 destinations, not 12.
 
+## What changed, 2026-09-23 -- Tests no longer fail every evening and night
+
+Tests only; nothing on the site or in the tools changed. Five tests depended on the time of day, so from late afternoon (Denver time) until about 10 PM, CI failed on main and on every open PR:
+- **Three booking tests** tapped the second or third time slot of the first day with room. Late in the day that day is today, with only one slot left. They now tap the last slot shown:
+  - `tests/portal/booking-picker-round4.test.js`;
+  - `tests/booking/booking-manage-link-round3.test.js`;
+  - `tests/booking/booking-flow-picker-and-confirm.test.js`.
+- **Two Start my day / End my day tests** (`tests/tools/shift-clock-shell.test.js`) built shifts that started "3 hours ago". From midnight to 3 AM UTC (CI runs in UTC) that start was yesterday, so they failed. That file now runs in a fixed-offset time zone where it's always about midday.
+- **A failing test there also hung CI for 40+ minutes** instead of failing. Its open page kept the test run alive. Every page that file opens is now closed after each test, pass or fail.
+
 ## What changed, 2026-09-23 -- Tools: page changes no longer flash, and going back Home no longer looks like the app starting up
 
 Tools (`tools/`) only: `styles-tools.css`, `tools-nav-pwa.js`, `workspace.html`, and `runway-dashboard.html`'s own copy of the shell CSS. No page's data or logic changes.
@@ -5034,13 +5044,9 @@ Nothing waits longer than before. In the same measurement, a complete first fram
 **Not tested here:** Safari. The hold is standard CSS (view transitions, `:has()`, `:only-child`) that Safari 18.2+ supports, but only Chromium could be run here. Browsers without view transitions navigate exactly as before.
 
 Verified:
-- full suite: the only failure is the known `check-links.py` sandbox-proxy test;
+- full suite: the only failure is the known `check-links.py` sandbox-proxy test. The clock-dependent booking and shift-clock tests that failed overnight were fixed in #404, which merged first;
 - `check-consistency`, `check-undefined-vars`, `check-visual-snapshot`, `eslint`;
 - frame-by-frame screencasts in Chromium at 390px and 1440px, in dark and light themes, with and without reduced motion.
-
-**Three tests fixed on the way, all of which also failed on `main`:**
-- `tests/tools/shift-clock-shell.test.js` builds times like "3 hours ago" and expects them to be today. Just after midnight they weren't, so "Start my day" and "End my day" failed. The failure also left a ticking clock behind, so `npm test` hung until CI's 6-hour limit, on every PR, every night. The file now runs in a fixed-offset time zone where it's about noon.
-- `tests/booking/booking-manage-link-round3.test.js`'s reschedule test tapped a third time slot, and `tests/booking/booking-flow-picker-and-confirm.test.js`'s "tapping a time never moves the booking" test tapped a second one. Late in the day, neither slot exists. Both now tap the last slot shown, the same fix #404 makes for the portal picker's test.
 
 Tests:
 - `tests/tools/page-handoff.test.js` (18, new): the hold rules and their reduced-motion override in both stylesheets, the shell adding its class in one synchronous pass, the tap feedback and loading line in jsdom (including back-button restores and a cancelled leave), the once-per-session welcome, and the Dashboard skeletons, which the first render always replaces.

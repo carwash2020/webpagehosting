@@ -1096,11 +1096,22 @@ Fixed in `sql/infra/fix_cron_health_false_positives.sql`: a `cron_tracked_http_r
 
 Tests: `tests/dev-tools/cron-health-scoped-to-cron.test.js` (8, new).
 
-## 2026-09-23 (from the visual lane) -- booking picker test fails late in the day (manage-booking half fixed 2026-09-24)
+## 2026-09-23 -- Clock-dependent tests failed every evening and night (and one hung CI)
 
-`tests/portal/booking-picker-round4.test.js` "tapping a time hands the page the exact computed slot..." clicks `#grid .slot-btn` index `[1]` on the first day shown. Late in the day there's only one slot left (it failed at 23:50 UTC on clean `main` too, `Cannot read properties of undefined (reading 'click')`). It looks like it needs a pinned clock or a day with two open slots. Not touched from the visual lane.
-Same class: `tests/booking/booking-manage-link-round3.test.js` "manage-booking.html: rescheduling updates the remembered visit's time" clicks `.slot-btn` index `[2]` and waits for more than 2 slots. It passed at 23:40 UTC and failed at 00:24 UTC (condition never became true), on clean `main` too, and under TZ=America/Denver as well, so the page computes the slots in its own timezone. **Fixed 2026-09-24** in the visual lane's page hand-off PR, because it was blocking that PR: it taps the last slot shown, the same approach #404 takes for the picker test. `tests/booking/booking-flow-picker-and-confirm.test.js`'s "tapping a time never moves the booking by itself" test had the same shape (a second slot, `[1]`) and failed on CI at 00:51 UTC. It got the same fix. With #404, that should be every test that assumed a slot count.
+**Symptom:** `tests/portal/booking-picker-round4.test.js` "tapping a time hands the page the exact computed slot..." failed with `Cannot read properties of undefined (reading 'click')`. It failed on main and on every open PR, starting in the late afternoon Denver time.
 
-## 2026-09-24 (from the visual lane) -- shift-clock tests fail, then hang the whole suite, just after midnight (fixed)
+**Root cause:** the test runs on the real clock, and the picker opens on the first day with room. Late in the day that's today, with a single slot left. At 5:42 PM Denver on 2026-09-23 the first day was 2026-09-23 with one 8:00 PM slot. The test tapped `querySelectorAll('#grid .slot-btn')[1]`, a second slot that didn't exist. Earlier in the day there are several slots, so it passed.
 
-`tests/tools/shift-clock-shell.test.js` builds times relative to now ("a job clock 50 min ago", "a shift started 3 h ago") and expects them to be today. Between 00:00 and about 03:00 in the runner's timezone (UTC on GitHub Actions), "Start my day" and "End my day" fail, and it's the same on clean `main`. The failed assertion throws before `w.close()`, so that window's 1-second clock `setInterval` keeps Node alive and `npm test` never finishes. CI would sit until the 6-hour job limit. With `TZ=America/Denver` (18:15 then), all 14 pass in 1.8s. **Fixed** in the same PR, since it blocked it too: the file now sets `process.env.TZ` to an `Etc/GMT` zone where it's about noon when the run starts. jsdom shares Node's timezone, and each test file is its own process. It passed at 00:43 UTC. Still worth doing: `try/finally { w.close() }` in these tests, so a future failure can't hang the run.
+**Fix:** tap the last slot shown instead. Nothing the test checks depends on which slot it is.
+
+**Same shape, found the same night (2026-09-24, 00:25-00:40 UTC):**
+- `booking-manage-link-round3` › "rescheduling updates the remembered visit's time" waited for more than 2 slots, then tapped `[2]`.
+- `booking-flow-picker-and-confirm` › "tapping a time never moves the booking by itself" waited for more than 1, then tapped `[1]`.
+- Both reschedule pickers showed one 9:00 PM slot for today (probed). Both now wait for any slot and tap the last. The saved visit is 48 h out, so any slot still moves it.
+
+**`tests/tools/shift-clock-shell.test.js`**, "Start my day…" and "End my day…":
+- **Why it failed:** fixtures come from the real clock (`Date.now() - 3 h`, a typed time 90 min ago). The shell decides "today" in local time (`thShiftClockLabel`'s `toDateString()`). CI runs in UTC, so from 00:00 to 03:00 UTC the start is yesterday. The title became "Since Sep 23, 9:25 PM" instead of "Since 9:25 PM", and the sheet took another path.
+- **Fix:** before anything else, the file sets `process.env.TZ` to the `Etc/GMT` zone where it is about noon now (`12 - getUTCHours()`, always -11..+12, no DST). Each test file is its own process, and Node and jsdom share the zone, so no Date faking is needed.
+- **Proof:** forced back to UTC at 00:43 UTC, exactly those two tests fail. With the fix, all 14 pass.
+
+**The hang:** a failed assertion skipped the test's own `w.close()`. The page's timers kept the `node --test` child alive, so CI's `test` job sat "in progress" for 40+ minutes instead of failing. An `afterEach` now closes every window the file opened. Forced to UTC, the file fails in 3 s instead of hanging.
