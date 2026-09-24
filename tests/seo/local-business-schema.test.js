@@ -55,9 +55,15 @@ for (const page of LANDING_PAGES) {
   });
 }
 
-test('the real internal contract/invoice address (used for actual paperwork, not public SEO) is untouched and still 84790', () => {
+test('the registered street address stays internal: Business Compliance keeps it, but no client document prints it', () => {
+  // 2026-09-24: the LLC's registered address is the owner's home, so the
+  // contract PDF no longer prints it either -- every generated document
+  // (all drawn by js/pdf-layout.js) shows the city line only.
   const contractGen = fs.readFileSync(repo('tools', 'contract-generator.html'), 'utf8');
   const workspace = fs.readFileSync(repo('tools', 'workspace.html'), 'utf8');
-  assert.match(contractGen, /124 N 2750 E, St\. George, UT 84790/);
+  const pdfLayout = fs.readFileSync(repo('js', 'pdf-layout.js'), 'utf8');
   assert.match(workspace, /124 N 2750 E, St\. George, UT 84790/);
+  assert.doesNotMatch(contractGen, /2750 E/);
+  assert.doesNotMatch(pdfLayout, /2750 E/);
+  assert.match(pdfLayout, /cityLine: 'St\. George, Utah 84790'/);
 });

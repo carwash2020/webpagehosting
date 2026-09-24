@@ -34,7 +34,7 @@ const TOOLS_DIR = path.join(__dirname, '..', '..', 'tools');
 // names (once it's running as this window's own real parsed <script>,
 // not itself eval'd) need the latter. Explicit window.X = X assignments,
 // same fix already used elsewhere in this suite (see finance-split.test.js).
-const PDF_LAYOUT_SRC = fs.readFileSync(path.join(TOOLS_DIR, 'pdf-layout.js'), 'utf8')
+const PDF_LAYOUT_SRC = fs.readFileSync(path.join(TOOLS_DIR, '..', 'js', 'pdf-layout.js'), 'utf8')
   + '\nwindow.PDF_COLORS = PDF_COLORS; window.pdfLoadImageAsDataURL = pdfLoadImageAsDataURL; window.drawPdfHeader = drawPdfHeader; window.drawPdfLineItemsTable = drawPdfLineItemsTable; window.drawPdfTotalsBlock = drawPdfTotalsBlock; window.drawPdfTotalHighlight = drawPdfTotalHighlight; window.drawPdfFooter = drawPdfFooter; window.pdfWrapAndDraw = pdfWrapAndDraw;';
 
 const SHARED_SCRIPTS = [

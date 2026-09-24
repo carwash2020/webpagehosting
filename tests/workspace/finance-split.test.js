@@ -27,7 +27,7 @@ const INVOICE_GENERATOR_PATH = path.join(__dirname, '..', '..', 'tools', 'invoic
 // generateQuotePDF() all the way through now needs this evaluated into
 // the same window first, same technique already used elsewhere in this
 // suite for business-hours.js.
-const PDF_LAYOUT_SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'pdf-layout.js'), 'utf8')
+const PDF_LAYOUT_SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'js', 'pdf-layout.js'), 'utf8')
   // const/function declarations run via indirect eval() (window.eval(...),
   // rather than the bare eval identifier) create bindings in the realm's
   // global lexical scope, but that is NOT the same thing as becoming an

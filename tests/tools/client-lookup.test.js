@@ -85,11 +85,13 @@ test('the PDF export has the same defensive "still loading" check as invoice-gen
 
 test('the dispute PDF includes all four real sections: invoices, estimates, work orders, and the full text of signed authorizations', () => {
   const fnMatch = HTML.match(/async function downloadClientDisputeReport\(email\)[\s\S]*?\n  \}\n/);
-  assert.match(fnMatch[0], /addLine\('Invoices \(' \+ p\.invoices\.length \+ '\)'/);
-  assert.match(fnMatch[0], /addLine\('Estimates \(' \+ p\.quotes\.length \+ '\)'/);
-  assert.match(fnMatch[0], /addLine\('Work Orders \(' \+ p\.workOrders\.length \+ '\)'/);
-  assert.match(fnMatch[0], /addLine\('Signed Authorizations \(' \+ p\.authorizations\.length \+ '\)'/);
-  assert.match(fnMatch[0], /doc\.splitTextToSize\(a\.authorization_text \|\| '', 500\)/);
+  // 2026-09-24: laid out with the shared js/pdf-layout.js tables.
+  assert.match(fnMatch[0], /section\('Invoices', p\.invoices\.length,/);
+  assert.match(fnMatch[0], /section\('Estimates', p\.quotes\.length,/);
+  assert.match(fnMatch[0], /section\('Work orders', p\.workOrders\.length,/);
+  assert.match(fnMatch[0], /section\('Signed authorizations', p\.authorizations\.length,/);
+  // The full authorization text, wrapped by the table, not truncated.
+  assert.match(fnMatch[0], /sub: \[a\.authorization_text \|\| ''\]/);
 });
 
 test('the CSP was widened to allow jsPDF from the same CDN already trusted on invoice-generator.html, and the script tag matches its exact SRI hash and async loading', () => {

@@ -75,6 +75,7 @@
 <!-- Client Lookup dispute-evidence export (2026-09-05), requested
      directly -- same jsPDF version/SRI hash/async loading pattern
      already proven on invoice-generator.html. -->
+<script src="/js/pdf-layout.js?v=6a1ecc363f" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -807,59 +808,85 @@
     const { jsPDF } = window.jspdf;
     const p = await loadClientLookupProfile(email);
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
-    let y = 50;
-    const left = 46;
-    const lineHeight = 16;
+    const pageW = doc.internal.pageSize.getWidth();
 
-    function addLine(text, size = 11, bold = false) {
-      if (y > 740) { doc.addPage(); y = 50; }
-      doc.setFont('helvetica', bold ? 'bold' : 'normal');
-      doc.setFontSize(size);
-      doc.text(String(text), left, y);
-      y += lineHeight;
+    // 2026-09-24 redesign: the shared /js/pdf-layout.js document system.
+    // This report goes to a card processor as dispute evidence, so it
+    // carries the same letterhead as the invoice it's defending, and
+    // every record type is a real table instead of loose text lines.
+    const generated = new Date().toLocaleString();
+    let y = await drawPdfHeader(doc, pageW, 'ACCOUNT SUMMARY', null, {
+      ref: p.name || p.email,
+      meta: [{ label: 'Generated', value: generated }],
+    });
+
+    const clientLines = [{ text: p.name || '(no name on file)', bold: true }, p.email];
+    if (p.phone) clientLines.push('Phone: ' + p.phone);
+    y = pdfDrawInfoColumns(doc, { y, columns: [
+      { label: 'Client', lines: clientLines },
+      { label: 'Account', lines: [
+        { text: 'Total spent (paid invoices): ' + pdfMoney(p.totalSpent), bold: true },
+        p.invoices.length + ' invoices  \u00b7  ' + p.quotes.length + ' estimates  \u00b7  ' + p.workOrders.length + ' work orders',
+        p.authorizations.length + ' signed authorizations',
+      ] },
+    ] });
+
+    function section(title, count, tableOpts) {
+      y = pdfEnsureSpace(doc, y + 6, 70);
+      y = pdfSectionLabel(doc, title + ' (' + count + ')', y, { after: 4 });
+      y = drawPdfTable(doc, Object.assign({ y, emptyText: 'None on file.' }, tableOpts)) + 18;
     }
-    function addSectionGap() { y += 8; }
 
-    addLine('Client Account Summary -- Triple H Enterprises', 15, true);
-    addLine('Generated ' + new Date().toLocaleString());
-    addSectionGap();
-    addLine((p.name || '(no name on file)') + '  --  ' + p.email, 12, true);
-    if (p.phone) addLine('Phone: ' + p.phone);
-    addLine('Total spent (paid invoices): $' + p.totalSpent.toFixed(2), 12, true);
-    addSectionGap();
+    section('Invoices', p.invoices.length, {
+      columns: [
+        { key: 'num', label: 'Invoice #', width: 0.3 },
+        { key: 'date', label: 'Date', width: 0.25, muted: true },
+        { key: 'status', label: 'Status', width: 0.2 },
+        { key: 'total', label: 'Total', width: 0.25, align: 'right', bold: true },
+      ],
+      rows: p.invoices.map(inv => ({
+        num: '#' + (inv.invoice_number || '?'),
+        date: inv.invoice_date || '',
+        status: { text: inv.paid ? 'PAID' : 'UNPAID', color: inv.paid ? PDF_COLORS.GREEN : PDF_COLORS.ORANGE_DARK },
+        total: pdfMoney(inv.total),
+      })),
+    });
 
-    addLine('Invoices (' + p.invoices.length + ')', 13, true);
-    if (!p.invoices.length) addLine('None on file.');
-    for (const inv of p.invoices) {
-      addLine('#' + (inv.invoice_number || '?') + '  ' + (inv.invoice_date || '') + '  $' + (Number(inv.total) || 0).toFixed(2) + '  ' + (inv.paid ? 'PAID' : 'UNPAID'));
-    }
-    addSectionGap();
+    section('Estimates', p.quotes.length, {
+      columns: [
+        { key: 'num', label: 'Estimate #', width: 0.3 },
+        { key: 'date', label: 'Date', width: 0.25, muted: true },
+        { key: 'status', label: 'Status', width: 0.2 },
+        { key: 'total', label: 'Total', width: 0.25, align: 'right', bold: true },
+      ],
+      rows: p.quotes.map(q => ({ num: '#' + (q.quote_number || '?'), date: q.quote_date || '', status: q.status || '', total: pdfMoney(q.total) })),
+    });
 
-    addLine('Estimates (' + p.quotes.length + ')', 13, true);
-    if (!p.quotes.length) addLine('None on file.');
-    for (const q of p.quotes) {
-      addLine('#' + (q.quote_number || '?') + '  ' + (q.quote_date || '') + '  $' + (Number(q.total) || 0).toFixed(2) + '  ' + (q.status || ''));
-    }
-    addSectionGap();
+    section('Work orders', p.workOrders.length, {
+      columns: [
+        { key: 'title', label: 'Request', width: 0.55 },
+        { key: 'date', label: 'Submitted', width: 0.25, muted: true },
+        { key: 'status', label: 'Status', width: 0.2 },
+      ],
+      rows: p.workOrders.map(wo => ({ title: wo.title || '(untitled)', date: wo.created_at ? new Date(wo.created_at).toLocaleDateString() : '', status: wo.status || '' })),
+    });
 
-    addLine('Work Orders (' + p.workOrders.length + ')', 13, true);
-    if (!p.workOrders.length) addLine('None on file.');
-    for (const wo of p.workOrders) {
-      addLine((wo.title || '(untitled)') + '  ' + (wo.created_at ? new Date(wo.created_at).toLocaleDateString() : '') + '  ' + (wo.status || ''));
-    }
-    addSectionGap();
+    // Authorization text is a full sentence -- it wraps inside its own
+    // row rather than running off the page.
+    section('Signed authorizations', p.authorizations.length, {
+      columns: [
+        { key: 'what', label: 'Authorization', width: 0.62 },
+        { key: 'when', label: 'Signed', width: 0.2, muted: true },
+        { key: 'amount', label: 'Amount', width: 0.18, align: 'right' },
+      ],
+      rows: p.authorizations.map(a => ({
+        what: { text: 'Signed by ' + (a.signer_name || '?'), bold: true, sub: [a.authorization_text || ''] },
+        when: a.created_at ? new Date(a.created_at).toLocaleString() : '',
+        amount: a.amount ? pdfMoney(a.amount) : '\u2014',
+      })),
+    });
 
-    addLine('Signed Authorizations (' + p.authorizations.length + ')', 13, true);
-    if (!p.authorizations.length) addLine('None on file.');
-    for (const a of p.authorizations) {
-      addLine((a.created_at ? new Date(a.created_at).toLocaleString() : '') + '  --  signed by ' + (a.signer_name || '?') + (a.amount ? '  $' + Number(a.amount).toFixed(2) : ''), 11, true);
-      // jsPDF's own splitTextToSize wraps long authorization text to
-      // the page width instead of running off the right edge --
-      // authorization_text is a full sentence, not a short label.
-      const wrapped = doc.splitTextToSize(a.authorization_text || '', 500);
-      for (const line of wrapped) addLine(line);
-      addSectionGap();
-    }
+    pdfFinalize(doc, {});
 
     doc.save('Client-Summary-' + email.replace(/[^a-z0-9]/gi, '-') + '.pdf');
   }

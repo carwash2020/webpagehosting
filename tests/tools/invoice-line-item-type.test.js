@@ -77,14 +77,14 @@ test('the shared PDF line-items table renderer appends the unit abbreviation to 
   // (2026-09-08, U15/W18) into the shared /tools/pdf-layout.js, also used
   // by job-detail.html's job sheet and contract-generator.html -- this
   // checks that one real implementation, wherever it now lives.
-  const PDF_LAYOUT = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'pdf-layout.js'), 'utf8');
+  const PDF_LAYOUT = fs.readFileSync(path.join(__dirname, '..', '..', 'js', 'pdf-layout.js'), 'utf8');
   const fnMatch = PDF_LAYOUT.match(/function drawPdfLineItemsTable\(doc, \{[\s\S]*?\n\}\n/);
   assert.ok(fnMatch, 'expected to isolate drawPdfLineItemsTable() in pdf-layout.js');
   // The shared renderer expects each item's unitLabel precomputed
   // (rather than calling back into invoice-generator.html's own
   // lineItemUnitLabel(), which it has no access to) -- the two PDF-
   // drawing call sites (generatePDF/generateQuotePDF) build that.
-  assert.match(fnMatch[0], /doc\.text\(String\(item\.qty\) \+ \(item\.unitLabel \? ' ' \+ item\.unitLabel : ''\), 40 \+ tableW \* 0\.68, y \+ 14, \{ align: 'center' \}\);/);
+  assert.match(fnMatch[0], /qty: String\(item\.qty\) \+ \(item\.unitLabel \? ' ' \+ item\.unitLabel : ''\),/);
   assert.match(HTML, /getLineItems\(\)\.map\(item => \(\{ \.\.\.item, unitLabel: lineItemUnitLabel\(item\.type\) \}\)\)/, 'expected generatePDF() to precompute unitLabel before calling the shared table renderer');
   assert.match(HTML, /getQuoteLineItems\(\)\.map\(item => \(\{ \.\.\.item, unitLabel: lineItemUnitLabel\(item\.type\) \}\)\)/, 'expected generateQuotePDF() to precompute unitLabel before calling the shared table renderer');
 });

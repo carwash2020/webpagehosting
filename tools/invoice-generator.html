@@ -67,7 +67,7 @@
      masthead/footer/totals-block drawing code below moved into this
      shared file, now also used by job-detail.html's job sheet and
      contract-generator.html. -->
-<script src="/tools/pdf-layout.js?v=dc66e8a810" defer></script>
+<script src="/js/pdf-layout.js?v=6a1ecc363f" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -1800,7 +1800,7 @@
   }
 
   // PDF_COLORS, loadImageAsDataURL, drawPdfHeader, drawPdfLineItemsTable,
-  // and drawPdfTotalsBlock all now live in the shared /tools/pdf-layout.js
+  // and drawPdfTotalsBlock all now live in the shared /js/pdf-layout.js
   // (U15/W18, 2026-09-08) -- also used by job-detail.html's job sheet and
   // contract-generator.html, so the one real masthead/footer/totals-block
   // design lives in one place instead of three drifting copies of it.
@@ -1834,72 +1834,54 @@
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
     const pageW = doc.internal.pageSize.getWidth();
 
-    const { ORANGE, ORANGE_DARK, GRAY } = PDF_COLORS;
-
+    // 2026-09-24 redesign: every block below comes from the shared
+    // /js/pdf-layout.js document system (letterhead, title block, info
+    // columns, table, totals, note boxes, footer), the same pieces the
+    // estimate, receipt, job sheet, contract and portal PDFs use.
+    //
     // Type-aware title (2026-09-02): a client seeing "DEPOSIT INVOICE"
     // knows a balance is still coming; "BALANCE DUE" says this closes
     // out the job. Plain "INVOICE" for the standard case, unchanged.
     const INVOICE_TYPE_LABELS = { standard: 'INVOICE', deposit: 'DEPOSIT INVOICE', balance: 'BALANCE DUE', progress: 'PROGRESS PAYMENT' };
     const invoiceTypeVal = (document.getElementById('invoiceType') || {}).value || 'standard';
-    await drawPdfHeader(doc, pageW, INVOICE_TYPE_LABELS[invoiceTypeVal] || 'INVOICE');
-
-    let y = 130;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...GRAY);
-    doc.text('INVOICE #', 40, y);
-    doc.text('DATE', 40 + 150, y);
-    doc.text('TERMS', 40 + 300, y);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
-    doc.text(document.getElementById('invoiceNumber').value, 40, y + 14);
+    const invoiceNumberVal = document.getElementById('invoiceNumber').value;
     const invoiceDateIso = document.getElementById('invoiceDate').value;
-    const invoiceDateDisplay = invoiceDateIso
-      ? new Date(invoiceDateIso + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-      : '';
-    doc.text(invoiceDateDisplay, 40 + 150, y + 14);
-    doc.text(document.getElementById('invoiceTerms').value, 40 + 300, y + 14);
-
-    y += 40;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...ORANGE_DARK);
-    doc.text('BILL TO', 40, y);
-    y += 16;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(20, 20, 20);
-    doc.text(document.getElementById('clientName').value || '(client name)', 40, y);
-    y += 14;
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(...GRAY);
-    doc.text(document.getElementById('clientAddress').value || '', 40, y);
-    y += 16;
-
-    getContacts().forEach(c => {
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(20, 20, 20);
-      doc.text(`${c.name}${c.title ? ' — ' + c.title : ''}`, 40, y);
-      y += 12;
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...GRAY);
-      doc.text(`${c.email}   |   ${c.phone}`, 40, y);
-      y += 16;
+    const longDate = (d) => d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const invoiceDateDisplay = invoiceDateIso ? longDate(new Date(invoiceDateIso + 'T00:00:00')) : '';
+    const invoiceTermsVal = document.getElementById('invoiceTerms').value;
+    // Due date from the same terms rule the invoice list and Dashboard
+    // use for "overdue" (data-layer.js thInvoiceDueDate), so the date
+    // printed here is the date the app will later hold the client to.
+    const dueDate = (invoiceDateIso && typeof thInvoiceDueDate === 'function') ? thInvoiceDueDate({ date: invoiceDateIso, terms: invoiceTermsVal }) : null;
+    let y = await drawPdfHeader(doc, pageW, INVOICE_TYPE_LABELS[invoiceTypeVal] || 'INVOICE', null, {
+      ref: invoiceNumberVal,
+      meta: [
+        { label: 'Invoice #', value: invoiceNumberVal },
+        { label: 'Date', value: invoiceDateDisplay },
+        { label: 'Due', value: dueDate ? longDate(dueDate) : '' },
+        { label: 'Terms', value: invoiceTermsVal },
+      ],
     });
 
-    y += 6;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...ORANGE_DARK);
-    doc.text('JOB', 40, y);
-    y += 16;
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
-    doc.text(document.getElementById('jobDescription').value || '', 40, y);
-    y += 26;
+    const billTo = [{ text: document.getElementById('clientName').value || '(client name)', bold: true }];
+    const clientAddressVal = document.getElementById('clientAddress').value;
+    if (clientAddressVal) billTo.push(clientAddressVal);
+    getContacts().forEach(c => {
+      billTo.push({ text: `${c.name}${c.title ? ' \u2014 ' + c.title : ''}`, muted: true });
+      const reach = [c.email, c.phone].filter(Boolean).join('  \u00b7  ');
+      if (reach) billTo.push({ text: reach, muted: true });
+    });
+    y = pdfDrawInfoColumns(doc, { y, columns: [
+      { label: 'Bill to', lines: billTo },
+      { label: 'Job', lines: [document.getElementById('jobDescription').value || ''] },
+    ] });
 
-    // A soft divider separates the client/job block above from the
-    // line-items table below, instead of relying on whitespace alone.
-    doc.setDrawColor(220, 220, 220);
-    doc.line(40, y - 10, pageW - 40, y - 10);
-
-    // The shared drawPdfLineItemsTable() (tools/pdf-layout.js) expects
+    // The shared drawPdfLineItemsTable() (js/pdf-layout.js) expects
     // each item's own unitLabel precomputed rather than reaching back
     // into this page's line-item-type helper.
     const items = getLineItems().map(item => ({ ...item, unitLabel: lineItemUnitLabel(item.type) }));
     const pageH = doc.internal.pageSize.getHeight();
-    // Leaves room below for the totals block and footer that render
-    // after the table -- a row landing past this line triggers a new
-    // page rather than drawing off the bottom of this one.
-    const tableBottom = pageH - 170;
-    const table = drawPdfLineItemsTable(doc, { y, items, pageW, pageH, tableBottom });
+    const table = drawPdfLineItemsTable(doc, { y, items, pageW, pageH });
     y = table.y;
     const { subtotal, taxableSubtotal } = table;
 
@@ -1912,16 +1894,10 @@
     const total = Math.round(Math.max(0, subtotal + tax - discount) * 100) / 100;
     y = drawPdfTotalsBlock(doc, { y, pageW, subtotal, tax, discount, discountLabel, totalLabel: 'TOTAL DUE' });
 
-    y += 37;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...ORANGE_DARK);
-    doc.text('PAYMENT', 40, y);
-    y += 18;
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
-    const paymentLines = doc.splitTextToSize(document.getElementById('paymentText').value, 340);
-    doc.text(paymentLines, 40, y);
-    y += paymentLines.length * 13 + 6;
-    doc.setFontSize(8.5); doc.setTextColor(...GRAY);
-    doc.text('Please reference invoice ' + document.getElementById('invoiceNumber').value + ' with payment.', 40, y);
+    y = pdfDrawNoteBox(doc, { y: y + 10, label: 'Payment', lines: [
+      document.getElementById('paymentText').value,
+      { text: 'Please reference invoice ' + invoiceNumberVal + ' with payment.', small: true },
+    ] });
 
     // U17 fix (High-Impact Upgrades, 2026-09-07): "the thirty-day labour
     // warranty is already tracked internally... stating it on the job
@@ -1938,31 +1914,15 @@
         if (!isNaN(completionDate.getTime())) {
           const warrantyEnd = new Date(completionDate);
           warrantyEnd.setDate(warrantyEnd.getDate() + 30);
-          const warrantyDisplay = warrantyEnd.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-          y += 20;
-          doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...ORANGE_DARK);
-          doc.text('Covered by our 30-day labor warranty through ' + warrantyDisplay + '.', 40, y);
+          y = pdfDrawNoteBox(doc, { y, label: 'Warranty', tone: 'green',
+            text: 'Covered by our 30-day labor warranty through ' + longDate(warrantyEnd) + '.' });
         }
       }
     }
 
-    // Footer final pass, matching contract-generator.html's own shape:
-    // total page count is only known now that every line item and the
-    // warranty line have been placed, so this loops back over every
-    // page already drawn and adds the shared footer -- including a
-    // real "Page X of Y" (item #52, 2026-08-19) once an invoice has
-    // enough line items to actually paginate. Previously this contact-
-    // line footer only ever drew on the LAST page (a real, if minor,
-    // gap on the rare multi-page invoice) -- repeating it on every page
-    // is a strict improvement, not a behavior change worth guarding.
-    const totalInvoicePages = doc.internal.getNumberOfPages();
-    for (let p = 1; p <= totalInvoicePages; p++) {
-      doc.setPage(p);
-      drawPdfFooter(doc, pageW, pageH, {
-        message: 'Thank you for choosing Triple H Enterprises. Work guaranteed.',
-        pageInfo: totalInvoicePages > 1 ? { pageNum: p, totalPages: totalInvoicePages } : null,
-      });
-    }
+    // Footer final pass: every page gets the footer with a real "Page X
+    // of Y" (item #52), and the closing line goes on the last page only.
+    pdfFinalize(doc, { message: 'Thank you for choosing Triple H Enterprises. Work guaranteed.' });
 
     const filename = 'TripleH_Invoice_' + (document.getElementById('clientName').value || 'Client').replace(/[^a-z0-9]/gi, '_') + '.pdf';
     // logInvoice() now RETURNS the entry it created (2026-09-02 fix --
@@ -2637,52 +2597,36 @@
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
     const pageW = doc.internal.pageSize.getWidth();
 
-    const { ORANGE, ORANGE_DARK, GRAY } = PDF_COLORS;
-    await drawPdfHeader(doc, pageW, 'ESTIMATE');
-
-    let y = 130;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...GRAY);
-    doc.text('ESTIMATE #', 40, y);
-    doc.text('DATE', 40 + 150, y);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
-    doc.text(document.getElementById('quoteNumber').value, 40, y + 14);
+    // 2026-09-24 redesign: same shared document system as the invoice
+    // above -- an estimate and an invoice from this business now differ
+    // only where their content does.
+    const quoteNumberVal = document.getElementById('quoteNumber').value;
     const quoteDateIso = document.getElementById('quoteDate').value;
     const quoteDateDisplay = quoteDateIso
       ? new Date(quoteDateIso + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
       : '';
-    doc.text(quoteDateDisplay, 40 + 150, y + 14);
+    let y = await drawPdfHeader(doc, pageW, 'ESTIMATE', null, {
+      ref: quoteNumberVal,
+      meta: [
+        { label: 'Estimate #', value: quoteNumberVal },
+        { label: 'Date', value: quoteDateDisplay },
+      ],
+    });
 
-    y += 40;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...ORANGE_DARK);
-    doc.text('FOR', 40, y);
-    y += 16;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(20, 20, 20);
-    doc.text(document.getElementById('quoteClientName').value || '(client name)', 40, y);
-    y += 14;
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(...GRAY);
-    doc.text(document.getElementById('quoteClientAddress').value || '', 40, y);
-    y += 22;
+    const forLines = [{ text: document.getElementById('quoteClientName').value || '(client name)', bold: true }];
+    const quoteClientAddressVal = document.getElementById('quoteClientAddress').value;
+    if (quoteClientAddressVal) forLines.push(quoteClientAddressVal);
+    y = pdfDrawInfoColumns(doc, { y, columns: [
+      { label: 'Prepared for', lines: forLines },
+      { label: 'Job', lines: [document.getElementById('quoteJobDescription').value || ''] },
+    ] });
 
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...ORANGE_DARK);
-    doc.text('JOB', 40, y);
-    y += 16;
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
-    doc.text(document.getElementById('quoteJobDescription').value || '', 40, y);
-    y += 26;
-
-    doc.setDrawColor(220, 220, 220);
-    doc.line(40, y - 10, pageW - 40, y - 10);
-
-    // The shared drawPdfLineItemsTable() (tools/pdf-layout.js) expects
+    // The shared drawPdfLineItemsTable() (js/pdf-layout.js) expects
     // each item's own unitLabel precomputed rather than reaching back
     // into this page's line-item-type helper.
     const items = getQuoteLineItems().map(item => ({ ...item, unitLabel: lineItemUnitLabel(item.type) }));
     const pageH = doc.internal.pageSize.getHeight();
-    // Same pagination guard as the invoice table (item #52, 2026-08-19)
-    // -- previously missing here, so a long enough estimate could
-    // silently draw line items off the bottom of the page.
-    const tableBottom = pageH - 170;
-    const table = drawPdfLineItemsTable(doc, { y, items, pageW, pageH, tableBottom });
+    const table = drawPdfLineItemsTable(doc, { y, items, pageW, pageH });
     y = table.y;
     const { subtotal, taxableSubtotal } = table;
 
@@ -2695,24 +2639,13 @@
     const total = Math.round(Math.max(0, subtotal + tax - discount) * 100) / 100;
     y = drawPdfTotalsBlock(doc, { y, pageW, subtotal, tax, discount, discountLabel, totalLabel: 'EST. TOTAL' });
 
-    y += 37;
-    doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor(...GRAY);
-    const disclaimerLines = doc.splitTextToSize(
-      'This is an estimate only, not a bill. Actual final cost may vary based on parts and labor actually required once work begins.',
-      pageW - 80
-    );
-    doc.text(disclaimerLines, 40, y);
+    // The estimate disclaimer is kept word for word -- it's what makes
+    // this document an estimate rather than a bill -- but it's now a
+    // labelled terms box instead of a loose italic paragraph.
+    y = pdfDrawNoteBox(doc, { y: y + 10, label: 'About this estimate', tone: 'neutral',
+      text: 'This is an estimate only, not a bill. Actual final cost may vary based on parts and labor actually required once work begins.' });
 
-    // Footer final pass, same shape as generatePDF()'s own -- a real
-    // "Page X of Y" once an estimate's line items paginate (the same
-    // fix that added the pagination guard just above applies here too).
-    const totalQuotePages = doc.internal.getNumberOfPages();
-    for (let p = 1; p <= totalQuotePages; p++) {
-      doc.setPage(p);
-      drawPdfFooter(doc, pageW, pageH, {
-        pageInfo: totalQuotePages > 1 ? { pageNum: p, totalPages: totalQuotePages } : null,
-      });
-    }
+    pdfFinalize(doc, {});
 
     const filename = 'TripleH_Estimate_' + (document.getElementById('quoteClientName').value || 'Client').replace(/[^a-z0-9]/gi, '_') + '.pdf';
     const newEntry = logQuote({ subtotal, tax, discount, total });

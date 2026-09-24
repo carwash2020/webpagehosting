@@ -104,12 +104,14 @@ const SHARED_SCRIPT_FILES = [
   // The portal app-shell shared helper (2026-09-04) -- skeleton
   // loading templates, loaded on every page that shows a list.
   'portal/portal-app.js',
-  // The shared jsPDF masthead/footer/totals-block renderer (U15/W18,
-  // 2026-09-08) -- loaded by invoice-generator.html, the job sheet on
-  // job-detail.html, and contract-generator.html. (Written without any
+  // The shared jsPDF document system -- letterhead, title block, tables,
+  // totals, stamps, footer (U15/W18 2026-09-08; moved from tools/ to js/
+  // 2026-09-24 so the client portal can load it too). Loaded by
+  // invoice-generator.html, job-detail.html, contract-generator.html,
+  // clients.html, and portal dashboard/quotes/jobs. (Written without any
   // apostrophes deliberately, same reason as the note above on
   // portal/push-notifications.js.)
-  'tools/pdf-layout.js',
+  'js/pdf-layout.js',
   // Shared drawn-signature capture (2026-09-22) -- a plain root-level
   // file (not under tools/ or portal/) loaded by portal/contracts.html,
   // portal/dashboard.html, portal/settings.html, and

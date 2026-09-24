@@ -5317,3 +5317,16 @@ Workspace tools only. Reported directly: the "A new version of Triple H is avail
 Verified: the full test suite, `check-consistency`, `check-undefined-vars` and `eslint`. In headless Chromium with a profile closed and reopened between 12 steps, the card appears only when a real change ships while a page is open. Also looked at in dark and light, at 320px, 390px and 1280px. `npm run fix-versions` bumped the tools service worker's cache name.
 
 Tests: `tests/tools/app-update-card.test.js` (11, new; 9 fail on the previous code). One device, several opens: repeat opens with nothing deployed, the first install, an open right after a deploy, a cache-only bump, a real change while open, an inline-script-only change, resuming the app, offline, and Update/Later/X.
+
+## What changed, 2026-09-24 -- Every client PDF now shares one branded letterhead
+
+Invoices, estimates, receipts, portal quotes, job sheets, contracts, the portal service history and the dispute account summary are all drawn by one shared file, `js/pdf-layout.js`. It moved from `tools/` so the portal can load it without any internal tool script. The four portal/Clients PDFs that had hand-copied mastheads now use it too.
+
+- **Print-first design.** A white letterhead replaces the old solid black band: logo, two-tone wordmark, "Handyman & Appliance Repair", tagline, and a contact block. Then a big Anton title with a number/date/due/terms grid, one wrapping table, a totals block that never splits from its subtotal, boxed notes for payment/warranty/estimate terms, and a footer with "Page X of Y" on every page. Page 2+ gets a compact running header.
+- **Brand fonts embedded.** Anton, Oswald Medium and Archivo (regular/semibold), Latin subsets in `fonts/pdf/` (~98 KB, OFL). Fetched once per page load; if that fails the PDF falls back to Helvetica with the same layout. The Workspace service worker precaches them.
+- **Stamps.** Portal receipts get a PAID stamp and approved/declined portal quotes an APPROVED/DECLINED one. The stamp is drawn in reserved space beside the totals, so it can't cover text. This replaces the fixed-position circle and its `y >= 255` workaround.
+- **Invoices show a Due date** computed from the terms (`thInvoiceDueDate`).
+- **Long text wraps.** Job descriptions, addresses and line-item descriptions used to be drawn as a single line and could run past the margin.
+- **No street address on any document.** The registered address is the owner's home. Contracts used to print it; now every document shows the city line only. Business Compliance keeps it internally.
+- **The "not attorney-reviewed" note is no longer printed on contracts.** It was a note to the owner, not the client. It stays on the Contract Generator page itself.
+- Checked by rendering every document type with real jsPDF from the real page code and inspecting the output, including a 3-page invoice, 2-page contracts and a 3-page service history.

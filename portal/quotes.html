@@ -119,6 +119,7 @@
      business-hours.js above it. If it ever fails to load, this page's
      original one-day-at-a-time picker runs instead. -->
 <script src="/js/booking-flow.js?v=adf1e6bf91"></script>
+<script src="/js/pdf-layout.js?v=6a1ecc363f" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
 <style>
   body { background: #0a0a0a; max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
@@ -426,28 +427,6 @@
     `;
   }
 
-  // Same self-contained image-to-dataURL helper portal/dashboard.html
-  // uses for its invoice PDF, reimplemented here rather than shared --
-  // same isolation reason as escapeHtml above.
-  function loadImageAsDataURL(src, timeoutMs = 3000) {
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error('Image load timed out')), timeoutMs);
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        clearTimeout(timer);
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        resolve(canvas.toDataURL('image/png'));
-      };
-      img.onerror = () => { clearTimeout(timer); reject(new Error('Image failed to load')); };
-      img.src = src;
-    });
-  }
-
   // Client-facing quote PDF (2026-09-16) -- closes the "no standalone
   // quote PDF" gap noted in docs/CLIENT-PORTAL.md. A quote today only
   // ever exists as this page's own on-screen card; a client who wants
@@ -468,122 +447,50 @@
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
     const pageW = doc.internal.pageSize.getWidth();
 
-    const NAVY = [26, 26, 26];
-    const ORANGE = [224, 123, 30];
-    const ORANGE_DARK = [179, 95, 19];
-    const GRAY = [90, 90, 90];
-    const LIGHTGRAY = [236, 236, 236];
-    const GREEN = [76, 175, 120];
-    const RED = [200, 90, 80];
-
-    doc.setFillColor(...NAVY);
-    doc.rect(0, 0, pageW, 100, 'F');
-
-    try {
-      const logoData = await loadImageAsDataURL('/images/logo-signature-orange.webp');
-      doc.addImage(logoData, 'PNG', 40, 15, 65, 60);
-    } catch (e) { /* logo optional if it fails to load */ }
-
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(255, 255, 255);
-    doc.text('TRIPLE H', 118, 45);
-    doc.setTextColor(...ORANGE);
-    doc.text('ENTERPRISES', 118 + doc.getTextWidth('TRIPLE H ') + 4, 45);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(207, 207, 207);
-    doc.text('Honesty.  Hustle.  Helpfulness.', 118, 62);
-
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(...ORANGE);
-    doc.text('QUOTE', pageW - 40, 30, { align: 'right' });
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(255, 255, 255);
-    doc.text('(435) 414-1667', pageW - 40, 46, { align: 'right' });
-    doc.text('steve@triplehenterprisesllc.biz', pageW - 40, 58, { align: 'right' });
-    doc.text('www.triplehenterprisesllc.biz', pageW - 40, 70, { align: 'right' });
-
-    let y = 130;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...GRAY);
-    doc.text('QUOTE #', 40, y);
-    doc.text('DATE', 40 + 150, y);
-    doc.text('STATUS', 40 + 300, y);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
-    doc.text(q.quote_number, 40, y + 14);
-    doc.text(formatDate(q.quote_date), 40 + 150, y + 14);
-    const statusColor = q.status === 'approved' ? GREEN : q.status === 'declined' ? RED : ORANGE;
+    // 2026-09-24 redesign: the shared /js/pdf-layout.js document system,
+    // same letterhead, table and summary as the invoice/receipt PDF on
+    // Invoices and the estimate PDF from the Workspace.
     const statusText = q.status === 'approved' ? 'APPROVED' : q.status === 'declined' ? 'DECLINED' : 'PENDING';
-    doc.setTextColor(...statusColor); doc.setFont('helvetica', 'bold');
-    doc.text(statusText, 40 + 300, y + 14);
+    const statusTone = q.status === 'approved' ? 'green' : q.status === 'declined' ? 'red' : 'orange';
+    let y = await drawPdfHeader(doc, pageW, 'QUOTE', null, {
+      ref: q.quote_number,
+      meta: [
+        { label: 'Quote #', value: q.quote_number },
+        { label: 'Date', value: formatDate(q.quote_date) },
+        { label: 'Status', value: statusText, tone: statusTone },
+      ],
+    });
 
-    y += 40;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...ORANGE_DARK);
-    doc.text('PREPARED FOR', 40, y);
-    y += 16;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(20, 20, 20);
-    doc.text(q.client_name || q.client_email, 40, y);
-    y += 14;
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(...GRAY);
-    doc.text(q.client_email, 40, y);
-    y += 26;
-
-    if (q.description) {
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...ORANGE_DARK);
-      doc.text('JOB', 40, y);
-      y += 16;
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
-      const jobLines = doc.splitTextToSize(q.description, pageW - 80);
-      doc.text(jobLines, 40, y);
-      y += jobLines.length * 13 + 12;
-    }
+    y = pdfDrawInfoColumns(doc, { y, columns: [
+      { label: 'Prepared for', lines: [{ text: q.client_name || q.client_email, bold: true }, { text: q.client_email, muted: true }] },
+      { label: 'Job', lines: [q.description || ''] },
+    ] });
 
     const items = Array.isArray(q.line_items) ? q.line_items : [];
-    const tableW = pageW - 80;
-
-    function drawTableHeaderBand(atY) {
-      doc.setFillColor(...NAVY);
-      doc.rect(40, atY - 14, tableW, 20, 'F');
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
-      doc.text('DESCRIPTION', 46, atY);
-      doc.text('QTY', 40 + tableW * 0.78, atY, { align: 'center' });
-      doc.text('AMOUNT', pageW - 46, atY, { align: 'right' });
-    }
-
     if (items.length) {
-      drawTableHeaderBand(y);
-      y += 8;
-      const pageH = doc.internal.pageSize.getHeight();
-      const tableBottom = pageH - 140;
-      let stripe = false;
-      items.forEach(item => {
-        const rowH = 22;
-        if (y + rowH > tableBottom) {
-          doc.addPage();
-          y = 60;
-          drawTableHeaderBand(y);
-          y += 8;
-          stripe = false;
-        }
-        if (stripe) { doc.setFillColor(...LIGHTGRAY); doc.rect(40, y, tableW, rowH, 'F'); }
-        stripe = !stripe;
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
-        doc.text(String(item.desc || ''), 46, y + 14);
-        doc.text(String(item.qty ?? ''), 40 + tableW * 0.78, y + 14, { align: 'center' });
-        doc.text('$' + Number(item.amount || 0).toFixed(2), pageW - 46, y + 14, { align: 'right' });
-        y += rowH;
+      y = drawPdfTable(doc, {
+        y,
+        columns: [
+          { key: 'desc', label: 'Description', width: 0.64 },
+          { key: 'qty', label: 'Qty', width: 0.14, align: 'center', muted: true },
+          { key: 'amount', label: 'Amount', width: 0.22, align: 'right', bold: true },
+        ],
+        rows: items.map(item => ({ desc: String(item.desc || ''), qty: String(item.qty ?? ''), amount: pdfMoney(item.amount) })),
       });
-      doc.setDrawColor(200, 200, 200);
-      doc.line(40, y, pageW - 40, y);
-      y += 24;
-    } else {
-      y += 10;
     }
 
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(20, 20, 20);
-    doc.text('ESTIMATED TOTAL', pageW - 220, y);
-    doc.setTextColor(...ORANGE);
-    doc.text('$' + Number(q.total || 0).toFixed(2), pageW - 40, y, { align: 'right' });
+    // An approved or declined quote carries the decision as a stamp;
+    // a pending one doesn't pretend to be decided.
+    y = pdfDrawSummary(doc, {
+      y: y + 10,
+      total: { label: 'ESTIMATED TOTAL', value: pdfMoney(q.total) },
+      stamp: q.status === 'approved' || q.status === 'declined' ? { text: statusText, tone: statusTone } : null,
+    });
 
-    y += 30;
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...GRAY);
-    doc.text('This is an estimate, not a final invoice -- the amount billed may change if the job scope', 40, y);
-    y += 12;
-    doc.text('does change. Questions? Call (435) 414-1667 or email steve@triplehenterprisesllc.biz.', 40, y);
+    y = pdfDrawNoteBox(doc, { y: y + 10, label: 'About this quote', tone: 'neutral',
+      text: 'This is an estimate, not a final invoice -- the amount billed may change if the job scope does change. Questions? Call (435) 414-1667 or email steve@triplehenterprisesllc.biz.' });
+
+    pdfFinalize(doc, {});
 
     doc.save('Quote-' + q.quote_number + '.pdf');
   }

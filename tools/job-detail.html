@@ -67,7 +67,7 @@
 <!-- U15/W18 fix (2026-09-08): the shared masthead/footer/totals-block
      renderer, also used by invoice-generator.html and
      contract-generator.html. -->
-<script src="/tools/pdf-layout.js?v=dc66e8a810" defer></script>
+<script src="/js/pdf-layout.js?v=6a1ecc363f" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -669,7 +669,7 @@
   // values here is what keeps the two documents looking related.
   // ---------------------------------------------------------------------------
   // PDF_COLORS and drawPdfHeader now live in the shared
-  // /tools/pdf-layout.js (U15/W18, 2026-09-08) -- the same masthead
+  // /js/pdf-layout.js (U15/W18, 2026-09-08; moved from /tools/ 2026-09-24) -- the same masthead
   // invoice-generator.html and contract-generator.html use.
   //
   // The photo loader below stays local: it needs JPEG-with-quality for
@@ -710,40 +710,27 @@
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ unit: 'pt', format: 'letter' });
       const pageW = doc.internal.pageSize.getWidth();
-      const { ORANGE, ORANGE_DARK, GRAY } = PDF_COLORS;
-
-      await drawPdfHeader(doc, pageW, 'JOB SHEET');
-
-      let y = 130;
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...GRAY);
-      doc.text('JOB', 40, y);
-      doc.text('COMPLETED', 40 + 260, y);
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(20, 20, 20);
-      doc.text(j.title || '', 40, y + 16);
+      // 2026-09-24 redesign: the shared /js/pdf-layout.js document
+      // system, same letterhead/footer as the invoice and contract.
       const completedDisplay = j.date
         ? new Date(j.date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
         : '';
-      doc.text(completedDisplay, 40 + 260, y + 16);
+      let y = await drawPdfHeader(doc, pageW, 'JOB SHEET', null, {
+        subtitle: j.title || '',
+        meta: [{ label: 'Completed', value: completedDisplay }],
+      });
 
-      y += 40;
       if (j.client || j.address) {
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...ORANGE_DARK);
-        doc.text('CUSTOMER', 40, y);
-        y += 16;
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); doc.setTextColor(20, 20, 20);
-        if (j.client) { doc.text(j.client, 40, y); y += 14; }
-        if (j.address) { doc.setFontSize(9.5); doc.setTextColor(...GRAY); doc.text(j.address, 40, y); y += 14; }
-        y += 8;
+        const custLines = [];
+        if (j.client) custLines.push({ text: j.client, bold: true });
+        if (j.address) custLines.push(j.address);
+        y = pdfDrawInfoColumns(doc, { y, columns: [{ label: 'Customer', lines: custLines }] });
       }
 
       if (j.notes) {
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...ORANGE_DARK);
-        doc.text('WHAT WE DID', 40, y);
-        y += 16;
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
-        const notesLines = doc.splitTextToSize(j.notes, pageW - 80);
-        doc.text(notesLines, 40, y);
-        y += notesLines.length * 13 + 10;
+        y = pdfEnsureSpace(doc, y, 40);
+        y = pdfSectionLabel(doc, 'What we did', y);
+        y = pdfDrawParagraph(doc, { y, text: j.notes, size: 10, color: PDF_COLORS.INK }) + 12;
       }
 
       // Part(s) replaced -- linkedExpenses already carries the real part
@@ -752,19 +739,14 @@
       // field invented just for this PDF.
       const partRows = bundle.linkedExpenses.filter(e => e.partNumber && e.partNumber.trim());
       if (partRows.length) {
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...ORANGE_DARK);
-        doc.text('PART' + (partRows.length > 1 ? 'S' : '') + ' REPLACED', 40, y);
-        y += 16;
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
-        partRows.forEach(e => {
-          doc.setTextColor(20, 20, 20);
-          doc.text(e.desc || 'Part', 40, y);
-          doc.setFontSize(9); doc.setTextColor(...GRAY);
-          doc.text('Part #: ' + e.partNumber, 40, y + 12);
-          doc.setFontSize(10);
-          y += 28;
-        });
-        y += 4;
+        y = drawPdfTable(doc, {
+          y,
+          columns: [
+            { key: 'desc', label: 'Part' + (partRows.length > 1 ? 's' : '') + ' replaced', width: 0.66 },
+            { key: 'part', label: 'Part #', width: 0.34, muted: true },
+          ],
+          rows: partRows.map(e => ({ desc: e.desc || 'Part', part: e.partNumber })),
+        }) + 22;
       }
 
       // Before/after photos, two per row, newest-fetched order (the same
@@ -780,23 +762,22 @@
         } catch (e) { /* photos are optional -- the sheet still has real value without them */ }
       }
       if (photos.length) {
-        const pageH = doc.internal.pageSize.getHeight();
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...ORANGE_DARK);
-        doc.text('PHOTOS', 40, y);
-        y += 14;
-        const imgW = (pageW - 80 - 16) / 2;
+        const L = 48;
+        const imgW = (pageW - L * 2 - 16) / 2;
         const imgH = imgW * 0.72;
+        y = pdfEnsureSpace(doc, y, 20 + imgH + 16);
+        y = pdfSectionLabel(doc, 'Photos', y, { after: 10 });
         let col = 0;
         for (const p of photos) {
           if (!p.url) continue;
-          if (y + imgH + 16 > pageH - 90) { doc.addPage(); y = 60; col = 0; }
-          const x = 40 + col * (imgW + 16);
+          if (col === 0) y = pdfEnsureSpace(doc, y, imgH + 18);
+          const x = L + col * (imgW + 16);
           try {
             const dataUrl = await jsLoadImageAsDataURL(p.url);
             doc.addImage(dataUrl, 'JPEG', x, y, imgW, imgH);
           } catch (e) { /* one failed photo doesn't block the rest of the sheet */ }
           if (p.type === 'before' || p.type === 'after') {
-            doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...GRAY);
+            pdfSetFont(doc, 'label', 7.5, PDF_COLORS.MUTED);
             doc.text(p.type.toUpperCase(), x, y + imgH + 11);
           }
           col++;
@@ -817,29 +798,11 @@
           const warrantyEnd = new Date(completionDate);
           warrantyEnd.setDate(warrantyEnd.getDate() + 30);
           const warrantyDisplay = warrantyEnd.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-          const pageH = doc.internal.pageSize.getHeight();
-          if (y + 40 > pageH - 90) { doc.addPage(); y = 60; }
-          doc.setFillColor(...PDF_COLORS.ORANGE_TINT);
-          doc.roundedRect(40, y, pageW - 80, 32, 4, 4, 'F');
-          doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...ORANGE_DARK);
-          doc.text('Covered by our 30-day labor warranty through ' + warrantyDisplay + '.', 52, y + 20);
-          y += 46;
+          y = pdfDrawNoteBox(doc, { y, label: 'Warranty', tone: 'green', text: 'Covered by our 30-day labor warranty through ' + warrantyDisplay + '.' });
         }
       }
 
-      // Footer final pass, same shape invoice-generator.html and
-      // contract-generator.html use -- a job sheet with enough photos
-      // to paginate gets the footer (and a real "Page X of Y") on
-      // every page, not just the last one.
-      const jobSheetPageH = doc.internal.pageSize.getHeight();
-      const totalJobSheetPages = doc.internal.getNumberOfPages();
-      for (let p = 1; p <= totalJobSheetPages; p++) {
-        doc.setPage(p);
-        drawPdfFooter(doc, pageW, jobSheetPageH, {
-          message: 'Thank you for choosing Triple H Enterprises. If we did right by you, a quick Google review means a lot.',
-          pageInfo: totalJobSheetPages > 1 ? { pageNum: p, totalPages: totalJobSheetPages } : null,
-        });
-      }
+      pdfFinalize(doc, { message: 'Thank you for choosing Triple H Enterprises. If we did right by you, a quick Google review means a lot.' });
 
       const filename = 'TripleH_JobSheet_' + (j.title || 'Job').replace(/[^a-z0-9]/gi, '_') + '.pdf';
       if (typeof sharePdfOrDownload === 'function') {
