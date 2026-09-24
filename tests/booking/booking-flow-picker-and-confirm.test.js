@@ -568,6 +568,13 @@ test('manage-booking.html: tapping a time never moves the booking by itself -- i
   });
   await waitForCondition(() => w.document.getElementById('startRescheduleBtn'));
   w.document.getElementById('startRescheduleBtn').click();
+  await waitForCondition(() => w.document.querySelectorAll('.slot-btn').length > 0);
+  // The picker opens on the first day with room, on the real clock. From
+  // 6:30 to 7 PM Mountain (4:30 to 5 on Sundays) that's today with one of
+  // this 45-minute visit's times left, so move on to the next open day.
+  if (w.document.querySelectorAll('.slot-btn').length < 2) {
+    Array.from(w.document.querySelectorAll('.date-btn')).find((b) => b.getAttribute('aria-disabled') === 'false' && !b.classList.contains('is-selected')).click();
+  }
   await waitForCondition(() => w.document.querySelectorAll('.slot-btn').length > 1);
   w.document.querySelectorAll('.slot-btn')[1].click();
   await waitFor(30);
