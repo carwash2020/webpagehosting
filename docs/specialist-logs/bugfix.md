@@ -1128,3 +1128,24 @@ Found by the features lane while wiring booking/manage-*/404 to `site_content`'s
 ## 2026-09-24 (from the visual lane, not fixed) -- Dev Tools' Graveyard list never fills in
 
 Found while regrouping `tools/dev-tools.html` (visual-only PR, so left as-is). `renderGraveyard()` is only ever called from inside `restoreFromGraveyard()` and `permanentlyDeleteFromGraveyard()` -- nothing calls it on page load, on tab switch, or on pull-to-refresh, so `#graveyardList` stays empty and there is no Restore button to press even when `th_graveyard` has entries. The init comment in `proceed()` ("renders lazily on demand ... whenever it's actually opened") describes an open/expand trigger that no longer exists; the panel isn't collapsible. Confirmed in headless Chromium with a seeded `th_graveyard`: blank until `renderGraveyard()` is called by hand, then it lists the entry with Restore. Likely fix: call `renderGraveyard()` in `proceed()` next to `renderKnownIssues()`, plus a test that loads the page with a seeded graveyard.
+
+## 2026-09-24 -- Follow-up to #404: the week card failed every Monday; CI jobs get a time limit
+
+#404 fixed four of the five clock-dependent test files that a libfaketime sweep turned up. Its commit message covers those. Two gaps remained.
+
+- **`tests/tools/shift-week-card.test.js` failed every Monday (UTC).**
+  - **What it does:** the "on shift" test adds a finished Monday shift (9 h) plus an open shift started "2 hours ago". It then expects `Hours this week: Mon 9 h worked`.
+  - **Why Monday breaks it:** the runner's day is Monday from about 8 PM Sunday to 8 PM Monday Mountain. The open shift is then also on Monday, so the card correctly says 11 h. The file already guarded one assertion with `if (sinceMonday > 0)`, but not that one.
+  - **Why #404's approach doesn't cover it:** a fixed-offset TZ fixes the hour, not the weekday.
+  - **Fix:** the new `tests/fixed-clock.js` pins that file's `Date` to a ticking Thursday 9 AM Mountain. `main` fails it at Sep 28 03:30Z, 07:00Z, 12:00Z, 18:00Z and 23:30Z, Sep 29 00:30Z, Oct 5 and Nov 2; with the pin it passes at all of those and the rest.
+- **`test.yml` had no `timeout-minutes`.** A test file whose process never exits held the job for GitHub's 6-hour default; #404 fixed the one known cause. The `test` job now stops at 20 minutes (a normal run is about 7).
+
+**Sweep coverage:** every test file ran under libfaketime at 12 moments on 2026-09-23/24:
+- weekday evenings, late night, 5 AM and noon Mountain;
+- a Saturday morning;
+- Sunday afternoon and night;
+- early Monday UTC.
+
+After this change it also ran at Monday midday, a Tuesday, the Sep/Oct month boundary and the Nov 1 DST change. Nothing else fails only at some hours or days.
+
+- **Sweep gotcha:** a failure that shows at *every* moment, noon included, is the harness, not the clock. Running 4 worktrees at once pushed `check-undefined-vars.test.js` past a 120 s per-file limit, and tests that edit real files left worktrees dirty. Always compare against a noon baseline from the same run.

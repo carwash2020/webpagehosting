@@ -5163,3 +5163,15 @@ Tests:
 
 - `tests/dev-tools/dev-tools-regroup.test.js` (9, new): the exact tab, section, and panel layout; all 32 panels present once; every element a panel writes into still on the page; the full health check on the Health tab; `#backup` landing on Data; every row wired the same way; no empty section heading for an Owner; no `<section>` elements; the phone tab bar width. 8 of the 9 fail against the old page. The 9th (every element still present) is a guard and passes on both.
 - `tests/dev-tools/dev-tools-tabs.test.js` and `tests/dev-tools/dev-tools-reports.test.js`: updated for the new tab names and order, and for the Owner now seeing Data and Access.
+
+## What changed, 2026-09-24 -- CI no longer fails every Monday, and a stuck test run stops after 20 minutes
+
+Tests and CI only; nothing on the site changes. Follows #404, which fixed the evening failures.
+
+- **The Dashboard week-card test failed all day every Monday.** In UTC, the timezone CI runs in, that's roughly 8 PM Sunday to 8 PM Monday Mountain. The test starts a shift "2 hours ago" and expected Monday to show only an earlier, finished shift. On a Monday the new shift counts toward Monday too. The file now runs on a pinned Thursday-morning clock (`tests/fixed-clock.js`), so it gives the same answer any day.
+- **The CI `test` job now stops after 20 minutes.** A normal run takes about 7. A test that never finished used to hold the job, and block the PR, for GitHub's 6-hour default.
+
+Verified:
+- the week-card test fails on `main` on Mondays (Sep 28, Oct 5, Nov 2) and passes with the fix at every time checked;
+- the whole suite, run under a faked clock at 16 moments across every day of the week (including a month boundary and the Nov 1 time change), has nothing else that depends on the day or hour;
+- full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint`.
