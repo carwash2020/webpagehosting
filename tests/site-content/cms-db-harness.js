@@ -1,7 +1,7 @@
 // Real-Postgres harness for the site_content / site_faq / site_terms CMS (2026-09-23).
 //
-// Runs the actual migration file (sql/site-content/cms_safe_publish_and_undo.sql)
-// inside PGlite -- a real PostgreSQL build compiled to WASM, running
+// Runs the actual migration files (sql/site-content/cms_safe_publish_and_undo.sql,
+// cms_faq_terms_safe_publish.sql, then cms_site_banners.sql) inside PGlite -- a real PostgreSQL build compiled to WASM, running
 // in-process -- on top of a copy of the live schema it applies to:
 // site_content + site_content_history as sql/site-content/site_content_schema_v2.sql
 // created them, the live RLS policies (read back from pg_policies on
@@ -20,6 +20,8 @@ const path = require('path');
 
 const MIGRATION_PATH = path.join(__dirname, '..', '..', 'sql', 'site-content', 'cms_safe_publish_and_undo.sql');
 const LIST_MIGRATION_PATH = path.join(__dirname, '..', '..', 'sql', 'site-content', 'cms_faq_terms_safe_publish.sql');
+// Applied after both, the way it was applied live: banner modes and links.
+const BANNER_MIGRATION_PATH = path.join(__dirname, '..', '..', 'sql', 'site-content', 'cms_site_banners.sql');
 
 const OWNER_EMAIL = 'steve@triplehenterprisesllc.biz';
 const DEV_EMAIL = 'connor@triplehenterprisesllc.biz';
@@ -256,6 +258,7 @@ async function buildDb(applyMigration) {
   if (applyMigration) {
     await db.exec(fs.readFileSync(MIGRATION_PATH, 'utf8'));
     await db.exec(fs.readFileSync(LIST_MIGRATION_PATH, 'utf8'));
+    await db.exec(fs.readFileSync(BANNER_MIGRATION_PATH, 'utf8'));
     await db.exec(`
       create table test_snapshot_content as select * from public.site_content;
       create table test_snapshot_history as select * from public.site_content_history;
@@ -341,5 +344,5 @@ async function readValue(db, key) {
 
 module.exports = {
   createCmsDb, closeAllCmsDbs, asUser, asAnon, rpc, readValue, httpStatusForError,
-  OWNER_EMAIL, DEV_EMAIL, PORTAL_EMAIL, STAFF_NO_CMS_EMAIL, MIGRATION_PATH, LIST_MIGRATION_PATH,
+  OWNER_EMAIL, DEV_EMAIL, PORTAL_EMAIL, STAFF_NO_CMS_EMAIL, MIGRATION_PATH, LIST_MIGRATION_PATH, BANNER_MIGRATION_PATH,
 };
