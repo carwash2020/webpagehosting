@@ -1129,15 +1129,20 @@ Found by the features lane while wiring booking/manage-*/404 to `site_content`'s
 
 Found while regrouping `tools/dev-tools.html` (visual-only PR, so left as-is). `renderGraveyard()` is only ever called from inside `restoreFromGraveyard()` and `permanentlyDeleteFromGraveyard()` -- nothing calls it on page load, on tab switch, or on pull-to-refresh, so `#graveyardList` stays empty and there is no Restore button to press even when `th_graveyard` has entries. The init comment in `proceed()` ("renders lazily on demand ... whenever it's actually opened") describes an open/expand trigger that no longer exists; the panel isn't collapsible. Confirmed in headless Chromium with a seeded `th_graveyard`: blank until `renderGraveyard()` is called by hand, then it lists the entry with Restore. Likely fix: call `renderGraveyard()` in `proceed()` next to `renderKnownIssues()`, plus a test that loads the page with a seeded graveyard.
 
-## 2026-09-24 -- Follow-up to #404: the week card failed every Monday; CI jobs get a time limit
+## 2026-09-24 -- Follow-up to #404: a Monday-only test, a test that expires Oct 1, and a CI time limit
 
-#404 fixed four of the five clock-dependent test files that a libfaketime sweep turned up. Its commit message covers those. Two gaps remained.
+#404 fixed four of the clock-dependent test files that a libfaketime sweep turned up. Its commit message covers those. Three gaps remained.
 
 - **`tests/tools/shift-week-card.test.js` failed every Monday (UTC).**
   - **What it does:** the "on shift" test adds a finished Monday shift (9 h) plus an open shift started "2 hours ago". It then expects `Hours this week: Mon 9 h worked`.
   - **Why Monday breaks it:** the runner's day is Monday from about 8 PM Sunday to 8 PM Monday Mountain. The open shift is then also on Monday, so the card correctly says 11 h. The file already guarded one assertion with `if (sinceMonday > 0)`, but not that one.
   - **Why #404's approach doesn't cover it:** a fixed-offset TZ fixes the hour, not the weekday.
   - **Fix:** the new `tests/fixed-clock.js` pins that file's `Date` to a ticking Thursday 9 AM Mountain. `main` fails it at Sep 28 03:30Z, 07:00Z, 12:00Z, 18:00Z and 23:30Z, Sep 29 00:30Z, Oct 5 and Nov 2; with the pin it passes at all of those and the rest.
+- **`tests/tools/job-tracker-calendar-view.test.js` would have failed from Oct 1 onward.**
+  - **What it does:** two tests set `w.viewYear = 2026; w.viewMonth = 8` to show September 2026, where their sample jobs are.
+  - **Why it only works in September:** the page keeps those in `let` bindings (`let viewYear = calToday.getFullYear(), ...`), so the assignment never reached it and the calendar opened on the current month. The tests passed only because they were written in September 2026. From Oct 1 00:00 UTC (Sep 30, 6 PM Mountain), every run on `main` and every PR would have failed.
+  - **Fix:** they now step to September 2026 with the page's own `changeMonth()`, one month per call as a click does, and check the month label first. `main` fails them in August 2026 and in every month from October on (checked through September 2027); the fix passes in all of them.
+  - **Gotcha:** assigning `w.someName` doesn't reach a page's top-level `let`/`const`. Only `var` and function declarations become window properties.
 - **`test.yml` had no `timeout-minutes`.** A test file whose process never exits held the job for GitHub's 6-hour default; #404 fixed the one known cause. The `test` job now stops at 20 minutes (a normal run is about 7).
 
 **Sweep coverage:** every test file ran under libfaketime at 12 moments on 2026-09-23/24:
@@ -1146,6 +1151,6 @@ Found while regrouping `tools/dev-tools.html` (visual-only PR, so left as-is). `
 - Sunday afternoon and night;
 - early Monday UTC.
 
-After this change it also ran at Monday midday, a Tuesday, the Sep/Oct month boundary and the Nov 1 DST change. Nothing else fails only at some hours or days.
+After this change it also ran at Monday midday, a Tuesday, the Sep/Oct month boundary (which caught the calendar tests), the Nov 1 DST change, New Year 2027 and March 2027. Nothing else fails only at some hours, days or months.
 
 - **Sweep gotcha:** a failure that shows at *every* moment, noon included, is the harness, not the clock. Running 4 worktrees at once pushed `check-undefined-vars.test.js` past a 120 s per-file limit, and tests that edit real files left worktrees dirty. Always compare against a noon baseline from the same run.
