@@ -1896,10 +1896,9 @@ if (typeof document !== 'undefined') {
 })();
 
 // ---------------------------------------------------------------------------
-// Shared banner helpers -- used by both the PWA install prompt below and
-// the "app update available" banner further down. Extracted here
-// (2026-08-27) rather than duplicated, since both are the exact same
-// dismissible-bottom-banner-with-an-action-button UI.
+// Shared banner helpers. showThBanner() is the PWA install prompt's bar;
+// dismissThBanner() is shared with the "update ready" card further down
+// (showThUpdateCard), which has its own look since 2026-09-24.
 // ---------------------------------------------------------------------------
 function dismissThBanner(banner, onDismiss) {
   if (typeof onDismiss === 'function') onDismiss();
@@ -1992,47 +1991,190 @@ function showThBanner(message, actionLabel, onAction, onDismiss) {
 })();
 
 // ---------------------------------------------------------------------------
-// APP UPDATE AVAILABLE -- added 2026-08-27, requested directly ("a pop up
-// for when a app becomes stale and needs to be redownloaded"). Confirmed
-// this app's own service worker (service-worker.js) already calls
-// self.skipWaiting() unconditionally on install and self.clients.claim()
-// on activate -- meaning a new version, once deployed, already takes
-// over as the active worker without waiting for every tab to close.
-// That part isn't new here.
+// APP UPDATE AVAILABLE -- added 2026-08-27 ("a pop up for when a app
+// becomes stale and needs to be redownloaded"), reworked 2026-09-24
+// after it was reported popping up on nearly every open.
 //
-// What's still missing without this: the currently OPEN page instance
-// keeps running the OLD already-loaded JS/HTML/CSS even after a newer
-// service worker has silently taken control in the background -- exactly
-// the "stale, needs redownloading" case. The real signal for this is the
-// `controllerchange` event on navigator.serviceWorker -- but confirmed
-// directly, via a real isolated test server (not assumed from docs),
-// that this event ALSO fires on a page's very first-ever service worker
-// registration, which would be a false positive (nothing is stale on a
-// first visit). Guarded against this by capturing whether a controller
-// already existed at script-start, BEFORE calling register() at all --
-// only a controllerchange that happens when one already existed means a
-// real handoff from an old worker to a new one. Verified this exact
-// three-step sequence (first load: no false positive; reload with an
-// existing controller: still no false positive; a genuine update while
-// that page stays open: correctly detected) with real Playwright tests
-// against a disposable service worker before relying on it here.
+// service-worker.js calls self.skipWaiting() on install and
+// self.clients.claim() on activate, so a new worker takes over the open
+// page as soon as it installs, and navigator.serviceWorker fires
+// `controllerchange`. The original version showed the banner on every
+// controllerchange that had a controller before it (a first-ever
+// install also fires one, and nothing is stale then). That guard does
+// hold: in real Chromium, with a persistent profile closed and reopened,
+// a reopen with nothing deployed in between never showed the banner.
 //
-// Deliberately NOT a forced auto-reload -- this app has real forms
-// (adding a job, typing notes) where silently reloading out from under
-// someone mid-task would lose unsaved work. Shows a dismissible banner
-// instead, reusing the exact same UI as the install prompt. Unlike that
-// one, dismissing this does NOT persist anything -- each real update is
-// a new, genuine event, not a repeated nag for the same thing, and the
-// already-active new worker will serve the fresh version automatically
-// the next time this page naturally reloads anyway.
-if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
-  const hadControllerAtScriptStart = navigator.serviceWorker.controller !== null;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!hadControllerAtScriptStart) return; // first-ever registration, not a real update
-    showThBanner('A new version of Triple H is available.', 'Update', () => {
-      window.location.reload();
-    });
+// What it missed: a controllerchange does not mean THIS page is stale.
+// CACHE_NAME is re-stamped by `npm run fix-versions` whenever a precached
+// file changes -- 5 to 22 times a day in mid-September 2026 -- so almost
+// every time the installed app is opened, the navigation's own update
+// check finds a new worker and it takes over a second or two later.
+// But the page that just opened was already fetched from the network
+// (HTML is network-first; every shared file's ?v= stamp changes its URL),
+// so it is already running the new version and "Update" would reload
+// into the same thing. The repro showed exactly that: a banner on every
+// cold open after any deploy, on a page that was already current.
+//
+// So a controllerchange is now only a cue to CHECK. The page records
+// what it actually loaded -- each script and stylesheet URL (with its
+// ?v= stamp) and a hash of each inline <script>/<style> -- and on a
+// controllerchange it fetches its own URL fresh and compares. The banner
+// shows only if the live page has a script or style this one doesn't:
+// a real update this page is missing. Worker-only bumps, and updates the
+// page already picked up on load, stay silent. Offline, a failed fetch,
+// or a response that isn't a page also stay silent -- the banner never
+// guesses. Relies on the host serving identical bytes per request, as
+// GitHub Pages does; a proxy that injects per-request inline scripts
+// (e.g. a CDN challenge token) would make every check look changed. Known gap, accepted: a pure markup change with no script or
+// style change isn't detected (the running DOM has been changed by the
+// page's own scripts, so it can't be compared to the raw HTML); the next
+// navigation, which is network-first, picks it up regardless.
+//
+// An installed app is usually resumed rather than reloaded, and nothing
+// else asks for a new worker while it sits open, so coming back to the
+// foreground asks for one (at most every 5 minutes).
+//
+// Never a forced reload: this app has real forms (a job, notes) where
+// reloading mid-task would lose work. One banner per page, and once it's
+// dismissed this page doesn't ask again; the new version arrives on the
+// next natural navigation anyway.
+// ---------------------------------------------------------------------------
+function thBuildHash(str) {
+  // FNV-1a, 32-bit. Identity only, not security.
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16);
+}
+
+// What a page document runs: its scripts and stylesheets. Works on the
+// live document and on one parsed from fetched HTML (DOMParser, where
+// nothing executes), which is why src/href are resolved by hand against
+// the page URL instead of read from the resolved properties.
+function thPageBuildParts(doc, baseHref) {
+  const parts = [];
+  doc.querySelectorAll('script, style, link[rel~="stylesheet"]').forEach((el) => {
+    const tag = el.tagName.toLowerCase();
+    const ref = tag === 'link' ? el.getAttribute('href') : (tag === 'script' ? el.getAttribute('src') : null);
+    if (ref) {
+      try {
+        const u = new URL(ref, baseHref);
+        parts.push((tag === 'link' ? 'css:' : 'js:') + u.origin + u.pathname + u.search);
+      } catch (e) { /* unparseable URL -- nothing to compare */ }
+      return;
+    }
+    const text = (el.textContent || '').trim();
+    if (text) parts.push((tag === 'style' ? 'style:' : 'inline:') + thBuildHash(text));
   });
+  return parts;
+}
+
+// True only when the live page has something this page didn't load.
+// Extras on this side are fine (scripts added at runtime), so this is
+// a one-way check.
+function thPageIsBehind(runningParts, liveParts) {
+  if (!liveParts.length) return false; // not a page we can read -- don't guess
+  const running = new Set(runningParts);
+  return liveParts.some((p) => !running.has(p));
+}
+
+const TH_UPDATE_ICON =
+  '<svg class="th-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.8 4.2v3.6h-3.6"/></svg>';
+
+// The update card: its own look (not the install bar) because "a newer
+// version is ready" is a heavier moment than "add this to your Home
+// Screen". Shares dismissThBanner()'s slide-out-and-remove.
+function showThUpdateCard(onUpdate, onDismiss) {
+  const card = document.createElement('div');
+  card.className = 'th-update-card';
+  card.setAttribute('role', 'status');
+  card.setAttribute('aria-live', 'polite');
+  card.innerHTML =
+    '<span class="th-update-mark th-hex-icon">' + TH_UPDATE_ICON + '</span>' +
+    '<span class="th-update-copy">' +
+      '<span class="th-update-title">Update ready</span>' +
+      '<span class="th-update-text">A newer version of Triple H is ready. Save what you’re working on, then update.</span>' +
+    '</span>' +
+    '<span class="th-update-actions">' +
+      '<button type="button" class="th-update-now">Update</button>' +
+      '<button type="button" class="th-update-later">Later</button>' +
+    '</span>' +
+    '<button type="button" class="th-update-close" aria-label="Dismiss update notice">&times;</button>';
+  document.body.appendChild(card);
+  requestAnimationFrame(() => card.classList.add('is-shown'));
+  const dismiss = () => dismissThBanner(card, onDismiss);
+  card.querySelector('.th-update-later').addEventListener('click', dismiss);
+  card.querySelector('.th-update-close').addEventListener('click', dismiss);
+  card.querySelector('.th-update-now').addEventListener('click', (e) => {
+    e.currentTarget.disabled = true;
+    e.currentTarget.textContent = 'Updating…';
+    card.classList.add('is-updating');
+    onUpdate();
+  });
+  return card;
+}
+
+if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+  (function () {
+    const hadControllerAtScriptStart = navigator.serviceWorker.controller !== null;
+    const UPDATE_CHECK_EVERY_MS = 5 * 60 * 1000;
+    let runningParts = null;
+    let shown = false; // shown or dismissed: this page asks once
+    let checking = null;
+    let recheck = false;
+    let lastUpdateRequest = Date.now(); // this load's navigation just checked
+
+    function captureRunningParts() {
+      if (!runningParts) runningParts = thPageBuildParts(document, location.href);
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', captureRunningParts);
+    else captureRunningParts();
+
+    function fetchLiveParts() {
+      const url = location.pathname + location.search;
+      return fetch(url, { cache: 'no-store', credentials: 'same-origin' }).then((res) => {
+        const type = (res.headers.get('content-type') || '').toLowerCase();
+        if (!res.ok || type.indexOf('text/html') === -1) return [];
+        return res.text().then((html) => {
+          const doc = new DOMParser().parseFromString(html, 'text/html');
+          return thPageBuildParts(doc, location.href);
+        });
+      });
+    }
+
+    function checkForRealUpdate() {
+      if (shown) return;
+      if (checking) { recheck = true; return; }
+      captureRunningParts();
+      checking = fetchLiveParts()
+        .then((liveParts) => {
+          if (shown || !thPageIsBehind(runningParts, liveParts)) return;
+          shown = true;
+          showThUpdateCard(() => window.location.reload());
+        })
+        .catch(() => { /* offline or blocked -- stay quiet */ })
+        .then(() => {
+          checking = null;
+          if (recheck) { recheck = false; checkForRealUpdate(); }
+        });
+    }
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadControllerAtScriptStart) return; // first-ever install, not an update
+      checkForRealUpdate();
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible' || shown) return;
+      if (Date.now() - lastUpdateRequest < UPDATE_CHECK_EVERY_MS) return;
+      lastUpdateRequest = Date.now();
+      navigator.serviceWorker.getRegistration()
+        .then((reg) => reg && reg.update())
+        .catch(() => { /* offline, or nothing new */ });
+    });
+  })();
 }
 
 // ---------------------------------------------------------------------------

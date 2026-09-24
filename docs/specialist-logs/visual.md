@@ -1681,3 +1681,13 @@ Layout/cleanup only; every panel's markup moved as-is (a script lifted each bloc
 ## 2026-09-24 (from the features lane, not fixed) -- the phone bottom nav covers the last ~9px of every tool page
 
 Measured in Chromium at 430px while adding Delete to `client-detail.html`: `.th-bottom-nav` is 85px tall, but `body.th-has-bottomnav` (styles-tools.css, `@media (max-width: 1023px)`) reserves `calc(76px + env(safe-area-inset-bottom))`. Scrolled to the very bottom, the last card on client-detail, job-detail and the rest ends ~9px under the bar, and the raised (+) hex covers more in the middle. Fixed only locally for the new Delete block (its own `margin-bottom`). The shared fix is to raise the reserved padding to the bar's real height (or measure it), then re-check the `th-has-clock` variant (158px) too.
+
+## 2026-09-24 -- "Update ready" card (its own look, not the install bar)
+
+- **Distinct from the install bar on purpose:** an update is a heavier moment. It uses the same family as the tour card and Create sheet: panel gradient, orange-tint border and glow, a `.th-hex-icon` mark, and a 2px orange accent line on the top edge. Primary pill **Update** plus a ghost **Later** (both 40px tall), and a 32px X.
+- **Motion:** it rises 20px from `scale(.97)` with a slight overshoot (`cubic-bezier(.2,.9,.25,1.12)`), and the refresh glyph turns -200deg to 0 once on entry, then spins while updating. Under reduced motion: opacity fade only, no turn.
+- **Placement:**
+  - Phone: `calc(85px + safe-area + 12px)`. At the shared `76px + 10px` it sat 1px off the bar, measured at 390px. This is the same 85-vs-76 gap logged above; the toast and tour card still use 76.
+  - Desktop (>=1024): lower-right, `bottom: 76px`, so it sits above `.th-flag-btn` (44px at 16px) rather than over it. `th-has-bottomnav` stays on the body at desktop, so the override must also target `body.th-has-bottomnav .th-update-card`.
+- **Light mode:** `--orange-light` is a dark orange there, so the Update pill gets its own lighter gradient (`#f07a1e` to `--orange`) so its dark text keeps contrast.
+- **Install bar:** while the card is up it steps down out of view (`body:has(.th-update-card.is-shown)`) instead of stacking under it.

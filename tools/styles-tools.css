@@ -2378,6 +2378,95 @@ body.th-has-bottomnav .th-install-banner { bottom: calc(76px + env(safe-area-ins
 .th-install-dismiss { background: none; border: none; color: var(--text-dim); font-size: 18px; line-height: 1; cursor: pointer; padding: 4px; }
 @media (prefers-reduced-motion: reduce) { .th-install-banner { transition: none; } }
 
+/* ---- App update card (2026-09-24, tools-nav-pwa.js showThUpdateCard) ----
+   Its own look, not the install bar above: "a newer version is ready,
+   save your work" carries more weight than "add to Home Screen". Same
+   family as the tour card and Create sheet: panel gradient, orange-tint
+   border and glow, the brand hex mark. Enters with a short rise and a
+   slight overshoot (the Create sheet's pop), and the refresh mark turns
+   once as it lands. Sits where the install bar would, so while it's up
+   the install bar steps aside rather than stacking under it. */
+.th-update-card {
+  position: fixed; left: 12px; right: 12px; bottom: 16px; z-index: 986;
+  max-width: 440px; margin: 0 auto; box-sizing: border-box;
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "mark copy close" "mark actions actions";
+  column-gap: 12px; row-gap: 12px; align-items: start;
+  padding: 16px 10px 14px 16px; overflow: hidden;
+  background:
+    radial-gradient(130% 150% at 0% 0%, var(--orange-tint-soft), transparent 55%),
+    linear-gradient(180deg, var(--bg-panel-3), var(--bg-panel-2));
+  border: 1px solid var(--orange-tint-border); border-radius: 18px;
+  box-shadow: 0 18px 48px -14px rgba(0,0,0,.6), 0 0 36px -10px var(--orange-tint-glow);
+  color: var(--white);
+  opacity: 0; transform: translateY(20px) scale(.97);
+  transition: opacity .2s ease, transform .42s cubic-bezier(.2,.9,.25,1.12);
+}
+.th-update-card::before {
+  content: ''; position: absolute; left: 18px; right: 18px; top: 0; height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: linear-gradient(90deg, transparent, var(--orange-light) 30%, var(--orange) 70%, transparent);
+}
+.th-update-card.is-shown { opacity: 1; transform: none; }
+/* The bar measures 85px (see visual.md, 2026-09-24), not the 76px the
+   toast/tour offsets assume; at +10 on 76 this card sat 1px off it. */
+body.th-has-bottomnav .th-update-card { bottom: calc(85px + env(safe-area-inset-bottom, 0px) + 12px); }
+body:has(.th-update-card.is-shown) .th-install-banner { transform: translateY(160%); }
+/* Desktop: no bottom nav (th-has-bottomnav stays on the body, the bar is
+   just hidden), and a corner card stays out of the content column. It
+   sits above the Flag-for-later button (.th-flag-btn, 44px at 16px from
+   the corner) rather than over it. */
+@media (min-width: 1024px) {
+  .th-update-card, body.th-has-bottomnav .th-update-card { left: auto; right: 16px; bottom: 76px; width: 400px; margin: 0; }
+}
+.th-update-mark { grid-area: mark; width: 44px; height: 44px; }
+.th-update-mark .th-icon { width: 21px; height: 21px; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.th-update-card.is-shown .th-update-mark .th-icon { animation: th-update-turn .8s cubic-bezier(.3,.7,.3,1) .18s both; }
+.th-update-card.is-updating .th-update-mark .th-icon { animation: helpBtnSpin .9s linear infinite; }
+@keyframes th-update-turn { from { transform: rotate(-200deg); } to { transform: none; } }
+.th-update-copy { grid-area: copy; display: flex; flex-direction: column; gap: 3px; padding-top: 1px; }
+.th-update-title {
+  font-family: var(--font-ui); font-size: 16px; font-weight: 600;
+  letter-spacing: .3px; line-height: 1.2; color: var(--white);
+}
+.th-update-text { font-size: 13px; line-height: 1.45; color: var(--text-dim); }
+.th-update-actions { grid-area: actions; display: flex; align-items: center; gap: 8px; padding-right: 6px; }
+.th-update-now, .th-update-later {
+  min-height: 40px; border-radius: 999px; padding: 0 18px;
+  font-family: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer;
+  transition: transform .12s ease, box-shadow .15s ease, border-color .15s ease, color .15s ease;
+}
+.th-update-now {
+  border: none; color: #1a0d02;
+  background:
+    radial-gradient(120% 130% at 30% 0%, rgba(255,255,255,.35), rgba(255,255,255,0) 50%),
+    linear-gradient(165deg, var(--orange-light), var(--orange) 55%, var(--orange-dark) 130%);
+  box-shadow: 0 6px 16px -6px var(--orange);
+}
+[data-theme="light"] .th-update-now { background: linear-gradient(165deg, #f07a1e, var(--orange) 60%); }
+.th-update-now:hover { box-shadow: 0 8px 20px -6px var(--orange); }
+.th-update-now:disabled { cursor: progress; opacity: .85; }
+.th-update-later { background: none; border: 1px solid var(--border); color: var(--text); }
+.th-update-later:hover, .th-update-later:focus-visible { border-color: var(--orange-tint-border); color: var(--orange-light); }
+.th-update-now:active, .th-update-later:active { transform: scale(.96); }
+.th-update-now:focus-visible, .th-update-later:focus-visible, .th-update-close:focus-visible {
+  outline: 2px solid var(--orange-light); outline-offset: 2px;
+}
+.th-update-close {
+  grid-area: close; width: 32px; height: 32px; margin: -8px 0 0;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; border-radius: 50%;
+  color: var(--text-dim); font-size: 20px; line-height: 1; cursor: pointer;
+}
+.th-update-close:hover { color: var(--text); background: var(--bg-panel); }
+@media (prefers-reduced-motion: reduce) {
+  .th-update-card { transform: none; transition: opacity .15s linear; }
+  .th-update-card.is-shown .th-update-mark .th-icon,
+  .th-update-card.is-updating .th-update-mark .th-icon { animation: none; }
+  .th-update-now, .th-update-later { transition: none; }
+  .th-update-now:active, .th-update-later:active { transform: none; }
+}
+
 /* Pull-to-refresh indicator (2026-08-27) -- moved here from workspace.html's
    own inline style once setupPullToRefresh() (tools-effects.js) became a
    shared function every synced tool page uses, not just workspace.html.
