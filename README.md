@@ -5225,7 +5225,9 @@ Result:
 - **With a different saved number and email,** every spot at every size (263 captures) showed the new ones and called, texted, or emailed them. None kept the old ones.
 
 Verified:
-- TBD_README_VERIFIED
+- full suite after merging main: 3786 of 3787 pass. The only failure is the known `check-links.py` sandbox-proxy test.
+- `check-consistency`, `check-undefined-vars`, `eslint`: clean.
+- `fix-versions` bumped the service worker's cache name.
 
 Tests:
 - `tests/site-content/contact-hooks-public.test.js` (now 119; 39 fail on the previous commit):
