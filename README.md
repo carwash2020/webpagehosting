@@ -5014,6 +5014,16 @@ Tests:
 - `tests/tools/app-shell-v2.test.js`: the More drawer's row list now includes Website (hidden for that test's account).
 - `tests/tools/job-tracker-calendar-view.test.js`: the sidebar now has 13 destinations, not 12.
 
+## What changed, 2026-09-23 -- Tests no longer fail every evening and night
+
+Tests only; nothing on the site or in the tools changed. Five tests depended on the time of day, so from late afternoon (Denver time) until about 10 PM, CI failed on main and on every open PR:
+- **Three booking tests** tapped the second or third time slot of the first day with room. Late in the day that day is today, with only one slot left. They now tap the last slot shown:
+  - `tests/portal/booking-picker-round4.test.js`;
+  - `tests/booking/booking-manage-link-round3.test.js`;
+  - `tests/booking/booking-flow-picker-and-confirm.test.js`.
+- **Two Start my day / End my day tests** (`tests/tools/shift-clock-shell.test.js`) built shifts that started "3 hours ago". From midnight to 3 AM UTC (CI runs in UTC) that start was yesterday, so they failed. That file now runs in a fixed-offset time zone where it's always about midday.
+- **A failing test there also hung CI for 40+ minutes** instead of failing. Its open page kept the test run alive. Every page that file opens is now closed after each test, pass or fail.
+
 ## What changed, 2026-09-23 -- FAQ and Terms: review before publishing, and a real undo
 
 Tools only (`tools/site-content.html`); the public FAQ and Terms look exactly the same.
@@ -5046,13 +5056,3 @@ Tests (31 new, against the real SQL in PGlite):
 Updated with reasons:
 - `tests/security/site-content-and-private-buckets-rls.test.js`: every CMS write is now a `cms_*` RPC sent with the session token, and the test now also fails if a direct table write comes back;
 - `tests/tools/escape-attr-audit.test.js`: FAQ and Terms share one row template, so it pins that template's `escapeAttr` calls.
-
-## What changed, 2026-09-23 -- Tests no longer fail every evening and night
-
-Tests only; nothing on the site or in the tools changed. Five tests depended on the time of day, so from late afternoon (Denver time) until about 10 PM, CI failed on main and on every open PR:
-- **Three booking tests** tapped the second or third time slot of the first day with room. Late in the day that day is today, with only one slot left. They now tap the last slot shown:
-  - `tests/portal/booking-picker-round4.test.js`;
-  - `tests/booking/booking-manage-link-round3.test.js`;
-  - `tests/booking/booking-flow-picker-and-confirm.test.js`.
-- **Two Start my day / End my day tests** (`tests/tools/shift-clock-shell.test.js`) built shifts that started "3 hours ago". From midnight to 3 AM UTC (CI runs in UTC) that start was yesterday, so they failed. That file now runs in a fixed-offset time zone where it's always about midday.
-- **A failing test there also hung CI for 40+ minutes** instead of failing. Its open page kept the test run alive. Every page that file opens is now closed after each test, pass or fail.
