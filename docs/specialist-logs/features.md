@@ -3207,4 +3207,39 @@ Tests:
   - `skip-link-and-main-landmark.test.js`: only `<script>` may follow 404's `<main>`;
   - the "no token" tests in `manage-booking.test.js` / `manage-job.test.js`. They asserted *no* network call; the intent, per their title, is no RPC. The public phone/email read is allowed; anything else still fails.
 
+## 2026-09-24 -- Phone + email: every public-site spot follows site_content
+
+Follow-up to the entry above. It left the remaining spots in `bugfix.md` ("Found in passing: saved phone/email don't reach every spot"), and the editor's intro named them. They all follow now, and the intro names only the two places that still don't.
+
+**What follows now:**
+- **"Call <span class=js-phone-text>" buttons** (index x2, About, Our Work, Careers, all 11 blog pages), index's "Call Now" (service pop-up) and the chat's "Call Instead": `.js-phone-link` added. They showed the saved number but dialed the built-in one.
+- **"Call (435) 414-1667" buttons** with `href="tel:4354141667"` (About, Our Work, 10 blog posts): `js-phone-link js-phone-text` on the button itself.
+- **Sentences:** the St. George dishwasher/refrigerator/washer-dryer same-day FAQ answer (`<p class="js-phone-text">`) and the Careers "Call or text ... or email ..." line (`js-phone-text js-email-text`).
+- **Every `sms:` link:** the new `.js-sms-link` hook. Index (hero "Text us", sticky "Text", chat "Text Us Now"), Careers, the washer/dryer St. George sticky bar, booking's confirmation line. Script-built "text" links in booking's and manage-booking's "Nothing open online" use `window.__siteOverridePhone`, like their Call links.
+
+**How:**
+- **One text-node swap everywhere but index.** booking.html's `applySiteContact()` now runs on 21 pages: the four above, About, Our Work, Careers, the 11 blog pages, and the 3 St. George pages. Those pages' old whole-`textContent` swap would have erased "Call " and the rest of a sentence. The test keeps all 21 copies identical, requires exactly those pages to carry it, and requires a hook on an element holding more than the number to be on one of them.
+- **`swapHref` keeps any `?query`** (an sms `?body=`, a mailto `?subject=`) and changes only what comes before it.
+- **Nothing is touched when the value is unchanged.** A link that already dials the saved number is left as written. `tel:4354141667` and `tel:+14354141667` ring the same phone, so the 12 old-format buttons keep their static `href` byte for byte.
+- **`window.__siteOverrideEmail`** is set too. careers.html's apply-form error message already read it and `__siteOverridePhone`, but nothing on that page set either, so it always showed the built-in values.
+
+**Decisions:**
+- **FAQPage search data follows the visible answer**, the way review-stats rewrites `aggregateRating`. Google's structured-data rules want the two to match. The swap is limited to FAQPage blocks and to the number itself, done on the JSON text, so the rest of the block stays byte-identical. The LocalBusiness/Service `telephone`/`email` blocks are left alone (not in scope, and not visible).
+- **index.html keeps its own `site_content` script.** Its FAQPage is rebuilt from `site_faq` rows by a separate fetch. A generic FAQ-schema swap there could land after that rebuild and make the schema disagree with the CMS accordion. index got the classes, a `.js-sms-link` block written like its `.js-email-mailto` one, and the chat-note fix below.
+- **No class on JSON-LD `<script>` tags.** Several SEO tests find blocks by the exact `<script type="application/ld+json">` string.
+
+**Found and fixed while here:** index's desktop chat note ("Prefer to text? Message us from your phone at ...") is written as the page loads, before the fetch lands, so it never showed a saved number. index's phone block now swaps the number in it (guarded; nothing happens at the built-in value, and the phone version of the note has no number).
+
+**Still built-in (the editor intro names both):**
+- **The client portal.** `portal/*.html` never reads `site_content`; its Call/Text links, and `js/booking-flow.js`'s `createBookingPicker()` "Nothing open online" message (used only by the portal), are hard-coded.
+- **Each page's LocalBusiness/Service JSON-LD** `telephone` and `email`.
+- index's FAQ answers and the Terms contact section are CMS free text, covered by those sections' own editor notes.
+
+**Proof it looks the same:** real Chromium (Playwright 1.56), TBD_SHOTS
+
+Tests:
+- `tests/site-content/contact-hooks-public.test.js`: 37 -> 120. The byte-identity, new-number and hook checks now cover all 22 pages. New tests cover the Call buttons, sms `?body=`, the FAQ + FAQPage pair, the Careers line, the index pop-up/chat links, and the desktop chat note (all scripts running). `KNOWN_UNHOOKED_PAGES` is now empty and the site-wide check includes `sms:` links. 39 of the 120 fail on the previous commit; the rest are byte-identity guards that hold on both.
+- `site-content-editor.test.js`: the intro test now checks the new wording.
+- TBD_DESIGN_TESTS
+
 <!-- Add new entries above this line -->

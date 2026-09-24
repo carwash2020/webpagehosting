@@ -245,8 +245,11 @@ test('manage-booking.html: rescheduling updates the remembered visit\'s time', a
   await until(() => w.document.getElementById('startRescheduleBtn'));
   const before = JSON.parse(w.localStorage.getItem(KEY)).start;
   w.document.getElementById('startRescheduleBtn').click();
-  await until(() => w.document.querySelectorAll('.slot-btn').length > 2);
-  w.document.querySelectorAll('.slot-btn')[2].click();
+  // Any open time is a real move (the visit is 30 hours out). Late in the
+  // day the picker opens on today with only a slot or two left, so this
+  // must not assume a third one exists.
+  await until(() => w.document.querySelectorAll('.slot-btn').length > 0);
+  [...w.document.querySelectorAll('.slot-btn')].pop().click();
   w.document.getElementById('confirmRescheduleBtn').click();
   await until(() => w.document.getElementById('content').innerHTML.includes('has been rescheduled'));
   const after = JSON.parse(w.localStorage.getItem(KEY));

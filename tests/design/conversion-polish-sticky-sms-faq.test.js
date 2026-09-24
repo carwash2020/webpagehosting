@@ -53,7 +53,8 @@ test('homepage and washer St. George LP sticky bars are Call + Text + Book, tel 
     const bookAt = bar.indexOf('href="/booking.html" class="btn orange"');
     assert.ok(callAt > 0 && textAt > callAt && bookAt > textAt, `${label}: Call, then Text, then Book`);
     assert.match(bar, /class="btn outline js-phone-link"/, `${label} Call stays outline`);
-    assert.match(bar, /class="btn outline">\s*<svg[\s\S]*?<\/svg>\s*Text/, `${label} Text stays outline`);
+    // js-sms-link (2026-09-24) is the hook that points it at the saved number.
+    assert.match(bar, /class="btn outline js-sms-link">\s*<svg[\s\S]*?<\/svg>\s*Text/, `${label} Text stays outline`);
     assert.match(bar, /class="btn orange"/, `${label} Book stays filled orange`);
   }
 });

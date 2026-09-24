@@ -596,7 +596,7 @@
       </details>
       <details class="faq-plain-item">
         <summary>Do you offer same-day service, and can you fix it the same visit?</summary>
-        <p>Same-day arrival: yes, when the schedule allows &mdash; St. George jobs usually get the fastest openings because this is home base. Call or text (435) 414-1667 to check the same day rather than booking online if it can't wait. Same-visit repair: often, yes, when the part is one we already carry or can source that day. If it needs to be ordered, we'll tell you before any work starts.</p>
+        <p class="js-phone-text">Same-day arrival: yes, when the schedule allows &mdash; St. George jobs usually get the fastest openings because this is home base. Call or text (435) 414-1667 to check the same day rather than booking online if it can't wait. Same-visit repair: often, yes, when the part is one we already carry or can source that day. If it needs to be ordered, we'll tell you before any work starts.</p>
       </details>
       <details class="faq-plain-item">
         <summary>Do you guarantee your work?</summary>
@@ -800,6 +800,66 @@
     const SITE_CONTENT_SUPABASE_URL = 'https://csvfqdjuobylgafgolho.supabase.co';
     const SITE_CONTENT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs';
 
+    // The hooks sit on elements that can hold more than the number (the
+    // header link's icon, a "Call" button's own word, a whole FAQ answer),
+    // so this rewrites only the number or address itself, inside each
+    // element's own text nodes (as js/review-stats.js does). Nothing is
+    // added, removed or re-created (a new wrapper <span> once shifted
+    // booking.html's text by a sub-pixel), and nothing is touched at all
+    // when the saved value is the built-in one. Every public page that
+    // reads phone/email this way carries this same function;
+    // contact-hooks-public.test.js keeps the copies identical.
+    function applySiteContact(map) {
+      function swapText(selector, from, to) {
+        if (to === from) return;
+        document.querySelectorAll(selector).forEach(el => {
+          for (let n = el.firstChild; n; n = n.nextSibling) {
+            if (n.nodeType === 3 && n.nodeValue.indexOf(from) !== -1) n.nodeValue = n.nodeValue.split(from).join(to);
+          }
+        });
+      }
+      // Points each link at `to` and keeps whatever follows a "?" (a text
+      // link's pre-filled ?body=, an email link's ?subject=). A link that
+      // already goes there is left exactly as written.
+      function swapHref(selector, to, alreadyThere) {
+        document.querySelectorAll(selector).forEach(el => {
+          const href = el.getAttribute('href') || '';
+          const q = href.indexOf('?');
+          if (!alreadyThere(q === -1 ? href : href.slice(0, q))) el.setAttribute('href', to + (q === -1 ? '' : href.slice(q)));
+        });
+      }
+      // FAQPage search data repeats some answers word for word (the
+      // St. George repair pages), so it follows the visible answer, the
+      // way review-stats keeps aggregateRating in step with the page.
+      function swapFaqSchema(from, to) {
+        if (to === from) return;
+        document.querySelectorAll('script[type="application/ld+json"]').forEach(s => {
+          let data = null;
+          try { data = JSON.parse(s.textContent); } catch (e) { return; }
+          if (data && data['@type'] === 'FAQPage' && s.textContent.indexOf(from) !== -1) {
+            s.textContent = s.textContent.split(from).join(JSON.stringify(to).slice(1, -1));
+          }
+        });
+      }
+      if (map.phone) {
+        const digits = map.phone.replace(/\D/g, '');
+        // A link written with or without the +1 rings the same phone.
+        const dials = href => href.replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '') === digits;
+        swapText('.js-phone-text', '(435) 414-1667', map.phone);
+        swapFaqSchema('(435) 414-1667', map.phone);
+        swapHref('.js-phone-link', 'tel:+1' + digits, dials);
+        swapHref('.js-sms-link', 'sms:+1' + digits, dials);
+        // Read by the messages this page builds later (errors, "Nothing
+        // open online"), which fall back to the built-in number.
+        window.__siteOverridePhone = map.phone;
+      }
+      if (map.email) {
+        swapText('.js-email-text', 'steve@triplehenterprisesllc.biz', map.email);
+        swapHref('.js-email-link', 'mailto:' + map.email, href => href === 'mailto:' + map.email);
+        window.__siteOverrideEmail = map.email;
+      }
+    }
+
     fetch(SITE_CONTENT_SUPABASE_URL + '/rest/v1/site_content?select=key,value', {
       headers: { 'apikey': SITE_CONTENT_SUPABASE_ANON_KEY },
     })
@@ -812,14 +872,7 @@
         window.__siteContentMap = map;
         if (typeof applyReviewStats === 'function') applyReviewStats(map);
 
-        if (map.phone) {
-          document.querySelectorAll('.js-phone-text').forEach(el => { el.textContent = map.phone; });
-          document.querySelectorAll('.js-phone-link').forEach(el => { el.href = 'tel:+1' + map.phone.replace(/\D/g, ''); });
-        }
-        if (map.email) {
-          document.querySelectorAll('.js-email-text').forEach(el => { el.textContent = map.email; });
-          document.querySelectorAll('.js-email-link').forEach(el => { el.href = 'mailto:' + map.email; });
-        }
+        applySiteContact(map);
         ['banner1', 'banner2'].forEach(key => {
           const el = document.getElementById('site' + key.charAt(0).toUpperCase() + key.slice(1));
           if (el && map[key]) { el.textContent = map[key]; el.style.display = 'block'; }

@@ -1093,3 +1093,14 @@ Found by the features lane while wiring booking/manage-*/404 to `site_content`'s
 - **Neither text nor link follows.** "Call (435) 414-1667" buttons with `tel:4354141667` on about, our-work and 10 blog pages. The number shares a text node with "Call ", and those pages' fetch replaces the whole `textContent`, so a class alone would erase "Call ". They need the text-node swap booking.html now uses, not a wrapper span.
 - **Text only:** FAQ answers on the dishwasher, refrigerator and washer/dryer St. George pages (their FAQPage JSON-LD repeats the text), and the careers "Call or text ... or email ..." line (phone and email).
 - **`sms:` links:** no page has a hook for these. They include index's "Text us" buttons, booking's confirmation and "Nothing open online" lines, careers, and washer/dryer.
+
+**Fixed 2026-09-24** by the features lane: every spot above now follows, plus index's desktop chat note, which was missed here. Details are in `features.md` ("Phone + email: every public-site spot follows site_content"). What still keeps the built-in values on purpose: the client portal, and each page's LocalBusiness/Service JSON-LD `telephone`/`email`.
+
+
+## 2026-09-24 -- Two manage-booking tests failed every evening (fixed, test-only)
+
+Found by the features lane: `booking-manage-link-round3.test.js` ("rescheduling updates the remembered visit's time") failed on `main` at 18:20 St. George time.
+
+- **Cause:** the reschedule picker opens on the first day with an open slot. Late in the day that is today, with only the last slot or two left (8:30 PM and 9:00 PM at the time). The test waited for more than 2 `.slot-btn`s and clicked the third, so it timed out. `booking-flow-picker-and-confirm.test.js` ("tapping a time never moves the booking by itself") had the same assumption with a second slot, so it would fail later in the evening, once only one slot is left today.
+- **Not a site bug.** The picker is right to offer today's last slots.
+- **Fix:** both tests wait for any slot and click the last one. The visit in the fixture is 30 hours out, so any open time is a real move. Both files pass.

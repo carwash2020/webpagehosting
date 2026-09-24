@@ -144,17 +144,23 @@ test('loads the live values into the right inputs, with plain-English labels and
   assert.match(w.document.querySelector('.cms-last-save').textContent, /No edits yet/, 'the migration seed rows are not offered as an "undo"');
 });
 
-test('the "Phone and email" intro no longer tells the owner the booking, manage-booking, and not-found pages keep the built-in number', async () => {
-  // Those four pages follow site_content's phone/email since 2026-09-23
-  // (tests/site-content/contact-hooks-public.test.js). The spots that
-  // still don't are named, and that test keeps the list honest.
+test('the "Phone and email" intro says every public-site spot follows, and names only the two places that do not', async () => {
+  // Every Call, Text, and Email link and every shown number/address on
+  // the public site follows site_content's phone/email since 2026-09-24
+  // (tests/site-content/contact-hooks-public.test.js keeps that honest).
+  // What still doesn't: the client portal (it never reads site_content)
+  // and the LocalBusiness telephone/email in each page's search data.
   const { w } = await loadEditor();
   const intro = w.document.querySelector('.cms-group[data-cms-group="contact"] .cms-group-intro').textContent;
-  assert.doesNotMatch(intro, /still show the number built into the site/);
-  assert.doesNotMatch(intro, /not-found page/);
-  assert.match(intro, /^Changes the number and email address visitors see and tap on the website, the booking and manage-booking pages included\./);
-  assert.match(intro, /every "text us" link/);
+  assert.match(intro, /^Changes the number and email address on every Call, Text, and Email button and everywhere else the public website shows them, the booking and manage-booking pages included/);
+  assert.match(intro, /FAQ and Terms answers are their own text; edit those directly/);
+  assert.match(intro, /Two places still use the ones built into the site: the client portal, and the business details Google reads behind the scenes on each page\./);
   assert.match(intro, /Ask Connor to update those too if the number ever changes\.$/);
+  // Nothing the earlier intros listed is left behind any more.
+  assert.doesNotMatch(intro, /still show the number built into the site/);
+  assert.doesNotMatch(intro, /"text us"/);
+  assert.doesNotMatch(intro, /A few spots/);
+  assert.doesNotMatch(intro, /About, Our Work, Careers, blog/);
 });
 
 test('the live Sunday value "2:00 pm - 8:00 pm" loads as Open 2 PM to 8 PM and is NOT counted as an edit', async () => {
