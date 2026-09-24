@@ -5191,6 +5191,39 @@ Verified:
 - the original failure reproduced on the real clock at 5:40 PM MDT, and with the clock pinned to 5:45 PM on a weekday and a Saturday and 3:45 PM on a Sunday. The fixed file passes at those times, at every half hour from 1:15 to 10:45 PM on a Wednesday and a Sunday, and on the real clock inside the window;
 - full suite on the branch merged with main (3703/3704 on the real clock at 8:49 to 8:56 PM MDT; the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint` on the changed file.
 
+## What changed, 2026-09-23 -- FAQ and Terms: review before publishing, and a real undo
+
+Tools only (`tools/site-content.html`); the public FAQ and Terms look exactly the same.
+
+**What was wrong:**
+- **Every save replaced the whole list.** It deleted every question and added them all back, so every save changed every item's id. The history filled up with deletes and re-adds, and "Restore this value" usually pointed at an item that no longer existed.
+- **A blank answer quietly deleted the question.** Clearing a question or answer by accident took it off the live site with no warning.
+- **A tab left open could wipe out someone else's newer edits** when it saved.
+
+**Now:**
+- **Review & publish** lists every change before anything goes live: questions added, edited, removed, and moved. Each shows what's live next to what it becomes, and removals get a warning.
+- A blank or too-long field, or two questions with the same wording, is flagged on the item and blocks publishing. The database refuses these too.
+- Saving changes only what you changed. Edited questions keep their identity, so history lines up.
+- If the list changed since you opened the page, nothing is published. You're shown the latest version with your edits still in place.
+- **Undo this save** puts the whole list back the way it was, including order and anything removed. It's refused if something in that save has changed again since. "Restore this value" in the history goes through the same review step.
+
+**Database** (`sql/site-content/cms_faq_terms_safe_publish.sql`, applied live):
+- History keeps full before/after copies, grouped by save.
+- Checks refuse blank, untrimmed, or oversized text.
+- `cms_publish_faq`/`cms_publish_terms` and `cms_undo_faq`/`cms_undo_terms` run as the signed-in user, so the "Site content" permission still decides.
+- Tested live in a transaction that always rolls back: move and edit an FAQ, undo restores all 15 items exactly, a stale save is refused, a blank answer is refused. Security advisors: nothing new.
+
+Verified:
+- full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint`.
+
+Tests (31 new, against the real SQL in PGlite):
+- `tests/site-content/cms-faq-terms-db.test.js` (21);
+- `tests/site-content/faq-terms-editor.test.js` (10): the real page script, including edit + add + delete + move, then undo, with every row back exactly.
+
+Updated with reasons:
+- `tests/security/site-content-and-private-buckets-rls.test.js`: every CMS write is now a `cms_*` RPC sent with the session token, and the test now also fails if a direct table write comes back;
+- `tests/tools/escape-attr-audit.test.js`: FAQ and Terms share one row template, so it pins that template's `escapeAttr` calls.
+
 ## What changed, 2026-09-24 -- Every Call, Text, and Email spot on the public site follows the saved phone number and email
 
 Public site (homepage, About, Our Work, Careers, all 11 blog pages, the 3 St. George appliance-repair pages, plus booking/manage-booking/manage-job/404) and `tools/site-content.html`. Nothing looks different today.
