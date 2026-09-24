@@ -1167,3 +1167,16 @@ After this change it also ran at Monday midday, a Tuesday, the Sep/Oct month bou
 - **Scan the whole day, not the reported minute.** Checked only at 17:40, round3 and picker-and-confirm looked fine. Their 45-minute visits push their windows to 18:00-19:00 and 18:30-19:00 (a whole-day scan found exactly those). Each test's visit length sets its own window.
 
 **Fixed (2026-09-24, features lane, with Delete on the client page):** `proceed()` now calls `renderGraveyard()` next to `renderFlaggedItems()`. Test: `tests/tools/client-delete.test.js` loads Dev Tools with a seeded `th_graveyard` and checks the entry and its Restore button render.
+
+## 2026-09-24 -- "Update available" banner on nearly every open: correct guard, wrong signal
+
+- **Reported:** the tools app's update banner (`tools/tools-nav-pwa.js`) showed on nearly every open of the installed app.
+- **The guard wasn't the bug.** In real Chromium with a persistent profile (`launchPersistentContext`, closed and reopened between steps), a cold reopen with nothing deployed never fired `controllerchange`. `hadControllerAtScriptStart` holds. `skipWaiting()`/`clients.claim()` don't make a plain relaunch look like a handoff either.
+- **The real cause was CACHE_NAME churn plus a wrong assumption.** `fix-versions` bumps CACHE_NAME whenever a precached file's content changes. That happened 5-22 times a day on `main` from Sep 11 to 24 (v178 to v318, from `git log --first-parent -- service-worker.js`). So nearly every open, that open's own update check installs a new worker, which claims the page and fires `controllerchange`. But that page was just fetched network-first, with fresh `?v=` URLs, so it was already current.
+- **Fix:** `controllerchange` is only a cue to check. The page fetches its own URL `no-store` and compares script/stylesheet URLs plus hashes of inline `<script>`/`<style>` against what it loaded. The check is one-way, so scripts added at runtime don't count. CACHE_NAME stamping was left alone: it's correct for the offline cache, and the banner shouldn't depend on it.
+- **Gotchas:**
+  - Compare inline scripts by `textContent`. Running scripts doesn't change it, but they do change the DOM, so the live DOM can't be diffed against the raw HTML. Pure markup-only changes aren't detected; that's an accepted gap, since the next navigation is fresh anyway.
+  - `DOMParser` docs don't resolve `src`/`href` the same way. Use `getAttribute` plus `new URL(ref, location.href)` on both sides.
+  - A test for "no banner" must look for BOTH classes (`.th-update-card, .th-install-banner`). The old code used the install bar's class, so a new-class-only check passes against the old code.
+  - A page first opened with no controller ignores every later `controllerchange` (the guard). Positive-case tests need a device that has opened the app once before.
+- Test: `tests/tools/app-update-card.test.js`. It models one device (the active worker persists) across many jsdom opens of the real login.html; the open's update check installs a changed worker, as Chromium does. 9 of 11 fail on the previous code. The other 2 are the cases the old guard already handled.
