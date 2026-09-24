@@ -172,10 +172,23 @@ click a setting by hand.
     triggers' Vault key -> through). Results per function:
     `docs/specialist-logs/security.md`, "round 3 follow-up".
 13. **Decide on server-side MFA enforcement for internal accounts**
-    (2026-09-23 audit, finding #4). Today a stolen password alone
-    reaches all internal data through the API, and can mint fresh
-    recovery codes too. The proposed design and its lockout risks are
-    in `docs/specialist-logs/security.md` (round 3, and its follow-up).
+    (2026-09-23 audit, finding #4, HIGH). Two-factor is only checked by
+    `tools/login.html`. Nothing on the server looks at the session's
+    `aal` level, so someone with a stolen password can skip the login
+    page, call the Auth and REST APIs directly, and reach every internal
+    table and edge function. They can also call
+    `generate_internal_recovery_codes()` on that password-only session
+    to mint fresh recovery codes.
+    - **The fix:** `current_user_has_any_role()` and the internal edge
+      functions require `aal2` whenever the account has a verified
+      factor. Generating recovery codes requires `aal2` too. The
+      recovery-code login path has to keep working, or a lost phone
+      locks the owner out.
+    - **Why it waits for you:** a mistake here can lock Steve and Connor
+      out of the tools. Say "go" in a new chat and point it at
+      `docs/specialist-logs/security.md` (the 2026-09-23 "round 3" entry
+      and its "follow-up"). It should build this behind a careful
+      rollout: dry-run, test both accounts, keep a way back in.
 
 14. **Confirm who should see the team's hours** (shift clock, 2026-09-23).
     The Dashboard's Hours worked card shows everyone's shifts only to
@@ -186,6 +199,41 @@ click a setting by hand.
     own permission (a new `account_roles` column), which is a small
     follow-up. The hours are an attendance record, not pay: the business
     still pays per job.
+
+15. **Decide who can save a card from portal Settings** (2026-09-23
+    audit, finding #6, MEDIUM). `manage-saved-card`'s
+    `create_setup_intent` mode accepts any signed-in account. With
+    public signup on (#11), a stranger can sign up and use it to create
+    Stripe Customers and SetupIntents, a common way to test stolen cards.
+    - **Quickest fix:** turning signup off (#11) removes the stranger case.
+    - **The code fix needs a product call:** who counts as a real client?
+      "Has an invoice, quote, job, contract or checkup" would block a
+      client whose only item is a work order they submitted themselves.
+      `client_account_codes` can't be the marker, because it's empty for
+      every current client account.
+    - **Next step:** once you decide, ask a new chat to gate
+      `edge-functions/manage-saved-card-index.ts` on that rule, and
+      deploy it.
+16. **Webhook doesn't compare the amount paid to the invoice total**
+    (2026-09-23 audit, finding #7, LOW). `stripe-webhook` marks invoices
+    paid without checking `amount_received`. The #386 double-charge fix
+    narrowed this: a raised invoice now gets a fresh PaymentIntent for
+    the new amount. But the old, smaller one stays payable from a stale
+    browser tab, and if it's paid, the invoice is marked paid short.
+    - **Two possible fixes**, either one small:
+      - cancel the superseded PaymentIntent in
+        `create-payment-intent` / `create-bulk-payment-intent`;
+      - or compare `amount_received` in `stripe-webhook` and send a staff
+        alert.
+    - **Next step:** ask a new chat to do one, with tests, and deploy it.
+17. **`work-order-photos` storage bucket accepts any upload** (2026-09-23
+    audit, LOW). Its INSERT policy checks only `bucket_id`, so any
+    signed-in account can upload files there. It's spam and storage
+    cost only: there's no read-back and no overwrite.
+    - **The fix:** limit uploads to a path under the uploader's own
+      work order, matching how `portal/work-orders.html` uploads photos. First
+      read that page and the bucket's live policies.
+    - Low priority. Turning signup off (#11) mostly covers it.
 
 <!-- Add new manual action items above this line -->
 
