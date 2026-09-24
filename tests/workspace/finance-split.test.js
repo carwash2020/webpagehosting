@@ -1174,8 +1174,40 @@ test('.tabs-sticky positions below the already-sticky header, matching the prove
   const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'styles-tools.css'), 'utf8');
   const rule = src.match(/\.tabs\.tabs-sticky\s*\{[^}]*\}/);
   assert.ok(rule, '.tabs-sticky rule not found');
-  assert.match(rule[0], /top:\s*calc\(61px \+ max\(env\(safe-area-inset-top, 0px\), 44px\)\)/, 'must include the safe-area-inset-top fix with a 44px floor (added 2026-08-21 after a real notch-overlap report on a real device, tracing back to a known iOS Safari bug where env() can unexpectedly return 0px), not just the bare env() value');
+  assert.match(rule[0], /top:\s*calc\(65px \+ max\(env\(safe-area-inset-top, 0px\), 44px\)\)/, 'must include the safe-area-inset-top fix with a 44px floor (added 2026-08-21 after a real notch-overlap report on a real device, tracing back to a known iOS Safari bug where env() can unexpectedly return 0px), not just the bare env() value; 65px (not the original 61px) since 2026-09-24, to match the header\'s real 44px-tall content row');
   assert.match(rule[0], /position:\s*sticky/);
+});
+
+// Reported directly, with a screenshot of the active tab's label
+// overlapping the header on Finance's Income tab. Confirmed live via
+// getBoundingClientRect() on the real page: the mobile header (see the
+// @media (max-width: 720px) override just below) is 109px tall --
+// calc(10px + 44px) top padding + 10px bottom padding + 1px border +
+// its 44px-tall content row (every th-hdr-actions button is a 44px
+// tap target) -- but .tabs.tabs-sticky's old top offset of
+// calc(61px + max(safe-area, 44px)) put it at only 105px, 4px above
+// where the header actually ends, on every page that shares this
+// header. This test proves the arithmetic holds without needing a
+// live browser: the header's own non-safe-area vertical space
+// (mobile top padding's 10px + bottom padding's 10px + border's 1px)
+// plus its 44px content row must equal .tabs.tabs-sticky's own
+// non-safe-area base -- both expressed as "N + max(safe-area, 44px)",
+// so their difference is exactly the difference of N.
+test(".tabs.tabs-sticky's top offset base matches the mobile header's real height, not a stale assumption", () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'styles-tools.css'), 'utf8');
+  const mobileHeaderRule = src.match(/@media \(max-width: 720px\) \{[\s\S]*?body \.hub-header, body \.tool-header \{ margin: 0 -12px 12px; padding: calc\((\d+)px \+ max\(env\(safe-area-inset-top, 0px\), 44px\)\) 14px (\d+)px; \}/);
+  assert.ok(mobileHeaderRule, 'expected to find the mobile .hub-header padding override');
+  const headerTopBase = Number(mobileHeaderRule[1]);
+  const headerBottomPad = Number(mobileHeaderRule[2]);
+  const HEADER_CONTENT_ROW_HEIGHT = 44; // every th-hdr-actions button is a 44px tap target
+  const HEADER_BORDER = 1; // border-bottom: 1px solid var(--border)
+  const expectedHeaderHeightBase = headerTopBase + headerBottomPad + HEADER_CONTENT_ROW_HEIGHT + HEADER_BORDER;
+
+  const tabsRule = src.match(/\.tabs\.tabs-sticky\s*\{[^}]*top:\s*calc\((\d+)px \+ max\(env\(safe-area-inset-top, 0px\), 44px\)\)/);
+  assert.ok(tabsRule, '.tabs-sticky rule not found');
+  const tabsTopBase = Number(tabsRule[1]);
+
+  assert.equal(tabsTopBase, expectedHeaderHeightBase, `.tabs.tabs-sticky's top base (${tabsTopBase}px) must equal the mobile header's own real height base (${headerTopBase} + ${headerBottomPad} + ${HEADER_CONTENT_ROW_HEIGHT} + ${HEADER_BORDER} = ${expectedHeaderHeightBase}px), or the tab bar sticks a few pixels above where the header actually ends`);
 });
 
 // Business Health restructuring (2026-08-20). "Business Health" bundled
@@ -2208,7 +2240,7 @@ test('#mainContent has scroll-margin-top accounting for both the header height a
   const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'styles-tools.css'), 'utf8');
   const rule = src.match(/#mainContent \{[^}]*\}/);
   assert.ok(rule, '#mainContent rule not found');
-  assert.match(rule[0], /scroll-margin-top:\s*calc\(61px \+ max\(env\(safe-area-inset-top, 0px\), 44px\)\)/);
+  assert.match(rule[0], /scroll-margin-top:\s*calc\(65px \+ max\(env\(safe-area-inset-top, 0px\), 44px\)\)/);
 });
 
 test('all 7 pages sharing the #mainContent skip-link pattern are covered by this one shared rule', () => {

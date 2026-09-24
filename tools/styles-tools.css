@@ -421,7 +421,18 @@ body.th-has-bottomnav .onboarding-card { bottom: calc(76px + env(safe-area-inset
 @media (prefers-reduced-motion: reduce) { .th-tour-highlight { animation: none; } }
 
 .tabs.tabs-sticky {
-  position: sticky; top: calc(61px + max(env(safe-area-inset-top, 0px), 44px)); z-index: 55;
+  /* 65px, not 61px (2026-09-24, reported directly with a screenshot of
+     the active tab's label overlapping the header on Finance's Income
+     tab): the header's own content row is a full 44px tall (every
+     th-hdr-actions button is a 44px tap target, not just the 36px
+     logo this constant was sized around), so the old 61px base put
+     this bar's sticky position 4px above where the header, measured
+     live, actually ends -- a small but real and always-present gap,
+     confirmed via getBoundingClientRect() on the real page (header
+     height 109px vs this bar's old top of 105px, on every page that
+     shares this header, regardless of safe-area-inset-top since it
+     cancels out of the difference). */
+  position: sticky; top: calc(65px + max(env(safe-area-inset-top, 0px), 44px)); z-index: 55;
 }
 /* Desktop (2026-09-22): the header there is fixed, 61px tall, with no
    notch padding, so the phone offset above left a 44px gap under it once
@@ -1383,7 +1394,12 @@ body .hub-header::before, body .tool-header::before {
    header's real height (including the safe-area-inset-top it also
    needs to clear) when jumping to this target. Applies identically
    across all 8 pages sharing this exact #mainContent skip-link pattern. */
-#mainContent { scroll-margin-top: calc(61px + max(env(safe-area-inset-top, 0px), 44px)); }
+/* 65px, not 61px -- same fix and same reason as .tabs.tabs-sticky's own
+   top offset above: the header's real content row is 44px tall, not
+   whatever shorter row this constant was originally sized around, so
+   the old value left #mainContent's top 4px under the header's real
+   bottom edge after a "Skip to main content" jump. */
+#mainContent { scroll-margin-top: calc(65px + max(env(safe-area-inset-top, 0px), 44px)); }
 /* F08 fix (2026-09-07): rendered every hub page rather than trusting a
    read -- font-size and logo size were already consistent (22px/36px
    everywhere), but workspace.html's own local .hub-title override set
