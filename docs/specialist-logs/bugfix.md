@@ -1096,10 +1096,35 @@ Fixed in `sql/infra/fix_cron_health_false_positives.sql`: a `cron_tracked_http_r
 
 Tests: `tests/dev-tools/cron-health-scoped-to-cron.test.js` (8, new).
 
+## 2026-09-23 -- Clock-dependent tests failed every evening and night (and one hung CI)
+
+**Symptom:** `tests/portal/booking-picker-round4.test.js` "tapping a time hands the page the exact computed slot..." failed with `Cannot read properties of undefined (reading 'click')`. It failed on main and on every open PR, starting in the late afternoon Denver time.
+
+**Root cause:** the test runs on the real clock, and the picker opens on the first day with room. Late in the day that's today, with a single slot left. At 5:42 PM Denver on 2026-09-23 the first day was 2026-09-23 with one 8:00 PM slot. The test tapped `querySelectorAll('#grid .slot-btn')[1]`, a second slot that didn't exist. Earlier in the day there are several slots, so it passed.
+
+**Fix:** tap the last slot shown instead. Nothing the test checks depends on which slot it is.
+
+**Same shape, found the same night (2026-09-24, 00:25-00:40 UTC):**
+- `booking-manage-link-round3` › "rescheduling updates the remembered visit's time" waited for more than 2 slots, then tapped `[2]`.
+- `booking-flow-picker-and-confirm` › "tapping a time never moves the booking by itself" waited for more than 1, then tapped `[1]`.
+- Both reschedule pickers showed one 9:00 PM slot for today (probed). Both now wait for any slot and tap the last. The saved visit is 48 h out, so any slot still moves it.
+
+**`tests/tools/shift-clock-shell.test.js`**, "Start my day…" and "End my day…":
+- **Why it failed:** fixtures come from the real clock (`Date.now() - 3 h`, a typed time 90 min ago). The shell decides "today" in local time (`thShiftClockLabel`'s `toDateString()`). CI runs in UTC, so from 00:00 to 03:00 UTC the start is yesterday. The title became "Since Sep 23, 9:25 PM" instead of "Since 9:25 PM", and the sheet took another path.
+- **Fix:** before anything else, the file sets `process.env.TZ` to the `Etc/GMT` zone where it is about noon now (`12 - getUTCHours()`, always -11..+12, no DST). Each test file is its own process, and Node and jsdom share the zone, so no Date faking is needed.
+- **Proof:** forced back to UTC at 00:43 UTC, exactly those two tests fail. With the fix, all 14 pass.
+
+**The hang:** a failed assertion skipped the test's own `w.close()`. The page's timers kept the `node --test` child alive, so CI's `test` job sat "in progress" for 40+ minutes instead of failing. An `afterEach` now closes every window the file opened. Forced to UTC, the file fails in 3 s instead of hanging.
+
+## 2026-09-23 -- Found in passing: saved phone/email don't reach every spot (not fixed)
+
+Found by the features lane while wiring booking/manage-*/404 to `site_content`'s phone/email. The spots below keep the built-in (435) 414-1667 / steve@ address if the owner changes them in `tools/site-content.html`. Nothing is wrong today (the saved values ARE the built-in ones), but a real number change would leave these behind. The editor's "Phone and email" intro now names them, and `tests/site-content/contact-hooks-public.test.js` pins the list of affected pages.
+
+- **Shows the new number but dials the old one.** The `tel:` link has no `.js-phone-link`: "Call <span class=js-phone-text>" buttons on index (two of them), about, our-work, careers and all 11 blog pages; also index's "Call Now" and the chat's "Call Instead". Fix: class only; the page's existing fetch already sets the href.
+- **Neither text nor link follows.** "Call (435) 414-1667" buttons with `tel:4354141667` on about, our-work and 10 blog pages. The number shares a text node with "Call ", and those pages' fetch replaces the whole `textContent`, so a class alone would erase "Call ". They need the text-node swap booking.html now uses, not a wrapper span.
+- **Text only:** FAQ answers on the dishwasher, refrigerator and washer/dryer St. George pages (their FAQPage JSON-LD repeats the text), and the careers "Call or text ... or email ..." line (phone and email).
+- **`sms:` links:** no page has a hook for these. They include index's "Text us" buttons, booking's confirmation and "Nothing open online" lines, careers, and washer/dryer.
+
 ## 2026-09-24 (from the visual lane, not fixed) -- Dev Tools' Graveyard list never fills in
 
 Found while regrouping `tools/dev-tools.html` (visual-only PR, so left as-is). `renderGraveyard()` is only ever called from inside `restoreFromGraveyard()` and `permanentlyDeleteFromGraveyard()` -- nothing calls it on page load, on tab switch, or on pull-to-refresh, so `#graveyardList` stays empty and there is no Restore button to press even when `th_graveyard` has entries. The init comment in `proceed()` ("renders lazily on demand ... whenever it's actually opened") describes an open/expand trigger that no longer exists; the panel isn't collapsible. Confirmed in headless Chromium with a seeded `th_graveyard`: blank until `renderGraveyard()` is called by hand, then it lists the entry with Restore. Likely fix: call `renderGraveyard()` in `proceed()` next to `renderKnownIssues()`, plus a test that loads the page with a seeded graveyard.
-
-## 2026-09-24 (from the visual lane, not fixed) -- shift-clock-shell tests fail and HANG from 00:00 to ~03:00 UTC
-
-Hit while verifying the Dev Tools regroup; reproduces identically on `main`. `tests/tools/shift-clock-shell.test.js` builds times relative to `Date.now()` ("3 h ago", "90 min ago", "50 min ago") and the shell treats a shift that started before local midnight as a forgotten, previous-day shift. CI runs in UTC, so between 00:00 and roughly 03:00 UTC (6-9 PM Mountain) "Start my day" (#6) and "End my day" (#7) fail. Worse, a failed assertion skips `w.close()`, the jsdom window's timers keep the file's process alive, and `node --test` waits forever -- the whole CI run hangs until someone cancels it (several runs on 2026-09-24 were cancelled around 00:25 UTC). Passes 14/14 with `TZ=America/Denver` at the same moment. Proposed fix: build each test's times from a fixed local midday (or skip to a same-day offset when `Date.now()` is too close to midnight), and close every JSDOM window in a `t.after()`/`finally` so a failure can never hang the run.

@@ -3185,4 +3185,59 @@ Follow-up to the site content editor rebuild (#395), which listed "a gated 'Webs
 
 Tests: `tests/tools/website-nav-entry.test.js` (8). Includes an end-to-end pass through the real `auth.js` with a mocked `account_roles` response. All 8 fail on the old nav, and 5 fail on a fail-open version of the row.
 
+## 2026-09-23 (from the visual lane) -- Home could render from local data before the sync
+
+`workspace.html` renders the dashboard only after `initSyncOnLoad()` (role load + sync pull, two network round trips). So every return to Home shows a skeleton first; before 2026-09-23 it showed empty cards and a made-up "0 jobs today". Rendering once from localStorage at DOMContentLoaded, then again after the pull, would make Home instant in the common case. Not done from the visual lane because it's an init-order change with a permission angle. `getCurrentUserRole()` is null until the role loads, and a few checks treat null as "allowed", so an Employee could briefly see Money Owed.
+
+## 2026-09-23 -- Site banners: the WELCOME15 offer and hiring notice are editable, without bringing back the layout shift
+
+**Problem:** the two bars above the header were two systems fighting over two slots. `promo-banner.js`/`hiring-banner.js` wrote fixed wording into `#siteBanner1/2`; a `banner1`/`banner2` value from Tools > Site Content replaced it with bare text (no close button, different padding) on 19 pages and did nothing on the other 14. Changing the offer or ending the hiring push meant a code deploy.
+
+**What shipped:**
+- **One script, `js/site-banners.js`,** on all 33 pages with the slots (adds about, our-work, careers, terms, privacy, the 11 blog pages, and the St. George city page, which had the slots but never loaded the promo). Each slot is `builtin` (the old wording, byte-identical markup and dismissal keys), `custom` (plain text + an optional link from a fixed list of 3 pages, rendered with `textContent`), or `off`. Old files deleted.
+- **Keys:** `banner1Mode`/`banner2Mode` and `banner1Link`/`banner2Link` join the existing `banner1`/`banner2` text (`sql/site-content/cms_site_banners.sql`, applied live). The CHECK validator refuses any other mode or link. With no mode saved, text alone still means "custom" (the old semantics).
+- **No network in a render-blocking script, so no CLS.** The first frame renders from a localStorage copy of the last-seen rows. The page's own fetch calls `applySiteBanners(rows)`, which saves the new rows and swaps now only if nothing has painted (`performance.getEntriesByType('paint')` empty) or the slot's `offsetHeight` is unchanged. Otherwise it puts the same nodes back in the same task (no frame drawn) and the change lands on the next page. A failed or empty fetch changes nothing.
+- **Dismissal:** built-in banners keep `th-promo-welcome15-dismissed`/`th-hiring-banner-dismissed`. A custom message stores an FNV-1a hash of text+link under `th-bannerN-dismissed`, so a new message reappears. A banner linking to the current page is skipped (no hiring banner on careers.html).
+- **Editor:** per-slot mode picker, with message + link shown only for "My own message", cross-field check (custom needs a message) on whichever field was touched, plain-word history ("built-in wording → no banner"), a next-page note in the review, a Put back guard, and banners grouped one column per slot.
+
+**Proof:** 64/64 element screenshots of both banners on the 16 pages that had them, desktop + phone, byte-identical before/after in Chromium. Header position, layout-shift totals, and page errors unchanged. Live migration verified in a rolled-back block: custom + link + off saved as one batch, undo back to exactly builtin/null, bad link and bad mode 23514.
+
+**Tests:** `cms-site-banners-db.test.js` (10, real SQL), `site-banners-public.test.js` (50, including the no-jump deferral with faked paint and heights, mutation-checked), 9 new flows in `site-content-editor.test.js`, plus a guard that no function is declared twice in the page (the FAQ/Terms PR had its own `cmsShort()` with other arguments; the banner helper is `cmsPlainValue()`). `promo-banner.test.js`, `hiring-banner.test.js`, and `site-banner-no-layout-shift.test.js` now point at the new file with their original assertions, plus the exact old markup.
+
+## 2026-09-23 -- Phone + email: booking, manage-booking, manage-job and 404 follow site_content
+
+The "phone hooks on booking/manage-*/404" item from the site-content entry above. These four pages showed only the built-in (435) 414-1667, and `tools/site-content.html` told the owner so.
+
+**What changed:**
+- **Hooks are classes on elements that already existed.** `js-phone-link js-phone-text` on the header `.phone-link` (booking, manage-booking, manage-job), the confirmation screen's number link (booking), and the 404 Call button. No wrapper elements: an extra `<span>` is what shifted booking.html's text by a sub-pixel in the review-stats work.
+- **A text-node swap, not the other pages' whole-text swap.** On index/about the fetch sets `.js-phone-text`'s `textContent`. Here that would erase the header link's icon and the 404 button's "Call ". So `applySiteContact(map)` rewrites only the number inside each hook's own text nodes, like `js/review-stats.js`. It writes nothing when the saved value is the built-in one. The four copies are identical, and a test keeps them that way.
+- **Fetch.** booking.html's review fetch was widened to `key=in.(googleRating,googleReviewCount,phone,email)`. The other three got their own fail-silent `key=in.(phone,email)` fetch (CSP already allowed `*.supabase.co`; 404 has no CSP).
+- **Messages built in script** read `window.__siteOverridePhone || '(435) 414-1667'` (index.html's precedent): the booking submit error, manage-booking's move/cancel errors, manage-job's request/cancel errors, and the "Nothing open online" Call link on booking and manage-booking. That link keeps `.js-phone-link`, so it's also fixed if it renders before the fetch lands.
+
+**Proof it looks the same:** real Chromium, desktop and phone, 27 element screenshots of every spot plus 18 whole-viewport shots (a spot that moved inside the page wouldn't show in an element shot).
+- **States**, driven with mocked RPCs: the confirmation screen, "Nothing open online", the submit error, the manage pages' move/cancel errors, and 404 hover.
+- **Repeatable:** Google fonts come from a local cache, `Math.random` is seeded (the confirmation confetti), the page clock is pinned (the slot picker), and smooth scrolls and the cookie notice settle before the viewport shot. Two runs of main then matched 45/45.
+- **Result:** main vs branch was byte-identical in all three runs (fetch failing, today's values, reduced motion): 135/135. Each spot's box, text and hrefs were identical too. A run with a different number showed it in all 27 spots and the old one in none.
+
+**Decided against:**
+- **A shared `js/site-contact.js`.** Every other public page carries its contact fetch inline, and 404.html is deliberately standalone. Four identical inline copies plus a test was the smaller change.
+- **Hooking `sms:` links, or fixing the other pages' gaps, in this change.** Out of scope; see below.
+
+**Found, not fixed (logged in bugfix.md):** the editor's old claim, "changes every place visitors tap to call, text, or email you", wasn't true elsewhere either:
+- no page hooks `sms:` links;
+- some Call buttons on the homepage, About, Our Work, Careers, and blog pages show the saved number but dial the built-in one;
+- About/Our Work/blog "Call (435) 414-1667" buttons, three appliance-repair FAQ answers, and the Careers "how to apply" line (phone and email) don't follow at all.
+
+So the new intro drops the four-pages warning but names those remaining spots. `contact-hooks-public.test.js` fails if that list of pages changes in either direction, so the intro can't silently go stale.
+
+Tests:
+- `tests/site-content/contact-hooks-public.test.js` (36, new): 32 fail on main. The 4 that pass there check things that were already true: the built-in fallbacks and 404's lack of scripts. `publicHtmlFiles()` moved into `tests/site-content/public-pages.js`, shared with `review-stats-public.test.js`.
+- `site-content-editor.test.js`: +1 for the rendered intro, and its built-in-fallback test now also checks the four pages;
+- updated with reasons:
+  - `review-stats-public.test.js`: booking's wider key filter;
+  - `404-button-language.test.js`: the Call button's new classes;
+  - `skip-link-and-main-landmark.test.js`: only `<script>` may follow 404's `<main>`;
+  - the "no token" tests in `manage-booking.test.js` / `manage-job.test.js`. They asserted *no* network call; the intent, per their title, is no RPC. The public phone/email read is allowed; anything else still fails.
+- **CodeQL (2 high, "Bad HTML filtering regexp") on the PR's first push:** two test regexes matched `<script>...</script>` literally. `inlineScripts()` now uses `scripts/check-undefined-vars.js`'s settled pattern: case-insensitive, and `</script` + anything up to `>`. The 404 landmark test checks what follows `<main>` through the DOM instead of a regex. Any new test that picks scripts out of HTML should reuse that pattern.
+
 <!-- Add new entries above this line -->

@@ -2690,6 +2690,78 @@ a.th-cmdk-item:hover { background: var(--orange-tint-soft); }
 }
 
 /* ---------------------------------------------------------------------
+   Page hand-off (2026-09-23). The transition captures the incoming page
+   at its first frame, and that frame came before tools-nav-pwa.js had
+   built the shell: the script is deferred behind supabase-js, sync.js
+   and five more, so the bar, the sidebar, the header's Search and More
+   buttons, and body.th-tool-page's padding all landed 150-220ms later
+   (Chromium at 4x CPU throttle; 0 of 15 navigations had the shell at
+   reveal). The old bar faded out with nothing under it and the new one
+   popped in, on every page change.
+   So: on a page that loads tools-nav-pwa.js, until body.th-tool-page
+   appears (inject() adds it in the same synchronous pass as the shell),
+   keep the outgoing frame on screen, still, and the incoming one
+   hidden; then the usual crossfade runs to a complete page. The script
+   test matters: the portal pages and the redirect stubs load this
+   stylesheet too but never get the class, so without it every visit to
+   them would sit through the full hold. Nothing is render-blocked, and the new page loads
+   and runs underneath the whole time. The hold is capped at 1.2s:
+   past that, the transition ends and the page shows as it used to.
+   Separate keyframe names for the hold, so each piece starts its
+   normal animation fresh when the hold lets go, rather than resuming
+   one that has already run out.
+--------------------------------------------------------------------- */
+@keyframes th-vt-hold { from, to { opacity: 1; } }
+@keyframes th-vt-hold-wait { from, to { opacity: 1; } }
+@keyframes th-vt-hidden { from, to { opacity: 0; } }
+html:has(> head > script[src*="/tools/tools-nav-pwa.js"]):not(:has(body.th-tool-page))::view-transition-old(root) { animation: th-vt-hold-wait 1.2s linear; }
+html:has(> head > script[src*="/tools/tools-nav-pwa.js"]):not(:has(body.th-tool-page))::view-transition-new(root) { animation: th-vt-hidden 1.2s linear; }
+/* A page captured before its shell has only the OLD bar/sidebar in the
+   transition. Keep that copy solid through the hold and the crossfade
+   after it, instead of the default fade-out: the new page's own copy
+   sits in the same place, fading in under it, so the shell never dips.
+   Only when the new page really has one -- on login.html the old bar
+   still fades out as before. */
+html:has(> head > script[src*="/tools/tools-nav-pwa.js"]):not(:has(body.th-tool-page))::view-transition-old(th-app-bottomnav):only-child,
+html:has(> head > script[src*="/tools/tools-nav-pwa.js"]):not(:has(body.th-tool-page))::view-transition-old(th-app-sidebar):only-child { animation: th-vt-hold-wait 1.2s linear; }
+html:has(.th-bottom-nav)::view-transition-old(th-app-bottomnav):only-child,
+html:has(.th-desktop-sidebar)::view-transition-old(th-app-sidebar):only-child { animation: th-vt-hold .28s linear; }
+/* Reduced motion keeps the hold (a still frame is not motion) and makes
+   everything after it instant, like every other transition here. */
+@media (prefers-reduced-motion: reduce) {
+  html:has(> head > script[src*="/tools/tools-nav-pwa.js"]):not(:has(body.th-tool-page))::view-transition-old(root),
+  html:has(> head > script[src*="/tools/tools-nav-pwa.js"]):not(:has(body.th-tool-page))::view-transition-new(root),
+  html:has(> head > script[src*="/tools/tools-nav-pwa.js"]):not(:has(body.th-tool-page))::view-transition-old(th-app-bottomnav):only-child,
+  html:has(> head > script[src*="/tools/tools-nav-pwa.js"]):not(:has(body.th-tool-page))::view-transition-old(th-app-sidebar):only-child {
+    animation-duration: 1.2s !important;
+  }
+}
+/* The loading line (tools-nav-pwa.js, "Page hand-off"): shown only once
+   a tap has waited 150ms for the next page. On a phone or tablet it sits
+   under the status bar, with the same 44px floor as the header's own top
+   padding (iOS can report the inset as 0); on a computer it runs along
+   the top edge of the fixed header, which has no notch. Same orange
+   sweep as .upload-progress-bar, moved with transform so it keeps
+   running while the page is busy. Reduced motion: a still line. */
+.th-nav-progress {
+  position: fixed; top: max(env(safe-area-inset-top, 0px), 44px); left: 0; right: 0; height: 3px;
+  z-index: 10001; overflow: hidden; pointer-events: none;
+  opacity: 0; transition: opacity .2s ease;
+}
+@media (min-width: 1024px) { .th-nav-progress { top: 0; } }
+html.th-nav-slow .th-nav-progress { opacity: 1; }
+.th-nav-progress::after {
+  content: ''; position: absolute; top: 0; left: 0; height: 100%; width: 40%;
+  border-radius: 0 2px 2px 0; background: linear-gradient(90deg, rgba(255,128,0,0), var(--orange) 45%, var(--orange-light));
+  transform: translateX(-100%);
+}
+html.th-nav-slow .th-nav-progress::after { animation: thNavProgress 1.1s cubic-bezier(.45,0,.25,1) infinite; }
+@keyframes thNavProgress { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+@media (prefers-reduced-motion: reduce) {
+  html.th-nav-slow .th-nav-progress::after { animation: none; transform: none; width: 100%; background: var(--orange); opacity: .75; }
+}
+
+/* ---------------------------------------------------------------------
    List rows (2026-09-22, Workspace rework part 2) -- one shared row for
    record lists, so a client, a job, or an invoice reads the same way on
    every page: a hex avatar at the left, a title over a one-line

@@ -779,6 +779,115 @@
 })();
 
 // ---------------------------------------------------------------------------
+// PAGE HAND-OFF (2026-09-23). Every tool page is its own document, and
+// HTML is network-first (service-worker.js), so after a tap the old page
+// sat still for as long as the next one took to arrive, with nothing to
+// say the tap had landed. Two things fill that gap. Neither delays the
+// navigation: the link does exactly what it did before.
+//   - The tapped tab or sidebar row lights up at once, as a native tab
+//     bar does. The next page lights the same one, so the shell the view
+//     transition carries across (styles-tools.css, "Page hand-off") is
+//     already right and nothing changes under your thumb at the end.
+//   - If the next page hasn't arrived within 150ms, a thin orange line
+//     runs along the top until it does. Quick hops never show it.
+// Undone on pageshow (back through the back/forward cache), when a
+// "leave with unsaved changes?" prompt is answered Stay (site-content.html
+// asks one), and after 10s for anything else that never navigated.
+// ---------------------------------------------------------------------------
+
+// Keys that send a link to a new tab or window instead of this one.
+var TH_NEW_TAB_KEYS = ['metaKey', 'ctrlKey', 'shiftKey', 'altKey'];
+
+// An ordinary left click the page itself hasn't already handled.
+function thIsPlainClick(e) {
+  if (e.defaultPrevented || e.button !== 0) return false;
+  return !TH_NEW_TAB_KEYS.some(function (k) { return e[k]; });
+}
+
+// The link's URL when it is a same-origin tool page, else null.
+function thToolsUrl(a) {
+  var url;
+  try { url = new URL(a.href, window.location.href); } catch (err) { return null; }
+  var sameApp = url.origin === window.location.origin && url.pathname.indexOf('/tools/') === 0;
+  return sameApp ? url : null;
+}
+
+// True when this click will load another tool page: a plain click on a
+// tool-page link that isn't a download, a new tab, or only a #hash move on
+// this page.
+function thLinkLeavesPage(a, e) {
+  if (!thIsPlainClick(e) || a.hasAttribute('download')) return false;
+  var target = a.getAttribute('target');
+  if (target && target !== '_self') return false;
+  var url = thToolsUrl(a);
+  return !!url && url.pathname + url.search !== window.location.pathname + window.location.search;
+}
+
+// Lights a tapped tab, sidebar row or Money segment, and returns what it
+// changed ({ el, on } per element, on = the state to put back) so it can
+// be undone.
+function thLightTappedTab(a) {
+  var group = a.closest('.th-bottom-nav, .th-desktop-sidebar, .th-money-switch');
+  if (!group || a.classList.contains('is-active')) return [];
+  var changed = [];
+  group.querySelectorAll('.is-active').forEach(function (el) {
+    el.classList.remove('is-active');
+    changed.push({ el: el, on: true });
+  });
+  a.classList.add('is-active');
+  changed.push({ el: a, on: false });
+  return changed;
+}
+
+// The loading line: one per page, hidden until html.th-nav-slow.
+function thNavProgressLine() {
+  var el = document.getElementById('thNavProgress');
+  if (el) return el;
+  el = document.createElement('div');
+  el.id = 'thNavProgress';
+  el.className = 'th-nav-progress';
+  el.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(el);
+  return el;
+}
+
+(function () {
+  if (typeof document === 'undefined' || !document.addEventListener) return;
+  var SHOW_AFTER_MS = 150;
+  var GIVE_UP_MS = 10000;
+  var showTimer = null;
+  var giveUpTimer = null;
+  var swapped = [];
+
+  function reset() {
+    clearTimeout(showTimer);
+    clearTimeout(giveUpTimer);
+    showTimer = giveUpTimer = null;
+    document.documentElement.classList.remove('th-nav-slow');
+    swapped.forEach(function (s) { s.el.classList.toggle('is-active', s.on); });
+    swapped = [];
+  }
+
+  document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a || !thLinkLeavesPage(a, e)) return;
+    reset();
+    swapped = thLightTappedTab(a);
+    thNavProgressLine();
+    showTimer = setTimeout(function () { document.documentElement.classList.add('th-nav-slow'); }, SHOW_AFTER_MS);
+    giveUpTimer = setTimeout(reset, GIVE_UP_MS);
+  });
+  // A page that asks before leaving cancels this event. The prompt is
+  // answered before a zero-delay timer can run, so if the timer runs on a
+  // cancelled event, this page is staying.
+  window.addEventListener('beforeunload', function (e) {
+    if (!giveUpTimer) return;
+    setTimeout(function () { if (e.defaultPrevented) reset(); }, 0);
+  });
+  window.addEventListener('pageshow', function (e) { if (e.persisted) reset(); });
+})();
+
+// ---------------------------------------------------------------------------
 // ON THE CLOCK (2026-09-23, Workspace rework part 9). While a job's clock
 // runs, a bar sits above the bottom nav (bottom-right on a computer) on
 // every tools page: the job, the client, the time ticking, and Stop. Tap

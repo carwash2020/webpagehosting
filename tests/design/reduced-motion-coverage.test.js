@@ -44,7 +44,7 @@ const PUBLIC_FILES = [
   ...fs.readdirSync(repo('blog')).filter((f) => f.endsWith('.html')).map((f) => `blog/${f}`),
   ...fs.readdirSync(repo('locations')).filter((f) => f.endsWith('.html')).map((f) => `locations/${f}`),
   ...fs.readdirSync(repo('services')).filter((f) => f.endsWith('.html')).map((f) => `services/${f}`),
-  'js/site-motion.js', 'js/promo-banner.js', 'js/hiring-banner.js', 'js/analytics-events.js', 'js/triage.js', 'js/business-hours.js', 'js/utm-tracking.js',
+  'js/site-motion.js', 'js/site-banners.js', 'js/analytics-events.js', 'js/triage.js', 'js/business-hours.js', 'js/utm-tracking.js',
 ];
 
 test('every explicit smooth scroll on the public site falls back to auto under reduced motion', () => {

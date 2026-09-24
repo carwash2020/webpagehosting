@@ -68,7 +68,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=87b1f5227e">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=9aa2822757">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=9c0fadebb0">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=0e885bb435" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -81,7 +81,7 @@
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
 <script src="/tools/tools-dialogs.js?v=310315eb44" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=151ee293de" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=27378ed01d" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <script src="/tools/tools-tour.js?v=118148b9a2" defer></script>
 <style>
@@ -182,6 +182,13 @@
   .greeting-banner-stat { display: flex; align-items: baseline; gap: 6px; flex-shrink: 0; text-align: right; }
   .greeting-banner-number { font-family: var(--font-display); font-size: 22px; line-height: 1; margin: 0; color: var(--orange-light); }
   .greeting-banner-label { margin: 0; color: var(--text-dim); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px; }
+  /* Loading state (2026-09-23): the band used to open on "Good morning."
+     and a 0 whatever the hour and the day's real count, until the sync
+     finished and renderGreetingBanner() replaced both. Now it opens on
+     the shared shimmer, sized to the words that replace it. */
+  .greeting-banner .skeleton-line { display: inline-block; vertical-align: middle; margin: 0; height: 14px; }
+  .greeting-banner-greeting .skeleton-line { width: 190px; max-width: 60vw; }
+  .greeting-banner-number .skeleton-line { width: 16px; height: 18px; }
   @media (max-width: 560px) {
     .greeting-banner { flex-direction: column; align-items: flex-start; gap: 4px; }
     .greeting-banner-stat { text-align: left; }
@@ -695,11 +702,11 @@
 
 <div class="greeting-banner" id="greetingBanner">
   <div class="greeting-banner-text">
-    <p class="greeting-banner-greeting" id="greetingBannerGreeting">Good morning.</p>
+    <p class="greeting-banner-greeting" id="greetingBannerGreeting"><span class="skeleton-line"></span></p>
     <p class="greeting-banner-date" id="greetingBannerDate"></p>
   </div>
   <div class="greeting-banner-stat">
-    <p class="greeting-banner-number" id="greetingBannerNumber">0</p>
+    <p class="greeting-banner-number" id="greetingBannerNumber"><span class="skeleton-line"></span></p>
     <p class="greeting-banner-label" id="greetingBannerLabel">jobs today</p>
   </div>
 </div>
@@ -716,13 +723,19 @@
      offers "Route today" -- a Google Maps directions link through
      every address on today's schedule (what Route Planner's "Pull
      Today's Jobs" + "Open Full Route" took four taps to reach). -->
+<!-- Skeletons (2026-09-23): what these three show until the first
+     renderDashboard() (after the role load and sync pull) fills them --
+     the same shared .skeleton-line the Finance, Invoices and Contracts
+     lists open on. They used to open empty and then jump to full height,
+     on every return to Home. renderDashboard() runs on a failed sync too,
+     so none of these can be left behind. -->
 <div class="today-hero" id="todayHero">
-  <div class="today-next-job" id="todayNextJob"></div>
+  <div class="today-next-job" id="todayNextJob"><div class="skeleton-line w-40"></div><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div></div>
   <div class="today-side">
-    <div class="today-money" id="todayMoney"></div>
+    <div class="today-money" id="todayMoney"><div class="today-money-label">Money Owed</div><div class="skeleton-line w-100"></div><div class="skeleton-line w-100"></div></div>
     <div class="today-restofday">
       <div class="today-restofday-label">Rest of Today</div>
-      <div id="todayRestOfDay"></div>
+      <div id="todayRestOfDay"><div class="skeleton-line w-60"></div></div>
     </div>
   </div>
 </div>
@@ -3404,10 +3417,24 @@
     }, 1200));
   }
 
+  // Once per person per session, not on every return to the dashboard
+  // (2026-09-23).
+  // This card fills the screen and takes every tap for 1.7s, and it ran
+  // each time Home was tapped, after the page had already appeared, so
+  // going back to the dashboard looked like the app starting up again.
+  // sessionStorage lasts until the app or tab is closed: the first open
+  // of the day still gets it, and so does someone else signing in here.
+  const WELCOME_SHOWN_KEY = 'th_welcome_shown';
+
   function renderWelcomeGreeting() {
     if (typeof getCurrentUserFirstName !== 'function') return;
     const name = getCurrentUserFirstName();
     if (!name) return;
+    const who = (typeof getCurrentUserEmail === 'function' && getCurrentUserEmail()) || name;
+    try {
+      if (sessionStorage.getItem(WELCOME_SHOWN_KEY) === who) return;
+      sessionStorage.setItem(WELCOME_SHOWN_KEY, who);
+    } catch (e) { /* storage blocked: greet every time, as before */ }
     const role = (typeof getCurrentUserRole === 'function') ? getCurrentUserRole() : null;
     const text = (role && role.roleName) ? ('Welcome back, ' + name + ' \u2014 ' + role.roleName) : ('Welcome back, ' + name);
     showWelcomeOverlay(text);
