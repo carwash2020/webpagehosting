@@ -5271,3 +5271,9 @@ Tests:
   - the list of pages with unhooked spots is now empty, and the check includes Text links.
 - `site-content-editor.test.js`: the new note; the built-in-value check covers every public page.
 - Updated: `conversion-polish-sticky-sms-faq.test.js` (the sticky Text button's new class).
+
+## What changed, 2026-09-24 -- Finance's Income tab: the active tab no longer overlaps the header
+
+Workspace tools only. Reported directly with a screenshot: on Finance's Income tab, the active tab's label bled up behind the sticky header once scrolled. Confirmed live: the mobile header is 109px tall (its content row is a full 44px, since every header button is a 44px tap target), but `.tabs.tabs-sticky`'s sticky position was set 4px above that, on every page sharing this tab bar (Finance, Job Tracker, Invoice Generator, Clients, Review Request). Fixed by correcting the offset to match the header's real height. `#mainContent`'s "skip to main content" scroll offset had the identical stale assumption and got the same fix.
+
+Verified: full suite (only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, and a live Playwright render confirming the tab bar now sits flush against the header with no gap or overlap. New test in `tests/workspace/finance-split.test.js` proves the arithmetic holds, so this can't silently drift again if the header's own padding or content height ever changes.
