@@ -5065,13 +5065,22 @@ Public site (homepage, About, Our Work, Careers, all 11 blog pages, the 3 St. Ge
 - **Text links keep their pre-filled message.** Only the number before `?body=` changes.
 - **Google's copy of those FAQ answers changes with them,** so search results never show a different number than the page (the same approach as the Google rating).
 - **Also fixed:**
-  - the homepage chat panel's "Prefer to text? Message us from your phone at ..." note on desktop never followed;
+  - the homepage chat panel's "Prefer to text? Message us from your phone at ..." note never followed (few visitors see it: the panel is hidden for a mouse pointer);
   - the Careers form's error message always showed the built-in number and email;
   - the "text" link in the booking pages' "Nothing open online" message used the built-in number.
 
 **The editor's "Phone and email" note** now says every Call, Text, and Email button follows. It names the only two places that don't: the client portal, and the business details Google reads behind the scenes on each page.
 
-**Proven identical in real Chromium:** TBD_README_SHOTS
+**Proven identical in real Chromium** at desktop (1280&times;800), phone (390&times;844) and touch-tablet (820&times;1180) sizes:
+- **Every spot on the 22 pages:** 98 of them. That's 263 close-up screenshots and 263 whole-screen screenshots, plus the rendered page at each size (every element, attribute, and text, leaving out only class names and script code).
+- **Opened states too:** the homepage's service pop-up and chat panel, the St. George FAQ answers, the phone menu, and booking's confirmation screen after a real booking.
+- **Repeatable:** fonts come from a local cache, `Math.random` is seeded, and the page clock is paused and moved forward in fixed steps. Scrolling and the cookie notice settle first, and each shot is retaken until two captures match.
+
+Result:
+- 657 of 658 files are byte-for-byte the same as a run of the old pages, and so is the confirmation screen (35 of 35).
+- The one other file is a whole-screen shot whose top strip, under the sticky header's blur, varies between runs of the old pages too (6 of 658 did). Retaken, the new pages gave the old bytes exactly.
+- The rendered page is identical at all 66 page sizes, so nothing but the added classes changed.
+- TBD_NEW_NUMBER
 
 **Also fixed (tests only):** two manage-booking tests assumed the day still had two or three open times. They failed every evening, on `main` too. They now pick any open time.
 
@@ -5079,7 +5088,7 @@ Verified:
 - TBD_README_VERIFIED
 
 Tests:
-- `tests/site-content/contact-hooks-public.test.js` (now 120; 39 fail on the previous commit):
+- `tests/site-content/contact-hooks-public.test.js` (now 119; 39 fail on the previous commit):
   - today's values and every failed answer leave all 22 pages byte-for-byte unchanged;
   - a new number and email reach every shown spot and every Call/Text/Email link, and nothing else changes;
   - new tests cover each spot above, plus the rule that a hook on a whole button or sentence only goes where the number-only rewrite runs;

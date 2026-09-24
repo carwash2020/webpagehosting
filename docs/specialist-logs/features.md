@@ -3242,18 +3242,32 @@ Follow-up to the entry above. It left the remaining spots in `bugfix.md` ("Found
 - **index.html keeps its own `site_content` script.** Its FAQPage is rebuilt from `site_faq` rows by a separate fetch. A generic FAQ-schema swap there could land after that rebuild and make the schema disagree with the CMS accordion. index got the classes, a `.js-sms-link` block written like its `.js-email-mailto` one, and the chat-note fix below.
 - **No class on JSON-LD `<script>` tags.** Several SEO tests find blocks by the exact `<script type="application/ld+json">` string.
 
-**Found and fixed while here:** index's desktop chat note ("Prefer to text? Message us from your phone at ...") is written as the page loads, before the fetch lands, so it never showed a saved number. index's phone block now swaps the number in it (guarded; nothing happens at the built-in value, and the phone version of the note has no number).
+**Found and fixed while here:** index's desktop chat note ("Prefer to text? Message us from your phone at ...") is written as the page loads, before the fetch lands, so it never showed a saved number. index's phone block now swaps the number in it. It is guarded: nothing happens at the built-in value, and the phone version of the note has no number. Few visitors see this note: CSS hides the chat for `(pointer: fine)`, so it only shows where the pointer is neither fine nor coarse.
 
 **Still built-in (the editor intro names both):**
 - **The client portal.** `portal/*.html` never reads `site_content`; its Call/Text links, and `js/booking-flow.js`'s `createBookingPicker()` "Nothing open online" message (used only by the portal), are hard-coded.
 - **Each page's LocalBusiness/Service JSON-LD** `telephone` and `email`.
 - index's FAQ answers and the Terms contact section are CMS free text, covered by those sections' own editor notes.
 
-**Proof it looks the same:** real Chromium (Playwright 1.56), TBD_SHOTS
+**Proof it looks the same:** real Chromium (Playwright 1.56), desktop 1280x800, phone 390x844 @2x, touch tablet 820x1180 @2x.
+- **Coverage:** every `tel:`/`sms:`/`mailto:` link, plus every element whose own text holds the number or address, on the 22 pages. That's 98 spots, 263 element + 263 viewport shots, plus a DOM signature per page and size (every node and attribute except `class`, with inline script source left out).
+- **Opened states:** index's service pop-up (`[data-service]`) and chat panel (tablet only: hidden for a fine pointer, and behind the sticky bar on phones), the St. George `<details>`, the phone/tablet menu, and booking's confirmation screen reached through the real flow with stubbed RPCs.
+- **Determinism** (each piece was needed):
+  - `clock.install()` then `pauseAt()`, advanced only by `runFor()`. `setFixedTime()` alone left rAF/timers on the real clock, and index's header edge varied by ±1.
+  - seeded `Math.random`, and Google Fonts served from a local cache;
+  - service workers blocked, and the cookie choice preset (the banner hides the chat widget);
+  - instant scrolls: `scroll-behavior: smooth` made `scrollTo` animate into the shot;
+  - `img.decode()`, and a shoot-until-two-captures-match loop;
+  - Chromium flags `--run-all-compositor-stages-before-draw`, `--disable-partial-raster`, `--disable-low-res-tiling`, `--num-raster-threads=1`, among others.
+- **Residual noise:** two runs of the old tree still differed in 6 of 658 files. All were viewport shots, all in the top band under the sticky header's `backdrop-filter`, which has two raster states.
+- **Result:** 657/658 files byte-identical to one of the two old-tree runs; the booking confirmation screen matched 35/35. The last file was that header band; retaken twice from each tree, the new tree reproduced the old bytes exactly. DOM signatures were identical on all 66 page sizes.
+- TBD_NEW_NUMBER
 
 Tests:
-- `tests/site-content/contact-hooks-public.test.js`: 37 -> 120. The byte-identity, new-number and hook checks now cover all 22 pages. New tests cover the Call buttons, sms `?body=`, the FAQ + FAQPage pair, the Careers line, the index pop-up/chat links, and the desktop chat note (all scripts running). `KNOWN_UNHOOKED_PAGES` is now empty and the site-wide check includes `sms:` links. 39 of the 120 fail on the previous commit; the rest are byte-identity guards that hold on both.
+- `tests/site-content/contact-hooks-public.test.js`: 37 -> 119. The byte-identity, new-number and hook checks now cover all 22 pages. New tests cover the Call buttons, sms `?body=`, the FAQ + FAQPage pair, the Careers line, the index pop-up/chat links, and the desktop chat note (all scripts running). `KNOWN_UNHOOKED_PAGES` is now empty and the site-wide check includes `sms:` links. 39 of the 119 fail on the previous commit; the rest are byte-identity guards that hold on both.
 - `site-content-editor.test.js`: the intro test now checks the new wording.
-- TBD_DESIGN_TESTS
+- `conversion-polish-sticky-sms-faq.test.js`: the sticky Text button's class string gains `js-sms-link`.
+- The built-in-value check (moved to `site-content-editor.test.js` by #402) now covers every public page, including `sms:` links and the old `tel:4354141667` form.
+- Two evening-only test failures on `main`, fixed (see bugfix.md): `booking-manage-link-round3` and `booking-flow-picker-and-confirm` assumed today still had 2-3 open slots.
 
 <!-- Add new entries above this line -->
