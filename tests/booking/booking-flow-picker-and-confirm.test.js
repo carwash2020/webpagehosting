@@ -568,8 +568,11 @@ test('manage-booking.html: tapping a time never moves the booking by itself -- i
   });
   await waitForCondition(() => w.document.getElementById('startRescheduleBtn'));
   w.document.getElementById('startRescheduleBtn').click();
-  await waitForCondition(() => w.document.querySelectorAll('.slot-btn').length > 1);
-  w.document.querySelectorAll('.slot-btn')[1].click();
+  // First open day, real clock: late in the day it can have a single slot
+  // (2026-09-23, 6:40 PM Denver: only 9:00 PM), so tap the last one shown.
+  await waitForCondition(() => w.document.querySelector('.slot-btn'));
+  const slots = w.document.querySelectorAll('.slot-btn');
+  slots[slots.length - 1].click();
   await waitFor(30);
   assert.equal(rescheduled, 0);
   assert.equal(w.document.getElementById('rescheduleConfirm').hidden, false);

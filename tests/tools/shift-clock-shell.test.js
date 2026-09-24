@@ -3,7 +3,20 @@
 // on shift, an amber dot when a shift needs an end time), a row under New in
 // the desktop sidebar, and one sheet that opens in whichever mode the day is
 // in. The data rules are part 1's (tests/tools/shift-clock.test.js).
-const { test } = require('node:test');
+//
+// Midday, whatever the real time (2026-09-24). The shell decides "today"
+// in local time, and these tests build shifts from the real clock ("started
+// 3 hours ago"). From midnight to 3 AM that start is yesterday, so the sheet
+// took another path and two tests failed every night on CI, which runs in
+// UTC. Each test file runs in its own process, and Node and jsdom share its
+// timezone, so this file runs in the fixed-offset zone where it's about
+// noon right now. Etc/GMT zones have no DST; their sign is inverted
+// (Etc/GMT-12 is UTC+12).
+{
+  const hoursAhead = 12 - new Date().getUTCHours(); // -11 .. +12
+  process.env.TZ = 'Etc/GMT' + (hoursAhead > 0 ? '-' + hoursAhead : hoursAhead < 0 ? '+' + -hoursAhead : '');
+}
+const { test, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
@@ -21,6 +34,12 @@ const MIN = 60 * 1000;
 const HOUR = 60 * MIN;
 const iso = (ms) => new Date(ms).toISOString();
 const timeLabel = (ms) => new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+// Every window a test opened is closed after it, pass or fail. A failed
+// assertion skips the test's own w.close(), and an open window's timers kept
+// the whole node --test run alive for 40+ minutes instead of failing.
+const OPEN_WINDOWS = [];
+afterEach(() => { while (OPEN_WINDOWS.length) OPEN_WINDOWS.pop().close(); });
 
 // A tools page with the shell (and, unless withDL is false, the data layer),
 // signed in as Steve. Toasts, undo toasts and confirms are recorded.
@@ -44,6 +63,7 @@ function page(url, { shifts, jobs, withDL = true, signedIn = true, setup } = {})
     },
   });
   const w = dom.window;
+  OPEN_WINDOWS.push(w);
   for (const src of (withDL ? [DL, NAV] : [NAV])) { const s = w.document.createElement('script'); s.textContent = src; w.document.body.appendChild(s); }
   w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
   return w;
