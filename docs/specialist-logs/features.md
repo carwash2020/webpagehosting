@@ -3172,4 +3172,8 @@ The owner can now change the Google rating and review count (plus banners, homep
 
 **Next (PR B/C):** promo + hiring banner copy into the CMS without re-introducing the CLS the synchronous banner scripts fixed; the banner-slot collision; banners on pages that skip them; FAQ/Terms in-place save with the same review + undo; a gated "Website" nav entry so the owner doesn't go through Dev Tools; phone hooks on booking/manage-*/404.
 
+## 2026-09-23 (from the visual lane) -- Home could render from local data before the sync
+
+`workspace.html` renders the dashboard only after `initSyncOnLoad()` (role load + sync pull, two network round trips). So every return to Home shows a skeleton first; before 2026-09-23 it showed empty cards and a made-up "0 jobs today". Rendering once from localStorage at DOMContentLoaded, then again after the pull, would make Home instant in the common case. Not done from the visual lane because it's an init-order change with a permission angle. `getCurrentUserRole()` is null until the role loads, and a few checks treat null as "allowed", so an Employee could briefly see Money Owed.
+
 <!-- Add new entries above this line -->
