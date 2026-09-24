@@ -5048,3 +5048,41 @@ Tests:
   - `404-button-language.test.js`: the Call button's new classes;
   - `skip-link-and-main-landmark.test.js`: a script may follow 404's `<main>`, nothing that renders;
   - the "no token" tests in `manage-booking.test.js` and `manage-job.test.js`: still no RPC call without a token, but the public phone/email read now happens.
+
+## What changed, 2026-09-24 -- Every Call, Text, and Email spot on the public site follows the saved phone number and email
+
+Public site (homepage, About, Our Work, Careers, all 11 blog pages, the 3 St. George appliance-repair pages, plus booking/manage-booking/manage-job/404) and `tools/site-content.html`. Nothing looks different today.
+
+**Before:** changing the phone number or email in the site content editor missed some spots. The editor's "Phone and email" note listed them:
+- some Call buttons showed the new number but dialed the old one (the homepage's two, About, Our Work, Careers, every blog page, the homepage's "Call Now" and the chat's "Call Instead");
+- the "Call (435) 414-1667" buttons at the end of About, Our Work, and the blog posts didn't change at all;
+- neither did the same-day FAQ answer on the dishwasher, fridge, and washer/dryer St. George pages, or the Careers "Call or text ... or email ..." line;
+- no "Text us" link followed.
+
+**Now all of them follow.** If the fetch fails, every page keeps the built-in number and email exactly as before.
+- **Classes only, on the elements that already hold the number.** No new elements.
+- **Only the number itself is rewritten**, inside the button's or sentence's own text, so "Call " and the rest of a sentence stay put. Nothing is rewritten at all when the saved number is the built-in one.
+- **Text links keep their pre-filled message.** Only the number before `?body=` changes.
+- **Google's copy of those FAQ answers changes with them,** so search results never show a different number than the page (the same approach as the Google rating).
+- **Also fixed:**
+  - the homepage chat panel's "Prefer to text? Message us from your phone at ..." note on desktop never followed;
+  - the Careers form's error message always showed the built-in number and email;
+  - the "text" link in the booking pages' "Nothing open online" message used the built-in number.
+
+**The editor's "Phone and email" note** now says every Call, Text, and Email button follows. It names the only two places that don't: the client portal, and the business details Google reads behind the scenes on each page.
+
+**Proven identical in real Chromium:** TBD_README_SHOTS
+
+**Also fixed (tests only):** two manage-booking tests assumed the day still had two or three open times. They failed every evening, on `main` too. They now pick any open time.
+
+Verified:
+- TBD_README_VERIFIED
+
+Tests:
+- `tests/site-content/contact-hooks-public.test.js` (now 120; 39 fail on the previous commit):
+  - today's values and every failed answer leave all 22 pages byte-for-byte unchanged;
+  - a new number and email reach every shown spot and every Call/Text/Email link, and nothing else changes;
+  - new tests cover each spot above, plus the rule that a hook on a whole button or sentence only goes where the number-only rewrite runs;
+  - the list of pages with unhooked spots is now empty, and the check includes Text links.
+- `site-content-editor.test.js`: the new note; the built-in-value check covers every public page.
+- Updated: `conversion-polish-sticky-sms-faq.test.js` (the sticky Text button's new class), and the two evening-only tests above.
