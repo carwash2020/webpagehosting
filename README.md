@@ -5092,3 +5092,38 @@ Updated with reasons:
 - `tests/design/promo-banner.test.js`, `hiring-banner.test.js`, and `site-banner-no-layout-shift.test.js`: pointed at the new `js/site-banners.js`, with every original check kept and the exact old markup pinned;
 - `tests/design/reduced-motion-coverage.test.js`: the file list;
 - `tests/site-content/site-content-editor.test.js`: its banner warning test picks "My own message" first.
+
+## What changed, 2026-09-23 -- The booking, manage-booking, and not-found pages follow the saved phone number
+
+Public site (`booking.html`, `manage-booking.html`, `manage-job.html`, `404.html`) and `tools/site-content.html`. Nothing looks different today.
+
+**Before:** changing the phone number in Dev Tools &rarr; Content left these four pages on the built-in (435) 414-1667, and the editor told the owner to ask Connor to change them by hand.
+
+**Now they follow it, like the other pages.** That covers the header number, the confirmation screen's "call or text" line, the 404 Call button, every Call link, and the error messages these pages show ("Please call us at ..."). If the fetch fails, each page keeps the built-in number exactly as before.
+- Only classes were added to the existing links. No new elements, since an extra `<span>` once shifted the booking page's text by a fraction of a pixel.
+- The number is rewritten inside the link's own text, so the header's phone icon and the 404 button's "Call" stay put. Nothing is rewritten at all when the saved number is the built-in one.
+
+**Proven identical in real Chromium, desktop and phone:**
+- 27 element screenshots of every spot on the four pages, including the confirmation screen, the error messages, "Nothing open online", and the 404 hover state;
+- 18 whole-screen screenshots of the same states, so a spot that moved on the page would show too.
+
+Main and this change are byte-for-byte the same with the fetch failing, with today's saved values, and with reduced motion (135 of 135). So are each spot's position, text, and link. With a different saved number, all 27 spots show it and none shows the old one.
+
+**The editor's "Phone and email" note** no longer names these four pages. It now names the spots that still keep the built-in number, found while doing this:
+- every "text us" link;
+- some Call buttons and sentences on the homepage, About, Our Work, Careers, blog, and appliance-repair pages.
+
+A new test fails if that list of pages changes, so the note stays accurate. Details are in `docs/specialist-logs/bugfix.md`; fixing them is a separate change.
+
+Verified:
+- full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint`;
+- `fix-versions` bumped the service worker's cache name.
+
+Tests:
+- `tests/site-content/contact-hooks-public.test.js` (36, new; 32 fail on main): the real script on the real pages. Today's values and every kind of failed answer leave each page byte-for-byte unchanged. A new number reaches every spot and nothing else; the error messages and "Nothing open online" are driven end to end.
+- `site-content-editor.test.js` (+1): the rendered "Phone and email" note. Its built-in-fallback check now covers the four pages too.
+- Updated with reasons:
+  - `review-stats-public.test.js`: booking's wider fetch;
+  - `404-button-language.test.js`: the Call button's new classes;
+  - `skip-link-and-main-landmark.test.js`: a script may follow 404's `<main>`, nothing that renders;
+  - the "no token" tests in `manage-booking.test.js` and `manage-job.test.js`: still no RPC call without a token, but the public phone/email read now happens.

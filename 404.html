@@ -103,8 +103,64 @@
   <p>This page took a wrong turn. The page you're looking for doesn't exist or may have moved. If you were trying to reach us, we're still just a call or text away.</p>
   <div class="btn-row">
     <a class="btn outline" href="/">Back to Home</a>
-    <a class="btn orange" href="tel:+14354141667">Call (435) 414-1667</a>
+    <a class="btn orange js-phone-link js-phone-text" href="tel:+14354141667">Call (435) 414-1667</a>
   </div>
 </main>
+<script>
+  // Phone + email, read live from site_content (edited in
+  // tools/site-content.html). This page had no site_content fetch before
+  // 2026-09-23, so it carries its own, the same fail-silent way every
+  // other public page does: if this doesn't succeed, the built-in number
+  // already in the HTML stays exactly as it is.
+  (function () {
+    const SITE_CONTENT_SUPABASE_URL = 'https://csvfqdjuobylgafgolho.supabase.co';
+    const SITE_CONTENT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs';
+    // The hooks on this page sit on elements that hold more than the
+    // number (the header link's icon, the 404 button's "Call"), so unlike
+    // the whole-text swap on the other pages this rewrites only the number
+    // itself, inside the element's own text nodes (as js/review-stats.js
+    // does). Nothing is added, removed or re-created (a new wrapper <span>
+    // once shifted booking.html's text by a sub-pixel), and nothing is
+    // touched at all when the saved value is the built-in one.
+    // booking.html, manage-booking.html, manage-job.html and 404.html
+    // carry this same function; contact-hooks-public.test.js keeps the
+    // copies identical.
+    function applySiteContact(map) {
+      function swapText(selector, from, to) {
+        if (to === from) return;
+        document.querySelectorAll(selector).forEach(el => {
+          for (let n = el.firstChild; n; n = n.nextSibling) {
+            if (n.nodeType === 3 && n.nodeValue.indexOf(from) !== -1) n.nodeValue = n.nodeValue.split(from).join(to);
+          }
+        });
+      }
+      function swapHref(selector, href) {
+        document.querySelectorAll(selector).forEach(el => { if (el.getAttribute('href') !== href) el.setAttribute('href', href); });
+      }
+      if (map.phone) {
+        swapText('.js-phone-text', '(435) 414-1667', map.phone);
+        swapHref('.js-phone-link', 'tel:+1' + map.phone.replace(/\D/g, ''));
+        // Read by the messages this page builds later (errors, "Nothing
+        // open online"), which fall back to the built-in number.
+        window.__siteOverridePhone = map.phone;
+      }
+      if (map.email) {
+        swapText('.js-email-text', 'steve@triplehenterprisesllc.biz', map.email);
+        swapHref('.js-email-link', 'mailto:' + map.email);
+      }
+    }
+
+    fetch(SITE_CONTENT_SUPABASE_URL + '/rest/v1/site_content?select=key,value&key=in.(phone,email)', {
+      headers: { 'apikey': SITE_CONTENT_SUPABASE_ANON_KEY },
+    })
+      .then(res => res.ok ? res.json() : [])
+      .then(rows => {
+        const map = {};
+        (Array.isArray(rows) ? rows : []).forEach(r => { if (r.value) map[r.key] = r.value; });
+        applySiteContact(map);
+      })
+      .catch(() => { /* static fallback content already shown is correct */ });
+  })();
+</script>
 </body>
 </html>
