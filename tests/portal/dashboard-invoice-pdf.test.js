@@ -85,7 +85,8 @@ test('the download button reads "Download Receipt" once paid, not just "Download
 });
 
 test('the generated PDF is labeled RECEIPT when paid and INVOICE when not', () => {
-  assert.match(html, /doc\.text\(inv\.paid \? 'RECEIPT' : 'INVOICE', pageW - 40, 30/);
+  assert.match(html, /const docType = inv\.paid \? 'RECEIPT' : 'INVOICE';/);
+  assert.match(html, /drawPdfHeader\(doc, pageW, docType,/);
 });
 
 test('a paid receipt includes the Stripe payment reference when one exists', () => {

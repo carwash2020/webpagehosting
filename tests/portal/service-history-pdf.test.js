@@ -39,6 +39,9 @@ function extractFn(src, name) {
 function ctx() {
   const c = { Intl, Date, Math, Number, String, Array };
   vm.createContext(c);
+  // 2026-09-24: the PDF is drawn with the shared js/pdf-layout.js
+  // (letterhead, table, footer), which jobs.html loads before this code.
+  vm.runInContext(fs.readFileSync(repo('js', 'pdf-layout.js'), 'utf8'), c);
   vm.runInContext(['historyMoney', 'historyDate', 'buildServiceHistory', 'drawServiceHistoryPdf'].map((n) => extractFn(JOBS, n)).join('\n') +
     '\nthis.build = buildServiceHistory; this.draw = drawServiceHistoryPdf;', c);
   return c;

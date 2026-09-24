@@ -40,7 +40,9 @@ test('generateJobSheet() guards on jsPDF being loaded and on a real job bundle, 
 
 test('the job sheet states the part number from linked expenses, not a field invented on the job record itself', () => {
   assert.match(JOB_DETAIL, /bundle\.linkedExpenses\.filter\(e => e\.partNumber && e\.partNumber\.trim\(\)\)/);
-  assert.match(JOB_DETAIL, /'Part #: ' \+ e\.partNumber/);
+  // 2026-09-24: parts are a two-column table (Part / Part #) now, via
+  // the shared drawPdfTable(), rather than a stacked "Part #:" line.
+  assert.match(JOB_DETAIL, /rows: partRows\.map\(e => \(\{ desc: e\.desc \|\| 'Part', part: e\.partNumber \}\)\)/);
 });
 
 test('the job sheet states the warranty as a real end date, not a decaying "days left" count', () => {

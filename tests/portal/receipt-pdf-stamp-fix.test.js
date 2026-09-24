@@ -13,34 +13,61 @@ const path = require('path');
 
 const HTML = fs.readFileSync(path.join(__dirname, '..', '..', 'portal', 'dashboard.html'), 'utf8');
 
-test('a minimum y is enforced before the total, whenever the PAID stamp exists, genuinely below the stamp\u2019s own bottom edge (195 + 46 = 241)', () => {
-  assert.match(HTML, /if \(inv\.paid\) y = Math\.max\(y, 255\);/);
-  // 255 is a real number here, not just present -- confirm it's
-  // actually past the stamp's bottom edge with the true, current
-  // stamp geometry (a regression in either number should fail this).
-  const cyMatch = HTML.match(/stampCX = pageW - 95, stampCY = (\d+), stampR = (\d+)/);
-  assert.ok(cyMatch, 'expected to find the stamp\u2019s real geometry');
-  const bottomEdge = parseInt(cyMatch[1], 10) + parseInt(cyMatch[2], 10);
-  assert.ok(255 > bottomEdge, `expected the enforced minimum (255) to be past the stamp's actual bottom edge (${bottomEdge})`);
+// 2026-09-24: the fixed-position circle (and its y >= 255 floor) is
+// gone. The stamp is now drawn by js/pdf-layout.js's pdfDrawSummary(),
+// in the space left of the totals column, which that block reserves --
+// so it can't land on the total however short the receipt is. These
+// check that by actually drawing, not by matching source.
+const vm = require('vm');
+const LAYOUT = fs.readFileSync(path.join(__dirname, '..', '..', 'js', 'pdf-layout.js'), 'utf8');
+
+function recordingDoc() {
+  const ops = [];
+  const doc = {
+    ops,
+    internal: { pageSize: { getWidth: () => 612, getHeight: () => 792 }, getNumberOfPages: () => 1 },
+    addPage() { ops.push(['addPage']); }, setPage() {},
+    splitTextToSize: (t) => [String(t)], getTextWidth: (t) => String(t).length * 6,
+    text: (t, x, y) => ops.push(['text', String(t), x, y]),
+    line: (x1, y1, x2, y2) => ops.push(['line', x1, y1, x2, y2]),
+    rect: (x, y, w, h) => ops.push(['rect', x, y, w, h]), addImage() {},
+    setFont() {}, setFontSize() {}, setTextColor() {}, setFillColor() {}, setLineWidth() {},
+    setDrawColor: (...c) => ops.push(['color', c.join(',')]),
+  };
+  return doc;
+}
+function drawShortReceipt() {
+  const c = { Math, Number, String, Array, Object };
+  vm.createContext(c);
+  vm.runInContext(LAYOUT + '\nthis.summary = pdfDrawSummary; this.GREEN = PDF_COLORS.GREEN.join(",");', c);
+  const doc = recordingDoc();
+  // A receipt with almost nothing above the total: the case that broke.
+  c.summary(doc, { y: 150, rows: [], total: { label: 'Total paid', value: '$85.00', tone: 'green' }, stamp: { text: 'PAID', sub: 'SEP 24, 2026', tone: 'green' } });
+  return { doc, GREEN: c.GREEN };
+}
+
+test('the PAID stamp is drawn entirely left of the totals column, so it can never cover the total', () => {
+  const { doc, GREEN } = drawShortReceipt();
+  const totalsLeft = 612 - 48 - 236;
+  let drawColor = '', stampXs = [];
+  doc.ops.forEach(op => {
+    if (op[0] === 'color') drawColor = op[1];
+    if (op[0] === 'line' && drawColor === GREEN) stampXs.push(op[1], op[3]);
+  });
+  assert.ok(stampXs.length >= 8, 'expected the stamp outline to be drawn');
+  assert.ok(Math.max(...stampXs) < totalsLeft, `stamp reaches x=${Math.max(...stampXs)}, totals column starts at ${totalsLeft}`);
+  const total = doc.ops.find(op => op[0] === 'text' && op[1] === '$85.00');
+  assert.ok(total && total[2] > totalsLeft, 'the total is drawn inside the totals column');
 });
 
-test('the fix sits directly before the total is drawn, not somewhere disconnected from it', () => {
-  const idx = HTML.indexOf('if (inv.paid) y = Math.max(y, 255);');
-  const totalIdx = HTML.indexOf("doc.text(inv.paid ? 'TOTAL PAID'");
-  assert.ok(idx !== -1 && totalIdx !== -1);
-  assert.ok(idx < totalIdx && totalIdx - idx < 200, 'expected the fix immediately before the total is drawn');
+test('the receipt asks for the stamp only when the invoice is paid', () => {
+  assert.match(HTML, /stamp: inv\.paid \? \{ text: 'PAID'/);
 });
 
-test('the fix only applies when the stamp actually exists (paid invoices) -- an unpaid invoice never has this problem since it has no stamp at all', () => {
-  const fnMatch = HTML.match(/async function downloadInvoicePDF\(invoiceId\)[\s\S]*$/);
-  const fixLine = fnMatch[0].match(/if \(inv\.paid\) y = Math\.max\(y, 255\);/);
-  assert.ok(fixLine, 'expected the fix gated behind inv.paid');
-});
-
-test('the normal case (a real job description and line items) is unaffected -- Math.max is a no-op once content already pushes y past 255', () => {
+test('the old fixed-position stamp workaround is gone from downloadInvoicePDF()', () => {
   // Confirms this is a floor, not a forced reset: a longer, more
   // typical invoice's own natural y (well past 255 by the time it
   // reaches the total) should never be pulled backward by this fix.
   const fnBody = HTML.match(/async function downloadInvoicePDF\(invoiceId\)[\s\S]*?\n  \}\n/)[0];
-  assert.doesNotMatch(fnBody, /y = 255;/, 'the fix should use Math.max (a floor), never a hard assignment that could pull a longer document\u2019s total backward');
+  assert.doesNotMatch(fnBody, /y = 255;|Math\.max\(y, 255\)/, 'the old fixed-position stamp workaround should be gone');
 });

@@ -60,12 +60,12 @@ test('the PDF only reads fields that actually exist on client_portal_quotes', ()
 });
 
 test('the generated PDF is always labeled QUOTE, and shows the real approve/decline status', () => {
-  assert.match(html, /doc\.text\('QUOTE', pageW - 40, 30/);
+  assert.match(html, /drawPdfHeader\(doc, pageW, 'QUOTE',/);
   assert.match(html, /const statusText = q\.status === 'approved' \? 'APPROVED' : q\.status === 'declined' \? 'DECLINED' : 'PENDING';/);
 });
 
 test('the total is labeled ESTIMATED, not billed, matching a quote rather than an invoice', () => {
-  assert.match(html, /doc\.text\('ESTIMATED TOTAL', pageW - 220, y\);/);
+  assert.match(html, /total: \{ label: 'ESTIMATED TOTAL', value: pdfMoney\(q\.total\) \}/);
 });
 
 test('the saved filename is based on the real quote number', () => {

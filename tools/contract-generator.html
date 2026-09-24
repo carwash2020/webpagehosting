@@ -65,7 +65,7 @@
 <!-- U15/W18 fix (High-Impact Upgrades, Master Audit, 2026-09-08): the
      shared masthead/footer/totals-block renderer, also used by
      invoice-generator.html and job-detail.html's job sheet. -->
-<script src="/tools/pdf-layout.js?v=dc66e8a810" defer></script>
+<script src="/js/pdf-layout.js?v=6a1ecc363f" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -332,7 +332,7 @@
       <p>The "existing contact" dropdown pulls from Job Tracker's Contacts and autofills name, phone, and email &mdash; it doesn't have an address on file, so that still needs typing in each time. You can also just ignore it and type everything manually.</p>
       <p>"Generate PDF &amp; Save" downloads a filled-in PDF ready to email or text to the client, and adds it to the Recent Contracts list below so you can find it again later. Signing itself happens outside this tool &mdash; print it and sign in person, or send it however you'd send any other PDF and have the client sign by hand or their own way.</p>
       <p><strong>Re-downloading:</strong> the list below doesn't store the PDF file itself, just the information you entered &mdash; tapping "Re-download" regenerates an identical PDF from that saved information, which keeps things lighter than storing every PDF as a separate file.</p>
-      <p><strong>Not attorney-reviewed.</strong> These are plain-language templates for general small-business use. Get a licensed Utah attorney to review them before relying on them with a real client &mdash; that disclaimer is also printed on every generated PDF itself.</p>
+      <p><strong>Not attorney-reviewed.</strong> These are plain-language templates for general small-business use. Get a licensed Utah attorney to review them before relying on them with a real client &mdash; this note is for you only and is not printed on the client&rsquo;s copy.</p>
     </div>
   </div>
 </div>
@@ -578,7 +578,7 @@
 
   // ---------- Generic contract-document renderer ----------
   // Each contract type is described as a flat array of "blocks" (heading,
-  // label, field, paragraph, signature, footnote). One shared function
+  // label, field, paragraph, signature). One shared function
   // walks the array and lays it out on the page with proper text-wrapping
   // and pagination, rather than writing near-identical PDF layout code
   // three separate times.
@@ -586,7 +586,7 @@
   // U15/W18 fix (High-Impact Upgrades, Master Audit, 2026-09-08):
   // loadImageAsDataURL, the masthead (drawContractHeader), and the
   // footer (drawContractFooter) all moved into the shared
-  // /tools/pdf-layout.js as pdfLoadImageAsDataURL/drawPdfHeader/
+  // /js/pdf-layout.js (then /tools/) as pdfLoadImageAsDataURL/drawPdfHeader/
   // drawPdfFooter -- the same real masthead invoice-generator.html and
   // job-detail.html's job sheet already use, replacing this page's own
   // smaller, one-line, no-type-label version that had nothing keeping
@@ -602,131 +602,116 @@
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
     const pageW = doc.internal.pageSize.getWidth();
-    const pageH = doc.internal.pageSize.getHeight();
-    const marginX = 50;
+    const marginX = 48;
     const maxWidth = pageW - marginX * 2;
-    const pageBottom = pageH - 70;
+    const { INK, BODY, MUTED, RULE } = PDF_COLORS;
 
-    // Loaded ONCE and cached -- a multi-page contract redraws the
-    // masthead on every page break, and re-fetching the same logo image
-    // that many times would be both slower and a real race (the shared
-    // drawPdfHeader is async; without a preloaded value, two page
-    // breaks close together could have their logo loads resolve out of
-    // order relative to the synchronous text-drawing calls around them).
-    let logoDataCache = null;
-    try { logoDataCache = await pdfLoadImageAsDataURL('/images/logo-signature-orange.webp'); }
-    catch (e) { /* header still draws fine without it */ }
-
-    async function drawHeader() { return await drawPdfHeader(doc, pageW, CONTRACT_PDF_TYPE_LABELS[type], logoDataCache); }
-
-    const BLACK = [20, 20, 20];
-    const GRAY = [90, 90, 90];
-    const ORANGE_DARK = [179, 95, 19];
-
-    let y = await drawHeader();
-    // U15/W18 fix (2026-09-08): the registered business address used to
-    // be part of contract-generator.html's own masthead -- real content
-    // this document type specifically needs (a signed agreement stating
-    // where the LLC is registered), not something invoices/estimates/job
-    // sheets have ever shown. The shared masthead doesn't carry a street
-    // address at all, so this is added back here rather than folded into
-    // drawPdfHeader() and shown on every document type.
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(...GRAY);
-    doc.text('124 N 2750 E, St. George, UT 84790', marginX, y);
-    y += 18;
-    doc.setDrawColor(220, 220, 220);
-    doc.line(marginX, y, pageW - marginX, y);
-    y += 26;
-
+    // 2026-09-24 redesign: the shared /js/pdf-layout.js document system.
+    // The template's own heading block becomes the document title (so
+    // the contract name is the big type, not a second heading under a
+    // generic label), and the first date field becomes the title meta.
     const blocks = CONTRACT_TEMPLATES[type].blocks(fields);
-    for (const block of blocks) {
-      if (y > pageBottom - 20 && block.type !== 'pagebreak') { doc.addPage(); y = (await drawHeader()) + 26; }
+    const heading = blocks.find(b => b.type === 'heading');
+    const firstSection = blocks.findIndex(b => b.type === 'sectionLabel');
+    const dateField = blocks.slice(0, firstSection < 0 ? blocks.length : firstSection)
+      .find(b => b.type === 'field' && /date/i.test(b.label) && b.value);
 
-      if (block.type === 'heading') {
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(...BLACK);
-        doc.text(block.text, marginX, y);
-        y += 14;
-        doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(...GRAY);
-        y += 12;
-        if (block.sub) { doc.text(block.sub, marginX, y); y += 26; } else { y += 14; }
-      } else if (block.type === 'sectionLabel') {
-        y += 6;
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5); doc.setTextColor(...ORANGE_DARK);
-        doc.text(block.text, marginX, y);
-        y += 18;
+    // No street address, same as every other document: the LLC's
+    // registered address is Steve's home, so the letterhead carries the
+    // city line only (decided 2026-09-24).
+    let y = await drawPdfHeader(doc, pageW, CONTRACT_PDF_TYPE_LABELS[type], null, {
+      title: heading ? heading.text : CONTRACT_TYPE_LABELS[type].toUpperCase(),
+      subtitle: heading ? heading.sub : '',
+      ref: fields.clientName || '',
+      meta: dateField ? [{ label: 'Date', value: dateField.value }] : [],
+    });
+
+    // Signature block: who, the signature (captured image or a blank
+    // line), a date line, and a printed-name line, each with a caption
+    // under it the way a paper contract does. Drawn at (x, y) in a
+    // column of width w; returns its height.
+    function drawSignature(block, x, sy, w) {
+      pdfSectionLabel(doc, block.who, sy, { x, right: x + w, after: 0 });
+      const img = block.who === 'CLIENT' ? clientSignatureDataUrl
+        : block.who === 'TRIPLE H ENTERPRISES LLC' ? businessSignatureDataUrl : null;
+      const lineY = sy + 58;
+      const sigW = w * 0.62;
+      if (img) {
+        // Canvas is 600x180 (10:3) -- keep that ratio so the signature
+        // isn't stretched or squashed.
+        const imgW = Math.min(sigW, 190), imgH = imgW * (180 / 600);
+        doc.addImage(img, 'PNG', x, lineY - imgH - 2, imgW, imgH);
+      }
+      doc.setDrawColor(...INK); doc.setLineWidth(0.7);
+      doc.line(x, lineY, x + sigW, lineY);
+      doc.line(x + sigW + 14, lineY, x + w, lineY);
+      doc.line(x, lineY + 36, x + w, lineY + 36);
+      pdfSetFont(doc, 'label', 6.5, MUTED);
+      doc.text('SIGNATURE', x, lineY + 10, { charSpace: 0.5 });
+      doc.text('DATE', x + sigW + 14, lineY + 10, { charSpace: 0.5 });
+      doc.text('PRINTED NAME', x, lineY + 46, { charSpace: 0.5 });
+      if (img) {
+        pdfSetFont(doc, 'body', 7, PDF_COLORS.FAINT);
+        doc.text('Signed digitally in Triple H Enterprises\u2019 contract tool', x, lineY + 58);
+      }
+      return 118;
+    }
+
+    for (let i = 0; i < blocks.length; i++) {
+      const block = blocks[i];
+      if (block.type === 'heading') continue; // drawn as the title block
+
+      if (block.type === 'sectionLabel') {
+        y = pdfEnsureSpace(doc, y + 8, 48);
+        pdfSetFont(doc, 'display', 12.5, INK);
+        doc.text(block.text.toUpperCase(), marginX, y);
+        doc.setDrawColor(...PDF_COLORS.ORANGE); doc.setLineWidth(1.5);
+        doc.line(marginX, y + 5, marginX + 22, y + 5);
+        y += 22;
       } else if (block.type === 'field') {
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...BLACK);
-        doc.text(block.label + ':', marginX, y);
-        doc.setFont('helvetica', 'normal'); doc.setTextColor(...GRAY);
-        doc.text(block.value || '\u2014', marginX + 150, y);
-        y += 17;
+        // Consecutive fields become one labelled list with hairlines,
+        // values wrapping in their own column.
+        const labelW = 158;
+        pdfSetFont(doc, 'body', 10);
+        const valueLines = pdfLines(doc, block.value || '\u2014', maxWidth - labelW - 8);
+        const h = valueLines.length * 13 + 9;
+        y = pdfEnsureSpace(doc, y, h);
+        pdfSetFont(doc, 'label', 7.5, MUTED);
+        doc.text(block.label.toUpperCase(), marginX, y + 1, { charSpace: 0.7 });
+        pdfSetFont(doc, 'body', 10, INK);
+        let vy = y;
+        valueLines.forEach(line => { doc.text(line, marginX + labelW, vy + 1); vy += 13; });
+        y += h;
+        doc.setDrawColor(...RULE); doc.setLineWidth(0.5);
+        doc.line(marginX, y - 11, pageW - marginX, y - 11);
+        if (!blocks[i + 1] || blocks[i + 1].type !== 'field') y += 10;
       } else if (block.type === 'totalHighlight') {
         // U15/W18 fix (2026-09-08): "the total given genuine
-        // prominence" -- the same orange-tint treatment invoices and
-        // estimates already give their own final total, instead of
-        // this rendering as a plain field row with the same visual
-        // weight as "Estimated Labor" above it.
-        y += 6;
+        // prominence" -- the same treatment invoices give their total.
+        y += 10;
         y = drawPdfTotalHighlight(doc, { x: marginX, y, width: maxWidth, label: block.label, value: block.value || '\u2014' });
-        y += 20;
+        y += 18;
       } else if (block.type === 'paragraph') {
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...BLACK);
-        y = await pdfWrapAndDraw(doc, block.text, marginX, y, maxWidth, 14, pageBottom, drawHeader,
-          { name: 'helvetica', style: 'normal', size: 10, color: BLACK });
+        pdfSetFont(doc, 'body', 10, BODY);
+        y = await pdfWrapAndDraw(doc, block.text, marginX, y, maxWidth, 14, pdfContentBottom(doc) - 4, null,
+          { role: 'body', size: 10, color: BODY });
         y += 8;
       } else if (block.type === 'signature') {
-        y += 10;
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...BLACK);
-        doc.text(block.who, marginX, y);
-        y += 22;
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...GRAY);
-        if (block.who === 'CLIENT' && clientSignatureDataUrl) {
-          // Embed the captured signature in place of the blank line.
-          // Canvas is 600x180 (10:3 ratio) -- keep that ratio here so the
-          // signature doesn't stretch or squash when placed into the PDF.
-          const imgWidth = 220;
-          const imgHeight = imgWidth * (180 / 600);
-          doc.addImage(clientSignatureDataUrl, 'PNG', marginX, y - 14, imgWidth, imgHeight);
-          doc.text('Date: ______________', marginX + imgWidth + 20, y + imgHeight - 20);
-          y += imgHeight + 6;
-          doc.setFontSize(8.5); doc.setTextColor(150, 150, 150);
-          doc.text('(Signed digitally in Triple H Enterprises\u2019 contract tool)', marginX, y);
-          doc.setFontSize(10); doc.setTextColor(...GRAY);
-          y += 16;
-        } else if (block.who === 'TRIPLE H ENTERPRISES LLC' && businessSignatureDataUrl) {
-          const imgWidth = 220;
-          const imgHeight = imgWidth * (180 / 600);
-          doc.addImage(businessSignatureDataUrl, 'PNG', marginX, y - 14, imgWidth, imgHeight);
-          doc.text('Date: ______________', marginX + imgWidth + 20, y + imgHeight - 20);
-          y += imgHeight + 6;
-          doc.setFontSize(8.5); doc.setTextColor(150, 150, 150);
-          doc.text('(Signed digitally in Triple H Enterprises\u2019 contract tool)', marginX, y);
-          doc.setFontSize(10); doc.setTextColor(...GRAY);
-          y += 16;
-        } else {
-          doc.text('Signature: _________________________________     Date: ______________', marginX, y);
-          y += 20;
-        }
-        doc.text('Printed Name: _________________________________', marginX, y);
-        y += 24;
-      } else if (block.type === 'footnote') {
-        y += 10;
-        doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.setTextColor(...GRAY);
-        y = await pdfWrapAndDraw(doc, block.text, marginX, y, maxWidth, 10, pageBottom, drawHeader,
-          { name: 'helvetica', style: 'italic', size: 8, color: GRAY });
+        // Two signatures side by side (client | Triple H), kept on one
+        // page together so neither party signs a page on its own.
+        const pair = blocks[i + 1] && blocks[i + 1].type === 'signature' ? blocks[i + 1] : null;
+        y = pdfEnsureSpace(doc, y + 14, 132);
+        const gap = 30;
+        const colW = pair ? (maxWidth - gap) / 2 : maxWidth * 0.55;
+        drawSignature(block, marginX, y, colW);
+        if (pair) { drawSignature(pair, marginX + colW + gap, y, colW); i++; }
+        y += 130;
       }
     }
 
-    // Footer final pass: total page count is only known now that every
-    // block has been placed, so this loops back over every page already
-    // drawn and adds the footer -- including the correct "Page X of Y"
-    // rather than an incomplete or guessed total. Same shared footer
-    // invoice-generator.html and job-detail.html's job sheet use.
-    const totalPages = doc.internal.getNumberOfPages();
-    for (let p = 1; p <= totalPages; p++) {
-      doc.setPage(p);
-      drawPdfFooter(doc, pageW, pageH, { pageInfo: { pageNum: p, totalPages } });
-    }
+    // Footer final pass: the page count is only known now, so every page
+    // gets the shared footer with a real "Page X of Y".
+    pdfFinalize(doc, {});
 
     const safeClientName = (fields.clientName || 'client').replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') || 'client';
     const filename = `TripleH-${CONTRACT_TYPE_LABELS[type].replace(/\s+/g, '-')}-${safeClientName}.pdf`;
@@ -758,7 +743,6 @@
         { type: 'paragraph', text: 'By signing below, the client authorizes Triple H Enterprises LLC to perform the work described above at the price and terms stated.' },
         { type: 'signature', who: 'CLIENT' },
         { type: 'signature', who: 'TRIPLE H ENTERPRISES LLC' },
-        { type: 'footnote', text: 'This is a plain-language template drafted for general small-business use and has NOT been reviewed by an attorney. Review with a licensed Utah attorney before using with clients to confirm it fits your specific situation and complies with applicable law.' },
       ],
     },
     stpa: {
@@ -795,7 +779,6 @@
         { type: 'paragraph', text: 'This Agreement is governed by the laws of the State of Utah.' },
         { type: 'signature', who: 'CLIENT' },
         { type: 'signature', who: 'TRIPLE H ENTERPRISES LLC' },
-        { type: 'footnote', text: 'This is a plain-language template drafted for general small-business use and has NOT been reviewed by an attorney. Review with a licensed Utah attorney before using with clients to confirm it fits your specific situation and complies with applicable law.' },
       ],
     },
     ltsa: {
@@ -829,7 +812,6 @@
         { type: 'paragraph', text: 'This Agreement is governed by the laws of the State of Utah.' },
         { type: 'signature', who: 'CLIENT' },
         { type: 'signature', who: 'TRIPLE H ENTERPRISES LLC' },
-        { type: 'footnote', text: 'This is a plain-language template drafted for general small-business use and has NOT been reviewed by an attorney. Review with a licensed Utah attorney before using with clients to confirm it fits your specific situation and complies with applicable law.' },
       ],
     },
   };

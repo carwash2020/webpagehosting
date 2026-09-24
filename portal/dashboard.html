@@ -105,6 +105,7 @@
 <script src="/signature-pad.js?v=f95f8e1d28"></script>
 <script src="/portal/portal-app.js?v=202609231400"></script>
 <script src="https://js.stripe.com/v3/"></script>
+<script src="/js/pdf-layout.js?v=6a1ecc363f" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
 <style>
   body { background: #0a0a0a; max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
@@ -715,28 +716,6 @@
     return div.innerHTML;
   }
 
-  // Same self-contained image-to-dataURL helper used by
-  // tools/invoice-generator.html, reimplemented here rather than
-  // shared for the same isolation reason as escapeHtml above.
-  function loadImageAsDataURL(src, timeoutMs = 3000) {
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error('Image load timed out')), timeoutMs);
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        clearTimeout(timer);
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        resolve(canvas.toDataURL('image/png'));
-      };
-      img.onerror = () => { clearTimeout(timer); reject(new Error('Image failed to load')); };
-      img.src = src;
-    });
-  }
-
   // Client-facing invoice PDF -- deliberately a simpler render than
   // tools/invoice-generator.html's, not a port of it. That tool's PDF
   // draws from fields this table doesn't have at all (per-unit price,
@@ -756,189 +735,65 @@
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
     const pageW = doc.internal.pageSize.getWidth();
 
-    const NAVY = [26, 26, 26];
-    const ORANGE = [224, 123, 30];
-    const ORANGE_DARK = [179, 95, 19];
-    const GRAY = [90, 90, 90];
-    const LIGHTGRAY = [236, 236, 236];
-    const GREEN = [76, 175, 120];
+    // 2026-09-24 redesign: the shared /js/pdf-layout.js document system
+    // (a public /js/ file, not an internal /tools/ one), so the receipt
+    // a client downloads here matches the invoice they were emailed from
+    // the Workspace letterhead for letterhead. Still only draws what
+    // client_portal_invoices actually has -- see the note above.
+    const docType = inv.paid ? 'RECEIPT' : 'INVOICE';
+    const paidDate = inv.paid && inv.paid_at ? formatDate(inv.paid_at.slice(0, 10)) : '';
+    let y = await drawPdfHeader(doc, pageW, docType, null, {
+      ref: inv.invoice_number,
+      meta: [
+        { label: 'Invoice #', value: inv.invoice_number },
+        { label: 'Date', value: formatDate(inv.invoice_date) },
+        { label: 'Status', value: inv.paid ? 'PAID' : 'UNPAID', tone: inv.paid ? 'green' : 'orange' },
+      ],
+    });
 
-    doc.setFillColor(...NAVY);
-    doc.rect(0, 0, pageW, 100, 'F');
-
-    try {
-      const logoData = await loadImageAsDataURL('/images/logo-signature-orange.webp');
-      doc.addImage(logoData, 'PNG', 40, 15, 65, 60);
-    } catch (e) { /* logo optional if it fails to load */ }
-
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(255, 255, 255);
-    doc.text('TRIPLE H', 118, 45);
-    doc.setTextColor(...ORANGE);
-    doc.text('ENTERPRISES', 118 + doc.getTextWidth('TRIPLE H ') + 4, 45);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(207, 207, 207);
-    doc.text('Honesty.  Hustle.  Helpfulness.', 118, 62);
-
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(...ORANGE);
-    doc.text(inv.paid ? 'RECEIPT' : 'INVOICE', pageW - 40, 30, { align: 'right' });
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(255, 255, 255);
-    doc.text('(435) 414-1667', pageW - 40, 46, { align: 'right' });
-    doc.text('steve@triplehenterprisesllc.biz', pageW - 40, 58, { align: 'right' });
-    doc.text('www.triplehenterprisesllc.biz', pageW - 40, 70, { align: 'right' });
-
-    // Receipt makeover (2026-09-02), requested directly. A genuine
-    // visual seal rather than just swapping label text, the way the
-    // rest of this function differentiated paid vs. unpaid before --
-    // a rotated circular "PAID" stamp is the real, recognizable visual
-    // convention for a receipt, not something colored text alone
-    // conveys. Drawn AFTER the line-item table below rather than here
-    // in the header, so it never collides with the BILL TO/JOB text
-    // that follows -- jsPDF has no z-order/layering control, so
-    // draw order IS paint order, and placing it here would have it
-    // painted first and then covered by everything after it.
-
-    let y = 130;
-    // PAID stamp seal (2026-09-02), requested directly: "receipts
-    // could also do a makeover." A rotated circular stamp is the real,
-    // recognizable visual marker of a receipt -- swapped label text
-    // and a color change (the only difference before this) doesn't
-    // read as a genuinely different kind of document the way an
-    // actual stamp does. Fixed position in the right-hand margin next
-    // to BILL TO, chosen specifically because that space is otherwise
-    // empty in this layout -- jsPDF has no z-order control, so
-    // placement has to avoid painting over anything, not just
-    // conceptually sit "behind" it.
-    if (inv.paid) {
-      const stampCX = pageW - 95, stampCY = 195, stampR = 46;
-      doc.setDrawColor(...GREEN); doc.setLineWidth(2.5);
-      doc.circle(stampCX, stampCY, stampR, 'S');
-      doc.setLineWidth(1);
-      doc.circle(stampCX, stampCY, stampR - 7, 'S');
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(17); doc.setTextColor(...GREEN);
-      doc.text('PAID', stampCX, stampCY + 3, { align: 'center', angle: 12 });
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(...GREEN);
-      doc.text('THANK YOU', stampCX, stampCY + 16, { align: 'center', angle: 12 });
-    }
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...GRAY);
-    doc.text('INVOICE #', 40, y);
-    doc.text('DATE', 40 + 150, y);
-    doc.text('STATUS', 40 + 300, y);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
-    doc.text(inv.invoice_number, 40, y + 14);
-    doc.text(formatDate(inv.invoice_date), 40 + 150, y + 14);
-    if (inv.paid) { doc.setTextColor(...GREEN); doc.setFont('helvetica', 'bold'); }
-    else { doc.setTextColor(...ORANGE); doc.setFont('helvetica', 'bold'); }
-    doc.text(inv.paid ? 'PAID' : 'UNPAID', 40 + 300, y + 14);
-
-    y += 40;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...ORANGE_DARK);
-    doc.text('BILL TO', 40, y);
-    y += 16;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(20, 20, 20);
-    doc.text(inv.client_name || inv.client_email, 40, y);
-    y += 14;
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(...GRAY);
-    doc.text(inv.client_email, 40, y);
-    y += 26;
-
-    if (inv.description) {
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(...ORANGE_DARK);
-      doc.text('JOB', 40, y);
-      y += 16;
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
-      const jobLines = doc.splitTextToSize(inv.description, pageW - 80);
-      doc.text(jobLines, 40, y);
-      y += jobLines.length * 13 + 12;
-    }
+    y = pdfDrawInfoColumns(doc, { y, columns: [
+      { label: 'Bill to', lines: [{ text: inv.client_name || inv.client_email, bold: true }, { text: inv.client_email, muted: true }] },
+      { label: 'Job', lines: [inv.description || ''] },
+    ] });
 
     const items = Array.isArray(inv.line_items) ? inv.line_items : [];
-    const tableW = pageW - 80;
-
-    function drawTableHeaderBand(atY) {
-      doc.setFillColor(...NAVY);
-      doc.rect(40, atY - 14, tableW, 20, 'F');
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
-      doc.text('DESCRIPTION', 46, atY);
-      doc.text('QTY', 40 + tableW * 0.78, atY, { align: 'center' });
-      doc.text('AMOUNT', pageW - 46, atY, { align: 'right' });
-    }
-
     if (items.length) {
-      drawTableHeaderBand(y);
-      y += 8;
-      const pageH = doc.internal.pageSize.getHeight();
-      const tableBottom = pageH - 140;
-      let stripe = false;
-      items.forEach(item => {
-        const rowH = 22;
-        if (y + rowH > tableBottom) {
-          doc.addPage();
-          y = 60;
-          drawTableHeaderBand(y);
-          y += 8;
-          stripe = false;
-        }
-        if (stripe) { doc.setFillColor(...LIGHTGRAY); doc.rect(40, y, tableW, rowH, 'F'); }
-        stripe = !stripe;
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
-        doc.text(String(item.desc || ''), 46, y + 14);
-        doc.text(String(item.qty ?? ''), 40 + tableW * 0.78, y + 14, { align: 'center' });
-        doc.text('$' + Number(item.amount || 0).toFixed(2), pageW - 46, y + 14, { align: 'right' });
-        y += rowH;
+      y = drawPdfTable(doc, {
+        y,
+        columns: [
+          { key: 'desc', label: 'Description', width: 0.64 },
+          { key: 'qty', label: 'Qty', width: 0.14, align: 'center', muted: true },
+          { key: 'amount', label: 'Amount', width: 0.22, align: 'right', bold: true },
+        ],
+        rows: items.map(item => ({ desc: String(item.desc || ''), qty: String(item.qty ?? ''), amount: pdfMoney(item.amount) })),
       });
-      doc.setDrawColor(200, 200, 200);
-      doc.line(40, y, pageW - 40, y);
-      y += 24;
-    } else {
-      y += 10;
     }
 
-    // PAID stamp collision fix (2026-09-05), reported directly: "it
-    // puts the paid stamp right over the total amount." The stamp
-    // sits at a FIXED position (stampCY=195, radius 46, spanning
-    // y=149-241) chosen when this layout was simpler and shorter --
-    // but the total's own y is dynamic, depending on how much content
-    // (description, line items) comes before it. With little or no
-    // content above it, the total lands well within the stamp's
-    // range and gets painted over (jsPDF has no z-order control, so
-    // whichever is drawn second wins, and either way the total
-    // becomes unreadable). Enforcing a floor here is a no-op for the
-    // normal case (description + line items already push y well past
-    // this) and only ever matters for the short-content case this
-    // bug actually came from.
-    if (inv.paid) y = Math.max(y, 255);
+    // Receipt makeover (2026-09-02) kept, redrawn: a paid invoice gets a
+    // real rubber-stamp PAID mark. It now sits in space the summary
+    // block reserves beside the total (pdfDrawSummary), so it can't land
+    // on the total -- the collision the old fixed-position circle needed
+    // a y-floor to dodge (2026-09-05).
+    y = pdfDrawSummary(doc, {
+      y: y + 10,
+      total: { label: inv.paid ? 'Total paid' : 'Total due', value: pdfMoney(inv.total), tone: inv.paid ? 'green' : null },
+      stamp: inv.paid ? { text: 'PAID', sub: paidDate ? paidDate.toUpperCase() : 'THANK YOU', tone: 'green' } : null,
+    });
 
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(20, 20, 20);
-    doc.text(inv.paid ? 'TOTAL PAID' : 'TOTAL DUE', pageW - 220, y);
-    doc.setTextColor(...(inv.paid ? GREEN : ORANGE));
-    doc.text('$' + Number(inv.total || 0).toFixed(2), pageW - 40, y, { align: 'right' });
-
-    y += 30;
-    // Payment Details box (2026-09-02), requested directly as part of
-    // the receipt makeover -- was plain running text (a single small
-    // gray line), which read like a footnote rather than a real part
-    // of the receipt. A bordered box with a section label matches the
-    // visual weight already given to BILL TO and JOB above it, so the
-    // receipt's payment confirmation reads as a real section rather
-    // than an afterthought.
+    // Payment Details box (2026-09-02): the receipt's payment
+    // confirmation as a real section, not a footnote.
     if (inv.paid && inv.paid_at) {
-      const boxW = pageW - 80, boxH = inv.stripe_payment_intent_id ? 62 : 44;
-      doc.setDrawColor(...GREEN); doc.setFillColor(247, 252, 249); doc.setLineWidth(1);
-      doc.roundedRect(40, y, boxW, boxH, 4, 4, 'FD');
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(...GREEN);
-      doc.text('PAYMENT DETAILS', 52, y + 18);
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
-      doc.text('Paid ' + formatDate(inv.paid_at.slice(0, 10)) + ' via ' + (inv.stripe_payment_intent_id ? 'card (Stripe)' : 'cash or check') + '.', 52, y + 34);
+      const paymentLines = ['Paid ' + paidDate + ' via ' + (inv.stripe_payment_intent_id ? 'card (Stripe)' : 'cash or check') + '.'];
       if (inv.stripe_payment_intent_id) {
-        doc.setFontSize(8); doc.setTextColor(...GRAY);
-        doc.text('Payment reference: ' + inv.stripe_payment_intent_id, 52, y + 48);
+        paymentLines.push({ text: 'Payment reference: ' + inv.stripe_payment_intent_id, small: true });
       }
-      y += boxH + 20;
-      doc.setFont('helvetica', 'italic'); doc.setFontSize(10.5); doc.setTextColor(...ORANGE_DARK);
-      doc.text('Thank you for your business!', 40, y);
+      y = pdfDrawNoteBox(doc, { y: y + 10, label: 'Payment details', tone: 'green', lines: paymentLines });
     } else if (!inv.paid) {
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...GRAY);
-      doc.text('Questions about this invoice? Call (435) 414-1667 or email steve@triplehenterprisesllc.biz.', 40, y);
+      y = pdfDrawNoteBox(doc, { y: y + 10, label: 'Questions?', tone: 'neutral',
+        text: 'Questions about this invoice? Call (435) 414-1667 or email steve@triplehenterprisesllc.biz.' });
     }
+
+    pdfFinalize(doc, { message: inv.paid ? 'Thank you for your business!' : '' });
 
     doc.save((inv.paid ? 'Receipt-' : 'Invoice-') + inv.invoice_number + '.pdf');
   }

@@ -69,15 +69,15 @@ test('a paid receipt gets a real visual PAID stamp, not just swapped label text'
   const fnMatch = DASHBOARD.match(/async function downloadInvoicePDF\(invoiceId\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate downloadInvoicePDF()');
   const body = fnMatch[0];
-  assert.match(body, /if \(inv\.paid\) \{[\s\S]*?doc\.circle\(stampCX, stampCY, stampR, 'S'\);/);
-  assert.match(body, /angle: 12/, 'the stamp text should be rotated for an authentic stamped look');
+  // 2026-09-24: drawn by js/pdf-layout.js's rotated pdfDrawStamp(),
+  // placed by pdfDrawSummary() beside the total.
+  assert.match(body, /stamp: inv\.paid \? \{ text: 'PAID'/);
 });
 
 test('a paid receipt gets a formatted Payment Details box, not a single plain text line', () => {
   const fnMatch = DASHBOARD.match(/async function downloadInvoicePDF\(invoiceId\)[\s\S]*?\n  \}\n/);
   const body = fnMatch[0];
-  assert.match(body, /PAYMENT DETAILS/);
-  assert.match(body, /doc\.roundedRect\(40, y, boxW, boxH, 4, 4, 'FD'\)/);
+  assert.match(body, /pdfDrawNoteBox\(doc, \{ y: y \+ 10, label: 'Payment details', tone: 'green'/);
   assert.match(body, /Thank you for your business!/);
   // Still distinguishes how it was paid, same real distinction the
   // code already tracked (stripe_payment_intent_id present or not).

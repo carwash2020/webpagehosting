@@ -314,6 +314,16 @@ on first paint, with the logo + stacked CTAs already filling the
 viewport. The same copy stays on the #schedule Book Instantly card,
 which clears the bar. booking.html has no sticky bar.
 
+## 2026-09-24 -- client PDFs: one print letterhead in js/pdf-layout.js
+
+- **Everything draws through `js/pdf-layout.js`** (moved from tools/ so the portal can load it; the portal must never load /tools/ scripts). Add a document by composing `drawPdfHeader` (letterhead + title/meta), `pdfDrawInfoColumns`, `drawPdfTable`, `pdfDrawSummary` / `drawPdfTotalsBlock`, `pdfDrawNoteBox`, then `pdfFinalize`. Don't hand-draw a masthead on a page again.
+- **Primitives only**: text/line/rect/addImage and set* calls, with `addFileToVFS`/`addFont` feature-checked. The test suite's fake jsPDF docs only implement those, so roundedRect/circle/GState would break them.
+- **Fonts**: `fonts/pdf/*.ttf` are fontTools static instances plus Latin subsets of the Google Fonts variable files (Oswald wght 500, Archivo wght 400/600 wdth 100). To add a glyph, rebuild the subset; don't swap in the variable TTF (jsPDF uses only the default instance).
+- **Letter-spaced labels** go through `pdfSpacedText`: jsPDF's charSpace plus align:'right' mis-measures.
+- **Stamps** sit in the space left of the summary column, and the summary block reserves that space, so a stamp can't collide with text.
+- **No street address, and no owner-only notes, on client documents** (owner's decision 2026-09-24).
+- **Verifying**: render with real jsPDF in jsdom from the actual page functions, then look at the pdftoppm output. The DOM screenshot tools can't see PDF layout.
+
 <!-- Add new entries above this line -->
 ## 2026-09-17 -- Schedule-primary hero + two-action sticky bar
 

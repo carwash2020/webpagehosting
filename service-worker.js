@@ -682,7 +682,7 @@
 // "Getting Started" guide making the identical false claim to real
 // people using the app. Same reasoning as every prior bump in this
 // file's history.
-const CACHE_NAME = 'th-workspace-v319'; // precache-fingerprint:d1086db99956
+const CACHE_NAME = 'th-workspace-v323'; // precache-fingerprint:3c971114b104
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
@@ -721,10 +721,14 @@ const PRECACHE_URLS = [
   // day, for the same underlying reason: a hardcoded list, maintained
   // by hand, drifting from reality.
   '/tools/reset-password.html', '/tools/tools-tour.js',
-  // The shared jsPDF masthead/footer/totals-block renderer (U15/W18,
-  // 2026-09-08) -- loaded by invoice-generator.html, job-detail.html's
-  // job sheet, and contract-generator.html, all three precached above.
-  '/tools/pdf-layout.js',
+  // The shared jsPDF document system (U15/W18, 2026-09-08; moved to
+  // /js/ 2026-09-24 so the portal can share it), plus what it pulls in
+  // at PDF time: the four subset brand fonts and the PNG logo -- so an
+  // invoice made offline still comes out fully branded.
+  '/js/pdf-layout.js',
+  '/fonts/pdf/Anton-Regular.ttf', '/fonts/pdf/Oswald-Medium.ttf',
+  '/fonts/pdf/Archivo-Regular.ttf', '/fonts/pdf/Archivo-SemiBold.ttf',
+  '/images/logo-signature-orange.png',
   // Bug fix (2026-08-20): tools-common.js no longer exists -- it was
   // split into 4 focused files (structural item #42). cache.addAll()
   // fails ATOMICALLY: if even one URL in this list 404s, NONE of the
