@@ -794,6 +794,49 @@
 // "leave with unsaved changes?" prompt is answered Stay (site-content.html
 // asks one), and after 10s for anything else that never navigated.
 // ---------------------------------------------------------------------------
+
+// True when this click will load another tool page: an ordinary left click
+// on a same-origin /tools/ link that isn't a download, a new tab, or only a
+// #hash move on this page.
+function thLinkLeavesPage(a, e) {
+  if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return false;
+  if (a.hasAttribute('download')) return false;
+  var target = a.getAttribute('target');
+  if (target && target !== '_self') return false;
+  var url;
+  try { url = new URL(a.href, window.location.href); } catch (err) { return false; }
+  if (url.origin !== window.location.origin || url.pathname.indexOf('/tools/') !== 0) return false;
+  return !(url.pathname === window.location.pathname && url.search === window.location.search);
+}
+
+// Lights a tapped tab, sidebar row or Money segment, and returns what it
+// changed ({ el, on } per element, on = the state to put back) so it can
+// be undone.
+function thLightTappedTab(a) {
+  var group = a.closest('.th-bottom-nav, .th-desktop-sidebar, .th-money-switch');
+  if (!group || a.classList.contains('is-active')) return [];
+  var changed = [];
+  group.querySelectorAll('.is-active').forEach(function (el) {
+    el.classList.remove('is-active');
+    changed.push({ el: el, on: true });
+  });
+  a.classList.add('is-active');
+  changed.push({ el: a, on: false });
+  return changed;
+}
+
+// The loading line: one per page, hidden until html.th-nav-slow.
+function thNavProgressLine() {
+  var el = document.getElementById('thNavProgress');
+  if (el) return el;
+  el = document.createElement('div');
+  el.id = 'thNavProgress';
+  el.className = 'th-nav-progress';
+  el.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(el);
+  return el;
+}
+
 (function () {
   if (typeof document === 'undefined' || !document.addEventListener) return;
   var SHOW_AFTER_MS = 150;
@@ -801,41 +844,6 @@
   var showTimer = null;
   var giveUpTimer = null;
   var swapped = [];
-
-  function leavesThisPage(a, e) {
-    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return false;
-    if (a.hasAttribute('download')) return false;
-    var target = a.getAttribute('target');
-    if (target && target !== '_self') return false;
-    var url;
-    try { url = new URL(a.href, window.location.href); } catch (err) { return false; }
-    if (url.origin !== window.location.origin || url.pathname.indexOf('/tools/') !== 0) return false;
-    // Same page with only the #hash moving: nothing loads.
-    return !(url.pathname === window.location.pathname && url.search === window.location.search);
-  }
-
-  function lightUp(a) {
-    var group = a.closest('.th-bottom-nav, .th-desktop-sidebar, .th-money-switch');
-    if (!group || a.classList.contains('is-active')) return;
-    group.querySelectorAll('.is-active').forEach(function (el) {
-      el.classList.remove('is-active');
-      swapped.push({ el: el, on: true });
-    });
-    a.classList.add('is-active');
-    swapped.push({ el: a, on: false });
-  }
-
-  function line() {
-    var el = document.getElementById('thNavProgress');
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'thNavProgress';
-      el.className = 'th-nav-progress';
-      el.setAttribute('aria-hidden', 'true');
-      document.body.appendChild(el);
-    }
-    return el;
-  }
 
   function reset() {
     clearTimeout(showTimer);
@@ -848,10 +856,10 @@
 
   document.addEventListener('click', function (e) {
     var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
-    if (!a || !leavesThisPage(a, e)) return;
+    if (!a || !thLinkLeavesPage(a, e)) return;
     reset();
-    lightUp(a);
-    line();
+    swapped = thLightTappedTab(a);
+    thNavProgressLine();
     showTimer = setTimeout(function () { document.documentElement.classList.add('th-nav-slow'); }, SHOW_AFTER_MS);
     giveUpTimer = setTimeout(reset, GIVE_UP_MS);
   });

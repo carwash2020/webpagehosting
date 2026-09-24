@@ -88,11 +88,12 @@ test('the class the hold waits for is added in the same synchronous pass that bu
 
 test('the hold only ever applies to a page that will build the shell: never the portal or the redirect stubs, which load this stylesheet too', () => {
   const REPO = path.join(TOOLS, '..');
+  // Every page that loads the stylesheet (and runway, which carries its own copy of the rules), each read once.
   const pages = ['tools', 'portal'].flatMap((dir) => fs.readdirSync(path.join(REPO, dir)).filter((f) => f.endsWith('.html')).map((f) => dir + '/' + f))
-    .filter((f) => f === 'tools/runway-dashboard.html' || fs.readFileSync(path.join(REPO, f), 'utf8').includes('/tools/styles-tools.css')); // runway: its own copy of the rules
+    .map((f) => ({ f, html: fs.readFileSync(path.join(REPO, f), 'utf8') }))
+    .filter(({ f, html }) => f === 'tools/runway-dashboard.html' || html.includes('/tools/styles-tools.css'));
   let shellPages = 0, others = 0;
-  for (const f of pages) {
-    const html = fs.readFileSync(path.join(REPO, f), 'utf8');
+  for (const { f, html } of pages) {
     const doc = new JSDOM(html).window.document;
     const loadsShell = /<script src="\/tools\/tools-nav-pwa\.js\?v=[a-z0-9]+" defer><\/script>/.test(html);
     // The real selector from the stylesheet, against the real page.
@@ -133,6 +134,12 @@ function page(pathname) {
 const tap = (w, el, init) => el.dispatchEvent(new w.MouseEvent('click', Object.assign({ bubbles: true, cancelable: true, button: 0 }, init)));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const lit = (w) => [...w.document.querySelectorAll('.th-bottom-nav .is-active')].map((a) => a.textContent);
+const slow = (w) => w.document.documentElement.classList.contains('th-nav-slow');
+// Back to how the page was before the tap: Home lit, no loading line.
+function assertUndone(w) {
+  assert.deepEqual(lit(w), ['Home']);
+  assert.equal(slow(w), false);
+}
 
 test('a tapped tab lights at once; the loading line only appears once the wait passes 150ms', async () => {
   const w = page('/tools/workspace.html');
@@ -140,11 +147,11 @@ test('a tapped tab lights at once; the loading line only appears once the wait p
   assert.deepEqual(lit(w), ['Jobs']);
   assert.equal(w.document.querySelector('a[href="/tools/workspace.html"]').getAttribute('aria-current'), 'page', 'aria-current still names the page you are on');
   assert.ok(w.document.getElementById('thNavProgress'), 'the line is in place, hidden');
-  assert.equal(w.document.documentElement.classList.contains('th-nav-slow'), false);
+  assert.equal(slow(w), false);
   await sleep(60);
-  assert.equal(w.document.documentElement.classList.contains('th-nav-slow'), false, 'a quick hop never shows it');
+  assert.equal(slow(w), false, 'a quick hop never shows it');
   await sleep(140);
-  assert.equal(w.document.documentElement.classList.contains('th-nav-slow'), true);
+  assert.equal(slow(w), true);
 });
 
 test('links that do not leave the page, or leave the app, get no hand-off', async () => {
@@ -157,8 +164,7 @@ test('links that do not leave the page, or leave the app, get no hand-off', asyn
   prevented.addEventListener('click', (e) => e.preventDefault());
   tap(w, prevented);
   await sleep(200);
-  assert.deepEqual(lit(w), ['Home']);
-  assert.equal(w.document.documentElement.classList.contains('th-nav-slow'), false);
+  assertUndone(w);
   assert.equal(w.document.getElementById('thNavProgress'), null);
 });
 
@@ -166,7 +172,7 @@ test('a plain link to another tool page (not only the bar) gets the loading line
   const w = page('/tools/workspace.html');
   tap(w, w.document.getElementById('row'));
   await sleep(200);
-  assert.equal(w.document.documentElement.classList.contains('th-nav-slow'), true);
+  assert.equal(slow(w), true);
   assert.deepEqual(lit(w), ['Home'], 'no tab to light for a list row');
 });
 
@@ -177,8 +183,7 @@ test('coming back through the back/forward cache undoes it', async () => {
   const e = new w.Event('pageshow');
   Object.defineProperty(e, 'persisted', { value: true });
   w.dispatchEvent(e);
-  assert.deepEqual(lit(w), ['Home']);
-  assert.equal(w.document.documentElement.classList.contains('th-nav-slow'), false);
+  assertUndone(w);
 });
 
 test('answering Stay to a "leave with unsaved changes?" prompt undoes it; a normal leave does not', async () => {
@@ -187,13 +192,12 @@ test('answering Stay to a "leave with unsaved changes?" prompt undoes it; a norm
   const plain = new w.Event('beforeunload', { cancelable: true });
   w.dispatchEvent(plain);
   await sleep(200);
-  assert.equal(w.document.documentElement.classList.contains('th-nav-slow'), true, 'nothing asked, so the page is still on its way out');
+  assert.equal(slow(w), true, 'nothing asked, so the page is still on its way out');
 
   w.addEventListener('beforeunload', (e) => e.preventDefault()); // site-content.html's own guard, registered after this file runs
   w.dispatchEvent(new w.Event('beforeunload', { cancelable: true }));
   await sleep(10);
-  assert.deepEqual(lit(w), ['Home']);
-  assert.equal(w.document.documentElement.classList.contains('th-nav-slow'), false);
+  assertUndone(w);
 });
 
 test('the loading line: fixed under the status bar, click-through, a still line under reduced motion', () => {

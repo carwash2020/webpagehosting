@@ -5038,9 +5038,9 @@ Verified:
 - `check-consistency`, `check-undefined-vars`, `check-visual-snapshot`, `eslint`;
 - frame-by-frame screencasts in Chromium at 390px and 1440px, in dark and light themes, with and without reduced motion.
 
-**Two tests fixed on the way, both of which also failed on `main`:**
+**Three tests fixed on the way, all of which also failed on `main`:**
 - `tests/tools/shift-clock-shell.test.js` builds times like "3 hours ago" and expects them to be today. Just after midnight they weren't, so "Start my day" and "End my day" failed. The failure also left a ticking clock behind, so `npm test` hung until CI's 6-hour limit, on every PR, every night. The file now runs in a fixed-offset time zone where it's about noon.
-- `tests/booking/booking-manage-link-round3.test.js`'s reschedule test tapped a third time slot that doesn't exist late in the day. It now taps the last slot shown, the same fix #404 makes for the portal picker's test.
+- `tests/booking/booking-manage-link-round3.test.js`'s reschedule test tapped a third time slot, and `tests/booking/booking-flow-picker-and-confirm.test.js`'s "tapping a time never moves the booking" test tapped a second one. Late in the day, neither slot exists. Both now tap the last slot shown, the same fix #404 makes for the portal picker's test.
 
 Tests:
 - `tests/tools/page-handoff.test.js` (18, new): the hold rules and their reduced-motion override in both stylesheets, the shell adding its class in one synchronous pass, the tap feedback and loading line in jsdom (including back-button restores and a cancelled leave), the once-per-session welcome, and the Dashboard skeletons, which the first render always replaces.
