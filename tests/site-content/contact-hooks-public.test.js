@@ -35,6 +35,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
+const { publicHtmlFiles } = require('./public-pages');
 
 const ROOT = path.join(__dirname, '..', '..');
 const read = (...p) => fs.readFileSync(path.join(ROOT, ...p), 'utf8');
@@ -62,8 +63,14 @@ async function until(fn, timeout = 5000) {
   throw new Error('condition never became true');
 }
 
+// The page's own inline JavaScript: no src, no type (so not the ld+json
+// search data). Same tag pattern as scripts/check-undefined-vars.js,
+// which CodeQL's "Bad HTML filtering regexp" check settled on: any case,
+// and </script followed by anything up to > still closes the element.
 function inlineScripts(html) {
-  return [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
+  return [...html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script[^>]*>/gi)]
+    .filter(m => !/\b(src|type)\s*=/i.test(m[1]))
+    .map(m => m[2]);
 }
 function contactScript(file) {
   const found = inlineScripts(read(file)).filter(s => s.includes('function applySiteContact('));
@@ -104,6 +111,19 @@ function visibleTextNodes(doc, re) {
     if (re.test(n.nodeValue)) out.push(n);
   }
   return out;
+}
+
+// Every Call/Text/Email link and every shown built-in number or address
+// on a page that would NOT follow site_content (no hook on it), as short
+// descriptions; [] means the whole page follows.
+function unhookedSpots(doc) {
+  return [
+    ...[...doc.querySelectorAll('a[href^="tel:"]')].filter(a => !a.classList.contains('js-phone-link')).map(a => 'tel link: ' + a.outerHTML.slice(0, 80)),
+    ...[...doc.querySelectorAll('a[href^="sms:"]')].filter(a => !a.classList.contains('js-sms-link')).map(a => 'sms link: ' + a.outerHTML.slice(0, 80)),
+    ...[...doc.querySelectorAll('a[href^="mailto:"]')].filter(a => !a.classList.contains('js-email-link') && !a.classList.contains('js-email-mailto')).map(a => 'mailto link: ' + a.outerHTML.slice(0, 80)),
+    ...visibleTextNodes(doc, /414-1667/).filter(n => !n.parentElement.closest('.js-phone-text')).map(n => 'number: ' + n.nodeValue.trim().slice(0, 80)),
+    ...visibleTextNodes(doc, /steve@triplehenterprisesllc/).filter(n => !n.parentElement.closest('.js-email-text')).map(n => 'email: ' + n.nodeValue.trim().slice(0, 80)),
+  ];
 }
 
 // ---------------------------------------------------------------------------
@@ -316,13 +336,8 @@ for (const [label, siteContent, phone, tel] of [
 for (const file of PAGES) {
   test(`${file}: every Call and Text link and every shown number is hooked, on the link itself (no wrapper elements)`, () => {
     const doc = new JSDOM(read(file)).window.document;
-    const tels = [...doc.querySelectorAll('a[href^="tel:"]')];
-    assert.ok(tels.length >= 1);
-    tels.forEach(a => assert.ok(a.classList.contains('js-phone-link'), file + ': ' + a.outerHTML.slice(0, 80)));
-    doc.querySelectorAll('a[href^="sms:"]').forEach(a => assert.ok(a.classList.contains('js-sms-link'), file + ': ' + a.outerHTML.slice(0, 80)));
-    visibleTextNodes(doc, /414-1667/).forEach(n => assert.ok(n.parentElement.closest('.js-phone-text'), file + ': ' + n.nodeValue.trim()));
-    visibleTextNodes(doc, /steve@triplehenterprisesllc/).forEach(n => assert.ok(n.parentElement.closest('.js-email-text'), file));
-    doc.querySelectorAll('a[href^="mailto:"]').forEach(a => assert.ok(a.classList.contains('js-email-link'), file));
+    assert.ok(doc.querySelectorAll('a[href^="tel:"]').length >= 1);
+    assert.deepEqual(unhookedSpots(doc), [], file);
     doc.querySelectorAll('.js-phone-text, .js-email-text').forEach(el => assert.equal(el.tagName, 'A', file + ': the hook sits on the link, not a new <span>'));
   });
 
@@ -359,23 +374,6 @@ test('every page that carries applySiteContact() carries the same one, and exact
 
 test('booking.html applies phone/email from the same fetch as the review stats, after handing that map over', () => {
   assert.match(contactScript('booking.html'), /window\.__siteContentMap = map;\s*\n\s*if \(typeof applyReviewStats === 'function'\) applyReviewStats\(map\);\s*\n\s*applySiteContact\(map\);/);
-});
-
-test('each page\'s built-in number and email are the ones the editor says a blank field shows', () => {
-  const src = read('tools', 'site-content.html').match(/const CMS_BUILT_IN = \{[\s\S]*?\n {2}\};/)[0];
-  const builtIn = new Function(src + '; return CMS_BUILT_IN;')();
-  assert.equal(builtIn.phone, BUILT_IN_PHONE);
-  assert.equal(builtIn.email, BUILT_IN_EMAIL);
-  const digits = builtIn.phone.replace(/\D/g, '');
-  const base = href => href.split('?')[0];
-  for (const file of CONTACT_PAGES) {
-    const doc = new JSDOM(read(file)).window.document;
-    doc.querySelectorAll('.js-phone-text').forEach(el => assert.ok(el.textContent.includes(builtIn.phone), file));
-    doc.querySelectorAll('.js-phone-link').forEach(el => assert.ok(['tel:+1' + digits, 'tel:' + digits].includes(el.getAttribute('href')), file + ': ' + el.getAttribute('href')));
-    doc.querySelectorAll('.js-sms-link').forEach(el => assert.equal(base(el.getAttribute('href')), 'sms:+1' + digits, file));
-    doc.querySelectorAll('.js-email-text').forEach(el => assert.ok(el.textContent.includes(builtIn.email), file));
-    doc.querySelectorAll('.js-email-link, .js-email-mailto').forEach(el => assert.equal(base(el.getAttribute('href')), 'mailto:' + builtIn.email, file));
-  }
 });
 
 // ---------------------------------------------------------------------------
@@ -533,25 +531,8 @@ test('index.html: the phone chat note has no number and is left as written', asy
 // that intro, together.
 const KNOWN_UNHOOKED_PAGES = [];
 
-function publicHtmlFiles() {
-  const out = [];
-  for (const dir of ['', 'services', 'locations', 'blog']) {
-    for (const f of fs.readdirSync(path.join(ROOT, dir))) {
-      if (f.endsWith('.html') && !/^google[0-9a-f]+\.html$/.test(f)) out.push(path.posix.join(dir, f));
-    }
-  }
-  return out;
-}
-
 test('the pages with an unhooked number, email, or Call/Text/Email link are exactly the ones the editor names (none)', () => {
-  const unhooked = publicHtmlFiles().filter(file => {
-    const doc = new JSDOM(read(file)).window.document;
-    return [...doc.querySelectorAll('a[href^="tel:"]')].some(a => !a.classList.contains('js-phone-link'))
-      || [...doc.querySelectorAll('a[href^="sms:"]')].some(a => !a.classList.contains('js-sms-link'))
-      || [...doc.querySelectorAll('a[href^="mailto:"]')].some(a => !a.classList.contains('js-email-link') && !a.classList.contains('js-email-mailto'))
-      || visibleTextNodes(doc, /414-1667/).some(n => !n.parentElement.closest('.js-phone-text'))
-      || visibleTextNodes(doc, /steve@triplehenterprisesllc/).some(n => !n.parentElement.closest('.js-email-text'));
-  }).sort();
+  const unhooked = publicHtmlFiles().filter(file => unhookedSpots(new JSDOM(read(file)).window.document).length).sort();
   assert.deepEqual(unhooked, [...KNOWN_UNHOOKED_PAGES].sort());
   CONTACT_PAGES.forEach(file => assert.ok(!unhooked.includes(file), file));
 

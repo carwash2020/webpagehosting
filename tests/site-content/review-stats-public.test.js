@@ -14,6 +14,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
+const { publicHtmlFiles } = require('./public-pages');
 
 const ROOT = path.join(__dirname, '..', '..');
 const SCRIPT = fs.readFileSync(path.join(ROOT, 'js', 'review-stats.js'), 'utf8');
@@ -169,16 +170,6 @@ test('the homepage count-up reads data-count-to on every frame, so a value arriv
 // ---------------------------------------------------------------------------
 // Nothing hardcoded comes back
 // ---------------------------------------------------------------------------
-
-function publicHtmlFiles() {
-  const out = [];
-  for (const dir of ['', 'services', 'locations', 'blog']) {
-    for (const f of fs.readdirSync(path.join(ROOT, dir))) {
-      if (f.endsWith('.html')) out.push(path.join(dir, f));
-    }
-  }
-  return out;
-}
 
 test('no public page shows a "X.X from N Google reviews" phrase outside a .js-review-text hook', () => {
   const offenders = [];

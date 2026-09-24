@@ -11,6 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
 const { createCmsDb, closeAllCmsDbs, asUser, rpc, readValue, OWNER_EMAIL, DEV_EMAIL } = require('./cms-db-harness');
+const { publicHtmlFiles } = require('./public-pages');
 
 after(closeAllCmsDbs);
 
@@ -434,6 +435,26 @@ test('the editor\'s built-in fallbacks match what the public pages really show w
   assert.deepEqual([...phones], [builtIn.phone]);
   const emails = new Set([...indexDom.querySelectorAll('.js-email-text')].map(el => el.textContent.trim()));
   assert.deepEqual([...emails], [builtIn.email]);
+  // Every public page's phone/email hooks (contact-hooks-public.test.js):
+  // each one holds the built-in number or address, or calls, texts, or
+  // emails it. A "Call (435) 414-1667" button written tel:4354141667
+  // dials the same phone. Text and email links may carry a ?body= or a
+  // ?subject= after it.
+  const digits = builtIn.phone.replace(/\D/g, '');
+  const base = href => href.split('?')[0];
+  for (const file of publicHtmlFiles()) {
+    const doc = new JSDOM(fs.readFileSync(path.join(ROOT, file), 'utf8')).window.document;
+    doc.querySelectorAll('.js-phone-text').forEach(el => assert.ok(el.textContent.includes(builtIn.phone), file));
+    doc.querySelectorAll('.js-phone-link').forEach(el => assert.ok(['tel:+1' + digits, 'tel:' + digits].includes(el.getAttribute('href')), file + ': ' + el.getAttribute('href')));
+    doc.querySelectorAll('.js-sms-link').forEach(el => assert.equal(base(el.getAttribute('href')), 'sms:+1' + digits, file));
+    doc.querySelectorAll('.js-email-text').forEach(el => assert.ok(el.textContent.includes(builtIn.email), file));
+    doc.querySelectorAll('.js-email-link, .js-email-mailto').forEach(el => assert.equal(base(el.getAttribute('href')), 'mailto:' + builtIn.email, file));
+  }
+  // The four pages that rewrite only the number inside a longer text
+  // (2026-09-23) each have at least one such hook.
+  for (const file of ['booking.html', 'manage-booking.html', 'manage-job.html', '404.html']) {
+    assert.ok(new JSDOM(fs.readFileSync(path.join(ROOT, file), 'utf8')).window.document.querySelector('.js-phone-text'), file);
+  }
 });
 
 // ---------------------------------------------------------------------------

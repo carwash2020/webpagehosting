@@ -11,6 +11,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
+const { JSDOM } = require('jsdom');
 
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const read = (p) => fs.readFileSync(repo(p), 'utf8');
@@ -51,10 +52,14 @@ for (const page of ALL.filter((p) => !NOT_THIS_LANE[p])) {
 
 test('404.html: content sits in a <main>, laid out as the same centred column as before', () => {
   const html = read('404.html');
-  const body = html.slice(html.indexOf('<body>'), html.indexOf('</body>'));
-  // Only scripts may follow <main> (the site_content phone fetch,
-  // 2026-09-23) -- nothing that renders.
-  assert.match(body, /^<body>\s*<main>[\s\S]*<h1>404<\/h1>[\s\S]*<\/main>\s*(<script>[\s\S]*?<\/script>\s*)*$/);
+  const body = html.slice(html.indexOf('<body>'), html.indexOf('</main>') + '</main>'.length);
+  assert.match(body, /^<body>\s*<main>[\s\S]*<h1>404<\/h1>[\s\S]*<\/main>$/);
+  // After <main>, only scripts (the site_content phone fetch, 2026-09-23):
+  // nothing that renders.
+  const doc = new JSDOM(html).window.document;
+  const [first, ...rest] = [...doc.body.children];
+  assert.equal(first.tagName, 'MAIN');
+  rest.forEach((el) => assert.equal(el.tagName, 'SCRIPT', 'only scripts may follow <main>'));
   assert.match(html, /\bmain\{display:flex; flex-direction:column; align-items:center;\}/);
 });
 
