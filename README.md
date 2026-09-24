@@ -5290,3 +5290,9 @@ Verified:
 Tests:
 
 - `tests/tools/client-delete.test.js` (8, new; all fail without this change).
+
+## What changed, 2026-09-24 -- Needs Attention: the Delete button no longer runs off the screen on a phone
+
+Dashboard only. Reported directly with a screenshot: on a real phone, a New Lead or New Applicant card's Handled/Delete buttons could get pushed off the right edge of the screen when the name, phone, and email didn't fit next to them. The row never wrapped and its button group never shrinks, unlike every other list row on this page that already handles this correctly. Fixed to match that same proven pattern: the buttons now drop to their own line, and a long email address can break instead of forcing the row wider than the screen.
+
+Verified: full suite (only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, and a Playwright render at phone width with the same name/email from the report, confirming the Delete button now sits fully on-screen. New tests in `tests/tools/workspace-ops-inbox.test.js` (3).

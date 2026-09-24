@@ -141,3 +141,29 @@ test('dashboard hub header no longer spends 140px on a second sync row', () => {
   assert.ok(paddingMatch);
   assert.ok(parseInt(paddingMatch[1], 10) < 140);
 });
+
+// Reported directly, with a screenshot of the Delete button cut off
+// past the right edge on a phone. .lead-card-top (shared by New Leads
+// and New Applicants, since both render `.lead-card` rows) never
+// wrapped -- flex-wrap defaulted to nowrap -- and its button group
+// (.dash-list-item-right) is flex-shrink: 0, so a real name/phone/
+// email that didn't fit next to Handled + Delete in the ops-lane's
+// narrowed width forced the row wider than its container instead of
+// wrapping. .dash-list-item, the sibling component for the exact same
+// "text + a right-aligned control group" shape, already gets this
+// right with flex-wrap: wrap -- this is that same fix.
+test('.lead-card-top wraps instead of forcing its button group off-screen on a narrow phone', () => {
+  const rule = WORKSPACE.match(/\.lead-card-top\s*\{[^}]*\}/);
+  assert.ok(rule, '.lead-card-top rule not found');
+  assert.match(rule[0], /flex-wrap:\s*wrap/, 'must wrap, matching .dash-list-item\'s own proven fix for the same shape');
+});
+
+test('.lead-card-top\'s text column can shrink below its content width, so a long field wraps instead of forcing the row wider', () => {
+  assert.match(WORKSPACE, /\.lead-card-top > div:first-child \{ min-width: 0; \}/);
+});
+
+test('.lead-card-meta can break a long, unbroken string (an email address) instead of overflowing its line', () => {
+  const rule = WORKSPACE.match(/\.lead-card-meta \{[^}]*\}/);
+  assert.ok(rule, '.lead-card-meta rule not found');
+  assert.match(rule[0], /overflow-wrap:\s*anywhere/);
+});
