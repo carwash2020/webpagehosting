@@ -34,7 +34,9 @@ function webpSize(file) {
   return [b.readUInt16LE(26) & 0x3fff, b.readUInt16LE(28) & 0x3fff];
 }
 
-const LOADER = [...HTML.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]).find((s) => s.includes("'#galleryGrid img[data-src]'"));
+// Parsed, not run: JSDOM executes nothing without runScripts.
+const LOADER = [...new JSDOM(HTML).window.document.querySelectorAll('script:not([src])')]
+  .map((s) => s.textContent).find((s) => s.includes("'#galleryGrid img[data-src]'"));
 
 test('the gallery still has 61 photos and none of them uses native loading="lazy"', () => {
   assert.equal(IMGS.length, 61);
