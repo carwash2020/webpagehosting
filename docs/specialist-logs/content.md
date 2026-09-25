@@ -271,4 +271,49 @@ Verified: full suite **2575/2575** passing. `check-consistency`/
 - The "Recent Notes From the Shop" section added to plumbing, drywall, handyman-repairs and assembly (PR #257) reused the blog-index card markup. Those pages didn't load `blog/blog.css`, where all the card's styles live, so the icon and arrow rendered at 820px wide. Fixed in the visual lane (each page now loads `blog.css`). `tests/design/blog-index-cards.test.js` now fails for any page that uses the markup without it. If you add the card to another page, add the `blog.css` link too.
 - Blog lead images load from `images.unsplash.com`, not from this site. That's a third-party connection on each post's likely LCP image, with no control over caching or availability. Worth copying them into `images/blog/` as sized WebP. The visual lane couldn't do it: the sandbox's egress policy blocks Unsplash, so the originals can't be downloaded.
 
+## 2026-09-25 -- three triage symptoms get their own posts
+
+`js/triage.js` lists 20 symptoms (5 appliances x 4). Only 5 had a post,
+each the first symptom in its appliance's list. Wrote three more:
+`blog/washer-leaking-water.html`, `blog/dryer-wont-turn-on.html`, and
+`blog/dishwasher-not-draining.html`.
+
+Why these three: each has high search intent, and none overlaps an
+existing post. Skipped "dryer takes forever to dry" because
+`dryer-not-heating.html` already targets damp clothes and vent
+restriction, so a second post would compete with it. Skipped the fridge
+extras (freezer-works-fridge-doesn't, leaking inside, ice maker) because
+the fridge post already covers all three in short form. Skipped oven
+"temperature off" because `oven-not-heating-right.html` already covers
+calibration.
+
+Each post restates its triage entry's `v`/`a` text and builds on it with
+general repair knowledge. It adds no prices, percentages, or claims about
+our own call volume. The one reused site fact is the homepage's April
+care tip about checking washer fill hoses, which closes the washer post.
+
+The request assumed each existing post links to its triage entry and to
+`booking.html`. None does. Booking appears only in the shared nav and
+footer, and the CTA is a `tel:` button. The new posts follow the real
+pattern. Each has exactly one in-body link: plumbing for the washer and
+dishwasher posts (standpipe, disposal), and the dryer-not-heating post
+for the dryer (thermal fuse).
+
+Wiring: blog index, the three appliance service pages' "Recent Notes",
+`sitemap.xml`, `check-links.py`, and the tests that pin the post list or
+the public page count. Added one inbound in-prose link each from
+`washer-wont-drain.html` ("water on the floor") and
+`dishwasher-not-cleaning.html` ("standing water"), because their text
+already named those symptoms.
+
+Images: Unsplash is still blocked. The washer post uses the reserved
+bathroom-laundry photo, now marked placed in ACTION-ITEMS.md. The dryer
+and dishwasher posts reuse their sibling posts' lead photos (the
+tv-mount and to-do-list posts already share one). Swap them if the owner
+sends better photos.
+
+Still open: 12 triage symptoms have no post. Next strongest by intent:
+washer won't spin, dishwasher leaking, washer no power, range burner
+won't light.
+
 <!-- Add new entries above this line -->
