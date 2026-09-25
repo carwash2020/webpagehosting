@@ -448,3 +448,4 @@ power.
 ## 2026-09-25 -- note from the visual lane: 5 service pages' diagram is missing Leeds and La Verkin
 
 `services/plumbing-repairs.html`, `drywall-painting.html`, `handyman-repairs.html`, `assembly-installation.html` and `washer-dryer-repair.html` still carry the pre-2026-09-11 service-area SVG: 5 cities, and an aria-label without Leeds/La Verkin. Their own `.areas-links` cards right below list all 7. The other 12 pages have the 7-city SVG. Not changed (which cities a page's diagram shows is a content call, and it may wait on the open Leeds/La Verkin placement question in `visual.md`, 2026-09-25).
+- **Resolved 2026-09-25** (asked directly): all 5 pages now carry the 7-city SVG. `service-area-light-trail.test.js` now finds every page with the diagram instead of using a hand-kept list, so a page can't be missed again.

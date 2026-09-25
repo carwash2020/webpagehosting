@@ -3651,9 +3651,10 @@
      St. George, with only the hub's name on it. The city names and
      notes move into HTML text below it: .radius-key on the 11 pages
      without .areas-links, and the .areas-links cards on the 6 pages
-     that have them. The zoom only fits because every node sits within
-     ~160 units of the hub (tests/design/service-area-phone-layout.test.js
-     checks that). */
+     that have them. The zoom only works while every node still lands
+     inside the SVG afterwards; La Verkin, the farthest out, lands 25
+     units from the right edge (tests/design/service-area-phone-layout.test.js
+     checks every node). */
   .radius-key{display:none;}
   @media (max-width:760px){
     .radius-figure svg{max-width:460px;}
