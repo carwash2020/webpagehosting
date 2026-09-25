@@ -1701,3 +1701,11 @@ Measured in Chromium at 430px while adding Delete to `client-detail.html`: `.th-
   - Desktop (>=1024): lower-right, `bottom: 76px`, so it sits above `.th-flag-btn` (44px at 16px) rather than over it. `th-has-bottomnav` stays on the body at desktop, so the override must also target `body.th-has-bottomnav .th-update-card`.
 - **Light mode:** `--orange-light` is a dark orange there, so the Update pill gets its own lighter gradient (`#f07a1e` to `--orange`) so its dark text keeps contrast.
 - **Install bar:** while the card is up it steps down out of view (`body:has(.th-update-card.is-shown)`) instead of stacking under it.
+
+## 2026-09-25 -- from the reports lane (SEO/technical audit, not fixed)
+
+Alt text is 210/210 on the 34 sitemap pages, but 13 different photos
+(`images/gallery/tile-finished-1.webp` .. `-13.webp`) all use the alt
+"Finished tile flooring" on both `index.html` and `our-work.html`. Needs
+someone looking at each photo to write a distinct alt (room, material,
+finish).

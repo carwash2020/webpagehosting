@@ -1172,6 +1172,15 @@ Cross-logged from `features.md` ("booking-flow follow-ups"). It closes the round
   - No rows were created.
 - **Advisors:** nothing new.
 
+## 2026-09-25 (from the reports lane, not fixed): what `.nojekyll` also publishes
+
+`.nojekyll` is deliberate (so `.well-known/security.txt` is served), but it
+means GitHub Pages serves every repo file: `/docs/`, `/sql/`, `/backups/`,
+`/tests/`, `/scripts/`, `/edge-functions/`, `README.md`, and `/.claude/`.
+robots.txt disallows only `/.claude/` (and the 5 AI answer-bot groups don't
+inherit even that). Nothing links to these paths. Whether this matters depends
+on the repo's own visibility. Security lane's call.
+
 ## 2026-09-25: work-order-photos uploads scoped to the uploader's own folder (ACTION-ITEMS #17, LOW)
 
 Closes the round 3 audit's last storage note: the `work-order-photos` INSERT policy checked `bucket_id` alone.
