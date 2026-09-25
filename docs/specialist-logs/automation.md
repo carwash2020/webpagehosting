@@ -349,3 +349,21 @@ whoever owns CI reliability: PR #283 has an empty "Retrigger Tests CI
 after cancelled hung runs" commit -- harmless once, but if "hung runs"
 recur it's a symptom worth root-causing rather than re-triggering
 around.
+
+## 2026-09-25 -- from the reports lane (SEO/technical audit, not fixed)
+
+- **`.github/workflows/lighthouse.yml` still audits
+  `/handyman-hurricane-ut.html`**, a redirect stub since the 2026-09-21 move.
+  Run #43 followed the refresh to `/locations/...`, but every run measures the
+  redirect hop. Point it at `/locations/handyman-hurricane-ut.html`.
+- **`robots.txt`:** the 5 AI answer-bot groups have only `Allow: /`. Under
+  RFC 9309 a bot obeys only its most specific group, so those bots aren't bound
+  by the `*` group's `/.claude/`, `/tools/`, `/portal/` disallows. Add the three
+  lines to each group; keep 5 separate groups (the robots test parses one block
+  per User-agent).
+- **`scripts/check-links.py` in a sandboxed session** reports proxy refusals
+  (`Tunnel connection failed: 403`) as BROKEN for non-allowlisted hosts (9
+  Unsplash images today; CI run #675 got 200 for all 9 on the same commit).
+  Classify tunnel/proxy errors as UNVERIFIABLE. Its docstring ("7 landing
+  pages") and `check-links.yml`'s comment ("6 public pages") are stale; the
+  list is 34.
