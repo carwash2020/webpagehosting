@@ -69,7 +69,10 @@ test('each page marks its own tab active, with aria-current for screen readers',
   };
   for (const [page, slug] of Object.entries(expected)) {
     const html = read(page);
-    const re = new RegExp(`<a href="/portal/${slug}\\.html" class="is-active" aria-current="page">`);
+    // Request's active tab now carries a second class (`portal-nav-request`,
+    // the raised orange hex added 2026-09-25) alongside `is-active`, so the
+    // class match allows extra class names rather than an exact "is-active".
+    const re = new RegExp(`<a href="/portal/${slug}\\.html" class="is-active[^"]*" aria-current="page">`);
     assert.match(html, re, `${page}: expected its own tab marked active`);
   }
 });

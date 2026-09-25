@@ -868,6 +868,104 @@ action needed.
 
 <!-- Add new proposed visual improvements above this line -->
 
+## Client portal redesign (2026-09-25 design handoff) -- deferred screens
+
+The design handoff (`Client Portal.dc.html` / `Client Portal Board.dc.html`,
+full spec in the handoff's `HANDOFF.md`) covers 11 screens. This branch
+(`portal-redesign`) shipped only the shell -- everything below is real,
+specific, unshipped work for a follow-up session, in the handoff's own
+priority order. Nothing here has been started; don't assume partial
+progress exists.
+
+**Shipped this branch:** Shell only -- bottom nav / desktop rail reordered
+to Home / Invoices / Request / Estimates / Visits, "Quotes"->"Estimates"
+and "Jobs"->"Visits" labels, Request raised as a filled orange hex with a
+reduced-motion-gated breathing glow, and a dot on Invoices when the client
+has money owed (`portalApplyNavInvoiceDot()`, wired on home.html and
+dashboard.html -- the two pages that already load invoice rows; other
+pages don't yet fetch invoice data just to drive this dot, see below).
+
+1. **Home** (`portal/home.html`) -- the existing "Needs Your Attention"
+   inbox, next-visit hero and 5-card grid already cover most of what the
+   handoff asks for (built in earlier sessions before this handoff
+   existed). Two genuinely missing pieces: (a) the handoff's **referral
+   card with a Share button** -- there's a `$25 referral` mechanic
+   referenced elsewhere in this repo (booking.html's `.referral-nudge`),
+   but nothing surfaces it on the portal Home page; would need a real
+   referral link/code source (check whether one already exists
+   server-side before inventing one) and a `navigator.share()` call with
+   a copy-link fallback. (b) The **amount count-up animation** on the "You
+   owe" card specified in the handoff's motion section -- Home's current
+   attention-card renders the amount as static text; a 0.9s ease-out
+   count-up (Web Animations API or `requestAnimationFrame`) plus a
+   `prefers-reduced-motion` fallback that skips straight to the final
+   value would need adding to `renderAttention()`.
+2. **Invoices list + detail + Stripe pay sheet** (`portal/dashboard.html`)
+   -- explicitly the highest-risk screen (real money) and explicitly not
+   touched this branch beyond the shared shell CSS/JS. Still to do:
+   **stat tiles** (owed / paid this year) as a phone alternative to the
+   existing SVG ring (handoff says the ring "can stay on desktop"), and
+   an **Open/Paid segmented control** in place of the current stacked
+   "Outstanding" / "Paid" section headers. Both are presentation-only
+   changes around `renderInvoiceSummary()`/the invoice list render in
+   `dashboard.html` -- do NOT touch `renderPayFirst()`, the Stripe
+   Payment Element mount, or any Edge Function call while doing this;
+   verify in Stripe test mode before merging, per the handoff's own
+   instruction ("get it right or don't ship it").
+3. **Estimates** (`portal/quotes.html`) -- list screen: a "waiting on
+   you" note + estimate rows + contract rows in one list (contracts
+   currently live only on `contracts.html`, a separate page/tab -- this
+   would mean deciding whether to actually merge them into one list or
+   just visually match row style, which is a real IA question, not a
+   pure restyle). Detail screen: "What's included" as its own labelled
+   block (currently inline description text), an explicit "Ask a
+   question" action distinct from the existing message thread toggle,
+   and a "Sign first" secondary path before Approve when a contract is
+   attached to that estimate (needs checking whether that link between
+   an estimate and its contract exists in the data model at all).
+4. **Booking time picker** (`createBookingPicker()`,
+   `portal-polish.css` -- confirm the handoff's "§25" section-comment
+   reference is still accurate before editing; section numbers drift as
+   the file grows) -- the handoff's two-week day-strip + slot-grid
+   description already roughly matches what's built; the specific gaps
+   are the "Full" greyed-out day state and the tap-pop micro-animation on
+   day/slot selection (reduced-motion gated).
+5. **Request work** (`portal/work-orders.html`) -- kind chips and a
+   3-option urgency grid (Whenever / Soon / Urgent, Urgent in red/danger)
+   in place of whatever urgency control exists today; check the current
+   form before assuming this is a net-new control vs. a restyle of an
+   existing one.
+6. **Visit detail** (`portal/jobs.html`) -- a vertical "Where things
+   stand" timeline (Requested -> Scheduled -> On the way -> Done -> Paid)
+   with a live pulse on the current step (reduced-motion gated), replacing
+   or augmenting whatever status display exists today.
+7. **Messages** -- bubble/composer visuals already largely exist
+   (`.portal-msg`, `.portal-composer` in `portal-app.css`, built
+   2026-09-22); missing: the "About: job" chip on each bubble, and the
+   motion spec's three-dot "Steven is typing" indicator and unread-badge
+   bounce (both reduced-motion gated).
+8. **Sign** (`portal/contracts.html`) -- summary card + `signature-pad.js`
+   area already exist; check the agree-checkbox's real touch target (spec
+   wants 44px) and whether the sticky "Sign work order" action bar matches
+   the handoff's sticky-bar treatment used elsewhere.
+9. **Settings** (`portal/settings.html`) -- likely the closest to done
+   already (2FA/Face ID cards were built 2026-09-22); a real diff against
+   the handoff's field list wasn't done this branch.
+10. **Sign-in** (`portal/login.html`, `portal/set-password.html`) -- not
+    reviewed against the handoff this branch; MFA/Face ID steps must stay
+    exactly as-is per the ground rules regardless of what else changes.
+
+**Also not done:** the shared-component pass the handoff describes
+("card, section label, buttons, segmented control, chips, list row, stat
+tiles, toggles, sticky action bar, toast -- build them once, scoped under
+the portal's own class namespace"). Card/button/toast elevation and tap
+feedback already exist in `portal-app.css`; a portal-scoped segmented
+control, chip and stat-tile primitive do not yet exist as reusable classes
+-- build them once when picking up item 2 or 3 above rather than
+one-off per screen.
+
+<!-- Add new proposed visual improvements above this line -->
+
 ## Cross-surface visual consistency plan (2026-09-25)
 
 From the visual lane's audit of the public site, client portal and

@@ -962,7 +962,7 @@ async function portalMarkThreadRead(supabaseClient, threadType, threadId, seenTh
 // the count for screen readers since the badge itself is aria-hidden.
 const PORTAL_NAV_UNREAD_TABS = [
   { type: 'work_order', href: '/portal/work-orders.html', label: 'Request' },
-  { type: 'job', href: '/portal/jobs.html', label: 'Jobs' },
+  { type: 'job', href: '/portal/jobs.html', label: 'Visits' },
 ];
 function portalApplyNavUnreadBadges(rows) {
   const totals = {};
@@ -989,6 +989,23 @@ function portalApplyNavUnreadBadges(rows) {
     badge.textContent = n > 9 ? '9+' : String(n);
     link.setAttribute('aria-label', tab.label + ', ' + n + ' new message' + (n === 1 ? '' : 's'));
   });
+}
+
+// Shell rebuild (2026-09-25 design handoff): a small dot on the
+// Invoices tab when the client has money owed. A dot rather than a
+// number -- the exact amount already lives one tap away on Home and
+// on Invoices itself, and this only needs to answer "is anything
+// owed", not "how much". Callers pass whatever unpaid/paid rows they
+// already fetched for the page (home.html and dashboard.html both
+// load client_portal_invoices already); this never queries on its
+// own so it can't add a request to pages that never asked for one.
+function portalApplyNavInvoiceDot(hasOwed) {
+  const link = document.querySelector('.portal-nav a[href="/portal/dashboard.html"]');
+  if (!link) return;
+  const dot = link.querySelector('.portal-nav-dot');
+  if (!dot) return;
+  dot.hidden = !hasOwed;
+  dot.classList.toggle('is-visible', !!hasOwed);
 }
 
 // ---------- Never miss a reply (2026-09-22) ----------
