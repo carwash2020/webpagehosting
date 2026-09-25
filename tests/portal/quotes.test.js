@@ -21,9 +21,11 @@ test('portal/quotes.html loads none of the internal /tools/ scripts', () => {
 });
 
 test('quotes.html and dashboard.html cross-link to each other', () => {
+  // "Quotes" nav label renamed to "Estimates" 2026-09-25 (design handoff);
+  // href (quotes.html) is unchanged.
   assert.match(html, /<a href="\/portal\/dashboard\.html">[\s\S]*?<span>Invoices<\/span>/);
   const dashboardHtml = fs.readFileSync(path.join(__dirname, '..', '..', 'portal', 'dashboard.html'), 'utf8');
-  assert.match(dashboardHtml, /<a href="\/portal\/quotes\.html">[\s\S]*?<span>Quotes<\/span>/);
+  assert.match(dashboardHtml, /<a href="\/portal\/quotes\.html">[\s\S]*?<span>Estimates<\/span>/);
 });
 
 test('an unauthenticated visitor is redirected to login, not shown quotes', () => {

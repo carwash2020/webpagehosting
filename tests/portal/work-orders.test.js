@@ -110,11 +110,15 @@ test('work-orders.html allows Supabase in its CSP connect-src', () => {
 });
 
 test('all four portal pages cross-link to each other, each marking its own page active', () => {
+  // Nav labels renamed 2026-09-25 (design handoff): "Quotes" -> "Estimates",
+  // "Jobs" -> "Visits". Request's active class also gained a second class
+  // (`portal-nav-request`, the raised orange hex) -- the active-class regex
+  // below now allows extra class names rather than an exact "is-active" match.
   const pages = {
     'work-orders.html': 'Request',
-    'quotes.html': 'Quotes',
+    'quotes.html': 'Estimates',
     'dashboard.html': 'Invoices',
-    'jobs.html': 'Jobs',
+    'jobs.html': 'Visits',
   };
   for (const [file, activeLabel] of Object.entries(pages)) {
     const src = fs.readFileSync(path.join(__dirname, '..', '..', 'portal', file), 'utf8');
@@ -127,7 +131,7 @@ test('all four portal pages cross-link to each other, each marking its own page 
         `${file}: should link to ${target}`);
     }
     // And marks exactly its own as active.
-    assert.match(nav, new RegExp(`class="is-active" aria-current="page">[\\s\\S]*?<span>${activeLabel}</span>`),
+    assert.match(nav, new RegExp(`class="is-active[^"]*" aria-current="page">[\\s\\S]*?<span>${activeLabel}</span>`),
       `${file}: should mark ${activeLabel} as the active tab`);
     assert.equal((nav.match(/is-active/g) || []).length, 1,
       `${file}: exactly one nav item should be active`);

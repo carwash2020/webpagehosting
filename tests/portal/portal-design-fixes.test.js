@@ -113,12 +113,16 @@ test('every signed-in portal page has a settings button, like the internal tools
 });
 
 test('all six signed-in portal pages share the same five-item nav, each marking its own tab', () => {
+  // Nav labels renamed 2026-09-25 (design handoff): "Quotes" -> "Estimates",
+  // "Jobs" -> "Visits" (hrefs unchanged). Request's active class also
+  // gained a second class (the raised orange hex, `portal-nav-request`),
+  // so the active-class regex now allows extra class names.
   const expected = {
     'home.html': 'Home',
     'work-orders.html': 'Request',
-    'quotes.html': 'Quotes',
+    'quotes.html': 'Estimates',
     'dashboard.html': 'Invoices',
-    'jobs.html': 'Jobs',
+    'jobs.html': 'Visits',
   };
   for (const [page, activeLabel] of Object.entries(expected)) {
     const src = fs.readFileSync(repo('portal', page), 'utf8');
@@ -129,7 +133,7 @@ test('all six signed-in portal pages share the same five-item nav, each marking 
       assert.match(nav, new RegExp(`href="/portal/${target.replace('.', '\\.')}"`),
         `${page}: should link to ${target}`);
     }
-    assert.match(nav, new RegExp(`class="is-active" aria-current="page">[\\s\\S]*?<span>${activeLabel}</span>`),
+    assert.match(nav, new RegExp(`class="is-active[^"]*" aria-current="page">[\\s\\S]*?<span>${activeLabel}</span>`),
       `${page}: should mark ${activeLabel} active`);
     assert.equal((nav.match(/is-active/g) || []).length, 1,
       `${page}: exactly one nav item should be active`);

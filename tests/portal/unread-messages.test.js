@@ -167,7 +167,9 @@ test('nav badges sum per tab, cap at 9+, set an accessible label, and clear at z
   assert.equal(req.querySelector('.portal-nav-badge'), null);
   assert.equal(req.getAttribute('aria-label'), null);
   assert.equal(jobs.querySelector('.portal-nav-badge').textContent, '1');
-  assert.equal(jobs.getAttribute('aria-label'), 'Jobs, 1 new message');
+  // "Jobs" tab label renamed to "Visits" 2026-09-25 (design handoff);
+  // PORTAL_NAV_UNREAD_TABS' own label drives this aria-label text.
+  assert.equal(jobs.getAttribute('aria-label'), 'Visits, 1 new message');
   assert.equal(jobs.querySelectorAll('.portal-nav-badge').length, 1, 'updates the existing badge, never stacks a second');
 });
 
