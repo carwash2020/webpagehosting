@@ -5455,3 +5455,12 @@ Public site only: the "Where We Work" diagram on the homepage, the 8 city pages 
 Verified in headless Chromium at 320, 375 and 390px, dark and light, on 5 page types (homepage, a city page, the St. George city page, a service page with cards, and one without): every label renders at 16px or more, no two labels overlap, no node is clipped, and there's no sideways scroll. Also checked at 560, 700 and 760px (the key goes to two columns), at 761 and 1280px (identical to before), and with motion on (the spokes still draw in). `check-consistency`, `check-undefined-vars`, `eslint` and `check-visual-snapshot` pass. The full suite passes 3878/3879; the one failure is the known `check-links.py` sandbox-proxy test. `check-links.py` finds every internal link resolved; its 9 failures are external Unsplash URLs the sandbox proxy blocks. `npm run fix-versions` bumped `styles.css` everywhere, plus both service workers.
 
 New test `tests/design/service-area-phone-layout.test.js` (39): each key matches its SVG's own text, the hub name and key text stay at 16px or more, the card sizes win the cascade, and every node still fits inside the SVG after the phone zoom.
+
+## What changed, 2026-09-25 -- A Graveyard sync test no longer fails on a fast CI runner
+
+Tests only. `tests/sync/graveyard-restore-sync.test.js` ("deleted again after a restore") failed once in CI on #426 and passed on a re-run of the same commit.
+
+- **Cause:** `tombstoneCounts` in `tools/sync.js` counts a delete only when `deletedAt > restoredAt`. The strict `>` is on purpose: Restore adds already-lifted tombstones with both stamps equal. The test restores on one device and deletes again on another a few calls later. On a fast runner both stamps land in the same millisecond, the delete ties the restore, and it doesn't count.
+- **Fix:** the test waits for the clock to reach the next millisecond before the second delete. A person can't restore and delete again within 1 ms, so the app code is unchanged. No other sync test deletes again after a restore.
+
+Verified: with the devices' clocks frozen, the old test fails every time with CI's assertion and the fixed one passes. Full suite 3,932/3,933. The one failure is the known `check-links.py` sandbox-proxy test. `check-consistency`, `check-undefined-vars` and `eslint` are clean.
