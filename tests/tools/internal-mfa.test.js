@@ -155,7 +155,7 @@ test('login.html shows a real challenge view and verifies via Supabase before pe
 
 test('login.html offers a recovery-code path for a lost authenticator device', () => {
   assert.match(LOGIN, /id="mfaRecoveryCodeInput"/);
-  assert.match(LOGIN, /const result = await verifyRecoveryCode\(pendingSession\.access_token, code\);/);
+  assert.match(LOGIN, /const result = await redeemRecoveryCode\(pendingSession\.access_token, code\);/);
   assert.match(LOGIN, /if \(!result\.ok \|\| !result\.valid\)/);
 });
 
