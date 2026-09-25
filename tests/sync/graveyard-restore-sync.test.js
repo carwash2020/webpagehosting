@@ -103,6 +103,10 @@ test('deleted again after a restore: the new delete sticks everywhere', () => {
   pull(b);
   assert.deepEqual(jobs(b), ['j1']);
 
+  // Restore and this delete are both stamped with new Date(). A fast runner
+  // can do both in the same millisecond, and a tie reads as "restored"
+  // (tombstoneCounts needs deletedAt > restoredAt). A person can't; step past it.
+  const t = Date.now(); while (Date.now() === t) { /* next ms */ }
   deleteJob(b, 'j1');
   push(b);
   pull(a);
