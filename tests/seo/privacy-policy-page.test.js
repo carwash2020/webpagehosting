@@ -79,6 +79,7 @@ const PAGES_LINKING_TO_PRIVACY = [
   'services/dishwasher-repair-st-george-ut.html',
   'blog/index.html',
   'blog/appliance-repair-or-replace.html',
+  'blog/dishwasher-leaking.html',
   'blog/dishwasher-not-cleaning.html',
   'blog/dishwasher-not-draining.html',
   'blog/dryer-not-heating.html',
@@ -86,11 +87,13 @@ const PAGES_LINKING_TO_PRIVACY = [
   'blog/drywall-crack-above-door.html',
   'blog/fridge-not-cooling.html',
   'blog/handyman-to-do-list.html',
+  'blog/ice-maker-not-working.html',
   'blog/oven-not-heating-right.html',
   'blog/toilet-running-flapper-valve.html',
   'blog/tv-mount-drywall-anchors.html',
   'blog/washer-leaking-water.html',
   'blog/washer-wont-drain.html',
+  'blog/washer-wont-spin.html',
 ];
 
 for (const name of PAGES_LINKING_TO_PRIVACY) {
