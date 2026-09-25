@@ -156,14 +156,22 @@ click a setting by hand.
     `send-push` → Delete, or `supabase functions delete send-push` from a
     machine that has the CLI and project access.
 
-11. **Turn off public signup in Supabase Auth** (dashboard:
+11. ~~**Turn off public signup in Supabase Auth** (dashboard:
     Authentication -> Sign In / Providers -> "Allow new users to sign
     up" -> off). Confirmed live 2026-09-23 that it's on
     (`disable_signup: false`), which lets any stranger with a mailbox
     hold an `authenticated` session -- the root cause of that day's
-    CRITICAL finding (`docs/specialist-logs/security.md`). Nothing in the
-    repo calls `signUp`; portal invites (`send-invite`, service role)
-    keep working with signup off.
+    CRITICAL finding (`docs/specialist-logs/security.md`).~~ **Done:
+    confirmed off live 2026-09-25** (`/auth/v1/settings` returns
+    `disable_signup: true`). It was switched off in the dashboard
+    some time after the 2026-09-23 audit.
+    - Nothing in the repo calls `signUp`, `signInWithOtp` or OAuth, so
+      no page depends on self-signup. All 3 client accounts were
+      created by invite; none ever signed up on their own.
+    - Portal invites (`send-invite`) use the service-role admin API
+      (`generateLink`), which this setting doesn't block. No real
+      invite has gone out since the change, so the first one is worth
+      a glance.
 12. **Resolved (2026-09-23).** Every security-fixed edge function merged
     that day is deployed from `main` and verified live (anon -> 401, the
     triggers' Vault key -> through). Results per function:
@@ -195,10 +203,13 @@ click a setting by hand.
 
 15. **Decide who can save a card from portal Settings** (2026-09-23
     audit, finding #6, MEDIUM). `manage-saved-card`'s
-    `create_setup_intent` mode accepts any signed-in account. With
-    public signup on (#11), a stranger can sign up and use it to create
-    Stripe Customers and SetupIntents, a common way to test stolen cards.
-    - **Quickest fix:** turning signup off (#11) removes the stranger case.
+    `create_setup_intent` mode accepts any signed-in account. While
+    public signup was on (#11), a stranger could sign up and use it to
+    create Stripe Customers and SetupIntents, a common way to test
+    stolen cards.
+    - **Stranger case closed (2026-09-25):** signup is off (#11), so only
+      invited clients and staff can sign in. What's left is an invited
+      account misusing it.
     - **The code fix needs a product call:** who counts as a real client?
       "Has an invoice, quote, job, contract or checkup" would block a
       client whose only item is a work order they submitted themselves.
@@ -236,7 +247,8 @@ click a setting by hand.
     - The bucket also takes images only, 8 MB max (the page's own
       limits).
     - **Still open:** any signed-in account can still fill its own
-      folder. Turning signup off (#11) removes strangers from that.
+      folder. With signup off (#11, confirmed 2026-09-25) that means
+      invited clients and staff only.
 
 18. **Steve: set up an authenticator for the Workspace** (2026-09-25). The
     Owner account has none. It has been signed in on one remembered,
@@ -305,12 +317,13 @@ when greenlit; these do not.
    backlink or local news mention -- slower, but the kind of link no
    amount of code can manufacture.
 
-8. **Request indexing for the three new blog posts** (2026-09-25) in
+8. **Request indexing for the six new blog posts** (2026-09-25) in
    Google Search Console (URL Inspection, then "Request indexing"):
    `/blog/washer-leaking-water.html`, `/blog/dryer-wont-turn-on.html`,
-   `/blog/dishwasher-not-draining.html`. They're in `sitemap.xml`
-   already, so Google will find them anyway. Requesting indexing is
-   just faster.
+   `/blog/dishwasher-not-draining.html`, `/blog/washer-wont-spin.html`,
+   `/blog/dishwasher-leaking.html`, `/blog/ice-maker-not-working.html`.
+   They're in `sitemap.xml` already, so Google will find them anyway.
+   Requesting indexing is just faster.
 
 <!-- Add new SEO action items above this line -->
 
@@ -688,6 +701,16 @@ reference:
   of their sibling posts (dryer-not-heating, dishwasher-not-cleaning),
   because this environment can't reach any image CDN to pick new ones.
   Swap them if you have better photos.
+
+- **Three more appliance symptom posts** (2026-09-25, later the same
+  day): `blog/washer-wont-spin.html`, `blog/dishwasher-leaking.html`,
+  and `blog/ice-maker-not-working.html`. 11 of the 20 symptoms in
+  `js/triage.js` now have a post. They're wired in the same places as
+  the first three, plus the refrigerator St. George page. All three
+  reuse a lead photo from an existing post on the same appliance, so the
+  dishwasher photo now appears on three posts and the washer-row and
+  fridge photos on two each. Real photos of a washer, a dishwasher, and
+  a fridge ice maker would fix all of them.
 
 - **Washer/dryer service page now lists all appliance types actually
   sold** (`washer-dryer-repair.html`, 2026-09-16) -- added Dishwashers,

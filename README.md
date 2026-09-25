@@ -5347,7 +5347,7 @@ Verified:
 
 - the full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint`;
 - a dry run of the new policy against the live database, in a transaction that rolled back: the caller's own folder was allowed (two clients and a staff account); another client's folder, the old shape, an arbitrary path, the folder root, extra depth and a wrong prefix were all RLS denials (42501);
-- the live results after deploy are in `docs/specialist-logs/security.md` (2026-09-25).
+- live, after the Pages deploy finished and the live page was confirmed to use the new path: migration `20260925164058` applied, then the same rolled-back probes. Each account's own folder was allowed. Everything else was an RLS denial, including anon and staff writing into a client's folder. The bucket shows 8 MB and `image/*`. Advisors: nothing new. Full write-up in `docs/specialist-logs/security.md` (2026-09-25). No real HTTP upload was run through the Storage API: this sandbox can't reach `*.supabase.co`.
 - `npm run fix-versions` bumped the portal service worker's cache name.
 
 Tests:
@@ -5390,6 +5390,15 @@ Verified: the full suite (the only failure is the known `check-links.py` sandbox
 Tests:
 
 - `tests/tools/mfa-settings-remember-me.test.js` (5, new). It runs the real settings.html and login.html, with the real auth.js, against a stubbed Supabase. It checks where the session ends up after turning on two-factor in Settings (remembered and this-session-only) and after an MFA sign-in with the box checked, unchecked, and unchecked over an old remembered session. The remembered Settings case fails on the old code.
+
+## What changed, 2026-09-25 -- Public signup is off (confirmed live)
+
+Security, docs only. Asked to turn off public signup in Supabase Auth, it was already off: the live `/auth/v1/settings` returns `disable_signup: true`, where the 2026-09-23 audit saw `false`. It was switched off in the dashboard in between.
+
+- **Why it matters:** with signup on, anyone with a mailbox could hold an `authenticated` session. That was the root cause of most of the 2026-09-23 findings. Now only invited clients and staff can sign in.
+- **Nothing broke:** no page uses self-signup, and all 3 client accounts were created by invite. `send-invite` uses the service-role admin API, which this setting shouldn't block. No invite has gone out since the change, so the first one is worth a glance.
+- **Still true:** policies must never treat `authenticated` as "staff". Portal clients are authenticated too, and the setting is one click from coming back on.
+- Updated: ACTION-ITEMS #11 (done), #15 and #17 (stranger case closed), `SECURITY.md`, and `docs/specialist-logs/security.md`.
 
 ## What changed, 2026-09-25 -- Two-factor is now checked by the server, not just the sign-in page (dry run first)
 
@@ -5480,6 +5489,27 @@ Tests only. `tests/sync/graveyard-restore-sync.test.js` ("deleted again after a 
 - **Fix:** the test waits for the clock to reach the next millisecond before the second delete. A person can't restore and delete again within 1 ms, so the app code is unchanged. No other sync test deletes again after a restore.
 
 Verified: with the devices' clocks frozen, the old test fails every time with CI's assertion and the fixed one passes. Full suite 3,932/3,933. The one failure is the known `check-links.py` sandbox-proxy test. `check-consistency`, `check-undefined-vars` and `eslint` are clean.
+
+## What changed, 2026-09-25 -- Three more symptom posts: washer won't spin, dishwasher leaking, ice maker
+
+Public site only. Follow-up to the three posts from earlier today. 11 of the 20 symptoms in the "Is it worth fixing?" tool (`js/triage.js`) now have a post.
+
+- **`blog/washer-wont-spin.html`**: "Washer Won't Spin? It's Usually a Belt or a Switch." Rule out an unbalanced load and a washer that never drained, then the lid switch or door lock, then the drive belt or, on direct-drive machines, the motor coupling.
+- **`blog/dishwasher-leaking.html`**: "Dishwasher Leaking? It's Usually a Seal or a Hose." Where the water shows up (door gasket, supply or drain hose fitting, a door that no longer closes square), and two causes that aren't parts: regular dish soap and a dishwasher that isn't level. Where the shutoff valve usually is.
+- **`blog/ice-maker-not-working.html`**: "Ice Maker Not Making Ice? Here's What Usually Failed." Shutoff arm, freezer temperature, water filter, and a jam first. Then the water inlet valve (hard St. George water), the fill line (kinked, or frozen and why), and the ice maker module.
+
+Each post says what that symptom's triage entry says, with no prices or claims about call volume. Same template as the other posts. Titles are shorter this time (72-75 characters with the site suffix, against 85-93 on the first batch), and descriptions are under 160 characters. Both came from today's SEO audit note in `docs/specialist-logs/content.md`.
+
+Range "burner won't light" was on the earlier to-do list, but `blog/oven-not-heating-right.html` already has a section on it, so it was dropped.
+
+Listed on the blog index (16 cards), the "Recent Notes From the Shop" lists on the washer/dryer, washer/dryer St. George, dishwasher St. George and refrigerator St. George pages, and `sitemap.xml`. `washer-wont-drain.html`, `dishwasher-not-draining.html` and `fridge-not-cooling.html` each gained one in-prose link, on the sentence that already named the symptom. All three new posts reuse a lead photo from a post on the same appliance (no image CDN is reachable from here), so real photos are now more useful than ever. `docs/ACTION-ITEMS.md`'s Search Console item now lists all six new URLs.
+
+Verified:
+- full suite 3931 of 3932 passing; the one failure is the known `check-links.py` sandbox-proxy test. After merging #426, its new `service-page-faq-depth` test and every blog and page-list suite were re-run: 527 of 527;
+- `check-consistency`, `check-undefined-vars`, `eslint` and `check-visual-snapshot` clean;
+- `check-links.py`: every internal reference resolves. External failures are only the sandbox proxy refusing Unsplash.
+
+Tests: the new pages are added to the page lists in `blog-index-cards`, `analytics-events`, `mobile-nav-collapsible` and `privacy-policy-page`. The public-page counts go from 36 to 39, and the Call-button page count from 15 to 18. `check-links.py`'s `PUBLIC_PAGES` gets the three new URLs.
 
 ## What changed, 2026-09-25 -- Leeds and La Verkin are on the service-area diagram on every page
 

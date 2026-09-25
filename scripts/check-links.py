@@ -72,6 +72,9 @@ PUBLIC_PAGES = [
     'blog/washer-leaking-water.html',
     'blog/dryer-wont-turn-on.html',
     'blog/dishwasher-not-draining.html',
+    'blog/washer-wont-spin.html',
+    'blog/dishwasher-leaking.html',
+    'blog/ice-maker-not-working.html',
 ]
 
 HREF_SRC_RE = re.compile(r'(?:href|src)="([^"]+)"')

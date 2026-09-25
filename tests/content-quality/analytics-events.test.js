@@ -38,7 +38,8 @@ const BLOG_PAGES = [
   'blog/toilet-running-flapper-valve.html', 'blog/drywall-crack-above-door.html',
   'blog/tv-mount-drywall-anchors.html', 'blog/oven-not-heating-right.html',
   'blog/washer-leaking-water.html', 'blog/dryer-wont-turn-on.html',
-  'blog/dishwasher-not-draining.html',
+  'blog/dishwasher-not-draining.html', 'blog/washer-wont-spin.html',
+  'blog/dishwasher-leaking.html', 'blog/ice-maker-not-working.html',
 ];
 
 function loadAnalytics({ url, body }) {
