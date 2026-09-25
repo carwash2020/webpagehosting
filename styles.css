@@ -3642,10 +3642,76 @@
   .radius-legend span{display:inline-flex; align-items:center; gap:8px;}
   .radius-legend b{width:22px; height:0; border-top:2px solid var(--blue-light);}
   .radius-legend b.is-request{border-top:2px dashed var(--orange);}
+  /* Phone layout (<=760px, 2026-09-25). The SVG's 760-unit viewBox
+     shrinks every label with the screen: 8.2px at 375px, 6.8px at 320px.
+     Bigger font sizes can't fix that, because the labels sit in fixed
+     SVG units: at the old 19px sizes, 10 of them overlapped at every
+     width from 320 to 760. So phones get a different layout. The
+     diagram keeps its spokes, nodes and hub, drawn 1.5x larger around
+     St. George, with only the hub's name on it. The city names and
+     notes move into HTML text below it: .radius-key on the 11 pages
+     without .areas-links, and the .areas-links cards on the 6 pages
+     that have them. The zoom only fits because every node sits within
+     ~160 units of the hub (tests/design/service-area-phone-layout.test.js
+     checks that). */
+  .radius-key{display:none;}
   @media (max-width:760px){
-    .radius-figure text{font-size:19px;}
-    .radius-note{font-size:16px;}
-    .radius-hub-name{font-size:21px;}
+    .radius-figure svg{max-width:460px;}
+    .radius-figure text{display:none;}
+    .radius-figure g[data-city]{
+      transform-box:view-box;
+      transform-origin:380px 210px;
+      transform:translateY(30px) scale(1.5);
+    }
+    .radius-figure .radius-spoke{stroke-width:2;}
+    .radius-figure .radius-hub-name{
+      display:inline;
+      font-size:30px;
+      transform:translateY(10px);
+      /* A halo in the page colour, so the two spokes under the name
+         don't cut through the letters. */
+      paint-order:stroke;
+      stroke:var(--bg);
+      stroke-width:8px;
+      stroke-linejoin:round;
+    }
+    .radius-legend{margin:-6px 0 22px; row-gap:6px;}
+
+    .radius-key{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(250px, 1fr));
+      gap:2px 16px;
+      margin:0 0 8px;
+      padding:0;
+      list-style:none;
+    }
+    .radius-key li{
+      position:relative;
+      display:flex;
+      flex-direction:column;
+      gap:1px;
+      padding:9px 12px 9px 40px;
+      border-radius:var(--radius);
+    }
+    /* The node, drawn like the diagram's own: a blue ring, an orange
+       ring for by-request, a filled orange dot for the hub. */
+    .radius-key li::before{
+      content:"";
+      position:absolute;
+      left:14px;
+      top:15px;
+      width:12px;
+      height:12px;
+      box-sizing:border-box;
+      border:2px solid var(--blue-light);
+      border-radius:50%;
+      background:var(--bg-panel-2);
+    }
+    .radius-key li.is-request::before{border-color:var(--orange);}
+    .radius-key li.is-hub::before{left:12px; top:13px; width:16px; height:16px; border:0; background:var(--orange);}
+    .radius-key b{font-family:var(--font-ui); font-weight:600; font-size:17px; line-height:1.35; letter-spacing:.6px; color:var(--text);}
+    .radius-key li.is-request b{color:var(--orange-text);}
+    .radius-key small{font-size:16px; line-height:1.4; color:var(--text-dim);}
   }
 
   /* Regression-recovery fix (2026-09-08): a second measured audit found
@@ -3706,6 +3772,13 @@
   @media (max-width:600px){
     .areas-links{gap:8px;}
     .areas-link{padding:10px 14px;}
+  }
+  /* On the 6 pages that have these cards, they carry the diagram's
+     labels at <=760px (the SVG drops them there; see the phone layout
+     above), so they get the same 16px floor as .radius-key. */
+  @media (max-width:760px){
+    .areas-link b{font-size:17px;}
+    .areas-link small{font-size:16px;}
   }
 
   /* W21/M03 fix (Master Audit, 2026-09-08): hovering (or tab-focusing)
@@ -4197,7 +4270,23 @@
   .radius-figure[data-focus="mesquite"]   g[data-city="mesquite"]   .radius-node{
     filter:drop-shadow(0 0 10px rgba(255,128,0,.6));
   }
-  .radius-figure[data-focus] .radius-name{font-size:15px;}
+  /* The phone key lights the same city. The other rows stay at full
+     strength: on a phone the key is the text, not the picture. */
+  .radius-figure[data-focus="st-george"]         ~ .radius-key li[data-city="st-george"],
+  .radius-figure[data-focus="washington-city"]   ~ .radius-key li[data-city="washington-city"],
+  .radius-figure[data-focus="hurricane"]         ~ .radius-key li[data-city="hurricane"],
+  .radius-figure[data-focus="santa-clara-ivins"] ~ .radius-key li[data-city="santa-clara-ivins"],
+  .radius-figure[data-focus="leeds"]             ~ .radius-key li[data-city="leeds"],
+  .radius-figure[data-focus="la-verkin"]         ~ .radius-key li[data-city="la-verkin"],
+  .radius-figure[data-focus="cedar-city"]        ~ .radius-key li[data-city="cedar-city"],
+  .radius-figure[data-focus="mesquite"]          ~ .radius-key li[data-city="mesquite"]{
+    background:var(--bg-panel);
+    box-shadow:inset 0 0 0 1px var(--border);
+    --key-glow:0 0 10px var(--key-glow-color, rgba(58,160,255,.55));
+  }
+  .radius-key li.is-request,
+  .radius-key li.is-hub{--key-glow-color:rgba(255,128,0,.6);}
+  .radius-key li::before{box-shadow:var(--key-glow, none);}
 
   /* ---------- landing page sections ---------- */
   .areas-map-section .radius-figure{margin-bottom:26px;}

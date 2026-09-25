@@ -1701,3 +1701,25 @@ Measured in Chromium at 430px while adding Delete to `client-detail.html`: `.th-
   - Desktop (>=1024): lower-right, `bottom: 76px`, so it sits above `.th-flag-btn` (44px at 16px) rather than over it. `th-has-bottomnav` stays on the body at desktop, so the override must also target `body.th-has-bottomnav .th-update-card`.
 - **Light mode:** `--orange-light` is a dark orange there, so the Update pill gets its own lighter gradient (`#f07a1e` to `--orange`) so its dark text keeps contrast.
 - **Install bar:** while the card is up it steps down out of view (`body:has(.th-update-card.is-shown)`) instead of stacking under it.
+
+## 2026-09-25 -- the service-area diagram's phone layout (the 09-23 parked finding, fixed)
+
+- **Re-measured first; the log's numbers held.** Rendered sizes were 6.8px at 320, 8.18px at 375 and 8.55px at 390. One correction: the Mesquite note collides with Leeds's *note* ("About 20 minutes north"), not the name. New finding: the collisions come from label geometry in SVG units, so the old 19px block overlapped 10 labels at *every* width up to 760, not just on phones. City pages were worse: `.radius-figure[data-focus] .radius-name{15px}` (0,3,0) made names smaller than the 19px notes.
+- **What shipped.** At <=760px, `text{display:none}` except the hub name, and every `g[data-city]` gets `translateY(30px) scale(1.5)` around the hub (`transform-box:view-box; transform-origin:380px 210px`). The labels become HTML:
+  - `.radius-key` after the legend on the 11 pages without `.areas-links`;
+  - the cards on the other 6, bumped to 17/16px (that rule has to come *after* the base `.areas-link` rules, as their specificity is equal).
+  The key sits after the legend, not inside the figure, so the focus rules use `.radius-figure[data-focus=x] ~ .radius-key li[data-city=x]`.
+- **Why not the alternatives.** Numbered node badges would need number markup in 17 SVGs and on the cards. A negative-margin crop fights flex shrink. A route-style spine list reads as a sequential route, not a hub. The group zoom stays inside the SVG's own viewport, so nothing outside the SVG changes.
+- **The zoom window is the constraint.** It fits because every node sits within ~160 units of the hub. `service-area-phone-layout.test.js` recomputes every node's zoomed position, so a re-plot that leaves the window fails there instead of clipping silently.
+- **The "open Leeds/La Verkin geography question".** It isn't written down anywhere under that name (searched docs/specialist-logs/, ACTION-ITEMS.md, README.md, PR history). My best reading, inferred rather than confirmed:
+  - PR #205 put Leeds and La Verkin "in the two angular gaps the diagram's own code comments had already reserved", but the SVG comment says cities are placed by angle clockwise from north.
+  - So Leeds sits at ~150 degrees (south-east of the hub) while its note says "About 20 minutes north", and La Verkin at ~300 degrees (north-west) while its note says "About 25 minutes east".
+  - In real bearings, Cedar City, Leeds, Washington City, La Verkin and Hurricane all fall inside a ~40-degree wedge to the north-east, which is presumably why they were spread out.
+  - That's a decision about node *positions*, for Connor. It didn't block this: the phone layout carries direction as text and reuses the same geometry, so a re-plot only has to move nodes and pass the zoom-fit test.
+- **Also noticed, not changed:**
+  - the 5 generic service pages' SVG still has only 5 cities (no Leeds/La Verkin), while their cards list all 7 (logged for content);
+  - desktop SVG notes render at 11.8px (12.5px CSS x 0.947) -- pre-existing, above 760 and out of this scope.
+- **Method notes:**
+  - Use `t.getScreenCTM()` x font-size for true SVG text size; viewBox scale alone misses group transforms.
+  - A collision check has to skip a label's own name/note pair, whose line boxes overlap even when the ink doesn't.
+  - `fullPage` screenshots drop the fixed `.bg-blueprint` layer, so light mode comes out on `#0a0a0a`. Resize the viewport to the region and clip instead.

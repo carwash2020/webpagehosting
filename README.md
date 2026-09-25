@@ -5330,3 +5330,17 @@ Invoices, estimates, receipts, portal quotes, job sheets, contracts, the portal 
 - **No street address on any document.** The registered address is the owner's home. Contracts used to print it; now every document shows the city line only. Business Compliance keeps it internally.
 - **The "not attorney-reviewed" note is no longer printed on contracts.** It was a note to the owner, not the client. It stays on the Contract Generator page itself.
 - Checked by rendering every document type with real jsPDF from the real page code and inspecting the output, including a 3-page invoice, 2-page contracts and a 3-page service history.
+
+## What changed, 2026-09-25 -- The service-area diagram gets its own phone layout
+
+Public site only: the "Where We Work" diagram on the homepage, the 8 city pages and 8 service pages. Found in the 2026-09-23 visual audit and re-measured in headless Chromium before changing anything. On a phone every label was unreadable: 6.8px at 320px, 8.2px at 375px and 8.6px at 390px. At every width up to 760px, "West side, near Snow Canyon" ran into "Home base", and the Mesquite and Leeds notes ran into each other. The cause is the SVG's 760-unit viewBox, which shrinks the text along with the screen. The old <=760px font-size bump couldn't fix that. Its labels sit in fixed SVG units, so the bigger sizes made 10 of them overlap at every width in that range. Its note size also never applied, because `.radius-figure text` outranked `.radius-note`.
+
+- **At 760px and below**, the diagram keeps its spokes, nodes and hub, drawn 1.5x larger around St. George, and shows only the hub's name. The city names and notes move into real text below it.
+- **The 11 pages without the `.areas-links` cards** (8 city pages and the 3 St. George appliance pages) get a new key list with the same wording as the SVG. Each row has a node marker matching the diagram: a blue ring, an orange ring for by-request, and a filled orange dot for St. George. A city page's own row is highlighted, as its node is.
+- **The 6 pages that have the cards** use them as the text, now at 17px/16px on a phone.
+- **Nothing changes above 760px.** Desktop label sizes and positions measure the same as before.
+- The old font-size block, and the cascade slip with it, are gone.
+
+Verified in headless Chromium at 320, 375 and 390px, dark and light, on 5 page types (homepage, a city page, the St. George city page, a service page with cards, and one without): every label renders at 16px or more, no two labels overlap, no node is clipped, and there's no sideways scroll. Also checked at 560, 700 and 760px (the key goes to two columns), at 761 and 1280px (identical to before), and with motion on (the spokes still draw in). `check-consistency`, `check-undefined-vars`, `eslint` and `check-visual-snapshot` pass. The full suite passes 3878/3879; the one failure is the known `check-links.py` sandbox-proxy test. `check-links.py` finds every internal link resolved; its 9 failures are external Unsplash URLs the sandbox proxy blocks. `npm run fix-versions` bumped `styles.css` everywhere, plus both service workers.
+
+New test `tests/design/service-area-phone-layout.test.js` (39): each key matches its SVG's own text, the hub name and key text stay at 16px or more, the card sizes win the cascade, and every node still fits inside the SVG after the phone zoom.
