@@ -1345,4 +1345,33 @@ the round-3 proposal, and what is still waiting on people.
 - **A new recovery power is only as safe as the minting behind it.**
   Review "how are codes created" whenever "what a code can do" grows.
 
+## 2026-09-25: Audit finding #7 closed in code -- the webhook checks the amount before marking an invoice paid
+
+Follow-up to the 2026-09-23 round 3 audit, finding #7 (LOW), ACTION-ITEMS #16.
+
+### The risk
+
+`stripe-webhook` marked every invoice a succeeded PaymentIntent pointed at as paid, whatever the amount. `sync-invoice-to-portal` changes `total` in place and never touches `stripe_payment_intent_id`. So a client who opened Pay, then had the invoice raised, could still pay the old amount from that page, and the invoice read "paid" in both the portal and the Invoice Log. Not attacker-for-profit: the client needs a page left open across a raise, and the business can still chase the difference. But nothing would ever have told anyone. The daily reconcile only flags unpaid invoices, and this one was marked paid.
+
+### Why the webhook check, not cancelling the old PaymentIntent
+
+The action item offered both. Cancelling in `create-payment-intent` / `create-bulk-payment-intent` only helps when a second "Pay" mints a replacement. The likelier path has no replacement: one page, opened before the raise, paying the invoice's only PaymentIntent. Nothing gets superseded, so there's nothing to cancel. The webhook check covers both paths, touches one file, and never cancels a PaymentIntent a client may be confirming in another tab (3DS in progress).
+
+### What it does
+
+- **Owed** is `Math.round(sum(unpaid totals) * 100)`: the exact formula both create functions use. Rounding each row first would disagree by a cent for totals like 10.075 + 10.075. A test feeds each create function's real charge back into the webhook to pin this.
+- **Paid short** (or `amount_received` missing): nothing is written, 200 to Stripe (a retry can't fix it), and a staff push "Invoice paid short". `reconcile-stripe-payments` then flags the unpaid invoice daily ("shows unpaid, but Stripe has a succeeded payment") for its 8-day lookback. That's the backstop if the push fails.
+- **Overpaid:** marked paid as before, plus an "Invoice overpaid" push. This is a deliberate deviation from the audit's "alert instead of marking paid". An overpaid invoice is covered. Leaving it unpaid would show a paying client a false balance. And when a newer, still-open PaymentIntent exists, the double-charge guard hands it back, so they could pay a second time.
+- The push reuses Send-Push's `stripe-reconciliation-alert` type, which only reaches internal subscriptions (certified 2026-09-23). The body names the PaymentIntent, invoice numbers, client email and both amounts, the same detail reconcile's alerts already carry. A push failure is logged and swallowed.
+- **Tests:** `tests/edge-functions/stripe-webhook-amount-check.test.js` runs the real handler. The fake Supabase honors `select=`, so a lookup that forgot to read `total` fails there the way it would against PostgREST. 24 tests; 9 fail on the old code; every legitimate path passes both before and after.
+
+### Deploy drift found (again)
+
+`get_edge_function` shows live `stripe-webhook` v18 is the 2026-09-14 code. `main` has carried #213 and #217 (2026-09-15) for ten days without a deploy: the invoice-PATCH failure now returns 500 so Stripe retries it (live, a failed write is acknowledged with 200 and the paid status is lost), `workspace_sync` failures are logged, and POS income is dated in Denver time. So deploying this PR ships those too. All three are fixes, merged and tested, but the deployer should know. It's the third function found running behind `main` (after uptime-alert and Send-Push). The deploy-drift check from round 3's lessons is still worth building.
+
+### Still open
+
+- **Deploy** `stripe-webhook` from `main` with `verify_jwt: false` (unchanged). After deploy, confirm the live source matches `main`, and that the next real payment marks its invoice paid with no alert.
+- **Duplicate alerts.** A redelivered event for a held invoice sends the push again. Stripe only redelivers on non-2xx or its rare duplicates, and reconcile nags daily anyway, so there's no dedup table for it.
+
 <!-- Add new entries above this line -->
