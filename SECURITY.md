@@ -234,9 +234,14 @@ includes any stranger with a mailbox.
   subscribed yet, so nothing leaked. The broadcast is internal-only now,
   and client pushes find their recipient by an exact email match. Both
   service workers only open same-origin pages on a tap (PR #381).
-- **HIGH, open, owner decision:** internal MFA is enforced only by
-  `login.html`, so an `aal1` token passes every RLS policy. Recovery
-  codes can also be minted at `aal1`.
+- **HIGH, fix built, rolling out (2026-09-25):** internal MFA was
+  enforced only by `login.html`, so an `aal1` token passed every RLS
+  policy. The server now checks `aal` too
+  (`sql/security/enforce_internal_mfa_server_side.sql`, the 15 internal
+  edge functions). It is in dry-run (`log`) mode until the review window
+  and both accounts' tests are done; `docs/INTERNAL-MFA-ENFORCEMENT.md`
+  has the rollout and the way back in. Minting recovery codes at `aal1`
+  is refused already, in every mode.
 - **MEDIUM:** the Stripe double charge is fixed (PR #386: an invoice
   that's already paid or paying can't be charged again, and the daily
   reconcile flags any that slip through). Still open: SetupIntents for
@@ -258,11 +263,16 @@ includes any stranger with a mailbox.
   breaches. No further action needed here.
 - **MFA is enforced in the browser only (2026-09-23 correction).** The
   enrollment and login-step UI below is real, but no RLS policy or edge
-  function checks the JWT's `aal`, so someone holding a password can
+  function checked the JWT's `aal`, so someone holding a password could
   skip the login page and call the Auth and REST APIs directly with an
-  `aal1` token. Proven live for an enrolled internal account; the fix
-  needs an owner decision (see `docs/specialist-logs/security.md`,
-  2026-09-23). The original note follows.
+  `aal1` token. Proven live for an enrolled internal account.
+  **2026-09-25:** the server-side check is built and live in dry-run
+  mode. It blocks once `internal_mfa_enforcement.mode` is `enforce`, and
+  until then the browser gate is still the only one that blocks. It
+  covers internal accounts that have an authenticator; an account that
+  never enrolled is still password-only, by design (opt-in, then
+  enforced). See `docs/INTERNAL-MFA-ENFORCEMENT.md`. The original note
+  follows.
 - ~~**No MFA enforcement**~~ -- **done for both populations now.**
   Enabling MFA availability itself was a one-time dashboard-only
   setting (Authentication -> MFA, which controls whether TOTP/phone

@@ -44,7 +44,7 @@
 </script>
 <link rel="stylesheet" href="/styles.css?v=87b1f5227e">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=ea55ae9760">
-<script src="/tools/auth.js?v=47af1279b5"></script>
+<script src="/tools/auth.js?v=e211eb740b"></script>
 <script src="/tools/tools-effects.js?v=a767167574" defer></script>
 <script src="/tools/tools-dialogs.js?v=310315eb44" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
@@ -181,8 +181,8 @@
        enroll/verify calls Settings uses for the optional, self-serve path,
        just reached from login instead of from a Settings toggle. -->
   <div id="mfaEnrollView" style="display:none; text-align:left;">
-    <div class="mfa-step-title">Set up two-factor authentication</div>
-    <div class="mfa-step-sub">Your account requires two-factor authentication before you can continue. Scan this code with an authenticator app (Google Authenticator, Authy, 1Password, etc.), then enter the 6-digit code it shows.</div>
+    <div class="mfa-step-title" id="mfaEnrollTitle">Set up two-factor authentication</div>
+    <div class="mfa-step-sub" id="mfaEnrollSub">Your account requires two-factor authentication before you can continue. Scan this code with an authenticator app (Google Authenticator, Authy, 1Password, etc.), then enter the 6-digit code it shows.</div>
     <div class="mfa-qr-wrap">
       <img id="mfaEnrollQrImg" alt="Scan this QR code with your authenticator app">
       <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-top:8px;">
@@ -358,12 +358,30 @@
       const code = document.getElementById('mfaRecoveryCodeInput').value.trim();
       if (!code) { errorEl.textContent = 'Enter a recovery code.'; return; }
       btn.disabled = true; btn.textContent = 'Checking...';
-      const result = await verifyRecoveryCode(pendingSession.access_token, code);
-      btn.disabled = false; btn.textContent = 'Verify';
+      const result = await redeemRecoveryCode(pendingSession.access_token, code);
       if (!result.ok || !result.valid) {
+        btn.disabled = false; btn.textContent = 'Verify';
         errorEl.textContent = (result.ok === false && result.error) ? result.error : 'That recovery code is invalid or already used.';
         return;
       }
+      // Server-side two-factor enforcement (2026-09-25): the server refuses a
+      // password-only session while the account has an authenticator, so a
+      // recovery code now stands in for the lost one. Redeeming it removed
+      // the authenticator (and signed out every other device), leaving this
+      // account with none -- so if its permissions require two-factor, set a
+      // new one up right here, the same step a first sign-in gets. If the
+      // authenticator is somehow still there (the database change rolled
+      // back to consume-only codes), carry on exactly as before.
+      const stillEnrolled = await mfaListVerifiedTotpFactor(pendingSession.access_token);
+      if (!stillEnrolled) {
+        const roleInfo = await loadCurrentUserRole(pendingSession.access_token, pendingSession.email);
+        btn.disabled = false; btn.textContent = 'Verify';
+        if (requiresMfaForRole(roleInfo)) {
+          await startMandatoryEnrollment({ afterRecovery: true });
+          return;
+        }
+      }
+      btn.disabled = false; btn.textContent = 'Verify';
       persistSession(pendingSession, pendingRememberMe);
       redirectAfterLogin();
       return;
@@ -388,7 +406,17 @@
 
   // ---- Mandatory enrollment step (role requires MFA, none enrolled yet) ----
 
-  async function startMandatoryEnrollment() {
+  const MFA_ENROLL_COPY = {
+    title: document.getElementById('mfaEnrollTitle').textContent,
+    sub: document.getElementById('mfaEnrollSub').textContent,
+  };
+
+  async function startMandatoryEnrollment(options) {
+    const afterRecovery = !!(options && options.afterRecovery);
+    document.getElementById('mfaEnrollTitle').textContent = afterRecovery ? 'Set up a new authenticator' : MFA_ENROLL_COPY.title;
+    document.getElementById('mfaEnrollSub').textContent = afterRecovery
+      ? 'Recovery code accepted. Your old authenticator was removed and your other devices were signed out. Scan this code with an authenticator app on the phone you have now, then enter the 6-digit code it shows. The old "Triple H Workspace" entry in your previous app no longer works.'
+      : MFA_ENROLL_COPY.sub;
     const errorEl = document.getElementById('mfaEnrollError');
     errorEl.textContent = '';
     showStep('mfaEnrollView');
@@ -563,6 +591,13 @@
     if (!result.ok) { errorEl.textContent = result.error; return; }
     successEl.style.display = '';
   });
+
+  // Sent here by checkInternalMfaSession() in auth.js: this session only
+  // passed the password, and the account has an authenticator, so the
+  // server stopped giving it internal access.
+  if (new URLSearchParams(window.location.search).get('reason') === 'mfa') {
+    document.querySelector('.login-sub').textContent = 'For your security, sign in again with your authenticator code.';
+  }
 
   // Already logged in? Skip the form entirely.
   (async () => {

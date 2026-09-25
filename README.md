@@ -5330,3 +5330,28 @@ Invoices, estimates, receipts, portal quotes, job sheets, contracts, the portal 
 - **No street address on any document.** The registered address is the owner's home. Contracts used to print it; now every document shows the city line only. Business Compliance keeps it internally.
 - **The "not attorney-reviewed" note is no longer printed on contracts.** It was a note to the owner, not the client. It stays on the Contract Generator page itself.
 - Checked by rendering every document type with real jsPDF from the real page code and inspecting the output, including a 3-page invoice, 2-page contracts and a 3-page service history.
+
+## What changed, 2026-09-25 -- Two-factor is now checked by the server, not just the sign-in page (dry run first)
+
+Workspace tools, database and internal edge functions. Closes `docs/ACTION-ITEMS.md` #13 (audit 2026-09-23, finding #4, HIGH).
+
+- **The gap:** only the sign-in page asked for the 6-digit code. Anyone with the password could skip that page and call Supabase directly with a password-only session, then read or change every internal table, file and edge function, and mint new recovery codes.
+- **The rule now:** if an internal account has an authenticator, only a session that passed it gets internal access. That covers every internal table and bucket (one check that every internal policy already goes through) and all 15 internal edge functions. An account with no authenticator works exactly as before.
+- **Rolled out in dry-run mode.** A single switch (`internal_mfa_enforcement.mode`) starts in `log`: it blocks nothing and records everything it would have blocked. Switching to `enforce` is one SQL statement, and so is switching back. `docs/INTERNAL-MFA-ENFORCEMENT.md` has the review queries, a checklist for testing both accounts, and the way back in. `sql/security/rollback_enforce_internal_mfa_server_side.sql` restores the old functions exactly.
+- **Recovery codes still get you in.** Signing in with one now removes the lost authenticator and signs out every other device, since a lost phone may still be signed in. The sign-in page then asks you to set up a new authenticator right away.
+- **Minting recovery codes** now needs a session that passed the authenticator. This is on already: it can't lock anyone out, and every real use of it already qualifies.
+- **Stale sessions:** once enforcement is on, a password-only session on an enrolled account is sent back to sign in ("For your security, sign in again with your authenticator code") instead of showing empty pages.
+- **Steve:** the Owner account has no authenticator yet, so none of this protects it until one is set up (ACTION-ITEMS #18). Signing out and back in walks through it.
+- **Also:** the repo's copy of `trigger-workflow` was behind the live one and would have broken Dev Tools' "Backup sensitive data" button on its next deploy. It now matches live.
+
+Verified:
+
+- full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint`, `check-visual-snapshot`;
+- a rehearsal on the live database inside a rolled-back transaction, with both real accounts, in dry-run and enforce modes, including a recovery-code sign-in;
+- `npm run fix-versions` bumped the tools service worker's cache name.
+
+Tests:
+
+- `tests/security/internal-mfa-enforcement-db.test.js` (27, new): the real migration files in PGlite over the live policies.
+- `tests/edge-functions/internal-mfa-gate.test.js` (92, new; 76 fail on the old code): every one of the 15 real handlers.
+- `tests/tools/internal-mfa-server-enforcement.test.js` (13, new; all fail on the old code): includes the full recovery sign-in in jsdom.

@@ -264,15 +264,65 @@ async function ensureFreshToken() {
 }
 
 async function requireAuth() {
-  if (hasValidSession()) return true;
+  if (hasValidSession()) {
+    checkInternalMfaSession();
+    return true;
+  }
   const s = getStoredSession();
   if (s && s.refresh_token) {
     const refreshed = await refreshSession();
-    if (refreshed) return true;
+    if (refreshed) {
+      checkInternalMfaSession();
+      return true;
+    }
   }
   const returnTo = encodeURIComponent(window.location.pathname);
   window.location.href = '/tools/login.html?return=' + returnTo;
   return false;
+}
+
+// The `aal` claim of an access token: 'aal2' once the session has passed
+// two-factor, 'aal1' for a password-only one. Read locally, no network call.
+// Only used to skip a check below, never to grant anything -- the database
+// reads the same claim from the verified JWT itself.
+function accessTokenAal(token) {
+  try {
+    const payload = String(token).split('.')[1];
+    return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))).aal || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Server-side two-factor enforcement (2026-09-25, docs/ACTION-ITEMS.md #13).
+// Once an account has an authenticator, the database refuses its
+// password-only sessions: every internal table, bucket and edge function
+// comes back empty or 403. A session like that (one signed in on another
+// device before the authenticator was added, say) would otherwise just show
+// blank pages. A fully verified (aal2) token can't be refused, so it costs
+// nothing; any other token asks internal_mfa_session_status() once per page,
+// and only when the server says this session IS being refused is it cleared
+// and the page sent back to sign in. Any failure leaves the page alone --
+// this only makes the refusal understandable, the database is the gate.
+// Called (not awaited) by requireAuth(), so it never delays a page.
+async function checkInternalMfaSession() {
+  try {
+    const s = getStoredSession();
+    if (!s || !s.access_token || accessTokenAal(s.access_token) === 'aal2') return false;
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/internal_mfa_session_status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${s.access_token}` },
+      body: '{}',
+    });
+    if (!res.ok) return false;
+    const status = await res.json();
+    if (!status || status.blocked !== true) return false;
+    clearStoredSession();
+    window.location.href = '/tools/login.html?reason=mfa&return=' + encodeURIComponent(window.location.pathname);
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 
 // The token sync.js (and anything else making authenticated requests)
@@ -859,13 +909,24 @@ async function generateRecoveryCodes(accessToken, count) {
   }
 }
 
-async function verifyRecoveryCode(accessToken, code) {
+// Signing in with a recovery code, since server-side two-factor enforcement
+// (2026-09-25). redeem_internal_recovery_code() treats the code as the
+// replacement for a lost authenticator: in one transaction it consumes the
+// code, removes the account's authenticator and other codes, and signs out
+// every other device (sql/security/enforce_internal_mfa_server_side.sql).
+// The session passed in is kept and, with no authenticator left, is no
+// longer refused. Falls back to the old RPC name on a 404 (function not
+// there), so the one way back in never depends on the database migration
+// and this file going live in a particular order.
+async function redeemRecoveryCode(accessToken, code) {
+  const post = (url) => fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${accessToken}` },
+    body: JSON.stringify({ p_code: code }),
+  });
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_and_consume_internal_recovery_code`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${accessToken}` },
-      body: JSON.stringify({ p_code: code }),
-    });
+    let res = await post(`${SUPABASE_URL}/rest/v1/rpc/redeem_internal_recovery_code`);
+    if (res.status === 404) res = await post(`${SUPABASE_URL}/rest/v1/rpc/verify_and_consume_internal_recovery_code`);
     const data = await res.json().catch(() => null);
     if (!res.ok) {
       return { ok: false, error: (data && (data.message || data.error_description || data.msg)) || 'Could not check that recovery code. Please try again.' };
@@ -879,7 +940,7 @@ async function verifyRecoveryCode(accessToken, code) {
 // Returns null on any failure (network, non-2xx, or an unexpected response
 // shape) -- callers show a plain "Could not check." status rather than a
 // count. Logs the real detail via logClientError() (2026-09-22, same gap as
-// generateRecoveryCodes()/verifyRecoveryCode() above) so a genuine failure
+// generateRecoveryCodes()/redeemRecoveryCode() above) so a genuine failure
 // here is diagnosable in Client Errors/the console instead of a dead end --
 // unlike those two, nothing here surfaces a message directly in the UI, so
 // there's no return-value shape change, just real logging on the failure path.

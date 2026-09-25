@@ -1180,3 +1180,11 @@ After this change it also ran at Monday midday, a Tuesday, the Sep/Oct month bou
   - A test for "no banner" must look for BOTH classes (`.th-update-card, .th-install-banner`). The old code used the install bar's class, so a new-class-only check passes against the old code.
   - A page first opened with no controller ignores every later `controllerchange` (the guard). Positive-case tests need a device that has opened the app once before.
 - Test: `tests/tools/app-update-card.test.js`. It models one device (the active worker persists) across many jsdom opens of the real login.html; the open's update check installs a changed worker, as Chromium does. 9 of 11 fail on the previous code. The other 2 are the cases the old guard already handled.
+
+## 2026-09-25 -- Noted from the security lane, not fixed: turning on two-factor in Settings forgets "Remember me"
+
+Seen while reading `tools/settings.html` for server-side two-factor enforcement. Not fixed there: it isn't a security issue, and it is this lane's call.
+
+- **What happens:** after "Verify & Turn On", `handleVerifyMfaEnrollSettings()` stores the new session with `persistSession({...}, undefined)`, meaning "keep whichever storage it was in". But `persistSession()` in `tools/auth.js` calls `storeSession(sessionFields, !!rememberMe)`, and `!!undefined` is `false`. So a remembered (localStorage, 30-day) session moves to sessionStorage, loses `remember_until`, and ends when the browser closes.
+- **Effect:** after turning on two-factor in Settings, the next browser restart asks you to sign in again. Signing in with "Remember me" checked restores it.
+- **Likely fix:** pass `undefined` through to `storeSession()` (whose `undefined` branch already keeps the existing store and `remember_until`), or have settings.html call a keep-store variant. Add a test that a remembered session stays in localStorage after enrollment.
