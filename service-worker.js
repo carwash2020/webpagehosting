@@ -682,7 +682,7 @@
 // "Getting Started" guide making the identical false claim to real
 // people using the app. Same reasoning as every prior bump in this
 // file's history.
-const CACHE_NAME = 'th-workspace-v333'; // precache-fingerprint:7458ad2b443a
+const CACHE_NAME = 'th-workspace-v333'; // precache-fingerprint:a8ff3d6ac00c
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
@@ -711,7 +711,7 @@ const PRECACHE_URLS = [
   '/tools/finance.html', '/tools/client-detail.html', '/tools/job-detail.html',
   // Added 2026-08-20 -- same gap yet again, found while already
   // touching this list for the light-mode work above.
-  '/tools/settings.html',
+  '/tools/settings.html', '/tools/this-file-was-deleted.js',
   // Added 2026-08-26 -- found by a new, automated check comparing this
   // list against the real file set, rather than another manual audit.
   // reset-password.html was missing entirely (a password-reset link
