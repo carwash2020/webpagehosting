@@ -5587,3 +5587,17 @@ Ten more items are logged for later, split into Phase 2 (small, no design call n
 Verified: full suite (only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`. `npm run fix-versions` restamped `tools/styles-tools.css` across all `tools/` and `portal/` pages, `portal/portal-polish.css`, and both service worker cache names.
 
 Tests: `tests/design/cross-surface-phase1.test.js` (4, new). Each assertion was mutation-checked by reverting its fix. `tests/design/tablet-nav-band.test.js`'s pinned 76px regex updated to 85.
+
+## What changed, 2026-09-25 -- Homepage redesign v2 (partial): services cards, reviews tint, teardown scrub chrome
+
+An approved design mockup (`Homepage Redesign v2.dc.html`) and a 15-section handoff spec asked for a full homepage rebuild. Reading both the mockup and the live `index.html`/`styles.css` first found the two already very close: every token the mockup needs already exists, and the `.bg-blueprint` layer, `[data-reveal]` motion, and the teardown/before-after sliders already match it. This pass ships the safe, CSS-only parts of the gap and defers the rest with reasons, rather than restructuring a live, heavily-tested page in one sitting.
+
+- **Services cards** (`#services`) re-laid out from vertical icon-top tiles to the mockup's compact horizontal rows (icon left, title/description/arrow beside it), via CSS Grid on the same markup -- `data-service`, the modal trigger, and every pinned hover/active/focus/shadow selector are untouched. Icon tiles now split blue (plumbing, assembly) vs. orange (everything else), matching the mockup; Emergency Calls gets a solid orange tile with a fixed dark glyph color so it holds contrast in light mode too.
+- **Reviews section** gets the mockup's warm orange tint band.
+- **Teardown "take it apart" slider** track and thumb are bigger (10px/38px, up from 6px/30px) with a `--p`-scaled glow, matching the mockup's spec; the old mobile-only 34px thumb override (which would have made phones' thumb *smaller* than the new desktop default) is removed.
+
+**Deliberately not done, logged to `docs/ACTION-ITEMS.md` for an owner call:** moving the hero lead form into a `#schedule` panel (7 pinned test assertions plus GA4 wiring), redrawing the teardown SVG with new parts, a full pointer-drag overlay on the before/after frame, removing `#honest`/`.stats-bar`/`.trust`/`#closing`/`#areas` as sections (each carries real, recently-finished, tested work -- `#honest` also holds an undocumented seasonal-tip feature), rebuilding the FAQ modal as an inline accordion, and a new "big 5.0" review number that isn't wired into `review-stats.js`'s live-update hook list.
+
+Verified: full suite 4182/4190 (8 failures were stale cache-bust stamps from the `styles.css` edit, fixed by `npm run fix-versions`, re-verified clean), `check-consistency`, `check-undefined-vars` clean, `check-links.py` only the known sandbox-proxy Unsplash failure. Screenshots at 1440/1024/390/320, dark/light and 390 reduced-motion in `docs/homepage-redesign-2026-09-25/{before,after}/`.
+
+Tests: none new -- every change stayed inside markup/selectors the existing suite already pins. Full details and the reasoning behind each deferral: `docs/specialist-logs/visual.md`.

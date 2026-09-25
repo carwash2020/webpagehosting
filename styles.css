@@ -1429,18 +1429,30 @@
     .reviews-ask{margin-left:12px; margin-right:12px;}
   }
 
-  /* services */
+  /* services -- v2 redesign (2026-09-25): compact horizontal rows (icon
+     tile, Oswald title, one line, trailing arrow) instead of the earlier
+     vertical tiles, a pure CSS-grid re-layout of the same markup so the
+     data-service click hooks, the modal, and every pinned selector below
+     (.service-card:hover/:active/:focus-visible, box-shadow:var(--shadow-resting),
+     the 860/600 breakpoints) stay exactly where the tests expect them.
+     The icon spans every implicit row via grid-row:1/-1 so h3/p/tag stack
+     in the second column without needing a new wrapper element. */
   .services-grid{
     display:grid;
     grid-template-columns:repeat(3,1fr);
-    gap:20px;
+    gap:14px;
   }
   .service-card{
+    display:grid;
+    grid-template-columns:46px 1fr;
+    column-gap:16px;
+    row-gap:5px;
+    align-items:start;
     background:var(--bg-panel);
     border:1px solid var(--border);
     border-top:3px solid var(--blue);
     border-radius:var(--radius);
-    padding:26px 24px;
+    padding:22px 22px;
     transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease;
     text-align:left;
     width:100%;
@@ -1453,32 +1465,46 @@
   .service-card.is-urgent{border-top-color:var(--orange-text-vivid);}
   @media (hover:hover){.service-card.is-urgent:hover{border-color:var(--orange-text);}}
   .service-icon{
-    width:42px; height:42px;
-    border-radius:8px;
+    grid-row:1 / -1;
+    grid-column:1;
+    align-self:start;
+    width:46px; height:46px;
+    border-radius:10px;
     display:flex; align-items:center; justify-content:center;
     background:rgba(58,160,255,0.28);
     color:var(--blue-text);
-    margin-bottom:16px;
+    margin-bottom:0;
   }
-  .service-card.is-urgent .service-icon{background:rgba(255,128,0,0.28); color:var(--orange-text);}
-  .service-icon svg{width:22px; height:22px;}
+  /* Plumbing and Assembly keep the blue tile (a real material distinction
+     in the design -- water/hardware vs. the rest); every other service,
+     including the urgent tile below, reads warm/orange. */
+  .service-card[data-service="appliance"] .service-icon,
+  .service-card[data-service="handyman"] .service-icon,
+  .service-card[data-service="drywall"] .service-icon{background:var(--orange-tint-soft); color:var(--orange-text);}
+  /* Fixed dark glyph color, not var(--bg) -- the emergency tile is a
+     solid orange fill in both themes, and var(--bg) flips to a light
+     cream in light mode, which would fail contrast against it. */
+  .service-card.is-urgent .service-icon{background:var(--orange-text-vivid); color:#140900;}
+  .service-icon svg{width:24px; height:24px;}
   .service-card h3{
+    grid-column:2;
     font-family:var(--font-ui);
     font-weight:700;
     font-size:17px;
     text-transform:none;
     letter-spacing:0;
-    margin-bottom:8px;
+    margin-bottom:0;
   }
-  .service-card p{color:var(--text-dim); font-size:14.5px; margin:0;}
+  .service-card p{grid-column:2; color:var(--text-dim); font-size:14.5px; margin:0;}
   .service-card p + p{margin-top:10px;}
   .service-card p a{color:var(--blue-text); font-weight:600; text-decoration:none;}
   .service-card p a:hover{text-decoration:underline;}
   .service-tag{
+    grid-column:2;
     display:inline-flex;
     align-items:center;
     gap:6px;
-    margin-top:14px;
+    margin-top:6px;
     font-size:11px;
     font-weight:600;
     letter-spacing:1.5px;
@@ -2535,6 +2561,15 @@
      with the real Google mark kept on each card and the existing
      "see more / leave your own" link doing the "read all on Google"
      job this finding also asked for. */
+  /* v2 redesign (2026-09-25): a warm tint band behind the whole section,
+     same idea as the design handoff's "orange tint band" -- the reviews
+     wall itself, the toggle and every card keep their existing rules
+     below untouched; this only adds a background on the ID selector,
+     which already beats the generic `section + section` border-top. */
+  #reviews{
+    background:linear-gradient(180deg, var(--orange-tint-soft), rgba(255,128,0,0) 70%);
+    border-top:1px solid var(--orange-tint-border);
+  }
   .reviews-wall{
     max-width:900px;
     margin:0 auto;
@@ -3150,42 +3185,47 @@
     cursor:grab;
   }
   .td-scrub input[type="range"]:active{cursor:grabbing;}
+  /* v2 redesign (2026-09-25): thicker track with a visible glow on the
+     filled portion, and a bigger grip thumb with a clearer orange ring
+     -- same --p-driven fill mechanism as before, just heavier chrome. */
   .td-scrub input[type="range"]::-webkit-slider-runnable-track{
-    height:6px;
+    height:10px;
     border-radius:999px;
     background:
       linear-gradient(90deg, var(--orange-dark), var(--orange-light)) 0/calc(var(--p, 1) * 100%) 100% no-repeat,
       var(--bg-panel-3);
     border:1px solid var(--border);
+    box-shadow:0 0 12px 1px rgba(255,128,0,calc(var(--p, 1) * .45));
   }
   .td-scrub input[type="range"]::-moz-range-track{
-    height:6px;
+    height:10px;
     border-radius:999px;
     background:var(--bg-panel-3);
     border:1px solid var(--border);
   }
   .td-scrub input[type="range"]::-moz-range-progress{
-    height:6px;
+    height:10px;
     border-radius:999px;
     background:linear-gradient(90deg, var(--orange-dark), var(--orange-light));
+    box-shadow:0 0 12px 1px rgba(255,128,0,calc(var(--p, 1) * .45));
   }
   .td-scrub input[type="range"]::-webkit-slider-thumb{
     -webkit-appearance:none;
     appearance:none;
-    width:30px; height:30px;
-    margin-top:-13px;
+    width:38px; height:38px;
+    margin-top:-17px;
     border-radius:50%;
     background:linear-gradient(160deg, #ffb347, #ff8000 62%, #c96400);
-    border:2px solid #1a1208;
-    box-shadow:0 4px 14px rgba(255,128,0,.45);
+    border:3px solid #1a1208;
+    box-shadow:0 0 0 3px rgba(255,128,0,.3), 0 4px 14px rgba(255,128,0,.45);
     cursor:grab;
   }
   .td-scrub input[type="range"]::-moz-range-thumb{
-    width:30px; height:30px;
+    width:38px; height:38px;
     border-radius:50%;
     background:linear-gradient(160deg, #ffb347, #ff8000 62%, #c96400);
-    border:2px solid #1a1208;
-    box-shadow:0 4px 14px rgba(255,128,0,.45);
+    border:3px solid #1a1208;
+    box-shadow:0 0 0 3px rgba(255,128,0,.3), 0 4px 14px rgba(255,128,0,.45);
     cursor:grab;
   }
   .td-scrub input[type="range"]:focus-visible{outline:none;}
@@ -3403,8 +3443,10 @@
     .teardown-figure{order:-1;}
     .teardown-figure svg{max-width:100%;}
     .td-callout text{font-size:19px;}
-    .td-scrub input[type="range"]::-webkit-slider-thumb{width:34px; height:34px; margin-top:-15px;}
-    .td-scrub input[type="range"]::-moz-range-thumb{width:34px; height:34px;}
+    /* v2 redesign (2026-09-25): the desktop thumb is now 38px (up from
+       30px), so the old 34px phone override -- meant to be a slightly
+       smaller re-fit -- would have shrunk it on the exact screens where
+       a big grip matters most. Phones now just inherit the 38px default. */
   }
 
   /* ---------- 7. service cards as diagnostic plates ---------- */
