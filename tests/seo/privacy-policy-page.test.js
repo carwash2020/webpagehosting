@@ -80,13 +80,16 @@ const PAGES_LINKING_TO_PRIVACY = [
   'blog/index.html',
   'blog/appliance-repair-or-replace.html',
   'blog/dishwasher-not-cleaning.html',
+  'blog/dishwasher-not-draining.html',
   'blog/dryer-not-heating.html',
+  'blog/dryer-wont-turn-on.html',
   'blog/drywall-crack-above-door.html',
   'blog/fridge-not-cooling.html',
   'blog/handyman-to-do-list.html',
   'blog/oven-not-heating-right.html',
   'blog/toilet-running-flapper-valve.html',
   'blog/tv-mount-drywall-anchors.html',
+  'blog/washer-leaking-water.html',
   'blog/washer-wont-drain.html',
 ];
 
