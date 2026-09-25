@@ -36,8 +36,8 @@ up a new authenticator right away. This path works in every mode.
 | Step | Status |
 |---|---|
 | Migration applied live, mode `log` | **Done 2026-09-25 16:59 UTC.** Verified: all 10 function bodies match this repo (md5); both accounts' access unchanged |
-| 15 edge functions deployed with the check | After merge (step 2 below) |
-| New `login.html` / `auth.js` live | On merge (GitHub Pages) |
+| 15 edge functions deployed with the check | **Done 2026-09-25, 18:20–18:33 UTC**, from `main` after #430 merged. Each live copy was checked byte for byte against `main` (the source decoded from the API, not retyped); `verify_jwt` is on for all 15; each answers the anon key with its own 401. The first real internal call writes an `allowed` row to `internal_mfa_gate_log` |
+| New `login.html` / `auth.js` live | On merge of #430 (GitHub Pages) |
 | **Steve enrolls an authenticator** | **Not done.** Until he does, his account is password-only, on the server too |
 | Review window | After step 2 |
 | Mode `enforce` | Not yet. Only after steps 3 to 5 |
