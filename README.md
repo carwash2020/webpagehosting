@@ -5416,6 +5416,22 @@ Tests:
 - `tests/edge-functions/internal-mfa-gate.test.js` (92, new; 76 fail on the old code): every one of the 15 real handlers.
 - `tests/tools/internal-mfa-server-enforcement.test.js` (13, new; all fail on the old code): includes the full recovery sign-in in jsdom.
 
+## What changed, 2026-09-25 -- The public site's logo downloads are 50-85% smaller
+
+Public site only; the Workspace tools and client portal still use the full-size logo. The header and footer logo was a 51-57KB webp at 531-550px wide, drawn at 44px (header) and 38px (footer). Every public page now uses a 176px copy of the same file (8-9KB), which is enough for a 44px logo on screens up to 4x.
+
+- **Three new files, same crops:** `images/logo-signature-176.webp`, `images/logo-signature-orange-176.webp` and `images/logo-signature-288.webp`. The two originals have different crops (one has padding around the hex), so each small file keeps the crop of the file it replaces, and every logo renders the same size as before.
+- **Homepage hero badge:** it's 96px on phones and about 420px beside the copy on desktop, so it picks with `srcset`: 176px on a 1x phone, 288px on 2x-3x, and the original 550px on desktop. On desktop, the homepage header and footer ask for the hero's 550px file too, so the desktop homepage still downloads a single logo file.
+- **Why 288 and not 300:** a 300px file drawn at 288 device pixels on a 3x phone visibly smeared the rivets and texture. 288 is 96 x 3, so a 3x phone draws it pixel for pixel.
+- **404 page** (100px) uses the same `srcset`: 176px at 1x, 288px at 2x. A 3x phone needs 300px there, so it still gets the original. The booking, manage-booking and manage-job headers use the 176px file.
+- **Measured per first visit, in real Chromium:** service, city, privacy and terms pages drop from 57.7KB to 9.2KB. About, careers, Our Work and the blog (header and footer use different files there) drop from 109.3KB to 17.4KB. Booking pages drop from 51.6KB to 8.3KB. The homepage drops from 51.6KB to 26.8KB on 2x-3x phones and stays 51.6KB on desktop.
+- **Not changed:** the service worker precache lists. The new files aren't precached; their `?v=` URLs are cached on first use like any other versioned file. `npm run fix-versions` had nothing to change.
+- **Still upscaled, as before:** the desktop hero on a 2x screen needs ~840px and the largest logo file is 550px. Fixing that needs a larger master file.
+
+Verified: 77 `<img>` tags in 40 files (including the three blog posts added the same day). In Chromium at 1x, 2x, 3x and 3.5x (1440, 820, 800, 412, 390 and 375px wide), every logo keeps the exact same box, and every logo gets at least as many pixels as it's drawn at, apart from the desktop hero noted above. Before/after crops compared at 1:1 and zoomed, in dark and light mode. Full suite (only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `check-visual-snapshot`, `eslint`, and `check-links.py` (all internal references resolve; the only failures are the same blocked Unsplash URLs as on `main`).
+
+Tests: `tests/design/public-logo-variants.test.js` (8, new). It checks that every public logo tag offers a small file, that each URL has a `?v=` stamp, that `width`/`height` and `srcset` widths match the real files, and that the `sizes` values match the CSS in `styles.css` and `404.html`.
+
 ## What changed, 2026-09-25 -- A short Stripe payment no longer marks an invoice paid
 
 `stripe-webhook` used to mark an invoice paid on any successful Stripe payment, without checking the amount. A payment page left open from before the invoice was raised could still pay the old, smaller amount, and the invoice showed as paid in full. (Security audit 2026-09-23, finding #7; ACTION-ITEMS #16.)
@@ -5455,6 +5471,15 @@ Public site only: the "Where We Work" diagram on the homepage, the 8 city pages 
 Verified in headless Chromium at 320, 375 and 390px, dark and light, on 5 page types (homepage, a city page, the St. George city page, a service page with cards, and one without): every label renders at 16px or more, no two labels overlap, no node is clipped, and there's no sideways scroll. Also checked at 560, 700 and 760px (the key goes to two columns), at 761 and 1280px (identical to before), and with motion on (the spokes still draw in). `check-consistency`, `check-undefined-vars`, `eslint` and `check-visual-snapshot` pass. The full suite passes 3878/3879; the one failure is the known `check-links.py` sandbox-proxy test. `check-links.py` finds every internal link resolved; its 9 failures are external Unsplash URLs the sandbox proxy blocks. `npm run fix-versions` bumped `styles.css` everywhere, plus both service workers.
 
 New test `tests/design/service-area-phone-layout.test.js` (39): each key matches its SVG's own text, the hub name and key text stay at 16px or more, the card sizes win the cascade, and every node still fits inside the SVG after the phone zoom.
+
+## What changed, 2026-09-25 -- A Graveyard sync test no longer fails on a fast CI runner
+
+Tests only. `tests/sync/graveyard-restore-sync.test.js` ("deleted again after a restore") failed once in CI on #426 and passed on a re-run of the same commit.
+
+- **Cause:** `tombstoneCounts` in `tools/sync.js` counts a delete only when `deletedAt > restoredAt`. The strict `>` is on purpose: Restore adds already-lifted tombstones with both stamps equal. The test restores on one device and deletes again on another a few calls later. On a fast runner both stamps land in the same millisecond, the delete ties the restore, and it doesn't count.
+- **Fix:** the test waits for the clock to reach the next millisecond before the second delete. A person can't restore and delete again within 1 ms, so the app code is unchanged. No other sync test deletes again after a restore.
+
+Verified: with the devices' clocks frozen, the old test fails every time with CI's assertion and the fixed one passes. Full suite 3,932/3,933. The one failure is the known `check-links.py` sandbox-proxy test. `check-consistency`, `check-undefined-vars` and `eslint` are clean.
 
 ## What changed, 2026-09-25 -- Leeds and La Verkin are on the service-area diagram on every page
 
