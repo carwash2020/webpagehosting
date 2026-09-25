@@ -330,13 +330,15 @@ What changed:
 - Each of the 4 pages got 3 new service-specific questions: 2 replace the generic pricing entry in Common Questions, and 1 leads the schema-paired FAQ. Every answer comes from text already on the site. Plumbing uses the flapper post (dye test, $6-12 part, St. George hard water, Hurricane well water) and Terms section 6 (customer-supplied fixtures). Drywall uses the crack post (stress cracks, St. George's temperature swings, the tape fix, foundation warning signs). Handyman uses the to-do-list post (pre-sale list, 15-60 minutes each), the crack post (sticking doors as a warning sign) and Terms section 6 (licensed-trade work). Assembly uses the TV post (stud spacing, anchor ratings, wiring behind walls, Mesquite open-plan builds) and the to-do-list post (wire hiders). Nothing is invented: no prices beyond the post's own parts range, no new policies.
 - All 5 service pages (washer included, so they match) now answer the cancellation question. The answer is the homepage's own $50 same-day wording plus the reschedule/cancel link that `booking.html` sends when an email is given. The trip-fee answer keeps the site-wide sentence verbatim and adds two details the city pages already state: most St. George addresses are inside the 15-mile radius, and the fee for Cedar City and Mesquite is confirmed before booking.
 - One blog link added: `assembly-installation.html` now also links `handyman-to-do-list.html`, whose "Wire management behind the TV" section covers the cables half of TV mounting. The card is copied verbatim from `blog/index.html`.
+- After merging main (which added three posts the same day), `plumbing-repairs.html` also links `dishwasher-not-draining.html`. Its "Then check where it drains to" section covers the disposal knockout plug, a clogged disposal or sink drain, and the air gap: the plumbing page's Drains & Disposals work. The post already links into plumbing.
 
 Links I decided against, with reasons:
 
 - tv-mount post on drywall-painting: the post is about mounting hardware and never covers patching or painting.
 - to-do-list on drywall: only one sentence about patching a satellite dish's holes, and that's exterior work.
 - crack post on handyman: it's a drywall repair. Its sticking-door warning is now cited in a handyman answer instead.
-- washer-drain and dishwasher posts on plumbing: both are about appliance internals, not household plumbing.
+- washer-drain and dishwasher-not-cleaning posts on plumbing: both are about appliance internals, not household plumbing.
+- new washer-leak post on plumbing: it's about washer parts (door seal, fill hoses, pump). Only one paragraph mentions a house-drain clog.
 
 Result: page-specific words went to about 450-520 on each of the 4 pages. Total words in `<main>` went from about 750 to about 1,050.
 
@@ -344,6 +346,6 @@ Open question for the owner, not changed: `blog/dishwasher-not-cleaning.html` sa
 
 Triage: `js/triage.js` is one hard-coded appliance data set, so nothing was added to these pages. Plumbing is the one service where a symptom tool would fit (running toilet, drip, slow drain, active leak, each ending in "schedule" or "call now"). That proposal is in `features.md`. It isn't built. Drywall, handyman and assembly are scope-of-work jobs, not diagnosis, so a triage tool doesn't fit them.
 
-New test: `tests/seo/service-page-faq-depth.test.js`. It checks that schema text equals visible text, every service page has at least one schema question of its own, the cancellation and trip-fee policies match, and no Common Questions entry is copied across pages. 15 of its 27 checks fail on the previous commit.
+New test: `tests/seo/service-page-faq-depth.test.js`. It checks that schema text equals visible text, every service page has at least one schema question of its own, the cancellation and trip-fee policies match, and no Common Questions entry is copied across pages. 16 of its 28 checks fail on the previous commit.
 
 <!-- Add new entries above this line -->

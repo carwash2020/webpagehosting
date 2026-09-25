@@ -114,3 +114,13 @@ test('assembly-installation links both blog posts that cover its work: TV mounti
   // The linked post really does cover wire management; don't keep the link if that section goes away.
   assert.match(read('blog/handyman-to-do-list.html'), /Wire management behind the TV/);
 });
+
+test('plumbing-repairs links the flapper post and the dishwasher-drain post, whose sink-drain section is plumbing work', () => {
+  const html = read('services/plumbing-repairs.html');
+  assert.ok(html.includes('<a class="blog-index-item" href="/blog/toilet-running-flapper-valve.html"'));
+  assert.ok(html.includes('<a class="blog-index-item" href="/blog/dishwasher-not-draining.html"'));
+  // The reason for the link: the post's disposal / sink-drain section, which routes readers to plumbing.
+  const post = read('blog/dishwasher-not-draining.html');
+  assert.match(post, /A newly installed garbage disposal/);
+  assert.match(post, /href="\/services\/plumbing-repairs\.html"/);
+});
