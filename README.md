@@ -5415,3 +5415,12 @@ Public site, content only. No layout or CSS changes. Audited all 5 service pages
 Verified: full suite 3,903/3,904 (after merging main). The one failure is the known `check-links.py` sandbox-proxy test, which also fails before this change. `check-consistency`, `check-undefined-vars`, `eslint` and `check-visual-snapshot` are all clean. `check-links.py` resolves every internal reference across 91 files; its only failures are Unsplash images the sandbox proxy blocks. Schema text was also checked against visible text on all 5 pages, and every new answer against the blog post, Terms section or page it came from.
 
 Tests: `tests/seo/service-page-faq-depth.test.js` (28, new; 16 fail on the previous commit). It checks that schema text equals visible text, each page has at least one schema question of its own, the cancellation and trip-fee policies match the Terms, no Common Questions entry is copied across pages, and assembly and plumbing link their posts.
+
+## What changed, 2026-09-25 -- A Graveyard sync test no longer fails on a fast CI runner
+
+Tests only. `tests/sync/graveyard-restore-sync.test.js` ("deleted again after a restore") failed once in CI on #426 and passed on a re-run of the same commit.
+
+- **Cause:** `tombstoneCounts` in `tools/sync.js` counts a delete only when `deletedAt > restoredAt`. The strict `>` is on purpose: Restore adds already-lifted tombstones with both stamps equal. The test restores on one device and deletes again on another a few calls later. On a fast runner both stamps land in the same millisecond, the delete ties the restore, and it doesn't count.
+- **Fix:** the test waits for the clock to reach the next millisecond before the second delete. A person can't restore and delete again within 1 ms, so the app code is unchanged. No other sync test deletes again after a restore.
+
+Verified: with the devices' clocks frozen, the old test fails every time with CI's assertion and the fixed one passes. Full suite 3,932/3,933. The one failure is the known `check-links.py` sandbox-proxy test. `check-consistency`, `check-undefined-vars` and `eslint` are clean.
