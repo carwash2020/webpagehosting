@@ -5347,7 +5347,7 @@ Verified:
 
 - the full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint`;
 - a dry run of the new policy against the live database, in a transaction that rolled back: the caller's own folder was allowed (two clients and a staff account); another client's folder, the old shape, an arbitrary path, the folder root, extra depth and a wrong prefix were all RLS denials (42501);
-- the live results after deploy are in `docs/specialist-logs/security.md` (2026-09-25).
+- live, after the Pages deploy finished and the live page was confirmed to use the new path: migration `20260925164058` applied, then the same rolled-back probes. Each account's own folder was allowed. Everything else was an RLS denial, including anon and staff writing into a client's folder. The bucket shows 8 MB and `image/*`. Advisors: nothing new. Full write-up in `docs/specialist-logs/security.md` (2026-09-25). No real HTTP upload was run through the Storage API: this sandbox can't reach `*.supabase.co`.
 - `npm run fix-versions` bumped the portal service worker's cache name.
 
 Tests:
@@ -5390,6 +5390,15 @@ Verified: the full suite (the only failure is the known `check-links.py` sandbox
 Tests:
 
 - `tests/tools/mfa-settings-remember-me.test.js` (5, new). It runs the real settings.html and login.html, with the real auth.js, against a stubbed Supabase. It checks where the session ends up after turning on two-factor in Settings (remembered and this-session-only) and after an MFA sign-in with the box checked, unchecked, and unchecked over an old remembered session. The remembered Settings case fails on the old code.
+
+## What changed, 2026-09-25 -- Public signup is off (confirmed live)
+
+Security, docs only. Asked to turn off public signup in Supabase Auth, it was already off: the live `/auth/v1/settings` returns `disable_signup: true`, where the 2026-09-23 audit saw `false`. It was switched off in the dashboard in between.
+
+- **Why it matters:** with signup on, anyone with a mailbox could hold an `authenticated` session. That was the root cause of most of the 2026-09-23 findings. Now only invited clients and staff can sign in.
+- **Nothing broke:** no page uses self-signup, and all 3 client accounts were created by invite. `send-invite` uses the service-role admin API, which this setting shouldn't block. No invite has gone out since the change, so the first one is worth a glance.
+- **Still true:** policies must never treat `authenticated` as "staff". Portal clients are authenticated too, and the setting is one click from coming back on.
+- Updated: ACTION-ITEMS #11 (done), #15 and #17 (stranger case closed), `SECURITY.md`, and `docs/specialist-logs/security.md`.
 
 ## What changed, 2026-09-25 -- Two-factor is now checked by the server, not just the sign-in page (dry run first)
 
