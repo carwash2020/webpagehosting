@@ -5463,3 +5463,12 @@ Public site only. The diagram on the 5 general service pages (Plumbing, Drywall 
 Why it drifted: `tests/design/service-area-light-trail.test.js` checked a hand-kept list of 12 pages, and its per-city check searched the whole page, so the city cards satisfied it. The list is now built from every page that has the diagram (17), and the city and label checks look inside the SVG only. Against the old markup, 10 of its tests fail.
 
 Verified in headless Chromium on all 5 pages at 320, 375, 390 and 1280px, dark and light: no label collisions, phone text at 16px or more, no clipped nodes. The full suite, `check-consistency`, `check-undefined-vars` and `eslint` were run too (results in the PR).
+
+## What changed, 2026-09-25 -- A Graveyard sync test no longer fails on a fast CI runner
+
+Tests only. `tests/sync/graveyard-restore-sync.test.js` ("deleted again after a restore") failed once in CI on #426 and passed on a re-run of the same commit.
+
+- **Cause:** `tombstoneCounts` in `tools/sync.js` counts a delete only when `deletedAt > restoredAt`. The strict `>` is on purpose: Restore adds already-lifted tombstones with both stamps equal. The test restores on one device and deletes again on another a few calls later. On a fast runner both stamps land in the same millisecond, the delete ties the restore, and it doesn't count.
+- **Fix:** the test waits for the clock to reach the next millisecond before the second delete. A person can't restore and delete again within 1 ms, so the app code is unchanged. No other sync test deletes again after a restore.
+
+Verified: with the devices' clocks frozen, the old test fails every time with CI's assertion and the fixed one passes. Full suite 3,932/3,933. The one failure is the known `check-links.py` sandbox-proxy test. `check-consistency`, `check-undefined-vars` and `eslint` are clean.
