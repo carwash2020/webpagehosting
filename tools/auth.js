@@ -126,8 +126,15 @@ async function signIn(email, password, rememberMe, options) {
 // successful MFA verify) -- a thin, explicitly-named wrapper around
 // storeSession() so login.html never has to poke that internal function
 // directly.
+//
+// rememberMe undefined means "keep whichever store the session already
+// lives in, and its remember_until" -- what Settings' MFA enrollment
+// passes. Real bug fix (2026-09-25): this used to be !!rememberMe, which
+// turned undefined into an explicit false, so turning on two-factor from
+// Settings moved a "Remember me" session to sessionStorage and it ended
+// when the browser closed. login.html always passes a real true/false.
 function persistSession(sessionFields, rememberMe) {
-  storeSession(sessionFields, !!rememberMe);
+  storeSession(sessionFields, rememberMe === undefined ? undefined : !!rememberMe);
 }
 
 // Sends Supabase's built-in password-recovery email. redirect_to tells

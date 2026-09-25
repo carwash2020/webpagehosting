@@ -5376,6 +5376,21 @@ Verified:
 
 Tests: the new pages are added to the hard-coded page lists in `blog-index-cards`, `analytics-events`, `mobile-nav-collapsible` and `privacy-policy-page`. The public-page counts go from 33 to 36 in `site-banner-no-layout-shift` and `site-banners-public`, and the Call-button page count from 12 to 15 in `contact-hooks-public`. `check-links.py`'s `PUBLIC_PAGES` gets the three new URLs.
 
+## What changed, 2026-09-25 -- Turning on two-factor in Settings no longer forgets "Remember me"
+
+Bug fix (found by the security lane while working on server-side MFA enforcement). After turning on two-factor from Settings, a "Remember me for 30 days" sign-in ended as soon as the browser closed.
+
+- **Cause:** Settings stores the new session Supabase issues after the code checks out with `persistSession({...}, undefined)`, meaning "keep it where it already is". `persistSession()` in `tools/auth.js` passed `!!rememberMe` to `storeSession()`, and `!!undefined` is `false`. So `storeSession()` treated it as an explicit "don't remember": the session moved from localStorage to sessionStorage and lost its `remember_until`.
+- **Fix:** `persistSession()` now passes `undefined` through. `storeSession()` already handles `undefined` by keeping the current store and `remember_until`, as it does for a silent token refresh. The 30-day cap keeps its original date; turning on two-factor doesn't restart it.
+- **Unchanged:** login.html always passes a real true/false from the checkbox, so sign-in behaves as before. Unchecked still goes to sessionStorage and clears an old remembered session.
+- `npm run fix-versions` bumped `auth.js?v=` on every tool page and the Workspace service worker's cache name.
+
+Verified: the full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint`.
+
+Tests:
+
+- `tests/tools/mfa-settings-remember-me.test.js` (5, new). It runs the real settings.html and login.html, with the real auth.js, against a stubbed Supabase. It checks where the session ends up after turning on two-factor in Settings (remembered and this-session-only) and after an MFA sign-in with the box checked, unchecked, and unchecked over an old remembered session. The remembered Settings case fails on the old code.
+
 ## What changed, 2026-09-25 -- Our Work: photos load as you scroll, so a phone downloads 0.27 MB up front instead of 4.1 MB
 
 `our-work.html` used to download all 61 gallery photos (4,122,565 bytes) the moment it opened, on every device. Most of them are 1152-1400px wide but show at about 333px on a phone.
