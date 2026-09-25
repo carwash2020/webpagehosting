@@ -1630,7 +1630,7 @@ Measured and deliberately left alone. Each needs a call from Connor before anyon
 - **Gallery weight: `our-work.html` loads ~4.1MB of photos up front on a phone.** 48 of its 61 photos are 1152-1400px wide but shown at ~333px. Eager loading is deliberate (see 2026-09-16: native `loading="lazy"` drops ~40% of photos in the CSS-column masonry). The options are:
   - a ~720w `srcset` variant per photo (48 new files; helps 1x/2x screens, while 3x phones still pick the original);
   - an IntersectionObserver lazy-loader (the 09-16 entry rejected that as new machinery).
-- **Header/footer logo: 50-57KB webp at 531-550px, shown at ~96px.** A ~300px variant would save ~40KB per first visit. But the same files are precached by both service workers and used across tools/portal, so it's a public-pages-only `srcset` job that touches ~65 img tags.
+- **Header/footer logo: 50-57KB webp at 531-550px, shown at ~96px.** A ~300px variant would save ~40KB per first visit. But the same files are precached by both service workers and used across tools/portal, so it's a public-pages-only `srcset` job that touches ~65 img tags. **Done 2026-09-25**, see that entry.
 - **Also logged in rounds 8-9:**
   - the homepage card hover lift is dead code (`[data-reveal]` outranks it);
   - `blog/blog.css` uses a hand-picked stamp outside `check-consistency.js`.
@@ -1731,3 +1731,18 @@ finish).
   - Use `t.getScreenCTM()` x font-size for true SVG text size; viewBox scale alone misses group transforms.
   - A collision check has to skip a label's own name/note pair, whose line boxes overlap even when the ink doesn't.
   - `fullPage` screenshots drop the fixed `.bg-blueprint` layer, so light mode comes out on `#0a0a0a`. Resize the viewport to the region and clip instead.
+
+## 2026-09-25 -- public-page logo variants (176 / 288), tools and portal untouched
+
+- **Real render sizes, measured (not the "~96px" guess):** header `.brand img` 44px, footer 38px, booking/manage-booking/manage-job header 38px, 404 mark 100px, homepage hero badge 96px at <=860px and ~421px on desktop (`min(440px, 100%)` of its column). Nothing else on a public page draws the logo.
+- **The two files are different crops.** `logo-signature.webp` (550x506) has ~29px padding round the hex; `logo-signature-orange.webp` (531x488) is tight. Swapping one for the other would resize the mark, so each variant is made from its own original. That's why there are two 176s.
+- **Shipped:** `logo-signature-176.webp` and `logo-signature-orange-176.webp` as plain `src` in every public header/footer (176 = 44 x 4). The hero and 404 use `srcset` 176w/288w/550w. The homepage header/footer carry `srcset` 176w/550w with `sizes="(max-width: 860px) 44px, 440px"`. That `sizes` over-states the desktop size on purpose so they pick the hero's 550 file (same URL, one download). Pointing them at the 176 would have added 8KB to the desktop homepage.
+- **Dead end: a 300px file.** On a 3x phone the 96px hero drew it at 288 device px, a 0.96 resample. It lost ~20% of edge detail and visibly smeared the rivets and texture. An exact 288 (96 x 3) draws 1:1 and matches the original. **Rule for later variants: size them to an exact multiple of the CSS size, not a round number just above it.**
+- **Also tried, not worth it:** unsharp mask on the 176 (sharper at 1x, over-sharp at 3x), an 88px 1x file, a 132px file. At 1x the 38px footer from the 176 is a hair softer than from the 550 at 5x zoom; at 1:1 they look the same.
+- **Harness notes:**
+  - With `srcset`, `img.naturalWidth` is density-corrected (a 288w file at `sizes=96px` reports 96). To get the real pixels, load `currentSrc` into a bare `new Image()`.
+  - Pillow's RGBA `resize` already premultiplies, so no dark edge fringe. Checking that needs a per-channel float (`'F'` mode) reference; an RGBA reference built from premultiplied values gets premultiplied twice and reports a false -19 fringe.
+  - Chromium picked 288w over 176w at DPR 2 for a 96px slot, so no geometric-mean down-pick to worry about there. At DPR 3.5 the hero takes the 550 and the 404 takes the 550 at 3x (it needs 300); neither is worse than before.
+- **Not changed:** both service workers' precache lists and every tools/portal `<img>`. The new files aren't precached. Their `?v=` URLs are runtime-cached cache-first, and a precache entry without `?v=` wouldn't match the page's request anyway (see bugfix.md, same date).
+- **Still open:** the desktop hero on a 2x screen needs ~843px and the master is 550px. That needs a bigger master file, not markup.
+- Test: `tests/design/public-logo-variants.test.js`. It reads the `sizes` numbers from styles.css / 404.html, so a CSS size change fails it until the markup follows.

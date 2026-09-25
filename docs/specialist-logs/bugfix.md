@@ -1181,6 +1181,11 @@ After this change it also ran at Monday midday, a Tuesday, the Sep/Oct month bou
   - A page first opened with no controller ignores every later `controllerchange` (the guard). Positive-case tests need a device that has opened the app once before.
 - Test: `tests/tools/app-update-card.test.js`. It models one device (the active worker persists) across many jsdom opens of the real login.html; the open's update check installs a changed worker, as Chromium does. 9 of 11 fail on the previous code. The other 2 are the cases the old guard already handled.
 
+## 2026-09-25 (from the visual lane, not fixed) -- public visitors install the whole Workspace precache
+
+- Every public page (index, about, careers, our-work, privacy, terms, blog, services/, locations/) registers `/service-worker.js`. Its inline comment says it's "the same no-op service worker the internal tools use... It doesn't cache anything". That's stale: its install runs `cache.addAll(PRECACHE_URLS)`, 48 URLs, ~3.3MB on disk, 2.6MB of it under `/tools/` plus the 251KB PDF logo PNG and the PDF fonts. So a first-time public visitor downloads the tools app in the background. Needs a call on whether public pages should register it at all, or register something smaller.
+- Both service workers precache `/images/logo-signature-orange.webp` without `?v=`, but every page requests it with `?v=...`. `caches.match()` compares the query string, so the precached copy is never served; it's an extra ~57KB download at install. Same for the PNG only if something requests it with a query (pdf-layout.js doesn't, so that one is fine).
+
 ## 2026-09-25 -- Turning on two-factor in Settings forgot "Remember me": `!!` collapsed a three-way argument
 
 Noted by the security lane while working on server-side MFA enforcement. Their log note wasn't on `main` or any pushed branch when this was fixed, so this entry covers it.
