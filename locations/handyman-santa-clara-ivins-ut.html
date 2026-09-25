@@ -81,7 +81,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/styles.css?v=87b1f5227e">
+<link rel="stylesheet" href="/styles.css?v=75f7ca9d5c">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -584,6 +584,19 @@
         <span><b></b> Standard coverage</span>
         <span><b class="is-request"></b> Available by request</span>
       </p>
+      <!-- Phone key: the diagram's labels as real text. Shown at
+           <=760px, where the SVG drops them (see .radius-key in
+           styles.css). Keep it in step with the SVG's own text. -->
+      <ul class="radius-key" data-reveal>
+        <li class="is-hub" data-city="st-george"><b>St. George</b> <small>Home base</small></li>
+        <li data-city="washington-city"><b>Washington City</b> <small>Right next door</small></li>
+        <li data-city="hurricane"><b>Hurricane</b> <small>About 20 minutes east</small></li>
+        <li data-city="santa-clara-ivins"><b>Santa Clara &amp; Ivins</b> <small>West side, near Snow Canyon</small></li>
+        <li data-city="leeds"><b>Leeds</b> <small>About 20 minutes north</small></li>
+        <li data-city="la-verkin"><b>La Verkin</b> <small>About 25 minutes east</small></li>
+        <li class="is-request" data-city="cedar-city"><b>Cedar City</b> <small>By request &middot; about an hour north</small></li>
+        <li class="is-request" data-city="mesquite"><b>Mesquite, NV</b> <small>By request &middot; about 40 minutes southwest</small></li>
+      </ul>
 
     </div>
   </section>
