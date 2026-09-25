@@ -5406,3 +5406,13 @@ Public site only; the Workspace tools and client portal still use the full-size 
 Verified: 77 `<img>` tags in 40 files (including the three blog posts added the same day). In Chromium at 1x, 2x, 3x and 3.5x (1440, 820, 800, 412, 390 and 375px wide), every logo keeps the exact same box, and every logo gets at least as many pixels as it's drawn at, apart from the desktop hero noted above. Before/after crops compared at 1:1 and zoomed, in dark and light mode. Full suite (only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `check-visual-snapshot`, `eslint`, and `check-links.py` (all internal references resolve; the only failures are the same blocked Unsplash URLs as on `main`).
 
 Tests: `tests/design/public-logo-variants.test.js` (8, new). It checks that every public logo tag offers a small file, that each URL has a `?v=` stamp, that `width`/`height` and `srcset` widths match the real files, and that the `sizes` values match the CSS in `styles.css` and `404.html`.
+
+## What changed, 2026-09-25 -- A short Stripe payment no longer marks an invoice paid
+
+`stripe-webhook` used to mark an invoice paid on any successful Stripe payment, without checking the amount. A payment page left open from before the invoice was raised could still pay the old, smaller amount, and the invoice showed as paid in full. (Security audit 2026-09-23, finding #7; ACTION-ITEMS #16.)
+
+- **Paid short:** the invoice stays unpaid in the portal and the Invoice Log, and staff get a push ("Invoice paid short") naming the invoice, the client, and both amounts. `reconcile-stripe-payments` also flags it daily for the week after the payment. Collect the difference, then mark it paid by hand.
+- **Overpaid** (the invoice was lowered after Pay was opened, or part of a bulk payment was already marked paid by hand): the invoice is covered, so it's marked paid as before, and staff get an "Invoice overpaid" push to check whether the extra needs a refund.
+- **Exact amount:** unchanged. The owed amount is computed the same way `create-payment-intent` and `create-bulk-payment-intent` compute the charge, so a normal payment always matches to the cent. The tests feed each create function's real charge back into the webhook to prove it.
+- The alert uses Send-Push's existing staff-only `stripe-reconciliation-alert` type. A failed push never fails the webhook.
+- 24 tests run the real webhook handler; 9 fail on the old code. **Needs a deploy:** `stripe-webhook` (with `verify_jwt` off, as now).
