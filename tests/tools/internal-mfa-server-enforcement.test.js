@@ -139,6 +139,9 @@ test('redeemRecoveryCode calls the new RPC, and falls back to the old name only 
 
 // ---- login.html, end to end in jsdom --------------------------------------------------
 
+const EMAIL = 'connor@triplehenterprisesllc.biz';
+const sessionReply = (aal, refresh) => reply({ access_token: token(aal), refresh_token: refresh, expires_at: Math.floor(Date.now() / 1000) + 3600, user: { email: EMAIL } });
+
 function fakeSupabase({ factorVerified = true, redeemRemovesFactor = true, role = { can_manage_roles: true } } = {}) {
   const state = {
     factors: factorVerified ? [{ id: 'old-factor', factor_type: 'totp', status: 'verified' }] : [],
@@ -150,37 +153,41 @@ function fakeSupabase({ factorVerified = true, redeemRemovesFactor = true, role 
     try { return JSON.parse(Buffer.from(auth.split('.')[1], 'base64url').toString()).aal; } catch (e) { return null; }
   };
   const hasVerified = () => state.factors.some((f) => f.status === 'verified');
+  const redeem = (init) => {
+    if (!state.codes.delete(JSON.parse(init.body).p_code)) return reply(false);
+    if (redeemRemovesFactor) state.factors = [];
+    return reply(true);
+  };
+  // GoTrue: a second authenticator needs an aal2 session.
+  const enroll = (init) => {
+    if (hasVerified() && aalOf(init) !== 'aal2') return reply({ msg: 'AAL2 required to enroll a new factor' }, 403);
+    state.factors.push({ id: 'new-factor', factor_type: 'totp', status: 'unverified' });
+    return reply({ id: 'new-factor', totp: { qr_code: 'data:image/svg+xml;utf-8,<svg/>', secret: 'NEWSECRET' } });
+  };
+  const verify = () => {
+    state.factors.find((f) => f.id === 'new-factor').status = 'verified';
+    return sessionReply('aal2', 'r2');
+  };
+  const generateCodes = (init) => (aalOf(init) === 'aal2'
+    ? reply(['NEW1-AAAA', 'NEW2-BBBB'])
+    : reply({ message: 'Sign out, then sign back in with your authenticator code before generating new recovery codes.' }, 403));
+  // One handler per endpoint the sign-in flow calls, keyed "METHOD /path".
+  const routes = {
+    'POST /auth/v1/token': (init, query) => (query === '?grant_type=password' ? sessionReply('aal1', 'r1') : null),
+    'GET /auth/v1/user': () => reply({ email: EMAIL, factors: state.factors }),
+    'POST /rest/v1/rpc/redeem_internal_recovery_code': redeem,
+    'GET /rest/v1/account_roles': () => reply([{ email: EMAIL, role_name: 'Developer', ...role }]),
+    'POST /auth/v1/factors': enroll,
+    'POST /auth/v1/factors/new-factor/challenge': () => reply({ id: 'challenge-1' }),
+    'POST /auth/v1/factors/new-factor/verify': verify,
+    'POST /rest/v1/rpc/generate_internal_recovery_codes': generateCodes,
+  };
   state.fetch = async (url, init = {}) => {
-    const u = String(url);
-    const route = u.replace('https://csvfqdjuobylgafgolho.supabase.co', '');
-    state.log.push(`${init.method || 'GET'} ${route.replace(/\?.*/, '')}`);
-    if (route.startsWith('/auth/v1/token?grant_type=password')) {
-      return reply({ access_token: token('aal1'), refresh_token: 'r1', expires_at: Math.floor(Date.now() / 1000) + 3600, user: { email: 'connor@triplehenterprisesllc.biz' } });
-    }
-    if (route === '/auth/v1/user') return reply({ email: 'connor@triplehenterprisesllc.biz', factors: state.factors });
-    if (route === '/rest/v1/rpc/redeem_internal_recovery_code') {
-      const code = JSON.parse(init.body).p_code;
-      if (!state.codes.delete(code)) return reply(false);
-      if (redeemRemovesFactor) state.factors = [];
-      return reply(true);
-    }
-    if (route.startsWith('/rest/v1/account_roles')) return reply([{ email: 'connor@triplehenterprisesllc.biz', role_name: 'Developer', ...role }]);
-    if (route === '/auth/v1/factors' && init.method === 'POST') {
-      // GoTrue: a second authenticator needs an aal2 session.
-      if (hasVerified() && aalOf(init) !== 'aal2') return reply({ msg: 'AAL2 required to enroll a new factor' }, 403);
-      state.factors.push({ id: 'new-factor', factor_type: 'totp', status: 'unverified' });
-      return reply({ id: 'new-factor', totp: { qr_code: 'data:image/svg+xml;utf-8,<svg/>', secret: 'NEWSECRET' } });
-    }
-    if (route === '/auth/v1/factors/new-factor/challenge') return reply({ id: 'challenge-1' });
-    if (route === '/auth/v1/factors/new-factor/verify') {
-      state.factors.find((f) => f.id === 'new-factor').status = 'verified';
-      return reply({ access_token: token('aal2'), refresh_token: 'r2', expires_at: Math.floor(Date.now() / 1000) + 3600, user: { email: 'connor@triplehenterprisesllc.biz' } });
-    }
-    if (route === '/rest/v1/rpc/generate_internal_recovery_codes') {
-      if (aalOf(init) !== 'aal2') return reply({ message: 'Sign out, then sign back in with your authenticator code before generating new recovery codes.' }, 403);
-      return reply(['NEW1-AAAA', 'NEW2-BBBB']);
-    }
-    return reply({ message: `unexpected ${route}` }, 500);
+    const [, path, query = ''] = String(url).match(/^https:\/\/csvfqdjuobylgafgolho\.supabase\.co([^?]*)(\?.*)?$/) || [];
+    const key = `${init.method || 'GET'} ${path}`;
+    state.log.push(key);
+    const handler = routes[key];
+    return (handler && handler(init, query)) || reply({ message: `unexpected ${key}` }, 500);
   };
   return state;
 }
