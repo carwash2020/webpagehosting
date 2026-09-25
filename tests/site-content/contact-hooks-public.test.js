@@ -407,7 +407,7 @@ test('a hook on an element that holds more than the number or address only goes 
 
 test('the "Call (435) 414-1667" buttons keep "Call ", dial the new number, and are still one text node', async () => {
   const pages = ['about.html', 'our-work.html', ...BLOG_PAGES.filter(f => f !== 'blog/index.html')];
-  assert.equal(pages.length, 15);
+  assert.equal(pages.length, 18);
   for (const file of pages) {
     const { w } = await withContactScript(file, answering(rowsFrom({ phone: NEW_PHONE })));
     const btns = [...w.document.querySelectorAll('a.btn.orange.js-phone-link.js-phone-text')];
