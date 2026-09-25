@@ -5376,7 +5376,7 @@ Verified:
 
 Tests: the new pages are added to the hard-coded page lists in `blog-index-cards`, `analytics-events`, `mobile-nav-collapsible` and `privacy-policy-page`. The public-page counts go from 33 to 36 in `site-banner-no-layout-shift` and `site-banners-public`, and the Call-button page count from 12 to 15 in `contact-hooks-public`. `check-links.py`'s `PUBLIC_PAGES` gets the three new URLs.
 
-## What changed, 2026-09-25 -- Service pages: real, service-specific FAQs and one more blog link
+## What changed, 2026-09-25 -- Service pages: real, service-specific FAQs and two more blog links
 
 Public site, content only. No layout or CSS changes. Audited all 5 service pages in `services/` side by side. The root-level copies are redirect stubs.
 

@@ -316,7 +316,46 @@ Still open: 12 triage symptoms have no post. Next strongest by intent:
 washer won't spin, dishwasher leaking, washer no power, range burner
 won't light.
 
-## 2026-09-25 -- service-page content depth: FAQs and one more blog link
+## 2026-09-25 -- from the reports lane (SEO/technical audit, not fixed)
+
+Found by a repo-only SEO audit of the 34 sitemap pages at `80fc896`. Schema
+survived the 2026-09-21 folder move intact (all 16 moved pages match their
+pre-move JSON-LD); these are the content-lane gaps it found:
+
+- **Review count disagrees (needs a human first).** CMS `googleReviewCount`
+  was edited 7 -> 6 at 2026-09-24 15:47 UTC (compare
+  `backups/site_content.json` in commits `142e7e0` and `1b53116`). The static
+  "7" is still in `index.html` (incl. `AggregateRating`), `booking.html` and the
+  3 `services/*-st-george-ut.html` pages, and in several tests. JS rewrites it
+  to 6 for visitors; crawlers that skip JS read 7. Confirm the real GBP count
+  with Steve, then align one side. No change to `docs/ACTION-ITEMS.md` yet.
+- **Homepage `areaServed`** omits "La Verkin, UT" and "Leeds, UT" (both are
+  standard coverage on the page and have city pages).
+- **`careers.html` JobPosting:** `jobLocationType: "TELECOMMUTE_NOT_ALLOWED"`
+  isn't a Google-defined value (only `TELECOMMUTE`; not re-verified, docs
+  blocked in the sandbox). Also no `validThrough` (ask Steve for a date),
+  no `postalCode`, no BreadcrumbList.
+- **Blog Article schema (10 posts):** no `image`, `dateModified`,
+  `mainEntityOfPage`; author is the Organization. Suggest author Person
+  Steven Robinson -> `about.html`.
+- **Entity consistency:** homepage + 8 city pages declare 9 separate
+  HomeAndConstructionBusiness entities with city-suffixed names and no shared
+  `@id`. Suggest one `@id` (`https://www.triplehenterprisesllc.biz/#business`)
+  and the plain business name everywhere. Judgment call.
+- **`sitemap.xml` lastmod:** index.html (2026-08-24) and booking.html
+  (2026-08-25) are stale; the 16 moved URLs say 2026-09-15, before they existed.
+- **Lengths:** 19 titles > 65 chars (the 23-char brand suffix; worst is
+  `blog/dryer-not-heating.html` at 95), 8 descriptions > 165 chars
+  (`locations/handyman-st-george-ut.html` 193).
+- **Small tags:** no `twitter:card` on `blog/index.html` and `booking.html`; no
+  BreadcrumbList on `privacy.html`; all 34 pages share one `og:image` (blog
+  posts could use their hero photo).
+- **The 3 posts added in #424** (`washer-leaking-water`, `dryer-wont-turn-on`,
+  `dishwasher-not-draining`) came after the audit. A re-check found they
+  follow the same template and inherit the same gaps: thin Article fields,
+  titles of 85-93 chars, 2 descriptions over 165 chars, generic `og:image`.
+
+## 2026-09-25 -- service-page content depth: FAQs and two more blog links
 
 Audited all 5 service pages side by side. The real pages live in `services/` since 2026-09-21; the root-level `*-repair(s).html` files are redirect stubs. The request described the 4 thinner pages as having no blog links. That was out of date: each has had one since PR #257. The real gap was the FAQs:
 
