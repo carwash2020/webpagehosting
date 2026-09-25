@@ -223,21 +223,21 @@ click a setting by hand.
       `edge-functions/manage-saved-card-index.ts` on that rule, and
       deploy it.
 16. ~~**Webhook doesn't compare the amount paid to the invoice total**
-    (2026-09-23 audit, finding #7, LOW).~~ **Fixed in code (2026-09-25).**
+    (2026-09-23 audit, finding #7, LOW).~~ **Done (2026-09-25), deployed.**
     `stripe-webhook` now compares `amount_received` to what the
     invoice(s) still owe. Paid short: left unpaid, and staff get an
     "Invoice paid short" push. Overpaid: marked paid, and staff get an
     "Invoice overpaid" push. Chosen over cancelling the superseded
     PaymentIntent, because a page opened before the raise can pay the
     invoice's only PaymentIntent, and then there's nothing to cancel.
-    - **Still needs:** deploying `stripe-webhook` from `main`, with
-      `verify_jwt` **off** exactly as now (Stripe can't send a Supabase
-      JWT, so turning it on would stop every invoice being marked paid).
-    - **That deploy ships more than this fix.** Live v18 is the
-      2026-09-14 code. `main` also carries PRs #213 and #217
-      (2026-09-15), never deployed: a failed "mark paid" write now
-      returns 500 so Stripe retries it, `workspace_sync` failures are
-      logged, and POS income is dated in Denver time instead of UTC.
+    - **Deployed** as `stripe-webhook` v19, `verify_jwt` off as before.
+      The live source is byte-identical to `main` (same sha256). A
+      forged-signature probe got 400 before anything was read.
+    - **That deploy also shipped PRs #213 and #217** (2026-09-15), which
+      had never been deployed (v18 was the 2026-09-14 code): a failed
+      "mark paid" write now returns 500 so Stripe retries it,
+      `workspace_sync` failures are logged, and POS income is dated in
+      Denver time instead of UTC.
 17. ~~**`work-order-photos` storage bucket accepts any upload** (2026-09-23
     audit, LOW). Its INSERT policy checks only `bucket_id`, so any
     signed-in account can upload files there. It's spam and storage
