@@ -5480,3 +5480,17 @@ Tests only. `tests/sync/graveyard-restore-sync.test.js` ("deleted again after a 
 - **Fix:** the test waits for the clock to reach the next millisecond before the second delete. A person can't restore and delete again within 1 ms, so the app code is unchanged. No other sync test deletes again after a restore.
 
 Verified: with the devices' clocks frozen, the old test fails every time with CI's assertion and the fixed one passes. Full suite 3,932/3,933. The one failure is the known `check-links.py` sandbox-proxy test. `check-consistency`, `check-undefined-vars` and `eslint` are clean.
+
+## What changed, 2026-09-25 -- Customers' browsers no longer download the Workspace app
+
+Public site and both service workers.
+
+- **The bug:** 36 public pages (home, about, careers, Our Work, privacy, terms, the blog, service and city pages) registered `/service-worker.js`. That's the Workspace tools' worker, so every visitor's browser quietly downloaded the tools app in the background (48 files, ~3.3MB), and again every time the worker changed, which happens several times a day. The page comment called it a no-op that cached nothing.
+- **Now:** public pages don't register a worker. On a device with no sign of Workspace use (no tools login or tools data, no push subscription), the page also removes the worker an older version installed, along with its caches. The owner's devices keep theirs, with offline tools and push notifications.
+- **Also fixed:** each worker's update step deleted every cache except its own, so on a device with both the Workspace and the portal, updating one wiped the other's offline copy. Each now deletes only its own old caches.
+- **Trade-off:** installing the site from the browser menu still works without a worker (Chrome 108+/112+, Safari's Add to Home Screen). Android Chrome's automatic install banner needs one, so it no longer appears on the public site.
+
+Verified: real Chromium, 11 scenarios. They cover a new visitor, an old customer device, tools devices (each key, local and session storage), a push-subscribed device, the portal worker untouched, both caches kept on a device with both apps, a tools page re-registering after cleanup, and blocked storage. All 11 pass; 5 fail on the previous code. Full suite (only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `check-visual-snapshot`, `eslint`. `npm run fix-versions` had nothing to change.
+
+Tests: `tests/site-wide/public-service-worker.test.js` (11, new; all fail on the previous code).
+

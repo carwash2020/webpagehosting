@@ -757,9 +757,12 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
+  // Only this worker's own old caches (th-workspace-*). Cache Storage is
+  // shared by the whole origin, so deleting every other name also wiped
+  // the portal's th-portal-* offline copy on any device that has both (2026-09-25).
   event.waitUntil(
     caches.keys()
-      .then((names) => Promise.all(names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n))))
+      .then((names) => Promise.all(names.filter((n) => n.startsWith('th-workspace-') && n !== CACHE_NAME).map((n) => caches.delete(n))))
       .then(() => self.clients.claim())
   );
 });
