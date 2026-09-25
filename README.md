@@ -5424,4 +5424,34 @@ Tests:
 - **Overpaid** (the invoice was lowered after Pay was opened, or part of a bulk payment was already marked paid by hand): the invoice is covered, so it's marked paid as before, and staff get an "Invoice overpaid" push to check whether the extra needs a refund.
 - **Exact amount:** unchanged. The owed amount is computed the same way `create-payment-intent` and `create-bulk-payment-intent` compute the charge, so a normal payment always matches to the cent. The tests feed each create function's real charge back into the webhook to prove it.
 - The alert uses Send-Push's existing staff-only `stripe-reconciliation-alert` type. A failed push never fails the webhook.
-- 24 tests run the real webhook handler; 9 fail on the old code. **Needs a deploy:** `stripe-webhook` (with `verify_jwt` off, as now).
+- 24 tests run the real webhook handler; 9 fail on the old code.
+- **Deployed** the same day as `stripe-webhook` v19 (`verify_jwt` still off). The live code matches `main` byte for byte. The deploy also shipped two earlier merged-but-undeployed fixes (#213, #217): a failed "mark paid" write now makes Stripe retry, and POS income is dated in Denver time.
+
+## What changed, 2026-09-25 -- Service pages: real, service-specific FAQs and two more blog links
+
+Public site, content only. No layout or CSS changes. Audited all 5 service pages in `services/` side by side. The root-level copies are redirect stubs.
+
+- **The gap was FAQ depth, not blog links.** Each of the 4 thinner pages (plumbing, drywall, handyman, assembly) has linked one on-topic post since #257. Their schema-paired FAQ, though, held the same 5 policy answers as each other and the homepage, word for word. Each "Common Questions" block also ended with the same generic pricing entry.
+- **3 new questions per page, all from copy already on the site.** Two replace the generic pricing entry in Common Questions. One leads the schema-paired FAQ, so each page's FAQPage JSON-LD now covers its own service. Sources: the flapper, crack, TV-mount and to-do-list blog posts, and Terms section 6. Local detail comes from the same posts: St. George's hard water, Hurricane well water, St. George's temperature swings, Mesquite open-plan builds. No new prices or policies.
+- **Cancellation policy added to all 5 service pages.** None of them stated it before. It uses the homepage's $50 same-day wording plus the reschedule/cancel link `booking.html` sends when an email is given. The trip-fee answer keeps the site-wide sentence verbatim and adds what the city pages already say: most St. George addresses are inside the 15-mile radius, and the Cedar City/Mesquite fee is confirmed before booking.
+- **Two blog links added**, cards copied from `blog/index.html`. `assembly-installation.html` now also links "The Small Jobs Everyone Forgets", whose wire-management section covers the cables half of TV mounting. `plumbing-repairs.html` now also links "Dishwasher Not Draining?" (new today on main), whose disposal and sink-drain section is the plumbing page's Drains & Disposals work. The other suggested matches (the TV-mount post on drywall, the new washer-leak post on plumbing, and others) were checked and left out as weak. Reasons are in `docs/specialist-logs/content.md`.
+- **No triage tool added.** `js/triage.js` holds appliance data only. A plumbing version is proposed in `docs/specialist-logs/features.md`, not built.
+- **Depth:** words that appear on no other service page went from about 270 to about 490 per thin page (washer/dryer: 755).
+
+Verified: full suite 3,903/3,904 (after merging main). The one failure is the known `check-links.py` sandbox-proxy test, which also fails before this change. `check-consistency`, `check-undefined-vars`, `eslint` and `check-visual-snapshot` are all clean. `check-links.py` resolves every internal reference across 91 files; its only failures are Unsplash images the sandbox proxy blocks. Schema text was also checked against visible text on all 5 pages, and every new answer against the blog post, Terms section or page it came from.
+
+Tests: `tests/seo/service-page-faq-depth.test.js` (28, new; 16 fail on the previous commit). It checks that schema text equals visible text, each page has at least one schema question of its own, the cancellation and trip-fee policies match the Terms, no Common Questions entry is copied across pages, and assembly and plumbing link their posts.
+
+## What changed, 2026-09-25 -- The service-area diagram gets its own phone layout
+
+Public site only: the "Where We Work" diagram on the homepage, the 8 city pages and 8 service pages. Found in the 2026-09-23 visual audit and re-measured in headless Chromium before changing anything. On a phone every label was unreadable: 6.8px at 320px, 8.2px at 375px and 8.6px at 390px. At every width up to 760px, "West side, near Snow Canyon" ran into "Home base", and the Mesquite and Leeds notes ran into each other. The cause is the SVG's 760-unit viewBox, which shrinks the text along with the screen. The old <=760px font-size bump couldn't fix that. Its labels sit in fixed SVG units, so the bigger sizes made 10 of them overlap at every width in that range. Its note size also never applied, because `.radius-figure text` outranked `.radius-note`.
+
+- **At 760px and below**, the diagram keeps its spokes, nodes and hub, drawn 1.5x larger around St. George, and shows only the hub's name. The city names and notes move into real text below it.
+- **The 11 pages without the `.areas-links` cards** (8 city pages and the 3 St. George appliance pages) get a new key list with the same wording as the SVG. Each row has a node marker matching the diagram: a blue ring, an orange ring for by-request, and a filled orange dot for St. George. A city page's own row is highlighted, as its node is.
+- **The 6 pages that have the cards** use them as the text, now at 17px/16px on a phone.
+- **Nothing changes above 760px.** Desktop label sizes and positions measure the same as before.
+- The old font-size block, and the cascade slip with it, are gone.
+
+Verified in headless Chromium at 320, 375 and 390px, dark and light, on 5 page types (homepage, a city page, the St. George city page, a service page with cards, and one without): every label renders at 16px or more, no two labels overlap, no node is clipped, and there's no sideways scroll. Also checked at 560, 700 and 760px (the key goes to two columns), at 761 and 1280px (identical to before), and with motion on (the spokes still draw in). `check-consistency`, `check-undefined-vars`, `eslint` and `check-visual-snapshot` pass. The full suite passes 3878/3879; the one failure is the known `check-links.py` sandbox-proxy test. `check-links.py` finds every internal link resolved; its 9 failures are external Unsplash URLs the sandbox proxy blocks. `npm run fix-versions` bumped `styles.css` everywhere, plus both service workers.
+
+New test `tests/design/service-area-phone-layout.test.js` (39): each key matches its SVG's own text, the hub name and key text stay at 16px or more, the card sizes win the cascade, and every node still fits inside the SVG after the phone zoom.

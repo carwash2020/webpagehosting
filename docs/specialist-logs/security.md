@@ -1369,9 +1369,19 @@ The action item offered both. Cancelling in `create-payment-intent` / `create-bu
 
 `get_edge_function` shows live `stripe-webhook` v18 is the 2026-09-14 code. `main` has carried #213 and #217 (2026-09-15) for ten days without a deploy: the invoice-PATCH failure now returns 500 so Stripe retries it (live, a failed write is acknowledged with 200 and the paid status is lost), `workspace_sync` failures are logged, and POS income is dated in Denver time. So deploying this PR ships those too. All three are fixes, merged and tested, but the deployer should know. It's the third function found running behind `main` (after uptime-alert and Send-Push). The deploy-drift check from round 3's lessons is still worth building.
 
+### Deployed (owner's go-ahead, same day)
+
+- **Before:** `main`'s file was byte-identical to the tested commit, and live was still v18 with an unchanged bundle hash, so nobody had deployed in between. `function_edge_logs` showed no webhook traffic in the prior 24h, so no payment was mid-flight.
+- **Deployed** as v19 with `verify_jwt: false`. The re-fetched live source decodes to the same 24,596 bytes and sha256 (`017e4e3e...`) as `main`'s file.
+- **Probed** from inside the database (`net.http_post`), served by deployment `_19`:
+  - forged `Stripe-Signature` -> **400** "Webhook signature verification failed". The function boots, the Stripe SDK loads, both Stripe secrets are set (a missing one returns 500), and nothing is read before the check.
+  - no signature -> **400** "Missing Stripe-Signature header."
+  - `function_logs`: two clean boots, no errors.
+- **Not exercised live:** the amount check itself. That needs a real signed Stripe event, so it rests on the 24 tests. The first real payment after this should mark its invoice paid with no alert. If a staff "Invoice paid short" push arrives for a normal payment, that's the signal to look.
+- **Rollback, if the amount check ever misbehaves:** redeploy the file from just before #421 (`git show 18bed263~1:edge-functions/stripe-webhook-index.ts`) with `verify_jwt: false`. That keeps #213 and #217.
+
 ### Still open
 
-- **Deploy** `stripe-webhook` from `main` with `verify_jwt: false` (unchanged). After deploy, confirm the live source matches `main`, and that the next real payment marks its invoice paid with no alert.
 - **Duplicate alerts.** A redelivered event for a held invoice sends the push again. Stripe only redelivers on non-2xx or its rare duplicates, and reconcile nags daily anyway, so there's no dedup table for it.
 
 <!-- Add new entries above this line -->
