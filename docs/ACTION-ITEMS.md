@@ -226,14 +226,20 @@ click a setting by hand.
       - or compare `amount_received` in `stripe-webhook` and send a staff
         alert.
     - **Next step:** ask a new chat to do one, with tests, and deploy it.
-17. **`work-order-photos` storage bucket accepts any upload** (2026-09-23
+17. ~~**`work-order-photos` storage bucket accepts any upload** (2026-09-23
     audit, LOW). Its INSERT policy checks only `bucket_id`, so any
     signed-in account can upload files there. It's spam and storage
-    cost only: there's no read-back and no overwrite.
-    - **The fix:** limit uploads to a path under the uploader's own
-      work order, matching how `portal/work-orders.html` uploads photos. First
-      read that page and the bucket's live policies.
-    - Low priority. Turning signup off (#11) mostly covers it.
+    cost only: there's no read-back and no overwrite.~~ **Done
+    (2026-09-25), applied live.**
+    - The page uploads before the work order exists, so there's no
+      work-order id to scope to. Uploads are scoped to the uploader's
+      account instead: `submissions/<auth.uid()>/<folder>/<n>.<ext>`.
+      The policy rejects any other path, including other accounts'
+      folders.
+    - The bucket also takes images only, 8 MB max (the page's own
+      limits).
+    - **Still open:** any signed-in account can still fill its own
+      folder. Turning signup off (#11) removes strangers from that.
 
 <!-- Add new manual action items above this line -->
 
