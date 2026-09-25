@@ -12,14 +12,11 @@ Kept here so they don't get lost -- pull from this list before reaching
 for stock photos next time something needs a real kitchen or laundry
 image.
 
-1. **Stacked washer/dryer in a modern bathroom laundry nook** (dark
+1. ~~**Stacked washer/dryer in a modern bathroom laundry nook** (dark
    vanity, towels, plant) --
-   `https://images.unsplash.com/photo-1721395285456-05a8b9b45b9f?fm=jpg&q=80&w=1400&auto=format&fit=crop`.
-   Supplied after `dryer-not-heating.html` (the last post needing an
-   image) had already been filled with a different photo, so there was
-   no open slot for this one. Good candidate for a future laundry-
-   related blog post, or to replace a stock laundry photo elsewhere on
-   the site if one turns up.
+   `https://images.unsplash.com/photo-1721395285456-05a8b9b45b9f?fm=jpg&q=80&w=1400&auto=format&fit=crop`.~~
+   **Placed (2026-09-25)** as the lead image on
+   `blog/washer-leaking-water.html`. Nothing else is reserved right now.
 
 <!-- Add new reserved images above this line -->
 
@@ -298,6 +295,13 @@ when greenlit; these do not.
    school fundraiser, a chamber event) that naturally generates a real
    backlink or local news mention -- slower, but the kind of link no
    amount of code can manufacture.
+
+8. **Request indexing for the three new blog posts** (2026-09-25) in
+   Google Search Console (URL Inspection, then "Request indexing"):
+   `/blog/washer-leaking-water.html`, `/blog/dryer-wont-turn-on.html`,
+   `/blog/dishwasher-not-draining.html`. They're in `sitemap.xml`
+   already, so Google will find them anyway. Requesting indexing is
+   just faster.
 
 <!-- Add new SEO action items above this line -->
 
@@ -663,6 +667,18 @@ reference:
   farmhouse-kitchen photo from "Reserved images" above (a real supplied
   photo showing an actual range, not stock-picked for the topic).
   Linked from the blog index and `sitemap.xml`.
+
+- **Three new appliance symptom posts** (2026-09-25):
+  `blog/washer-leaking-water.html`, `blog/dryer-wont-turn-on.html`, and
+  `blog/dishwasher-not-draining.html`. `js/triage.js` lists 20 symptoms
+  and only 5 had a post; these cover three more of the 15 without one,
+  and each post says what that symptom's triage entry already says.
+  Listed on the blog index, the three appliance service pages' "Recent
+  Notes From the Shop", and `sitemap.xml`. The washer post uses the
+  reserved bathroom-laundry photo. The other two reuse the lead photos
+  of their sibling posts (dryer-not-heating, dishwasher-not-cleaning),
+  because this environment can't reach any image CDN to pick new ones.
+  Swap them if you have better photos.
 
 - **Washer/dryer service page now lists all appliance types actually
   sold** (`washer-dryer-repair.html`, 2026-09-16) -- added Dishwashers,

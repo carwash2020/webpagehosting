@@ -3315,4 +3315,32 @@ Requested directly with a screenshot of `client-detail.html`: there was no way t
 
 Tests: `tests/tools/client-delete.test.js` (8, new; all fail on main): Delete block placement, confirm wording and Cancel, what's removed vs. kept, no rebuild from jobs, the Undo state surviving a live-sync refresh, Undo restoring the same id with a lifted tombstone, singular/plural copy, light-mode colour, and the Graveyard rendering on Dev Tools' load.
 
+## 2026-09-25 -- From reports: a hand-logged part deposit marks a job Paid (open)
+
+Found while building the job-profitability report. No code changed.
+
+- **What happens.** A job with no invoice counts as **paid** in
+  `thJobMoneyStage()` (`tools/data-layer.js`) once any Finance income
+  entry carries its `jobRefId`, whatever the amount. Part 5 did this on
+  purpose ("a hand-logged payment against the job means paid"). But the
+  income form has no deposit option, so a deposit settles the job too.
+- **Real case.** Belinda Christensen, "Fix washer" (job `1785813282715`),
+  Done Aug 5:
+  - Income: one $140.00 Venmo entry described "Part deposit" (Aug 4).
+  - Expense: one $148.04 inverter board (Aug 3).
+  - No invoice, no labor income, no hours.
+  - It reads Paid, so it never reaches To invoice, the list built to
+    catch finished jobs nobody billed. Profitability shows $-8.04 (-6%).
+- **Unknown:** whether labor was collected outside the app. The report
+  asks the owner; leave the data alone until they answer.
+- **Directions (features' call, nothing decided):**
+  - A Deposit / Payment choice on the income form. Deposits count toward
+    `billed` but don't settle the stage, so a Done job with only
+    deposits lands in To invoice or a new "deposit only" state.
+  - Whatever changes, `thComputeJobMargin`'s `hasInvoice` and the stage
+    must still agree on what "billed" means, as part 5 intended.
+- **Existing data:** as of 2026-09-25 there are only two hand-logged,
+  job-linked income entries. This deposit is one. The other is Bree
+  Sullivan's $200.00 "Handyman services" (job `1785387236448`).
+
 <!-- Add new entries above this line -->

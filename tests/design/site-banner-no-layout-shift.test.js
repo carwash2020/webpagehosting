@@ -33,8 +33,8 @@ for (const dir of ['', 'blog', 'locations', 'services']) {
   }
 }
 
-test('the banner pages are the 33 we expect (index, about, our-work, careers, terms, privacy + 11 blog + 8 city + 8 service pages)', () => {
-  assert.equal(PAGES.length, 33, PAGES.join(', '));
+test('the banner pages are the 36 we expect (index, about, our-work, careers, terms, privacy + 14 blog + 8 city + 8 service pages)', () => {
+  assert.equal(PAGES.length, 36, PAGES.join(', '));
   for (const p of ['index.html', 'about.html', 'our-work.html', 'careers.html', 'terms.html', 'privacy.html', 'blog/index.html', 'locations/handyman-st-george-ut.html']) {
     assert.ok(PAGES.includes(p), p);
   }

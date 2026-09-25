@@ -128,7 +128,7 @@
   </url>
   <url>
     <loc>https://www.triplehenterprisesllc.biz/blog/</loc>
-    <lastmod>2026-09-15</lastmod>
+    <lastmod>2026-09-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -152,13 +152,13 @@
   </url>
   <url>
     <loc>https://www.triplehenterprisesllc.biz/blog/washer-wont-drain.html</loc>
-    <lastmod>2026-09-15</lastmod>
+    <lastmod>2026-09-25</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://www.triplehenterprisesllc.biz/blog/dishwasher-not-cleaning.html</loc>
-    <lastmod>2026-09-15</lastmod>
+    <lastmod>2026-09-25</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -189,6 +189,24 @@
   <url>
     <loc>https://www.triplehenterprisesllc.biz/blog/oven-not-heating-right.html</loc>
     <lastmod>2026-09-16</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.triplehenterprisesllc.biz/blog/washer-leaking-water.html</loc>
+    <lastmod>2026-09-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.triplehenterprisesllc.biz/blog/dryer-wont-turn-on.html</loc>
+    <lastmod>2026-09-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://www.triplehenterprisesllc.biz/blog/dishwasher-not-draining.html</loc>
+    <lastmod>2026-09-25</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
