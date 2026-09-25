@@ -31,7 +31,7 @@ const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-function decodeJwtPayload(token: string): { email?: string; role?: string } {
+function decodeJwtPayload(token: string): { email?: string; role?: string; sub?: string; aal?: string; session_id?: string } {
   try {
     const payload = token.split(".")[1];
     const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
@@ -57,6 +57,43 @@ async function callerCanManageInvoices(email: string): Promise<boolean> {
   return rows[0].can_manage_invoices === true;
 }
 
+// Two-factor gate (2026-09-25, docs/ACTION-ITEMS.md #13). An internal
+// account that has an authenticator enrolled must call with a session that
+// passed it (aal2); its password alone (aal1) is not enough. The rule and
+// its dry-run/enforce switch live in the database, in
+// check_internal_mfa_for_edge_function()
+// (sql/security/enforce_internal_mfa_server_side.sql). The claims come from
+// the caller's JWT, which the gateway has already verified (verify_jwt).
+// Fails closed if the check itself can't be made.
+const MFA_REQUIRED_ERROR =
+  "Two-factor sign-in required: sign out of the Workspace and sign back in with your authenticator code.";
+async function callerPassesInternalMfa(
+  claims: { sub?: string; email?: string; aal?: string; session_id?: string },
+  fn: string,
+): Promise<boolean> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/check_internal_mfa_for_edge_function`, {
+      method: "POST",
+      headers: {
+        apikey: SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        p_user_id: claims.sub ?? null,
+        p_email: claims.email ?? null,
+        p_session_id: claims.session_id ?? null,
+        p_aal: claims.aal ?? null,
+        p_function: fn,
+      }),
+    });
+    if (!res.ok) return false;
+    return (await res.json()) === true;
+  } catch {
+    return false;
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: CORS_HEADERS });
@@ -79,6 +116,9 @@ Deno.serve(async (req: Request) => {
     }
     if (!(await callerCanManageInvoices(claims.email))) {
       return json({ ok: false, error: "This account can't manage quotes." }, 403);
+    }
+    if (!(await callerPassesInternalMfa(claims, "sync-quote-to-portal"))) {
+      return json({ ok: false, error: MFA_REQUIRED_ERROR, code: "mfa_required" }, 403);
     }
 
     const body = await req.json();

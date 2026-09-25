@@ -16,7 +16,7 @@
 //   1. every MFA/recovery-code handler in settings.html now awaits
 //      ensureFreshToken() before its first getAuthToken() call, not just
 //      the two obviously-named recovery-code ones;
-//   2. generateRecoveryCodes()/verifyRecoveryCode() in auth.js now surface
+//   2. generateRecoveryCodes()/redeemRecoveryCode() in auth.js now surface
 //      the real error detail instead of only ever the generic fallback,
 //      matching what mfaUnenroll() already did a few lines above them.
 
@@ -79,7 +79,7 @@ test('handleCancelMfaEnrollSettings is async (required to await ensureFreshToken
 });
 
 // ---------------------------------------------------------------------------
-// 2. Runtime check: generateRecoveryCodes()/verifyRecoveryCode() surface the
+// 2. Runtime check: generateRecoveryCodes()/redeemRecoveryCode() surface the
 //    real error detail on a genuine RPC failure, not just the generic
 //    fallback message -- this is what actually makes the bug diagnosable in
 //    the UI/console next time, rather than only fixing this one occurrence.
@@ -96,7 +96,7 @@ function makeAuthSandbox(fetchImpl) {
     const SUPABASE_URL = 'https://example.supabase.co';
     const SUPABASE_ANON_KEY = 'anon-key';
     ${extractFn(AUTH_JS, 'generateRecoveryCodes')}
-    ${extractFn(AUTH_JS, 'verifyRecoveryCode')}
+    ${extractFn(AUTH_JS, 'redeemRecoveryCode')}
   `;
   vm.runInContext(src, sandbox);
   return sandbox;
@@ -141,29 +141,31 @@ test('generateRecoveryCodes() still succeeds and returns the codes on a real 2xx
   assert.equal(Array.from(result.codes).join(','), 'CODE1-AAAA,CODE2-BBBB');
 });
 
-test('verifyRecoveryCode() surfaces the real error message on a genuine RPC failure instead of only the generic fallback', async () => {
+// redeemRecoveryCode() replaced verifyRecoveryCode() on 2026-09-25 (server-side
+// two-factor enforcement) and keeps the same error handling.
+test('redeemRecoveryCode() surfaces the real error message on a genuine RPC failure instead of only the generic fallback', async () => {
   const sandbox = makeAuthSandbox(async () => ({
     ok: false,
     status: 401,
     json: async () => ({ message: 'not authenticated' }),
   }));
-  const result = await sandbox.verifyRecoveryCode('some-token', 'ABCD-1234');
+  const result = await sandbox.redeemRecoveryCode('some-token', 'ABCD-1234');
   assert.equal(result.ok, false);
   assert.equal(result.error, 'not authenticated');
   assert.notEqual(result.error, 'Could not check that recovery code. Please try again.');
 });
 
-test('verifyRecoveryCode() still resolves valid: true/false correctly on success', async () => {
+test('redeemRecoveryCode() still resolves valid: true/false correctly on success', async () => {
   // Not assert.deepEqual against a plain object literal -- same cross-realm
   // prototype mismatch as the codes array above. Individual field checks
   // avoid it entirely.
   const sandboxTrue = makeAuthSandbox(async () => ({ ok: true, status: 200, json: async () => true }));
-  const resTrue = await sandboxTrue.verifyRecoveryCode('t', 'c');
+  const resTrue = await sandboxTrue.redeemRecoveryCode('t', 'c');
   assert.equal(resTrue.ok, true);
   assert.equal(resTrue.valid, true);
 
   const sandboxFalse = makeAuthSandbox(async () => ({ ok: true, status: 200, json: async () => false }));
-  const resFalse = await sandboxFalse.verifyRecoveryCode('t', 'c');
+  const resFalse = await sandboxFalse.redeemRecoveryCode('t', 'c');
   assert.equal(resFalse.ok, true);
   assert.equal(resFalse.valid, false);
 });
