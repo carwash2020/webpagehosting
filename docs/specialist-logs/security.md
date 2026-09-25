@@ -1172,4 +1172,20 @@ Cross-logged from `features.md` ("booking-flow follow-ups"). It closes the round
   - No rows were created.
 - **Advisors:** nothing new.
 
+## 2026-09-25: work-order-photos uploads scoped to the uploader's own folder (ACTION-ITEMS #17, LOW)
+
+Closes the round 3 audit's last storage note: the `work-order-photos` INSERT policy checked `bucket_id` alone.
+
+- **The real risk, read live first.** The one INSERT policy was `with check (bucket_id = 'work-order-photos')`, and the bucket had no size or type limit. A rolled-back probe under a real client's simulated JWT wrote `anything/evil.exe` and wrote into another client's folder, both allowed. SELECT stays staff-only and there's no UPDATE policy, so this was spam and storage cost only. That made it LOW.
+- **Why it's scoped to the account, not the work order.** The ask was "a path under the uploader's own work order". Reading `portal/work-orders.html` showed that isn't possible: photos upload *before* the row exists, deliberately, because clients have no UPDATE policy on `client_portal_work_orders`. The page's path was `submissions/<Date.now()>-<random>/<n>.<ext>`, with nothing tied to the caller. Scoping to a work order would mean pre-creating the row and adding a client UPDATE policy, which loosens a table to tighten a bucket. So the page now puts `session.user.id` in the path, and the policy requires the second folder to equal `(select auth.uid())::text`, with exactly 3 folders and `submissions` first.
+- **Bucket limits added too:** `image/*`, 8 MB. These are the page's own client-side limits. Path scoping alone doesn't stop "arbitrary files"; these do.
+- **Deploy order was the real risk of breakage.** Applying the policy before Pages served the new page would have denied every real upload. The old policy accepts the new path, so the order was PR #420 merged → Pages deploy confirmed complete → the live page fetched from inside the DB (`net.http_get`) showing the new path → migration applied (`20260925164058`).
+- **Verified live after applying,** rolled back, simulated JWTs for two real clients and a staff account:
+  - allowed: each account's own folder;
+  - 42501: another client's folder (from a client and from staff), the old path, `anything/evil.exe`, the folder root, extra depth, anon, and the `job-photos` control.
+  - Stored state matches the mirror: the policy text, `file_size_limit` 8388608, `allowed_mime_types` `{image/*}`. The one existing object (old path) is untouched.
+  - Advisors: nothing new.
+- **Not tested end to end.** This sandbox can't reach `*.supabase.co`, and there's no client session to use from inside the DB. So no real HTTP upload went through the Storage API. The RLS side is what Storage runs (an INSERT as `authenticated` with the JWT claims set), and the page's real `uploadSelectedPhotos()` is run against a port of the policy in `tests/security/work-order-photos-upload-scope.test.js`. The bucket's type and size limits are Supabase-enforced config, checked as stored rather than exercised.
+- **Still open:** any signed-in account can fill its own folder. Turning signup off (ACTION-ITEMS #11) removes strangers from that. A per-account daily cap would need a SECURITY DEFINER count, since clients can't SELECT the bucket. Not worth it at LOW unless signup stays on and spam actually shows up.
+
 <!-- Add new entries above this line -->

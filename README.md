@@ -5347,7 +5347,7 @@ Verified:
 
 - the full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint`;
 - a dry run of the new policy against the live database, in a transaction that rolled back: the caller's own folder was allowed (two clients and a staff account); another client's folder, the old shape, an arbitrary path, the folder root, extra depth and a wrong prefix were all RLS denials (42501);
-- the live results after deploy are in `docs/specialist-logs/security.md` (2026-09-25).
+- live, after the Pages deploy finished and the live page was confirmed to use the new path: migration `20260925164058` applied, then the same rolled-back probes. Each account's own folder was allowed. Everything else was an RLS denial, including anon and staff writing into a client's folder. The bucket shows 8 MB and `image/*`. Advisors: nothing new. Full write-up in `docs/specialist-logs/security.md` (2026-09-25). No real HTTP upload was run through the Storage API: this sandbox can't reach `*.supabase.co`.
 - `npm run fix-versions` bumped the portal service worker's cache name.
 
 Tests:
