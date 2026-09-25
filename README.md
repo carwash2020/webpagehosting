@@ -5399,7 +5399,8 @@ Tests:
 - **Overpaid** (the invoice was lowered after Pay was opened, or part of a bulk payment was already marked paid by hand): the invoice is covered, so it's marked paid as before, and staff get an "Invoice overpaid" push to check whether the extra needs a refund.
 - **Exact amount:** unchanged. The owed amount is computed the same way `create-payment-intent` and `create-bulk-payment-intent` compute the charge, so a normal payment always matches to the cent. The tests feed each create function's real charge back into the webhook to prove it.
 - The alert uses Send-Push's existing staff-only `stripe-reconciliation-alert` type. A failed push never fails the webhook.
-- 24 tests run the real webhook handler; 9 fail on the old code. **Needs a deploy:** `stripe-webhook` (with `verify_jwt` off, as now).
+- 24 tests run the real webhook handler; 9 fail on the old code.
+- **Deployed** the same day as `stripe-webhook` v19 (`verify_jwt` still off). The live code matches `main` byte for byte. The deploy also shipped two earlier merged-but-undeployed fixes (#213, #217): a failed "mark paid" write now makes Stripe retry, and POS income is dated in Denver time.
 
 ## What changed, 2026-09-25 -- Service pages: real, service-specific FAQs and two more blog links
 
