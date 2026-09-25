@@ -3,7 +3,7 @@
 // pushed everything below them (Gallery, Blog, Reviews, Schedule,
 // Contact, Call) off the bottom of the menu on most phones. This makes
 // both sublists collapsed by default behind a caret toggle button
-// (mobile-nav-collapsible.js), on all 33 pages that carry this same
+// (mobile-nav-collapsible.js), on all 36 pages that carry this same
 // mobile menu.
 
 const { test } = require('node:test');
@@ -31,6 +31,8 @@ const PAGES = [
   'blog/dishwasher-not-cleaning.html', 'blog/fridge-not-cooling.html',
   'blog/toilet-running-flapper-valve.html', 'blog/drywall-crack-above-door.html',
   'blog/tv-mount-drywall-anchors.html', 'blog/oven-not-heating-right.html',
+  'blog/washer-leaking-water.html', 'blog/dryer-wont-turn-on.html',
+  'blog/dishwasher-not-draining.html',
 ];
 
 for (const page of PAGES) {
