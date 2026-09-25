@@ -176,24 +176,20 @@ click a setting by hand.
     that day is deployed from `main` and verified live (anon -> 401, the
     triggers' Vault key -> through). Results per function:
     `docs/specialist-logs/security.md`, "round 3 follow-up".
-13. **Decide on server-side MFA enforcement for internal accounts**
-    (2026-09-23 audit, finding #4, HIGH). Two-factor is only checked by
-    `tools/login.html`. Nothing on the server looks at the session's
-    `aal` level, so someone with a stolen password can skip the login
-    page, call the Auth and REST APIs directly, and reach every internal
-    table and edge function. They can also call
-    `generate_internal_recovery_codes()` on that password-only session
-    to mint fresh recovery codes.
-    - **The fix:** `current_user_has_any_role()` and the internal edge
-      functions require `aal2` whenever the account has a verified
-      factor. Generating recovery codes requires `aal2` too. The
-      recovery-code login path has to keep working, or a lost phone
-      locks the owner out.
-    - **Why it waits for you:** a mistake here can lock Steve and Connor
-      out of the tools. Say "go" in a new chat and point it at
-      `docs/specialist-logs/security.md` (the 2026-09-23 "round 3" entry
-      and its "follow-up"). It should build this behind a careful
-      rollout: dry-run, test both accounts, keep a way back in.
+13. **Server-side MFA enforcement for internal accounts: built, in dry run.
+    Two human steps are left** (2026-09-23 audit, finding #4, HIGH;
+    go-ahead given 2026-09-25). The server now applies the `aal2` rule to
+    every internal table, bucket and edge function. It sits in `log` mode:
+    it records what it would block and blocks nothing.
+    - **Before switching it on:** run the two-account checklist in
+      `docs/INTERNAL-MFA-ENFORCEMENT.md` (normal sign-in, a recovery-code
+      sign-in, and the terminal test), and review a few days of its logs.
+    - **Switching it on** is one SQL statement. So is switching it back
+      off. Both are in that doc.
+    - **Recovery codes:** signing in with one now removes the lost
+      authenticator, signs out other devices, and asks for a new
+      authenticator. Minting codes on a password-only session is refused
+      already.
 
 14. **Confirm who should see the team's hours** (shift clock, 2026-09-23).
     The Dashboard's Hours worked card shows everyone's shifts only to
@@ -253,6 +249,15 @@ click a setting by hand.
     - **Still open:** any signed-in account can still fill its own
       folder. With signup off (#11, confirmed 2026-09-25) that means
       invited clients and staff only.
+
+18. **Steve: set up an authenticator for the Workspace** (2026-09-25). The
+    Owner account has none. It has been signed in on one remembered,
+    password-only session since 2026-09-03. That means #13 can't protect it:
+    the server only enforces two-factor for accounts that have an
+    authenticator. Sign out of the Workspace, then sign in. The login page
+    walks you through it: scan the QR code, enter the code, save the
+    recovery codes somewhere safe. Until then, Steve's password alone opens
+    everything.
 
 <!-- Add new manual action items above this line -->
 

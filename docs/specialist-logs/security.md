@@ -1213,6 +1213,170 @@ The owner asked for signup to be turned off. It already was.
   - #17 (`work-order-photos`) narrows to invited accounts filling their own folder.
   - The policies fixed in round 3 stay fixed. None of them relied on signup being off, and they shouldn't: it's one dashboard click from coming back on.
 
+## 2026-09-25: server-side two-factor enforcement for internal accounts (ACTION-ITEMS #13, audit round 3 finding #4)
+
+The owner gave the go-ahead for #13 with three conditions: a dry run
+first, both real accounts tested before and after enforcement, and a fast
+way back in. This entry records what was built, the calls that differ from
+the round-3 proposal, and what is still waiting on people.
+
+### What the live data said before anything was built
+
+- **Connor (Developer):** one verified TOTP factor (enrolled 2026-09-22),
+  5 live sessions, **all aal2**, 10 unused recovery codes. Enforcement
+  would not have blocked a single real session of his.
+- **Steve (Owner):** **no factor at all.** One remembered aal1 session from
+  2026-09-03, refreshed today. So "opt-in, then enforced" changes nothing
+  for Steve, including protection. His password alone still opens
+  everything until he enrolls. That is the biggest residual risk in the
+  system now. It is logged as ACTION-ITEMS #18 and was not buried in this
+  entry.
+- **One chokepoint really does cover RLS.** `account_roles`' only SELECT
+  policy is `(select current_user_has_any_role())`. Every inline
+  `exists (select 1 from account_roles ...)` policy, the CMS publish
+  functions (SECURITY INVOKER), and `current_user_can_manage_roles()`
+  (INVOKER) read through it. The only SECURITY DEFINER functions reading
+  account_roles directly are the gate itself, a service-role-only
+  function, and a trigger. `next_*_number()` call the gate. This was
+  checked across all 104 live policies (88 public, 14 storage) and every SECURITY DEFINER function
+  EXECUTE-able by `authenticated`.
+- **15 internal edge functions**, all the same shape: `claims.role`/`email`,
+  then an account_roles lookup with the service role, which bypasses RLS.
+
+### Design, and why
+
+- **One rule, `internal_mfa_session_ok(user, aal)`:** aal2, or the account
+  has no verified factor. It is called from `current_user_has_any_role()`
+  (RLS), `check_internal_mfa_for_edge_function()` (service-role only; the
+  edge functions pass their gateway-verified claims) and
+  `internal_mfa_session_status()` (the tools pages).
+- **A single-row switch, `internal_mfa_enforcement.mode`:** `log` / `enforce`
+  / `off`. A missing row reads as `enforce`, so deleting it can't quietly
+  disable protection. The break-glass is one UPDATE from the dashboard SQL
+  editor, which uses a separate login that this change can't lock.
+- **Dry-run logging had to be split.** RLS runs inside PostgREST's
+  read-only GET transactions, where nothing can be inserted. Making the
+  gate VOLATILE to insert would also have changed planning for every
+  policy. So the RLS path uses `RAISE WARNING`; `log_min_messages` is
+  `warning` on this project, and it was confirmed that the warnings land
+  in `postgres_logs`. Edge functions, pages and recovery write rows to
+  `internal_mfa_gate_log`, de-duplicated per session/source/outcome per
+  10 minutes. In `log` mode the edge check also records `allowed`, so the
+  dry run positively shows the check ran on real traffic rather than
+  proving it only by absence.
+
+### Two calls that differ from the round-3 proposal
+
+1. **Recovery is a SQL function, not a service-role edge function.**
+   `redeem_internal_recovery_code()` consumes the code, deletes the
+   account's `auth.mfa_factors`, deletes its other unused codes, and
+   deletes every other `auth.sessions` row, all in one transaction. So a
+   code is never spent without the account being let back in, or the
+   other way round, and there is no extra function to deploy or drift.
+   `postgres` has DELETE on both auth tables (checked). Challenges and
+   refresh tokens cascade. Signing other devices out is new relative to
+   the proposal: a lost phone is exactly the device most likely to still
+   hold a remembered aal2 session.
+   - The old RPC name now delegates to it, so a cached old login page
+     can't burn a code and leave a session the server refuses.
+   - It refuses non-internal accounts. Otherwise a portal client's password
+     plus a code could strip their portal authenticator.
+2. **Minting recovery codes requires aal2 in every mode, not dry-run
+   first.** With redemption now able to remove a factor, "mint codes on
+   a password-only session, then redeem one" would have been a
+   persistence path for a password thief during the dry run: a new hole
+   this change itself would have created.
+   - It cannot lock anyone out. Sign-in, the authenticator and existing
+     codes are untouched.
+   - Every real caller already qualifies: login.html generates with its
+     verify's aal2 session, settings.html stores the aal2 session before
+     generating, and "Generate new codes" only shows with a factor.
+   - Deleting codes on a password-only session with a live factor is
+     refused for the same reason. Settings' turn-off path still works,
+     because it deletes after the unenroll.
+
+### Browser side
+
+- **login.html's recovery branch:** redeem, then re-check the factor.
+  - If it's gone and the permissions require MFA, show the existing
+    mandatory-enrollment step, reworded "Set up a new authenticator".
+  - If the factor is still there (the rollback's consume-only world),
+    carry on as before, with no doomed second enroll that GoTrue would
+    refuse at aal1.
+- **auth.js `requireAuth()`** fires `checkInternalMfaSession()` without
+  awaiting it. An aal2 token costs nothing. Otherwise one RPC runs, and
+  only a server-confirmed `blocked` clears the session and sends it to
+  `login.html?reason=mfa`. Any failure leaves the page alone.
+- **`redeemRecoveryCode()` replaces `verifyRecoveryCode()`.** It falls back
+  to the old RPC name only on a 404, so deploy order can't break the one
+  way back in.
+
+### Verified
+
+- **PGlite** runs the real migration files over the live policy text and
+  both accounts' real shapes (`tests/security/internal-mfa-enforcement-db.test.js`,
+  27 tests). Covered:
+  - the gap, reproduced pre-migration;
+  - log, enforce and off modes;
+  - a missing switch row;
+  - a read-only transaction;
+  - strangers and portal clients;
+  - minting and deleting codes in every mode;
+  - redemption, including other sessions revoked, case and whitespace,
+    reuse, wrong codes, a portal client, and the old RPC name;
+  - the edge check and the page check;
+  - grants;
+  - de-duplication;
+  - the rollback file.
+- **All 15 real edge handlers** were run with fetch mocked
+  (`tests/edge-functions/internal-mfa-gate.test.js`, 92 tests: 76 fail on
+  the old code). Covered: refused leads to 403 `mfa_required` with no side
+  effects; allowed carries on; fail-closed on 500, 404, a bad body or a
+  network error; non-internal callers never reach the gate; the gate is
+  ordered before the body is read.
+- **login.html + auth.js in jsdom** against a fake Supabase that enforces
+  GoTrue's aal2 rule for a second factor and the new aal2 rule for minting
+  (`tests/tools/internal-mfa-server-enforcement.test.js`, 13 tests: all 13
+  fail on the old code).
+- **Live rehearsal** on production, inside a transaction forced to roll
+  back. It ran the full migration and probed 12 internal tables, the
+  secure-documents bucket, 4 functions and a write, for Connor aal2,
+  Connor aal1, Steve and a stranger, in log and enforce modes, plus the
+  whole recovery path with Connor's real user and session ids.
+  - Every result was as designed.
+  - The md5 of all 10 function bodies matched the committed file.
+  - Afterwards the objects were confirmed absent and Connor still had his
+    factor, 5 sessions and 10 codes.
+
+### Not done yet, on purpose
+
+- **The edge functions are not deployed.** Per this log's "deploy only
+  `main`" lesson, they go after merge.
+- **Drift was found.** The repo's `trigger-workflow` was *behind* live: it
+  still listed the retired `backup-business-data.yml`. Deploying the repo
+  copy would have broken Dev Tools' "Backup sensitive data" button. The
+  repo was brought in line with live byte-for-byte first.
+  `delete-portal-invoice` and `sync-job-to-portal` are behind `main` and
+  will pick up merged fixes on deploy. Three others differ only in
+  comments.
+- **Enforcement is not flipped.** That needs the review window and both
+  people's real-device tests (the checklist in
+  `docs/INTERNAL-MFA-ENFORCEMENT.md`, including a terminal test of the
+  actual stolen-password path). No session here can do a real TOTP
+  sign-in as Steve or Connor, and it would be wrong to mint their sessions
+  with the service role to fake one.
+
+### Lessons
+
+- **Check the target account's real state before designing a lockout
+  guard.** Here the Owner had no factor at all. That turned "don't lock
+  Steve out" into "Steve isn't protected yet", which is a different and
+  more urgent message.
+- **Read-only transactions change how a dry run can log.** Anything
+  evaluated inside RLS can only RAISE, not INSERT.
+- **A new recovery power is only as safe as the minting behind it.**
+  Review "how are codes created" whenever "what a code can do" grows.
+
 ## 2026-09-25: Audit finding #7 closed in code -- the webhook checks the amount before marking an invoice paid
 
 Follow-up to the 2026-09-23 round 3 audit, finding #7 (LOW), ACTION-ITEMS #16.
