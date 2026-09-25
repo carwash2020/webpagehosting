@@ -19,13 +19,15 @@ test('portal/jobs.html loads none of the internal /tools/ scripts', () => {
 });
 
 test('jobs.html cross-links with quotes.html and dashboard.html, and vice versa', () => {
-  assert.match(html, /<a href="\/portal\/quotes\.html">[\s\S]*?<span>Quotes<\/span>/);
+  // Nav labels renamed 2026-09-25 (design handoff): "Quotes" -> "Estimates",
+  // "Jobs" -> "Visits". Hrefs (still quotes.html / jobs.html) are unchanged.
+  assert.match(html, /<a href="\/portal\/quotes\.html">[\s\S]*?<span>Estimates<\/span>/);
   assert.match(html, /<a href="\/portal\/dashboard\.html">[\s\S]*?<span>Invoices<\/span>/);
 
   const dashboardHtml = fs.readFileSync(path.join(__dirname, '..', '..', 'portal', 'dashboard.html'), 'utf8');
   const quotesHtml = fs.readFileSync(path.join(__dirname, '..', '..', 'portal', 'quotes.html'), 'utf8');
-  assert.match(dashboardHtml, /<a href="\/portal\/jobs\.html">[\s\S]*?<span>Jobs<\/span>/);
-  assert.match(quotesHtml, /<a href="\/portal\/jobs\.html">[\s\S]*?<span>Jobs<\/span>/);
+  assert.match(dashboardHtml, /<a href="\/portal\/jobs\.html">[\s\S]*?<span>Visits<\/span>/);
+  assert.match(quotesHtml, /<a href="\/portal\/jobs\.html">[\s\S]*?<span>Visits<\/span>/);
 });
 
 test('an unauthenticated visitor is redirected to login, not shown job history', () => {
