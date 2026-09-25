@@ -27,6 +27,11 @@
 // one invoice) and plural (client_portal_invoice_ids, comma-separated
 // list, bulk) shapes.
 //
+// Updated 2026-09-25 (security audit finding #7): an invoice is only
+// marked paid when the amount Stripe received matches what it still owes.
+// A short payment (a page left open from before the invoice was raised)
+// is left unpaid and staff get a push. See the amount check below.
+//
 // Required secrets (Supabase dashboard -> Edge Functions -> Secrets):
 //   STRIPE_SECRET_KEY -- same test-mode key create-payment-intent uses.
 //   STRIPE_WEBHOOK_SIGNING_SECRET -- a SEPARATE secret from the API
@@ -95,6 +100,37 @@ function buildPosReceiptEmail(description: string, amount: number, dateLabel: st
 </table></td></tr></table></body></html>`;
   const text = `Receipt -- Triple H Enterprises\n\nThanks for your business! Here's a record of what was charged today.\n\nDate: ${dateLabel}\nFor: ${description || "Service call"}\nAmount: ${amountLabel}\n\nQuestions about this charge? Just reply to this email.\n\nTriple H Enterprises\n(435) 414-1667, triplehenterprisesllc.biz`;
   return { html, text };
+}
+
+function money(cents: number): string {
+  return "$" + (cents / 100).toFixed(2);
+}
+
+// Staff push for a payment whose amount doesn't match what the invoice(s)
+// still owe -- see the amount check in the handler below. Goes through
+// Send-Push's existing stripe-reconciliation-alert type, which only ever
+// reaches internal accounts' devices. Never throws: the alert is the
+// heads-up, not the record, and a push failure must not turn a real
+// payment into a webhook error Stripe retries for days.
+async function sendAmountMismatchAlert(piId: string, invoices: any[], receivedCents: number, owedCents: number, underpaid: boolean) {
+  const label = `${invoices.length === 1 ? "invoice" : "invoices"} ${invoices.map((inv: any) => `#${inv.invoice_number}`).join(", ")}`;
+  const clientEmail = invoices[0]?.client_email || "unknown client";
+  const title = underpaid ? "Invoice paid short" : "Invoice overpaid";
+  const body = `Stripe payment ${piId} received ${money(receivedCents)} for ${label} (${clientEmail}), which still owed ${money(owedCents)}. ` +
+    (underpaid
+      ? "It was left unpaid. Collect the difference, then mark it paid by hand."
+      : `It was marked paid. Check Stripe: the extra ${money(receivedCents - owedCents)} may need a refund.`);
+  try {
+    // Send-Push, exact casing -- function slugs are case-sensitive.
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/Send-Push`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+      body: JSON.stringify({ type: "stripe-reconciliation-alert", title, body }),
+    });
+    if (!res.ok) console.error(`Amount-mismatch alert for ${piId} failed: HTTP ${res.status}`);
+  } catch (err) {
+    console.error(`Amount-mismatch alert for ${piId} failed:`, err);
+  }
 }
 
 async function sendPosReceiptEmail(clientEmail: string, description: string, amount: number) {
@@ -246,7 +282,7 @@ Deno.serve(async (req: Request) => {
   // fallback if that earlier write ever failed for some reason, not
   // the primary lookup.
   let invoiceRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/client_portal_invoices?stripe_payment_intent_id=eq.${pi.id}&select=id,source_invoice_id,paid`,
+    `${SUPABASE_URL}/rest/v1/client_portal_invoices?stripe_payment_intent_id=eq.${pi.id}&select=id,source_invoice_id,paid,total,invoice_number,client_email`,
     { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
   );
   let rows = await invoiceRes.json();
@@ -256,7 +292,7 @@ Deno.serve(async (req: Request) => {
     const fallbackIds = idsCsv ? idsCsv.split(",") : (singleId ? [singleId] : []);
     if (fallbackIds.length) {
       invoiceRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/client_portal_invoices?id=in.(${fallbackIds.join(",")})&select=id,source_invoice_id,paid`,
+        `${SUPABASE_URL}/rest/v1/client_portal_invoices?id=in.(${fallbackIds.join(",")})&select=id,source_invoice_id,paid,total,invoice_number,client_email`,
         { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
       );
       rows = await invoiceRes.json();
@@ -282,8 +318,32 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ received: true, already_processed: true }), { status: 200 });
   }
 
-  const paidAt = new Date().toISOString();
   const unpaidIds = unpaidRows.map((inv: any) => inv.id);
+
+  // Amount check (security audit 2026-09-23, finding #7). A PaymentIntent
+  // is created for the invoice's total at the time "Pay" was tapped. If
+  // the invoice is raised afterwards, the page that was already open can
+  // still pay the old, smaller amount. Without this check the invoice
+  // would be marked paid in full. The expected amount is worked out
+  // exactly as create-payment-intent / create-bulk-payment-intent do it,
+  // so a legitimate payment always matches to the cent.
+  // - Paid short: left unpaid, staff alerted. reconcile-stripe-payments
+  //   also flags it daily for the week after the payment.
+  // - Overpaid: the invoice is covered, so it's marked paid, but staff
+  //   are alerted to refund the extra rather than it passing silently.
+  const owedCents = Math.round(unpaidRows.reduce((sum: number, inv: any) => sum + Number(inv.total), 0) * 100);
+  const receivedCents = pi.amount_received;
+  if (receivedCents !== owedCents) {
+    // Written as "not more than" so a missing or malformed amount is held too.
+    const underpaid = !(receivedCents > owedCents);
+    await sendAmountMismatchAlert(pi.id, unpaidRows, receivedCents, owedCents, underpaid);
+    if (underpaid) {
+      console.error(`PaymentIntent ${pi.id} received ${receivedCents} cents but invoice(s) ${unpaidIds.join(",")} owe ${owedCents}; left unpaid`);
+      return new Response(JSON.stringify({ received: true, amount_mismatch: true, invoices_marked_paid: 0 }), { status: 200 });
+    }
+  }
+
+  const paidAt = new Date().toISOString();
 
   // Mark paid in the client-facing table -- this is what the client
   // actually sees reflected back on their next dashboard load. One

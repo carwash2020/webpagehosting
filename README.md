@@ -5399,3 +5399,13 @@ Security, docs only. Asked to turn off public signup in Supabase Auth, it was al
 - **Nothing broke:** no page uses self-signup, and all 3 client accounts were created by invite. `send-invite` uses the service-role admin API, which this setting shouldn't block. No invite has gone out since the change, so the first one is worth a glance.
 - **Still true:** policies must never treat `authenticated` as "staff". Portal clients are authenticated too, and the setting is one click from coming back on.
 - Updated: ACTION-ITEMS #11 (done), #15 and #17 (stranger case closed), `SECURITY.md`, and `docs/specialist-logs/security.md`.
+
+## What changed, 2026-09-25 -- A short Stripe payment no longer marks an invoice paid
+
+`stripe-webhook` used to mark an invoice paid on any successful Stripe payment, without checking the amount. A payment page left open from before the invoice was raised could still pay the old, smaller amount, and the invoice showed as paid in full. (Security audit 2026-09-23, finding #7; ACTION-ITEMS #16.)
+
+- **Paid short:** the invoice stays unpaid in the portal and the Invoice Log, and staff get a push ("Invoice paid short") naming the invoice, the client, and both amounts. `reconcile-stripe-payments` also flags it daily for the week after the payment. Collect the difference, then mark it paid by hand.
+- **Overpaid** (the invoice was lowered after Pay was opened, or part of a bulk payment was already marked paid by hand): the invoice is covered, so it's marked paid as before, and staff get an "Invoice overpaid" push to check whether the extra needs a refund.
+- **Exact amount:** unchanged. The owed amount is computed the same way `create-payment-intent` and `create-bulk-payment-intent` compute the charge, so a normal payment always matches to the cent. The tests feed each create function's real charge back into the webhook to prove it.
+- The alert uses Send-Push's existing staff-only `stripe-reconciliation-alert` type. A failed push never fails the webhook.
+- 24 tests run the real webhook handler; 9 fail on the old code. **Needs a deploy:** `stripe-webhook` (with `verify_jwt` off, as now).
