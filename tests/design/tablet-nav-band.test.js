@@ -28,7 +28,7 @@ function breakpoints(css, label) {
   const bar = css.match(/@media \(max-width: (\d+)px\) \{ \.th-bottom-nav \{ display: flex/);
   const sidebar = css.match(/@media \(min-width: (\d+)px\) \{ \.th-desktop-sidebar \{ display: flex/);
   const sheet = css.match(/@media \(min-width: (\d+)px\) \{ \.th-more-sheet \{ display: none !important; \} \}/);
-  const pad = css.match(/@media \(max-width: (\d+)px\) \{ body\.th-has-bottomnav \{ padding-bottom: calc\(76px \+ env\(safe-area-inset-bottom, 0px\)\); \} \}/);
+  const pad = css.match(/@media \(max-width: (\d+)px\) \{ body\.th-has-bottomnav \{ padding-bottom: calc\(85px \+ env\(safe-area-inset-bottom, 0px\)\); \} \}/);
   assert.ok(bar && sidebar && sheet && pad, label + ': expected the four breakpoint rules to be present in their exact one-line form');
   return { bar: Number(bar[1]), sidebar: Number(sidebar[1]), sheet: Number(sheet[1]), pad: Number(pad[1]) };
 }

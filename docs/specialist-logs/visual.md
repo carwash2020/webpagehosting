@@ -1832,3 +1832,164 @@ finish).
   - The script is in this session's scratchpad (`place5.js`). It's worth re-creating it before placing any future city by hand.
 - **Labels.** Leeds's label goes above its dot; Washington City's and La Verkin's go to the right. The old "every label centred" test became "aligned name+note pair on its own dot; only these three off-centre".
 - **Left schematic** (not asked): Cedar City (329 vs ~35), Hurricane (93 vs ~72), Santa Clara & Ivins (264 vs ~304). Moving Cedar City into the north-east would crowd that wedge further.
+
+## 2026-09-25 -- cross-surface audit (public site, portal, Workspace) and Phase 1
+
+Asked for a consistency audit of all three surfaces, a ranked plan, and
+only the top items built. The plan is in `docs/ACTION-ITEMS.md` under
+"Cross-surface visual consistency plan (2026-09-25)". Phases 2 and 3 are
+left there on purpose.
+
+**Method, and what it couldn't do.** This session ran in a design sandbox
+with read access to the repo, not the usual Playwright setup. Static
+copies of 13 pages (scripts stripped, so no nav shell, auth or data) were
+rendered at one ~910px viewport, dark and light, via a DOM-to-image
+capture. It can't emulate a phone width, and it drops `<img>` and
+`background-image` content. Every finding below was confirmed from the
+CSS/markup itself; the screenshots only back up the ones they can show.
+Phone widths, real fonts and pixel before/afters are listed in the PR
+body for the Claude Code session that applies the patch.
+
+Tags: impact (H/M/L) / effort (S/M/L).
+
+### Cross-surface (the drift between the three)
+
+All three load `styles.css`. Portal pages also load
+`tools/styles-tools.css`, between `portal-app.css` and
+`portal-polish.css`. Most drift comes from that stacking.
+
+- **X1 [M/S-M] Three focus rings.** Public: 2px `--blue-light` + blue
+  glow. Tools: global `:focus-visible` is 2px `--orange` + orange glow
+  (styles-tools.css ~L1222), but `.tool-card/.small-btn/.tab-btn/.help-btn`
+  override to the public blue (~L2601, comment "one focus treatment
+  everywhere"), and a dozen components use `--orange-light`. Portal:
+  blue inside `.portal-page`, tools' orange for anything outside it, and
+  `.portal-reply-notice-item` orange-light. A keyboard user sees
+  orange and blue rings on the same screen.
+- **X2 [M/M] The no-sticky-hover convention stops at the public site.**
+  styles.css has 31 `(hover:hover)` guards plus a test.
+  styles-tools.css has 0 guards and 41 unguarded surface hovers.
+  portal-app/-polish have 0 guards and 19 (6+13), including
+  `.invoice-card/.quote-card:hover` lifts and `.btn:hover`
+  translateY. Both surfaces are mostly used on phones.
+- **X3 [M/L] Button language.** The public site retired the glossy
+  gradient pills (U01, 2026-09-07) for flat orange + offset shadow.
+  Tools (`.primary-btn`, `.th-install-action`, `.th-update-now`) and
+  portal (`.btn.orange:hover` glow) still use gradient/glow. This is
+  the most visible "dated vs. current" gap, but it is a look change on
+  every tool page, so it needs Connor's call.
+- **X4 [M/M-L] Bare element selectors in styles.css leak into the apps.**
+  `header{position:sticky;z-index:60;border-bottom}` +
+  `header::before{rgba(10,10,10,.88)}`, and `section` padding/borders,
+  apply to every page that loads styles.css. Dev Tools already had to use
+  `div role="group"` instead of `<section>` (2026-09-24). Workspace's lane
+  headers were hit (fixed below); `runway-dashboard.html`'s
+  `<header id="mainContent">` still gets the dark ::before bar and
+  border (it overrides `position` only). The real fix is scoping the
+  public element rules, which touches every public page, so it's Phase 3.
+- **X5 [L/M] Empty/loading/error states have no shared vocabulary.**
+  Empty: tools has 5 variants (`.empty-state`, `-small`, `.empty-note`,
+  `.pr-empty`, `.ops-lane-clear`), the portal a dashed box, the public
+  site none. Loading: tools shimmer (gradient), portal pulse +
+  shimmer. Error: tools `#e05252` text with a warning glyph, toasts
+  `#e0807a`. There is no `--danger`/`--success` token in the apps
+  (public has `--success-text`). Not identical, but each is readable;
+  worth unifying only alongside X3.
+- **Checked, not worth changing:** border-radius spread (tools ~25
+  distinct values, public ~10). Nobody notices it.
+
+### Public site
+
+Audited deeply 2026-09-23 to 09-25 (rounds 1-9, logo, gallery, diagram);
+no new issues found in this pass. Still open from those entries:
+
+- **P1 [M/S]** `blog/blog.css` hand-picked stamp (`202609231020`, 22
+  refs) outside `check-consistency.js`. Same class of gap as PO1.
+- **P2 [L/S, needs a call]** homepage card hover lift is dead code
+  (`[data-reveal]` specificity).
+- **P3 [L/S, needs a call]** `careers.html` has no skip link;
+  `locations/handyman-st-george-ut.html` never loads the banner scripts.
+- Desktop SVG notes at 11.8px (logged 09-25). Cosmetic, skipped.
+
+### Client portal
+
+- **PO1 [H/S] All 9 portal pages request `/tools/styles-tools.css?v=a494344e8c`;
+  the file's hash is `ea55ae9760`.** `check-consistency.js` checks
+  styles-tools.css only inside `tools/`, so the cross-directory
+  references never got restamped. Returning clients get whichever copy
+  their service worker cached under the old stamp. **Fixed (Phase 1).**
+- **PO2 [H/S] `.small-btn` is 38px tall on phones.** styles-tools.css
+  sets 44px at <=760px, but portal-polish.css loads after it with an
+  unconditional `.small-btn{min-height:38px}` at equal specificity.
+  That affects the buttons on jobs, work orders and settings, plus the
+  ones portal-app.js renders. **Fixed (Phase 1).**
+- **PO3 [L/S]** Skeletons animate twice: portal-app.css pulses the
+  background (`skeleton-pulse`) and portal-polish.css runs a shimmer
+  `::after` on top. Visible as a flicker on the first paint of every
+  list. Phase 2.
+- **PO4 [L/S]** `.th-toast` is defined in both portal-app.css and
+  styles-tools.css. styles-tools loads later, so the portal's copy
+  (`--bg-panel` background) is dead. Cleanup only.
+- **PO5 [L/L]** The portal is dark-only (never sets `data-theme`). That's
+  consistent with itself. Only worth doing if clients ask. Skipped.
+- 15-17KB of inline `<style>` per portal page. This is where drift
+  comes from, but moving it is a refactor with no visible change. Skipped.
+
+### Workspace tools
+
+- **T1 [H/S] Content hides under the phone bottom nav.** The bar
+  measures 85px (2026-09-24 entry). Body padding, tour card, toast stack
+  and install banner all reserved 76px, in styles-tools.css and in
+  runway-dashboard.html's own copy. The last ~9px of every page, and
+  the bottom edge of every toast, sat under the bar. **Fixed (Phase 1).**
+  `.th-clock` (94px) and the `th-has-clock` 158px variant already
+  cleared it and are unchanged.
+- **T2 [H/S] Workspace "Needs attention" lane headers were black sticky
+  bars in light mode** (labels unreadable, see screenshots). Cause is X4:
+  `<header class="ops-lane-header">`. In dark mode the same bar was a
+  near-invisible sticky strip at z-index 60 with a border. **Fixed
+  (Phase 1)** by making them `<div>`s. Nothing in JS, CSS or the tests
+  selects them by tag.
+- **T3 [M/S] Loading skeletons vanish on gradient cards.**
+  `.skeleton-line` is a `--bg-panel-2` to `--bg-panel` gradient,
+  the same two stops as the card face. On Home's Next Job card (the
+  first thing on screen) the three placeholder lines are invisible in
+  both themes, so the card reads as empty while loading. Money Owed's
+  skeleton, on a flatter face, shows. Phase 2: key the line colour to
+  `--bg-panel-3`/`--border`.
+- **T4 [M/S-M]** Workspace's Compliance edit forms are ~20 inline-styled
+  inputs, not `.form-field`. They miss the 46px phone min-height and the
+  shared focus treatment. Rarely used. Phase 2.
+- **T5 [L/S]** 8 `:focus { outline:none }` rules on inputs rely on a
+  border-colour change only (`.dialog-textarea`, `.dialog-field-input`,
+  `.th-remind-text`, `.th-shift-input`; portal `.portal-prompt-textarea`).
+  Visible, but weaker than the ring. Fold into X1.
+- **T6 [L/S]** `.error-state`/toast colours are raw hex, not tokens. Fold
+  into X5.
+
+### Phase 1 decisions (this branch)
+
+- **Picked PO1, PO2, T1, T2:** each is high impact (stale CSS for
+  clients, sub-44px taps, hidden content, unreadable headers), each is
+  small, and none changes how a working screen looks. X1-X3 are bigger
+  and each needs a colour/look call first.
+- **PO1 fix is `tools/styles-tools.css` in `GLOBAL_SHARED_FILES`**, the
+  same move as `hiring-banner.js` on 09-23. The tools/ directory check
+  still covers it too; both compute the same hash. That's a one-line
+  change to a checker (automation lane), made here because it's what
+  keeps the fix from regressing.
+- **T1 uses the literal 85px**, the same as `.th-update-card` already
+  does, not a custom property. `tablet-nav-band.test.js` pins the
+  one-line rule form, and a variable would have meant rewriting that
+  test's regex for no visible gain. The new test fails if any bottom-nav
+  offset drops under 85.
+- **T2: changed the markup, not the public `header` rule.** Scoping
+  styles.css's element rules is the right long-term fix (X4). But it
+  ripples across every public page and the visual snapshot baseline pins
+  the header rule, so it's Phase 3.
+- **PO2: a phone-only 44px rule right after the 38px default** in
+  portal-polish.css. Desktop keeps 38.
+- **Screenshots:** `docs/visual-audit-2026-09-25/` (before/after of the
+  lane headers, portal and Workspace first paint). Phone-width
+  before/afters for T1 and PO2 need the real Playwright harness; the
+  PR body lists them.

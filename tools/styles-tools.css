@@ -391,7 +391,7 @@ body:has(.login-box){ background-color:#0a0a0a; }
 }
 @keyframes onboardingSlideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .onboarding-card { animation: none; } }
-body.th-has-bottomnav .onboarding-card { bottom: calc(76px + env(safe-area-inset-bottom, 0px) + 10px); }
+body.th-has-bottomnav .onboarding-card { bottom: calc(85px + env(safe-area-inset-bottom, 0px) + 10px); }
 .onboarding-dots { display: flex; gap: 5px; margin-bottom: 10px; }
 .onboarding-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
 .onboarding-dots span.is-active { background: var(--orange); width: 16px; border-radius: 3px; }
@@ -550,7 +550,7 @@ body.th-has-bottomnav .onboarding-card { bottom: calc(76px + env(safe-area-inset
    would render underneath or flush against it on every phone. Raised to
    clear the bar with real breathing room whenever it's present. */
 body.th-has-bottomnav .th-toast-container{
-  bottom: calc(76px + env(safe-area-inset-bottom, 0px) + 12px);
+  bottom: calc(85px + env(safe-area-inset-bottom, 0px) + 12px);
 }
 .th-toast{
   pointer-events:auto; cursor:pointer;
@@ -1623,7 +1623,9 @@ body select:focus, body textarea:focus {
    the same max-width:1023px the bar's own display rule below uses.
    Lived inside the phone-only block above until 2026-09-21, which
    was correct only while the bar stopped at 720px. */
-@media (max-width: 1023px) { body.th-has-bottomnav { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } }
+/* 85px (2026-09-25): the bar measures 85px, not 76 -- at 76 the last ~9px
+   of every page sat under it (visual.md, 2026-09-24 and 2026-09-25). */
+@media (max-width: 1023px) { body.th-has-bottomnav { padding-bottom: calc(85px + env(safe-area-inset-bottom, 0px)); } }
 
 /* ---- bottom app nav: injected markup, styled here ---- */
 .th-bottom-nav {
@@ -2367,7 +2369,7 @@ body.th-is-offline .hub-header, body.th-is-offline .tool-header {
   transform: translateY(120%);
   transition: transform .25s cubic-bezier(.2,.8,.2,1);
 }
-body.th-has-bottomnav .th-install-banner { bottom: calc(76px + env(safe-area-inset-bottom, 0px) + 10px); }
+body.th-has-bottomnav .th-install-banner { bottom: calc(85px + env(safe-area-inset-bottom, 0px) + 10px); }
 .th-install-banner.is-shown { transform: translateY(0); }
 .th-install-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .th-install-action {
