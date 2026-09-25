@@ -711,7 +711,7 @@ const PRECACHE_URLS = [
   '/tools/finance.html', '/tools/client-detail.html', '/tools/job-detail.html',
   // Added 2026-08-20 -- same gap yet again, found while already
   // touching this list for the light-mode work above.
-  '/tools/settings.html', '/tools/this-file-was-deleted.js',
+  '/tools/settings.html',
   // Added 2026-08-26 -- found by a new, automated check comparing this
   // list against the real file set, rather than another manual audit.
   // reset-password.html was missing entirely (a password-reset link
