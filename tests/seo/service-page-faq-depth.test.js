@@ -107,20 +107,28 @@ test('no Common Questions entry is copy-pasted across service pages', () => {
   }
 });
 
-test('assembly-installation links both blog posts that cover its work: TV mounting and TV wire management', () => {
-  const html = read('services/assembly-installation.html');
-  assert.ok(html.includes('<a class="blog-index-item" href="/blog/tv-mount-drywall-anchors.html"'));
-  assert.ok(html.includes('<a class="blog-index-item" href="/blog/handyman-to-do-list.html"'));
-  // The linked post really does cover wire management; don't keep the link if that section goes away.
-  assert.match(read('blog/handyman-to-do-list.html'), /Wire management behind the TV/);
-});
+// Each cross-service blog link, plus the section of the post that makes
+// it a real match. If that section goes away, the link should too.
+const BLOG_LINKS = [
+  {
+    page: 'services/assembly-installation.html',
+    posts: ['tv-mount-drywall-anchors', 'handyman-to-do-list'],
+    reason: { post: 'handyman-to-do-list', patterns: [/Wire management behind the TV/] },
+  },
+  {
+    page: 'services/plumbing-repairs.html',
+    posts: ['toilet-running-flapper-valve', 'dishwasher-not-draining'],
+    reason: { post: 'dishwasher-not-draining', patterns: [/A newly installed garbage disposal/, /href="\/services\/plumbing-repairs\.html"/] },
+  },
+];
 
-test('plumbing-repairs links the flapper post and the dishwasher-drain post, whose sink-drain section is plumbing work', () => {
-  const html = read('services/plumbing-repairs.html');
-  assert.ok(html.includes('<a class="blog-index-item" href="/blog/toilet-running-flapper-valve.html"'));
-  assert.ok(html.includes('<a class="blog-index-item" href="/blog/dishwasher-not-draining.html"'));
-  // The reason for the link: the post's disposal / sink-drain section, which routes readers to plumbing.
-  const post = read('blog/dishwasher-not-draining.html');
-  assert.match(post, /A newly installed garbage disposal/);
-  assert.match(post, /href="\/services\/plumbing-repairs\.html"/);
-});
+for (const { page, posts, reason } of BLOG_LINKS) {
+  test(`${page} links ${posts.join(' and ')}, and ${reason.post} still covers this service's work`, () => {
+    const html = read(page);
+    for (const post of posts) {
+      assert.ok(html.includes(`<a class="blog-index-item" href="/blog/${post}.html"`), `missing link to ${post}`);
+    }
+    const postHtml = read(`blog/${reason.post}.html`);
+    for (const pattern of reason.patterns) assert.match(postHtml, pattern);
+  });
+}
