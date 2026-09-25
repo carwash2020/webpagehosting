@@ -5330,3 +5330,25 @@ Invoices, estimates, receipts, portal quotes, job sheets, contracts, the portal 
 - **No street address on any document.** The registered address is the owner's home. Contracts used to print it; now every document shows the city line only. Business Compliance keeps it internally.
 - **The "not attorney-reviewed" note is no longer printed on contracts.** It was a note to the owner, not the client. It stays on the Contract Generator page itself.
 - Checked by rendering every document type with real jsPDF from the real page code and inspecting the output, including a 3-page invoice, 2-page contracts and a 3-page service history.
+
+## What changed, 2026-09-25 -- Our Work: photos load as you scroll, so a phone downloads 0.27 MB up front instead of 4.1 MB
+
+`our-work.html` used to download all 61 gallery photos (4,122,565 bytes) the moment it opened, on every device. Most of them are 1152-1400px wide but show at about 333px on a phone.
+
+- **Now:** the first category's 4 photos load right away. The other 57 load once their tile is within 800px of the screen, through a small IntersectionObserver script on the page. Filter chips still work: a category loads when its chip shows it. A browser without IntersectionObserver gets every photo at once, as before.
+- **Not native `loading="lazy"`.** That was removed on 2026-09-16 after it looked like it dropped ~40% of the photos in this CSS-column masonry. Re-testing the 09-16 code in headless Chromium, that pattern only appears when the page never actually scrolls (`fullPage` screenshots, or setting `document.body.scrollTop`, which doesn't scroll this page). A real scroll loaded 61/61 even then. The new script doesn't rely on that either way.
+- **No jump as photos arrive.** Each unloaded photo holds a transparent SVG placeholder with the photo's exact ratio, so every tile is already its final height. A bare `data-src` wouldn't have worked here: an `<img>` with alt text and no `src` draws an alt-text box (828px tall in a 333px column instead of 250px). That would scramble the columns and pull every photo in at once. The tile's striped background shows until the photo lands.
+- **The lightbox is unchanged.** It still opens each full-size photo.
+
+Measured in headless Chromium (Chromium 141), service worker off, cache disabled, gallery photos only:
+
+| | Before | After |
+|---|---|---|
+| Phone 390x844, first load | 61 photos, 4,122,565 bytes | 4 photos, 269,925 bytes (-93%) |
+| Phone, whole page first load | 4,453,230 bytes | 608,721 bytes |
+| Desktop 1280x900, first load | 61 photos, 4,122,565 bytes | 14 photos, 1,035,511 bytes (-75%) |
+| After a real scroll to the bottom | 61/61 rendered | 61/61 rendered, 0 tiles changed height |
+
+The same results at 2x and 3x screens, since nothing depends on screen density. Also checked: every filter chip (each category 100%), End/Home key jumps (any tile skipped mid-scroll loads once you reach it), no IntersectionObserver (61/61 up front), the lightbox, and light/dark screenshots on phone and desktop.
+
+Tests: `tests/design/our-work-gallery-lazy-load.test.js` (6, new). No `loading="lazy"` in the gallery. Placeholder ratio and `width`/`height` match each real WebP file. The lightbox list still names each tile's own photo. A JSDOM run with a fake IntersectionObserver, and one without it. Full suite 3845/3846; the one failure is the known `check-links.py` sandbox-proxy test (images.unsplash.com is blocked here, the same on main). `check-consistency`, `check-undefined-vars`, `eslint` and `check-visual-snapshot` pass.
