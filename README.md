@@ -5354,6 +5354,28 @@ Tests:
 
 - `tests/security/work-order-photos-upload-scope.test.js` (9, new). It runs the page's real `uploadSelectedPhotos()` against a port of the policy. Two fail on the old page code.
 
+## What changed, 2026-09-25 -- Three new blog posts for symptoms the "Is it worth fixing?" tool lists
+
+Public site only. The symptom tool (`js/triage.js`) lists 20 symptoms across 5 appliances. Only 5 had a blog post, one per appliance, always the first symptom in the list. This adds three more, picked for search intent and so they don't compete with an existing post:
+
+- **`blog/washer-leaking-water.html`**: "Washer Leaking Water? Where the Puddle Is Tells You What Failed." Door seal, hose connection, or pump, and how where and when the water appears points to which one. What to do until it's fixed (shut off the supply valves), and what looks like a leak but isn't (a backed-up standpipe, too much detergent).
+- **`blog/dryer-wont-turn-on.html`**: "Dryer Won't Turn On? It's Usually a Switch or a Fuse, Not a Dead Dryer." Breaker, plug and control lock first, then the door switch, thermal fuse and start switch. A hum with no drum movement points elsewhere.
+- **`blog/dishwasher-not-draining.html`**: "Dishwasher Not Draining? Standing Water Is Usually Just a Clog." Filter first, then where it drains to: a new disposal's knockout plug, a clogged sink drain, a kinked hose, the air gap. Don't pour drain cleaner in.
+
+Each post says what that symptom's triage entry says (the `v` and `a` text) and adds general repair knowledge. No prices, no percentages, no claims about call volume. Same template as the existing posts: `.blog-diagram` lead image, Article + BreadcrumbList JSON-LD dated 2026-09-25, one in-body link, a Call CTA, two "More from the shop" links. Like every existing post, booking is reached through the shared nav and footer. No post links to the symptom tool.
+
+Where they're listed: the blog index (13 cards now), the "Recent Notes From the Shop" lists on `washer-dryer-repair.html`, `washer-dryer-repair-st-george-ut.html` and `dishwasher-repair-st-george-ut.html`, and `sitemap.xml`. `washer-wont-drain.html` and `dishwasher-not-cleaning.html` each gained one in-prose link to the new post their text already mentioned.
+
+Images: the washer post uses the reserved bathroom-laundry photo from `docs/ACTION-ITEMS.md`. The dryer and dishwasher posts reuse their sibling posts' photos, because this environment can't reach any image CDN. Swap them in if better photos turn up. ACTION-ITEMS.md also gets a Search Console "request indexing" item for the three URLs.
+
+Verified:
+- full suite 3866 of 3867 passing; the one failure is the known `check-links.py` sandbox-proxy test, which fails the same way on main here;
+- `check-consistency`, `check-undefined-vars`, `eslint` and `check-visual-snapshot` clean;
+- `check-links.py`: every internal reference resolves across all HTML files. The only external failures are the sandbox proxy refusing every Unsplash image, including the 10 existing posts' images;
+- rendered the dryer post at 390px and 1280px (no horizontal scroll, "September 25, 2026 · 3 min read") and the blog index's new cards.
+
+Tests: the new pages are added to the hard-coded page lists in `blog-index-cards`, `analytics-events`, `mobile-nav-collapsible` and `privacy-policy-page`. The public-page counts go from 33 to 36 in `site-banner-no-layout-shift` and `site-banners-public`, and the Call-button page count from 12 to 15 in `contact-hooks-public`. `check-links.py`'s `PUBLIC_PAGES` gets the three new URLs.
+
 ## What changed, 2026-09-25 -- The public site's logo downloads are 50-85% smaller
 
 Public site only; the Workspace tools and client portal still use the full-size logo. The header and footer logo was a 51-57KB webp at 531-550px wide, drawn at 44px (header) and 38px (footer). Every public page now uses a 176px copy of the same file (8-9KB), which is enough for a 44px logo on screens up to 4x.
@@ -5366,6 +5388,6 @@ Public site only; the Workspace tools and client portal still use the full-size 
 - **Not changed:** the service worker precache lists. The new files aren't precached; their `?v=` URLs are cached on first use like any other versioned file. `npm run fix-versions` had nothing to change.
 - **Still upscaled, as before:** the desktop hero on a 2x screen needs ~840px and the largest logo file is 550px. Fixing that needs a larger master file.
 
-Verified: 71 `<img>` tags in 37 files. In Chromium at 1x, 2x, 3x and 3.5x (1440, 820, 800, 412, 390 and 375px wide), every logo keeps the exact same box, and every logo gets at least as many pixels as it's drawn at, apart from the desktop hero noted above. Before/after crops compared at 1:1 and zoomed, in dark and light mode. Full suite (only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `check-visual-snapshot`, `eslint`, and `check-links.py` (all internal references resolve; the only failures are the same blocked Unsplash URLs as on `main`).
+Verified: 77 `<img>` tags in 40 files (including the three blog posts added the same day). In Chromium at 1x, 2x, 3x and 3.5x (1440, 820, 800, 412, 390 and 375px wide), every logo keeps the exact same box, and every logo gets at least as many pixels as it's drawn at, apart from the desktop hero noted above. Before/after crops compared at 1:1 and zoomed, in dark and light mode. Full suite (only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `check-visual-snapshot`, `eslint`, and `check-links.py` (all internal references resolve; the only failures are the same blocked Unsplash URLs as on `main`).
 
 Tests: `tests/design/public-logo-variants.test.js` (8, new). It checks that every public logo tag offers a small file, that each URL has a `?v=` stamp, that `width`/`height` and `srcset` widths match the real files, and that the `sizes` values match the CSS in `styles.css` and `404.html`.
