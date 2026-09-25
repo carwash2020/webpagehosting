@@ -3315,4 +3315,19 @@ Requested directly with a screenshot of `client-detail.html`: there was no way t
 
 Tests: `tests/tools/client-delete.test.js` (8, new; all fail on main): Delete block placement, confirm wording and Cancel, what's removed vs. kept, no rebuild from jobs, the Undo state surviving a live-sync refresh, Undo restoring the same id with a lifted tombstone, singular/plural copy, light-mode colour, and the Graveyard rendering on Dev Tools' load.
 
+## 2026-09-25 -- proposal from the content lane (not built): a plumbing symptom tool
+
+Came out of the service-page content pass (see `content.md`, same date). Only `services/washer-dryer-repair.html` has the "Is it worth fixing?" triage tool. `js/triage.js` holds one hard-coded `DATA` object with 5 appliances, so it can't serve another service as it stands.
+
+Of the other 4 service pages, plumbing is the only one where a symptom tool fits. People arrive with a symptom, not a to-do list, and the right answer really does split between "schedule it" and "call now". A possible shape, with every answer from copy already on the site:
+
+- Running or refilling toilet: usually the flapper. Dye test and the $6-12 part (flapper blog post).
+- Dripping faucet: worn cartridge or washer (plumbing page, Faucets & Fixtures card).
+- Slow drain or disposal (plumbing page, Drains & Disposals card).
+- Active leak: shut off the water at the fixture or the main valve, then call or text instead of booking online (plumbing page Common Questions, homepage emergency FAQ).
+
+Implementation idea: let a page pick its data set (for example `data-triage-set="plumbing"` on the grid) instead of adding a second copy of the script. The homepage and washer page keep today's appliance set. Worth the owner's go-ahead first, since the active-leak path makes an urgency promise.
+
+Not a fit for drywall, handyman or assembly: those are scope-of-work jobs, not diagnoses.
+
 <!-- Add new entries above this line -->
