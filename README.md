@@ -5415,3 +5415,24 @@ Public site, content only. No layout or CSS changes. Audited all 5 service pages
 Verified: full suite 3,903/3,904 (after merging main). The one failure is the known `check-links.py` sandbox-proxy test, which also fails before this change. `check-consistency`, `check-undefined-vars`, `eslint` and `check-visual-snapshot` are all clean. `check-links.py` resolves every internal reference across 91 files; its only failures are Unsplash images the sandbox proxy blocks. Schema text was also checked against visible text on all 5 pages, and every new answer against the blog post, Terms section or page it came from.
 
 Tests: `tests/seo/service-page-faq-depth.test.js` (28, new; 16 fail on the previous commit). It checks that schema text equals visible text, each page has at least one schema question of its own, the cancellation and trip-fee policies match the Terms, no Common Questions entry is copied across pages, and assembly and plumbing link their posts.
+
+## What changed, 2026-09-25 -- Three more symptom posts: washer won't spin, dishwasher leaking, ice maker
+
+Public site only. Follow-up to the three posts from earlier today. 11 of the 20 symptoms in the "Is it worth fixing?" tool (`js/triage.js`) now have a post.
+
+- **`blog/washer-wont-spin.html`**: "Washer Won't Spin? It's Usually a Belt or a Switch." Rule out an unbalanced load and a washer that never drained, then the lid switch or door lock, then the drive belt or, on direct-drive machines, the motor coupling.
+- **`blog/dishwasher-leaking.html`**: "Dishwasher Leaking? It's Usually a Seal or a Hose." Where the water shows up (door gasket, supply or drain hose fitting, a door that no longer closes square), and two causes that aren't parts: regular dish soap and a dishwasher that isn't level. Where the shutoff valve usually is.
+- **`blog/ice-maker-not-working.html`**: "Ice Maker Not Making Ice? Here's What Usually Failed." Shutoff arm, freezer temperature, water filter, and a jam first. Then the water inlet valve (hard St. George water), the fill line (kinked, or frozen and why), and the ice maker module.
+
+Each post says what that symptom's triage entry says, with no prices or claims about call volume. Same template as the other posts. Titles are shorter this time (72-75 characters with the site suffix, against 85-93 on the first batch), and descriptions are under 160 characters. Both came from today's SEO audit note in `docs/specialist-logs/content.md`.
+
+Range "burner won't light" was on the earlier to-do list, but `blog/oven-not-heating-right.html` already has a section on it, so it was dropped.
+
+Listed on the blog index (16 cards), the "Recent Notes From the Shop" lists on the washer/dryer, washer/dryer St. George, dishwasher St. George and refrigerator St. George pages, and `sitemap.xml`. `washer-wont-drain.html`, `dishwasher-not-draining.html` and `fridge-not-cooling.html` each gained one in-prose link, on the sentence that already named the symptom. All three new posts reuse a lead photo from a post on the same appliance (no image CDN is reachable from here), so real photos are now more useful than ever. `docs/ACTION-ITEMS.md`'s Search Console item now lists all six new URLs.
+
+Verified:
+- full suite 3931 of 3932 passing; the one failure is the known `check-links.py` sandbox-proxy test. After merging #426, its new `service-page-faq-depth` test and every blog and page-list suite were re-run: 527 of 527;
+- `check-consistency`, `check-undefined-vars`, `eslint` and `check-visual-snapshot` clean;
+- `check-links.py`: every internal reference resolves. External failures are only the sandbox proxy refusing Unsplash.
+
+Tests: the new pages are added to the page lists in `blog-index-cards`, `analytics-events`, `mobile-nav-collapsible` and `privacy-policy-page`. The public-page counts go from 36 to 39, and the Call-button page count from 15 to 18. `check-links.py`'s `PUBLIC_PAGES` gets the three new URLs.

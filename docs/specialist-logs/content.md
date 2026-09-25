@@ -387,4 +387,60 @@ Triage: `js/triage.js` is one hard-coded appliance data set, so nothing was adde
 
 New test: `tests/seo/service-page-faq-depth.test.js`. It checks that schema text equals visible text, every service page has at least one schema question of its own, the cancellation and trip-fee policies match, and no Common Questions entry is copied across pages. 16 of its 28 checks fail on the previous commit.
 
+## 2026-09-25 (later) -- three more triage symptoms: washer won't spin, dishwasher leaking, ice maker
+
+Second batch after #424: `blog/washer-wont-spin.html`,
+`blog/dishwasher-leaking.html`, `blog/ice-maker-not-working.html`. 11 of
+the 20 `js/triage.js` symptoms now have a post.
+
+Correction to my previous entry: I listed "range burner won't light" as a
+next candidate, but `oven-not-heating-right.html` already has a full
+section on it ("Gas burner clicks but won't light"), and another on
+temperature being off. Both range symptoms are covered. I also reversed
+the call to skip the ice maker. The fridge post gives it one sentence
+inside "Other things worth checking", and its title and description are
+about cooling, so a dedicated post doesn't compete with it.
+
+Same template and rules as the first batch. Each post restates its
+triage `v`/`a` text, adds no prices or call-volume claims, and has one
+in-body link:
+- washer won't spin links to washer-wont-drain, because a washer won't
+  spin with water still in the drum;
+- dishwasher leaking links to plumbing, for a leak at the supply line or
+  valve under the sink;
+- the ice maker post links to fridge-not-cooling, for a warm freezer.
+
+Site facts reused: St. George's hard water (from the toilet post) and the
+homepage's August tip that slow leaks show up underfoot first.
+
+Acted on the reports lane's audit note about the #424 posts. Titles are
+now 72-75 characters with the suffix, down from 85-93, and descriptions
+are 144-153 characters. The Article schema gaps it named (`image`,
+`dateModified`, `mainEntityOfPage`, a Person author) are left alone.
+They apply to all 16 posts, and should be one change across the whole
+blog rather than a mismatch between old and new posts.
+
+Inbound links from sentences that already named the symptom:
+`washer-wont-drain.html` ("won't spin the water out afterward"),
+`dishwasher-not-draining.html` ("Water on the floor in front of the
+dishwasher"), `fridge-not-cooling.html` ("the ice maker has stopped
+working").
+
+Photos: all three reuse a sibling post's lead photo. The dishwasher photo
+is now on 3 posts. Worth asking the owner for real washer, dishwasher and
+ice-maker photos.
+
+`washer-dryer-repair.html`'s "Recent Notes From the Shop" list is now 12
+cards long. The page's rule has been to link every appliance post. If
+the list feels too long, that's a visual-lane call (a "latest N", or
+grouping by appliance).
+
+Still open, 9 symptoms: washer no power, dryer takes forever to dry,
+dryer thumping/grinding, dishwasher won't start, fridge
+freezer-works-fridge-doesn't, fridge leaking inside, and three range
+entries. Of those three, burner won't light and temperature off are
+already sections in the oven post, which leaves range won't turn on.
+Strongest remaining by intent: dryer thumping/grinding and washer no
+power.
+
 <!-- Add new entries above this line -->

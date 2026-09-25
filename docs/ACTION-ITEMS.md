@@ -300,12 +300,13 @@ when greenlit; these do not.
    backlink or local news mention -- slower, but the kind of link no
    amount of code can manufacture.
 
-8. **Request indexing for the three new blog posts** (2026-09-25) in
+8. **Request indexing for the six new blog posts** (2026-09-25) in
    Google Search Console (URL Inspection, then "Request indexing"):
    `/blog/washer-leaking-water.html`, `/blog/dryer-wont-turn-on.html`,
-   `/blog/dishwasher-not-draining.html`. They're in `sitemap.xml`
-   already, so Google will find them anyway. Requesting indexing is
-   just faster.
+   `/blog/dishwasher-not-draining.html`, `/blog/washer-wont-spin.html`,
+   `/blog/dishwasher-leaking.html`, `/blog/ice-maker-not-working.html`.
+   They're in `sitemap.xml` already, so Google will find them anyway.
+   Requesting indexing is just faster.
 
 <!-- Add new SEO action items above this line -->
 
@@ -683,6 +684,16 @@ reference:
   of their sibling posts (dryer-not-heating, dishwasher-not-cleaning),
   because this environment can't reach any image CDN to pick new ones.
   Swap them if you have better photos.
+
+- **Three more appliance symptom posts** (2026-09-25, later the same
+  day): `blog/washer-wont-spin.html`, `blog/dishwasher-leaking.html`,
+  and `blog/ice-maker-not-working.html`. 11 of the 20 symptoms in
+  `js/triage.js` now have a post. They're wired in the same places as
+  the first three, plus the refrigerator St. George page. All three
+  reuse a lead photo from an existing post on the same appliance, so the
+  dishwasher photo now appears on three posts and the washer-row and
+  fridge photos on two each. Real photos of a washer, a dishwasher, and
+  a fridge ice maker would fix all of them.
 
 - **Washer/dryer service page now lists all appliance types actually
   sold** (`washer-dryer-repair.html`, 2026-09-16) -- added Dishwashers,
