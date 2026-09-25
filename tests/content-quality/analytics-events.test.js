@@ -37,6 +37,8 @@ const BLOG_PAGES = [
   'blog/dishwasher-not-cleaning.html', 'blog/fridge-not-cooling.html',
   'blog/toilet-running-flapper-valve.html', 'blog/drywall-crack-above-door.html',
   'blog/tv-mount-drywall-anchors.html', 'blog/oven-not-heating-right.html',
+  'blog/washer-leaking-water.html', 'blog/dryer-wont-turn-on.html',
+  'blog/dishwasher-not-draining.html',
 ];
 
 function loadAnalytics({ url, body }) {

@@ -69,6 +69,9 @@ PUBLIC_PAGES = [
     'blog/drywall-crack-above-door.html',
     'blog/tv-mount-drywall-anchors.html',
     'blog/oven-not-heating-right.html',
+    'blog/washer-leaking-water.html',
+    'blog/dryer-wont-turn-on.html',
+    'blog/dishwasher-not-draining.html',
 ]
 
 HREF_SRC_RE = re.compile(r'(?:href|src)="([^"]+)"')
