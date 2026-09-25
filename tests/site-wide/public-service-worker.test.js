@@ -29,7 +29,14 @@ function publicHtml(dir = ROOT) {
   });
 }
 
-const cleanupOf = (src) => (src.match(/<script>\n\s*\/\/ Public pages don't register a service worker[\s\S]*?<\/script>/) || [])[0];
+// The whole <script>...</script> block holding the cleanup, found by its
+// opening comment. Plain string search, not a tag regex.
+const OPEN = '<script>', CLOSE = '</script>';
+function cleanupOf(src) {
+  const at = src.indexOf("// Public pages don't register a service worker");
+  if (at === -1) return undefined;
+  return src.slice(src.lastIndexOf(OPEN, at), src.indexOf(CLOSE, at) + CLOSE.length);
+}
 const CLEANUP = cleanupOf(read('index.html'));
 const keysMatch = (CLEANUP || '').match(/const TOOLS_KEYS = (\[[^\]]*\]);/);
 const TOOLS_KEYS = keysMatch ? JSON.parse(keysMatch[1].replace(/'/g, '"')) : null;
@@ -83,7 +90,7 @@ async function runCleanup({ local = {}, session = {}, reg = 'root', push = false
   Object.defineProperty(win, 'localStorage', { get() { if (storageThrows) throw new Error('blocked'); return store(local); } });
   Object.defineProperty(win, 'sessionStorage', { get() { return store(session); } });
   win.window = win;
-  vm.runInNewContext(CLEANUP.replace(/<\/?script>/g, ''), win);
+  vm.runInNewContext(CLEANUP.slice(OPEN.length, -CLOSE.length), win);
   assert.ok(onLoad, 'cleanup should wait for load');
   onLoad();
   await new Promise((r) => setTimeout(r, 20));
