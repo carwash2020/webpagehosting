@@ -5391,6 +5391,16 @@ Tests:
 
 - `tests/tools/mfa-settings-remember-me.test.js` (5, new). It runs the real settings.html and login.html, with the real auth.js, against a stubbed Supabase. It checks where the session ends up after turning on two-factor in Settings (remembered and this-session-only) and after an MFA sign-in with the box checked, unchecked, and unchecked over an old remembered session. The remembered Settings case fails on the old code.
 
+## What changed, 2026-09-25 -- A short Stripe payment no longer marks an invoice paid
+
+`stripe-webhook` used to mark an invoice paid on any successful Stripe payment, without checking the amount. A payment page left open from before the invoice was raised could still pay the old, smaller amount, and the invoice showed as paid in full. (Security audit 2026-09-23, finding #7; ACTION-ITEMS #16.)
+
+- **Paid short:** the invoice stays unpaid in the portal and the Invoice Log, and staff get a push ("Invoice paid short") naming the invoice, the client, and both amounts. `reconcile-stripe-payments` also flags it daily for the week after the payment. Collect the difference, then mark it paid by hand.
+- **Overpaid** (the invoice was lowered after Pay was opened, or part of a bulk payment was already marked paid by hand): the invoice is covered, so it's marked paid as before, and staff get an "Invoice overpaid" push to check whether the extra needs a refund.
+- **Exact amount:** unchanged. The owed amount is computed the same way `create-payment-intent` and `create-bulk-payment-intent` compute the charge, so a normal payment always matches to the cent. The tests feed each create function's real charge back into the webhook to prove it.
+- The alert uses Send-Push's existing staff-only `stripe-reconciliation-alert` type. A failed push never fails the webhook.
+- 24 tests run the real webhook handler; 9 fail on the old code. **Needs a deploy:** `stripe-webhook` (with `verify_jwt` off, as now).
+
 ## What changed, 2026-09-25 -- Our Work: photos load as you scroll, so a phone downloads 0.27 MB up front instead of 4.1 MB
 
 `our-work.html` used to download all 61 gallery photos (4,122,565 bytes) the moment it opened, on every device. Most of them are 1152-1400px wide but show at about 333px on a phone.
