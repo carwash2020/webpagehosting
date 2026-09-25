@@ -106,4 +106,29 @@ now say 7. Wall stays at 4 written quotes. No invented Review
 objects. Reports should cite GBP 7 vs. 4 on-page quotes when both
 matter.
 
+## 2026-09-25 — repo-only SEO / technical-health audit
+
+Doc: "Triple H Site SEO & Technical Health Audit — 2026-09-25" (Claude Docs,
+private until shared). 16-item punch list; handoffs written to `content.md`,
+`automation.md`, `visual.md`, `security.md`. Notes for next time:
+
+- **This sandbox can't reach the live site, Unsplash, developers.google.com
+  or GitHub artifact storage** (egress policy). `check-links.py` exits 1 here
+  with false BROKENs. Use the CI logs instead: the "Check links" workflow runs
+  on every push to `main` and prints every external URL's status
+  (`mcp__github__get_job_logs`). Lighthouse CI logs show pass/warn per
+  assertion, but exact scores live only in the artifact.
+- **The review count now lives in the CMS** (`site_content` keys
+  `googleRating` / `googleReviewCount`, since 2026-09-23), and JS rewrites the
+  static HTML. The static HTML is no longer the source of truth. Read
+  `backups/site_content.json` (daily backup commit) for the current value and
+  its `updated_at`. On 2026-09-24 it went 7 -> 6 while the HTML still says 7.
+  Cite which one you mean, and don't pick a number without the owner.
+- **Proving a move kept schema:** run `git fetch --unshallow` (the clone is
+  shallow), then diff JSON-LD against `git show <move-commit>^:<old path>`,
+  normalizing old -> new URLs. Faster and more convincing than eyeballing.
+- **Page inventory at `80fc896`** (before #424 added 3 blog posts, making
+  37 sitemap URLs): 34 sitemap URLs; 16 root redirect stubs; 88 HTML
+  files repo-wide; 88 JSON-LD blocks on the 34 public pages.
+
 <!-- Add new entries above this line -->
