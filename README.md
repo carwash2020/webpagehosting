@@ -5488,3 +5488,21 @@ Public site only. The diagram on the 5 general service pages (Plumbing, Drywall 
 Why it drifted: `tests/design/service-area-light-trail.test.js` checked a hand-kept list of 12 pages, and its per-city check searched the whole page, so the city cards satisfied it. The list is now built from every page that has the diagram (17), and the city and label checks look inside the SVG only. Against the old markup, 10 of its tests fail.
 
 Verified in headless Chromium on all 5 pages at 320, 375, 390 and 1280px, dark and light: no label collisions, phone text at 16px or more, no clipped nodes. The full suite, `check-consistency`, `check-undefined-vars` and `eslint` were run too (results in the PR).
+
+## What changed, 2026-09-25 -- Leeds and La Verkin sit in their real direction on the service-area diagram
+
+Public site only, all 17 pages with the "Where We Work" diagram. The diagram places each city by its angle from St. George, but on 2026-09-11 Leeds and La Verkin went into the two gaps that happened to be free. That drew Leeds south-east of St. George and La Verkin north-west, while their own notes say "About 20 minutes north" and "About 25 minutes east". Asked directly to move them to their real places.
+
+| City | Real bearing from St. George | Was drawn at | Now |
+|---|---|---|---|
+| Leeds | ~52° (north-east, 24.5 km) | 150° (south-east) | 52° |
+| La Verkin | ~61–68° (east-north-east, 29–33 km) | 300° (north-west) | 83°: between Washington City and Hurricane, farther out than Hurricane |
+| Washington City | ~63° (6.8 km) | 44° | 63° |
+
+- **Washington City moved too.** Leeds's spoke at its real bearing ran through Washington City's label, and Washington City was itself drawn 19° off. Moving it onto its own bearing made room.
+- **La Verkin can't be exact.** Washington City, Leeds, La Verkin and Hurricane really sit inside one ~20° wedge, and La Verkin shares Washington City's line (Washington City is on the way there). So La Verkin sits just north of Hurricane and farther out, as it is on the ground.
+- **Three labels moved off-centre.** Leeds's label is now above its dot, and Washington City's and La Verkin's sit beside theirs; the rest stay centred.
+- **How the spots were chosen.** A search in Chromium tried every angle, radius and label side against real measured label boxes. It rejected any overlap, any spoke through a label, anything within 8° of another spoke, and any dot outside the phone layout's zoom window, then kept the spot nearest the true bearing.
+- **Unchanged:** the other cities. Cedar City (drawn 329°, real ~35°), Hurricane (93°, ~72°) and Santa Clara & Ivins (264°, ~304°) are still schematic.
+
+Tests: new `tests/design/service-area-bearings.test.js` (17) checks every page's diagram against the real bearings; all 17 fail on the old positions. `round-3-visual-polish.test.js`'s "every label centred" check is replaced by one that allows the three off-centre labels but keeps each name and note aligned on its own dot. Browser checks cover 4 page types at 320, 375, 390 and 1280px, dark and light: no collisions, phone text at 16px or more, no clipped dots. `npm run fix-versions` re-stamped `styles.css` for a corrected comment.

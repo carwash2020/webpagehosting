@@ -47,14 +47,33 @@ test('the service-area diagram viewBox grew to fit the wider-spaced layout (760x
   }
 });
 
-test('every non-hub diagram label is centered under its own node (text-anchor="middle"), not anchored start/end', () => {
+// Until 2026-09-25 every label was centered under its node. Moving Leeds,
+// La Verkin and Washington City to their real bearings put them in one
+// ~30-degree wedge, where centered labels collide, so those three sit
+// beside or above their node instead. What still has to hold: a city's
+// name and note read as one label, and each label stays on its own node.
+test('each diagram label is one aligned name+note pair on its own node; only the three north-east cities are off-center', () => {
   const svgStart = INDEX.indexOf('<svg viewBox="0 0 760 480"');
   const svgEnd = INDEX.indexOf('</svg>', svgStart);
   const svg = INDEX.slice(svgStart, svgEnd);
-  const nameNotes = [...svg.matchAll(/<text class="radius-(?:name|note)[^"]*"[^>]*>/g)];
-  assert.ok(nameNotes.length >= 10, 'expected at least 2 text elements (name+note) per city plus the hub');
-  for (const m of nameNotes) {
-    assert.match(m[0], /text-anchor="middle"/, `expected centered text: ${m[0]}`);
+  const OFF_CENTER = new Set(['leeds', 'la-verkin', 'washington-city']);
+  const groups = [...svg.matchAll(/<g data-city="([a-z-]+)"[^>]*>([\s\S]*?)<\/g>/g)];
+  assert.ok(groups.length >= 8, 'expected all 8 groups');
+  for (const [, city, body] of groups) {
+    const node = body.match(/<circle [^>]*cx="([\d.]+)" cy="([\d.]+)"/);
+    const texts = [...body.matchAll(/<text class="radius-(?:hub-)?(?:name|note)[^"]*" x="([\d.]+)" y="([\d.]+)" text-anchor="(\w+)"/g)];
+    assert.equal(texts.length, 2, `${city}: expected a name and a note`);
+    const [[, x1, , a1], [, x2, , a2]] = texts;
+    assert.equal(x1, x2, `${city}: name and note should share an x`);
+    assert.equal(a1, a2, `${city}: name and note should share an anchor`);
+    const cx = Number(node[1]);
+    if (a1 === 'middle') {
+      assert.equal(Number(x1), cx, `${city}: a centered label sits on its node's x`);
+    } else {
+      assert.ok(OFF_CENTER.has(city), `${city}: only the north-east cities are anchored ${a1}`);
+      assert.equal(a1, 'start', `${city}: an off-center label sits to the right of its node`);
+      assert.ok(Number(x1) > cx && Number(x1) - cx <= 20, `${city}: the label starts just right of its node`);
+    }
   }
 });
 

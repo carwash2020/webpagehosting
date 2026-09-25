@@ -1746,3 +1746,27 @@ finish).
 - **Not changed:** both service workers' precache lists and every tools/portal `<img>`. The new files aren't precached. Their `?v=` URLs are runtime-cached cache-first, and a precache entry without `?v=` wouldn't match the page's request anyway (see bugfix.md, same date).
 - **Still open:** the desktop hero on a 2x screen needs ~843px and the master is 550px. That needs a bigger master file, not markup.
 - Test: `tests/design/public-logo-variants.test.js`. It reads the `sizes` numbers from styles.css / 404.html, so a CSS size change fails it until the markup follows.
+
+## 2026-09-25 -- Leeds and La Verkin moved to their real bearings (the "geography question", settled)
+
+- **The question.** It was the one inferred in the phone-layout entry above: Leeds was drawn at 150 degrees and La Verkin at 300, against their "north"/"east" notes. Connor asked for them to be moved to their real places.
+- **Real bearings** (town centres; Wikipedia is blocked from the sandbox, so via web search):
+  - Leeds 52;
+  - Washington City 63;
+  - La Verkin 61-68 (sources differ);
+  - Hurricane 72;
+  - Cedar City 35;
+  - Santa Clara/Ivins ~304;
+  - Mesquite 233.
+- **The constraint.** The first four sit in a ~20-degree wedge, and Washington City lies on the road to La Verkin, so they can't all be exact spokes.
+  - With Washington City fixed at its old 44 degrees, the best collision-free spot for Leeds was 80 degrees: east, and *south* of La Verkin. Wrong.
+  - Moving Washington City onto its own bearing (63) freed Leeds's true 52.
+  - La Verkin then lands at 83: between Washington City and Hurricane, farther out than Hurricane, as it really is.
+- **Method.** Brute force in Chromium, with the webfonts loaded:
+  - every angle (1-degree steps), radius (5-unit steps) and label side (below / right / left / above);
+  - real `getBBox()` label boxes with 6 units of padding;
+  - reject any label overlap, any spoke through a label, anything within 8 degrees of another spoke, and any dot outside the phone zoom window;
+  - score by distance from the true bearing, plus a small cost for off-centre labels.
+  - The script is in this session's scratchpad (`place5.js`). It's worth re-creating it before placing any future city by hand.
+- **Labels.** Leeds's label goes above its dot; Washington City's and La Verkin's go to the right. The old "every label centred" test became "aligned name+note pair on its own dot; only these three off-centre".
+- **Left schematic** (not asked): Cedar City (329 vs ~35), Hurricane (93 vs ~72), Santa Clara & Ivins (264 vs ~304). Moving Cedar City into the north-east would crowd that wedge further.
