@@ -367,6 +367,16 @@ viewport-distance heuristic breaks down across CSS column
 fragmentation, especially after a `column-span:all` element (the
 `.gallery-category` headers) forces a column restart.
 
+**Update 2026-09-25: this root cause didn't hold up on re-test.** On
+this exact pre-fix code (`fb869e65^`), headless Chromium 141 loaded
+61/61 with native lazy after any real scroll (`window.scrollTo` steps,
+mouse wheel, smooth scroll, a jump to the bottom). The 0%-for-the-last-
+categories pattern only came back when the viewport never moved:
+`document.body.scrollTop` (a no-op here, `<html>` is the scroller) or a
+`fullPage` screenshot. The page is now lazy-loaded by its own
+IntersectionObserver; see the 2026-09-25 "Our Work gallery" entry
+near the end of this file.
+
 **Fixed 2026-09-16 (later the same day).** Stripped ` loading="lazy"`
 from all 61 `<img>` tags inside `#galleryGrid` in `our-work.html`
 (left the unrelated footer logo's own `loading="lazy"` alone -- it's
@@ -1627,7 +1637,7 @@ Found with `document.getAnimations()` under emulated reduced motion. It lists ps
 Measured and deliberately left alone. Each needs a call from Connor before anyone builds it.
 
 - **The service-area diagram is unreadable on phones.** The SVG has a 760-unit viewBox, so at 375px every label renders at 8.2px (6.8px at 320px). "West side, near Snow Canyon" collides with "Home base", and the Mesquite note collides with "Leeds". There's a cascade bug too: in the <=760px block, `.radius-figure text{font-size:19px}` (0,1,1) outranks the intended `.radius-note{16px}` and `.radius-hub-name{21px}` (0,1,0). Fixing that alone makes the notes *smaller*, though. Hiding the notes on phones isn't safe either: the 8 city pages and 3 service pages show the diagram without the `.areas-links` list that repeats them. A real fix is a separate phone layout for the diagram. That's a design change tied to the open Leeds/La Verkin geography question.
-- **Gallery weight: `our-work.html` loads ~4.1MB of photos up front on a phone.** 48 of its 61 photos are 1152-1400px wide but shown at ~333px. Eager loading is deliberate (see 2026-09-16: native `loading="lazy"` drops ~40% of photos in the CSS-column masonry). The options are:
+- **Gallery weight: `our-work.html` loads ~4.1MB of photos up front on a phone.** *(Done 2026-09-25 with the IntersectionObserver option; see that entry.)* 48 of its 61 photos are 1152-1400px wide but shown at ~333px. Eager loading is deliberate (see 2026-09-16: native `loading="lazy"` drops ~40% of photos in the CSS-column masonry). The options are:
   - a ~720w `srcset` variant per photo (48 new files; helps 1x/2x screens, while 3x phones still pick the original);
   - an IntersectionObserver lazy-loader (the 09-16 entry rejected that as new machinery).
 - **Header/footer logo: 50-57KB webp at 531-550px, shown at ~96px.** A ~300px variant would save ~40KB per first visit. But the same files are precached by both service workers and used across tools/portal, so it's a public-pages-only `srcset` job that touches ~65 img tags. **Done 2026-09-25**, see that entry.
@@ -1701,6 +1711,58 @@ Measured in Chromium at 430px while adding Delete to `client-detail.html`: `.th-
   - Desktop (>=1024): lower-right, `bottom: 76px`, so it sits above `.th-flag-btn` (44px at 16px) rather than over it. `th-has-bottomnav` stays on the body at desktop, so the override must also target `body.th-has-bottomnav .th-update-card`.
 - **Light mode:** `--orange-light` is a dark orange there, so the Update pill gets its own lighter gradient (`#f07a1e` to `--orange`) so its dark text keeps contrast.
 - **Install bar:** while the card is up it steps down out of view (`body:has(.th-update-card.is-shown)`) instead of stacking under it.
+
+## 2026-09-25 -- Our Work gallery: an IntersectionObserver loader, not srcset
+
+Picked up the "gallery weight" item parked on 2026-09-23. Measured on
+main first: 61 photos, 4,122,565 bytes on first load at phone 3x, phone
+2x and desktop alike (4,453,230 for the whole page).
+
+- **Why not the 720w `srcset`:** a 333px column on a 3x phone needs
+  ~1000px, so every current iPhone would still pick the original. That
+  means 4.1MB for most phone visitors. It would also add 48 files, and
+  every photo added later would need a variant made by hand.
+- **What shipped:** the first category (4 photos) keeps a plain `src`.
+  The other 57 have `data-src` and a viewBox-only SVG placeholder in
+  `src`. An inline IntersectionObserver (`rootMargin: '800px 0px'`)
+  swaps the real file in. With no IntersectionObserver, all load at
+  once. IntersectionObserver was already used on index.html and in
+  tools-nav-pwa.js, so the 09-16 "no existing pattern" point no longer
+  applies.
+- **The masonry trap that was real:** an `<img>` with alt text and no
+  `src` renders as an alt-text box that ignores `width`/`height`. It
+  measured 828px tall in a 333px column instead of 250px. With a bare
+  `data-src` the columns would be wrong until each photo loaded, every
+  arrival would reflow the page, and the short boxes would put most
+  tiles "in view" at once. The placeholder SVG with the photo's own
+  viewBox keeps each tile at its final height: 0 tiles changed height
+  on load, and document height was identical before and after.
+- **Re-testing 09-16:** native lazy wasn't the problem in real
+  scrolling (see the update on that entry). It stays out anyway: its
+  distance threshold belongs to the browser, and the new loader is what
+  the tests guard.
+- **Measured after** (headless Chromium, SW blocked, cache off): phone
+  first load 4 photos / 269,925 bytes (-93%), page 608,721. Desktop
+  first load 14 / 1,035,511 (-75%). After a real scroll-through: 61/61
+  rendered. Every filter chip renders its whole category, other-work
+  included. Jumping with End/Home skips tiles passed mid-animation,
+  and each loads once scrolled to (normal for lazy loading). The
+  lightbox is unchanged.
+- **How to measure "did it render" on this page:** check
+  `img.currentSrc` includes `/images/gallery/` plus `complete &&
+  naturalWidth > 0`. The placeholder SVG also reports `complete`. Scroll
+  with `window.scrollTo`, never `document.body.scrollTop`. When looping
+  over tiles with `scrollIntoView`, wait a frame or more on each; a
+  loop without waits skips tiles and looks exactly like the old bug.
+- **Not covered:** no WebKit/Firefox in this sandbox, so tested on
+  Chromium only. The markup relies only on widely supported behavior
+  (IntersectionObserver, SVG intrinsic ratio). With JS off, the 57
+  deferred tiles show the striped background only. Adding a
+  `<noscript>` copy of each image wasn't worth 57 more tags.
+- Test: `tests/design/our-work-gallery-lazy-load.test.js`. It fails if
+  `loading=` returns to a gallery image, or if a placeholder's viewBox
+  or `width`/`height` stops matching the real WebP's size (both checked
+  by mutation).
 
 ## 2026-09-25 -- from the reports lane (SEO/technical audit, not fixed)
 
