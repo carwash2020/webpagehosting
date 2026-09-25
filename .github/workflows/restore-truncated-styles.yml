@@ -12,7 +12,7 @@ jobs:
   restore:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: cursor/visual-and-audit-fixes-19fd
           fetch-depth: 0
