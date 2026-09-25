@@ -5412,6 +5412,7 @@ Workspace tools, database and internal edge functions. Closes `docs/ACTION-ITEMS
 - **Stale sessions:** once enforcement is on, a password-only session on an enrolled account is sent back to sign in ("For your security, sign in again with your authenticator code") instead of showing empty pages.
 - **Steve:** the Owner account has no authenticator yet, so none of this protects it until one is set up (ACTION-ITEMS #18). Signing out and back in walks through it.
 - **Also:** the repo's copy of `trigger-workflow` was behind the live one and would have broken Dev Tools' "Backup sensitive data" button on its next deploy. It now matches live.
+- **Deployed:** after #430 merged, all 15 internal edge functions went live from `main` (18:20–18:33 UTC). Each live copy was checked byte for byte against `main`, and each answers the public key with 401. The switch is still in dry-run mode.
 
 Verified:
 
