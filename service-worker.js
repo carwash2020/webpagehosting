@@ -682,7 +682,7 @@
 // "Getting Started" guide making the identical false claim to real
 // people using the app. Same reasoning as every prior bump in this
 // file's history.
-const CACHE_NAME = 'th-workspace-v323'; // precache-fingerprint:3c971114b104
+const CACHE_NAME = 'th-workspace-v324'; // precache-fingerprint:e0c88a9a1f4d
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
