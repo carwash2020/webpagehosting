@@ -912,13 +912,27 @@
   }
 </script>
 <script>
-  // Registers the same no-op service worker the internal tools use --
-  // exists only to satisfy PWA installability checks in some browsers.
-  // It doesn't cache anything, so there's no risk of the stale-cache
-  // confusion this project has already been bitten by once before.
+  // Public pages don't register a service worker (2026-09-25).
+  // /service-worker.js is the Workspace tools' worker: installing it
+  // precaches the whole tools app (~3.3MB) in the background, which a
+  // customer never uses. Installing the site from the browser menu no
+  // longer needs a worker. Earlier versions of these pages registered it,
+  // so this removes it, and its caches, on devices with no sign of
+  // Workspace use. Devices that use the tools keep it, with their offline
+  // copy and push notifications.
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+      const TOOLS_KEYS = ['th_auth_session', 'th_sync_last', 'th_tracker_jobs', 'th_invoices', 'th_clients'];
+      try {
+        if (TOOLS_KEYS.some((k) => localStorage.getItem(k) !== null || sessionStorage.getItem(k) !== null)) return;
+      } catch (e) { return; }
+      navigator.serviceWorker.getRegistration('/').then((reg) => {
+        if (!reg || reg.scope !== location.origin + '/') return true;
+        const sub = reg.pushManager ? reg.pushManager.getSubscription() : Promise.resolve(null);
+        return sub.then((s) => (s ? false : reg.unregister()));
+      }).then((clear) => clear && caches.keys().then((names) =>
+        Promise.all(names.filter((n) => n.startsWith('th-workspace-')).map((n) => caches.delete(n)))
+      )).catch(() => {});
     });
   }
 </script>

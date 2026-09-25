@@ -5534,6 +5534,19 @@ Verified:
 
 Tests: the new pages are added to the page lists in `blog-index-cards`, `analytics-events`, `mobile-nav-collapsible` and `privacy-policy-page`. The public-page counts go from 36 to 39, and the Call-button page count from 15 to 18. `check-links.py`'s `PUBLIC_PAGES` gets the three new URLs.
 
+## What changed, 2026-09-25 -- Customers' browsers no longer download the Workspace app
+
+Public site and both service workers.
+
+- **The bug:** 39 public pages (home, about, careers, Our Work, privacy, terms, the blog, service and city pages, including the three symptom posts added the same day) registered `/service-worker.js`. That's the Workspace tools' worker, so every visitor's browser quietly downloaded the tools app in the background (48 files, ~3.3MB), and again every time the worker changed, which happens several times a day. The page comment called it a no-op that cached nothing.
+- **Now:** public pages don't register a worker. On a device with no sign of Workspace use (no tools login or tools data, no push subscription), the page also removes the worker an older version installed, along with its caches. The owner's devices keep theirs, with offline tools and push notifications.
+- **Also fixed:** each worker's update step deleted every cache except its own, so on a device with both the Workspace and the portal, updating one wiped the other's offline copy. Each now deletes only its own old caches.
+- **Trade-off:** installing the site from the browser menu still works without a worker (Chrome 108+/112+, Safari's Add to Home Screen). Android Chrome's automatic install banner needs one, so it no longer appears on the public site.
+
+Verified: real Chromium, 11 scenarios. They cover a new visitor, an old customer device, tools devices (each key, local and session storage), a push-subscribed device, the portal worker untouched, both caches kept on a device with both apps, a tools page re-registering after cleanup, and blocked storage. All 11 pass; 5 fail on the previous code. Full suite (only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `check-visual-snapshot`, `eslint`. `npm run fix-versions` had nothing to change.
+
+Tests: `tests/site-wide/public-service-worker.test.js` (11, new; all fail on the previous code).
+
 ## What changed, 2026-09-25 -- Leeds and La Verkin are on the service-area diagram on every page
 
 Public site only. The diagram on the 5 general service pages (Plumbing, Drywall & Painting, Handyman Repairs, Assembly & Installation, Washer & Dryer Repair) still showed the 5-city version from before Leeds and La Verkin got their own pages on 2026-09-11. The city cards right under it already listed all 7. Those 5 pages now carry the same 7-city diagram as the other 12, byte for byte, including the screen-reader label.
