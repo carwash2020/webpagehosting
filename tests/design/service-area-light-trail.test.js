@@ -6,8 +6,10 @@
 // this diagram, and the existing global prefers-reduced-motion rule
 // (every animation-duration/transition-duration zeroed) already
 // collapses this to its finished state instantly with no extra code.
-// The diagram is identical markup on index.html and all 5 satellite
-// landing pages, so this is checked on all 6.
+// The diagram is identical markup on every page that has it, so this is
+// checked on all of them. The list is found, not hand-kept (2026-09-25):
+// a hand-kept list of 12 missed the 5 generic service pages, which kept
+// a 5-city diagram without Leeds and La Verkin for two weeks.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -17,20 +19,15 @@ const path = require('path');
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const STYLES = fs.readFileSync(repo('styles.css'), 'utf8');
 
-const PAGES = {
-  'index.html': fs.readFileSync(repo('index.html'), 'utf8'),
-  'locations/handyman-cedar-city-ut.html': fs.readFileSync(repo('locations/handyman-cedar-city-ut.html'), 'utf8'),
-  'locations/handyman-hurricane-ut.html': fs.readFileSync(repo('locations/handyman-hurricane-ut.html'), 'utf8'),
-  'locations/handyman-mesquite-nv.html': fs.readFileSync(repo('locations/handyman-mesquite-nv.html'), 'utf8'),
-  'locations/handyman-santa-clara-ivins-ut.html': fs.readFileSync(repo('locations/handyman-santa-clara-ivins-ut.html'), 'utf8'),
-  'locations/handyman-washington-city-ut.html': fs.readFileSync(repo('locations/handyman-washington-city-ut.html'), 'utf8'),
-  'locations/handyman-la-verkin-ut.html': fs.readFileSync(repo('locations/handyman-la-verkin-ut.html'), 'utf8'),
-  'locations/handyman-leeds-ut.html': fs.readFileSync(repo('locations/handyman-leeds-ut.html'), 'utf8'),
-  'locations/handyman-st-george-ut.html': fs.readFileSync(repo('locations/handyman-st-george-ut.html'), 'utf8'),
-  'services/washer-dryer-repair-st-george-ut.html': fs.readFileSync(repo('services/washer-dryer-repair-st-george-ut.html'), 'utf8'),
-  'services/refrigerator-repair-st-george-ut.html': fs.readFileSync(repo('services/refrigerator-repair-st-george-ut.html'), 'utf8'),
-  'services/dishwasher-repair-st-george-ut.html': fs.readFileSync(repo('services/dishwasher-repair-st-george-ut.html'), 'utf8'),
-};
+const PAGES = Object.fromEntries(['index.html',
+  ...fs.readdirSync(repo('locations')).filter((f) => f.endsWith('.html')).map((f) => `locations/${f}`),
+  ...fs.readdirSync(repo('services')).filter((f) => f.endsWith('.html')).map((f) => `services/${f}`)]
+  .map((page) => [page, fs.readFileSync(repo(page), 'utf8')])
+  .filter(([, html]) => html.includes('class="radius-figure')));
+
+test('the diagram is found on all 17 pages that carry it', () => {
+  assert.equal(Object.keys(PAGES).length, 17);
+});
 
 for (const [name, html] of Object.entries(PAGES)) {
   test(`${name}: the 5 solid spokes carry pathLength="1" for the stroke-draw trick, the 2 dashed "by request" spokes do not`, () => {
@@ -45,8 +42,14 @@ for (const [name, html] of Object.entries(PAGES)) {
   });
 
   test(`${name}: every city group is present for the per-city animation-timing selectors to target`, () => {
+    const start = html.indexOf('class="radius-figure');
+    const svg = html.slice(start, html.indexOf('</svg>', start));
     ['washington-city', 'hurricane', 'santa-clara-ivins', 'la-verkin', 'leeds', 'cedar-city', 'mesquite'].forEach((city) => {
-      assert.match(html, new RegExp(`data-city="${city}"`));
+      assert.match(svg, new RegExp(`<g data-city="${city}"`), `the diagram itself has no ${city} group`);
+    });
+    const label = svg.match(/<svg [^>]*aria-label="([^"]*)"/)[1];
+    ['Washington City', 'Hurricane', 'Santa Clara and Ivins', 'La Verkin', 'Leeds', 'Cedar City', 'Mesquite'].forEach((city) => {
+      assert.ok(label.includes(city), `the diagram's aria-label doesn't name ${city}`);
     });
   });
 }

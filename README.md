@@ -5455,3 +5455,11 @@ Public site only: the "Where We Work" diagram on the homepage, the 8 city pages 
 Verified in headless Chromium at 320, 375 and 390px, dark and light, on 5 page types (homepage, a city page, the St. George city page, a service page with cards, and one without): every label renders at 16px or more, no two labels overlap, no node is clipped, and there's no sideways scroll. Also checked at 560, 700 and 760px (the key goes to two columns), at 761 and 1280px (identical to before), and with motion on (the spokes still draw in). `check-consistency`, `check-undefined-vars`, `eslint` and `check-visual-snapshot` pass. The full suite passes 3878/3879; the one failure is the known `check-links.py` sandbox-proxy test. `check-links.py` finds every internal link resolved; its 9 failures are external Unsplash URLs the sandbox proxy blocks. `npm run fix-versions` bumped `styles.css` everywhere, plus both service workers.
 
 New test `tests/design/service-area-phone-layout.test.js` (39): each key matches its SVG's own text, the hub name and key text stay at 16px or more, the card sizes win the cascade, and every node still fits inside the SVG after the phone zoom.
+
+## What changed, 2026-09-25 -- Leeds and La Verkin are on the service-area diagram on every page
+
+Public site only. The diagram on the 5 general service pages (Plumbing, Drywall & Painting, Handyman Repairs, Assembly & Installation, Washer & Dryer Repair) still showed the 5-city version from before Leeds and La Verkin got their own pages on 2026-09-11. The city cards right under it already listed all 7. Those 5 pages now carry the same 7-city diagram as the other 12, byte for byte, including the screen-reader label.
+
+Why it drifted: `tests/design/service-area-light-trail.test.js` checked a hand-kept list of 12 pages, and its per-city check searched the whole page, so the city cards satisfied it. The list is now built from every page that has the diagram (17), and the city and label checks look inside the SVG only. Against the old markup, 10 of its tests fail.
+
+Verified in headless Chromium on all 5 pages at 320, 375, 390 and 1280px, dark and light: no label collisions, phone text at 16px or more, no clipped nodes. The full suite, `check-consistency`, `check-undefined-vars` and `eslint` were run too (results in the PR).
