@@ -350,5 +350,9 @@ pre-move JSON-LD); these are the content-lane gaps it found:
 - **Small tags:** no `twitter:card` on `blog/index.html` and `booking.html`; no
   BreadcrumbList on `privacy.html`; all 34 pages share one `og:image` (blog
   posts could use their hero photo).
+- **The 3 posts added in #424** (`washer-leaking-water`, `dryer-wont-turn-on`,
+  `dishwasher-not-draining`) came after the audit. A re-check found they
+  follow the same template and inherit the same gaps: thin Article fields,
+  titles of 85-93 chars, 2 descriptions over 165 chars, generic `og:image`.
 
 <!-- Add new entries above this line -->

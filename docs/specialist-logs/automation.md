@@ -366,4 +366,4 @@ around.
   Unsplash images today; CI run #675 got 200 for all 9 on the same commit).
   Classify tunnel/proxy errors as UNVERIFIABLE. Its docstring ("7 landing
   pages") and `check-links.yml`'s comment ("6 public pages") are stale; the
-  list is 34.
+  list has 37 entries since #424.

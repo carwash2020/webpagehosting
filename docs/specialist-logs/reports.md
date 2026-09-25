@@ -127,7 +127,8 @@ private until shared). 16-item punch list; handoffs written to `content.md`,
 - **Proving a move kept schema:** run `git fetch --unshallow` (the clone is
   shallow), then diff JSON-LD against `git show <move-commit>^:<old path>`,
   normalizing old -> new URLs. Faster and more convincing than eyeballing.
-- **Page inventory today:** 34 sitemap URLs; 16 root redirect stubs; 88 HTML
+- **Page inventory at `80fc896`** (before #424 added 3 blog posts, making
+  37 sitemap URLs): 34 sitemap URLs; 16 root redirect stubs; 88 HTML
   files repo-wide; 88 JSON-LD blocks on the 34 public pages.
 
 <!-- Add new entries above this line -->
