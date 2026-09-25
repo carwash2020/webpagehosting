@@ -81,7 +81,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/styles.css?v=75f7ca9d5c">
+<link rel="stylesheet" href="/styles.css?v=7d413b2477">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -501,17 +501,26 @@
                placed by angle-from-hub (clockwise from north) and a
                radius tier -- 160 for standard coverage, 235 for
                by-request -- spaced at least 50 degrees apart. (Update,
-               2026-09-11: the two open ranges this diagram originally
-               reserved for a future city -- 120-190 and 280-330
-               degrees -- are now used by Leeds and La Verkin
-               respectively.) Every label is centered under its own node
-               (text-anchor="middle") so a future addition just needs
-               its own angle/radius, not a fresh clipping check. -->
+               2026-09-11: Leeds and La Verkin went into the two open
+               ranges this diagram had reserved, 120-190 and 280-330
+               degrees -- which put Leeds south-east and La Verkin
+               north-west, against their own "north"/"east" notes.)
+               Update, 2026-09-25: Leeds, La Verkin and Washington City
+               now sit on their real bearings from St. George as far as
+               the drawing allows: Leeds 52 degrees (true ~52), Washington
+               City 63 (true ~63), La Verkin 83 (true ~61-68; it can't
+               share Washington City's line, so it sits between it and
+               Hurricane, farther out, as it really is). Those four are
+               inside a real 20-degree wedge, so the 50-degree rule no
+               longer holds there, and their labels sit beside or above
+               the node instead of centered under it. The positions came
+               from a search that measures real label boxes, so a new or
+               moved city needs a fresh collision check in a browser. -->
           <g data-city="washington-city">
-            <line class="radius-spoke" pathLength="1" x1="380" y1="210" x2="460" y2="127"/>
-            <circle class="radius-node" cx="460" cy="127" r="7"/>
-            <text class="radius-name" x="460" y="145" text-anchor="middle">Washington City</text>
-            <text class="radius-note" x="460" y="162" text-anchor="middle">Right next door</text>
+            <line class="radius-spoke" pathLength="1" x1="380" y1="210" x2="482" y2="158"/>
+            <circle class="radius-node" cx="482" cy="158" r="7"/>
+            <text class="radius-name" x="496" y="157" text-anchor="start">Washington City</text>
+            <text class="radius-note" x="496" y="174" text-anchor="start">Right next door</text>
           </g>
 
           <g data-city="hurricane">
@@ -529,17 +538,17 @@
           </g>
 
           <g data-city="leeds">
-            <line class="radius-spoke" pathLength="1" x1="380" y1="210" x2="460" y2="349"/>
-            <circle class="radius-node" cx="460" cy="349" r="7"/>
-            <text class="radius-name" x="460" y="367" text-anchor="middle">Leeds</text>
-            <text class="radius-note" x="460" y="384" text-anchor="middle">About 20 minutes north</text>
+            <line class="radius-spoke" pathLength="1" x1="380" y1="210" x2="518" y2="102"/>
+            <circle class="radius-node" cx="518" cy="102" r="7"/>
+            <text class="radius-name" x="518" y="71" text-anchor="middle">Leeds</text>
+            <text class="radius-note" x="518" y="88" text-anchor="middle">About 20 minutes north</text>
           </g>
 
           <g data-city="la-verkin">
-            <line class="radius-spoke" pathLength="1" x1="380" y1="210" x2="241" y2="130"/>
-            <circle class="radius-node" cx="241" cy="130" r="7"/>
-            <text class="radius-name" x="241" y="148" text-anchor="middle">La Verkin</text>
-            <text class="radius-note" x="241" y="165" text-anchor="middle">About 25 minutes east</text>
+            <line class="radius-spoke" pathLength="1" x1="380" y1="210" x2="608" y2="182"/>
+            <circle class="radius-node" cx="608" cy="182" r="7"/>
+            <text class="radius-name" x="622" y="181" text-anchor="start">La Verkin</text>
+            <text class="radius-note" x="622" y="198" text-anchor="start">About 25 minutes east</text>
           </g>
 
           <g data-city="cedar-city" class="is-request">

@@ -5482,6 +5482,28 @@ Verified in headless Chromium at 320, 375 and 390px, dark and light, on 5 page t
 
 New test `tests/design/service-area-phone-layout.test.js` (39): each key matches its SVG's own text, the hub name and key text stay at 16px or more, the card sizes win the cascade, and every node still fits inside the SVG after the phone zoom.
 
+## What changed, 2026-09-25 -- Our Work: photos load as you scroll, so a phone downloads 0.27 MB up front instead of 4.1 MB
+
+`our-work.html` used to download all 61 gallery photos (4,122,565 bytes) the moment it opened, on every device. Most of them are 1152-1400px wide but show at about 333px on a phone.
+
+- **Now:** the first category's 4 photos load right away. The other 57 load once their tile is within 800px of the screen, through a small IntersectionObserver script on the page. Filter chips still work: a category loads when its chip shows it. A browser without IntersectionObserver gets every photo at once, as before.
+- **Not native `loading="lazy"`.** That was removed on 2026-09-16 after it looked like it dropped ~40% of the photos in this CSS-column masonry. Re-testing the 09-16 code in headless Chromium, that pattern only appears when the page never actually scrolls (`fullPage` screenshots, or setting `document.body.scrollTop`, which doesn't scroll this page). A real scroll loaded 61/61 even then. The new script doesn't rely on that either way.
+- **No jump as photos arrive.** Each unloaded photo holds a transparent SVG placeholder with the photo's exact ratio, so every tile is already its final height. A bare `data-src` wouldn't have worked here: an `<img>` with alt text and no `src` draws an alt-text box (828px tall in a 333px column instead of 250px). That would scramble the columns and pull every photo in at once. The tile's striped background shows until the photo lands.
+- **The lightbox is unchanged.** It still opens each full-size photo.
+
+Measured in headless Chromium (Chromium 141), service worker off, cache disabled, gallery photos only:
+
+| | Before | After |
+|---|---|---|
+| Phone 390x844, first load | 61 photos, 4,122,565 bytes | 4 photos, 269,925 bytes (-93%) |
+| Phone, whole page first load | 4,453,230 bytes | 608,721 bytes |
+| Desktop 1280x900, first load | 61 photos, 4,122,565 bytes | 14 photos, 1,035,511 bytes (-75%) |
+| After a real scroll to the bottom | 61/61 rendered | 61/61 rendered, 0 tiles changed height |
+
+The same results at 2x and 3x screens, since nothing depends on screen density. Also checked: every filter chip (each category 100%), End/Home key jumps (any tile skipped mid-scroll loads once you reach it), no IntersectionObserver (61/61 up front), the lightbox, and light/dark screenshots on phone and desktop.
+
+Tests: `tests/design/our-work-gallery-lazy-load.test.js` (6, new). No `loading="lazy"` in the gallery. Placeholder ratio and `width`/`height` match each real WebP file. The lightbox list still names each tile's own photo. A JSDOM run with a fake IntersectionObserver, and one without it. Full suite 3881/3882; the one failure is the known `check-links.py` sandbox-proxy test (images.unsplash.com is blocked here, the same on main). `check-consistency`, `check-undefined-vars`, `eslint` and `check-visual-snapshot` pass.
+
 ## What changed, 2026-09-25 -- A Graveyard sync test no longer fails on a fast CI runner
 
 Tests only. `tests/sync/graveyard-restore-sync.test.js` ("deleted again after a restore") failed once in CI on #426 and passed on a re-run of the same commit.
@@ -5511,3 +5533,29 @@ Verified:
 - `check-links.py`: every internal reference resolves. External failures are only the sandbox proxy refusing Unsplash.
 
 Tests: the new pages are added to the page lists in `blog-index-cards`, `analytics-events`, `mobile-nav-collapsible` and `privacy-policy-page`. The public-page counts go from 36 to 39, and the Call-button page count from 15 to 18. `check-links.py`'s `PUBLIC_PAGES` gets the three new URLs.
+
+## What changed, 2026-09-25 -- Leeds and La Verkin are on the service-area diagram on every page
+
+Public site only. The diagram on the 5 general service pages (Plumbing, Drywall & Painting, Handyman Repairs, Assembly & Installation, Washer & Dryer Repair) still showed the 5-city version from before Leeds and La Verkin got their own pages on 2026-09-11. The city cards right under it already listed all 7. Those 5 pages now carry the same 7-city diagram as the other 12, byte for byte, including the screen-reader label.
+
+Why it drifted: `tests/design/service-area-light-trail.test.js` checked a hand-kept list of 12 pages, and its per-city check searched the whole page, so the city cards satisfied it. The list is now built from every page that has the diagram (17), and the city and label checks look inside the SVG only. Against the old markup, 10 of its tests fail.
+
+Verified in headless Chromium on all 5 pages at 320, 375, 390 and 1280px, dark and light: no label collisions, phone text at 16px or more, no clipped nodes. The full suite, `check-consistency`, `check-undefined-vars` and `eslint` were run too (results in the PR).
+
+## What changed, 2026-09-25 -- Leeds and La Verkin sit in their real direction on the service-area diagram
+
+Public site only, all 17 pages with the "Where We Work" diagram. The diagram places each city by its angle from St. George, but on 2026-09-11 Leeds and La Verkin went into the two gaps that happened to be free. That drew Leeds south-east of St. George and La Verkin north-west, while their own notes say "About 20 minutes north" and "About 25 minutes east". Asked directly to move them to their real places.
+
+| City | Real bearing from St. George | Was drawn at | Now |
+|---|---|---|---|
+| Leeds | ~52° (north-east, 24.5 km) | 150° (south-east) | 52° |
+| La Verkin | ~61–68° (east-north-east, 29–33 km) | 300° (north-west) | 83°: between Washington City and Hurricane, farther out than Hurricane |
+| Washington City | ~63° (6.8 km) | 44° | 63° |
+
+- **Washington City moved too.** Leeds's spoke at its real bearing ran through Washington City's label, and Washington City was itself drawn 19° off. Moving it onto its own bearing made room.
+- **La Verkin can't be exact.** Washington City, Leeds, La Verkin and Hurricane really sit inside one ~20° wedge, and La Verkin shares Washington City's line (Washington City is on the way there). So La Verkin sits just north of Hurricane and farther out, as it is on the ground.
+- **Three labels moved off-centre.** Leeds's label is now above its dot, and Washington City's and La Verkin's sit beside theirs; the rest stay centred.
+- **How the spots were chosen.** A search in Chromium tried every angle, radius and label side against real measured label boxes. It rejected any overlap, any spoke through a label, anything within 8° of another spoke, and any dot outside the phone layout's zoom window, then kept the spot nearest the true bearing.
+- **Unchanged:** the other cities. Cedar City (drawn 329°, real ~35°), Hurricane (93°, ~72°) and Santa Clara & Ivins (264°, ~304°) are still schematic.
+
+Tests: new `tests/design/service-area-bearings.test.js` (17) checks every page's diagram against the real bearings; all 17 fail on the old positions. `round-3-visual-polish.test.js`'s "every label centred" check is replaced by one that allows the three off-centre labels but keeps each name and note aligned on its own dot. Browser checks cover 4 page types at 320, 375, 390 and 1280px, dark and light: no collisions, phone text at 16px or more, no clipped dots. `npm run fix-versions` re-stamped `styles.css` for a corrected comment.
