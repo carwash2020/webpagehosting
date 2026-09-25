@@ -5330,3 +5330,19 @@ Invoices, estimates, receipts, portal quotes, job sheets, contracts, the portal 
 - **No street address on any document.** The registered address is the owner's home. Contracts used to print it; now every document shows the city line only. Business Compliance keeps it internally.
 - **The "not attorney-reviewed" note is no longer printed on contracts.** It was a note to the owner, not the client. It stays on the Contract Generator page itself.
 - Checked by rendering every document type with real jsPDF from the real page code and inspecting the output, including a 3-page invoice, 2-page contracts and a 3-page service history.
+
+## What changed, 2026-09-25 -- The public site's logo downloads are 50-85% smaller
+
+Public site only; the Workspace tools and client portal still use the full-size logo. The header and footer logo was a 51-57KB webp at 531-550px wide, drawn at 44px (header) and 38px (footer). Every public page now uses a 176px copy of the same file (8-9KB), which is enough for a 44px logo on screens up to 4x.
+
+- **Three new files, same crops:** `images/logo-signature-176.webp`, `images/logo-signature-orange-176.webp` and `images/logo-signature-288.webp`. The two originals have different crops (one has padding around the hex), so each small file keeps the crop of the file it replaces, and every logo renders the same size as before.
+- **Homepage hero badge:** it's 96px on phones and about 420px beside the copy on desktop, so it picks with `srcset`: 176px on a 1x phone, 288px on 2x-3x, and the original 550px on desktop. On desktop, the homepage header and footer ask for the hero's 550px file too, so the desktop homepage still downloads a single logo file.
+- **Why 288 and not 300:** a 300px file drawn at 288 device pixels on a 3x phone visibly smeared the rivets and texture. 288 is 96 x 3, so a 3x phone draws it pixel for pixel.
+- **404 page** (100px) uses the same `srcset`: 176px at 1x, 288px at 2x. A 3x phone needs 300px there, so it still gets the original. The booking, manage-booking and manage-job headers use the 176px file.
+- **Measured per first visit, in real Chromium:** service, city, privacy and terms pages drop from 57.7KB to 9.2KB. About, careers, Our Work and the blog (header and footer use different files there) drop from 109.3KB to 17.4KB. Booking pages drop from 51.6KB to 8.3KB. The homepage drops from 51.6KB to 26.8KB on 2x-3x phones and stays 51.6KB on desktop.
+- **Not changed:** the service worker precache lists. The new files aren't precached; their `?v=` URLs are cached on first use like any other versioned file. `npm run fix-versions` had nothing to change.
+- **Still upscaled, as before:** the desktop hero on a 2x screen needs ~840px and the largest logo file is 550px. Fixing that needs a larger master file.
+
+Verified: 71 `<img>` tags in 37 files. In Chromium at 1x, 2x, 3x and 3.5x (1440, 820, 800, 412, 390 and 375px wide), every logo keeps the exact same box, and every logo gets at least as many pixels as it's drawn at, apart from the desktop hero noted above. Before/after crops compared at 1:1 and zoomed, in dark and light mode. Full suite (only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `check-visual-snapshot`, `eslint`, and `check-links.py` (all internal references resolve; the only failures are the same blocked Unsplash URLs as on `main`).
+
+Tests: `tests/design/public-logo-variants.test.js` (8, new). It checks that every public logo tag offers a small file, that each URL has a `?v=` stamp, that `width`/`height` and `srcset` widths match the real files, and that the `sizes` values match the CSS in `styles.css` and `404.html`.

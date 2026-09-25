@@ -307,7 +307,10 @@
 <header>
   <nav class="nav">
     <a href="#home" class="brand">
-      <img class="logo-img" src="/images/logo-signature.webp?v=202608010300" alt="Triple H Enterprises logo" width="550" height="506">
+      <!-- Above 860px the hero badge already loads the 550px file, so the
+           header and footer ask for the same one instead of adding the
+           176px file. On phones they get the 176px file. -->
+      <img class="logo-img" src="/images/logo-signature-176.webp?v=202609251200" srcset="/images/logo-signature-176.webp?v=202609251200 176w, /images/logo-signature.webp?v=202608010300 550w" sizes="(max-width: 860px) 44px, 440px" alt="Triple H Enterprises logo" width="176" height="162">
       <span class="brand-name">TRIPLE H<span>HANDYMAN AND APPLIANCE REPAIR</span></span>
     </a>
 
@@ -509,7 +512,7 @@
         <p class="next-opening" id="nextOpening" hidden></p>
       </div>
       <div class="hero-badge">
-        <img class="logo-img" src="/images/logo-signature.webp?v=202608010300" alt="Triple H Enterprises badge" width="550" height="506">
+        <img class="logo-img" src="/images/logo-signature.webp?v=202608010300" srcset="/images/logo-signature-176.webp?v=202609251200 176w, /images/logo-signature-288.webp?v=202609251200 288w, /images/logo-signature.webp?v=202608010300 550w" sizes="(max-width: 860px) 96px, 440px" alt="Triple H Enterprises badge" width="550" height="506">
       </div>
     </div>
   </section>
@@ -1494,7 +1497,7 @@
     <div class="footer-grid">
       <div>
         <div class="footer-brand">
-          <img class="logo-img" src="/images/logo-signature.webp?v=202608010300" alt="Triple H Enterprises logo" loading="lazy" width="550" height="506">
+          <img class="logo-img" src="/images/logo-signature-176.webp?v=202609251200" srcset="/images/logo-signature-176.webp?v=202609251200 176w, /images/logo-signature.webp?v=202608010300 550w" sizes="(max-width: 860px) 38px, 440px" alt="Triple H Enterprises logo" loading="lazy" width="176" height="162">
           <div class="brand-name">TRIPLE H ENTERPRISES</div>
         </div>
         <p class="footer-tagline">Honesty. Hustle. Helpfulness.</p>
