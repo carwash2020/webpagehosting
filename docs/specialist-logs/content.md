@@ -271,6 +271,90 @@ Verified: full suite **2575/2575** passing. `check-consistency`/
 - The "Recent Notes From the Shop" section added to plumbing, drywall, handyman-repairs and assembly (PR #257) reused the blog-index card markup. Those pages didn't load `blog/blog.css`, where all the card's styles live, so the icon and arrow rendered at 820px wide. Fixed in the visual lane (each page now loads `blog.css`). `tests/design/blog-index-cards.test.js` now fails for any page that uses the markup without it. If you add the card to another page, add the `blog.css` link too.
 - Blog lead images load from `images.unsplash.com`, not from this site. That's a third-party connection on each post's likely LCP image, with no control over caching or availability. Worth copying them into `images/blog/` as sized WebP. The visual lane couldn't do it: the sandbox's egress policy blocks Unsplash, so the originals can't be downloaded.
 
+## 2026-09-25 -- three triage symptoms get their own posts
+
+`js/triage.js` lists 20 symptoms (5 appliances x 4). Only 5 had a post,
+each the first symptom in its appliance's list. Wrote three more:
+`blog/washer-leaking-water.html`, `blog/dryer-wont-turn-on.html`, and
+`blog/dishwasher-not-draining.html`.
+
+Why these three: each has high search intent, and none overlaps an
+existing post. Skipped "dryer takes forever to dry" because
+`dryer-not-heating.html` already targets damp clothes and vent
+restriction, so a second post would compete with it. Skipped the fridge
+extras (freezer-works-fridge-doesn't, leaking inside, ice maker) because
+the fridge post already covers all three in short form. Skipped oven
+"temperature off" because `oven-not-heating-right.html` already covers
+calibration.
+
+Each post restates its triage entry's `v`/`a` text and builds on it with
+general repair knowledge. It adds no prices, percentages, or claims about
+our own call volume. The one reused site fact is the homepage's April
+care tip about checking washer fill hoses, which closes the washer post.
+
+The request assumed each existing post links to its triage entry and to
+`booking.html`. None does. Booking appears only in the shared nav and
+footer, and the CTA is a `tel:` button. The new posts follow the real
+pattern. Each has exactly one in-body link: plumbing for the washer and
+dishwasher posts (standpipe, disposal), and the dryer-not-heating post
+for the dryer (thermal fuse).
+
+Wiring: blog index, the three appliance service pages' "Recent Notes",
+`sitemap.xml`, `check-links.py`, and the tests that pin the post list or
+the public page count. Added one inbound in-prose link each from
+`washer-wont-drain.html` ("water on the floor") and
+`dishwasher-not-cleaning.html` ("standing water"), because their text
+already named those symptoms.
+
+Images: Unsplash is still blocked. The washer post uses the reserved
+bathroom-laundry photo, now marked placed in ACTION-ITEMS.md. The dryer
+and dishwasher posts reuse their sibling posts' lead photos (the
+tv-mount and to-do-list posts already share one). Swap them if the owner
+sends better photos.
+
+Still open: 12 triage symptoms have no post. Next strongest by intent:
+washer won't spin, dishwasher leaking, washer no power, range burner
+won't light.
+
+## 2026-09-25 -- from the reports lane (SEO/technical audit, not fixed)
+
+Found by a repo-only SEO audit of the 34 sitemap pages at `80fc896`. Schema
+survived the 2026-09-21 folder move intact (all 16 moved pages match their
+pre-move JSON-LD); these are the content-lane gaps it found:
+
+- **Review count disagrees (needs a human first).** CMS `googleReviewCount`
+  was edited 7 -> 6 at 2026-09-24 15:47 UTC (compare
+  `backups/site_content.json` in commits `142e7e0` and `1b53116`). The static
+  "7" is still in `index.html` (incl. `AggregateRating`), `booking.html` and the
+  3 `services/*-st-george-ut.html` pages, and in several tests. JS rewrites it
+  to 6 for visitors; crawlers that skip JS read 7. Confirm the real GBP count
+  with Steve, then align one side. No change to `docs/ACTION-ITEMS.md` yet.
+- **Homepage `areaServed`** omits "La Verkin, UT" and "Leeds, UT" (both are
+  standard coverage on the page and have city pages).
+- **`careers.html` JobPosting:** `jobLocationType: "TELECOMMUTE_NOT_ALLOWED"`
+  isn't a Google-defined value (only `TELECOMMUTE`; not re-verified, docs
+  blocked in the sandbox). Also no `validThrough` (ask Steve for a date),
+  no `postalCode`, no BreadcrumbList.
+- **Blog Article schema (10 posts):** no `image`, `dateModified`,
+  `mainEntityOfPage`; author is the Organization. Suggest author Person
+  Steven Robinson -> `about.html`.
+- **Entity consistency:** homepage + 8 city pages declare 9 separate
+  HomeAndConstructionBusiness entities with city-suffixed names and no shared
+  `@id`. Suggest one `@id` (`https://www.triplehenterprisesllc.biz/#business`)
+  and the plain business name everywhere. Judgment call.
+- **`sitemap.xml` lastmod:** index.html (2026-08-24) and booking.html
+  (2026-08-25) are stale; the 16 moved URLs say 2026-09-15, before they existed.
+- **Lengths:** 19 titles > 65 chars (the 23-char brand suffix; worst is
+  `blog/dryer-not-heating.html` at 95), 8 descriptions > 165 chars
+  (`locations/handyman-st-george-ut.html` 193).
+- **Small tags:** no `twitter:card` on `blog/index.html` and `booking.html`; no
+  BreadcrumbList on `privacy.html`; all 34 pages share one `og:image` (blog
+  posts could use their hero photo).
+- **The 3 posts added in #424** (`washer-leaking-water`, `dryer-wont-turn-on`,
+  `dishwasher-not-draining`) came after the audit. A re-check found they
+  follow the same template and inherit the same gaps: thin Article fields,
+  titles of 85-93 chars, 2 descriptions over 165 chars, generic `og:image`.
+
 <!-- Add new entries above this line -->
 
 ## 2026-09-25 -- note from the visual lane: 5 service pages' diagram is missing Leeds and La Verkin
