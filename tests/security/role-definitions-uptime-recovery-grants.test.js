@@ -82,9 +82,18 @@ test('every browser read of role_definitions and th_uptime_checks is on an inter
 
 test('the recovery-code RPCs are only ever called from tools/auth.js with the signed-in session', () => {
   const auth = read('tools', 'auth.js');
-  for (const fn of ['generate_internal_recovery_codes', 'verify_and_consume_internal_recovery_code', 'count_unused_internal_recovery_codes', 'delete_internal_recovery_codes']) {
+  for (const fn of ['generate_internal_recovery_codes', 'count_unused_internal_recovery_codes', 'delete_internal_recovery_codes']) {
     const idx = auth.indexOf(`/rest/v1/rpc/${fn}`);
     assert.ok(idx !== -1, `tools/auth.js should call ${fn}`);
     assert.match(auth.slice(idx, idx + 400), /'?Authorization'?: (`Bearer \$\{[^}]+\}`|'Bearer ' \+)/, `${fn} must be called with a bearer session token`);
   }
+  // Signing in with a code (2026-09-25): redeemRecoveryCode() posts to the
+  // new RPC, or the old name when the new one is missing, through one helper
+  // that always sends the session it was given.
+  const start = auth.indexOf('async function redeemRecoveryCode(accessToken, code)');
+  const body = auth.slice(start, auth.indexOf('\n}\n', start));
+  for (const fn of ['redeem_internal_recovery_code', 'verify_and_consume_internal_recovery_code']) {
+    assert.ok(body.includes(`/rest/v1/rpc/${fn}`), `redeemRecoveryCode() should call ${fn}`);
+  }
+  assert.match(body, /'Authorization': `Bearer \$\{accessToken\}`/);
 });
