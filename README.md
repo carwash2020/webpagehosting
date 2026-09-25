@@ -5331,6 +5331,29 @@ Invoices, estimates, receipts, portal quotes, job sheets, contracts, the portal 
 - **The "not attorney-reviewed" note is no longer printed on contracts.** It was a note to the owner, not the client. It stays on the Contract Generator page itself.
 - Checked by rendering every document type with real jsPDF from the real page code and inspecting the output, including a 3-page invoice, 2-page contracts and a 3-page service history.
 
+## What changed, 2026-09-25 -- Work-order photo uploads are limited to the uploader's own folder
+
+Security, LOW (ACTION-ITEMS #17, from the 2026-09-23 audit). The `work-order-photos` Storage bucket's only upload policy checked the bucket name and nothing else. Any signed-in account, including a stranger who signed up, could upload any file of any size at any path. A rolled-back probe against the live policy confirmed a client could write `anything/evil.exe`, or into another client's folder. Nobody could read files back (staff only) or overwrite them (no update policy), so this was spam and storage cost only.
+
+- **Why the path is scoped to the account, not the work order:** `portal/work-orders.html` uploads photos *before* the work order row exists. Clients have no update policy on work orders, so photos can't be attached afterwards. At upload time there's no work-order id to check against. The old path, `submissions/<time>-<random>/<n>.<ext>`, had nothing tied to the caller at all.
+- **The page** now uploads to `submissions/<your user id>/<time>-<random>/<n>.<ext>`, and uploads nothing if the session is gone.
+- **The policy** (`sql/security/scope_work_order_photo_uploads_to_own_folder.sql`) only accepts that exact shape, with the second folder equal to the caller's own `auth.uid()`. Any other path is an RLS denial: another account's folder, the old unscoped shape, the folder root, or extra depth.
+- **The bucket** takes images only, up to 8 MB, the same limits the page already enforced in the browser. Before this it had neither.
+- **Unchanged:** staff still see every photo in Clients (the one existing photo, uploaded under the old path, still opens). There's still no client read, overwrite or delete.
+- **Deploy order:** the page went live first, then the migration. The old policy already accepted the new path, so no real upload ever failed.
+- **Still open:** any signed-in account can fill its own folder. Turning signup off (ACTION-ITEMS #11) removes strangers from that.
+
+Verified:
+
+- the full suite (the only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `eslint`;
+- a dry run of the new policy against the live database, in a transaction that rolled back: the caller's own folder was allowed (two clients and a staff account); another client's folder, the old shape, an arbitrary path, the folder root, extra depth and a wrong prefix were all RLS denials (42501);
+- the live results after deploy are in `docs/specialist-logs/security.md` (2026-09-25).
+- `npm run fix-versions` bumped the portal service worker's cache name.
+
+Tests:
+
+- `tests/security/work-order-photos-upload-scope.test.js` (9, new). It runs the page's real `uploadSelectedPhotos()` against a port of the policy. Two fail on the old page code.
+
 ## What changed, 2026-09-25 -- The public site's logo downloads are 50-85% smaller
 
 Public site only; the Workspace tools and client portal still use the full-size logo. The header and footer logo was a 51-57KB webp at 531-550px wide, drawn at 44px (header) and 38px (footer). Every public page now uses a 176px copy of the same file (8-9KB), which is enough for a 44px logo on screens up to 4x.

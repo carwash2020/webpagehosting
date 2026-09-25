@@ -245,6 +245,11 @@ includes any stranger with a mailbox.
 - **LOW, fixed live:** `role_definitions` and `th_uptime_checks` reads
   are staff-only, and anon can no longer EXECUTE the recovery-code RPCs
   (PR #384).
+- **LOW, fixed live (2026-09-25):** the `work-order-photos` bucket
+  accepted any file at any path from any signed-in account. Uploads now
+  have to go to `submissions/<the caller's own auth.uid()>/<folder>/`,
+  and the bucket takes images only, up to 8 MB
+  (`sql/security/scope_work_order_photo_uploads_to_own_folder.sql`).
 
 ## Known, accepted gaps (not oversights)
 

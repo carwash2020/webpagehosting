@@ -858,11 +858,19 @@
   // folder, ahead of the work-order row's own INSERT -- see this
   // file's storage-bucket migration for why photos have to exist
   // BEFORE the row does, not attached to it afterward.
+  //
+  // The path is submissions/<the signed-in user's id>/<one folder per
+  // submission>/<n>.<ext>. The bucket's INSERT policy (2026-09-25,
+  // sql/security/scope_work_order_photo_uploads_to_own_folder.sql)
+  // rejects any upload whose second segment isn't the caller's own
+  // auth.uid(), so the user id here isn't decoration -- without it
+  // every upload is denied.
   async function uploadSelectedPhotos() {
     if (!selectedPhotos.length) return [];
     const { data: { session } } = await client.auth.getSession();
-    const token = session ? session.access_token : null;
-    const folder = 'submissions/' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+    if (!session) throw new Error('Not signed in');
+    const token = session.access_token;
+    const folder = 'submissions/' + session.user.id + '/' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
     const paths = [];
     for (let i = 0; i < selectedPhotos.length; i++) {
       const file = selectedPhotos[i];
