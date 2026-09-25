@@ -1702,6 +1702,14 @@ Measured in Chromium at 430px while adding Delete to `client-detail.html`: `.th-
 - **Light mode:** `--orange-light` is a dark orange there, so the Update pill gets its own lighter gradient (`#f07a1e` to `--orange`) so its dark text keeps contrast.
 - **Install bar:** while the card is up it steps down out of view (`body:has(.th-update-card.is-shown)`) instead of stacking under it.
 
+## 2026-09-25 -- from the reports lane (SEO/technical audit, not fixed)
+
+Alt text is 210/210 on the 34 sitemap pages, but 13 different photos
+(`images/gallery/tile-finished-1.webp` .. `-13.webp`) all use the alt
+"Finished tile flooring" on both `index.html` and `our-work.html`. Needs
+someone looking at each photo to write a distinct alt (room, material,
+finish).
+
 ## 2026-09-25 -- public-page logo variants (176 / 288), tools and portal untouched
 
 - **Real render sizes, measured (not the "~96px" guess):** header `.brand img` 44px, footer 38px, booking/manage-booking/manage-job header 38px, 404 mark 100px, homepage hero badge 96px at <=860px and ~421px on desktop (`min(440px, 100%)` of its column). Nothing else on a public page draws the logo.
