@@ -240,7 +240,7 @@
      phone bottom bar; this copied block never did, so on a phone the bar
      (z-index 900) covered the card's Next button on this page -- found by
      walking the whole tutorial in a real browser. */
-  body.th-has-bottomnav .onboarding-card { bottom: calc(76px + env(safe-area-inset-bottom, 0px) + 10px); }
+  body.th-has-bottomnav .onboarding-card { bottom: calc(85px + env(safe-area-inset-bottom, 0px) + 10px); }
   @keyframes onboardingSlideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
   @media (prefers-reduced-motion: reduce) { .onboarding-card { animation: none; } }
   .onboarding-dots { display: flex; gap: 5px; margin-bottom: 10px; }
@@ -725,7 +725,7 @@
      More pair floats at its top-right corner; keep the title clear of it. */
   header#mainContent { position: relative; }
   @media (max-width: 1023px) { header#mainContent h1 { padding-right: 104px; } }
-  @media (max-width: 1023px) { body.th-has-bottomnav { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } }
+  @media (max-width: 1023px) { body.th-has-bottomnav { padding-bottom: calc(85px + env(safe-area-inset-bottom, 0px)); } }
   @media (max-width: 720px) {
     /* F22 fix (2026-09-07): row action buttons measured ~21px, category
        add ~26px, tabs ~37px -- all below any reasonable touch minimum.

@@ -68,7 +68,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=7d413b2477">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=ea55ae9760">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=c9dae52c32">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=0e885bb435" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -793,10 +793,10 @@
       <div class="ops-lanes">
 
         <section class="ops-lane" data-lane="respond" data-priority="now" id="lane-respond">
-          <header class="ops-lane-header">
+          <div class="ops-lane-header">
             <h3 class="ops-lane-label">Needs response</h3>
             <span class="ops-lane-count" id="laneRespondCount" hidden>0</span>
-          </header>
+          </div>
           <div class="ops-group" data-ops-list="workRequestsList">
             <div class="analytics-subheading has-icon"><span class="th-hex-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-wrench" xlink:href="#icon-wrench"></use></svg></span>Work Requests <span id="workRequestsBadge"></span></div>
             <div id="workRequestsList"></div>
@@ -817,28 +817,28 @@
         </section>
 
         <section class="ops-lane" data-lane="soon" data-priority="soon" id="lane-soon">
-          <header class="ops-lane-header">
+          <div class="ops-lane-header">
             <h3 class="ops-lane-label">Due this week</h3>
             <span class="ops-lane-count" id="laneSoonCount" hidden>0</span>
-          </header>
+          </div>
           <div class="analytics-subheading has-icon is-first"><span class="th-hex-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-bell" xlink:href="#icon-bell"></use></svg></span>Due Soon (next 7 days, not done)</div>
           <div id="upcomingJobs"></div>
         </section>
 
         <section class="ops-lane" data-lane="follow" data-priority="later" id="lane-follow">
-          <header class="ops-lane-header">
+          <div class="ops-lane-header">
             <h3 class="ops-lane-label">Follow-ups</h3>
             <span class="ops-lane-count" id="laneFollowCount" hidden>0</span>
-          </header>
+          </div>
           <div class="analytics-subheading has-icon is-first"><span class="th-hex-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-signal" xlink:href="#icon-signal"></use></svg></span>Client Follow-Ups</div>
           <div id="followupsList"></div>
         </section>
 
         <section class="ops-lane" data-lane="money" data-priority="money" id="lane-money">
-          <header class="ops-lane-header">
+          <div class="ops-lane-header">
             <h3 class="ops-lane-label">Income</h3>
             <span class="ops-lane-count" id="laneMoneyCount" hidden>0</span>
-          </header>
+          </div>
           <!-- Ready to invoice (2026-09-22, Workspace rework part 5): finished
                jobs with no invoice and no payment logged -- the money that
                slips. renderReadyToInvoice(); hidden while empty. -->

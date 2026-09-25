@@ -220,6 +220,9 @@ body.portal-page {
 .login-btn:hover { box-shadow: 0 8px 22px -6px rgba(58, 160, 255, .5); }
 .secondary-btn:hover { border-color: var(--steel); color: var(--white); }
 .small-btn { min-height: 38px; }
+/* Phones (2026-09-25): this file loads after styles-tools.css, so the 38px
+   above was beating that file's own 44px phone rule on every portal page. */
+@media (max-width: 760px) { .small-btn { min-height: 44px; } }
 .date-btn,
 .slot-btn,
 .wo-urgency-btn {

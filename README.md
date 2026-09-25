@@ -5572,3 +5572,18 @@ Public site only, all 17 pages with the "Where We Work" diagram. The diagram pla
 - **Unchanged:** the other cities. Cedar City (drawn 329°, real ~35°), Hurricane (93°, ~72°) and Santa Clara & Ivins (264°, ~304°) are still schematic.
 
 Tests: new `tests/design/service-area-bearings.test.js` (17) checks every page's diagram against the real bearings; all 17 fail on the old positions. `round-3-visual-polish.test.js`'s "every label centred" check is replaced by one that allows the three off-centre labels but keeps each name and note aligned on its own dot. Browser checks cover 4 page types at 320, 375, 390 and 1280px, dark and light: no collisions, phone text at 16px or more, no clipped dots. `npm run fix-versions` re-stamped `styles.css` for a corrected comment.
+
+## What changed, 2026-09-25 -- Cross-surface visual audit + Phase 1: portal's stale stylesheet, hidden content under the phone nav, black lane headers, small portal buttons
+
+A first cross-surface look at the public site, client portal and Workspace together, not just each on its own. Full findings in `docs/specialist-logs/visual.md`; the ranked plan (14 items across 3 phases) is in `docs/ACTION-ITEMS.md`. Only the top 4, all high-impact and small, are in this branch.
+
+- **All 9 portal pages were serving a stale Workspace stylesheet.** They request `/tools/styles-tools.css` by absolute path, so the freshness checker -- which only looked inside `tools/` -- never saw those references. They sat on a stamp from before several tools-side changes. `tools/styles-tools.css` is now a tracked global shared file, and all 9 portal pages (plus every `tools/` page) got restamped.
+- **The phone bottom nav measures 85px; everything meant to clear it was still reserving 76.** The last ~9px of every Workspace page, and the bottom edge of every toast, sat under the bar. Fixed in `tools/styles-tools.css` and `tools/runway-dashboard.html`'s own copy of the same rule.
+- **Workspace's "Needs attention" lane headers were `<header>` elements**, so the public site's shared `styles.css` styled them as its own sticky glass header: a black bar with unreadable labels in light mode, and a near-invisible sticky strip in dark mode. Changed to `<div>`; nothing in JS, CSS or the tests selected them by tag.
+- **The portal's small buttons were 38px tall on phones**, not the 44px `tools/styles-tools.css` sets, because `portal/portal-polish.css` loads after it with an unconditional 38px rule at equal specificity. Now 44px at 760px and under; desktop unchanged.
+
+Ten more items are logged for later, split into Phase 2 (small, no design call needed) and Phase 3 (needs an owner decision first: one focus ring color across all three surfaces, and retiring the tools/portal gradient buttons for the public site's flatter current look).
+
+Verified: full suite (only failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`. `npm run fix-versions` restamped `tools/styles-tools.css` across all `tools/` and `portal/` pages, `portal/portal-polish.css`, and both service worker cache names.
+
+Tests: `tests/design/cross-surface-phase1.test.js` (4, new). Each assertion was mutation-checked by reverting its fix. `tests/design/tablet-nav-band.test.js`'s pinned 76px regex updated to 85.

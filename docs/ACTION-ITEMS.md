@@ -867,3 +867,60 @@ a future pass doesn't waste time re-diagnosing the FAQ item -- no
 action needed.
 
 <!-- Add new proposed visual improvements above this line -->
+
+## Cross-surface visual consistency plan (2026-09-25)
+
+From the visual lane's audit of the public site, client portal and
+Workspace (findings, with impact/effort tags, in
+`docs/specialist-logs/visual.md`, same date). Only Phase 1 is in the
+current branch. Phases 2 and 3 are intentionally left for follow-up
+sessions. ⚠ marks items that touch a shared stylesheet
+(`styles.css`, `tools/styles-tools.css`, `portal/portal-polish.css`):
+run the full suite before and after.
+
+### Phase 1 -- in this branch
+
+1. **Portal loads a stale Workspace stylesheet** (PO1). 9 portal pages
+   stamp `styles-tools.css` with an old hash; the checker now tracks it
+   as a global shared file.
+2. **Phone bottom nav hides the last ~9px of every tool page** (T1) ⚠.
+   Clearance raised from 76 to the measured 85px.
+3. **Workspace "Needs attention" headers were black bars in light mode**
+   (T2). `<header>` changed to `<div>`.
+4. **Portal small buttons were 38px on phones** (PO2) ⚠. Now 44px at
+   <=760px.
+
+### Phase 2 -- next session (small, needs no design call)
+
+5. **Visible loading skeletons on Workspace Home** (T3) ⚠. The Next Job
+   card's placeholder lines are invisible in both themes.
+6. **Extend no-sticky-hover to tools and portal** (X2) ⚠. 41 + 19 surface
+   hovers go in `@media (hover:hover)`, and
+   `touch-no-sticky-hover.test.js` scans styles-tools.css and both
+   portal sheets.
+7. **One skeleton animation in the portal** (PO3). Drop the pulse or the
+   shimmer.
+8. **Runway Dashboard's page header gets the public header's dark bar**
+   (X4, runway only). Look at it in light mode, then reset or re-tag.
+9. **blog.css cache-bust into `GLOBAL_SHARED_FILES`** (P1).
+10. **Workspace Compliance forms onto `.form-field`** (T4).
+
+### Phase 3 -- needs Connor's call first
+
+11. **One focus ring across all three surfaces** (X1, T5) ⚠. Blue (the
+    public site, and what the tools comment says was intended) or orange
+    (what most tool components draw). Pick one; implementation is small.
+12. **Retire the glossy gradient buttons in tools/portal** (X3) ⚠. Bring
+    them to the public site's flat U01 language. Visible on every tool
+    page; do it as its own PR with full before/afters.
+13. **Scope styles.css's bare `header`/`section` rules to the public
+    site** (X4) ⚠. Stops the element rules leaking into apps; updates the
+    visual snapshot baseline.
+14. **Shared empty/error/loading vocabulary + `--danger`/`--success`
+    tokens** (X5, T6). Best done with #12.
+
+**Skipped on purpose:** border-radius spread, portal light mode, moving
+portal inline styles into sheets, desktop SVG note size. None has a user
+impact worth the churn.
+
+<!-- Add new cross-surface visual plan phases above this line -->

@@ -548,7 +548,10 @@ function fixVersions(dir) {
 // that one real hash -- the same automatic, no-judgment-call mechanism
 // every other shared file already gets, just no longer scoped to a single
 // directory.
-const GLOBAL_SHARED_FILES = ['styles.css', 'js/triage.js', 'js/business-hours.js', 'js/site-motion.js', 'js/analytics-events.js', 'js/site-banners.js', 'js/utm-tracking.js', 'signature-pad.js', 'js/booking-flow.js', 'js/review-stats.js', 'js/pdf-layout.js'];
+const GLOBAL_SHARED_FILES = ['styles.css', 'js/triage.js', 'js/business-hours.js', 'js/site-motion.js', 'js/analytics-events.js', 'js/site-banners.js', 'js/utm-tracking.js', 'signature-pad.js', 'js/booking-flow.js', 'js/review-stats.js', 'js/pdf-layout.js', 'tools/styles-tools.css'];
+// tools/styles-tools.css (2026-09-25, visual lane): every portal page loads it
+// by absolute path, so the tools/-only check never saw those 9 references.
+// They sat at a494344e8c while tools/ pages moved on to ea55ae9760.
 const BLOG_DIR = path.join(__dirname, '..', 'blog');
 // locations/ and services/ (2026-09-23): the 16 city and service pages moved
 // out of the root on 2026-09-21, and htmlFilesIn() doesn't recurse, so from
