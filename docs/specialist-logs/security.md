@@ -1366,6 +1366,16 @@ the round-3 proposal, and what is still waiting on people.
   sign-in as Steve or Connor, and it would be wrong to mint their sessions
   with the service role to fake one.
 
+### Deployed (same day, after #430 merged)
+
+- **All 15 internal edge functions are live from `main`**, deployed 18:20–18:33 UTC.
+  - Before deploying, every live version still matched the morning snapshot, so nobody else's deploy was overwritten.
+  - After deploying, each live source was fetched and decoded from the API response by script, then compared with `cmp` against `main`'s file. All 15 are byte-identical, with `verify_jwt` true.
+  - All 15 answer the public anon key with their own 401. One (sync-contract-to-portal) first timed out at pg_net's 5 s default on a cold start, then answered 401.
+- **Before the deploy, the exact gate HTTP call was tested:** the service key to `check_internal_mfa_for_edge_function` returns 200 `true`; the anon key gets 401 permission denied.
+- **Oddity, harmless:** each function's version number ended one higher than the deploys account for (e.g. advisor-health 20 → 22). The live code is still byte-identical to `main`.
+- **Mode is still `log`.** Enforcement waits on the steps in `docs/INTERNAL-MFA-ENFORCEMENT.md`.
+
 ### Lessons
 
 - **Check the target account's real state before designing a lockout
