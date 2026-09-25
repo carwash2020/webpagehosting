@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=47af1279b5"></script>
+<script src="/tools/auth.js?v=266d22bc09"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -561,7 +561,8 @@
     mfaPendingFactorId = null;
     // A step-up verify issues a fresh session -- keep this device's stored
     // session in sync with it rather than leaving the old (now-superseded)
-    // one in storage.
+    // one in storage. undefined (not false) keeps it in whichever store it
+    // already lives in, with its remember_until, so "Remember me" survives.
     if (typeof persistSession === 'function') {
       persistSession(
         { access_token: result.access_token, refresh_token: result.refresh_token, expires_at: result.expires_at, email: result.email || getCurrentUserEmail() },
