@@ -1197,4 +1197,20 @@ Closes the round 3 audit's last storage note: the `work-order-photos` INSERT pol
 - **Not tested end to end.** This sandbox can't reach `*.supabase.co`, and there's no client session to use from inside the DB. So no real HTTP upload went through the Storage API. The RLS side is what Storage runs (an INSERT as `authenticated` with the JWT claims set), and the page's real `uploadSelectedPhotos()` is run against a port of the policy in `tests/security/work-order-photos-upload-scope.test.js`. The bucket's type and size limits are Supabase-enforced config, checked as stored rather than exercised.
 - **Still open:** any signed-in account can fill its own folder. Turning signup off (ACTION-ITEMS #11) removes strangers from that. A per-account daily cap would need a SECURITY DEFINER count, since clients can't SELECT the bucket. Not worth it at LOW unless signup stays on and spam actually shows up.
 
+## 2026-09-25: public signup confirmed off (ACTION-ITEMS #11)
+
+The owner asked for signup to be turned off. It already was.
+
+- **Read live, not assumed.** `/auth/v1/settings`, fetched from inside the DB with `net.http_get` (the same method the 2026-09-23 audit used), returns `disable_signup: true`. On 2026-09-23 it was `false`. So it was switched off in the dashboard some time in between. There's no audit trail for auth config changes, so exactly when is unknown.
+- **Nobody ever used the open door.** `auth.users` has 5 accounts:
+  - 2 internal, both created before the portal existed;
+  - 3 clients, all with `invited_at` set.
+  - No account was ever self-created.
+- **Nothing depends on self-signup.** No page or function calls `signUp`, `signInWithOtp` or OAuth. Portal login is password-only, and new clients arrive through `send-invite`.
+- **Invites.** `send-invite` uses the service-role `admin.generateLink` (`invite`, or `magiclink` for a resend). My understanding of Supabase Auth is that `disable_signup` gates the public `/signup` endpoint, not admin calls. Supabase's docs don't say so outright, though, and no invite has gone out since the change: no `send-invite` or auth invite activity in the last 24h of logs. I didn't send one to prove it, because that emails a real person and creates a real account. The first real invite is worth a glance, and if it fails, this setting is the first suspect.
+- **What it closes.** "Authenticated" now means an invited client or staff, not anyone with a mailbox. That was the root cause of round 3.
+  - #6 (SetupIntents) loses its stranger case; the product-call gate is still open for invited accounts.
+  - #17 (`work-order-photos`) narrows to invited accounts filling their own folder.
+  - The policies fixed in round 3 stay fixed. None of them relied on signup being off, and they shouldn't: it's one dashboard click from coming back on.
+
 <!-- Add new entries above this line -->

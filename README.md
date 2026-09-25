@@ -5390,3 +5390,12 @@ Verified: the full suite (the only failure is the known `check-links.py` sandbox
 Tests:
 
 - `tests/tools/mfa-settings-remember-me.test.js` (5, new). It runs the real settings.html and login.html, with the real auth.js, against a stubbed Supabase. It checks where the session ends up after turning on two-factor in Settings (remembered and this-session-only) and after an MFA sign-in with the box checked, unchecked, and unchecked over an old remembered session. The remembered Settings case fails on the old code.
+
+## What changed, 2026-09-25 -- Public signup is off (confirmed live)
+
+Security, docs only. Asked to turn off public signup in Supabase Auth, it was already off: the live `/auth/v1/settings` returns `disable_signup: true`, where the 2026-09-23 audit saw `false`. It was switched off in the dashboard in between.
+
+- **Why it matters:** with signup on, anyone with a mailbox could hold an `authenticated` session. That was the root cause of most of the 2026-09-23 findings. Now only invited clients and staff can sign in.
+- **Nothing broke:** no page uses self-signup, and all 3 client accounts were created by invite. `send-invite` uses the service-role admin API, which this setting shouldn't block. No invite has gone out since the change, so the first one is worth a glance.
+- **Still true:** policies must never treat `authenticated` as "staff". Portal clients are authenticated too, and the setting is one click from coming back on.
+- Updated: ACTION-ITEMS #11 (done), #15 and #17 (stranger case closed), `SECURITY.md`, and `docs/specialist-logs/security.md`.

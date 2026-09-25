@@ -39,7 +39,10 @@ vary by what a table is for, and that's deliberate:
   when client-portal accounts shipped, and was never true in practice:
   Supabase Auth's public signup was left enabled (confirmed live
   2026-09-23, `disable_signup: false`), so any stranger with a real
-  mailbox can get an `authenticated` session. Every policy must check
+  mailbox could get an `authenticated` session. Signup is off as of
+  2026-09-25, but the rule below doesn't change: every portal client
+  is `authenticated` too, and the setting is one dashboard click from
+  coming back on. Every policy must check
   `account_roles` (internal), or a row's own `client_email` (portal
   client), never `authenticated` alone. The 2026-09-23 audit
   (`docs/specialist-logs/security.md`) found and closed the policies
@@ -218,8 +221,8 @@ than the finding's title alone.
 
 **2026-09-23, cross-stack audit round 3** (full write-up:
 `docs/specialist-logs/security.md`, same date). Root cause of most
-findings: Supabase Auth's public signup is on, so `authenticated`
-includes any stranger with a mailbox.
+findings: Supabase Auth's public signup was on, so `authenticated`
+included any stranger with a mailbox. (Confirmed off 2026-09-25.)
 
 - **CRITICAL, fixed live:** CMS writes (`site_content`/`site_faq`/
   `site_terms`), the CMS history tables, and the `secure-documents` and
@@ -240,7 +243,8 @@ includes any stranger with a mailbox.
 - **MEDIUM:** the Stripe double charge is fixed (PR #386: an invoice
   that's already paid or paying can't be charged again, and the daily
   reconcile flags any that slip through). Still open: SetupIntents for
-  any signed-in session (closing signup removes the stranger path), and
+  any signed-in session (signup is off as of 2026-09-25, so that now
+  means invited clients and staff only), and
   the webhook doesn't compare amounts (LOW).
 - **LOW, fixed live:** `role_definitions` and `th_uptime_checks` reads
   are staff-only, and anon can no longer EXECUTE the recovery-code RPCs
