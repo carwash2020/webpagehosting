@@ -27,10 +27,13 @@ const PAGES = ['index.html', 'about.html', 'our-work.html']
 
 function cards(page) {
   const html = fs.readFileSync(path.join(ROOT, page), 'utf8')
-    .replace(/<script[\s\S]*?<\/script>/g, '')
     .replace(/<link[^>]+href="\/styles\.css[^"]*"[^>]*>/, '<style>' + CSS + '</style>');
   const dom = new JSDOM(html, { virtualConsole: new VirtualConsole() });
   const win = dom.window;
+  // jsdom never executes <script> content (runScripts is unset), so these are
+  // inert either way; removed from the DOM rather than string-stripped before
+  // parsing so there's no HTML-filtering regex to get wrong.
+  win.document.querySelectorAll('script').forEach((s) => s.remove());
   return Array.from(win.document.querySelectorAll('.service-card')).map((el) => {
     const cs = win.getComputedStyle(el);
     const h3 = el.querySelector('h3');
