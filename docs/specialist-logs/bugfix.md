@@ -1212,3 +1212,57 @@ Noted by the security lane while working on server-side MFA enforcement. Their l
 - **Checked, not changed:** `portalUpdateNow()` (`portal/portal-update.js`, the portal's Update now button) deletes every cache on the origin, the Workspace's included. Its comment says that's deliberate, because both workers read with an unscoped `caches.match()`, so scoping it needs that looked at too. Dev Tools' "Clear service worker and caches" clears everything on purpose.
 - Tests: `tests/site-wide/public-service-worker.test.js` (11; all fail on the previous code). It runs the real cleanup script and each worker's real activate handler against fakes. Real-Chromium scenarios (not committed, Playwright isn't a dependency): 11/11 on the fix, 6/11 on main.
 
+
+## 2026-09-25 -- Redesign regression pass (#438, #440, #441), driven end to end in Chromium
+
+Asked to prove the day's restyles (#438 cross-surface Phase 1, #440 homepage v2, #441 portal shell) broke nothing functional. The Workspace tools redesign had not landed when this was written.
+
+**How it was driven.** This sandbox can't reach Supabase, Stripe or jsDelivr (network policy), so everything ran against local fakes, with the real pages served locally:
+- supabase-js 2.112.3, jsPDF and Leaflet came from npm and are byte-identical to the SRI hashes the pages pin.
+- An in-memory PostgREST/GoTrue/Storage stand-in answered the pages.
+- 30 real edge functions ran in a vm against those fakes, including `create-payment-intent`, `create-pos-charge`, `stripe-webhook`, the `sync-*-to-portal` functions, `respond-to-*` and the three notify-email triggers. The same pattern is used in `tests/edge-functions/stripe-webhook-amount-check.test.js`.
+- A fake Stripe.js and api.stripe.com decide test-card outcomes, and a confirmed payment is delivered to the real webhook.
+- Face ID used Chromium's CDP virtual authenticator.
+- The harness is not committed (Playwright isn't a dependency). It ran 21 flows on 3c17596 and on b43feec, and a mutation run showed it catches restyle-type slips.
+
+**Result.** Every flow behaves the same before and after #440/#441:
+- Portal pay: signature, decline, success, and short/over/exact through the real webhook; also Pay All.
+- Quick Charge with a new card and with a saved card.
+- Tools sign-in: the 2FA code, recovery code, forced enrollment, and log-mode aal1 left alone.
+- Portal sign-in: with and without 2FA, and Face ID.
+- Dev Tools: all 7 tabs and every panel.
+- CRUD: jobs, invoice and quote send, add client, portal work order, estimate approve/schedule/decline, both threads, and contract signing.
+- Both service workers: install, precache, no loop, and a deploy that shows one Update card and does one reload.
+- Portal nav on all 7 pages.
+- Homepage service modals, lead form, sliders, and a booking.
+
+`edge-functions/stripe-webhook-index.ts` wasn't touched by any of the three PRs. The last change was 18bed26 (#421), and live stripe-webhook is v20. Two real bugs, both fixed in this branch:
+
+- **#440's card grid bled onto 16 landing pages.**
+  - **Root cause:** `.service-card` became `display:grid; grid-template-columns:46px 1fr` for the homepage's icon cards, and `h3`/`p` were pinned to column 2. The 8 `services/` and 8 `locations/` pages use the same classes for text-only cards, so each card got an empty 46px column. Text started 85px in instead of 25px, the text was 234px wide instead of 292px at 390px, and the heading's 8px gap was gone.
+  - **Fix:** the row layout moved under `.service-card:has(> .service-icon)`, with the same `:has(> …)` pattern the site banner uses. Chromium measurements now match 3c17596 exactly on the landing pages and #440 exactly on the homepage.
+  - styles.css already had a comment warning about this (the `.areas-links` block): "`.service-card/.services-grid` -- that shared component is still used for … the landing pages' own service lists."
+- **Dev Tools' full health check said "1 ISSUE" on every run since 2026-09-21.**
+  - **Root cause:** the Live Consistency Check still listed `calendar.html`, which became a redirect stub that day. Stubs have no CSP, manifest or PWA meta, by design. check-consistency.js exempted it; the Dev Tools list, which says it's kept in sync with that EXEMPT list, didn't.
+  - **Fix:** removed it from the list. The check now reads ALL CLEAR.
+  - This bug predates today's redesigns.
+
+**Found in passing, not fixed (latent, pre-existing): a record type the cloud blob has never seen loses its first edits.**
+- **Where:** `applySyncData()` skips a key that is absent remotely (`sync.js` ~584), so no merge base is saved for it. The next push's pre-merge then hits "no base entry → remote wins" (`mergeRecordArrays`, ~405). It takes the cloud's older copy of each record wholesale, and pushes that back.
+- **Repro:** start from an empty blob, add a job, let it sync, then edit it before any pull. The next push reverts the edit locally and in the cloud.
+- **Production today:** safe. All 47 synced keys exist in the live blob (checked read-only).
+- **When it bites:** it will fire for the first records of any new synced key a feature adds, as `th_shift_log` was on 09-23, if they're edited before a pull.
+- **Likely fix:** after a successful push, save the pushed arrays as the base.
+
+Two behavior questions went to ACTION-ITEMS.md: the portal owed dot shows on 2 of 7 pages, and the quote email error names a Resend that quotes don't have.
+
+**Gotchas worth keeping:**
+- **Shared public classes.** `.service-card`, `.services-grid` and `.reviews-wall` appear on 17-19 public pages, not just index.html. Before restyling one for the homepage, `grep -rl 'class="service-card' --include=*.html .`.
+- **jsdom drops `:has()` rules.** Its CSS parser logs "Could not parse CSS" and skips them. A computed-style test of a `:has()`-scoped rule passes vacuously for the side the rule would change, so check that half in the stylesheet text (as `service-card-landing-pages.test.js` does), and confirm in a real browser.
+- **Harness blob shape matters.** With an empty `workspace_sync.data`, the tools' first sync takes the first-key path above, and edits made soon after "vanish". Seed every synced key (as live has) before blaming a page.
+- **Six digits submit on their own.** tools/login.html auto-submits the six-digit code on `input`. A Playwright `fill('123456')` plus a click submits twice.
+- **Autofill races `fill()`.** Leaving the invoice/quote client-name field autofills a blank email (`thAutofillClientFields`). A Playwright `fill()` racing that autofill can double the address. A person sees the field already filled; blur and wait before typing.
+- **`innerText` follows `text-transform`.** Portal buttons read "ENABLE BIOMETRIC UNLOCK" through `innerText`. Match on `textContent` or case-insensitively.
+- **Dev Tools actions sit behind `confirmDevPassword()`.** A test sets `sessionStorage.th_dev_password_confirmed = '1'` rather than knowing the password.
+
+Tests: `tests/design/service-card-landing-pages.test.js` (19; 17 fail on b43feec), `tests/dev-tools/live-consistency-page-list.test.js` (12; 2 fail on b43feec).

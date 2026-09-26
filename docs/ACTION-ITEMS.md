@@ -1116,3 +1116,25 @@ either): the header's live sync text -> single dot (per-page
 belongs with whichever phase touches each page's header next).
 
 <!-- Add new cross-surface visual plan phases above this line -->
+
+## From the bug lane's redesign regression pass (2026-09-25) -- needs a call
+
+Found while driving every flow in Chromium around #440 and #441. Neither is
+a restyle slip, so neither was changed.
+
+- **Portal owed dot shows on 2 of 7 pages.** `portalApplyNavInvoiceDot()`
+  runs only on Home and Invoices (the pages that already load invoices), so
+  the dot on the Invoices tab appears and disappears as a client moves
+  between tabs while money is still owed. #441 chose this on purpose (no
+  extra request on the other pages). Options: accept it; or read one
+  unpaid-invoice count on every portal page (one small `head`/count query)
+  so the dot means the same thing everywhere.
+- **Quote email error points at a feature that doesn't exist.** With a
+  malformed client email, Download Estimate PDF says "Fix it and use
+  Resend from the Recent Quotes list" (`tools/invoice-generator.html`
+  ~2671). Quotes have no Resend (only invoices do), and saved quotes don't
+  store `clientEmail` at all, so there is nothing to resend with. Options:
+  reword it ("fix the email and download again"), or store the email on the
+  quote and add a Resend like invoices have (a feature, features lane).
+
+<!-- Add new bug-lane questions above this line -->
