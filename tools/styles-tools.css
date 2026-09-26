@@ -357,10 +357,13 @@ body:has(.login-box){ background-color:#0a0a0a; }
   /* 2026-08-16: previously a solid gradient-filled pill with a heavy
      glow. When a scrolled screenshot cropped this button so only its
      bottom edge showed, it read as a random floating orange bar rather
-     than a tab. The underline indicator added in the v2 redesign layer
-     (.tab-btn::after) already signals "active" clearly and can never be
-     mistaken for debris even when cropped -- this is now the only
-     active-tab treatment, just a color change plus that thin rail. */
+     than a tab.
+     2026-09-25 (Workspace tools redesign Phase 1): the underline-bar
+     indicator that replaced it is gone too now -- the handoff's
+     segmented-control spec calls for a soft tinted fill on the active
+     segment instead (set below, "body .tab-btn.is-active"), which is
+     is subtle (var(--orange-tint-soft), not a solid fill) enough not to
+     reintroduce the original cropped-screenshot problem. */
   color: var(--orange-light);
 }
 .tab-panel { display:none; }
@@ -573,7 +576,7 @@ body.th-has-bottomnav .th-toast-container{
   font-weight: 700; font-size: 13.5px; font-family: inherit; cursor: pointer;
   padding: 2px 4px; margin-left: 2px;
 }
-.th-toast-undo-btn:hover { color: var(--orange); }
+@media (hover: hover) { .th-toast-undo-btn:hover { color: var(--orange); } }
 
 /* ==========================================================================
    INTERNAL TOOLS — PROFESSIONAL POLISH PASS
@@ -586,27 +589,29 @@ body.th-has-bottomnav .th-toast-container{
    introducing a second, conflicting focus treatment.
    ========================================================================== */
 
-/* --- Primary / call-to-action buttons: soft orange glow + slight lift --- */
+/* --- Primary / call-to-action buttons ---
+   Phase 1 (2026-09-25): the hover glow + lift here is superseded by the
+   flat "body .primary-btn..." rules further down (a brightness change on
+   hover, translateY(2px) press against a shortening offset shadow --
+   see the note above those rules). Only the transition and .generate-btn
+   (which the body-prefixed selector below doesn't cover) still need
+   anything here. */
 .primary-btn, .generate-btn, .note-new-btn, .dialog-btn-primary {
-  transition: box-shadow .18s ease, transform .12s ease, filter .18s ease;
+  transition: box-shadow .1s ease, transform .1s ease, filter .1s ease;
 }
-.primary-btn:hover, .generate-btn:hover, .note-new-btn:hover, .dialog-btn-primary:hover {
-  box-shadow: 0 0 16px rgba(255,128,0,0.4);
-  transform: translateY(-1px);
-  filter: brightness(1.04);
+@media (hover: hover) {
+  .generate-btn:hover { filter: brightness(1.05); }
 }
-.primary-btn:active, .generate-btn:active, .note-new-btn:active, .dialog-btn-primary:active {
-  transform: translateY(0);
-  filter: brightness(0.97);
-}
+.generate-btn:active { transform: translateY(1px); filter: brightness(.95); }
 
-/* --- Secondary / neutral buttons: understated lift, no color glow --- */
+/* --- Secondary / neutral buttons: understated, no color glow --- */
 .secondary-btn, .backup-btn, .add-stop-btn, .add-contact-btn, .dialog-btn-cancel {
-  transition: border-color .18s ease, box-shadow .18s ease, transform .12s ease;
+  transition: border-color .18s ease, transform .12s ease;
 }
-.secondary-btn:hover, .backup-btn:hover, .add-stop-btn:hover, .add-contact-btn:hover, .dialog-btn-cancel:hover {
-  box-shadow: 0 0 10px rgba(255,255,255,0.05);
-  transform: translateY(-1px);
+@media (hover: hover) {
+  .backup-btn:hover, .add-stop-btn:hover, .add-contact-btn:hover, .dialog-btn-cancel:hover {
+    border-color: var(--orange-tint-border);
+  }
 }
 
 /* --- Small utility buttons: quiet, just smoother transitions --- */
@@ -619,17 +624,24 @@ body.th-has-bottomnav .th-toast-container{
 .tool-card, .metric-card, .compliance-card, .lead-card, .job-card {
   transition: border-color .18s ease, box-shadow .18s ease, transform .15s ease;
 }
-.tool-card:hover {
-  box-shadow: 0 0 20px rgba(255,128,0,0.12);
-  transform: translateY(-2px);
-}
-.metric-card:hover {
-  border-color: var(--border);
-  box-shadow: 0 0 14px rgba(255,255,255,0.04);
-}
-.job-card:hover {
-  box-shadow: 0 0 14px rgba(255,255,255,0.05);
-  transform: translateY(-1px);
+/* Guarded (Phase 1, 2026-09-25): these three used to apply on any tap,
+   which on a touch device meant the hover state stuck until the next
+   tap elsewhere -- the "no sticky hover" convention the public site
+   already follows (ACTION-ITEMS X2 covers the suite-wide audit, Phase
+   2; guarding the ones touched directly by this PR now). */
+@media (hover: hover) {
+  .tool-card:hover {
+    box-shadow: 0 0 20px rgba(255,128,0,0.12);
+    transform: translateY(-2px);
+  }
+  .metric-card:hover {
+    border-color: var(--border);
+    box-shadow: 0 0 14px rgba(255,255,255,0.04);
+  }
+  .job-card:hover {
+    box-shadow: 0 0 14px rgba(255,255,255,0.05);
+    transform: translateY(-1px);
+  }
 }
 
 /* --- Live-sync indicator: a gentle pulse so "active" reads as alive,
@@ -659,8 +671,10 @@ body.th-has-bottomnav .th-toast-container{
 .realtime-badge.is-retryable:hover { text-decoration-color: currentColor; }
 
 /* --- Help "?" button: small glow on hover so it reads as tappable --- */
-.help-btn:hover {
-  box-shadow: 0 0 10px rgba(255,128,0,0.25);
+@media (hover: hover) {
+  .help-btn:hover {
+    box-shadow: 0 0 10px rgba(255,128,0,0.25);
+  }
 }
 
 /* --- Shared button system ---
@@ -670,10 +684,18 @@ body.th-has-bottomnav .th-toast-container{
    invoice-generator.html (.generate-btn, plus an undefined .secondary-btn
    that was silently relying on browser defaults). Base classes now live
    here once; page-specific sizing/layout needs are modifier classes. */
+/* Flat primary (Workspace tools redesign Phase 1, 2026-09-25): retires the
+   glossy gradient+glow button (ACTION-ITEMS "Cross-surface visual
+   consistency plan" Phase 3 #12 / X3), matching the public site's own
+   U01 flat-button language (styles.css .btn.orange) instead of a second,
+   dated button style living only in the tools suite. Solid fill, one
+   offset "hard shadow" that shortens on press instead of a lift+glow. */
 .primary-btn {
-  background: linear-gradient(135deg, var(--orange-light), var(--orange) 60%, var(--orange-dark));
-  color: #1a0d02; font-weight: 700; font-family:var(--font-ui); font-size: 14.5px;
-  border: none; border-radius: 8px; padding: 11px 22px; cursor: pointer;
+  background: var(--orange);
+  color: #140900; font-weight: 700; font-family:var(--font-ui); font-size: 14.5px;
+  border: none; border-radius: 10px; padding: 11px 22px; cursor: pointer;
+  box-shadow: 0 3px 0 0 var(--orange-dark);
+  transition: transform .1s ease, box-shadow .1s ease;
 }
 .primary-btn.is-disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
 .primary-btn.block {
@@ -687,10 +709,11 @@ body.th-has-bottomnav .th-toast-container{
 .primary-btn.wide:hover { opacity: 0.92; }
 
 .secondary-btn {
-  background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--white);
-  border-radius: 8px; padding: 11px 18px; cursor: pointer; font-size: 14px; font-family: inherit;
+  background: var(--bg-panel-3); border: 1px solid var(--border); color: var(--white);
+  border-radius: 10px; padding: 11px 18px; cursor: pointer; font-size: 14px; font-family: inherit;
+  transition: border-color .1s ease, transform .1s ease;
 }
-.secondary-btn:hover { border-color: var(--blue-light); }
+@media (hover: hover) { .secondary-btn:hover { border-color: var(--orange-tint-border); } }
 .secondary-btn:active { transform: translateY(1px); filter: brightness(0.95); }
 
 /* --- Shared "tool card" link row (Dashboard's Tools section, and
@@ -719,7 +742,7 @@ body.th-has-bottomnav .th-toast-container{
   background: none; border: 1px solid var(--border); color: var(--text-dim); border-radius: 6px;
   padding: 6px 12px; cursor: pointer; font-size: 12.5px; font-family: inherit;
 }
-.small-btn:hover { border-color: var(--orange-light); color: var(--orange-light); }
+@media (hover: hover) { .small-btn:hover { border-color: var(--orange-light); color: var(--orange-light); } }
 .small-btn:active { transform: translateY(1px); filter: brightness(0.95); }
 .small-btn.is-active { border-color: var(--blue-light); color: var(--blue-light); background: rgba(58,160,255,0.1); }
 /* 2026-09-06: resting state was border+text tint only, no fill -- read as
@@ -974,6 +997,19 @@ td { padding: 10px 8px; font-size: 14px; color: var(--white); border-bottom: 1px
   --blue: #0d6efd;
   --blue-dark: #0a52c2;
   --blue-light: #0650bd;
+
+  /* Tone pairs, light mode (2026-09-25 handoff): darker fg for contrast on
+     a light bg, same low-alpha-tint approach as dark mode above. */
+  --tone-orange-fg: #a84408;
+  --tone-orange-bg: rgba(216, 95, 10, 0.1);
+  --tone-blue-fg: #0650bd;
+  --tone-blue-bg: rgba(6, 80, 189, 0.1);
+  --tone-green-fg: #146c34;
+  --tone-green-bg: rgba(20, 108, 52, 0.1);
+  --tone-purple-fg: #7a4fd1;
+  --tone-purple-bg: rgba(122, 79, 209, 0.1);
+  --tone-red-fg: #b3261e;
+  --tone-red-bg: rgba(179, 38, 30, 0.1);
 }
 
 /* Note: a few subtle ambient effects (the soft orange/blue radial glow
@@ -1205,12 +1241,36 @@ body.th-tool-page { padding: 44px 20px 60px; }
    cards floating on it). html:not([data-theme="light"]) restores the
    original dark-mode-only scope without touching this rule's actual
    values. */
+/* Workspace tools redesign Phase 1 (2026-09-25): re-tuned to the exact
+   hex values in the approved handoff (HANDOFF.md, "Tokens"), one step
+   darker/closer together than the previous scale below. Verified against
+   the same WCAG floor the prior note describes (worst case, --text-dim
+   on --bg-panel-3, is still comfortably above 4.5:1). */
 html:not([data-theme="light"]) body.th-tool-page {
   --bg: #07080a;
-  --bg-panel: #18191d;
-  --bg-panel-2: #212327;
-  --bg-panel-3: #2c2e34;
-  --border: #34363c;
+  --bg-panel: #141518;
+  --bg-panel-2: #17181c;
+  --bg-panel-3: #1b1c20;
+  --border: #2c2e34;
+  /* The handoff's own #9fd0ff for --blue-light (a hair lighter/cooler than
+     styles.css's public-site #7ec4ff), scoped to tools only -- the public
+     site's own tuned value is untouched. */
+  --blue-light: #9fd0ff;
+
+  /* Tone pairs (2026-09-25 handoff): one fg + bg per tone, for pills, icon
+     tiles and row accents, so a future page reaches for a tone instead of
+     inventing another one-off color. bg values are low-alpha tints over
+     the panel so they still read as "this panel, tinted" in every tier. */
+  --tone-orange-fg: #ffb347;
+  --tone-orange-bg: rgba(255, 128, 0, 0.16);
+  --tone-blue-fg: #9fd0ff;
+  --tone-blue-bg: rgba(159, 208, 255, 0.14);
+  --tone-green-fg: #3ad66b;
+  --tone-green-bg: rgba(58, 214, 107, 0.14);
+  --tone-purple-fg: #c9a4ff;
+  --tone-purple-bg: rgba(201, 164, 255, 0.14);
+  --tone-red-fg: #ff8080;
+  --tone-red-bg: rgba(255, 90, 90, 0.14);
 }
 
 ::selection { background: var(--orange); color: #0a0a0a; }
@@ -1510,66 +1570,56 @@ body table tbody tr:hover { background: var(--orange-tint-soft); }
 body table tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
 body table tbody tr:nth-child(even):hover { background: var(--orange-tint-soft); }
 
-/* ---- controls: pill buttons with real states ----
-   Redesign (2026-09-06), requested directly ("cleaner... make it
-   amazing"): the gradient itself was already good, but it was the only
-   depth cue -- a single flat light-to-dark ramp reads as a colored
-   rectangle, not a pressable object. Adds a second background layer (a
-   glass sheen, brightest top-left, fading out well before halfway) over
-   the same orange ramp, plus a real top/bottom edge highlight in the
-   shadow stack -- the two things that make a physical pill button read
-   as lit from above rather than painted flat. Same technique applied to
-   .secondary-btn below, at much lower intensity, so the visual language
-   is shared but primary still reads as the one button meant to be
-   pressed. */
+/* ---- controls: flat pill buttons with real states ----
+   Workspace tools redesign Phase 1 (2026-09-25): replaces the 2026-09-06
+   glossy gradient+sheen+glow treatment (ACTION-ITEMS Phase 3 #12 / X3),
+   matching the flat, offset-hard-shadow language styles.css's own
+   .btn.orange already uses on the public site (U01, 2026-09-07) and the
+   handoff's explicit spec: solid fill, one offset shadow that shortens
+   on press instead of lifting with a color glow. Kept as `body`-prefixed
+   rules (same specificity as before) so nothing else has to change to
+   keep winning the cascade. */
 body .primary-btn, body .dialog-btn-primary, body .note-new-btn {
   position: relative;
-  border-radius: 999px;
-  background-image:
-    linear-gradient(165deg, rgba(255,255,255,.38), rgba(255,255,255,0) 44%),
-    linear-gradient(180deg, var(--orange-light) -35%, var(--orange) 50%, var(--orange-dark) 135%);
-  box-shadow:
-    0 1px 0 rgba(255,255,255,.32) inset,
-    0 -1px 0 rgba(0,0,0,.18) inset,
-    0 2px 6px -2px rgba(0,0,0,.5),
-    0 12px 22px -16px var(--orange-tint-glow);
-  font-weight: 600; letter-spacing: .3px;
+  border-radius: 10px;
+  background: var(--orange);
+  background-image: none;
+  box-shadow: 0 3px 0 0 var(--orange-dark);
+  font-weight: 700; letter-spacing: .3px; color: #140900;
 }
-body .secondary-btn, body .small-btn, body .dialog-btn-cancel { border-radius: 999px; }
+body .secondary-btn, body .small-btn, body .dialog-btn-cancel { border-radius: 10px; }
 body .secondary-btn {
-  background-image: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,0) 55%),
-    linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel) 130%);
-  box-shadow: 0 1px 0 rgba(255,255,255,.05) inset, 0 1px 2px -1px rgba(0,0,0,.3);
+  background: var(--bg-panel-3);
+  background-image: none;
+  box-shadow: none;
 }
-body .primary-btn:hover, body .dialog-btn-primary:hover, body .note-new-btn:hover {
-  transform: translateY(-1px);
-  box-shadow:
-    0 1px 0 rgba(255,255,255,.36) inset,
-    0 -1px 0 rgba(0,0,0,.18) inset,
-    0 3px 10px -3px rgba(0,0,0,.55),
-    0 16px 30px -14px var(--orange-tint-glow);
-  filter: brightness(1.06);
+@media (hover: hover) {
+  body .primary-btn:hover, body .dialog-btn-primary:hover, body .note-new-btn:hover {
+    filter: brightness(1.05);
+  }
+  body .secondary-btn:hover, body .small-btn:hover {
+    border-color: var(--orange-tint-border);
+  }
 }
-body .secondary-btn:hover, body .small-btn:hover {
-  transform: translateY(-1px);
-  border-color: var(--orange-tint-border);
-  box-shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 5px 14px -6px rgba(0,0,0,.4);
+body .primary-btn:active, body .dialog-btn-primary:active, body .note-new-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 0 var(--orange-dark);
+  filter: none;
 }
-body .primary-btn:active, body .secondary-btn:active, body .small-btn:active,
-body .dialog-btn:active, body .note-new-btn:active {
+body .secondary-btn:active, body .small-btn:active,
+body .dialog-btn:active {
   transform: translateY(1px) scale(.98);
   filter: brightness(.95);
   box-shadow: inset var(--shadow-active);
 }
-body .tab-btn { position: relative; border-radius: 10px 10px 0 0; }
-body .tab-btn::after {
-  content: ''; position: absolute; left: 12%; right: 12%; bottom: -1px; height: 3px;
-  border-radius: 3px 3px 0 0;
-  background: linear-gradient(90deg, var(--orange), var(--orange-light));
-  transform: scaleX(0); transition: transform .2s cubic-bezier(.2,.8,.2,1);
+/* Segmented look for .tab-btn (2026-09-25 handoff, "segmented control"):
+   a solid tinted fill on the active tab instead of the old gradient
+   underline bar. */
+body .tab-btn { position: relative; border-radius: 10px; }
+body .tab-btn.is-active {
+  color: var(--orange-light);
+  background: var(--orange-tint-soft);
 }
-body .tab-btn.is-active::after { transform: scaleX(1); }
-body .tab-btn.is-active { color: var(--orange-light); }
 
 body .form-field input:focus, body .form-field select:focus, body .form-field textarea:focus,
 body input[type="text"]:focus, body input[type="email"]:focus, body input[type="tel"]:focus,
@@ -1665,11 +1715,11 @@ body select:focus, body textarea:focus {
 .th-bottom-nav a .th-bn-icon .th-icon { width: 20px; height: 20px; margin-right: 0; }
 .th-bottom-nav a.is-active { color: var(--orange-light); }
 .th-bottom-nav a.is-active .th-bn-icon {
-  background:
-    radial-gradient(120% 130% at 30% 18%, rgba(255,255,255,.5), rgba(255,255,255,0) 46%),
-    linear-gradient(165deg, var(--orange-light), var(--orange) 55%, var(--orange-dark) 130%);
+  /* Flat (Phase 1, 2026-09-25): was a gradient+sheen disc; see the
+     "flat pill buttons" note above styles-tools.css's own primary-btn
+     rules for why. */
+  background: var(--orange);
   border-color: var(--orange-dark);
-  box-shadow: 0 2px 6px -2px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.3) inset;
 }
 .th-bottom-nav a.is-active .th-bn-icon .th-icon { color: #1a0d02; }
 .th-bottom-nav a:active .th-bn-icon { background: var(--bg-panel-2); }
@@ -1683,9 +1733,9 @@ body select:focus, body textarea:focus {
   width: 46px; height: 46px; margin-top: -10px;
   clip-path: var(--hex);
   display: flex; align-items: center; justify-content: center;
-  background:
-    radial-gradient(120% 130% at 30% 18%, rgba(255,255,255,.45), rgba(255,255,255,0) 46%),
-    linear-gradient(165deg, var(--orange-light), var(--orange) 55%, var(--orange-dark) 130%);
+  /* Flat (Phase 1, 2026-09-25): the raised hex "+" reads as lifted from
+     the drop-shadow alone; a gradient face on top of that was extra. */
+  background: var(--orange);
   filter: drop-shadow(0 4px 8px rgba(0,0,0,.45));
   transition: transform .18s cubic-bezier(.2,.8,.2,1);
 }
@@ -2599,14 +2649,24 @@ body:has(.th-update-card.is-shown) .th-install-banner { transform: translateY(16
   .form-field textarea { min-height: 46px; }
 }
 
-/* one focus treatment everywhere, matching the rest of the project */
+/* One focus ring, tools-only (Workspace tools redesign Phase 1,
+   2026-09-25; ACTION-ITEMS Phase 3 #11 / X1 for the tools surface --
+   the public site and portal are separate, already-logged decisions,
+   left untouched here). This used to override the default
+   :focus-visible rule above (2px orange + offset + soft glow) back to
+   blue, for exactly these four classes -- meaning a keyboard user
+   tabbing across one screen could see both an orange ring (everything
+   else) and a blue one (these four), which is what this settles: same
+   orange treatment everywhere, this rule is now a no-op kept only so a
+   future component doesn't have to know these four classes were ever
+   special-cased. */
 .tool-card:focus-visible,
 .small-btn:focus-visible,
 .tab-btn:focus-visible,
 .help-btn:focus-visible {
-  outline: 2px solid var(--blue-light);
+  outline: 2px solid var(--orange);
   outline-offset: 2px;
-  box-shadow: 0 0 0 5px rgba(58, 160, 255, .16);
+  box-shadow: 0 0 0 5px var(--orange-tint-soft);
 }
 
 /* an empty list should read as empty, not as a failed load */
@@ -2884,7 +2944,7 @@ html.th-nav-slow .th-nav-progress::after { animation: thNavProgress 1.1s cubic-b
   padding: 4px 8px 4px 4px;
   transition: border-color .15s ease;
 }
-.th-row:hover { border-color: var(--orange-tint-border); }
+@media (hover: hover) { .th-row:hover { border-color: var(--orange-tint-border); } }
 .th-row-link {
   flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px;
   min-height: 56px; padding: 6px; border-radius: 10px;
@@ -2901,7 +2961,7 @@ html.th-nav-slow .th-nav-progress::after { animation: thNavProgress 1.1s cubic-b
   color: var(--orange-light); background: var(--orange-tint-soft);
   box-shadow: inset 0 0 0 1px var(--orange-tint-border);
 }
-.th-row-avatar.is-owed { color: #1a0d02; background: linear-gradient(165deg, var(--orange-light), var(--orange) 70%); }
+.th-row-avatar.is-owed { color: #140900; background: var(--orange); box-shadow: none; }
 .th-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .th-row-title { color: var(--white); font-size: 15.5px; font-weight: 600; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .th-row-sub { color: var(--text-dim); font-size: 13px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -2921,7 +2981,8 @@ html.th-nav-slow .th-nav-progress::after { animation: thNavProgress 1.1s cubic-b
   text-decoration: none; cursor: pointer;
 }
 .th-icon-btn .th-icon { width: 18px; height: 18px; margin-right: 0; }
-.th-icon-btn:hover, .th-icon-btn:focus-visible { border-color: var(--orange-light); color: var(--orange-light); }
+.th-icon-btn:focus-visible { border-color: var(--orange-light); color: var(--orange-light); }
+@media (hover: hover) { .th-icon-btn:hover { border-color: var(--orange-light); color: var(--orange-light); } }
 .th-icon-btn:active { transform: scale(.94); }
 .th-list-letter {
   position: sticky; top: calc(122px + max(env(safe-area-inset-top, 0px), 44px)); z-index: 2;
@@ -2937,13 +2998,160 @@ html.th-nav-slow .th-nav-progress::after { animation: thNavProgress 1.1s cubic-b
   background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--text-dim);
   font-family: var(--font-ui); font-size: 13.5px; font-weight: 600; cursor: pointer;
 }
-.th-chip.is-active { color: #1a0d02; border-color: var(--orange-dark); background: linear-gradient(165deg, var(--orange-light), var(--orange) 70%); }
+.th-chip.is-active { color: #140900; border-color: var(--orange-dark); background: var(--orange); }
 .th-chip-count { font-size: 12px; opacity: .8; }
 /* A search field that reads as part of the list above it, icon inside. */
 .th-search-field { position: relative; flex: 1; min-width: 0; }
 .th-search-field .th-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--text-dim); pointer-events: none; }
 body .th-search-field input { width: 100%; box-sizing: border-box; padding-left: 42px; min-height: 48px; border-radius: 12px; }
 @media (prefers-reduced-motion: reduce) { .th-row { transition: none; } .th-icon-btn:active { transform: none; } }
+
+/* ---- Shared components, Workspace tools redesign Phase 1 (2026-09-25) ----
+   Built once here from the approved handoff (HANDOFF.md, "Shared parts"),
+   for phases 2-4 (Home/Jobs/Job detail, Money pages, Clients + rest) to
+   adopt page by page -- this PR does not change any individual page's
+   content, only builds the pieces. Every color comes from a token (the
+   tool-scope overrides and tone pairs above), nothing here is hardcoded,
+   and every hover is guarded so it never sticks on a touch device. */
+
+/* Card: the base surface every panel/hero/hub tile in the redesign sits
+   on. Deliberately its own class, not a restyle of the many existing
+   `.card`/`.metric-card`/etc. selectors (body .section-block... at
+   ~1240) -- those stay as they are for every page not yet migrated. */
+.th-card {
+  border-radius: 18px; border: 1px solid var(--border); background: var(--bg-panel);
+  padding: 16px;
+}
+/* Hero variant: the one "this is the important card" treatment (Home's
+   Next Job, Money's totals) -- a 160deg gradient face plus a soft orange
+   corner glow, contained so it never bleeds past the card's own radius. */
+.th-card-hero {
+  position: relative; overflow: hidden;
+  background: linear-gradient(160deg, var(--bg-panel-2), var(--bg-panel) 65%);
+  border-color: var(--orange-tint-border);
+}
+.th-card-hero::after {
+  content: ''; position: absolute; inset: -40% -40% auto auto; width: 60%; height: 60%;
+  background: radial-gradient(circle, var(--orange-tint-glow), transparent 70%);
+  pointer-events: none;
+}
+
+.th-section-label {
+  font-family: var(--font-ui); font-size: 12.5px; letter-spacing: 1.8px;
+  text-transform: uppercase; color: var(--text-dim); font-weight: 600;
+}
+
+/* Segmented control: 2-4 full-width options, one active. Distinct from
+   `.tabs`/`.tab-btn` above (an underline-tab bar with its own long
+   history across the suite) -- this is the handoff's own component, for
+   places like the Money Invoices/Finance switch and List/Calendar/
+   Contacts/Notes on Jobs. */
+.th-segmented {
+  display: flex; gap: 2px; padding: 3px; border-radius: 12px;
+  background: var(--bg-panel-2); border: 1px solid var(--border);
+}
+.th-segmented-btn {
+  flex: 1; min-width: 0; min-height: 38px; padding: 0 10px; border: none; border-radius: 9px;
+  background: none; color: var(--text-dim); cursor: pointer;
+  font-family: var(--font-ui); font-size: 13.5px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: background .12s ease, color .12s ease;
+}
+.th-segmented-btn.is-active { background: var(--orange); color: #140900; }
+.th-segmented-btn:active:not(.is-active) { background: var(--bg-panel-3); }
+
+/* Stats tile: one number + label, for a row of 2-4 (Home's "Your week",
+   Money's stat row). */
+.th-stats-tile {
+  display: flex; flex-direction: column; gap: 2px; padding: 12px 14px;
+  border-radius: 14px; border: 1px solid var(--border); background: var(--bg-panel);
+}
+.th-stats-tile-value { font-family: var(--font-ui); font-weight: 700; font-size: 20px; color: var(--white); }
+.th-stats-tile-label {
+  font-size: 11px; letter-spacing: .4px; text-transform: uppercase; color: var(--text-dim);
+}
+
+/* Hero number: Anton 38-40px, for a card's headline figure (a total, a
+   count of jobs today). Anton is already the suite's display face
+   (see the font-family declarations elsewhere using var(--font-display),
+   set in styles.css) -- this class only sets the size/weight/color. */
+.th-hero-number {
+  font-family: var(--font-display, var(--font-ui)); font-weight: 400;
+  font-size: 38px; line-height: 1.05; color: var(--white); font-variant-numeric: tabular-nums;
+}
+@media (min-width: 480px) { .th-hero-number { font-size: 40px; } }
+
+/* Toggle: 48x28 switch, real role="switch" semantics expected on the
+   element using it (not set here -- markup's job). */
+.th-toggle {
+  position: relative; display: inline-flex; align-items: center; flex-shrink: 0;
+  width: 48px; height: 28px; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--bg-panel-3); cursor: pointer; padding: 0;
+  transition: background .15s ease, border-color .15s ease;
+}
+.th-toggle::before {
+  content: ''; position: absolute; top: 2px; left: 2px; width: 22px; height: 22px;
+  border-radius: 50%; background: var(--text-dim);
+  transition: transform .15s cubic-bezier(.2,.8,.2,1), background .15s ease;
+}
+.th-toggle[aria-checked="true"] { background: var(--orange); border-color: var(--orange-dark); }
+.th-toggle[aria-checked="true"]::before { transform: translateX(20px); background: #140900; }
+
+/* Note: a tinted callout, tone defaults to orange. Add .th-tone-* below
+   for another color. */
+.th-note {
+  display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px;
+  border-radius: 12px; font-size: 13.5px; line-height: 1.4;
+  background: var(--tone-orange-bg); color: var(--text); border: 1px solid var(--orange-tint-border);
+}
+.th-note .th-icon { flex-shrink: 0; width: 16px; height: 16px; margin-top: 2px; color: var(--tone-orange-fg); }
+
+/* Placeholder slot: where a map / QR / signature-pad / other real
+   component mounts -- this only frames it, the real component keeps
+   its own markup (route-planner's map, review-request's QR,
+   contract-generator's signature-pad.js all stay exactly as they are). */
+.th-placeholder-slot {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 160px; border-radius: 14px; border: 1px dashed var(--border);
+  background: var(--bg-panel-2); color: var(--text-dim); font-size: 13px;
+}
+
+/* Tone utility classes, for a pill/icon-tile/row-accent that wants a
+   tone other than orange (the suite's long-standing default). Pair with
+   an element that already sets its own layout (.th-pill, .th-row-avatar,
+   an icon tile) -- these two properties only. */
+.th-tone-orange { color: var(--tone-orange-fg); background: var(--tone-orange-bg); }
+.th-tone-blue   { color: var(--tone-blue-fg);   background: var(--tone-blue-bg); }
+.th-tone-green  { color: var(--tone-green-fg);  background: var(--tone-green-bg); }
+.th-tone-purple { color: var(--tone-purple-fg); background: var(--tone-purple-bg); }
+.th-tone-red    { color: var(--tone-red-fg);    background: var(--tone-red-bg); }
+
+/* Sticky action bar: fixed above the bottom nav on a phone/tablet, or at
+   the bottom of the content column on desktop -- one primary and an
+   optional secondary. A page adopting this also adds `th-has-stickybar`
+   to <body>, which (like `th-has-clock`) raises the toast stack and the
+   clock bar clear of it; that per-page wiring is Phase 2-4 work, this PR
+   only builds the bar itself. */
+.th-sticky-bar {
+  position: fixed; left: 0; right: 0; z-index: 890;
+  bottom: 0;
+  display: flex; gap: 10px; padding: 10px max(14px, env(safe-area-inset-left)) 10px max(14px, env(safe-area-inset-right));
+  background: color-mix(in srgb, var(--bg-panel) 92%, transparent);
+  -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+  border-top: 1px solid var(--border);
+}
+@media (max-width: 1023px) {
+  body.th-has-bottomnav .th-sticky-bar { bottom: calc(85px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (min-width: 1024px) {
+  .th-sticky-bar { position: sticky; padding: 12px 0; border-radius: 0; }
+}
+.th-sticky-bar .primary-btn { flex: 1; }
+.th-sticky-bar .secondary-btn { flex: 0 0 auto; }
+body.th-has-bottomnav.th-has-stickybar .th-toast-container {
+  bottom: calc(85px + env(safe-area-inset-bottom, 0px) + 68px);
+}
+body.th-has-stickybar .th-clock { bottom: calc(94px + env(safe-area-inset-bottom, 0px) + 68px); }
 
 /* ---- On the clock (2026-09-23, Workspace rework part 9) ----
    A running job's clock, above the bottom bar on a phone and bottom-right

@@ -2180,3 +2180,134 @@ identical to `main`. Screenshots at 1440/1024/390/320, dark/light, and
 Tests: no new test file this pass (every change stayed inside markup/
 selectors the existing suite already pins); the deferred items above
 each need their own new tests when picked up.
+
+## 2026-09-26 -- Workspace tools redesign Phase 1: shared components + app shell
+
+Asked to build Phase 1 of a 4-phase Workspace tools redesign from a
+design-handoff folder (`HANDOFF.md`, the approved `.dc.html` prototype
+exports, `support.js`). Phase 1 is the shared component library + app
+shell only; phases 2-4 (Home/Jobs/Job detail, Money pages, Clients +
+rest) are explicit follow-up sessions, tracked in `docs/ACTION-ITEMS.md`
+with the handoff's own page-by-page table.
+
+- **Read the shell code first, found it mostly already matches the
+  spec structurally.** `tools/tools-nav-pwa.js`'s `inject()` already
+  builds the described header search/grid buttons, the Home/Jobs/+/
+  Clients/Money bottom nav with a raised orange hex center button, the
+  Create sheet's quick-add + paste + say-it + 3x3 `CREATE_ACTIONS` grid,
+  and the desktop sidebar's Work/Money/Office groups with an orange New
+  button and orange active-item tint (all from the 2026-08-20 through
+  2026-09-23 app-shell-v2 work). This phase's real gap was visual only
+  -- tokens and component styling, not shell markup -- so no changes
+  landed in `tools-nav-pwa.js` at all; everything is in
+  `tools/styles-tools.css`.
+- **Token remap was a real finding, not a formality.** The handoff's
+  hex values (`#141518`/`#17181c`/`#1b1c20` for
+  `--bg-panel`/`-2`/`-3`, `#2c2e34` for `--border`, `#9fd0ff` for
+  `--blue-light`) didn't match the current tool-scope override values
+  (`#18191d`/`#212327`/`#2c2e34`/`#34363c`) -- a step lighter and more
+  spread out than the approved design. Updated the
+  `html:not([data-theme="light"]) body.th-tool-page` override block to
+  the exact approved values.
+- **Tone pairs needed a base declaration in `styles.css`, not just
+  `tools/styles-tools.css`'s own override.** `tests/design/
+  tools-light-mode.test.js` asserts every `var(--x)` `styles-tools.css`
+  references is defined *somewhere* in `styles.css` (any `--x:`
+  anywhere in the file, not scoped to `:root`) -- the same mechanism
+  that already backs `--bg-panel`/`-2`/`-3`/`--border` (base in
+  `styles.css`, tool-scope override in `styles-tools.css`). Missed this
+  on the first pass (5 tone pairs x 2 = 10 vars, only added to
+  `styles-tools.css`) and the full suite caught it immediately. Added
+  base declarations to `styles.css`'s `:root` and `[data-theme="light"]`
+  blocks -- nothing on the public site references them, so this is a
+  pure token addition, not a visual change to any public page. Worth
+  remembering for any future new token: it needs a home in `styles.css`
+  even if only tools ever uses it.
+- **Retiring the glossy gradient buttons (ACTION-ITEMS Phase 3 #12) is
+  the actual content of this phase**, not a side effect. `.primary-btn`,
+  `.secondary-btn`, `.small-btn`, `.dialog-btn-primary`/`-cancel`, the
+  bottom nav's `.th-bn-create-disc` hex, `.th-chip.is-active` and
+  `.th-row-avatar.is-owed` were each their own gradient+glow/sheen rule
+  (some going back to 2026-08-16/09-06). All now flat fills with an
+  offset hard shadow, matching the public site's own U01 language
+  (2026-09-07) instead of a second, dated button style living only in
+  tools. The handoff itself is the "Connor's OK" ACTION-ITEMS asked for
+  -- an explicit design he'd already approved, not a unilateral call.
+  One subtlety: a `body`-prefixed override block (higher specificity,
+  added 2026-08-16 for a "glass sheen" pass) was actually what rendered
+  on every button, not the base `.primary-btn` rule -- both had to be
+  flattened, or the base rule's flat fill would have been invisible
+  under the still-glossy override.
+- **One focus ring (ACTION-ITEMS Phase 3 #11 for tools).** The default
+  `:focus-visible` rule (~L1222, orange) already existed, but a later
+  override (~L2601, "one focus treatment everywhere") deliberately set
+  `.tool-card`/`.small-btn`/`.tab-btn`/`.help-btn` back to blue --
+  itself trying to unify things, just landing on the wrong color for
+  4 of dozens of components. Changed to orange, matching the majority
+  and the base rule's own intent.
+- **Hover-guarded only what this PR touches, not the full audit.**
+  ACTION-ITEMS' X2 (41 unguarded tools hovers + 19 portal) is explicit
+  Phase 2 scope from the 2026-09-25 cross-surface audit. Guarded the
+  ~10 hover rules this phase actually rewrote or added (button hovers,
+  `.tool-card`/`.job-card`/`.metric-card`/`.help-btn` glow,
+  `.th-icon-btn`/`.th-row`/`.th-toast-undo-btn`), left the rest for
+  that already-planned pass.
+- **Didn't touch the header's live sync text -> dot, or per-page
+  `hub-header` markup.** The handoff's shell bullet describes this, but
+  that markup lives in each of ~15 tool pages' own HTML (the
+  `realtime-badge`/`realtime-dot`/`realtime-text` pattern), not in
+  `tools-nav-pwa.js`'s `inject()` -- changing it is "unique content of
+  an individual tool page" work, explicitly out of this phase's scope
+  per the delegation. Logged for phases 2-4 alongside per-page content.
+- **New shared components are additive and unused so far**: `.th-card`/
+  `.th-card-hero`, `.th-section-label`, `.th-segmented`(-btn),
+  `.th-stats-tile`, `.th-hero-number`, `.th-toggle`, `.th-note`,
+  `.th-placeholder-slot`, `.th-sticky-bar`, `.th-tone-*`. None of them
+  render anywhere yet -- phases 2-4 wire them into real pages. This is
+  deliberate (a visual pass builds the library first, page content
+  adopts it next), but worth flagging so a future session doesn't
+  wonder why a class has no callers.
+- **Origin/main moved twice underneath this branch** (PR #440 homepage
+  redesign v2, then PR #441 client portal redesign, both merged while
+  this session worked). Rebasing via cherry-pick + merge: the only real
+  conflicts were cache-bust `?v=`/`CACHE_NAME` stamps on ~65-68 pages
+  (both sessions restamped the same global-shared-file references) --
+  resolved by keeping origin/main's side and re-running
+  `npm run fix-versions`, never by hand-editing a hash. One stray find
+  while re-verifying after the rebase: `portal/jobs.html` carried a
+  duplicate local `const MIN_LEAD_HOURS = 2;` (already defined in
+  `js/business-hours.js`) that isn't part of this PR's actual work --
+  removed it since it broke the undefined-vars redeclaration check and
+  wasn't referenced anywhere in the file.
+- **A background `node --test` run got contaminated by concurrent `git
+  worktree add`/`remove` operations** (used to get a clean "before"
+  checkout for screenshots) -- a run mid-flight showed 9 failures
+  including several unrelated-looking ones (cache-bust, tour health
+  check, `var` redeclaration checks) that vanished on a clean rerun
+  with nothing else happening concurrently. Lesson for next time: don't
+  run `git worktree add`/`remove` while a background test suite is
+  executing, same as the existing "don't edit files" rule -- it isn't
+  just file edits that can race a running suite.
+
+Verified: full suite 4189/4190 (the one failure is the known
+`check-links.py` sandbox-proxy test). `check-consistency.js`,
+`check-undefined-vars.js` clean. `npm run fix-versions` restamped
+`styles.css` and `tools/styles-tools.css` (both global shared files)
+across every page that loads either. `check-visual-snapshot` clean (6
+targets, all match baseline -- confirms nothing here touched a pinned
+public-site element). Screenshots via a real headless Chromium
+(`/opt/pw-browsers/chromium-1194`, not the default `chromium` channel
+whose expected revision wasn't installed in this sandbox) at 390/768/
+1024/1440px, dark/light and 390 reduced-motion, before (a `git worktree
+add` of the pre-change commit) and after, in
+`docs/workspace-tools-phase1-2026-09-25/{before,after}/`. Auth-gated
+tool pages were screenshotted by seeding a fake `th_auth_session` in
+localStorage before navigation (passes the client-side `hasValidSession()`
+gate; real data fetches 401 and show empty states, which is fine for a
+shell/component screenshot).
+
+Tests: none new this phase -- every change is inside existing shared
+classes/tokens the suite already exercises indirectly (button/focus/
+hover assertions across many test files), and the new unused component
+classes have no test surface yet (phases 2-4 will add their own tests
+when they adopt them).
