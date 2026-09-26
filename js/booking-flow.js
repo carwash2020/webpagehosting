@@ -106,6 +106,50 @@ function bookingDayLabel(entry) {
   return entry.noTimes ? 'No times' : 'Full';
 }
 
+// ---------- small picker helpers (2026-09-25 booking polish) ----------
+// Why a greyed-out day can't be picked, for the note a tap on it shows:
+// "<strong>Saturday, Sep 26</strong> is fully booked. Pick another day."
+function bookingUnavailableDayText(dateStr, entry) {
+  const label = new Intl.DateTimeFormat('en-US', { timeZone: BUSINESS_TIMEZONE, weekday: 'long', month: 'short', day: 'numeric' }).format(zonedTimeToUtc(dateStr, 12, 0));
+  let why = 'is fully booked';
+  if (entry && entry.closed) why = 'is closed';
+  else if (entry && entry.noTimes) why = 'has no times left to book online';
+  return '<strong>' + label + '</strong> ' + why + '. Pick another day.';
+}
+
+// A short shake on a tapped full day (CSS .is-nudged, dayNudge keyframes
+// on each page). Removed on animationend so the next tap replays it.
+function bookingNudge(btn) {
+  if (!btn) return;
+  btn.classList.remove('is-nudged');
+  void btn.offsetWidth; // restart the animation
+  btn.classList.add('is-nudged');
+  btn.addEventListener('animationend', function done() {
+    btn.classList.remove('is-nudged');
+    btn.removeEventListener('animationend', done);
+  });
+}
+
+// Edge fades on a horizontally scrolling date strip: .has-more-left /
+// .has-more-right on its .date-row-wrap parent, only while there's more
+// to scroll that way. Safe to call again after every re-render.
+function bookingScrollFade(rowEl) {
+  const wrap = rowEl && rowEl.closest ? rowEl.closest('.date-row-wrap') : null;
+  if (!wrap) return;
+  function update() {
+    const max = rowEl.scrollWidth - rowEl.clientWidth;
+    wrap.classList.toggle('has-more-left', rowEl.scrollLeft > 2);
+    wrap.classList.toggle('has-more-right', rowEl.scrollLeft < max - 2);
+  }
+  if (!rowEl._bookingFade) {
+    rowEl._bookingFade = true;
+    rowEl.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+  }
+  update();
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(update);
+}
+
 // ---------- one whole-window picker for the client portal ----------
 // The portal's three self-scheduling spots -- quotes.html (schedule the
 // job on approval), jobs.html (book a due check-up) and work-orders.html
@@ -151,6 +195,20 @@ function createBookingPicker(opts) {
   let loading = false;
   let selectedDate = null;
   let requestId = 0;
+  let dayNoteEl = null;
+
+  // The note a tap on a full day shows, just under the strip.
+  function showDayNote(html) {
+    if (!dayNoteEl) {
+      dayNoteEl = document.createElement('p');
+      dayNoteEl.className = 'booking-picker-daynote';
+      dayNoteEl.setAttribute('role', 'status');
+      const anchor = (dateRowEl.closest && dateRowEl.closest('.date-row-wrap')) || dateRowEl;
+      anchor.insertAdjacentElement('afterend', dayNoteEl);
+    }
+    dayNoteEl.innerHTML = html;
+    dayNoteEl.hidden = !html;
+  }
 
   function showEmpty(show) {
     if (emptyEl) emptyEl.style.display = show ? 'block' : 'none';
@@ -183,7 +241,12 @@ function createBookingPicker(opts) {
     dateRowEl.innerHTML = html;
     dateRowEl.querySelectorAll('.date-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        if (btn.getAttribute('aria-disabled') === 'true') return;
+        if (btn.getAttribute('aria-disabled') === 'true') {
+          showDayNote(bookingUnavailableDayText(btn.dataset.date, byDate && byDate[btn.dataset.date]));
+          bookingNudge(btn);
+          return;
+        }
+        showDayNote('');
         selectDay(btn.dataset.date);
       });
     });

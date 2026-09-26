@@ -39,7 +39,7 @@ const PAGES = [
 for (const page of PAGES) {
   test(`${page}: loads mobile-nav-collapsible.js and both sublists start collapsed with a caret toggle`, () => {
     const html = fs.readFileSync(repo(page), 'utf8');
-    assert.match(html, /<script src="\/js\/mobile-nav-collapsible\.js" defer><\/script>/);
+    assert.match(html, /<script src="\/js\/mobile-nav-collapsible\.js\?v=[a-f0-9]{10}" defer><\/script>/);
     assert.match(html, /<ul class="mobile-services-sublist" id="mobileServicesSublist" hidden>/);
     assert.match(html, /<ul class="mobile-areas-sublist" id="mobileAreasSublist" hidden>/);
     assert.match(html, /<button type="button" class="mobile-nav-caret" aria-expanded="false" aria-controls="mobileServicesSublist"/);
@@ -80,10 +80,14 @@ test('a real run: clicking a caret un-hides its sublist and flips aria-expanded;
   assert.equal(btn.getAttribute('aria-expanded'), 'false');
 });
 
-test('scripts/check-consistency.js does NOT need to track mobile-nav-collapsible.js as a global shared file (it carries no ?v= cache-bust param, same precedent as js/cookie-consent.js)', () => {
+test('scripts/check-consistency.js tracks mobile-nav-collapsible.js and cookie-consent.js as global shared files, with a content-hash stamp on every page (2026-09-25)', () => {
+  const src = fs.readFileSync(repo('scripts/check-consistency.js'), 'utf8');
+  const list = src.match(/const GLOBAL_SHARED_FILES = \[([^\]]*)\]/)[1];
+  assert.match(list, /'js\/mobile-nav-collapsible\.js'/);
+  assert.match(list, /'js\/cookie-consent\.js'/);
   for (const page of ['index.html', 'about.html']) {
     const html = fs.readFileSync(repo(page), 'utf8');
-    assert.match(html, /<script src="\/js\/mobile-nav-collapsible\.js" defer><\/script>/);
-    assert.doesNotMatch(html, /\/js\/mobile-nav-collapsible\.js\?v=/);
+    assert.match(html, /<script src="\/js\/mobile-nav-collapsible\.js\?v=[a-f0-9]{10}" defer><\/script>/);
+    assert.match(html, /<script src="\/js\/cookie-consent\.js\?v=[a-f0-9]{10}" defer><\/script>/);
   }
 });

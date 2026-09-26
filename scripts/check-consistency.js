@@ -548,10 +548,18 @@ function fixVersions(dir) {
 // that one real hash -- the same automatic, no-judgment-call mechanism
 // every other shared file already gets, just no longer scoped to a single
 // directory.
-const GLOBAL_SHARED_FILES = ['styles.css', 'js/triage.js', 'js/business-hours.js', 'js/site-motion.js', 'js/analytics-events.js', 'js/site-banners.js', 'js/utm-tracking.js', 'signature-pad.js', 'js/booking-flow.js', 'js/review-stats.js', 'js/pdf-layout.js', 'tools/styles-tools.css'];
+const GLOBAL_SHARED_FILES = ['styles.css', 'js/triage.js', 'js/business-hours.js', 'js/site-motion.js', 'js/analytics-events.js', 'js/site-banners.js', 'js/utm-tracking.js', 'signature-pad.js', 'js/booking-flow.js', 'js/review-stats.js', 'js/pdf-layout.js', 'tools/styles-tools.css', 'blog/blog.css', 'js/cookie-consent.js', 'js/mobile-nav-collapsible.js'];
+// js/cookie-consent.js and js/mobile-nav-collapsible.js (2026-09-25): both
+// loaded on every public page with no ?v= at all, so an edit to either sat
+// behind whatever the browser had cached. A bare reference to one of these is
+// now an error, and --fix-versions adds the stamp.
+const UNSTAMPED_GLOBAL_FILES = ['js/cookie-consent.js', 'js/mobile-nav-collapsible.js'];
 // tools/styles-tools.css (2026-09-25, visual lane): every portal page loads it
 // by absolute path, so the tools/-only check never saw those 9 references.
 // They sat at a494344e8c while tools/ pages moved on to ea55ae9760.
+// blog/blog.css (2026-09-25, P1): 28 pages (blog, services, about, careers,
+// our-work) carried a hand-picked timestamp (202609231020) that nothing
+// checked against the file. It gets a content hash like everything else now.
 const BLOG_DIR = path.join(__dirname, '..', 'blog');
 // locations/ and services/ (2026-09-23): the 16 city and service pages moved
 // out of the root on 2026-09-21, and htmlFilesIn() doesn't recurse, so from
@@ -566,7 +574,20 @@ function htmlFilesIn(dir) {
   return fs.readdirSync(dir).filter(f => f.endsWith('.html')).map(f => path.join(dir, f));
 }
 
+function unstampedPattern(file) {
+  return new RegExp('(src|href)="/' + file.replace(/\./g, '\\.') + '"', 'g');
+}
+
 function checkGlobalSharedFileFreshness(problems) {
+  for (const file of UNSTAMPED_GLOBAL_FILES) {
+    for (const dir of SCAN_DIRS) {
+      for (const htmlPath of htmlFilesIn(dir)) {
+        if (unstampedPattern(file).test(fs.readFileSync(htmlPath, 'utf8'))) {
+          problems.push(`${path.relative(ROOT_DIR, htmlPath)} loads /${file} with no ?v= stamp. Run "npm run fix-versions" to add one.`);
+        }
+      }
+    }
+  }
   for (const file of GLOBAL_SHARED_FILES) {
     const realHash = currentContentHash(ROOT_DIR, file);
     if (realHash === null) continue; // file doesn't exist -- not this check's job to notice that
@@ -591,6 +612,20 @@ function fixGlobalSharedFiles() {
   for (const file of GLOBAL_SHARED_FILES) {
     const realHash = currentContentHash(ROOT_DIR, file);
     if (realHash === null) continue;
+    if (UNSTAMPED_GLOBAL_FILES.includes(file)) {
+      // First give any bare reference a stamp to correct below.
+      for (const dir of SCAN_DIRS) {
+        for (const htmlPath of htmlFilesIn(dir)) {
+          const content = fs.readFileSync(htmlPath, 'utf8');
+          const updated = content.replace(unstampedPattern(file), (m, attr) => attr + '="/' + file + '?v=' + realHash + '"');
+          if (updated !== content) {
+            fs.writeFileSync(htmlPath, updated);
+            console.log(`  ${path.relative(ROOT_DIR, htmlPath)}: /${file} -> ?v=${realHash}`);
+            changedCount++;
+          }
+        }
+      }
+    }
     const pattern = new RegExp(file.replace('.', '\\.') + '\\?v=([a-zA-Z0-9]+)', 'g');
     for (const dir of SCAN_DIRS) {
       for (const htmlPath of htmlFilesIn(dir)) {

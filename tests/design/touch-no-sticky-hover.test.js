@@ -77,3 +77,56 @@ test('blog.css: the blog index cards follow the same rule, and keep their keyboa
   assert.equal(norm(hover.body), norm(focus.body), 'hover and keyboard focus should look the same');
   assert.ok(BLOG_RULES.some((r) => r.sel === '.blog-index-item:focus-visible .blog-index-item-title' && !r.media.length));
 });
+
+// The apps follow the same rule (2026-09-25, cross-surface X2). The
+// Workspace and the portal are mostly used on phones, where a tapped tool
+// card, invoice card, date or time stayed lifted/tinted until the next tap
+// -- on the booking pickers that read as a second selection. The booking
+// pages (own <style> blocks, no styles.css) are scanned too.
+// A walker that also tracks @supports/@keyframes blocks, so a nested
+// block's closing brace can't pop the wrong @media off the stack.
+function appRules(css) {
+  css = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const out = []; const stack = [];
+  for (const m of css.matchAll(/(@[a-z-]+[^{;]*)\{|([^{}]+)\{([^{}]*)\}|\}/g)) {
+    if (m[1]) { stack.push(m[1].trim()); continue; }
+    if (m[2] !== undefined) { out.push({ sel: m[2].trim().replace(/\s+/g, ' '), body: m[3], media: [...stack] }); continue; }
+    stack.pop();
+  }
+  return out;
+}
+const inlineStyle = (f) => { const h = read(f); return h.slice(h.indexOf('<style>') + 7, h.indexOf('</style>')); };
+const APP_SHEETS = {
+  'tools/styles-tools.css': read('tools/styles-tools.css'),
+  'portal/portal-app.css': read('portal/portal-app.css'),
+  'portal/portal-polish.css': read('portal/portal-polish.css'),
+  'booking.html': inlineStyle('booking.html'),
+  'manage-booking.html': inlineStyle('manage-booking.html'),
+  'manage-job.html': inlineStyle('manage-job.html'),
+  // runway-dashboard.html carries its own copy of the shell CSS (no styles.css).
+  'tools/runway-dashboard.html': inlineStyle('tools/runway-dashboard.html'),
+};
+const APP_OK = [/::-webkit-scrollbar-thumb:hover$/];
+
+for (const [file, css] of Object.entries(APP_SHEETS)) {
+  test(`${file}: every surface-changing :hover is behind @media (hover:hover)`, () => {
+    const bad = appRules(css).filter((r) => r.sel.includes(':hover') && SURFACE.test(r.body)
+      && !r.media.some((m) => /\(hover:\s*hover\)/.test(m))
+      && !APP_OK.some((re) => re.test(r.sel)));
+    assert.deepEqual(bad.map((r) => r.sel), []);
+  });
+}
+
+test('the app scan is not vacuous, and focus rings that shared a hover rule stay unconditional', () => {
+  const guarded = (file) => appRules(APP_SHEETS[file]).filter((r) => r.media.some((m) => /\(hover:\s*hover\)/.test(m))).map((r) => r.sel);
+  const tools = guarded('tools/styles-tools.css');
+  for (const sel of ['.tool-card:hover', '.job-card:hover', '.small-btn:hover', '.th-sidebar-link:hover', '.th-row:hover']) assert.ok(tools.includes(sel), sel);
+  const polish = guarded('portal/portal-polish.css');
+  for (const sel of ['.invoice-card:hover, .job-card:hover, .quote-card:hover, .wo-card:hover, .contract-card:hover', '.date-btn:hover, .slot-btn:hover, .wo-urgency-btn:hover', '.home-card:hover']) assert.ok(polish.includes(sel), sel);
+  for (const f of ['booking.html', 'manage-booking.html']) {
+    const g = guarded(f);
+    assert.ok(g.includes('.date-btn:hover') && g.includes('.slot-btn:hover'), f);
+  }
+  const unguarded = appRules(APP_SHEETS['tools/styles-tools.css']).filter((r) => !r.media.length).map((r) => r.sel);
+  for (const sel of ['.th-more-sheet-link:focus-visible', '.th-create-tile:focus-visible', '.th-hdr-btn:focus-visible', '.th-icon-btn:focus-visible']) assert.ok(unguarded.includes(sel), sel + ' should apply without a media query');
+});

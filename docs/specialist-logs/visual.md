@@ -2100,3 +2100,168 @@ identical to `main`. Screenshots at 1440/1024/390/320, dark/light, and
 Tests: no new test file this pass (every change stayed inside markup/
 selectors the existing suite already pins); the deferred items above
 each need their own new tests when picked up.
+
+## 2026-09-25 -- scheduling audit and fixes, plus Phase 2 #5-#9
+
+Asked for a focused pass on the booking flow (booking.html,
+manage-booking.html, manage-job.html, `createBookingPicker()`), and to
+clear whichever cross-surface Phase 2 items nobody had claimed. Not a
+redesign: no flow, copy direction or booking logic changed.
+
+**Method, and what it couldn't do.** Same sandbox as the morning's audit:
+read access to the repo, no Playwright, no test runner, no git. Findings
+come from the CSS and markup. Before/afters were rendered from static
+fixtures (the real stylesheets, before and after, with each picker's
+rendered markup in a given state) at 390, 430 and 1024px, in dark and,
+for Workspace/runway, light. **Couldn't check open PRs or the git log**,
+so the "unclaimed" status of #5-#9 is from ACTION-ITEMS.md only. The
+Claude Code session applying this should confirm first.
+
+`createBookingPicker()` **has landed**: quotes, jobs and work-orders all
+call it, and its styles are portal-polish.css section 25.
+
+### Findings (booking)
+
+- **B1 [H/S] Full and closed days can't be read.** Every picker drops an
+  unavailable tile to `opacity:.45`. The label that says why ("Full",
+  "Closed", "No times") is 10-10.5px `--text-dim`, which lands at about
+  2.3:1 on the page. It's the one word on the strip that explains the
+  state. **Fixed:** hollow tile (transparent, dashed border, dim date),
+  label at full strength (~7:1). Same on booking, manage-booking and the
+  portal.
+- **B2 [M/S] Sticky lift on tapped dates and times.** Part of X2 below.
+  On a phone, the last tapped date stayed lifted with a tinted border next
+  to the orange selected one, which reads as two selections. **Fixed**
+  with the X2 guards. Touch gets a `scale(.97)` press instead.
+- **B3 [M/S] Sub-44px targets:** the header phone link (~37px, all three
+  pages), booking's "Change service" / "Change date/time" (~33px),
+  "Not you? Forget this device" (~19px). **Fixed** (44px min-height; the
+  back link's bottom margin drops 16 to 10 so the step doesn't move).
+- **B4 [M/S] manage-job.html still used the old language.** Success was
+  the orange hex + unicode check the other two pages retired on 09-19/22.
+  Its date field was 15px, so iOS zoomed on focus. **Fixed:** the same
+  green drawn check and `successMsg()` as manage-booking; 16px, 48px tall.
+- **B5 [M/S] manage-job.html errors replaced the page.** A failed request
+  or cancel swapped the whole card for a "please call us" line. The button
+  reset written just above it never showed, and retrying meant reloading
+  the email link. Sending with no date did nothing at all. **Fixed:**
+  inline `role="alert"` errors under the button (manage-booking's
+  pattern), the form stays, "Choose a date first." for the empty case.
+  Copy follows manage-booking's "Try again, or call us at ...".
+- **B6 [L/S] A sent reschedule request didn't say what happens to the
+  current date.** It's request-only (by design, see manage-job.test.js),
+  so the success now says the appointment stays on its date until
+  confirmed.
+- **B7 [L/S] manage-booking's "That time was just taken"** was appended
+  under the grid on every conflict, so two conflicts stacked two copies,
+  below the fresh times. **Fixed:** one `#slotTakenNote`, above the grid,
+  cleared on the next pick.
+- **B8 [L/S] Portal picker:** slot skeletons 40px vs 44px buttons (a jump
+  when times land); the error's Try again uses `.slot-btn` so it looked
+  like a full-width time tile. **Fixed:** 44px skeletons; the retry is
+  centered and accent-outlined, still a `.slot-btn` for its 44px.
+- **B9 [L/S] Nothing moved when availability landed.** The counts and
+  times just appeared, which made a day switch hard to notice on a phone.
+  **Added (requested):** counts fade up, times rise in with a light 30ms
+  stagger (capped at 180ms), and inline errors slide in like the steps
+  do. `backwards` fill only, so a finished animation never holds a
+  transform over `:active`. Reduced motion: the booking pages'
+  page-wide rule, plus an explicit block in portal-polish.css.
+- **Checked, fine:** whole-window availability, first-open-day
+  preselect, the "is full, so here's the next open day" note, the
+  nothing-open-in-two-weeks message, the mobile sticky summary and the
+  booking confirmation all read clearly at 390/430/1024.
+- **Not changed, needs a call:** the three booking pages and the portal
+  are dark-only. They don't load styles.css, so the public light theme
+  never reaches them. Adding it is a theme build, not polish.
+
+### Phase 2 (cross-surface)
+
+- **T3 done.** `.skeleton-line` runs `--bg-panel-3` to `--border`. That's
+  visible on the Next Job card in both themes, and it's a shared rule, so
+  Finance, Invoices, Contracts and Job Tracker skeletons get a little
+  more visible too.
+- **X2 done.** A script wrapped every surface-changing `:hover` in
+  `@media (hover:hover)`, in place, so cascade order is unchanged. Rules
+  that shared a selector list with `:focus-visible` or a state class were
+  split: the focus/state half stays unconditional. Rules already inside a
+  media query (reduced-motion, max-width:720px, min-width:1024px) get a
+  nested `@media (hover:hover)`. Counts: styles-tools 40,
+  portal-app 6, portal-polish 13, booking 9, manage-booking 8,
+  manage-job 4. The scrollbar-thumb hover stays exempt, as on the public
+  site. `touch-no-sticky-hover.test.js` scans all six with a walker that
+  also tracks non-@media blocks, so a nested closing brace can't pop the
+  wrong media. **Left out:** runway-dashboard.html's own inline copy of
+  the shell CSS. It's desktop-first; do it with X3.
+- **PO3 done: kept the shimmer, dropped the pulse.** The shimmer is the
+  newer, deliberate one ("a slow sweep reads as loading"). Lines sit at
+  0.7 opacity (the pulse's midpoint), and a line inside a
+  `.skeleton-card` rides the card's sweep instead of running its own on
+  top. skeleton-loading.test.js's reduced-motion check still holds.
+- **X4 (runway): no bar, no change.** Looked before touching it:
+  runway-dashboard.html doesn't load styles.css at all (it's deliberately
+  self-contained; see its own "exempt from loading the shared styles.css"
+  comment), so `header{position:sticky}` and `header::before` never reach
+  its `<header id="mainContent">`. This morning's X4 note was inferred
+  from the markup, not checked against its links. Only the allow-list
+  comment in cross-surface-phase1.test.js changed. It stays a `<header>`,
+  since the shell pins Search/More to `header#mainContent`.
+- **P1 done.** `blog/blog.css` is in `GLOBAL_SHARED_FILES`. All 28
+  references are absolute `/blog/blog.css?v=`, which the checker's
+  pattern matches. `fix-versions` restamps them from 202609231020 to the
+  content hash. blog-index-cards.test.js only checks that they agree.
+- **T4 (Compliance forms) not done.** Not in this pass's list. Still open.
+
+### Needs the real harness
+
+- The full suite, check-consistency, check-undefined-vars, check-links,
+  check-visual-snapshot and fix-versions have **not been run**. Edited
+  tests: touch-no-sticky-hover (extended), cross-surface-phase1 (X4
+  assert), contact-hooks-public (manage-job errors are inline now). New:
+  booking-polish-2026-09-25.test.js.
+- fix-versions will restamp styles-tools.css (tools and portal),
+  blog.css, and bump the portal's CACHE_NAME for the two portal sheets.
+- The visual snapshot baseline may pin styles-tools.css or portal-polish
+  hover rules. If it fails, check whether only the `@media (hover:hover)`
+  wrapping moved.
+
+### Second round, same day (picked by Connor from a list of small follow-ups)
+
+- **Blueprint backdrop on the booking pages.** booking, manage-booking and
+  manage-job painted flat `#0a0a0a`. Every public page sits on
+  `.bg-blueprint` (drafting grid + orange/blue glows), so booking read as
+  a different site. Each page now carries a local copy of that rule (dark
+  values: these pages are dark-only) and the `<div>`, with
+  `html{background:var(--bg)}` so overscroll stays dark.
+- **Date-strip scroll hint.** Edge fades on booking and manage-booking,
+  shown only while there's more to scroll that way.
+  `bookingScrollFade()` in booking-flow.js. The portal's quotes page
+  already had its own; jobs and work orders didn't get one this round.
+- **Check mark on the selected date and time** (a CSS-masked SVG, so it
+  takes the text colour), on all three pickers. Selection was colour only.
+- **A tapped full day explains itself.** It used to do nothing. Now it
+  shows "**Saturday, Sep 26** is fully booked. Pick another day." (or
+  "is closed" / "has no times left to book online"), with a 0.32s shake.
+  booking and manage-booking reuse `#dateJumpNote` (now `role="status"`).
+  createBookingPicker adds a `.booking-picker-daynote` under the strip.
+- **Load skeletons** on manage-booking and manage-job, in the card's own
+  shape. The old "Loading..." text stays as an sr-only status.
+- **12px labels:** day names and counts on all three pickers, and
+  booking's phone-width step labels (were 10-11px).
+- **T4 done:** 14 Compliance fields onto `.form-field` with `<label for>`.
+- **Runway hover guards:** 18 rules in its own copy of the shell CSS. The
+  touch test scans it too.
+- **cookie-consent.js and mobile-nav-collapsible.js** are global shared
+  files now. check-consistency flags a bare reference, and fix-versions
+  adds the stamp (about 80 references). This reverses the 09-23
+  "no stamp needed" precedent that mobile-nav-collapsible.test.js pinned;
+  that test now asserts the stamp.
+- **PO4:** portal-app.css's dead `.th-toast` box rule is gone. It was a
+  property-for-property duplicate of styles-tools.css's rule, which loads
+  later. The container offset stays.
+- **P3:** careers.html has a skip link to `<main id="main">` and has left
+  the skip-link test's exclusion list. The St. George page already loads
+  the banner scripts, so nothing was left to do there.
+- **X1/T5 (Connor's call: orange):** see ACTION-ITEMS #11. The 404 page's
+  own ring and its test moved with it. The slider thumbs keep their
+  mixed blue/orange glow: it's decorative, and they draw no outline.

@@ -359,9 +359,12 @@
   input:focus-visible,
   select:focus-visible,
   textarea:focus-visible{
-    outline:2px solid var(--blue-light);
+    /* Orange, one ring on all three surfaces (X1, 2026-09-25). --orange-text
+       is #ffb347 in dark and #994a00 in light, so the ring holds 3:1+
+       against both grounds; plain --orange would fall under it in light. */
+    outline:2px solid var(--orange-text);
     outline-offset:2px;
-    box-shadow:0 0 0 5px rgba(58,160,255,0.16);
+    box-shadow:0 0 0 5px rgba(255,128,0,0.16);
   }
 
   .skip-link{
@@ -2546,7 +2549,7 @@
   }
   @media (hover:hover){.gallery-filter-chip:hover{border-color:var(--blue-text); color:var(--white); transform:translateY(-1px);}}
   .gallery-filter-chip:active{transform:scale(.97);}
-  .gallery-filter-chip:focus-visible{outline:2px solid var(--blue-text); outline-offset:2px;}
+  .gallery-filter-chip:focus-visible{outline:2px solid var(--orange-text); outline-offset:2px;}
   .gallery-filter-chip[aria-pressed="true"]{
     background:linear-gradient(135deg, #ffb347, #ff8000 60%, #c96400);
     border-color:transparent;
@@ -3463,7 +3466,7 @@
     pointer-events:none;
   }
   @media (hover:hover){.service-card:hover::before{border-color:var(--blue-text);}}
-  .service-card:focus-visible::before{border-color:var(--blue-text);}
+  .service-card:focus-visible::before{border-color:var(--orange-text);}
   @media (hover:hover){.service-card.is-urgent:hover::before{border-color:var(--orange-text);}}
   .service-card.is-urgent:focus-visible::before{border-color:var(--orange-text);}
   /* A single scan pass on hover/focus. Transform-only, so it composites. */
@@ -3793,7 +3796,7 @@
   .areas-link b{font-family:var(--font-ui); font-weight:700; font-size:15px;}
   .areas-link small{color:var(--text-dim); font-size:12.5px;}
   @media (hover:hover){.areas-link:hover{border-color:var(--blue-text); transform:translateY(-2px);}}
-  .areas-link:focus-visible{border-color:var(--blue-text); transform:translateY(-2px);}
+  .areas-link:focus-visible{border-color:var(--orange-text); transform:translateY(-2px);}
   .areas-link:active{transform:scale(.98);}
   .areas-link.is-request{border-color:var(--orange-tint-border);}
   @media (hover:hover){.areas-link.is-request:hover{border-color:var(--orange-text);}}

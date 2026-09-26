@@ -851,6 +851,15 @@ reference:
   **Hours worked** card under Your week on the Dashboard with this week's
   bars and, for Owner/Developer, everyone's hours. Separate from the job
   clock, which is unchanged.
+- **Booking pickers: readable full days, 44px taps, clearer
+  confirmations** (2026-09-25) -- on `booking.html`,
+  `manage-booking.html` and the portal's three schedulers, a full or
+  closed day is a hollow dashed tile whose "Full" / "Closed" label you can
+  read, not a 45%-faded one. Tapped dates and times no longer stay lifted
+  on a phone. `manage-job.html` gets the green check the other two pages
+  use, a 16px date field (no iOS zoom), and errors that keep the form up
+  so you can try again. A sent reschedule request now says the
+  appointment stays on its current date until it's confirmed.
 <!-- Add new visual additions above this line -->
 
 ## Proposed visual improvements (not yet built)
@@ -938,24 +947,33 @@ run the full suite before and after.
 
 ### Phase 2 -- next session (small, needs no design call)
 
-5. **Visible loading skeletons on Workspace Home** (T3) ⚠. The Next Job
-   card's placeholder lines are invisible in both themes.
-6. **Extend no-sticky-hover to tools and portal** (X2) ⚠. 41 + 19 surface
-   hovers go in `@media (hover:hover)`, and
-   `touch-no-sticky-hover.test.js` scans styles-tools.css and both
-   portal sheets.
-7. **One skeleton animation in the portal** (PO3). Drop the pulse or the
-   shimmer.
-8. **Runway Dashboard's page header gets the public header's dark bar**
-   (X4, runway only). Look at it in light mode, then reset or re-tag.
-9. **blog.css cache-bust into `GLOBAL_SHARED_FILES`** (P1).
-10. **Workspace Compliance forms onto `.form-field`** (T4).
+5. ~~**Visible loading skeletons on Workspace Home** (T3) ⚠.~~ **Done
+   (2026-09-25, scheduling pass).** `.skeleton-line` runs
+   `--bg-panel-3` to `--border`, a step above every panel tier.
+6. ~~**Extend no-sticky-hover to tools and portal** (X2) ⚠.~~ **Done
+   (2026-09-25).** 40 + 19 rules guarded (the 41st is the scrollbar
+   thumb, exempt as on the public site), plus 21 on booking.html,
+   manage-booking.html and manage-job.html. `touch-no-sticky-hover.test.js`
+   scans all six.
+7. ~~**One skeleton animation in the portal** (PO3).~~ **Done
+   (2026-09-25).** The pulse is gone, and lines inside a card ride the
+   card's sweep.
+8. ~~**Runway Dashboard's page header gets the public header's dark bar**
+   (X4, runway only).~~ **Closed, no change needed (2026-09-25).**
+   runway-dashboard.html never loads styles.css, so the public
+   `header` rules never reach it. The finding was wrong.
+9. ~~**blog.css cache-bust into `GLOBAL_SHARED_FILES`** (P1).~~ **Done
+   (2026-09-25).** 28 references restamped by `fix-versions`.
+10. ~~**Workspace Compliance forms onto `.form-field`** (T4).~~ **Done
+    (2026-09-25).** All 14 inline-styled fields.
 
 ### Phase 3 -- needs Connor's call first
 
-11. **One focus ring across all three surfaces** (X1, T5) ⚠. Blue (the
-    public site, and what the tools comment says was intended) or orange
-    (what most tool components draw). Pick one; implementation is small.
+11. ~~**One focus ring across all three surfaces** (X1, T5) ⚠.~~ **Done
+    (2026-09-25), Connor picked orange.** Public: `--orange-text` (#ffb347
+    dark, #994a00 light, so it holds 3:1 in both). Tools and portal:
+    `--orange`. The four tools inputs that cancelled the ring (T5) get it
+    back for keyboard focus.
 12. **Retire the glossy gradient buttons in tools/portal** (X3) ⚠. Bring
     them to the public site's flat U01 language. Visible on every tool
     page; do it as its own PR with full before/afters.
