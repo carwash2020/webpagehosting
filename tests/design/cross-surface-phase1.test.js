@@ -61,8 +61,9 @@ for (const file of ['tools/styles-tools.css', 'tools/runway-dashboard.html']) {
 }
 
 test('tool pages do not use a bare <header> for sub-headings (styles.css makes every <header> the sticky public header)', () => {
-  // runway-dashboard.html's page header predates this and overrides position;
-  // its dark ::before bar is Phase 2 in ACTION-ITEMS.md.
+  // runway-dashboard.html never loads styles.css (it's self-contained), so
+  // its <header> never got the public bar (checked 2026-09-25, X4). It stays
+  // a <header>: the shell pins Search/More to header#mainContent.
   const ALLOW = { 'runway-dashboard.html': /<header id="mainContent">/g };
   for (const page of fs.readdirSync(path.join(ROOT, 'tools')).filter((f) => f.endsWith('.html'))) {
     let src = read('tools/' + page);
@@ -80,3 +81,4 @@ test('portal .small-btn is at least 44px tall on phones, and that rule comes aft
   const later = css.slice(phone + 10).match(/\.small-btn\s*\{[^}]*min-height:\s*(\d+)px/g) || [];
   for (const r of later) assert.ok(Number(r.match(/(\d+)px/)[1]) >= 44, 'a later .small-btn rule drops below 44px: ' + r);
 });
+

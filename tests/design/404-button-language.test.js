@@ -39,6 +39,6 @@ test("404: the orange primary is styles.css's flat fill + offset shadow, with th
 
 test('404: the outline partner and focus ring match the site, and hover motion respects reduced motion', () => {
   assert.match(CSS, /a\.btn\.outline\{background:transparent; color:#ff8000; border:1\.5px solid rgba\(255,128,0,\.3\);\}/);
-  assert.match(CSS, new RegExp(`a\\.btn:focus-visible\\{outline:2px solid ${rootToken('--blue-light')};`));
+  assert.match(CSS, new RegExp(`a\\.btn:focus-visible\\{outline:2px solid ${rootToken('--orange-light')};`)); // orange ring site-wide (X1, 2026-09-25)
   assert.match(CSS, /@media \(prefers-reduced-motion:reduce\)\{\s*a\.btn\{transition:none;\}\s*a\.btn:hover, a\.btn:active\{transform:none;\}\s*\}/);
 });

@@ -67,8 +67,8 @@
     document.documentElement.style.colorScheme = saved === 'light' ? 'light' : 'dark';
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=c3b4c6aa66">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=2feefeec47">
+<link rel="stylesheet" href="/styles.css?v=6d29f79247">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=91cc947166">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=0e885bb435" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -490,6 +490,9 @@
   .compliance-detail-row strong { color: var(--white); }
   .compliance-edit-form { display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
   .compliance-edit-form.is-open { display: block; }
+  /* T4 (2026-09-25): the Compliance edit fields are .form-field now, so
+     they get the shared 46px phone height, 16px text and focus ring
+     instead of ~20 copies of one inline style. */
   .license-item {
     display: flex; justify-content: space-between; align-items: center; gap: 12px;
     padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 14px;
@@ -971,18 +974,18 @@
 
       <div class="compliance-edit-form" id="insuranceEditForm">
         <div class="tool-form-row">
-          <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Insurer</label><input type="text" id="insInsurer" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
-          <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Broker / Producer</label><input type="text" id="insProducer" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+          <div class="form-field"><label for="insInsurer">Insurer</label><input type="text" id="insInsurer"></div>
+          <div class="form-field"><label for="insProducer">Broker / Producer</label><input type="text" id="insProducer"></div>
         </div>
         <div class="tool-form-row">
-          <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Policy Number</label><input type="text" id="insPolicyNumber" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
-          <div style="flex:1; min-width:120px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Effective</label><input type="date" id="insEffectiveDate" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
-          <div style="flex:1; min-width:120px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Expires</label><input type="date" id="insExpirationDate" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+          <div class="form-field"><label for="insPolicyNumber">Policy Number</label><input type="text" id="insPolicyNumber"></div>
+          <div class="form-field"><label for="insEffectiveDate">Effective</label><input type="date" id="insEffectiveDate"></div>
+          <div class="form-field"><label for="insExpirationDate">Expires</label><input type="date" id="insExpirationDate"></div>
         </div>
         <div class="tool-form-row">
-          <div style="flex:1; min-width:140px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Each Occurrence</label><input type="text" id="insEachOccurrence" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
-          <div style="flex:1; min-width:140px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">General Aggregate</label><input type="text" id="insGeneralAggregate" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
-          <div style="flex:1; min-width:140px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Payment due day of month</label><input type="number" id="insPaymentDueDay" min="1" max="28" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+          <div class="form-field"><label for="insEachOccurrence">Each Occurrence</label><input type="text" id="insEachOccurrence"></div>
+          <div class="form-field"><label for="insGeneralAggregate">General Aggregate</label><input type="text" id="insGeneralAggregate"></div>
+          <div class="form-field"><label for="insPaymentDueDay">Payment due day of month</label><input type="number" id="insPaymentDueDay" min="1" max="28"></div>
         </div>
         <button class="secondary-btn" onclick="saveInsuranceEdit()">Save</button>
         <button class="secondary-btn" onclick="closeInsuranceEdit()">Cancel</button>
@@ -993,18 +996,18 @@
 
       <div class="compliance-edit-form" id="businessEditForm">
         <div class="tool-form-row">
-          <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Legal Name</label><input type="text" id="bizLegalName" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
-          <div style="flex:1; min-width:120px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">State of Formation</label><input type="text" id="bizState" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+          <div class="form-field"><label for="bizLegalName">Legal Name</label><input type="text" id="bizLegalName"></div>
+          <div class="form-field"><label for="bizState">State of Formation</label><input type="text" id="bizState"></div>
         </div>
         <div class="tool-form-row">
-          <div style="flex:1; min-width:220px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Business Address</label><input type="text" id="bizAddress" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+          <div class="form-field"><label for="bizAddress">Business Address</label><input type="text" id="bizAddress"></div>
         </div>
         <div class="tool-form-row">
-          <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">Utah Sales Tax License #</label><input type="text" id="bizSalesTax" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
-          <div style="flex:1; min-width:160px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">EIN</label><input type="text" id="bizEin" placeholder="Leave blank until the IRS responds" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+          <div class="form-field"><label for="bizSalesTax">Utah Sales Tax License #</label><input type="text" id="bizSalesTax"></div>
+          <div class="form-field"><label for="bizEin">EIN</label><input type="text" id="bizEin" placeholder="Leave blank until the IRS responds"></div>
         </div>
         <div class="tool-form-row">
-          <div style="flex:1; min-width:220px;"><label style="display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:4px;">W-9 Status / Notes</label><input type="text" id="bizW9Status" style="width:100%; box-sizing:border-box; padding:9px 11px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:14px;"></div>
+          <div class="form-field"><label for="bizW9Status">W-9 Status / Notes</label><input type="text" id="bizW9Status"></div>
         </div>
         <button class="secondary-btn" onclick="saveBusinessEdit()">Save</button>
         <button class="secondary-btn" onclick="closeBusinessEdit()">Cancel</button>

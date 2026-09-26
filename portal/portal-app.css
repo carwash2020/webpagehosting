@@ -328,10 +328,10 @@ body.portal-page {
    perceptual improvement that doesn't need pixel-perfect matching to
    work. */
 
-@keyframes skeleton-pulse {
-  0%, 100% { opacity: 0.55; }
-  50% { opacity: 0.9; }
-}
+/* PO3 (2026-09-25): the opacity pulse that lived here ran underneath
+   portal-polish.css's shimmer sweep, two animations on one placeholder
+   (a flicker on every list's first paint). The sweep stays; the line
+   sits at the pulse's old midpoint instead. */
 
 .skeleton-card {
   background: var(--bg-panel);
@@ -345,7 +345,7 @@ body.portal-page {
   height: 12px;
   border-radius: 6px;
   background: var(--border);
-  animation: skeleton-pulse 1.3s ease-in-out infinite;
+  opacity: 0.7;
 }
 
 .skeleton-line + .skeleton-line {
@@ -624,15 +624,10 @@ body.portal-page {
 body.portal-page .th-toast-container {
   bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 16px);
 }
-.th-toast {
-  pointer-events: auto; cursor: pointer;
-  display: flex; align-items: center; gap: 10px;
-  background: var(--bg-panel); border: 1px solid var(--border); border-left: 3px solid var(--orange);
-  color: var(--white); font-size: 14px; font-family: inherit; line-height: 1.4;
-  padding: 12px 18px; border-radius: 8px; max-width: 420px; width: max-content;
-  box-shadow: var(--shadow-hover, 0 6px 20px rgba(0,0,0,0.35));
-  opacity: 0; transform: translateY(8px); transition: opacity .18s ease, transform .18s ease;
-}
+/* .th-toast's own box (PO4, removed 2026-09-25): styles-tools.css defines
+   the same selector and loads after this file on every portal page, so
+   this copy (a --bg-panel face) never applied. The container offset above
+   and the icon/state rules below stay. */
 .th-toast .th-icon { width: 17px; height: 17px; flex-shrink: 0; color: #6fcf97; }
 .th-toast.is-error .th-icon { color: #e0807a; }
 .th-toast.is-shown { opacity: 1; transform: translateY(0); }
@@ -670,7 +665,7 @@ body.portal-page .th-toast-container {
   color: var(--text); font-family: inherit; font-size: 13px; font-weight: 600;
   text-decoration: none; transition: border-color .15s ease, color .15s ease;
 }
-.portal-thread-toggle:hover { border-color: var(--blue-light); color: var(--white); }
+@media (hover:hover){.portal-thread-toggle:hover{ border-color: var(--blue-light); color: var(--white); }}
 .portal-thread-toggle[aria-expanded="true"] { border-color: var(--blue-light); color: var(--white); }
 .portal-thread-toggle svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .portal-thread-toggle.has-unread { border-color: var(--orange-tint-border); background: var(--orange-tint-soft); color: var(--white); }
@@ -707,7 +702,7 @@ body.portal-page .th-toast-container {
   color: var(--white); font: inherit; font-size: 14px; text-align: left; cursor: pointer;
 }
 .portal-reply-notice-item + .portal-reply-notice-item { border-top: 1px solid var(--orange-tint-border); border-radius: 0 0 8px 8px; }
-.portal-reply-notice-item:hover { background: rgba(255, 255, 255, .04); }
+@media (hover:hover){.portal-reply-notice-item:hover{ background: rgba(255, 255, 255, .04); }}
 .portal-reply-notice-item:focus-visible { outline: 2px solid var(--orange-light); outline-offset: -2px; }
 .portal-reply-notice-about { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .portal-reply-notice .portal-unread-pill { flex-shrink: 0; }
@@ -775,7 +770,7 @@ body.portal-page .th-toast-container {
   display: inline-flex; align-items: center; justify-content: center;
   background: var(--blue-light); color: #0a0a0a; transition: transform .15s ease, opacity .15s ease;
 }
-.portal-composer-send:hover { transform: scale(1.05); }
+@media (hover:hover){.portal-composer-send:hover{ transform: scale(1.05); }}
 .portal-composer-send:disabled { opacity: .5; cursor: default; transform: none; }
 .portal-composer-send svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .portal-composer-send.is-sending svg { animation: portal-send-pulse .8s ease-in-out infinite; }
@@ -783,7 +778,7 @@ body.portal-page .th-toast-container {
 @media (prefers-reduced-motion: reduce) {
   .portal-nav-badge, .portal-composer-send.is-sending svg { animation: none; }
   .portal-thread { scroll-behavior: auto; }
-  .portal-composer-send:hover { transform: none; }
+  @media (hover:hover){.portal-composer-send:hover{ transform: none; }}
 }
 
 /* ==========================================================
@@ -860,8 +855,7 @@ body.portal-page .th-toast-container {
     width: 20px; height: 20px; flex-shrink: 0; stroke: currentColor; fill: none;
     stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; transform: none;
   }
-  .portal-rail .portal-nav a:hover,
-  .portal-rail-more a:hover { background: rgba(255, 255, 255, .04); color: var(--white); }
+  @media (hover:hover){.portal-rail .portal-nav a:hover, .portal-rail-more a:hover{ background: rgba(255, 255, 255, .04); color: var(--white); }}
   .portal-rail .portal-nav a.is-active,
   .portal-rail-more a.is-current { background: var(--orange-tint-soft); color: var(--orange-light); }
   .portal-rail .portal-nav a.is-active svg { transform: none; }
@@ -910,7 +904,7 @@ body.portal-page .th-toast-container {
     background: var(--bg-panel-2); border: 1px solid var(--border);
   }
   .portal-rail-help-actions a:first-child { background: var(--orange); border-color: var(--orange); color: #0a0a0a; }
-  .portal-rail-help-actions a:hover { filter: brightness(1.08); }
+  @media (hover:hover){.portal-rail-help-actions a:hover{ filter: brightness(1.08); }}
 
   /* Header: the rail already carries the brand and a Settings link, so
      the page header becomes a proper page title bar. */

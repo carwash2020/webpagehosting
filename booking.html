@@ -147,9 +147,25 @@
   *{box-sizing:border-box;}
   html{scroll-behavior:smooth;}
   body{
-    margin:0; background:var(--bg); color:var(--text);
+    margin:0; background:transparent; color:var(--text);
     font-family:var(--font-body); line-height:1.5;
     padding-bottom:24px;
+  }
+  /* Blueprint backdrop (2026-09-25): the public site's drafting-paper
+     linework (styles.css .bg-blueprint, dark values), copied because this
+     page doesn't load styles.css. Without it, booking read as a
+     different, flat-black site next to the page the visitor came from. */
+  html{background:var(--bg);}
+  .bg-blueprint{
+    position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background-color:var(--bg);
+    background-image:
+      radial-gradient(ellipse 62% 46% at 86% 4%, rgba(255,128,0,.085), transparent 62%),
+      radial-gradient(ellipse 58% 42% at 6% 72%, rgba(58,160,255,.070), transparent 62%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.026) 0 1px, transparent 1px 96px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.026) 0 1px, transparent 1px 96px),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.011) 0 1px, transparent 1px 24px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.011) 0 1px, transparent 1px 24px);
   }
   @media (prefers-reduced-motion: reduce){
     *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;}
@@ -161,8 +177,8 @@
   .brand{display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--text);}
   .brand img{width:38px; height:auto;}
   .brand-name{font-family:var(--font-ui); font-weight:700; letter-spacing:1.5px; font-size:14px;}
-  .phone-link{font-family:var(--font-ui); display:flex; align-items:center; gap:8px; color:var(--orange-light); text-decoration:none; font-weight:600; font-size:14.5px; white-space:nowrap; padding:8px 10px; border-radius:8px; transition:background .15s ease;}
-  .phone-link:hover{background:var(--orange-tint-soft);}
+  .phone-link{font-family:var(--font-ui); display:flex; align-items:center; gap:8px; color:var(--orange-light); text-decoration:none; font-weight:600; font-size:14.5px; white-space:nowrap; min-height:44px; padding:8px 10px; border-radius:8px; transition:background .15s ease;}
+  @media (hover:hover){.phone-link:hover{background:var(--orange-tint-soft);}}
   .phone-link:focus-visible, a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible{outline:2px solid var(--orange-light); outline-offset:2px;}
   .phone-link svg{width:16px; height:16px; flex-shrink:0;}
 
@@ -233,7 +249,7 @@
   .step-connector.is-done{background:var(--orange);}
   .step-node .label-short{display:none;}
   @media (max-width:600px){
-    .step-node .label{font-size:11px;}
+    .step-node .label{font-size:12px;}
     .step-node .label-full{display:none;}
     .step-node .label-short{display:inline;}
     .step-connector{margin:0 6px;}
@@ -253,7 +269,7 @@
     cursor:pointer; color:var(--text); font-family:var(--font-app);
     transition:border-color .15s ease, background .15s ease, transform .15s ease, box-shadow .15s ease;
   }
-  .service-option:hover{border-color:var(--orange-tint-border); background:var(--orange-tint-soft); transform:translateY(-2px); box-shadow:0 8px 20px -12px rgba(0,0,0,.6);}
+  @media (hover:hover){.service-option:hover{border-color:var(--orange-tint-border); background:var(--orange-tint-soft); transform:translateY(-2px); box-shadow:0 8px 20px -12px rgba(0,0,0,.6);}}
   .service-option.is-selected{border-color:var(--orange); background:var(--orange-tint-soft);}
   .service-option .svc-body{flex:1; min-width:0;}
   .service-option .svc-name{font-weight:700; font-size:15.5px; display:flex; justify-content:space-between; align-items:baseline; gap:10px;}
@@ -278,7 +294,7 @@
 
   .btn-back{
     background:transparent; border:none; color:var(--text-dim); font-family:var(--font-app); font-size:14px;
-    cursor:pointer; padding:6px 0; margin-bottom:16px; display:flex; align-items:center; gap:6px;
+    cursor:pointer; min-height:44px; padding:6px 0; margin-bottom:10px; display:flex; align-items:center; gap:6px;
     transition:color .15s ease;
   }
   .btn-back:hover{color:var(--orange-light);}
@@ -290,7 +306,7 @@
     font-family:var(--font-ui); font-weight:600; letter-spacing:0.5px; font-size:13px;
     padding:10px 20px; border-radius:8px; cursor:pointer; transition:background .15s ease, border-color .15s ease;
   }
-  .btn-retry:hover{background:var(--orange-tint-soft); border-color:var(--orange);}
+  @media (hover:hover){.btn-retry:hover{background:var(--orange-tint-soft); border-color:var(--orange);}}
   .btn-retry svg{width:15px; height:15px;}
 
   .date-row{display:flex; gap:8px; overflow-x:auto; padding-bottom:10px; margin-bottom:20px; -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity; scrollbar-width:thin; scrollbar-color:var(--border) transparent;}
@@ -303,19 +319,27 @@
     color:var(--text); font-family:var(--font-app); scroll-snap-align:start;
     transition:border-color .15s ease, background .15s ease, transform .15s ease;
   }
-  .date-btn:hover{border-color:var(--orange-tint-border); transform:translateY(-2px);}
-  .date-btn .dow{font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px;}
+  @media (hover:hover){.date-btn:hover{border-color:var(--orange-tint-border); transform:translateY(-2px);}}
+  .date-btn .dow{font-size:12px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px;}
   .date-btn .dom{font-size:18px; font-weight:700; margin-top:2px; font-family:var(--font-ui);}
   .date-btn.is-selected{border-color:var(--orange); background:var(--orange-tint-soft); color:var(--orange-light);}
   /* Whole-window availability (2026-09-22): each day now says how many
      open times it has, from ONE fetch for the whole strip, instead of a
      visitor tapping day after day to find out. Full/closed days stay in
      the strip (the calendar reads as a calendar) but can't be picked. */
-  .date-btn .avail{display:block; margin-top:4px; font-size:10.5px; font-weight:600; letter-spacing:.3px; color:var(--success-text); white-space:nowrap; min-height:14px;}
+  .date-btn .avail{display:block; margin-top:4px; font-size:12px; font-weight:600; letter-spacing:.3px; color:var(--success-text); white-space:nowrap; min-height:16px;}
   .date-btn.is-selected .avail{color:var(--orange-light);}
   .date-btn .avail.is-loading{width:34px; height:8px; min-height:0; margin:8px auto 3px; border-radius:4px; background:var(--border); animation:skelPulse 1.1s ease-in-out infinite;}
-  .date-btn.is-unavailable{opacity:.45; cursor:not-allowed; transform:none;}
-  .date-btn.is-unavailable:hover{border-color:var(--border); transform:none;}
+  /* Full/closed/no-times days (2026-09-25 booking audit): the whole tile
+     used to drop to 45% opacity, which took its "Full" / "Closed" label
+     down to about 2.3:1 -- the one word that says WHY the day can't be
+     picked was the hardest thing on the strip to read. The tile now goes
+     hollow (no fill, dashed edge, dim date) and keeps its label at full
+     strength. */
+  .date-btn.is-unavailable{background:transparent; border-style:dashed; cursor:not-allowed; transform:none;}
+  .date-btn.is-unavailable .dow, .date-btn.is-unavailable .dom{color:var(--text-dim);}
+  .date-btn.is-unavailable .dom{font-weight:500;}
+  @media (hover:hover){.date-btn.is-unavailable:hover{border-color:var(--border); transform:none;}}
   .date-btn.is-unavailable .avail{color:var(--text-dim);}
   @keyframes skelPulse{0%,100%{opacity:.45;} 50%{opacity:1;}}
   .slot-skel{height:44px; border-radius:10px; background:var(--bg-panel-2); border:1px solid var(--border); animation:skelPulse 1.1s ease-in-out infinite;}
@@ -332,8 +356,19 @@
     padding:12px 8px; cursor:pointer; color:var(--text); font-family:var(--font-app); font-size:14px;
     text-align:center; font-weight:500; transition:border-color .15s ease, background .15s ease, transform .15s ease;
   }
-  .slot-btn:hover{border-color:var(--orange-tint-border); transform:translateY(-2px);}
+  @media (hover:hover){.slot-btn:hover{border-color:var(--orange-tint-border); transform:translateY(-2px);}}
   .slot-btn.is-selected{border-color:var(--orange); background:var(--orange-tint-soft); color:var(--orange-light); font-weight:700;}
+  /* Touch gets a press instead of the (now hover:hover-only) lift. */
+  .date-btn:not(.is-unavailable):active, .slot-btn:active{transform:scale(.97);}
+  /* Arrivals (2026-09-25): a day's count fades up when the window lands,
+     and times rise in, lightly staggered, on every day switch. Fill is
+     backwards-only so the finished animation never holds a transform
+     over :active. The page-wide reduced-motion rule flattens it. */
+  @keyframes slotIn{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;}}
+  .slots-grid .slot-btn{animation:slotIn .22s ease-out backwards;}
+  .slots-grid .slot-btn:nth-child(2){animation-delay:.03s;} .slots-grid .slot-btn:nth-child(3){animation-delay:.06s;} .slots-grid .slot-btn:nth-child(4){animation-delay:.09s;}
+  .slots-grid .slot-btn:nth-child(5){animation-delay:.12s;} .slots-grid .slot-btn:nth-child(6){animation-delay:.15s;} .slots-grid .slot-btn:nth-child(n+7){animation-delay:.18s;}
+  .date-btn .avail:not(.is-loading){animation:slotIn .25s ease-out backwards;}
   .slots-empty{color:var(--text-dim); font-size:14px; padding:28px 0; text-align:center;}
 
   label{display:block; font-size:13px; color:var(--text-dim); margin-bottom:6px; margin-top:18px; font-weight:500;}
@@ -393,14 +428,14 @@
     transition:background .15s ease, transform .1s ease, box-shadow .15s ease;
   }
   .btn.orange{background:var(--orange); color:#1a1a1a; box-shadow:0 6px 18px -8px rgba(255,128,0,.55);}
-  .btn.orange:hover{background:var(--orange-dark); transform:translateY(-1px);}
+  @media (hover:hover){.btn.orange:hover{background:var(--orange-dark); transform:translateY(-1px);}}
   .btn.orange:active{transform:translateY(0);}
   .btn.orange:disabled{opacity:0.5; cursor:not-allowed; transform:none; box-shadow:none;}
   .btn.outline{
     background:transparent; color:var(--orange-light);
     border:1.5px solid var(--orange-tint-border); box-shadow:none; text-decoration:none;
   }
-  .btn.outline:hover{background:var(--orange-tint-soft); border-color:var(--orange); color:#ffffff;}
+  @media (hover:hover){.btn.outline:hover{background:var(--orange-tint-soft); border-color:var(--orange); color:#ffffff;}}
   .btn svg{width:16px; height:16px; flex-shrink:0;}
 
   .booking-summary{
@@ -544,7 +579,7 @@
   .booked-banner-when strong{color:var(--success-text);}
   .booked-banner-actions{font-family:var(--font-app); font-size:13.5px; color:var(--text-dim); margin-top:6px !important;}
   .booked-banner-actions a{color:var(--orange-light); font-weight:600; text-decoration:underline; text-underline-offset:2px;}
-  .booked-banner-forget{margin-top:8px; padding:0; background:none; border:0; color:var(--text-dim); font-family:var(--font-app); font-size:12.5px; text-decoration:underline; cursor:pointer;}
+  .booked-banner-forget{display:inline-flex; align-items:center; min-height:44px; margin-top:0; padding:0; background:none; border:0; color:var(--text-dim); font-family:var(--font-app); font-size:12.5px; text-decoration:underline; cursor:pointer;}
   /* display:flex would otherwise beat the hidden attribute. */
   .conf-actions[hidden], .prefill-note[hidden], .date-jump-note[hidden], .booked-banner[hidden]{display:none;}
   .conf-cal-hint{font-size:12.5px; color:var(--text-dim); margin:-14px 0 22px; text-align:left;}
@@ -614,11 +649,11 @@
     color:#f3d5b0;
     border-color:rgba(255,128,0,.55);
   }
-  .sticky-call .btn.outline:hover{
+  @media (hover:hover){.sticky-call .btn.outline:hover{
     background:rgba(255,128,0,.12);
     color:#ffffff;
     border-color:#ff8000;
-  }
+  }}
   .cookie-banner{
     position:fixed;
     left:16px; right:16px;
@@ -663,6 +698,24 @@
     from{opacity:0; transform:translateY(12px);}
     to{opacity:1; transform:translateY(0);}
   }
+  /* Date-strip scroll hint (2026-09-25): 14 days, about five visible on a
+     phone, and iOS hides the scrollbar. Edge fades show only while there's
+     more to scroll that way (bookingScrollFade(), js/booking-flow.js). */
+  .date-row-wrap{position:relative;}
+  .date-row-wrap::before, .date-row-wrap::after{content:""; position:absolute; top:0; bottom:10px; width:36px; pointer-events:none; opacity:0; transition:opacity .18s ease; z-index:1;}
+  .date-row-wrap::before{left:0; background:linear-gradient(to left, transparent, var(--bg));}
+  .date-row-wrap::after{right:0; background:linear-gradient(to right, transparent, var(--bg));}
+  .date-row-wrap.has-more-left::before, .date-row-wrap.has-more-right::after{opacity:1;}
+  /* Selection isn't colour alone: a small check rides the picked date and time. */
+  .date-btn{position:relative;}
+  .date-btn.is-selected::after, .slot-btn.is-selected::before{content:""; background:currentColor;
+    -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 13l5 5L19 7' fill='none' stroke='%23000' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;
+            mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 13l5 5L19 7' fill='none' stroke='%23000' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;}
+  .date-btn.is-selected::after{position:absolute; top:5px; right:5px; width:11px; height:11px;}
+  .slot-btn.is-selected::before{display:inline-block; width:12px; height:12px; margin-right:6px; vertical-align:-1px;}
+  /* A tap on a full day explains itself and gives a small shake. */
+  @keyframes dayNudge{0%,100%{transform:none;} 25%{transform:translateX(-3px);} 75%{transform:translateX(3px);}}
+  .date-btn.is-nudged{animation:dayNudge .32s ease;}
 </style>
 <!-- Shared business-hours data + timezone helpers (2026-09-03),
      extracted here from what used to be this page's own private copy
@@ -673,11 +726,12 @@
 <!-- Whole-window availability, add-to-calendar and the confirmation
      burst (2026-09-22) -- see js/booking-flow.js. Needs business-hours.js
      above it. -->
-<script src="/js/booking-flow.js?v=adf1e6bf91"></script>
-<script src="/js/cookie-consent.js" defer></script>
+<script src="/js/booking-flow.js?v=22b23c22e3"></script>
+<script src="/js/cookie-consent.js?v=14d2625000" defer></script>
 <script src="/js/utm-tracking.js?v=5aa2d867e3" defer></script>
 </head>
 <body>
+<div class="bg-blueprint" aria-hidden="true"></div>
 
 <header class="site-header">
   <div class="wrap">
@@ -763,8 +817,8 @@
       <button type="button" class="btn-back" id="backToService"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Change service</button>
       <div class="booking-summary" id="selectedServiceSummary"></div>
       <label>Choose a date</label>
-      <div class="date-row" id="dateRow"></div>
-      <p class="date-jump-note" id="dateJumpNote" hidden></p>
+      <div class="date-row-wrap"><div class="date-row" id="dateRow"></div></div>
+      <p class="date-jump-note" id="dateJumpNote" role="status" hidden></p>
       <label>Choose a time</label>
       <div class="slots-grid" id="slotsGrid" aria-live="polite"></div>
       <div class="slots-empty" id="slotsEmpty" style="display:none;" aria-live="polite">No open times this day. Try another date.</div>
@@ -1023,9 +1077,19 @@
       html += '<button type="button" class="date-btn" data-date="' + dateStr + '" aria-pressed="false"><div class="dow">' + dow + '</div><div class="dom">' + dom + '</div><span class="avail is-loading" aria-hidden="true"></span></button>';
     }
     el.innerHTML = html;
+    if (typeof bookingScrollFade === 'function') bookingScrollFade(el);
     el.querySelectorAll('.date-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        if (btn.getAttribute('aria-disabled') === 'true') return;
+        if (btn.getAttribute('aria-disabled') === 'true') {
+          // A tap on a full day says why (2026-09-25) instead of doing nothing.
+          const why = document.getElementById('dateJumpNote');
+          if (why && typeof bookingUnavailableDayText === 'function') {
+            why.innerHTML = bookingUnavailableDayText(btn.dataset.date, availability.byDate && availability.byDate[btn.dataset.date]);
+            why.hidden = false;
+          }
+          if (typeof bookingNudge === 'function') bookingNudge(btn);
+          return;
+        }
         const jumpNote = document.getElementById('dateJumpNote');
         if (jumpNote) jumpNote.hidden = true;
         selectDate(btn.dataset.date);
