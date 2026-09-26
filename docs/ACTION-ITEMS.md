@@ -1067,22 +1067,68 @@ run the full suite before and after.
 
 ### Phase 3 -- needs Connor's call first
 
-11. ~~**One focus ring across all three surfaces** (X1, T5) ⚠.~~ **Done
-    (2026-09-25), Connor picked orange.** Public: `--orange-text` (#ffb347
-    dark, #994a00 light, so it holds 3:1 in both). Tools and portal:
-    `--orange`. The four tools inputs that cancelled the ring (T5) get it
-    back for keyboard focus.
-12. **Retire the glossy gradient buttons in tools/portal** (X3) ⚠. Bring
-    them to the public site's flat U01 language. Visible on every tool
-    page; do it as its own PR with full before/afters.
+11. ~~**One focus ring across all three surfaces**~~ (X1, T5) ⚠ --
+    **done for tools (2026-09-26, Workspace tools redesign Phase 1)**:
+    orange, matching what most tool components already drew and what
+    the tools comment said was intended. The public site and portal
+    keep their own separate, already-logged focus decisions --
+    unifying across all three surfaces (the original scope of this
+    item) is still open.
+12. ~~**Retire the glossy gradient buttons in tools/portal**~~ (X3) ⚠ --
+    **done for tools (2026-09-26, Workspace tools redesign Phase 1)**:
+    `.primary-btn`, `.secondary-btn`, `.small-btn`,
+    `.dialog-btn-primary`/`-cancel`, the bottom nav's raised "+" hex,
+    `.th-chip.is-active` and `.th-row-avatar.is-owed` are all flat
+    fills with an offset hard shadow now, matching the public site's
+    U01 language. "Connor's OK" is the Workspace tools redesign handoff
+    itself (an explicit design he'd already approved). **Portal still
+    has its glossy `.btn.orange:hover` glow** -- open.
 13. **Scope styles.css's bare `header`/`section` rules to the public
     site** (X4) ⚠. Stops the element rules leaking into apps; updates the
     visual snapshot baseline.
 14. **Shared empty/error/loading vocabulary + `--danger`/`--success`
-    tokens** (X5, T6). Best done with #12.
+    tokens** (X5, T6). Best done with #12 (now: with #12's portal half).
 
 **Skipped on purpose:** border-radius spread, portal light mode, moving
 portal inline styles into sheets, desktop SVG note size. None has a user
 impact worth the churn.
+
+## Workspace tools redesign (2026-09-25 handoff, 4 phases)
+
+From the design handoff (`HANDOFF.md` + the approved `.dc.html`
+prototype exports, a Claude Code session's scratchpad folder -- ask for
+the link if picking this up later) for a full visual redesign of the
+internal Workspace tool suite. Split deliberately into 4 phases so each
+PR stays reviewable; only Phase 1 is built so far.
+
+1. ~~**Shared parts + app shell**~~ -- **done (2026-09-26)**. The
+   component library (`.th-card`/`-hero`, `.th-section-label`,
+   `.th-segmented`, `.th-stats-tile`, `.th-hero-number`, `.th-toggle`,
+   `.th-note`, `.th-placeholder-slot`, `.th-sticky-bar`, tone-pair
+   tokens/utilities) plus the flat-button and one-focus-ring work above
+   (#11, #12), all in `tools/styles-tools.css`. `tools/tools-nav-pwa.js`
+   needed no changes -- the shell it builds (header actions, bottom nav,
+   Create sheet, desktop sidebar) already matched the handoff's spec
+   structurally; this phase was tokens and component styling only.
+   Full reasoning: `docs/specialist-logs/visual.md`, 2026-09-26.
+2. **Home + Jobs + Job detail** (next session). `workspace.html`,
+   `job-tracker.html`, `job-detail.html` -- see the handoff's page-by-page
+   table for exactly what each screen needs (Next job hero, Money owed
+   split bar, the Job track stepper, filter chips, calendar density
+   dots, etc.), now buildable from Phase 1's shared classes.
+3. **Money pages** (after that). `invoice-generator.html` (Invoices/
+   Quotes/Finance segment, the editor, quick charge keypad),
+   `finance.html`.
+4. **Clients + the rest** (last). `clients.html`/`client-detail.html`,
+   the More drawer tile grouping, `route-planner.html`,
+   `review-request.html`, `contract-generator.html`,
+   `parts-reference.html`, `runway-dashboard.html` (keeps its own nav
+   CSS copy -- update both), `settings.html`, `dev-tools.html`,
+   `site-content.html`, `login.html`.
+
+Also still open from Phase 1's own notes (not phases 2-4, but not done
+either): the header's live sync text -> single dot (per-page
+`hub-header` markup, ~15 pages, not shell-injected markup, so it
+belongs with whichever phase touches each page's header next).
 
 <!-- Add new cross-surface visual plan phases above this line -->

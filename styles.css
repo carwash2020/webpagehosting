@@ -238,6 +238,23 @@
        look, and this doesn't reopen that. */
     --bg-glass: rgba(20,20,20,.74);
     --glass-highlight: rgba(255,255,255,.09);
+    /* Tone pairs (Workspace tools redesign Phase 1, 2026-09-25): base
+       declarations only -- nothing on the public site references these.
+       tools/styles-tools.css overrides every one of these with its own
+       tuned values, the same pattern --bg-panel/-2/-3/--border already
+       use (base here, tool-scope override there); declared here purely
+       so the shared-token mechanism (tests/design/tools-light-mode.test.js)
+       has no gap. */
+    --tone-orange-fg: #ffb347;
+    --tone-orange-bg: rgba(255, 128, 0, 0.16);
+    --tone-blue-fg: #9fd0ff;
+    --tone-blue-bg: rgba(159, 208, 255, 0.14);
+    --tone-green-fg: #3ad66b;
+    --tone-green-bg: rgba(58, 214, 107, 0.14);
+    --tone-purple-fg: #c9a4ff;
+    --tone-purple-bg: rgba(201, 164, 255, 0.14);
+    --tone-red-fg: #ff8080;
+    --tone-red-bg: rgba(255, 90, 90, 0.14);
   }
 
   /* Light theme (2026-08-20): the JS toggle has always correctly set

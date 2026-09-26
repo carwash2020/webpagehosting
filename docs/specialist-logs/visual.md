@@ -2181,167 +2181,133 @@ Tests: no new test file this pass (every change stayed inside markup/
 selectors the existing suite already pins); the deferred items above
 each need their own new tests when picked up.
 
-## 2026-09-25 -- scheduling audit and fixes, plus Phase 2 #5-#9
+## 2026-09-26 -- Workspace tools redesign Phase 1: shared components + app shell
 
-Asked for a focused pass on the booking flow (booking.html,
-manage-booking.html, manage-job.html, `createBookingPicker()`), and to
-clear whichever cross-surface Phase 2 items nobody had claimed. Not a
-redesign: no flow, copy direction or booking logic changed.
+Asked to build Phase 1 of a 4-phase Workspace tools redesign from a
+design-handoff folder (`HANDOFF.md`, the approved `.dc.html` prototype
+exports, `support.js`). Phase 1 is the shared component library + app
+shell only; phases 2-4 (Home/Jobs/Job detail, Money pages, Clients +
+rest) are explicit follow-up sessions, tracked in `docs/ACTION-ITEMS.md`
+with the handoff's own page-by-page table.
 
-**Method, and what it couldn't do.** Same sandbox as the morning's audit:
-read access to the repo, no Playwright, no test runner, no git. Findings
-come from the CSS and markup. Before/afters were rendered from static
-fixtures (the real stylesheets, before and after, with each picker's
-rendered markup in a given state) at 390, 430 and 1024px, in dark and,
-for Workspace/runway, light. **Couldn't check open PRs or the git log**,
-so the "unclaimed" status of #5-#9 is from ACTION-ITEMS.md only. The
-Claude Code session applying this should confirm first.
+- **Read the shell code first, found it mostly already matches the
+  spec structurally.** `tools/tools-nav-pwa.js`'s `inject()` already
+  builds the described header search/grid buttons, the Home/Jobs/+/
+  Clients/Money bottom nav with a raised orange hex center button, the
+  Create sheet's quick-add + paste + say-it + 3x3 `CREATE_ACTIONS` grid,
+  and the desktop sidebar's Work/Money/Office groups with an orange New
+  button and orange active-item tint (all from the 2026-08-20 through
+  2026-09-23 app-shell-v2 work). This phase's real gap was visual only
+  -- tokens and component styling, not shell markup -- so no changes
+  landed in `tools-nav-pwa.js` at all; everything is in
+  `tools/styles-tools.css`.
+- **Token remap was a real finding, not a formality.** The handoff's
+  hex values (`#141518`/`#17181c`/`#1b1c20` for
+  `--bg-panel`/`-2`/`-3`, `#2c2e34` for `--border`, `#9fd0ff` for
+  `--blue-light`) didn't match the current tool-scope override values
+  (`#18191d`/`#212327`/`#2c2e34`/`#34363c`) -- a step lighter and more
+  spread out than the approved design. Updated the
+  `html:not([data-theme="light"]) body.th-tool-page` override block to
+  the exact approved values.
+- **Tone pairs needed a base declaration in `styles.css`, not just
+  `tools/styles-tools.css`'s own override.** `tests/design/
+  tools-light-mode.test.js` asserts every `var(--x)` `styles-tools.css`
+  references is defined *somewhere* in `styles.css` (any `--x:`
+  anywhere in the file, not scoped to `:root`) -- the same mechanism
+  that already backs `--bg-panel`/`-2`/`-3`/`--border` (base in
+  `styles.css`, tool-scope override in `styles-tools.css`). Missed this
+  on the first pass (5 tone pairs x 2 = 10 vars, only added to
+  `styles-tools.css`) and the full suite caught it immediately. Added
+  base declarations to `styles.css`'s `:root` and `[data-theme="light"]`
+  blocks -- nothing on the public site references them, so this is a
+  pure token addition, not a visual change to any public page. Worth
+  remembering for any future new token: it needs a home in `styles.css`
+  even if only tools ever uses it.
+- **Retiring the glossy gradient buttons (ACTION-ITEMS Phase 3 #12) is
+  the actual content of this phase**, not a side effect. `.primary-btn`,
+  `.secondary-btn`, `.small-btn`, `.dialog-btn-primary`/`-cancel`, the
+  bottom nav's `.th-bn-create-disc` hex, `.th-chip.is-active` and
+  `.th-row-avatar.is-owed` were each their own gradient+glow/sheen rule
+  (some going back to 2026-08-16/09-06). All now flat fills with an
+  offset hard shadow, matching the public site's own U01 language
+  (2026-09-07) instead of a second, dated button style living only in
+  tools. The handoff itself is the "Connor's OK" ACTION-ITEMS asked for
+  -- an explicit design he'd already approved, not a unilateral call.
+  One subtlety: a `body`-prefixed override block (higher specificity,
+  added 2026-08-16 for a "glass sheen" pass) was actually what rendered
+  on every button, not the base `.primary-btn` rule -- both had to be
+  flattened, or the base rule's flat fill would have been invisible
+  under the still-glossy override.
+- **One focus ring (ACTION-ITEMS Phase 3 #11 for tools).** The default
+  `:focus-visible` rule (~L1222, orange) already existed, but a later
+  override (~L2601, "one focus treatment everywhere") deliberately set
+  `.tool-card`/`.small-btn`/`.tab-btn`/`.help-btn` back to blue --
+  itself trying to unify things, just landing on the wrong color for
+  4 of dozens of components. Changed to orange, matching the majority
+  and the base rule's own intent.
+- **Hover-guarded only what this PR touches, not the full audit.**
+  ACTION-ITEMS' X2 (41 unguarded tools hovers + 19 portal) is explicit
+  Phase 2 scope from the 2026-09-25 cross-surface audit. Guarded the
+  ~10 hover rules this phase actually rewrote or added (button hovers,
+  `.tool-card`/`.job-card`/`.metric-card`/`.help-btn` glow,
+  `.th-icon-btn`/`.th-row`/`.th-toast-undo-btn`), left the rest for
+  that already-planned pass.
+- **Didn't touch the header's live sync text -> dot, or per-page
+  `hub-header` markup.** The handoff's shell bullet describes this, but
+  that markup lives in each of ~15 tool pages' own HTML (the
+  `realtime-badge`/`realtime-dot`/`realtime-text` pattern), not in
+  `tools-nav-pwa.js`'s `inject()` -- changing it is "unique content of
+  an individual tool page" work, explicitly out of this phase's scope
+  per the delegation. Logged for phases 2-4 alongside per-page content.
+- **New shared components are additive and unused so far**: `.th-card`/
+  `.th-card-hero`, `.th-section-label`, `.th-segmented`(-btn),
+  `.th-stats-tile`, `.th-hero-number`, `.th-toggle`, `.th-note`,
+  `.th-placeholder-slot`, `.th-sticky-bar`, `.th-tone-*`. None of them
+  render anywhere yet -- phases 2-4 wire them into real pages. This is
+  deliberate (a visual pass builds the library first, page content
+  adopts it next), but worth flagging so a future session doesn't
+  wonder why a class has no callers.
+- **Origin/main moved twice underneath this branch** (PR #440 homepage
+  redesign v2, then PR #441 client portal redesign, both merged while
+  this session worked). Rebasing via cherry-pick + merge: the only real
+  conflicts were cache-bust `?v=`/`CACHE_NAME` stamps on ~65-68 pages
+  (both sessions restamped the same global-shared-file references) --
+  resolved by keeping origin/main's side and re-running
+  `npm run fix-versions`, never by hand-editing a hash. One stray find
+  while re-verifying after the rebase: `portal/jobs.html` carried a
+  duplicate local `const MIN_LEAD_HOURS = 2;` (already defined in
+  `js/business-hours.js`) that isn't part of this PR's actual work --
+  removed it since it broke the undefined-vars redeclaration check and
+  wasn't referenced anywhere in the file.
+- **A background `node --test` run got contaminated by concurrent `git
+  worktree add`/`remove` operations** (used to get a clean "before"
+  checkout for screenshots) -- a run mid-flight showed 9 failures
+  including several unrelated-looking ones (cache-bust, tour health
+  check, `var` redeclaration checks) that vanished on a clean rerun
+  with nothing else happening concurrently. Lesson for next time: don't
+  run `git worktree add`/`remove` while a background test suite is
+  executing, same as the existing "don't edit files" rule -- it isn't
+  just file edits that can race a running suite.
 
-`createBookingPicker()` **has landed**: quotes, jobs and work-orders all
-call it, and its styles are portal-polish.css section 25.
+Verified: full suite 4189/4190 (the one failure is the known
+`check-links.py` sandbox-proxy test). `check-consistency.js`,
+`check-undefined-vars.js` clean. `npm run fix-versions` restamped
+`styles.css` and `tools/styles-tools.css` (both global shared files)
+across every page that loads either. `check-visual-snapshot` clean (6
+targets, all match baseline -- confirms nothing here touched a pinned
+public-site element). Screenshots via a real headless Chromium
+(`/opt/pw-browsers/chromium-1194`, not the default `chromium` channel
+whose expected revision wasn't installed in this sandbox) at 390/768/
+1024/1440px, dark/light and 390 reduced-motion, before (a `git worktree
+add` of the pre-change commit) and after, in
+`docs/workspace-tools-phase1-2026-09-25/{before,after}/`. Auth-gated
+tool pages were screenshotted by seeding a fake `th_auth_session` in
+localStorage before navigation (passes the client-side `hasValidSession()`
+gate; real data fetches 401 and show empty states, which is fine for a
+shell/component screenshot).
 
-### Findings (booking)
-
-- **B1 [H/S] Full and closed days can't be read.** Every picker drops an
-  unavailable tile to `opacity:.45`. The label that says why ("Full",
-  "Closed", "No times") is 10-10.5px `--text-dim`, which lands at about
-  2.3:1 on the page. It's the one word on the strip that explains the
-  state. **Fixed:** hollow tile (transparent, dashed border, dim date),
-  label at full strength (~7:1). Same on booking, manage-booking and the
-  portal.
-- **B2 [M/S] Sticky lift on tapped dates and times.** Part of X2 below.
-  On a phone, the last tapped date stayed lifted with a tinted border next
-  to the orange selected one, which reads as two selections. **Fixed**
-  with the X2 guards. Touch gets a `scale(.97)` press instead.
-- **B3 [M/S] Sub-44px targets:** the header phone link (~37px, all three
-  pages), booking's "Change service" / "Change date/time" (~33px),
-  "Not you? Forget this device" (~19px). **Fixed** (44px min-height; the
-  back link's bottom margin drops 16 to 10 so the step doesn't move).
-- **B4 [M/S] manage-job.html still used the old language.** Success was
-  the orange hex + unicode check the other two pages retired on 09-19/22.
-  Its date field was 15px, so iOS zoomed on focus. **Fixed:** the same
-  green drawn check and `successMsg()` as manage-booking; 16px, 48px tall.
-- **B5 [M/S] manage-job.html errors replaced the page.** A failed request
-  or cancel swapped the whole card for a "please call us" line. The button
-  reset written just above it never showed, and retrying meant reloading
-  the email link. Sending with no date did nothing at all. **Fixed:**
-  inline `role="alert"` errors under the button (manage-booking's
-  pattern), the form stays, "Choose a date first." for the empty case.
-  Copy follows manage-booking's "Try again, or call us at ...".
-- **B6 [L/S] A sent reschedule request didn't say what happens to the
-  current date.** It's request-only (by design, see manage-job.test.js),
-  so the success now says the appointment stays on its date until
-  confirmed.
-- **B7 [L/S] manage-booking's "That time was just taken"** was appended
-  under the grid on every conflict, so two conflicts stacked two copies,
-  below the fresh times. **Fixed:** one `#slotTakenNote`, above the grid,
-  cleared on the next pick.
-- **B8 [L/S] Portal picker:** slot skeletons 40px vs 44px buttons (a jump
-  when times land); the error's Try again uses `.slot-btn` so it looked
-  like a full-width time tile. **Fixed:** 44px skeletons; the retry is
-  centered and accent-outlined, still a `.slot-btn` for its 44px.
-- **B9 [L/S] Nothing moved when availability landed.** The counts and
-  times just appeared, which made a day switch hard to notice on a phone.
-  **Added (requested):** counts fade up, times rise in with a light 30ms
-  stagger (capped at 180ms), and inline errors slide in like the steps
-  do. `backwards` fill only, so a finished animation never holds a
-  transform over `:active`. Reduced motion: the booking pages'
-  page-wide rule, plus an explicit block in portal-polish.css.
-- **Checked, fine:** whole-window availability, first-open-day
-  preselect, the "is full, so here's the next open day" note, the
-  nothing-open-in-two-weeks message, the mobile sticky summary and the
-  booking confirmation all read clearly at 390/430/1024.
-- **Not changed, needs a call:** the three booking pages and the portal
-  are dark-only. They don't load styles.css, so the public light theme
-  never reaches them. Adding it is a theme build, not polish.
-
-### Phase 2 (cross-surface)
-
-- **T3 done.** `.skeleton-line` runs `--bg-panel-3` to `--border`. That's
-  visible on the Next Job card in both themes, and it's a shared rule, so
-  Finance, Invoices, Contracts and Job Tracker skeletons get a little
-  more visible too.
-- **X2 done.** A script wrapped every surface-changing `:hover` in
-  `@media (hover:hover)`, in place, so cascade order is unchanged. Rules
-  that shared a selector list with `:focus-visible` or a state class were
-  split: the focus/state half stays unconditional. Rules already inside a
-  media query (reduced-motion, max-width:720px, min-width:1024px) get a
-  nested `@media (hover:hover)`. Counts: styles-tools 40,
-  portal-app 6, portal-polish 13, booking 9, manage-booking 8,
-  manage-job 4. The scrollbar-thumb hover stays exempt, as on the public
-  site. `touch-no-sticky-hover.test.js` scans all six with a walker that
-  also tracks non-@media blocks, so a nested closing brace can't pop the
-  wrong media. **Left out:** runway-dashboard.html's own inline copy of
-  the shell CSS. It's desktop-first; do it with X3.
-- **PO3 done: kept the shimmer, dropped the pulse.** The shimmer is the
-  newer, deliberate one ("a slow sweep reads as loading"). Lines sit at
-  0.7 opacity (the pulse's midpoint), and a line inside a
-  `.skeleton-card` rides the card's sweep instead of running its own on
-  top. skeleton-loading.test.js's reduced-motion check still holds.
-- **X4 (runway): no bar, no change.** Looked before touching it:
-  runway-dashboard.html doesn't load styles.css at all (it's deliberately
-  self-contained; see its own "exempt from loading the shared styles.css"
-  comment), so `header{position:sticky}` and `header::before` never reach
-  its `<header id="mainContent">`. This morning's X4 note was inferred
-  from the markup, not checked against its links. Only the allow-list
-  comment in cross-surface-phase1.test.js changed. It stays a `<header>`,
-  since the shell pins Search/More to `header#mainContent`.
-- **P1 done.** `blog/blog.css` is in `GLOBAL_SHARED_FILES`. All 28
-  references are absolute `/blog/blog.css?v=`, which the checker's
-  pattern matches. `fix-versions` restamps them from 202609231020 to the
-  content hash. blog-index-cards.test.js only checks that they agree.
-- **T4 (Compliance forms) not done.** Not in this pass's list. Still open.
-
-### Needs the real harness
-
-- The full suite, check-consistency, check-undefined-vars, check-links,
-  check-visual-snapshot and fix-versions have **not been run**. Edited
-  tests: touch-no-sticky-hover (extended), cross-surface-phase1 (X4
-  assert), contact-hooks-public (manage-job errors are inline now). New:
-  booking-polish-2026-09-25.test.js.
-- fix-versions will restamp styles-tools.css (tools and portal),
-  blog.css, and bump the portal's CACHE_NAME for the two portal sheets.
-- The visual snapshot baseline may pin styles-tools.css or portal-polish
-  hover rules. If it fails, check whether only the `@media (hover:hover)`
-  wrapping moved.
-
-### Second round, same day (picked by Connor from a list of small follow-ups)
-
-- **Blueprint backdrop on the booking pages.** booking, manage-booking and
-  manage-job painted flat `#0a0a0a`. Every public page sits on
-  `.bg-blueprint` (drafting grid + orange/blue glows), so booking read as
-  a different site. Each page now carries a local copy of that rule (dark
-  values: these pages are dark-only) and the `<div>`, with
-  `html{background:var(--bg)}` so overscroll stays dark.
-- **Date-strip scroll hint.** Edge fades on booking and manage-booking,
-  shown only while there's more to scroll that way.
-  `bookingScrollFade()` in booking-flow.js. The portal's quotes page
-  already had its own; jobs and work orders didn't get one this round.
-- **Check mark on the selected date and time** (a CSS-masked SVG, so it
-  takes the text colour), on all three pickers. Selection was colour only.
-- **A tapped full day explains itself.** It used to do nothing. Now it
-  shows "**Saturday, Sep 26** is fully booked. Pick another day." (or
-  "is closed" / "has no times left to book online"), with a 0.32s shake.
-  booking and manage-booking reuse `#dateJumpNote` (now `role="status"`).
-  createBookingPicker adds a `.booking-picker-daynote` under the strip.
-- **Load skeletons** on manage-booking and manage-job, in the card's own
-  shape. The old "Loading..." text stays as an sr-only status.
-- **12px labels:** day names and counts on all three pickers, and
-  booking's phone-width step labels (were 10-11px).
-- **T4 done:** 14 Compliance fields onto `.form-field` with `<label for>`.
-- **Runway hover guards:** 18 rules in its own copy of the shell CSS. The
-  touch test scans it too.
-- **cookie-consent.js and mobile-nav-collapsible.js** are global shared
-  files now. check-consistency flags a bare reference, and fix-versions
-  adds the stamp (about 80 references). This reverses the 09-23
-  "no stamp needed" precedent that mobile-nav-collapsible.test.js pinned;
-  that test now asserts the stamp.
-- **PO4:** portal-app.css's dead `.th-toast` box rule is gone. It was a
-  property-for-property duplicate of styles-tools.css's rule, which loads
-  later. The container offset stays.
-- **P3:** careers.html has a skip link to `<main id="main">` and has left
-  the skip-link test's exclusion list. The St. George page already loads
-  the banner scripts, so nothing was left to do there.
-- **X1/T5 (Connor's call: orange):** see ACTION-ITEMS #11. The 404 page's
-  own ring and its test moved with it. The slider thumbs keep their
-  mixed blue/orange glow: it's decorative, and they draw no outline.
+Tests: none new this phase -- every change is inside existing shared
+classes/tokens the suite already exercises indirectly (button/focus/
+hover assertions across many test files), and the new unused component
+classes have no test surface yet (phases 2-4 will add their own tests
+when they adopt them).

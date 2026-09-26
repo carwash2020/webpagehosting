@@ -5612,3 +5612,21 @@ An approved design mockup (`Homepage Redesign v2.dc.html`) and a 15-section hand
 Verified: full suite 4182/4190 (8 failures were stale cache-bust stamps from the `styles.css` edit, fixed by `npm run fix-versions`, re-verified clean), `check-consistency`, `check-undefined-vars` clean, `check-links.py` only the known sandbox-proxy Unsplash failure. Screenshots at 1440/1024/390/320, dark/light and 390 reduced-motion in `docs/homepage-redesign-2026-09-25/{before,after}/`.
 
 Tests: none new -- every change stayed inside markup/selectors the existing suite already pins. Full details and the reasoning behind each deferral: `docs/specialist-logs/visual.md`.
+
+## What changed, 2026-09-26 -- Workspace tools redesign Phase 1: shared components + app shell
+
+First of 4 phases from the approved Workspace tools handoff (`HANDOFF.md` in the design assets folder; `docs/ACTION-ITEMS.md` has the phase breakdown). This phase builds the shared component library and app-shell visual language -- nothing page-specific. Scope held strictly to `tools/styles-tools.css` and `tools/tools-nav-pwa.js`; no individual tool page's unique content changed.
+
+- **Tokens re-tuned to the handoff's exact values**: `--bg-panel`/`-2`/`-3`/`--border` (tool scope) and `--blue-light` move a step darker/closer together, matching the approved design rather than the previous scale. Five new tone pairs (orange/blue/green/purple/red, each `-fg` + `-bg`) for pills, icon tiles and row accents, in both themes -- base declarations also live in `styles.css` (nothing on the public site references them) so the shared-token mechanism has no gap.
+- **New shared components** (additive, ready for phases 2-4 to adopt): `.th-card`/`.th-card-hero`, `.th-section-label`, `.th-segmented`/`.th-segmented-btn`, `.th-stats-tile`, `.th-hero-number`, `.th-toggle`, `.th-note`, `.th-placeholder-slot`, `.th-sticky-bar`, `.th-tone-*` utilities. The existing shared list row (`.th-row`, 2026-09-22) and chips (`.th-chip`) are restyled in place rather than duplicated.
+- **Flat buttons, closing out ACTION-ITEMS Phase 3 #12 for tools.** Retires the glossy gradient+glow language on `.primary-btn`, `.secondary-btn`, `.small-btn`, `.dialog-btn-primary`/`-cancel`, the bottom nav's raised "+" hex, `.th-chip.is-active` and `.th-row-avatar.is-owed` -- all solid fills with an offset hard shadow now, matching the public site's own U01 flat-button language (2026-09-07) instead of a second, dated button style. `.tab-btn`'s active state is a soft tinted fill instead of a gradient underline bar.
+- **One focus ring, closing out ACTION-ITEMS Phase 3 #11 for tools.** The blue focus-visible override on `.tool-card`/`.small-btn`/`.tab-btn`/`.help-btn` is now orange, matching the suite's own default ring everywhere else. The public site and portal keep their own separate, already-logged focus decisions.
+- Every hover rule touched or added by this change is now under `@media (hover:hover)`, so nothing sticks on a touch device; the suite-wide 41-hover audit stays Phase 2 as already planned.
+
+Phases 2-4 (Home/Jobs/Job detail, Money pages, Clients + the rest) are explicitly **not** in this PR -- tracked with the page-by-page handoff table referenced in `docs/ACTION-ITEMS.md`.
+
+Verified: full suite 4189/4190 (the one failure is the known `check-links.py` sandbox-proxy test), `check-consistency`, `check-undefined-vars`, `check-visual-snapshot` clean. `npm run fix-versions` restamped `styles.css` and `tools/styles-tools.css` site-wide (both are global shared files). Screenshots at 390/768/1024/1440px, dark/light and 390 reduced-motion, before/after, in `docs/workspace-tools-phase1-2026-09-25/{before,after}/`.
+
+Also fixed in passing, found while re-verifying after rebasing onto origin/main: a stray duplicate `MIN_LEAD_HOURS` declaration in `portal/jobs.html` (unrelated to this PR's scope) that broke the undefined-vars redeclaration check.
+
+Tests: none new for this phase -- every change stayed inside existing shared classes and tokens. Full reasoning in `docs/specialist-logs/visual.md`.
