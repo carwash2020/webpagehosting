@@ -51,7 +51,7 @@
     document.documentElement.style.colorScheme = saved === 'light' ? 'light' : 'dark';
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=bdd15bb284">
+<link rel="stylesheet" href="/styles.css?v=6d29f79247">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=91cc947166">
 <script src="/tools/data-layer.js?v=b2586a446b" defer></script>
 <script src="/tools/dev-tools-shared.js?v=58277b5d8b" defer></script>
@@ -1025,8 +1025,12 @@
 
 
 
+  // calendar.html left this list 2026-09-25: it has been a redirect stub
+  // (no CSP, manifest or PWA meta) since 2026-09-21, so "Run full health
+  // check" reported 1 ISSUE on every run. Retired stubs belong in
+  // check-consistency.js's EXEMPT list, not here.
   const TOOL_PAGES_TO_CHECK = [
-    'workspace.html', 'calendar.html', 'contract-generator.html', 'invoice-generator.html',
+    'workspace.html', 'contract-generator.html', 'invoice-generator.html',
     'job-tracker.html', 'login.html', 'review-request.html', 'route-planner.html',
     'parts-reference.html', 'runway-dashboard.html', 'dev-tools.html',
   ];
