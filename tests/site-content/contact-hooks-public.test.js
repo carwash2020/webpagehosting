@@ -316,16 +316,19 @@ for (const [label, siteContent, phone, tel] of [
     w.document.getElementById('startRescheduleBtn').click();
     w.document.getElementById('newDateInput').value = '2026-12-28';
     w.document.getElementById('submitRescheduleBtn').click();
-    await until(() => w.document.querySelector('.state-msg.is-error'));
-    assert.equal(w.document.querySelector('.state-msg.is-error').textContent, 'Something went wrong sending that request. Please call us at ' + phone + '.');
+    // Inline, like manage-booking.html (2026-09-25): the form stays up to retry.
+    await until(() => !w.document.getElementById('rescheduleError').hidden);
+    assert.equal(w.document.getElementById('rescheduleError').textContent, 'Something went wrong sending that request. Try again, or call us at ' + phone + '.');
+    assert.ok(w.document.getElementById('submitRescheduleBtn'), 'the request form is still there');
 
     w = realPage('manage-job.html', query, { get_job_by_cancel_token: [200, [JOB]], cancel_job_by_token: [500, 'x'] }, siteContent);
     await until(() => w.document.getElementById('startCancelBtn'));
     await tick(20);
     w.document.getElementById('startCancelBtn').click();
     w.document.getElementById('confirmCancelBtn').click();
-    await until(() => w.document.querySelector('.state-msg.is-error'));
-    assert.equal(w.document.querySelector('.state-msg.is-error').textContent, 'Something went wrong cancelling this appointment. Please call us at ' + phone + '.');
+    await until(() => !w.document.getElementById('cancelError').hidden);
+    assert.equal(w.document.getElementById('cancelError').textContent, 'Something went wrong cancelling this appointment. Try again, or call us at ' + phone + '.');
+    assert.equal(w.document.getElementById('confirmCancelBtn').disabled, false, 'the cancel button can be pressed again');
   });
 }
 

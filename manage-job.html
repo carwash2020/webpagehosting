@@ -35,13 +35,14 @@
     --orange-tint-soft: rgba(255,128,0,0.08);
     --orange-tint-border: rgba(255,128,0,0.32);
     --radius:12px;
+    --success-text:#3ad66b;
     --hex: polygon(25% 6%, 75% 6%, 97% 50%, 75% 94%, 25% 94%, 3% 50%);
   }
   button,input,select,textarea,label{font-family:var(--font-app);}
 
   *{box-sizing:border-box;}
   body{
-    margin:0; background:var(--bg); color:var(--text);
+    margin:0; background:transparent; color:var(--text);
     font-family:var(--font-body); line-height:1.5;
     padding-bottom:80px;
   }
@@ -54,8 +55,8 @@
   .brand{display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--text);}
   .brand img{width:38px; height:auto;}
   .brand-name{font-family:var(--font-ui); font-weight:700; letter-spacing:1.5px; font-size:14px;}
-  .phone-link{font-family:var(--font-ui); display:flex; align-items:center; gap:8px; color:var(--orange-light); text-decoration:none; font-weight:600; font-size:14.5px; white-space:nowrap; padding:8px 10px; border-radius:8px; transition:background .15s ease;}
-  .phone-link:hover{background:var(--orange-tint-soft);}
+  .phone-link{font-family:var(--font-ui); display:flex; align-items:center; gap:8px; color:var(--orange-light); text-decoration:none; font-weight:600; font-size:14.5px; white-space:nowrap; min-height:44px; padding:8px 10px; border-radius:8px; transition:background .15s ease;}
+  @media (hover:hover){.phone-link:hover{background:var(--orange-tint-soft);}}
   .phone-link:focus-visible, a:focus-visible, button:focus-visible{outline:2px solid var(--orange-light); outline-offset:2px;}
   .phone-link svg{width:16px; height:16px; flex-shrink:0;}
 
@@ -79,12 +80,34 @@
 
   .state-msg{text-align:center; padding:36px 20px 8px; color:var(--text-dim);}
   .state-msg.is-error{color:#ff8a80;}
-  .state-msg .checkmark{
-    width:64px; height:64px; clip-path:var(--hex); background:var(--orange); color:#1a1a1a;
-    display:flex; align-items:center; justify-content:center; margin:0 auto 18px; font-size:27px; font-weight:700;
+  /* Success states (2026-09-25 booking audit): the same green drawn check
+     booking.html and manage-booking.html use, replacing the orange hex +
+     unicode glyph those two retired on 2026-09-19/22. */
+  .state-msg .checkmark.is-success{
+    width:72px; height:72px; border-radius:50%; background:var(--success-text);
+    display:flex; align-items:center; justify-content:center; margin:0 auto 18px; position:relative;
     animation:popIn .4s cubic-bezier(.2,1.4,.4,1) both;
   }
+  .state-msg .checkmark.is-success svg{width:38px; height:38px;}
+  .state-msg .checkmark.is-success svg path{
+    fill:none; stroke:#0a0a0a; stroke-width:3.5; stroke-linecap:round; stroke-linejoin:round;
+    stroke-dasharray:28; stroke-dashoffset:28; animation:drawCheck .35s ease-out .35s both;
+  }
+  .state-msg .checkmark.is-success::after{
+    content:''; position:absolute; inset:0; border-radius:50%; border:3px solid var(--success-text); opacity:0;
+    animation:ringPulse .9s ease-out .55s both;
+  }
   @keyframes popIn{from{opacity:0; transform:scale(.5);} to{opacity:1; transform:scale(1);}}
+  @keyframes drawCheck{to{stroke-dashoffset:0;}}
+  @keyframes ringPulse{0%{opacity:.7; transform:scale(1);} 100%{opacity:0; transform:scale(1.9);}}
+  .state-msg .success-title{font-family:var(--font-ui); font-size:22px; color:var(--text); margin:0 0 6px; font-weight:700;}
+  @media (prefers-reduced-motion: reduce){
+    .state-msg .checkmark.is-success *, .state-msg .checkmark.is-success::after{animation-delay:0s !important;}
+  }
+  .inline-error{color:#ff8a80; font-size:13.5px; margin:10px 0 0; text-align:center;}
+  /* Errors slide in like the steps do, so a retry that fails again still
+     reads as new. */
+  .inline-error:not([hidden]){animation:stepIn .25s ease backwards;}
   .state-msg .hex-icon{margin:0 auto 18px;}
 
   .btn{
@@ -95,13 +118,13 @@
     transition:background .15s ease, border-color .15s ease, transform .1s ease, box-shadow .15s ease;
   }
   .btn.danger{background:transparent; border-color:#e05252; color:#e05252;}
-  .btn.danger:hover{background:rgba(224,82,82,0.1);}
+  @media (hover:hover){.btn.danger:hover{background:rgba(224,82,82,0.1);}}
   .btn.danger:disabled{opacity:0.5; cursor:not-allowed; transform:none;}
   .btn.orange{background:var(--orange); color:#1a1a1a; box-shadow:0 6px 18px -8px rgba(255,128,0,.55);}
-  .btn.orange:hover{background:var(--orange-dark); transform:translateY(-1px);}
+  @media (hover:hover){.btn.orange:hover{background:var(--orange-dark); transform:translateY(-1px);}}
   .btn.orange:disabled{opacity:0.5; cursor:not-allowed; transform:none;}
   .btn.ghost{background:transparent; border-color:var(--border); color:var(--text-dim);}
-  .btn.ghost:hover{border-color:var(--orange-tint-border); color:var(--text);}
+  @media (hover:hover){.btn.ghost:hover{border-color:var(--orange-tint-border); color:var(--text);}}
 
   #rescheduleStep{display:none;}
   #rescheduleStep.is-active{display:block; animation:stepIn .25s ease both;}
@@ -111,9 +134,11 @@
 
   .date-field{
     width:100%; padding:13px 14px; border-radius:10px; border:1px solid var(--border);
-    background:var(--bg-panel-2); color:var(--text); font-family:var(--font-app); font-size:15px;
+    background:var(--bg-panel-2); color:var(--text); font-family:var(--font-app); font-size:16px; min-height:48px;
     margin:18px 0 4px;
   }
+  /* 16px, not 15 (2026-09-25): under 16px iOS Safari zooms the page on
+     focus, the same fix booking.html's fields got on 2026-09-05. */
   .date-field:focus-visible{outline:2px solid var(--orange-light); outline-offset:2px;}
   .field-note{color:var(--text-dim); font-size:13px; margin:0 0 16px;}
 
@@ -121,9 +146,34 @@
     .brand-name{display:none;}
     h1{font-size:24px;}
   }
+
+  /* Blueprint backdrop (2026-09-25): the public site's drafting-paper
+     linework (styles.css .bg-blueprint, dark values), copied because this
+     page doesn't load styles.css. Without it, booking read as a
+     different, flat-black site next to the page the visitor came from. */
+  html{background:var(--bg);}
+  .bg-blueprint{
+    position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background-color:var(--bg);
+    background-image:
+      radial-gradient(ellipse 62% 46% at 86% 4%, rgba(255,128,0,.085), transparent 62%),
+      radial-gradient(ellipse 58% 42% at 6% 72%, rgba(58,160,255,.070), transparent 62%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.026) 0 1px, transparent 1px 96px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.026) 0 1px, transparent 1px 96px),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.011) 0 1px, transparent 1px 24px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.011) 0 1px, transparent 1px 24px);
+  }
+  /* Loading skeleton (2026-09-25), same shape as the job card. */
+  .job-card.is-skeleton .hex-icon{background:var(--bg-panel); border-color:var(--border);}
+  .skel-line{height:12px; border-radius:6px; background:var(--border); animation:skelPulse 1.1s ease-in-out infinite;}
+  .skel-line + .skel-line{margin-top:10px;}
+  .skel-line.w-60{width:60%;} .skel-line.w-40{width:40%;}
+  @keyframes skelPulse{0%,100%{opacity:.45;} 50%{opacity:1;}}
+  .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;}
 </style>
 </head>
 <body>
+<div class="bg-blueprint" aria-hidden="true"></div>
 
 <header class="site-header">
   <div class="wrap">
@@ -141,7 +191,8 @@
 <main class="wrap">
   <h1>Manage Your Appointment</h1>
   <div id="content">
-    <div class="state-msg"><p>Loading your appointment...</p></div>
+    <div class="job-card is-skeleton" aria-busy="true"><div class="hex-icon"></div><div style="flex:1;"><div class="skel-line w-60"></div><div class="skel-line w-40"></div></div></div>
+    <p class="sr-only" role="status">Loading your appointment...</p>
   </div>
 </main>
 
@@ -225,6 +276,18 @@
     return map.year + '-' + map.month + '-' + map.day;
   }
 
+  const CHECK_SVG = '<svg viewBox="0 0 24 24"><path d="M5 13l5 5L19 7"/></svg>';
+  function successMsg(title, sub) {
+    return '<div class="state-msg"><div class="checkmark is-success" aria-hidden="true">' + CHECK_SVG + '</div>' +
+      '<p class="success-title" role="status">' + title + '</p>' + (sub ? '<p>' + sub + '</p>' : '') + '</div>';
+  }
+  function showInlineError(id, text) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = text;
+    el.hidden = !text;
+  }
+
   function renderJob(job, token) {
     if (job.cancelled_at) {
       renderState(
@@ -253,11 +316,13 @@
       '  <input type="date" class="date-field" id="newDateInput">' +
       '  <p class="field-note">This is a request, not an instant change -- we\'ll call or email to confirm the new date works.</p>' +
       '  <button type="button" class="btn orange" id="submitRescheduleBtn">Send request</button>' +
+      '  <p class="inline-error" id="rescheduleError" role="alert" hidden></p>' +
       '  <button type="button" class="btn ghost" id="cancelRescheduleBtn">Never mind</button>' +
       '</div>' +
       '<div id="confirmStep">' +
       '  <p style="text-align:center; color:var(--text-dim); font-size:14.5px; margin-top:20px;">Are you sure? This can\'t be undone. You\'ll need to book or call us again if you change your mind.</p>' +
       '  <button type="button" class="btn danger" id="confirmCancelBtn">Yes, cancel it</button>' +
+      '  <p class="inline-error" id="cancelError" role="alert" hidden></p>' +
       '  <button type="button" class="btn ghost" id="backOutBtn">Never mind, keep it</button>' +
       '</div>'
     );
@@ -275,7 +340,8 @@
     });
     document.getElementById('submitRescheduleBtn').addEventListener('click', async function () {
       const input = document.getElementById('newDateInput');
-      if (!input.value) { input.focus(); return; }
+      if (!input.value) { showInlineError('rescheduleError', 'Choose a date first.'); input.focus(); return; }
+      showInlineError('rescheduleError', '');
       const btn = document.getElementById('submitRescheduleBtn');
       btn.disabled = true;
       btn.textContent = 'Sending...';
@@ -283,14 +349,17 @@
       const row = result && result[0];
       if (row && row.ok) {
         renderState(
-          '<div class="state-msg"><div class="checkmark" aria-hidden="true">&#10003;</div><p>Got it -- we\'ll reach out to confirm ' + escapeHtml(formatJobDate(input.value)) + '.</p></div>'
+          successMsg('Request sent', 'Got it -- we\'ll reach out to confirm ' + escapeHtml(formatJobDate(input.value)) + '. Until then your appointment stays on ' + escapeHtml(formatJobDate(job.job_date)) + '.')
         );
       } else if (row && row.message === 'already-cancelled') {
         renderState('<div class="state-msg"><p>This appointment was already cancelled.</p></div><a href="/booking.html" class="btn orange">Book a new appointment</a>');
       } else {
+        // Stay on the form (2026-09-25): this used to replace the whole page
+        // with the error, so the button reset above it never showed and the
+        // only way to retry was reloading the link.
         btn.disabled = false;
         btn.textContent = 'Send request';
-        renderState('<div class="state-msg is-error"><p>Something went wrong sending that request. Please call us at ' + escapeHtml(window.__siteOverridePhone || '(435) 414-1667') + '.</p></div>');
+        showInlineError('rescheduleError', 'Something went wrong sending that request. Try again, or call us at ' + (window.__siteOverridePhone || '(435) 414-1667') + '.');
       }
     });
 
@@ -312,13 +381,15 @@
       const row = result && result[0];
       if (row && row.ok) {
         renderState(
-          '<div class="state-msg"><div class="checkmark" aria-hidden="true">&#10003;</div><p>Your appointment has been cancelled.</p></div>' +
+          successMsg('Your appointment has been cancelled.', '') +
           '<a href="/booking.html" class="btn orange">Book a new appointment</a>'
         );
       } else if (row && row.message === 'already-cancelled') {
         renderState('<div class="state-msg"><p>This appointment was already cancelled.</p></div><a href="/booking.html" class="btn orange">Book a new appointment</a>');
       } else {
-        renderState('<div class="state-msg is-error"><p>Something went wrong cancelling this appointment. Please call us at ' + escapeHtml(window.__siteOverridePhone || '(435) 414-1667') + '.</p></div>');
+        btn.disabled = false;
+        btn.textContent = 'Yes, cancel it';
+        showInlineError('cancelError', 'Something went wrong cancelling this appointment. Try again, or call us at ' + (window.__siteOverridePhone || '(435) 414-1667') + '.');
       }
     });
   }

@@ -27,7 +27,6 @@ const NOT_THIS_LANE = {
   'booking.html': 'booking lane',
   'manage-booking.html': 'booking lane',
   'manage-job.html': 'booking lane',
-  'careers.html': 'waiting on a scope decision (logged in docs/specialist-logs/visual.md)',
 };
 
 test('the scan finds the public pages it should (so an exclusion typo cannot empty it)', () => {
