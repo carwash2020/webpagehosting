@@ -1994,6 +1994,86 @@ no new issues found in this pass. Still open from those entries:
   before/afters for T1 and PO2 need the real Playwright harness; the
   PR body lists them.
 
+## 2026-09-25 (later) -- client portal redesign, shell only: nav reorder, "Estimates"/"Visits" rename, raised Request hex
+
+Design handoff (`docs/ACTION-ITEMS.md`'s new "Client portal redesign
+(2026-09-25 design handoff)" entry has the full 11-screen breakdown and
+what's deferred) asked for an 11-screen portal rebuild. Scoped down hard,
+on purpose, per the brief's own instruction not to try all 11 in one pass:
+this branch (`portal-redesign`) ships the shell only -- the one piece every
+other screen depends on -- and defers the rest with specifics, rather than
+half-migrating several screens. Two concurrent sessions were rebuilding
+the public homepage and the Workspace tools shell in their own worktrees
+at the same time; touched nothing under `index.html`, root `styles.css`,
+or `tools/` except reading `tools/styles-tools.css` (unchanged, already
+loaded by the portal).
+
+**What shipped.** Bottom nav / desktop rail order changed from Home /
+Request / Quotes / Invoices / Jobs to **Home / Invoices / Request /
+Estimates / Visits**, matching the handoff. "Quotes" -> "Estimates" and
+"Jobs" -> "Visits" (hrefs, file names and every element id are untouched --
+only the visible label and tab order moved). Request is now a raised
+filled-orange hexagon (CSS `clip-path`, not an SVG asset, so it inherits
+the shared shadow/gradient language) floating above the bar, with a slow
+"breathing" glow (`@media (hover: hover)` gated, and fully off under
+`prefers-reduced-motion`) per the handoff's motion spec. Kept the original
+circle+plus Request icon rather than inventing a new one -- it's reused in
+3 empty states and a Home card already (confirmed by running the suite);
+a stylized "+"-only mark would have meant restyling every one of those to
+stay consistent, for no real visual gain inside a hex that already frames it.
+
+Added an **Invoices tab dot** (`.portal-nav-dot`, `portalApplyNavInvoiceDot()`
+in portal-app.js) shown when the client has any unpaid invoice. Wired only
+on `home.html` and `dashboard.html`, which already fetch
+`client_portal_invoices` for their own rendering -- deliberately did not
+add a new query to the other 5 nav-bearing pages just to light this dot;
+logged as a known gap rather than quietly fetching invoice rows on pages
+that never needed them before.
+
+**Real mistake caught by the desktop-shell tests, worth repeating for next
+time:** the new Request-hex desktop-rail override was written as its own
+standalone `@media (min-width: 1024px) { ... }` block, inserted much
+earlier in the file (right after the tap-feedback section) than the
+existing single `@media (min-width: 1024px)` block for the whole desktop
+rail (much further down). `desktop-app-shell.test.js`'s `mediaBlock()`
+helper greps for the *first* `@media (min-width: 1024px) {` and asserts
+its contents -- exactly the same class of bug this log has hit before with
+bare top-level selectors (`html {}` collisions, 2026-09-22 entry above):
+a second copy of a query/selector the test assumes is unique silently
+becomes the match instead. Fixed by folding the new rules into the
+existing block rather than adding a second one. **Standing habit,
+restated:** before adding a new `@media (...)` block (not just a bare
+element selector) to a CSS file this size, grep for that exact query
+string first.
+
+**Also fixed while renaming:** `PORTAL_NAV_UNREAD_TABS`' own `label: 'Jobs'`
+(portal-app.js) drives the unread-badge `aria-label` text
+("Jobs, 2 new messages") -- missed on the first pass since it's JS data,
+not markup; caught by `unread-messages.test.js` failing, not by inspection.
+Renamed to `'Visits'` to match.
+
+**Deferred, with reasons, not just "ran out of time":** Home's referral
+card + Share button and the amount count-up (Home already had almost
+everything else the handoff describes, built in earlier sessions before
+this handoff existed); the Invoices stat-tiles/segmented-control visual
+work (deliberately not touched together with a slow, contended test run --
+this is the real-money screen, and the brief is explicit that it should
+ship right or not at all); Estimates, Request work, the booking picker,
+Visit detail, Messages, Sign, Settings and Sign-in were not touched beyond
+the shared shell CSS. Full list with file-level specifics is in
+`docs/ACTION-ITEMS.md`.
+
+**Verification:** full suite (`cd tests && node --test --test-concurrency=1`)
+run to a clean baseline before starting, then again after every fix in this
+entry -- portal suite alone (`portal/*.test.js`) went 673/679 -> 679/679 across
+the label-rename, nav-order and media-query fixes above. The full-repo run
+finished at 4185/4190 (heavily CPU-starved by two other sessions' own
+concurrent full suites in sibling worktrees, taking ~10.5 minutes instead of
+the usual ~20s); the 4 non-`check-links.py` failures touched none of this
+PR's files and did not reproduce in an isolated re-run, confirming a
+transient race rather than a regression. Screenshots at 390/430/1024/1440,
+dark + reduced-motion, are in `docs/client-portal-redesign-2026-09-25/`.
+
 ## 2026-09-25 -- Homepage redesign v2 (partial): services cards, reviews
 tint, teardown scrub chrome
 

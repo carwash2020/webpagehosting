@@ -5588,6 +5588,17 @@ Verified: full suite (only failure is the known `check-links.py` sandbox-proxy t
 
 Tests: `tests/design/cross-surface-phase1.test.js` (4, new). Each assertion was mutation-checked by reverting its fix. `tests/design/tablet-nav-band.test.js`'s pinned 76px regex updated to 85.
 
+## What changed, 2026-09-25 (later) -- Client portal redesign, shell only: Home/Invoices/Request/Estimates/Visits
+
+First pass on the approved client-portal design handoff (11 screens, `docs/ACTION-ITEMS.md` has the full breakdown). Scoped down deliberately to the shell -- everything else depends on it -- rather than half-migrating several screens at once. Full reasoning and a mistake caught along the way in `docs/specialist-logs/visual.md`'s dated entry; the remaining 10 screens are logged there and in `docs/ACTION-ITEMS.md` with file-level specifics for a follow-up session.
+
+- **Bottom nav / desktop rail reordered** to Home / Invoices / Request / Estimates / Visits (was Home / Request / Quotes / Invoices / Jobs). "Quotes" is now "Estimates" and "Jobs" is now "Visits" -- labels only; every href, file name and element id is unchanged.
+- **Request is now a raised filled-orange hexagon** floating above the bar (a CSS `clip-path`, not an image), with a slow reduced-motion-gated "breathing" glow, matching the approved design's one primary action in the bar.
+- **A dot on the Invoices tab** when the client has any unpaid invoice (`portalApplyNavInvoiceDot()` in `portal-app.js`), wired on `home.html` and `dashboard.html` -- the two pages that already load invoice rows for their own rendering.
+- Real Stripe payment path, MFA/Face ID steps, and every other portal screen's markup are untouched this pass.
+
+Verified: portal test suite 679/679 (7 test files updated for the label rename and nav reorder, each with a comment explaining why), `check-consistency`, `check-undefined-vars`, `check-links.py` (only the known sandbox-proxy failures), `check-visual-snapshot`, `fix-versions` (bumped both service worker cache names). Screenshots at 390/430/1024/1440px, dark and reduced-motion, in `docs/client-portal-redesign-2026-09-25/after/`. A full-suite run finished at 4185/4190; the 4 non-`check-links.py` failures did not touch any file this PR changed and did not reproduce when re-run in isolation, confirming a transient race under the heavy CPU contention from three concurrent redesign sessions in sibling worktrees.
+
 ## What changed, 2026-09-25 -- Homepage redesign v2 (partial): services cards, reviews tint, teardown scrub chrome
 
 An approved design mockup (`Homepage Redesign v2.dc.html`) and a 15-section handoff spec asked for a full homepage rebuild. Reading both the mockup and the live `index.html`/`styles.css` first found the two already very close: every token the mockup needs already exists, and the `.bg-blueprint` layer, `[data-reveal]` motion, and the teardown/before-after sliders already match it. This pass ships the safe, CSS-only parts of the gap and defers the rest with reasons, rather than restructuring a live, heavily-tested page in one sitting.

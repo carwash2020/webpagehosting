@@ -45,7 +45,10 @@ test('every signed-in page with the tab bar wraps it in the same rail: brand, th
     const rail = doc.querySelector('.portal-rail');
     assert.equal(rail.querySelector('.portal-rail-brand').getAttribute('href'), '/portal/home.html', page);
     const tabs = Array.from(rail.querySelectorAll('nav.portal-nav > a'), (a) => a.getAttribute('href'));
-    assert.deepEqual(tabs, ['/portal/home.html', '/portal/work-orders.html', '/portal/quotes.html', '/portal/dashboard.html', '/portal/jobs.html'],
+    // Order changed 2026-09-25 (design handoff): Home / Invoices / Request
+    // (raised orange hex) / Estimates / Visits -- was Home / Request /
+    // Quotes / Invoices / Jobs. Hrefs and page count are unchanged.
+    assert.deepEqual(tabs, ['/portal/home.html', '/portal/dashboard.html', '/portal/work-orders.html', '/portal/quotes.html', '/portal/jobs.html'],
       `${page}: the tab bar must stay exactly five links -- a sixth would break the phone grid`);
     const more = Array.from(rail.querySelectorAll('.portal-rail-more > a'), (a) => a.getAttribute('href'));
     assert.deepEqual(more, ['/portal/contracts.html', '/portal/settings.html'], page);

@@ -131,6 +131,92 @@
   transform: scale(0.94);
 }
 
+/* ----------------------------------------------------------
+   Shell rebuild (2026-09-25, design handoff) -- the raised
+   orange "Request" hex, and the Invoices owed-dot
+   ---------------------------------------------------------- */
+
+/* Nav order is now Home / Invoices / Request / Estimates / Visits,
+   with Request raised off the bar as a filled orange hex -- the one
+   action in the bar (everything else is a destination). Built with a
+   clipped hexagon rather than a real SVG shape so it inherits the
+   same background/box-shadow language as every other raised surface
+   here. */
+.portal-nav a.portal-nav-request {
+  color: var(--text-dim);
+  margin-top: -18px;
+}
+.portal-nav-hex {
+  width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(155deg, var(--orange-light), var(--orange));
+  color: #0a0a0a;
+  clip-path: polygon(50% 0%, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%);
+  box-shadow: 0 6px 16px rgba(245, 129, 31, 0.42), 0 0 0 4px var(--bg, #0e0e0e);
+  transition: transform .15s ease, box-shadow .3s ease;
+}
+.portal-nav-hex svg {
+  stroke: #0a0a0a;
+  width: 21px;
+  height: 21px;
+}
+.portal-nav a.portal-nav-request span:last-child {
+  color: var(--text-dim);
+  margin-top: 1px;
+}
+.portal-nav a.portal-nav-request.is-active,
+.portal-nav a.portal-nav-request.is-active span:last-child {
+  color: var(--orange-light);
+}
+/* No bottom dot on the raised hex tab -- it already reads as
+   distinct without the shared active-tab indicator. */
+.portal-nav a.portal-nav-request::after { content: none; }
+.portal-nav a.portal-nav-request:active .portal-nav-hex {
+  transform: scale(0.93);
+}
+
+/* Motion spec: the hex "breathes" (a slow glow pulse) at rest so it
+   reads as the primary action, not just another tab. Off entirely
+   under reduced motion -- decorative only, nothing depends on it. */
+@keyframes portal-hex-breathe {
+  0%, 100% { box-shadow: 0 6px 16px rgba(245, 129, 31, 0.42), 0 0 0 4px var(--bg, #0e0e0e); }
+  50% { box-shadow: 0 6px 22px rgba(245, 129, 31, 0.62), 0 0 0 4px var(--bg, #0e0e0e); }
+}
+@media (hover: hover) {
+  .portal-nav-hex { animation: portal-hex-breathe 3.6s ease-in-out infinite; }
+}
+
+/* Invoices dot: a small solid dot next to the Invoices label when the
+   client has an unpaid balance, set via portalApplyNavInvoiceDot() in
+   portal-app.js. A dot rather than a number -- the exact amount
+   already lives one tap away. */
+.portal-nav-dot {
+  display: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--orange);
+  margin: -2px 0 -2px 2px;
+  flex-shrink: 0;
+}
+.portal-nav-dot.is-visible { display: inline-block; }
+/* On the phone bar the label sits under the icon in a column, so the
+   dot rides beside the icon itself. */
+.portal-nav a svg + .portal-nav-dot {
+  position: absolute;
+  top: 2px;
+  left: calc(50% + 7px);
+  margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portal-nav-hex { animation: none; }
+  .portal-nav a.portal-nav-request:active .portal-nav-hex { transform: none; }
+}
+
 /* The bar is fixed, so it no longer occupies layout space -- without
    this the last card on every page sits underneath it and can't be
    scrolled to. 72px was exactly the bar height, so a full-width
@@ -782,6 +868,24 @@ body.portal-page .th-toast-container {
   /* Unread badge sits at the end of the row instead of on the icon. */
   .portal-rail .portal-nav-badge {
     position: static; margin-left: auto; box-shadow: none; animation: none;
+  }
+  /* Request's raised orange hex is a bottom-bar-only idea; inside the
+     rail it's a plain horizontal row like every other item. */
+  .portal-rail .portal-nav a.portal-nav-request {
+    margin-top: 0;
+    color: var(--text-dim);
+  }
+  .portal-rail .portal-nav-hex {
+    width: 20px; height: 20px; flex-shrink: 0;
+    background: none; color: currentColor; box-shadow: none; clip-path: none;
+    animation: none;
+  }
+  .portal-rail .portal-nav-hex svg { stroke: currentColor; width: 20px; height: 20px; }
+  .portal-rail .portal-nav a.portal-nav-request.is-active,
+  .portal-rail .portal-nav a.portal-nav-request.is-active span:last-child { color: var(--orange-light); }
+  /* Invoices dot sits at the end of the row, not beside the icon. */
+  .portal-rail .portal-nav-dot {
+    position: static; margin: 0 0 0 6px;
   }
 
   .portal-rail-more { display: flex; flex-direction: column; gap: 2px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
