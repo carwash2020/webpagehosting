@@ -1213,9 +1213,9 @@ Noted by the security lane while working on server-side MFA enforcement. Their l
 - Tests: `tests/site-wide/public-service-worker.test.js` (11; all fail on the previous code). It runs the real cleanup script and each worker's real activate handler against fakes. Real-Chromium scenarios (not committed, Playwright isn't a dependency): 11/11 on the fix, 6/11 on main.
 
 
-## 2026-09-25 -- Redesign regression pass (#438, #440, #441, #442), driven end to end in Chromium
+## 2026-09-25 -- Redesign regression pass (#438, #440, #441, #442, #443), driven end to end in Chromium
 
-Asked to prove the day's restyles broke nothing functional: #438 (cross-surface Phase 1), #440 (homepage v2), #441 (portal shell) and #442 (Workspace tools Phase 1). A baseline was recorded on 3c17596, before any of #440-#442. The same flows then ran on b43feec (#440 and #441) and on 1e2fba5 (plus #442).
+Asked to prove the day's restyles broke nothing functional: #438 (cross-surface Phase 1), #440 (homepage v2), #441 (portal shell), #442 (Workspace tools Phase 1) and #443 (scheduling polish + cross-surface Phase 2). A baseline was recorded on 3c17596, before any of #440-#443. The same flows then ran on b43feec (#440 and #441), on 1e2fba5 (plus #442) and on e4e70d6 (plus #443).
 
 **How it was driven.** This sandbox can't reach Supabase, Stripe or jsDelivr (network policy), so everything ran against local fakes, with the real pages served locally:
 - supabase-js 2.112.3, jsPDF and Leaflet came from npm and are byte-identical to the SRI hashes the pages pin.
@@ -1224,6 +1224,7 @@ Asked to prove the day's restyles broke nothing functional: #438 (cross-surface 
 - A fake Stripe.js and api.stripe.com decide test-card outcomes, and a confirmed payment is delivered to the real webhook.
 - Face ID used Chromium's CDP virtual authenticator.
 - The harness is not committed (Playwright isn't a dependency). It has 25 flows, plus a layout audit of every page at 390px and 1440px: overflow, covered controls, content under the bottom nav, tap targets, and computed-style fingerprints of shared components. Runs are diffed against the baseline.
+- The harness grew to 28 flows for #443: manage-booking, manage-job and Workspace Compliance.
 - **Mutation check.** 14 realistic restyle slips were applied to a scratch copy, each run against the flow that should catch it:
   - an element id renamed in markup only (pay modal, POS mount, login code input, portal 2FA submit, job form button);
   - a CSS rule hiding or disabling a control;
@@ -1235,7 +1236,7 @@ Asked to prove the day's restyles broke nothing functional: #438 (cross-surface 
 
   13 of 14 were caught at first. The miss: the portal clips sideways overflow, so page scroll width never grew and the header was just cut off. The layout audit now also flags content past the viewport edge, and that one is caught too (14/14). The same check is clean on 3c17596, 1e2fba5 and this branch.
 
-**Result.** Every flow behaves the same on 3c17596, b43feec and 1e2fba5:
+**Result.** Every flow behaves the same on 3c17596, b43feec, 1e2fba5 and e4e70d6:
 - Portal pay: signature, decline, success, and short/over/exact through the real webhook; also Pay All.
 - Quick Charge with a new card and with a saved card.
 - Tools sign-in: the 2FA code, recovery code, forced enrollment, and log-mode aal1 left alone.
@@ -1246,7 +1247,7 @@ Asked to prove the day's restyles broke nothing functional: #438 (cross-surface 
 - Portal nav on all 7 pages.
 - Homepage service modals, lead form, sliders, and a booking.
 
-`edge-functions/stripe-webhook-index.ts` wasn't touched by any of the four PRs. The last change was 18bed26 (#421), and live stripe-webhook is v20. Two real bugs, both fixed in this branch:
+`edge-functions/stripe-webhook-index.ts` wasn't touched by any of the five PRs. The last change was 18bed26 (#421), and live stripe-webhook is v20. Two real bugs, both fixed in this branch:
 
 - **#440's card grid bled onto 16 landing pages.**
   - **Root cause:** `.service-card` became `display:grid; grid-template-columns:46px 1fr` for the homepage's icon cards, and `h3`/`p` were pinned to column 2. The 8 `services/` and 8 `locations/` pages use the same classes for text-only cards, so each card got an empty 46px column. Text started 85px in instead of 25px, the text was 234px wide instead of 292px at 390px, and the heading's 8px gap was gone.
@@ -1270,6 +1271,15 @@ Two behavior questions went to ACTION-ITEMS.md: the portal owed dot shows on 2 o
 - the unscoped `.secondary-btn` base colour shifts the portal's secondary buttons (styles-tools.css is loaded by the portal too);
 - the "one focus ring" is still blue on `.primary-btn`, `.secondary-btn` and `.dev-tab-btn`.
 
+**#443 (scheduling polish, cross-surface Phase 2)** changes `js/booking-flow.js` (a note and a nudge on unavailable days, scroll fades), manage-booking, manage-job (inline errors instead of replacing the page) and workspace.html's Compliance fields (moved onto `.form-field`). Flows added for it:
+- manage-booking: reschedule and cancel by link, plus an unknown token;
+- manage-job: a refused date keeps the form up with an inline `role="alert"`, a valid request is stored, and cancel works;
+- Workspace Compliance insurance and business: edit, save, reopen.
+
+All pass on e4e70d6. Before #443, manage-job's refused-date step "fails" because an error replaced the page, which is exactly what #443 changed on purpose. Compliance inputs go from 41px to 48px, as intended. The layout audit is clean, and its unified orange focus ring also resolves one of the #442 visual notes. Found in passing, pre-existing, not changed: manage-job answers every refusal with the same "Something went wrong sending that request" copy, including 'in-the-past', 'invalid-date' and 'already-completed'. The date input's `min` normally prevents the first.
+
+**Seen once, not reproduced: `GET /tools/' + url + '` (404) during the add-client flow on e4e70d6.** That literal exists only inside a `<script>` on clients.html (line ~1563, the work-order photo HTML string), and clients.html didn't change in #443. It didn't come back in 24 reruns (12 targeted runs with a CDP initiator trace, 6 flow runs on 1e2fba5 and e4e70d6, and 3 full CRUD runs that record resource type and frame). No mechanism found. The harness now records type, frame and referer for every 4xx; if it shows up again, that says who parsed the script as markup.
+
 Its branch picked up this log's known fixture leak: a duplicate `const MIN_LEAD_HOURS` in portal/jobs.html, from `check-undefined-vars.test.js`. #441's branch picked up another, a `this-file-was-deleted.js` precache entry. Both were removed before merge, and main is clean of both (checked, and the service-worker flow fetches every precache URL). That's twice in one day: never stage while the suite runs.
 
 **Gotchas worth keeping:**
@@ -1281,4 +1291,4 @@ Its branch picked up this log's known fixture leak: a duplicate `const MIN_LEAD_
 - **`innerText` follows `text-transform`.** Portal buttons read "ENABLE BIOMETRIC UNLOCK" through `innerText`. Match on `textContent` or case-insensitively.
 - **Dev Tools actions sit behind `confirmDevPassword()`.** A test sets `sessionStorage.th_dev_password_confirmed = '1'` rather than knowing the password.
 
-Tests: `tests/design/service-card-landing-pages.test.js` (19; 17 fail on 1e2fba5), `tests/dev-tools/live-consistency-page-list.test.js` (12; 2 fail on 1e2fba5).
+Tests: `tests/design/service-card-landing-pages.test.js` (19; 17 fail on e4e70d6), `tests/dev-tools/live-consistency-page-list.test.js` (12; 2 fail on e4e70d6).

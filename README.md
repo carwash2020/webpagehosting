@@ -5633,11 +5633,11 @@ Tests: none new for this phase -- every change stayed inside existing shared cla
 
 ## What changed, 2026-09-26 -- Service cards on the landing pages look right again; Dev Tools' health check reads All clear
 
-Public site and Dev Tools. Found by the bug lane's end-to-end pass over the day's three redesigns (#440, #441, #442).
+Public site and Dev Tools. Found by the bug lane's end-to-end pass over the day's redesigns (#440, #441, #442, #443).
 
 - **Landing-page service cards.** The homepage redesign turned service cards into rows with an icon on the left. The 16 service and city pages use the same card style for text-only cards, so each of their cards got an empty icon-sized gap on the left, and the text was squeezed into about four-fifths of the width. The icon layout now applies only to cards that have an icon (the homepage's six). The landing pages are back to how they looked before; the homepage is unchanged.
 - **Dev Tools' "Run full health check"** has said "1 ISSUE" on every run since 2026-09-21. It still checked `tools/calendar.html`, which that day became a redirect to Job Tracker's calendar view and has none of the checked parts by design. The check now skips it, and reads All clear.
 
-Checked, not changed: every other flow behaves the same before and after the three redesigns. That covers portal invoice payment (including short/over/exact amounts through the real webhook), Quick Charge, sign-in with 2FA and Face ID, every Dev Tools tab, the job, invoice, quote and client flows, portal requests, estimates, messages and contracts, and both service workers. Details are in `docs/specialist-logs/bugfix.md`. Two questions are in `docs/ACTION-ITEMS.md`, and two visual notes are in `docs/specialist-logs/visual.md`.
+Checked, not changed: every other flow behaves the same before and after the redesigns. That covers portal invoice payment (including short/over/exact amounts through the real webhook), Quick Charge, sign-in with 2FA and Face ID, every Dev Tools tab, the job, invoice, quote and client flows, portal requests, estimates, messages and contracts, booking and manage-by-link pages, Workspace Compliance edits, and both service workers. Details are in `docs/specialist-logs/bugfix.md`. Two questions are in `docs/ACTION-ITEMS.md`, and two visual notes are in `docs/specialist-logs/visual.md`.
 
 Tests: `tests/design/service-card-landing-pages.test.js` (19) and `tests/dev-tools/live-consistency-page-list.test.js` (12). Both fail on the previous code.
