@@ -1213,9 +1213,9 @@ Noted by the security lane while working on server-side MFA enforcement. Their l
 - Tests: `tests/site-wide/public-service-worker.test.js` (11; all fail on the previous code). It runs the real cleanup script and each worker's real activate handler against fakes. Real-Chromium scenarios (not committed, Playwright isn't a dependency): 11/11 on the fix, 6/11 on main.
 
 
-## 2026-09-25 -- Redesign regression pass (#438, #440, #441), driven end to end in Chromium
+## 2026-09-25 -- Redesign regression pass (#438, #440, #441, #442), driven end to end in Chromium
 
-Asked to prove the day's restyles (#438 cross-surface Phase 1, #440 homepage v2, #441 portal shell) broke nothing functional. The Workspace tools redesign had not landed when this was written.
+Asked to prove the day's restyles broke nothing functional: #438 (cross-surface Phase 1), #440 (homepage v2), #441 (portal shell) and #442 (Workspace tools Phase 1). A baseline was recorded on 3c17596, before any of #440-#442. The same flows then ran on b43feec (#440 and #441) and on 1e2fba5 (plus #442).
 
 **How it was driven.** This sandbox can't reach Supabase, Stripe or jsDelivr (network policy), so everything ran against local fakes, with the real pages served locally:
 - supabase-js 2.112.3, jsPDF and Leaflet came from npm and are byte-identical to the SRI hashes the pages pin.
@@ -1223,9 +1223,19 @@ Asked to prove the day's restyles (#438 cross-surface Phase 1, #440 homepage v2,
 - 30 real edge functions ran in a vm against those fakes, including `create-payment-intent`, `create-pos-charge`, `stripe-webhook`, the `sync-*-to-portal` functions, `respond-to-*` and the three notify-email triggers. The same pattern is used in `tests/edge-functions/stripe-webhook-amount-check.test.js`.
 - A fake Stripe.js and api.stripe.com decide test-card outcomes, and a confirmed payment is delivered to the real webhook.
 - Face ID used Chromium's CDP virtual authenticator.
-- The harness is not committed (Playwright isn't a dependency). It ran 21 flows on 3c17596 and on b43feec, and a mutation run showed it catches restyle-type slips.
+- The harness is not committed (Playwright isn't a dependency). It has 25 flows, plus a layout audit of every page at 390px and 1440px: overflow, covered controls, content under the bottom nav, tap targets, and computed-style fingerprints of shared components. Runs are diffed against the baseline.
+- **Mutation check.** 14 realistic restyle slips were applied to a scratch copy, each run against the flow that should catch it:
+  - an element id renamed in markup only (pay modal, POS mount, login code input, portal 2FA submit, job form button);
+  - a CSS rule hiding or disabling a control;
+  - a taller bottom nav, and a shared `header` rule going fixed;
+  - a renamed Dev Tools panel attribute and results container;
+  - a signature pad no longer initialised;
+  - a precache URL that 404s;
+  - a portal header forced wider than the phone.
 
-**Result.** Every flow behaves the same before and after #440/#441:
+  13 of 14 were caught at first. The miss: the portal clips sideways overflow, so page scroll width never grew and the header was just cut off. The layout audit now also flags content past the viewport edge, and that one is caught too (14/14). The same check is clean on 3c17596, 1e2fba5 and this branch.
+
+**Result.** Every flow behaves the same on 3c17596, b43feec and 1e2fba5:
 - Portal pay: signature, decline, success, and short/over/exact through the real webhook; also Pay All.
 - Quick Charge with a new card and with a saved card.
 - Tools sign-in: the 2FA code, recovery code, forced enrollment, and log-mode aal1 left alone.
@@ -1236,7 +1246,7 @@ Asked to prove the day's restyles (#438 cross-surface Phase 1, #440 homepage v2,
 - Portal nav on all 7 pages.
 - Homepage service modals, lead form, sliders, and a booking.
 
-`edge-functions/stripe-webhook-index.ts` wasn't touched by any of the three PRs. The last change was 18bed26 (#421), and live stripe-webhook is v20. Two real bugs, both fixed in this branch:
+`edge-functions/stripe-webhook-index.ts` wasn't touched by any of the four PRs. The last change was 18bed26 (#421), and live stripe-webhook is v20. Two real bugs, both fixed in this branch:
 
 - **#440's card grid bled onto 16 landing pages.**
   - **Root cause:** `.service-card` became `display:grid; grid-template-columns:46px 1fr` for the homepage's icon cards, and `h3`/`p` were pinned to column 2. The 8 `services/` and 8 `locations/` pages use the same classes for text-only cards, so each card got an empty 46px column. Text started 85px in instead of 25px, the text was 234px wide instead of 292px at 390px, and the heading's 8px gap was gone.
@@ -1256,6 +1266,12 @@ Asked to prove the day's restyles (#438 cross-surface Phase 1, #440 homepage v2,
 
 Two behavior questions went to ACTION-ITEMS.md: the portal owed dot shows on 2 of 7 pages, and the quote email error names a Resend that quotes don't have.
 
+**#442 (Workspace tools Phase 1)** changed no behavior. Its tools-side style changes (flat orange primary buttons, darker panels and inputs, a tinted active tab) cause no overflow, covered controls, hidden content or smaller tap targets. Keyboard focus stays visible on every restyled control. Two side effects went to visual.md, and neither breaks anything:
+- the unscoped `.secondary-btn` base colour shifts the portal's secondary buttons (styles-tools.css is loaded by the portal too);
+- the "one focus ring" is still blue on `.primary-btn`, `.secondary-btn` and `.dev-tab-btn`.
+
+Its branch picked up this log's known fixture leak: a duplicate `const MIN_LEAD_HOURS` in portal/jobs.html, from `check-undefined-vars.test.js`. #441's branch picked up another, a `this-file-was-deleted.js` precache entry. Both were removed before merge, and main is clean of both (checked, and the service-worker flow fetches every precache URL). That's twice in one day: never stage while the suite runs.
+
 **Gotchas worth keeping:**
 - **Shared public classes.** `.service-card`, `.services-grid` and `.reviews-wall` appear on 17-19 public pages, not just index.html. Before restyling one for the homepage, `grep -rl 'class="service-card' --include=*.html .`.
 - **jsdom drops `:has()` rules.** Its CSS parser logs "Could not parse CSS" and skips them. A computed-style test of a `:has()`-scoped rule passes vacuously for the side the rule would change, so check that half in the stylesheet text (as `service-card-landing-pages.test.js` does), and confirm in a real browser.
@@ -1265,4 +1281,4 @@ Two behavior questions went to ACTION-ITEMS.md: the portal owed dot shows on 2 o
 - **`innerText` follows `text-transform`.** Portal buttons read "ENABLE BIOMETRIC UNLOCK" through `innerText`. Match on `textContent` or case-insensitively.
 - **Dev Tools actions sit behind `confirmDevPassword()`.** A test sets `sessionStorage.th_dev_password_confirmed = '1'` rather than knowing the password.
 
-Tests: `tests/design/service-card-landing-pages.test.js` (19; 17 fail on b43feec), `tests/dev-tools/live-consistency-page-list.test.js` (12; 2 fail on b43feec).
+Tests: `tests/design/service-card-landing-pages.test.js` (19; 17 fail on 1e2fba5), `tests/dev-tools/live-consistency-page-list.test.js` (12; 2 fail on 1e2fba5).

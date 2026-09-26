@@ -2311,3 +2311,10 @@ classes/tokens the suite already exercises indirectly (button/focus/
 hover assertions across many test files), and the new unused component
 classes have no test surface yet (phases 2-4 will add their own tests
 when they adopt them).
+
+## 2026-09-26 (from the bug lane, not fixed) -- two visual side effects of #442, found in the redesign regression pass
+
+Both came from computed-style diffs of every page, before and after, in headless Chromium. Neither breaks anything, so they're left for this lane.
+
+- **Portal secondary buttons changed shade.** #442 changed the unscoped base `.secondary-btn` background in `tools/styles-tools.css` from `var(--bg-panel-2)` to `var(--bg-panel-3)`. Every portal page loads that file, and `portal-polish.css` only overrides `background-image`, so the base colour under its gradient moved from `rgb(33,35,39)` to `rgb(44,46,52)`. "Sign out", Clear and the other secondary buttons are a shade lighter on all 7 portal pages. #442 describes the portal as untouched. If that's the intent, scope the rule to tool pages (`body.th-tool-page .secondary-btn`, or give `body.portal-page .secondary-btn` its old colour in portal-polish.css). Four `.btn` instances on portal pages moved the same way.
+- **"One focus ring" is orange on some controls, blue on others.** With keyboard focus (`:focus-visible`), `.tab-btn`, `.small-btn` and `.help-btn` now show the 2px orange ring. `.primary-btn`, `.secondary-btn` and `.dev-tab-btn` still show 2px `--blue-light` (`#9fd0ff`). All are clearly visible, so there's no accessibility regression. It only falls short of the single-ring goal. An orange ring on the new solid-orange `.primary-btn` would disappear, so that one probably needs its own treatment.
