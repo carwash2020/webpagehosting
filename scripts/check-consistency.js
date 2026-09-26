@@ -574,8 +574,12 @@ function htmlFilesIn(dir) {
   return fs.readdirSync(dir).filter(f => f.endsWith('.html')).map(f => path.join(dir, f));
 }
 
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function unstampedPattern(file) {
-  return new RegExp('(src|href)="/' + file.replace(/\./g, '\\.') + '"', 'g');
+  return new RegExp('(src|href)="/' + escapeRegex(file) + '"', 'g');
 }
 
 function checkGlobalSharedFileFreshness(problems) {
