@@ -473,7 +473,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=71e319a546">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=aaf32af090">
 </head>
 <body class="portal-page">
 
@@ -1259,10 +1259,10 @@
       renderRecentActivity(summary, new Date());
       document.getElementById('homeIntro').textContent = homeSummaryText(summary);
       renderGlance(summary);
-      portalSetHeaderInitials(summary.displayName || session.user.email);
+      if (typeof portalSetHeaderInitials === 'function') portalSetHeaderInitials(summary.displayName || session.user.email);
       portalApplyNavUnreadBadges(summary.unread);
       portalApplyNavInvoiceDot(summary.invoices.some(i => !i.paid));
-      portalApplyNavEstimatesDot(summary.quotes.some(q => (q.status || 'pending') === 'pending'));
+      if (typeof portalApplyNavEstimatesDot === 'function') portalApplyNavEstimatesDot(summary.quotes.some(q => (q.status || 'pending') === 'pending'));
       watchHomeUnread(summary);
     } catch (e) {
       document.getElementById('homeCards').innerHTML =

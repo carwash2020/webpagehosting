@@ -301,7 +301,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=71e319a546">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=aaf32af090">
 </head>
 <body class="portal-page">
 
@@ -660,7 +660,7 @@
       return;
     }
     document.getElementById('clientEmailDisplay').textContent = session.user.email;
-    portalSetHeaderInitials(session.user.email);
+    if (typeof portalSetHeaderInitials === 'function') portalSetHeaderInitials(session.user.email);
     await portalGuardWithBiometricLock(session.user.email, client);
     // Keeps the Request/Jobs unread badges on the bottom nav while
     // browsing other tabs (2026-09-22). Fire-and-forget; never throws.
@@ -926,7 +926,7 @@
       '</div>' +
       '<button class="btn orange pay-sheet-cta" id="payAuthContinueBtn" style="width:100%; justify-content:center; margin-top:14px;" onclick="submitPaymentSignature(' + invoiceId + ')">Continue to Payment</button>';
     if (typeof sigPadInit === 'function') sigPadInit('paySignatureCanvas', 'paySignatureStatus');
-    portalGateOnSignature('paySignatureStatus', 'payAuthContinueBtn');
+    if (typeof portalGateOnSignature === 'function') portalGateOnSignature('paySignatureStatus', 'payAuthContinueBtn');
   }
 
   function submitPaymentSignature(invoiceId) {
@@ -1007,7 +1007,7 @@
       '</div>' +
       '<button class="btn orange pay-sheet-cta" id="bulkPayAuthContinueBtn" style="width:100%; justify-content:center; margin-top:14px;" onclick="submitBulkPaymentSignature([' + invoiceIds.join(',') + '])">Continue to Payment</button>';
     if (typeof sigPadInit === 'function') sigPadInit('bulkPaySignatureCanvas', 'bulkPaySignatureStatus');
-    portalGateOnSignature('bulkPaySignatureStatus', 'bulkPayAuthContinueBtn');
+    if (typeof portalGateOnSignature === 'function') portalGateOnSignature('bulkPaySignatureStatus', 'bulkPayAuthContinueBtn');
   }
 
   function submitBulkPaymentSignature(invoiceIds) {
