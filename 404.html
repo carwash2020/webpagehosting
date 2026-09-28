@@ -94,17 +94,49 @@
     a.btn{transition:none;}
     a.btn:hover, a.btn:active{transform:none;}
   }
+
+  /* P6 redesign (2026-09-28): a brand moment and somewhere to go. The
+     blueprint grid is an inline SVG (not a CSS gradient, which the
+     404-button-language test rules out), the numbers sit on a stamped
+     plate, and the main destinations follow the buttons. Colours are the
+     same copied values this page already uses. */
+  body{background:#0a0a0a url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cpath d='M120 0H0v120' fill='none' stroke='%23ffffff' stroke-opacity='.05'/%3E%3C/svg%3E");}
+  .plate{position:relative; padding:18px 34px 14px; margin:0 0 4px; border:1.5px solid rgba(255,128,0,.3); border-radius:14px; background:rgba(20,20,20,.72);}
+  .plate::before, .plate::after{content:""; position:absolute; width:14px; height:14px; border:2px solid #ff8000;}
+  .plate::before{top:-2px; left:-2px; border-right:0; border-bottom:0; border-radius:14px 0 0 0;}
+  .plate::after{bottom:-2px; right:-2px; border-left:0; border-top:0; border-radius:0 0 14px 0;}
+  .plate h1{font-size:clamp(88px,18vw,168px); letter-spacing:4px;}
+  .dest{display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; width:100%; max-width:560px; margin:40px 0 0;}
+  .dest-link{display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px 10px; border:1px solid #2a2a2a; border-radius:10px; background:#141414; color:#e8e8e8; text-decoration:none; font-size:13px; letter-spacing:1.4px; text-transform:uppercase;}
+  .dest-link svg{width:22px; height:22px; color:#3aa0ff;}
+  .dest-link:first-child svg{color:#ff8000;}
+  .dest-link:focus-visible{outline:2px solid #ffb347; outline-offset:2px;}
+  @media (hover:hover){.dest-link:hover{border-color:#ff8000; color:#ffffff;}}
+  .dest-link:active{transform:scale(.98);}
+  @media (max-width:480px){.dest{grid-template-columns:repeat(2, minmax(0, 1fr));}}
 </style>
 </head>
 <body>
 <main>
   <img src="/images/logo-signature-288.webp?v=202609251200" srcset="/images/logo-signature-176.webp?v=202609251200 176w, /images/logo-signature-288.webp?v=202609251200 288w, /images/logo-signature.webp?v=202608010300 550w" sizes="100px" alt="Triple H Enterprises logo" width="288" height="265">
+  <div class="plate" aria-hidden="false">
   <h1>404</h1>
+  </div>
   <p>This page took a wrong turn. The page you're looking for doesn't exist or may have moved. If you were trying to reach us, we're still just a call or text away.</p>
   <div class="btn-row">
     <a class="btn outline" href="/">Back to Home</a>
     <a class="btn orange js-phone-link js-phone-text" href="tel:+14354141667">Call (435) 414-1667</a>
   </div>
+  <!-- P6 redesign (2026-09-28): the site's main destinations, the same
+       links its header nav carries, so a dead end still goes somewhere. -->
+  <nav class="dest" aria-label="Main destinations">
+    <a class="dest-link" href="/booking.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Schedule</a>
+    <a class="dest-link" href="/#services"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 1 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.8 2.8-2.1-2.1z"/></svg>Services</a>
+    <a class="dest-link" href="/our-work.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>Gallery</a>
+    <a class="dest-link" href="/blog/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>Blog</a>
+    <a class="dest-link" href="/#areas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>Areas</a>
+    <a class="dest-link" href="/about.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>About</a>
+  </nav>
 </main>
 <script>
   // Phone + email, read live from site_content (edited in

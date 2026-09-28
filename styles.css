@@ -2026,6 +2026,81 @@
   .terms-body h4:first-child{margin-top:0;}
   .terms-body p{color:var(--text-dim); font-size:14px; line-height:1.6; margin:0 0 4px;}
 
+  /* === Redesign P6 (2026-09-28): Careers, Privacy, Terms and 404 (utility pages) -- scoped to html.page-careers / html.page-legal === */
+  /* Utility pages that read as documents. Careers now recruits: the pay
+     and schedule facts up top, schedule and pay as cards, duties and
+     requirements side by side, and the application as a panel. Privacy
+     and Terms get a contents list (sticky sidebar on desktop, collapsible
+     on phones) filled from their own <h4>s by a small inline script that
+     also re-runs after the site_terms CMS fetch rewrites #termsBody, plus
+     scroll-spy, a section-number device and a readable measure. Hooks are
+     on <html> (body is pinned). The new <section>s reset the site-wide
+     section 88px padding rule and section + section border. 404.html is
+     standalone and styled in its own <style>. */
+
+  /* ---- careers ---- */
+  html.page-careers .blog-body{max-width:1080px; padding:0 24px;}
+  html.page-careers .blog-header{padding:72px 0 20px; border-bottom:0;}
+  html.page-careers .blog-title{font-size:clamp(48px, 7vw, 96px); line-height:.94;}
+  html.page-careers .blog-article{max-width:none;}
+  html.page-careers .blog-article > p:first-of-type{max-width:62ch; font-size:20px;}
+  html.page-careers .careers-facts{display:flex; flex-wrap:wrap; gap:12px; margin:8px 0 40px;}
+  html.page-careers .careers-facts span{display:flex; flex-direction:column; gap:4px; padding:16px 20px; border-radius:12px; border:1px solid var(--orange-tint-border); background:var(--orange-tint-soft); font-family:var(--font-ui); font-size:13px; letter-spacing:.6px; color:var(--text-dim);}
+  html.page-careers .careers-facts b{font-family:var(--font-display); font-weight:400; font-size:30px; letter-spacing:.3px; line-height:1; color:var(--white);}
+  html.page-careers .careers-glance,
+  html.page-careers .careers-columns{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:16px; margin:0 0 16px;}
+  html.page-careers .careers-card,
+  html.page-careers .careers-col,
+  html.page-careers .careers-apply{padding:26px 28px; border:1px solid var(--border); border-radius:16px; background:var(--bg-panel);}
+  html.page-careers .careers-card h2,
+  html.page-careers .careers-col h2,
+  html.page-careers .careers-apply h2{margin:0 0 14px; font-family:var(--font-display); font-weight:400; font-size:clamp(24px, 2.6vw, 32px); letter-spacing:.3px; text-transform:none; color:var(--white);}
+  html.page-careers .careers-card p{margin:0; max-width:none; color:var(--text-dim);}
+  html.page-careers .careers-col ul{margin:0; padding:0; list-style:none; display:grid; gap:10px;}
+  html.page-careers .careers-col li{position:relative; margin:0; padding-left:26px; color:var(--text-dim); font-size:16px; line-height:1.5;}
+  html.page-careers .careers-col li::before{content:""; position:absolute; left:0; top:.45em; width:12px; height:12px; border-radius:3px; border:2px solid var(--orange); box-sizing:border-box;}
+  html.page-careers .careers-col + .careers-col li::before{border-color:var(--blue);}
+  html.page-careers .careers-apply{margin:24px 0 64px; padding:32px; border-color:var(--orange-tint-border); background:linear-gradient(160deg, var(--bg-panel-2), var(--bg-panel) 60%); box-shadow:var(--shadow-hover);}
+  html.page-careers .careers-apply h2{font-size:clamp(34px, 4vw, 52px);}
+  html.page-careers .careers-apply > p{margin:22px 0 0; max-width:none;}
+
+  /* ---- privacy & terms ---- */
+  html.page-legal .legal-hero{padding-bottom:0;}
+  html.page-legal .legal-hero h1{font-size:clamp(44px, 6.4vw, 88px); line-height:.95;}
+  html.page-legal .legal-doc{max-width:1080px; display:grid; grid-template-columns:240px minmax(0,1fr); column-gap:56px; align-items:start;}
+  html.page-legal .legal-toc{position:sticky; top:96px; max-height:calc(100vh - 120px); overflow:auto;}
+  html.page-legal .legal-toc:has(ol:empty){display:none;}
+  html.page-legal .legal-toc summary{cursor:pointer; list-style:none; margin:0 0 12px; font-family:var(--font-ui); font-weight:600; font-size:12px; letter-spacing:2.2px; text-transform:uppercase; color:var(--orange-text-vivid);}
+  html.page-legal .legal-toc summary::-webkit-details-marker{display:none;}
+  html.page-legal .legal-toc ol{list-style:none; margin:0; padding:0 0 0 14px; border-left:2px solid var(--border); display:grid; gap:10px;}
+  html.page-legal .legal-toc a{display:block; color:var(--text-dim); font-family:var(--font-ui); font-size:13.5px; line-height:1.35; text-decoration:none;}
+  html.page-legal .legal-toc a:focus-visible{color:var(--text);}
+  @media (hover:hover){html.page-legal .legal-toc a:hover{color:var(--text);}}
+  html.page-legal .legal-toc a.is-current{color:var(--orange-text-vivid);}
+  html.page-legal .legal-doc .terms-body{margin-top:0; counter-reset:legal;}
+  html.page-legal .legal-doc .terms-body h4{counter-increment:legal; position:relative; margin:44px 0 12px; padding-top:18px; border-top:1px solid var(--border); font-family:var(--font-display); font-weight:400; font-size:clamp(22px, 2.4vw, 28px); letter-spacing:.3px; text-transform:none; color:var(--white); scroll-margin-top:96px;}
+  html.page-legal .legal-doc .terms-body h4:first-child{margin-top:0;}
+  html.page-legal--privacy .legal-doc .terms-body h4::before{content:counter(legal, decimal-leading-zero); position:absolute; right:0; top:18px; font-family:var(--font-ui); font-size:12px; letter-spacing:2px; color:var(--orange-text-vivid);}
+  html.page-legal--terms .legal-doc .terms-body h4::before{content:""; position:absolute; left:0; top:-1px; width:48px; height:2px; background:var(--orange);}
+  html.page-legal .legal-doc .terms-body p,
+  html.page-legal .legal-doc .terms-body li{max-width:68ch; font-size:16.5px; line-height:1.7; color:var(--text-dim);}
+  html.page-legal .legal-doc .terms-body p{margin:0 0 14px;}
+
+  @media (max-width:860px){
+    html.page-careers .careers-glance,
+    html.page-careers .careers-columns{grid-template-columns:minmax(0,1fr);}
+    html.page-careers .careers-card,
+    html.page-careers .careers-col{padding:22px 20px;}
+    html.page-careers .careers-apply{padding:24px 18px;}
+    html.page-careers .blog-header{padding:44px 0 16px;}
+    html.page-legal .legal-doc{grid-template-columns:minmax(0,1fr);}
+    html.page-legal .legal-toc{position:static; max-height:none; margin:0 0 28px; padding:14px 16px; border:1px solid var(--border); border-radius:12px; background:var(--bg-panel);}
+    html.page-legal .legal-toc summary{margin:0;}
+    html.page-legal .legal-toc details[open] summary{margin-bottom:12px;}
+    html.page-legal .legal-doc .terms-body p{font-size:16px;}
+  }
+  /* === end Redesign P6 === */
+
   /* FAQ */
   .faq-list{max-width:760px;}
   /* Category sub-headings grouping the flat FAQ list (item 11, visual

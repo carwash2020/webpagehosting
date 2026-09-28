@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" style="background:#0a0a0a;">
+<html class="page-legal page-legal--privacy" lang="en" style="background:#0a0a0a;">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -63,7 +63,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/styles.css?v=bf45bd2f80">
+<link rel="stylesheet" href="/styles.css?v=69118e5c8e">
 </head>
 <body class="has-blueprint-bg">
 <div class="bg-blueprint" aria-hidden="true"></div>
@@ -163,14 +163,23 @@
 </header>
 
 <main id="main">
-  <section class="hero" style="padding-bottom:0;">
+  <section class="hero legal-hero">
     <div class="wrap">
       <h1>Privacy Policy</h1>
     </div>
   </section>
 
   <section>
-    <div class="wrap" style="max-width:900px;">
+    <div class="wrap legal-doc">
+      <!-- P6 redesign (2026-09-28): contents sidebar (desktop) / collapsible
+           list (phone), filled from this document's own headings by the
+           script at the end of the page. -->
+      <nav class="legal-toc" aria-label="On this page">
+        <details open>
+          <summary>On this page</summary>
+          <ol data-legal-toc></ol>
+        </details>
+      </nav>
       <div class="terms-body" id="privacyBody">
         <!-- Deliberately static, not live-CMS-backed like site_terms/
              site_faq: this is a policy document, not day-to-day
@@ -410,5 +419,57 @@
 </script>
 <script src="/js/analytics-events.js?v=4a6fd9aa19" defer></script>
 <script src="/js/mobile-nav-collapsible.js?v=cda30dbcff" defer></script>
+<script>
+  // P6 redesign (2026-09-28): the on-page contents for this document,
+  // built from its own <h4> headings. terms.html's body can be replaced
+  // by the site_terms fetch (tools/site-content.html's Terms editor emits
+  // plain <h4>/<p> pairs), so the list rebuilds whenever the body changes,
+  // and every heading gets a stable id. Scroll-spy marks the section in
+  // view. Nothing here changes the document text.
+  (function () {
+    var body = document.querySelector('.legal-doc .terms-body');
+    var list = document.querySelector('[data-legal-toc]');
+    if (!body || !list) return;
+    var spy = null;
+    function slug(s) { return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'section'; }
+    function build() {
+      var heads = [].slice.call(body.querySelectorAll('h4'));
+      var used = {};
+      list.innerHTML = '';
+      heads.forEach(function (h) {
+        var id = h.id || slug(h.textContent);
+        while (used[id]) id += '-2';
+        used[id] = true;
+        h.id = id;
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.href = '#' + id;
+        a.textContent = h.textContent;
+        li.appendChild(a);
+        list.appendChild(li);
+      });
+      if (spy) spy.disconnect();
+      if (!('IntersectionObserver' in window)) return;
+      spy = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (!e.isIntersecting) return;
+          [].forEach.call(list.querySelectorAll('a'), function (a) {
+            a.classList.toggle('is-current', a.getAttribute('href') === '#' + e.target.id);
+          });
+        });
+      }, { rootMargin: '-20% 0px -70% 0px' });
+      heads.forEach(function (h) { spy.observe(h); });
+    }
+    build();
+    if ('MutationObserver' in window) {
+      var pending = false;
+      new MutationObserver(function () {
+        if (pending) return;
+        pending = true;
+        setTimeout(function () { pending = false; build(); }, 0);
+      }).observe(body, { childList: true });
+    }
+  })();
+</script>
 </body>
 </html>

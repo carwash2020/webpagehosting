@@ -2425,3 +2425,26 @@ Fourth package from the public-site sweep. I used the later revision in the comb
 - **Tests and checks:** full suite 4253/4254 (the known `check-links.py` sandbox-proxy failure). `check-consistency`, `check-undefined-vars`, lint and the visual snapshot are clean.
 - **No leakage:** pixel diffs of About, Our Work, Careers and two service pages (these load `blog.css`), at 390/1440 in dark and light, show no visible change. The one Our Work strip was re-shot and is capture noise.
 - **Screenshots:** `docs/blog-2026-09-28/`.
+
+## 2026-09-28 -- P6 Careers, Privacy, Terms and 404 (html.page-careers / html.page-legal), applied from a Claude Design package
+
+Fifth package from the public-site sweep; the P6 zip and the combined export were identical. `rule1-audit` found nothing missing on any of the four pages, and the legal text is verbatim. No existing `<script>` changed on any page. Privacy and Terms each gain one small script, which builds the contents list.
+
+**What shipped.**
+- **Careers:** a display hero with the pay and schedule facts pulled up as aria-hidden chips. Schedule and pay become cards, duties and requirements sit side by side, and the application is a panel (same fields and the same submission path).
+- **Privacy and Terms:** an "On this page" list built from each document's own `<h4>`s. It's a sticky sidebar on desktop and collapsible on phones, with numbered sections. On Terms it re-runs through a MutationObserver when the `site_terms` CMS fetch replaces `#termsBody`, so a later edit in Site Content re-flows it.
+- **404:** a brand moment plus the site's main destinations (the home page, services, Our Work, the blog, areas, About, booking), still self-contained with its own inline styles.
+
+**Changed at apply time, and why:**
+- **A block comment quoted `section{padding:88px 0}`, braces and all.** The count balanced, but it's the same trap P3 and P4 hit, so it's reworded without braces. That's the standing rule now: never put a brace in a CSS comment.
+- **The legal contents links' `:hover` wasn't behind `(hover:hover)`.** It is now guarded, with `:focus-visible` kept as its own rule.
+
+**Verification.**
+- **Suite and checks.** Full suite 4253/4254; the one failure is the known `check-links.py` sandbox-proxy failure. `check-consistency`, `check-undefined-vars`, lint and the visual snapshot are clean.
+- **Leaks.** Pixel diffs of the homepage, About, Our Work, a blog post and Hurricane (390/1440, dark and light) show no visible change beyond the homepage capture-noise strips seen in every round.
+- **Interactions.**
+  - Careers' application form keeps its fields (`_gotcha`, name, phone, email, experience) and still blocks an empty submit.
+  - Privacy builds 12 contents entries and Terms 16. Every target exists, and clicking one lands on its section.
+  - With a stubbed `site_terms` response, the Terms body and its contents list both show the CMS headings.
+  - The 404's original two links are kept, and six more real destinations are added.
+- **Screenshots** are in `docs/careers-legal-404-2026-09-28/`.
