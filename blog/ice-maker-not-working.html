@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" style="background:#0a0a0a;">
+<html class="page-blog-post" lang="en" style="background:#0a0a0a;">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -61,7 +61,7 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="/styles.css?v=bf45bd2f80">
-<link rel="stylesheet" href="/blog/blog.css?v=8c0107810e">
+<link rel="stylesheet" href="/blog/blog.css?v=62fcdbf83c">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -209,6 +209,9 @@
 
 <main id="main">
 <div class="blog-body">
+  <!-- P5 redesign (2026-09-28): diagnostic header -- the title block and the
+       lead diagram share one hero frame. -->
+  <div class="post-hero">
   <div class="blog-header">
     <div class="blog-kicker"><a href="/blog/">Triple H Enterprises Blog</a></div>
     <h1 class="blog-title">Ice Maker Not Making Ice? Here's What Usually Failed</h1>
@@ -217,11 +220,26 @@
   </div>
 
   <img class="blog-diagram" src="https://images.unsplash.com/photo-1721613877687-c9099b698faa?fm=jpg&q=80&w=1400&auto=format&fit=crop" alt="A stainless steel side-by-side refrigerator in a home kitchen entryway" loading="lazy">
+  </div>
 
+  <div class="post-layout">
+  <!-- P5 redesign (2026-09-28): on-page navigation built from this post's own
+       H2s (sticky beside the article on desktop, collapsible on phones). -->
+  <nav class="post-toc" aria-label="In this post">
+    <details open>
+      <summary>In this post</summary>
+      <ol>
+        <li><a href="#a-few-checks-first">A few checks first</a></li>
+        <li><a href="#the-three-parts-that-usually-cause-it">The three parts that usually cause it</a></li>
+        <li><a href="#when-it-s-something-else">When it's something else</a></li>
+        <li><a href="#is-it-worth-fixing">Is it worth fixing?</a></li>
+      </ol>
+    </details>
+  </nav>
   <div class="blog-article">
     <p>An ice maker that quits while the rest of the refrigerator keeps working is frustrating, but it isn't a sign the fridge is failing. The ice maker is its own small system: a valve lets water in, a fill line carries it up into the freezer, and the ice maker module freezes it and pushes the cubes out. When the ice stops, it's commonly one of those three.</p>
 
-    <h2 data-reveal>A few checks first</h2>
+    <h2 data-reveal id="a-few-checks-first">A few checks first</h2>
 
     <ul>
       <li>The shutoff arm or switch. Most ice makers have a wire arm that lifts to stop production when the bin is full, or an on/off switch, and either is easy to bump off while digging out ice</li>
@@ -230,7 +248,7 @@
       <li>A jam. Cubes that melted and refroze into a clump can block the ejector or hold the shutoff arm up</li>
     </ul>
 
-    <h2 data-reveal>The three parts that usually cause it</h2>
+    <h2 data-reveal id="the-three-parts-that-usually-cause-it">The three parts that usually cause it</h2>
 
     <p>The first is the water inlet valve, usually at the back of the fridge near the bottom, where the household water line connects. It opens for a few seconds each time the ice maker calls for water. Over time the screen inside it clogs with sediment, or the valve stops opening at all. St. George's water runs harder than a lot of places, so mineral buildup there is worth checking.</p>
 
@@ -243,18 +261,26 @@
       <p>Inlet valves, fill lines, and ice maker assemblies are all standard replacement parts. We test the valve and trace the line before replacing anything, because a new ice maker won't help if water was never reaching it.</p>
     </div>
 
-    <h2 data-reveal>When it's something else</h2>
+    <section class="post-pivot">
+    <h2 data-reveal id="when-it-s-something-else">When it's something else</h2>
 
     <p>If the whole freezer is warm, not just the ice maker, that's a cooling problem, and the empty bin is just the first thing you noticed. We've written up <a href="/blog/fridge-not-cooling.html">what usually causes a fridge that isn't cooling</a>. Water pooling inside the fridge is a different issue too, frequently a clogged defrost drain. And if the ice is coming out but small, cloudy, or tasting off, that's usually the filter or the water itself, not a failed part.</p>
 
-    <h2 data-reveal>Is it worth fixing?</h2>
+    
+      <p class="post-pivot-call"><a href="tel:+14354141667" class="btn orange js-phone-link">Call <span class="js-phone-text">(435) 414-1667</span></a> <a href="/booking.html" class="cta-quiet-link">or book a visit online</a></p>
+    </section>
+
+    <section class="post-worth">
+    <h2 data-reveal id="is-it-worth-fixing">Is it worth fixing?</h2>
 
     <p>Usually, yes. An ice maker problem is almost always confined to the ice maker and its water supply, and the parts are standard. The one case to think twice about is an older fridge that's also having cooling trouble. Then the ice maker is a small part of a bigger decision, and it's worth weighing the whole unit.</p>
+    </section>
 
     <div class="blog-cta">
       <p>Ice maker quit on you? We can usually track down whether it's the valve, the line, or the ice maker itself, and fix it same visit.</p>
       <a href="tel:4354141667" class="btn orange js-phone-link js-phone-text">Call (435) 414-1667</a>
     </div>
+  </div>
   </div>
 
   <div class="blog-related">

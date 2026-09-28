@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" style="background:#0a0a0a;">
+<html class="page-blog-post" lang="en" style="background:#0a0a0a;">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -61,7 +61,7 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="/styles.css?v=bf45bd2f80">
-<link rel="stylesheet" href="/blog/blog.css?v=8c0107810e">
+<link rel="stylesheet" href="/blog/blog.css?v=62fcdbf83c">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -209,6 +209,9 @@
 
 <main id="main">
 <div class="blog-body">
+  <!-- P5 redesign (2026-09-28): diagnostic header -- the title block and the
+       lead diagram share one hero frame. -->
+  <div class="post-hero">
   <div class="blog-header">
     <div class="blog-kicker"><a href="/blog/">Triple H Enterprises Blog</a></div>
     <h1 class="blog-title">Mounting a TV and Can't Find a Stud? Here's What Actually Holds</h1>
@@ -217,13 +220,26 @@
   </div>
 
   <img class="blog-diagram" src="https://images.unsplash.com/photo-1756027583186-a04a19e4f6ce?fm=jpg&q=80&w=1400&auto=format&fit=crop" alt="Assorted hand tools including wrenches, pliers, and a hammer" loading="lazy">
+  </div>
 
+  <div class="post-layout">
+  <!-- P5 redesign (2026-09-28): on-page navigation built from this post's own
+       H2s (sticky beside the article on desktop, collapsible on phones). -->
+  <nav class="post-toc" aria-label="In this post">
+    <details open>
+      <summary>In this post</summary>
+      <ol>
+        <li><a href="#the-mistake-we-see-most-two-studs-one-guess">The mistake we see most: two studs, one guess</a></li>
+        <li><a href="#the-other-thing-people-miss-what-s-actually-behi">The other thing people miss: what's actually behind the wall</a></li>
+      </ol>
+    </details>
+  </nav>
   <div class="blog-article">
     <p>This is the most common assembly and installation call we get, and it usually starts the same way: someone bought a wall mount, found a stud on one side of where they want the TV, couldn't find a second one in the right spot, and either drilled into drywall alone or called us before making that decision. Good instinct, because the second option is where a lot of DIY TV mounts actually go wrong.</p>
 
     <p>A stud is solid wood framing behind the drywall, typically spaced 16 inches apart, and it can hold real weight because the screw is biting into something structural. Plain drywall, on the other hand, is about half an inch of gypsum board. A screw driven straight into drywall with nothing behind it has almost no pull-out strength. Put a 50-plus pound TV on a mounting arm that puts leverage on that connection every time someone bumps it or adjusts the angle, and it's genuinely a matter of when it fails, not if.</p>
 
-    <h2 data-reveal>The mistake we see most: two studs, one guess</h2>
+    <h2 data-reveal id="the-mistake-we-see-most-two-studs-one-guess">The mistake we see most: two studs, one guess</h2>
     <p>Most full-motion and tilting mounts have four mounting points, and the safest setup catches at least two of those points on real studs. What we actually see a lot is someone finding one stud, assuming the second mounting hole "should" land on the next one 16 inches over, and it just doesn't line up, so they fill the gap with a standard drywall anchor rated for a picture frame, not a 45-pound television with a tilting arm putting leverage on it every time it moves.</p>
 
     <ul>
@@ -237,7 +253,7 @@
       <p>For a lighter TV, roughly 32 inches or under with a fixed (non-tilting) mount, a proper heavy-duty toggle-style anchor rated for 50-plus pounds per anchor, used at all four points, is a legitimate, safe setup. The mistake isn't using anchors at all. It's mixing one stud, one weak anchor, and a heavier tilting mount, which is exactly the combination that shows up in the falling-TV videos.</p>
     </div>
 
-    <h2 data-reveal>The other thing people miss: what's actually behind the wall</h2>
+    <h2 data-reveal id="the-other-thing-people-miss-what-s-actually-behi">The other thing people miss: what's actually behind the wall</h2>
     <p>Beyond studs, we routinely find electrical wiring, HVAC ducting, or plumbing lines running through a wall exactly where someone wants to drill, especially near an existing outlet that was added for the TV setup itself. A stud finder that also flags wiring, and a quick visual check before drilling, is a cheap five extra minutes that avoids a genuinely expensive mistake.</p>
 
     <p>We run into this constantly on the newer builds out around <a href="/locations/handyman-mesquite-nv.html">Mesquite</a>, where open floor plans mean a lot of large TVs going up on walls with awkward stud spacing relative to where the fireplace or the furniture layout actually wants the screen centered.</p>
@@ -246,6 +262,7 @@
       <p>Mounting a TV, a shelf, or anything heavy and not sure what's behind the wall? We'll find the studs, use the right hardware, and mount it so it actually stays up.</p>
       <a href="tel:4354141667" class="btn orange js-phone-link js-phone-text">Call (435) 414-1667</a>
     </div>
+  </div>
   </div>
 
   <div class="blog-related">

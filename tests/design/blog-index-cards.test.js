@@ -32,17 +32,24 @@ test('each card carries an icon badge and a "Read the post" tag with the shared 
   });
 });
 
+// One card's own markup, found by its link rather than by where it sits in
+// the file: the P5 redesign (2026-09-28) regroups the cards into a featured
+// post and appliance shelves, so file order no longer matches the old list.
+const cardFor = (href) => (INDEX.match(new RegExp(`<a class="blog-index-item[^"]*" href="/blog/${href.replace('.', '\\.')}"[\\s\\S]*?</a>`)) || [''])[0];
+
 test('the two appliance posts reuse the exact appliance icon already used by the homepage service card, not a new shape', () => {
   const applianceIconPath = '<rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="7" x2="16" y2="7"/><circle cx="12" cy="15" r="3"/>';
-  const dryerCard = INDEX.slice(INDEX.indexOf('dryer-not-heating.html'), INDEX.indexOf('handyman-to-do-list.html'));
-  const repairOrReplaceCard = INDEX.slice(INDEX.indexOf('appliance-repair-or-replace.html'));
+  const dryerCard = cardFor('dryer-not-heating.html');
+  const repairOrReplaceCard = cardFor('appliance-repair-or-replace.html');
+  assert.ok(dryerCard && repairOrReplaceCard, 'appliance cards not found');
   assert.ok(dryerCard.includes(applianceIconPath));
   assert.ok(repairOrReplaceCard.includes(applianceIconPath));
 });
 
 test('the general-repairs post reuses the exact handyman icon already used by the homepage service card', () => {
   const handymanIconPath = '<path d="M14.7 6.3a4 4 0 1 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.8 2.8-2.1-2.1z"/>';
-  const todoCard = INDEX.slice(INDEX.indexOf('handyman-to-do-list.html'), INDEX.indexOf('appliance-repair-or-replace.html'));
+  const todoCard = cardFor('handyman-to-do-list.html');
+  assert.ok(todoCard, 'to-do list card not found');
   assert.ok(todoCard.includes(handymanIconPath));
 });
 

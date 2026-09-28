@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" style="background:#0a0a0a;">
+<html class="page-blog-post" lang="en" style="background:#0a0a0a;">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -61,7 +61,7 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="/styles.css?v=bf45bd2f80">
-<link rel="stylesheet" href="/blog/blog.css?v=8c0107810e">
+<link rel="stylesheet" href="/blog/blog.css?v=62fcdbf83c">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -209,6 +209,9 @@
 
 <main id="main">
 <div class="blog-body">
+  <!-- P5 redesign (2026-09-28): diagnostic header -- the title block and the
+       lead diagram share one hero frame. -->
+  <div class="post-hero">
   <div class="blog-header">
     <div class="blog-kicker"><a href="/blog/">Triple H Enterprises Blog</a></div>
     <h1 class="blog-title">Toilet Running All Night? It's Almost Always This $8 Part</h1>
@@ -217,13 +220,27 @@
   </div>
 
   <img class="blog-diagram" src="https://images.unsplash.com/photo-1722858812830-88868aa112c8?fm=jpg&q=80&w=1400&auto=format&fit=crop" alt="A white toilet in a bathroom" loading="lazy">
+  </div>
 
+  <div class="post-layout">
+  <!-- P5 redesign (2026-09-28): on-page navigation built from this post's own
+       H2s (sticky beside the article on desktop, collapsible on phones). -->
+  <nav class="post-toc" aria-label="In this post">
+    <details open>
+      <summary>In this post</summary>
+      <ol>
+        <li><a href="#how-to-actually-confirm-it-before-you-call-anyon">How to actually confirm it before you call anyone</a></li>
+        <li><a href="#why-this-is-worth-fixing-today-not-next-month">Why this is worth fixing today, not next month</a></li>
+        <li><a href="#when-it-s-not-just-the-flapper">When it's not just the flapper</a></li>
+      </ol>
+    </details>
+  </nav>
   <div class="blog-article">
     <p>We get this call constantly, usually phrased as "my toilet keeps making noise" or "the water bill jumped and we don't know why." Sometimes it's an obvious, continuous hiss. Sometimes it's more subtle: the tank refills on its own every ten or fifteen minutes even though nobody's touched it. Both are the same problem about eight times out of ten, and it's a part that costs less than a fast-food lunch.</p>
 
     <p>It's called a flapper valve, and it sits at the bottom of the tank, sealing the hole that lets water drop into the bowl when you flush. Over time, the rubber degrades, warps, or picks up a thin film of mineral buildup that keeps it from sealing flat. Once that happens, water is constantly leaking past it into the bowl, so the fill valve keeps kicking on to top the tank back off, over and over, all day and all night.</p>
 
-    <h2 data-reveal>How to actually confirm it before you call anyone</h2>
+    <h2 data-reveal id="how-to-actually-confirm-it-before-you-call-anyon">How to actually confirm it before you call anyone</h2>
 
     <p>There's a genuinely reliable home test that takes two minutes and no tools:</p>
     <ul>
@@ -239,18 +256,26 @@
       <p>A universal flapper valve runs six to twelve dollars in parts, and swapping it is a five-minute job once the tank's shut off and drained. The only real trick is matching the flapper to your specific toilet model. St. George's water runs harder than a lot of places, and mineral buildup on an ill-fitting or mismatched flapper is the single most common reason a "new" flapper still leaks within a few months.</p>
     </div>
 
-    <h2 data-reveal>Why this is worth fixing today, not next month</h2>
+    <section class="post-worth">
+    <h2 data-reveal id="why-this-is-worth-fixing-today-not-next-month">Why this is worth fixing today, not next month</h2>
 
     <p>A running toilet isn't a dramatic problem, which is exactly why people let it go. But a continuously leaking flapper can waste anywhere from a few hundred to well over a thousand gallons a day depending on how bad the seal is. On a typical utility bill, that's real money every single billing cycle for a fix that costs less than a movie ticket. We've walked into more than one house where the running toilet had been "getting around to it" for over a year, quietly adding up.</p>
 
-    <h2 data-reveal>When it's not just the flapper</h2>
+    
+    </section>
+
+    <section class="post-pivot">
+    <h2 data-reveal id="when-it-s-not-just-the-flapper">When it's not just the flapper</h2>
 
     <p>If you've swapped the flapper and it's still running, or the water level in the tank keeps creeping up past the overflow tube, the fill valve itself is usually the next suspect, and that's a slightly bigger job that's worth having someone actually look at rather than keep guessing. This is the kind of thing we handle as part of our <a href="/services/plumbing-repairs.html">plumbing repairs</a> service, and it's a fast, low-cost visit almost every time. We also see this a lot on well-water properties out around <a href="/locations/handyman-hurricane-ut.html">Hurricane</a>, where sediment tends to chew through fill valve seals faster than city water does.</p>
+      <p class="post-pivot-call"><a href="tel:+14354141667" class="btn orange js-phone-link">Call <span class="js-phone-text">(435) 414-1667</span></a> <a href="/booking.html" class="cta-quiet-link">or book a visit online</a></p>
+    </section>
 
     <div class="blog-cta">
       <p>Toilet won't stop running, or your water bill jumped for no obvious reason? We can usually track it down and fix it in one visit.</p>
       <a href="tel:4354141667" class="btn orange js-phone-link js-phone-text">Call (435) 414-1667</a>
     </div>
+  </div>
   </div>
 
   <div class="blog-related">
