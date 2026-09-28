@@ -114,9 +114,29 @@
     background: rgba(224,82,82,0.1); border: 1px solid #e05252; border-radius: 8px;
     padding: 12px 16px; font-size: 13px; color: #ff8a8a; margin-bottom: 20px; line-height: 1.5;
   }
+
+  /* ==========================================================================
+     W3 -- MONEY (2026-09-28, Workspace redesign brief W): Contracts.
+     Shipped in the package as a block appended to styles-tools.css; moved
+     here rule for rule, because every rule is keyed to this one page and
+     the nine portal pages load that shared sheet too. This <style> loads
+     after styles-tools.css, so equal-specificity rules still win.
+     ========================================================================== */
+  /* ---- Contracts: the three documents as tabs, their sections in two columns ---- */
+  body.th-tool-page[data-th-page="contract-generator"] .contract-tabs { position: sticky; top: calc(65px + max(env(safe-area-inset-top, 0px), 44px)); z-index: 55; background: var(--bg); }
+  @media (min-width: 1024px) {
+    body.th-tool-page[data-th-page="contract-generator"] .contract-tabs { top: 73px; }
+  }
+  @media (min-width: 1200px) {
+    body.th-tool-page[data-th-page="contract-generator"] .contract-panel.is-active {
+      display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 20px; align-items: start;
+    }
+    body.th-tool-page[data-th-page="contract-generator"] .contract-panel.is-active > * { min-width: 0; }
+    body.th-tool-page[data-th-page="contract-generator"] .contract-panel.is-active > .form-section:first-child { grid-row: span 2; }
+  }
 </style>
 </head>
-<body>
+<body data-th-page="contract-generator">
 
 <div id="roleBlockedOverlay" class="role-blocked-overlay">
   <div class="tool-title" style="font-size:22px;">Not available here</div>
@@ -289,7 +309,7 @@
   <button class="primary-btn wide" onclick="generateAndLog('ltsa')">Generate PDF &amp; Save</button>
 </div>
 
-<div class="form-section is-collapsed" id="signatureFormSection">
+<div class="form-section is-collapsed" id="signatureFormSection" data-th-inline>
   <div class="form-section-header" onclick="toggleFormSection('signatureFormSection')">
     <h3>Signatures <span style="color:var(--text-dim); font-weight:400; text-transform:none; letter-spacing:0;">(optional)</span> <button class="help-btn" onclick="event.stopPropagation(); openCardInfo('signature')" aria-label="What is this?" title="What is this?">?</button></h3>
     <span class="collapse-chevron">&#9660;</span>

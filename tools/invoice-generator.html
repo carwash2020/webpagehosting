@@ -316,9 +316,57 @@
   .job-fill.is-done { display: flex; align-items: center; gap: 10px; background: rgba(76,175,120,.08); border-color: rgba(76,175,120,.35); }
   .job-fill.is-done .th-icon { width: 18px; height: 18px; margin: 0; flex-shrink: 0; color: #4caf78; }
   .job-fill-done-text { flex: 1; min-width: 0; color: var(--text); font-size: 13.5px; }
+
+  /* ==========================================================================
+     W3 -- MONEY (2026-09-28, Workspace redesign brief W): Invoices / Quotes / Quick charge.
+     Shipped in the package as a block appended to styles-tools.css; moved
+     here rule for rule, because every rule is keyed to this one page and
+     the nine portal pages load that shared sheet too. This <style> loads
+     after styles-tools.css, so equal-specificity rules still win.
+     ========================================================================== */
+  /* ---- Invoices: a builder on a computer -- who/what on the left, the
+     priced lines and totals beside them ---- */
+  body.th-tool-page[data-th-page="invoice-generator"] .totals-box {
+    background: var(--bg-panel-2); border: 0; border-radius: var(--th-radius-control);
+    box-shadow: inset 0 var(--th-rule) 0 var(--orange);
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-summary { gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--th-radius-card); overflow: hidden; }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-summary > * { border: 0; border-radius: 0; margin: 0; }
+  body.th-tool-page[data-th-page="invoice-generator"] .quote-banner { border-radius: var(--th-radius-card); }
+  body.th-tool-page[data-th-page="invoice-generator"] .job-fill { border-radius: var(--th-radius-card); }
+  body.th-tool-page[data-th-page="invoice-generator"] .pos-card { max-width: 560px; }
+  body.th-tool-page[data-th-page="invoice-generator"] .pos-amount-field input {
+    font-family: var(--font-display); font-size: 44px; min-height: 76px; letter-spacing: .5px;
+  }
+  /* Apply-time change: the package ran the builder from 1200px at
+     .9fr/1.1fr, but the line-items table keeps the shared .table-scroll
+     640px minimum, so below ~1900px the right column scrolled sideways
+     and hid each row's remove button. The builder now starts at 1400px
+     with a right column wide enough for the whole table (640px + the
+     card's padding), and Payment Text stays in the left column under
+     Job instead of dropping below the line items with a gap above it. */
+  @media (min-width: 1400px) {
+    body.th-tool-page[data-th-page="invoice-generator"] #tab-invoice.is-active,
+    body.th-tool-page[data-th-page="invoice-generator"] #tab-quote.is-active {
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(704px, 1.2fr); column-gap: 20px; align-items: start; grid-auto-flow: row dense;
+    }
+    body.th-tool-page[data-th-page="invoice-generator"] #tab-invoice > *,
+    body.th-tool-page[data-th-page="invoice-generator"] #tab-quote > * { grid-column: 1; min-width: 0; }
+    body.th-tool-page[data-th-page="invoice-generator"] #tab-invoice > .form-section:nth-child(4),
+    body.th-tool-page[data-th-page="invoice-generator"] #tab-quote > .form-section:nth-child(5) { grid-column: 2; grid-row: 1 / span 4; }
+    body.th-tool-page[data-th-page="invoice-generator"] #tab-quote > .quote-banner { grid-column: 1 / -1; }
+    body.th-tool-page[data-th-page="invoice-generator"] #tab-quote > .form-section:nth-child(5) { grid-row: 2 / span 4; }
+  }
+  @media (min-width: 1200px) {
+    body.th-tool-page[data-th-page="invoice-generator"] #tab-recent.is-active {
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 20px; align-items: start;
+    }
+    body.th-tool-page[data-th-page="invoice-generator"] #tab-recent > * { min-width: 0; }
+    body.th-tool-page[data-th-page="invoice-generator"] #tab-recent > #invoiceSummary { grid-column: 1 / -1; }
+  }
 </style>
 </head>
-<body>
+<body data-th-page="invoice-generator">
 
 <div id="roleBlockedOverlay" class="role-blocked-overlay">
   <div class="tool-title" style="font-size:22px;">Not available here</div>
