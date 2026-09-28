@@ -188,9 +188,30 @@
     display: flex; align-items: center; justify-content: center;
     border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.4);
   }
+
+  /* ==========================================================================
+     W4 (2026-09-28) -- People + field redesign, this page only. Moved here,
+     rule for rule, from the package's styles-tools.css block: every rule is
+     keyed to body.th-tool-page[data-th-page="route-planner"], and the shared sheet
+     is also loaded by the nine portal pages, so it stays untouched.
+     ========================================================================== */
+  /* ---- Route planner: map beside the stops on a computer ---- */
+  body.th-tool-page[data-th-page="route-planner"] .route-map-wrap { border: 1px solid var(--border); border-radius: var(--th-radius-card); overflow: hidden; }
+  body.th-tool-page[data-th-page="route-planner"] .results-box { background: var(--bg-panel-2); border: 0; border-radius: var(--th-radius-control); box-shadow: inset 0 var(--th-rule) 0 var(--orange); }
+  body.th-tool-page[data-th-page="route-planner"] .result-row.final { font-family: var(--font-display); font-size: 20px; letter-spacing: .3px; }
+  @media (min-width: 1100px) {
+    body.th-tool-page[data-th-page="route-planner"] {
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); column-gap: 20px; align-content: start; grid-auto-flow: row dense;
+    }
+    body.th-tool-page[data-th-page="route-planner"] > * { grid-column: 1; min-width: 0; }
+    body.th-tool-page[data-th-page="route-planner"] > .hub-header,
+    body.th-tool-page[data-th-page="route-planner"] > .tool-sub { grid-column: 1 / -1; }
+    body.th-tool-page[data-th-page="route-planner"] > .route-map-wrap { grid-column: 2; grid-row: span 3; position: sticky; top: 77px; align-self: start; }
+    body.th-tool-page[data-th-page="route-planner"] > .route-map-wrap #routeMap { min-height: calc(100vh - 110px); }
+  }
 </style>
 </head>
-<body>
+<body data-th-page="route-planner">
 <a href="#mainContent" class="skip-link">Skip to main content</a>
 
 <div class="hub-header">

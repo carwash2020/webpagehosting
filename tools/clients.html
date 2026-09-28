@@ -151,9 +151,29 @@
   .cd-empty { text-align: center; color: var(--text-dim); font-size: 14px; padding: 36px 16px; border: 1px dashed var(--border); border-radius: 14px; }
   .cd-empty .secondary-btn { margin-top: 12px; }
   @media (min-width: 1024px) { #tab-directory { max-width: 860px; } }
+
+  /* ==========================================================================
+     W4 (2026-09-28) -- People + field redesign, this page only. Moved here,
+     rule for rule, from the package's styles-tools.css block: every rule is
+     keyed to body.th-tool-page[data-th-page="clients"], and the shared sheet
+     is also loaded by the nine portal pages, so it stays untouched.
+     ========================================================================== */
+  /* ---- Clients ---- */
+  body.th-tool-page[data-th-page="clients"] .cd-toolbar { gap: 8px; }
+  body.th-tool-page[data-th-page="clients"] .cd-summary {
+    font-family: var(--font-ui); text-transform: uppercase; letter-spacing: 1.2px; font-size: 12px; color: var(--text-dim);
+    display: flex; align-items: center; gap: 10px;
+  }
+  body.th-tool-page[data-th-page="clients"] .cd-summary::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  @media (min-width: 1280px) {
+    /* Two columns of rows, still one ruled list. */
+    body.th-tool-page[data-th-page="clients"] #clientDirList.th-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 12px; }
+    body.th-tool-page[data-th-page="clients"] #clientDirList.th-list > .th-row { border-width: 1px 1px 0; border-radius: 0; }
+    body.th-tool-page[data-th-page="clients"] #clientDirList.th-list > :not(.th-row) { grid-column: 1 / -1; }
+  }
 </style>
 </head>
-<body>
+<body data-th-page="clients">
 <a href="#mainContent" class="skip-link">Skip to main content</a>
 
 <div class="hub-header">
