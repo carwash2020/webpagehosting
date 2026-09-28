@@ -216,9 +216,57 @@
   .job-clock-time { font-size: 34px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--white); }
   .job-clock-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--orange); animation: th-clock-pulse 1.6s ease-out infinite; }
   @media (prefers-reduced-motion: reduce) { .job-clock-dot { animation: none; } }
+
+  /* ==========================================================================
+     Workspace redesign W2 -- DAILY (2026-09-28): Job detail -- the job is the headline, a thumb bar on phones
+     Package W2 of the v2 Workspace redesign, built on W1 (the append-only
+     body.th-tool-page block at the end of styles-tools.css). Kept in this
+     page's own <style> (which loads after styles-tools.css, so it wins at
+     equal specificity) rather than appended to the shared sheet: every rule
+     is keyed to this page's body[data-th-page], so it has no business in a
+     file the nine portal pages also load. Source order is untouched; the
+     desktop arrangement is CSS grid placement only.
+     ========================================================================== */
+  /* ---- Job detail: the job is the headline; the next step is the spine ---- */
+  body.th-tool-page[data-th-page="job-detail"] .job-hero {
+    background: var(--bg-panel); background-image: none; border: 1px solid var(--border);
+    border-radius: var(--th-radius-card); box-shadow: none;
+  }
+  body.th-tool-page[data-th-page="job-detail"] .job-hero-title { font-size: 32px; line-height: 1.02; text-transform: uppercase; color: var(--text); }
+  body.th-tool-page[data-th-page="job-detail"] .job-next {
+    border-width: 1px; border-radius: var(--th-radius-card); padding: 14px 16px;
+  }
+  body.th-tool-page[data-th-page="job-detail"] .job-next-text { font-size: 15px; }
+  body.th-tool-page[data-th-page="job-detail"] .job-next-text strong { font-family: var(--font-ui); text-transform: uppercase; letter-spacing: .6px; }
+  body.th-tool-page[data-th-page="job-detail"] .job-next-btn { min-height: 48px; }
+  body.th-tool-page[data-th-page="job-detail"] .job-stat-row { gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--th-radius-card); overflow: hidden; }
+  body.th-tool-page[data-th-page="job-detail"] .job-stat { background: var(--bg-panel); border: 0; border-radius: 0; }
+  body.th-tool-page[data-th-page="job-detail"] .job-stat-value { font-size: 24px; }
+  body.th-tool-page[data-th-page="job-detail"] .job-quick-action {
+    border-radius: var(--th-radius-control); font-family: var(--font-ui); text-transform: uppercase; letter-spacing: .8px; font-size: 12px;
+  }
+  /* Phone/tablet: Call / Text / Directions / On my way ride in a thumb bar
+     above the bottom nav, so the daily loop never needs a scroll back up. */
+  @media (max-width: 1023px) {
+    body.th-tool-page[data-th-page="job-detail"] .job-quick-actions {
+      position: fixed; z-index: 880; left: 0; right: 0; margin: 0;
+      bottom: calc(85px + env(safe-area-inset-bottom, 0px));
+      padding: 8px max(12px, env(safe-area-inset-left)) 8px max(12px, env(safe-area-inset-right));
+      background: var(--bg-panel); box-shadow: inset 0 1px 0 var(--border);
+    }
+    body.th-tool-page[data-th-page="job-detail"] .job-quick-action { min-height: 52px; }
+    body.th-tool-page[data-th-page="job-detail"].th-has-bottomnav { padding-bottom: calc(85px + 72px + env(safe-area-inset-bottom, 0px)); }
+  }
+  @media (min-width: 1100px) {
+    body.th-tool-page[data-th-page="job-detail"] #jobContent {
+      display: grid; grid-template-columns: minmax(360px, .95fr) minmax(0, 1.05fr); column-gap: 20px; align-items: start;
+    }
+    body.th-tool-page[data-th-page="job-detail"] #jobContent > .job-hero { grid-column: 1; grid-row: 1 / span 12; }
+    body.th-tool-page[data-th-page="job-detail"] #jobContent > :not(.job-hero) { grid-column: 2; min-width: 0; }
+  }
 </style>
 </head>
-<body>
+<body data-th-page="job-detail">
 
 <!-- Bug fix (2026-09-22): jobDetailView (the whole page, including the
      header) stays display:none until the async job lookup resolves, and
@@ -378,6 +426,19 @@
     if (j.address) quick.push(['https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(j.address), 'navigate', 'Directions', true]);
     if (allowed('canManageInvoices')) quick.push(['/tools/invoice-generator.html?jobRef=' + encodeURIComponent(j.id), 'receipt', 'Invoice']);
     if (allowed('canViewFinance')) quick.push(['/tools/finance.html?job=' + encodeURIComponent(j.id) + '#expenses', 'camera', 'Expense']);
+    // W2 (2026-09-28): the last step of the daily loop sits in the same thumb
+    // bar once the job is Done -- the same review-request.html ?name=&job=&phone=
+    // prefill Job Tracker's Done prompt already uses. Presentation only: a
+    // link to a page that already reads these params.
+    if (j.status === 'done' && allowed('canManageReviews')) {
+      // Built exactly like job-tracker.html's reviewRequestHref(): only the
+      // params that have a value, so review-request.html leaves the rest blank.
+      const reviewParams = new URLSearchParams();
+      if (j.client) reviewParams.set('name', String(j.client).split(' ')[0]);
+      if (j.title) reviewParams.set('job', j.title);
+      if (j.phone) reviewParams.set('phone', j.phone);
+      quick.push(['/tools/review-request.html?' + reviewParams.toString(), 'star', 'Review']);
+    }
     const attr = typeof escapeAttr === 'function' ? escapeAttr : escapeHtml;
     const quickHtml = quick.length
       ? '<div class="job-quick-actions">' + quick.map(([href, icon, label, external]) =>
