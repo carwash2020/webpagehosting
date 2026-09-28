@@ -147,7 +147,7 @@
     width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border);
     background: var(--bg-panel-2); color: var(--text-dim); text-decoration: none; cursor: pointer;
   }
-  .portal-icon-btn:hover { border-color: var(--orange); color: var(--orange-light); }
+  @media (hover:hover){.portal-icon-btn:hover { border-color: var(--orange); color: var(--orange-light); }}
   .portal-icon-btn svg { width: 18px; height: 18px; }
   /* Fixed 2026-09-02, from a direct screenshot: with flex-wrap and
      flex:1 on 5 items, the 5th item (Jobs) couldn't fit on the first
@@ -234,7 +234,7 @@
   .invoice-chart-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
   .invoice-chart-bar-group { cursor: pointer; }
   .invoice-chart-bar { transition: opacity .12s ease; }
-  .invoice-chart-bar-group:hover .invoice-chart-bar,
+  @media (hover:hover){.invoice-chart-bar-group:hover .invoice-chart-bar { opacity: 0.8; }}
   .invoice-chart-bar-group:focus .invoice-chart-bar { opacity: 0.8; }
   .invoice-chart-bar-group:focus { outline: none; }
   .invoice-chart-value { font-size: 10.5px; font-weight: 600; fill: var(--text); font-family: inherit; }
@@ -290,7 +290,7 @@
   }
   .payment-modal-close { float: right; background: none; border: none; color: var(--text-dim); font-size: 20px; cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; margin: -8px -8px 0 0; }
   .report-bug-link { display: block; margin-top: 14px; font-size: 12px; color: var(--text-dim); text-decoration: underline; cursor: pointer; text-align: center; background: none; border: none; font-family: inherit; padding: 0; }
-  .report-bug-link:hover { color: var(--orange-light); }
+  @media (hover:hover){.report-bug-link:hover { color: var(--orange-light); }}
   .report-bug-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 1000; }
   .report-bug-modal { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 24px; max-width: 400px; width: 100%; }
   .report-bug-title { font-family:var(--font-ui); font-weight: 600; font-size: 18px; color: var(--white); margin-bottom: 6px; }
@@ -305,15 +305,21 @@
 </head>
 <body class="portal-page">
 
-<div class="portal-header">
+<!-- App bar (v2 shell, 2026-09-28) -- same as home.html's: kicker +
+     Anton title, the round Report-a-problem button (this page's one
+     #reportBugLink, moved up from the page foot) and the round account
+     button. #clientEmailDisplay and #signOutBtn stay in the markup. -->
+<div class="portal-header portal-appbar">
   <div class="portal-header-left">
     <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
     <div>
-      <div class="portal-title">Your Invoices</div>
+      <div class="portal-kicker">Money</div>
+      <div class="portal-title">Invoices</div>
       <div class="portal-sub" id="clientEmailDisplay"></div>
     </div>
   </div>
   <div class="portal-header-actions">
+    <button type="button" class="portal-icon-btn portal-report-btn" id="reportBugLink" aria-label="Report a problem" title="Report a problem"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.5"/><circle cx="12" cy="17.2" r=".6"/></svg></button>
     <a href="/portal/settings.html" class="portal-icon-btn" aria-label="Settings" title="Settings">
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
     </a>
@@ -369,6 +375,7 @@
   <div class="invoice-summary-text">
     <div class="invoice-summary-row"><span class="invoice-summary-dot is-paid"></span>Paid <strong id="invoiceSummaryPaid">$0.00</strong></div>
     <div class="invoice-summary-row"><span class="invoice-summary-dot is-outstanding"></span>Outstanding <strong id="invoiceSummaryOutstanding">$0.00</strong></div>
+    <div class="invoice-summary-row is-count">Invoices <strong id="invoiceSummaryCount"></strong></div>
   </div>
 </div>
 
@@ -392,8 +399,6 @@
 </div>
 </div>
 
-<button type="button" class="report-bug-link" id="reportBugLink">Report a problem</button>
-
 <div class="report-bug-overlay" id="reportBugOverlay" style="display:none;">
   <div class="report-bug-modal">
     <div class="report-bug-title" id="reportBugTitle">Report a problem</div>
@@ -413,7 +418,7 @@
 <div class="payment-modal-overlay" id="paymentModal">
   <div class="payment-modal">
     <button class="payment-modal-close" onclick="closePaymentModal()" aria-label="Close">&times;</button>
-    <div class="login-title" style="margin-bottom:16px;">Pay Invoice</div>
+    <div class="login-title payment-modal-title">Pay Invoice</div>
     <div id="paymentModalBody"></div>
   </div>
 </div>
@@ -475,6 +480,8 @@
     document.getElementById('invoiceSummaryPercent').textContent = Math.round(fraction * 100) + '%';
     document.getElementById('invoiceSummaryPaid').textContent = formatCurrency(totalPaid);
     document.getElementById('invoiceSummaryOutstanding').textContent = formatCurrency(totalOutstanding);
+    const countEl = document.getElementById('invoiceSummaryCount');
+    if (countEl) countEl.textContent = String(invoices.length);
     el.style.display = '';
   }
 
@@ -491,7 +498,19 @@
   function renderPayFirst(invoices) {
     const el = document.getElementById('payFirstArea');
     const outstanding = invoices.filter(inv => !inv.paid);
-    if (!outstanding.length) { el.innerHTML = ''; return; }
+    // v2 (2026-09-28): with invoices on file and nothing owed, the hero
+    // turns into a green "All paid up" instead of disappearing. No pay
+    // handler in it -- there is nothing to pay.
+    if (!outstanding.length) {
+      el.innerHTML = invoices.length
+        ? '<div class="pay-first is-paid-up" id="payFirst">' +
+            '<p class="pay-first-kicker">Amount due</p>' +
+            '<p class="pay-first-amount">' + formatCurrency(0) + '</p>' +
+            '<p class="pay-first-paidup"><span class="pay-first-paidup-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>All paid up. Thank you!</p>' +
+          '</div>'
+        : '';
+      return;
+    }
 
     const total = outstanding.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
     const oldest = outstanding.slice().sort((a, b) => new Date(a.invoice_date) - new Date(b.invoice_date))[0];
@@ -508,14 +527,16 @@
       }
     }
 
+    // v2 labels: "Pay $N" for one invoice, "Pay all · $N" for several
+    // (still the one combined Pay All Outstanding PaymentIntent).
     let actions;
     if (outstanding.length > 1) {
-      actions = '<button class="btn orange" type="button" onclick="startBulkPayment([' +
+      actions = '<button class="btn orange pay-first-btn" type="button" aria-label="Pay all outstanding, ' + formatCurrency(total) + '" onclick="startBulkPayment([' +
         outstanding.map(inv => inv.id).join(',') +
-        '])">Pay All Outstanding (' + formatCurrency(total) + ')</button>';
+        '])">Pay all &middot; ' + formatCurrency(total) + '</button>';
     } else {
-      actions = '<button class="btn orange" type="button" onclick="startPayment(' +
-        outstanding[0].id + ')">Pay now</button>';
+      actions = '<button class="btn orange pay-first-btn" type="button" onclick="startPayment(' +
+        outstanding[0].id + ')">Pay ' + formatCurrency(total) + '</button>';
     }
 
     el.innerHTML =
@@ -524,6 +545,7 @@
         '<p class="pay-first-amount">' + formatCurrency(total) + '</p>' +
         '<p class="pay-first-meta">' + meta + '</p>' +
         '<div class="pay-first-actions">' + actions + '</div>' +
+        '<p class="pay-first-secure"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4"/></svg>Secure card payment through Stripe</p>' +
       '</div>';
   }
 
@@ -601,25 +623,29 @@
     el.classList.add('is-highlighted');
   }
 
+  // v2 card (2026-09-28): what the invoice was for as the title (the
+  // description, falling back to the number), then number · invoiced
+  // date, the Anton amount and its status pill, then Pay now (orange,
+  // the one primary action) and Download PDF / Receipt.
   function renderInvoiceCard(inv) {
+    const title = inv.description || inv.invoice_number;
     return `
       <div class="invoice-card" id="invoice-card-${inv.id}">
         <div class="invoice-card-top">
-          <div>
-            <div class="invoice-number">${escapeHtml(inv.invoice_number)}</div>
-            ${inv.description ? `<div class="invoice-desc">${escapeHtml(inv.description)}</div>` : ''}
-            <div class="invoice-desc">${formatDate(inv.invoice_date)}</div>
+          <div class="invoice-card-head">
+            <div class="invoice-card-title">${escapeHtml(title)}</div>
+            <div class="invoice-desc">${inv.description ? `<span class="invoice-number">${escapeHtml(inv.invoice_number)}</span> &middot; ` : ''}Invoiced ${formatDate(inv.invoice_date)}</div>
           </div>
-          <div style="text-align:right;">
+          <div class="invoice-card-amount">
             <div class="invoice-total">${formatCurrency(inv.total)}</div>
             <span class="invoice-status ${inv.paid ? 'is-paid' : 'is-unpaid'}">${inv.paid ? 'Paid' : 'Unpaid'}</span>
-            ${inv.paid && inv.paid_at ? `<div class="invoice-desc" style="margin-top:4px;">${formatDate(inv.paid_at.slice(0, 10))}</div>` : ''}
+            ${inv.paid && inv.paid_at ? `<div class="invoice-desc invoice-paid-on">Paid ${formatDate(inv.paid_at.slice(0, 10))}</div>` : ''}
           </div>
         </div>
         ${renderLineItemsTable(inv.line_items)}
-        <div style="display:flex; gap:8px; margin-top:8px;">
-          ${!inv.paid ? `<button class="btn blue" style="flex:1; justify-content:center;" onclick="startPayment(${inv.id})">Pay now</button>` : ''}
-          <button class="btn secondary-btn" style="${inv.paid ? 'width:100%;' : 'flex:1;'} justify-content:center;" onclick="downloadInvoicePDF(${inv.id})">${inv.paid ? 'Download Receipt' : 'Download PDF'}</button>
+        <div class="invoice-card-actions">
+          ${!inv.paid ? `<button class="btn orange" onclick="startPayment(${inv.id})">Pay now</button>` : ''}
+          <button class="btn secondary-btn" onclick="downloadInvoicePDF(${inv.id})">${inv.paid ? 'Download Receipt' : 'Download PDF'}</button>
         </div>
       </div>
     `;
@@ -634,6 +660,7 @@
       return;
     }
     document.getElementById('clientEmailDisplay').textContent = session.user.email;
+    portalSetHeaderInitials(session.user.email);
     await portalGuardWithBiometricLock(session.user.email, client);
     // Keeps the Request/Jobs unread badges on the bottom nav while
     // browsing other tabs (2026-09-22). Fire-and-forget; never throws.
@@ -876,7 +903,13 @@
   function renderPaymentSignatureStep(invoiceId) {
     const inv = currentInvoices.find(i => i.id === invoiceId);
     const amountLabel = inv ? '$' + Number(inv.total).toFixed(2) : 'the invoice total';
+    // v2 sheet, step 1 of 2 (2026-09-28): a kicker + Anton heading over
+    // the unchanged authorization text, name field and signature pad.
+    // Continue stays disabled until the pad has a signature
+    // (portalGateOnSignature); submitPaymentSignature() still checks both.
     document.getElementById('paymentModalBody').innerHTML =
+      '<p class="pay-step-kicker">Step 1 of 2 &middot; authorize</p>' +
+      '<p class="pay-step-title">Authorize ' + amountLabel + '</p>' +
       '<div class="pay-auth-box">' +
       '<p class="pay-auth-text">I, <span id="paySignerNamePreview">_____________</span>, authorize Triple H Enterprises to charge ' + amountLabel + ' for this invoice, and to securely save this card on file for future charges I separately approve.</p>' +
       '<label for="paySignerName" class="pay-auth-label">Type your full legal name</label>' +
@@ -891,8 +924,9 @@
       '<span id="paySignatureStatus" class="pay-auth-label" style="margin:0;"></span>' +
       '</div>' +
       '</div>' +
-      '<button class="btn blue" id="payAuthContinueBtn" style="width:100%; justify-content:center; margin-top:14px;" onclick="submitPaymentSignature(' + invoiceId + ')">Continue to Payment</button>';
+      '<button class="btn orange pay-sheet-cta" id="payAuthContinueBtn" style="width:100%; justify-content:center; margin-top:14px;" onclick="submitPaymentSignature(' + invoiceId + ')">Continue to Payment</button>';
     if (typeof sigPadInit === 'function') sigPadInit('paySignatureCanvas', 'paySignatureStatus');
+    portalGateOnSignature('paySignatureStatus', 'payAuthContinueBtn');
   }
 
   function submitPaymentSignature(invoiceId) {
@@ -958,6 +992,8 @@
       .reduce((sum, inv) => sum + Number(inv.total), 0);
     const amountLabel = '$' + total.toFixed(2);
     document.getElementById('paymentModalBody').innerHTML =
+      '<p class="pay-step-kicker">Step 1 of 2 &middot; authorize</p>' +
+      '<p class="pay-step-title">Authorize ' + amountLabel + '</p>' +
       '<div class="pay-auth-box">' +
       '<p class="pay-auth-text">I, <span id="bulkPaySignerNamePreview">_____________</span>, authorize Triple H Enterprises to charge ' + amountLabel + ' for ' + invoiceIds.length + ' outstanding invoices, and to securely save this card on file for future charges I separately approve.</p>' +
       '<label for="bulkPaySignerName" class="pay-auth-label">Type your full legal name</label>' +
@@ -969,8 +1005,9 @@
       '<span id="bulkPaySignatureStatus" class="pay-auth-label" style="margin:0;"></span>' +
       '</div>' +
       '</div>' +
-      '<button class="btn blue" id="bulkPayAuthContinueBtn" style="width:100%; justify-content:center; margin-top:14px;" onclick="submitBulkPaymentSignature([' + invoiceIds.join(',') + '])">Continue to Payment</button>';
+      '<button class="btn orange pay-sheet-cta" id="bulkPayAuthContinueBtn" style="width:100%; justify-content:center; margin-top:14px;" onclick="submitBulkPaymentSignature([' + invoiceIds.join(',') + '])">Continue to Payment</button>';
     if (typeof sigPadInit === 'function') sigPadInit('bulkPaySignatureCanvas', 'bulkPaySignatureStatus');
+    portalGateOnSignature('bulkPaySignatureStatus', 'bulkPayAuthContinueBtn');
   }
 
   function submitBulkPaymentSignature(invoiceIds) {
@@ -995,10 +1032,15 @@
   function mountPaymentUI(clientSecret) {
     if (!stripeInstance) stripeInstance = Stripe(STRIPE_PUBLISHABLE_KEY);
     elementsInstance = stripeInstance.elements({ clientSecret });
+    // v2 sheet, step 2 of 2: the Stripe Payment Element (saved card or a
+    // new one -- Stripe's own UI), the error line, Pay, and the Stripe note.
     document.getElementById('paymentModalBody').innerHTML = `
+      <p class="pay-step-kicker is-quiet">Step 2 of 2 &middot; pay</p>
+      <p class="pay-step-title">Pay by card</p>
       <div id="paymentElement"></div>
       <div class="login-error" id="paymentError"></div>
-      <button class="btn blue" id="paymentSubmitBtn" style="width:100%; justify-content:center; margin-top:14px;">Pay</button>
+      <button class="btn orange pay-sheet-cta" id="paymentSubmitBtn" style="width:100%; justify-content:center; margin-top:14px;">Pay</button>
+      <p class="pay-first-secure is-centered"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4"/></svg>Processed by Stripe. Triple H never sees your card number.</p>
     `;
     const paymentElement = elementsInstance.create('payment');
     paymentElement.mount('#paymentElement');
@@ -1028,7 +1070,12 @@
         return;
       }
       if (paymentIntent && paymentIntent.status === 'succeeded') {
-        document.getElementById('paymentModalBody').innerHTML = '<div class="empty-state" style="color:#4caf78;">Payment received. Thank you!</div>';
+        // v2 paid confirmation: a green check pop and the amount Stripe
+        // actually confirmed (paymentIntent.amount, in cents). Receipt
+        // copy points at the Download Receipt button this page already
+        // has -- Stripe receipt emails aren't switched on (CLIENT-PORTAL.md).
+        const paidLabel = typeof paymentIntent.amount === 'number' ? ' &middot; ' + formatCurrency(paymentIntent.amount / 100) : '';
+        document.getElementById('paymentModalBody').innerHTML = '<div class="pay-done"><span class="pay-done-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span><p class="pay-done-title">Paid' + paidLabel + '</p><p class="pay-done-sub">Payment received. Thank you! Your receipt will be under Paid on this page.</p></div>';
         setTimeout(() => {
           closePaymentModal();
           renderInvoices(); // reflects the new paid status once the webhook (usually near-instant) has processed it

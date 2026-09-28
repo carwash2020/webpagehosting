@@ -77,7 +77,8 @@ test('portal/dashboard.html still loads none of the internal /tools/ scripts', (
 // becomes a real receipt (not just an invoice relabeled) once paid.
 
 test('a paid invoice card shows the paid date', () => {
-  assert.match(html, /inv\.paid && inv\.paid_at \? `<div class="invoice-desc"[^`]*\$\{formatDate\(inv\.paid_at\.slice\(0, 10\)\)\}/);
+  // The v2 card (2026-09-28) adds a second class (invoice-paid-on) to the line.
+  assert.match(html, /inv\.paid && inv\.paid_at \? `<div class="invoice-desc[^"]*"[^`]*\$\{formatDate\(inv\.paid_at\.slice\(0, 10\)\)\}/);
 });
 
 test('the download button reads "Download Receipt" once paid, not just "Download PDF"', () => {

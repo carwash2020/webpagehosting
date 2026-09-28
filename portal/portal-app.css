@@ -56,7 +56,13 @@
      guard the internal tools app already needed after a real
      reported bug. */
   padding: 6px 4px max(6px, env(safe-area-inset-bottom));
-  background: rgba(14, 14, 14, 0.92);
+  /* v2 shell (2026-09-28): an 84px bar with a hairline top edge. The
+     row keeps its 44px targets; the extra height is the room the raised
+     Request hex and the labels need. */
+  min-height: calc(84px + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+  align-items: start;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
   border-top: 1px solid var(--border);
   /* Content scrolling under a translucent bar reads as glass rather
      than as a gap; the solid fallback above still applies wherever
@@ -76,9 +82,12 @@
   padding: 4px 2px;
   text-decoration: none;
   color: var(--text-dim);
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.2px;
+  /* v2 labels: Oswald 11px uppercase, the app's label face. */
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
   line-height: 1.2;
   border: 0;
   border-radius: 10px;
@@ -99,7 +108,7 @@
 }
 
 .portal-nav a.is-active {
-  color: var(--orange-light);
+  color: var(--orange);
   /* No filled pill behind the icon -- the colour change plus the dot
      below is enough to read at a glance without adding visual weight
      to a bar that's on screen at all times. */
@@ -120,7 +129,7 @@
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: var(--orange-light);
+  background: var(--orange);
 }
 
 .portal-nav a {
@@ -144,24 +153,25 @@
    here. */
 .portal-nav a.portal-nav-request {
   color: var(--text-dim);
-  margin-top: -18px;
+  /* v2: a 54px brand hex lifted 20px off the bar. */
+  margin-top: -20px;
 }
 .portal-nav-hex {
-  width: 46px;
-  height: 46px;
+  width: 54px;
+  height: 54px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(155deg, var(--orange-light), var(--orange));
-  color: #0a0a0a;
-  clip-path: polygon(50% 0%, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%);
+  background: var(--orange);
+  color: #1a0d02;
+  clip-path: var(--hex);
   box-shadow: 0 6px 16px rgba(245, 129, 31, 0.42), 0 0 0 4px var(--bg, #0e0e0e);
   transition: transform .15s ease, box-shadow .3s ease;
 }
 .portal-nav-hex svg {
-  stroke: #0a0a0a;
-  width: 21px;
-  height: 21px;
+  stroke: #1a0d02;
+  width: 24px;
+  height: 24px;
 }
 .portal-nav a.portal-nav-request span:last-child {
   color: var(--text-dim);
@@ -169,7 +179,7 @@
 }
 .portal-nav a.portal-nav-request.is-active,
 .portal-nav a.portal-nav-request.is-active span:last-child {
-  color: var(--orange-light);
+  color: var(--orange);
 }
 /* No bottom dot on the raised hex tab -- it already reads as
    distinct without the shared active-tab indicator. */
@@ -232,21 +242,9 @@ body.portal-page {
   flex-shrink: 0;
 }
 
-/* A full-width bar looks stranded on a desktop window, where the
-   content column is centred and narrow. Matching the container's own
-   width keeps it visually attached to the content it belongs to. */
-@media (min-width: 720px) {
-  .portal-nav {
-    left: 50%;
-    transform: translateX(-50%);
-    right: auto;
-    width: min(560px, calc(100% - 32px));
-    margin-bottom: 14px;
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
-  }
-}
+/* (A 720-1023px floating pill version of the bar lived here. The v2
+   shell, 2026-09-28, keeps one full-width 84px bar at every width below
+   the 1024px sidebar, the way a tablet app's tab bar sits.) */
 
 /* ----------------------------------------------------------
    2. Card elevation
@@ -375,6 +373,9 @@ body.portal-page {
   }
 }
 
+/* Reduced motion (the opening of this comment had been lost, which
+   silently swallowed the @media block below as an invalid rule --
+   restored 2026-09-28).
    ----------------------------------------------------------
    Vestibular-motion sensitivity is a real accessibility need, and
    every transition above is decorative rather than load-bearing --
@@ -622,7 +623,7 @@ body.portal-page {
   transition: bottom .18s ease;
 }
 body.portal-page .th-toast-container {
-  bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 16px);
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px) + 12px);
 }
 /* .th-toast's own box (PO4, removed 2026-09-25): styles-tools.css defines
    the same selector and loads after this file on every portal page, so
@@ -801,12 +802,15 @@ body.portal-page .th-toast-container {
    so the nav inside it is still the fixed bottom tab bar it always was,
    and the desktop-only extras are hidden. */
 
-:root { --portal-rail-w: 252px; --portal-measure: 1180px; }
+:root { --portal-rail-w: 248px; --portal-measure: 1240px; }
 
 .portal-rail { display: contents; }
 .portal-rail-brand,
 .portal-rail-more,
 .portal-rail-help { display: none; }
+/* The v2 rail extras portalEnhanceShell() adds are desktop-only too. */
+.portal-rail-cta,
+.portal-rail-signout { display: none; }
 
 @media (min-width: 1024px) {
   body.portal-page {
@@ -820,19 +824,46 @@ body.portal-page .th-toast-container {
     position: fixed; top: 0; bottom: 0; left: 0; z-index: 90;
     width: var(--portal-rail-w); box-sizing: border-box;
     display: flex; flex-direction: column; gap: 6px;
-    padding: 22px 14px 18px; overflow-y: auto;
-    background: linear-gradient(180deg, rgba(24, 25, 29, .96), rgba(12, 13, 15, .98));
+    padding: 18px 14px; overflow-y: auto;
+    /* v2: one flat surface a step above the page, hairline edge. */
+    background: color-mix(in srgb, var(--bg-panel) 45%, var(--bg));
     border-right: 1px solid var(--border);
   }
 
+  /* v2 brand: the orange brand hex (clip-path var(--hex)) drawn in CSS,
+     so every page's identical rail markup gets it; the logo image
+     stays in the markup, hidden here. */
   .portal-rail-brand {
-    display: flex; align-items: center; gap: 12px;
-    padding: 4px 10px 18px; margin-bottom: 6px; text-decoration: none;
-    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+    padding: 4px 8px 6px; text-decoration: none;
   }
-  .portal-rail-brand img { width: 38px; height: auto; flex-shrink: 0; }
-  .portal-rail-name { display: block; font-family: var(--font-display); font-size: 19px; letter-spacing: .6px; color: var(--white); line-height: 1.1; }
-  .portal-rail-tag { display: block; font-size: 12px; color: var(--text-dim); margin-top: 2px; letter-spacing: .3px; }
+  .portal-rail-brand::before {
+    content: 'HHH'; flex-shrink: 0; width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--orange); color: #1a0d02; clip-path: var(--hex);
+    font-family: var(--font-display); font-size: 13px; letter-spacing: .2px;
+  }
+  .portal-rail-brand img { display: none; }
+  .portal-rail-name { display: block; font-family: var(--font-display); font-size: 18px; letter-spacing: .5px; text-transform: uppercase; color: var(--text); line-height: 1.05; }
+  .portal-rail-tag { display: block; font-size: 11.5px; color: var(--text-dim); margin-top: 1px; }
+
+  /* "Request work" (added by portalEnhanceShell() in portal-app.js). */
+  .portal-rail-cta {
+    display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 0 14px;
+    margin: 12px 0 8px; border-radius: 14px; text-decoration: none;
+    background: var(--orange); color: #1a0d02;
+    font-family: var(--font-ui); font-size: 14.5px; letter-spacing: .9px; text-transform: uppercase;
+    transition: filter .15s ease, transform .12s ease;
+  }
+  .portal-rail-cta svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
+  @media (hover:hover){.portal-rail-cta:hover{ filter: brightness(1.08); color: #1a0d02; }}
+  .portal-rail-cta:active { transform: scale(.98); }
+  .portal-rail-signout {
+    display: block; align-self: flex-start; min-height: 44px; margin-top: 8px; padding: 0 10px;
+    border: 0; background: none; color: var(--text-dim); cursor: pointer;
+    font-family: inherit; font-size: 13px;
+  }
+  @media (hover:hover){.portal-rail-signout:hover{ color: var(--text); }}
 
   /* The five tabs, as a vertical menu. Every property the phone bar
      sets that a sidebar list doesn't want is reset explicitly. */
@@ -841,6 +872,7 @@ body.portal-page .th-toast-container {
     width: auto; margin: 0; padding: 4px 0; border: 0; border-radius: 0;
     box-shadow: none; background: none; backdrop-filter: none; -webkit-backdrop-filter: none;
     display: flex; flex-direction: column; gap: 2px;
+    align-items: stretch; min-height: 0;
   }
   .portal-rail .portal-nav a,
   .portal-rail-more a {
@@ -857,7 +889,9 @@ body.portal-page .th-toast-container {
   }
   @media (hover:hover){.portal-rail .portal-nav a:hover, .portal-rail-more a:hover{ background: rgba(255, 255, 255, .04); color: var(--white); }}
   .portal-rail .portal-nav a.is-active,
-  .portal-rail-more a.is-current { background: var(--orange-tint-soft); color: var(--orange-light); }
+  .portal-rail-more a.is-current { background: var(--tone-orange-bg); color: var(--orange-light); }
+  /* Sidebar rows are sentence-case Archivo, not the bar's Oswald labels. */
+  .portal-rail .portal-nav a { font-family: var(--font-app); text-transform: none; letter-spacing: 0; }
   .portal-rail .portal-nav a.is-active svg { transform: none; }
   /* The phone bar's active dot becomes a left accent bar. */
   .portal-rail .portal-nav a.is-active::after {
@@ -884,26 +918,27 @@ body.portal-page .th-toast-container {
   .portal-rail .portal-nav a.portal-nav-request.is-active,
   .portal-rail .portal-nav a.portal-nav-request.is-active span:last-child { color: var(--orange-light); }
   /* Invoices dot sits at the end of the row, not beside the icon. */
-  .portal-rail .portal-nav-dot {
-    position: static; margin: 0 0 0 6px;
+  .portal-rail .portal-nav-dot,
+  .portal-rail .portal-nav a svg + .portal-nav-dot {
+    position: static; order: 3; margin: 0 4px 0 auto;
   }
 
   .portal-rail-more { display: flex; flex-direction: column; gap: 2px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
-  .portal-rail-label { font-size: 11px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--text-dim); padding: 0 12px 6px; }
+  .portal-rail-label { font-family: var(--font-ui); font-size: 11px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-dim); padding: 0 12px 6px; }
 
   .portal-rail-help {
     display: block; margin-top: auto; padding: 14px; border-radius: 12px;
     background: var(--bg-panel); border: 1px solid var(--border);
   }
-  .portal-rail-help-title { font-size: 13.5px; font-weight: 700; color: var(--white); }
+  .portal-rail-help-title { font-family: var(--font-ui); font-size: 12px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text); }
   .portal-rail-help p { margin: 4px 0 10px; font-size: 12.5px; line-height: 1.45; color: var(--text-dim); }
   .portal-rail-help-actions { display: flex; gap: 8px; }
   .portal-rail-help-actions a {
-    flex: 1; text-align: center; padding: 8px 0; border-radius: 8px; text-decoration: none;
-    font-size: 13px; font-weight: 700; color: var(--white);
-    background: var(--bg-panel-2); border: 1px solid var(--border);
+    flex: 1; text-align: center; min-height: 40px; display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 12px; text-decoration: none;
+    font-family: var(--font-ui); font-size: 13px; letter-spacing: .9px; text-transform: uppercase; color: var(--text);
+    background: var(--bg-panel-3); border: 1px solid var(--border);
   }
-  .portal-rail-help-actions a:first-child { background: var(--orange); border-color: var(--orange); color: #0a0a0a; }
   @media (hover:hover){.portal-rail-help-actions a:hover{ filter: brightness(1.08); }}
 
   /* Header: the rail already carries the brand and a Settings link, so

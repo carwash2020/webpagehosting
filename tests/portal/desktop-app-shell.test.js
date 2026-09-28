@@ -94,7 +94,8 @@ test('from 1024px the rail is a fixed sidebar and the content fills the space be
   assert.match(desk, /\.portal-rail \{\s*position: fixed; top: 0; bottom: 0; left: 0;/);
   assert.match(desk, /width: var\(--portal-rail-w\)/);
   assert.match(desk, /body\.portal-page \{[\s\S]*?max-width: none;[\s\S]*?padding: 30px var\(--portal-gutter\) 56px calc\(var\(--portal-rail-w\) \+ var\(--portal-gutter\)\);/);
-  assert.match(APP_CSS, /:root \{ --portal-rail-w: 252px; --portal-measure: 1180px; \}/);
+  // v2 shell (2026-09-28 handoff): a 248px rail and a 1240px content measure.
+  assert.match(APP_CSS, /:root \{ --portal-rail-w: 248px; --portal-measure: 1240px; \}/);
 });
 
 test('inside the rail the tab bar is reset to a plain vertical list, badge at the row end', () => {
