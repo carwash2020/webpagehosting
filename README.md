@@ -5738,3 +5738,33 @@ Package 2 of the Workspace redesign, on top of W1.
 - **Job detail**: the title is larger and uppercase, the money numbers are one ruled strip, and the next-step buttons are bigger. On a phone, Call, Text, Directions, Invoice and Expense ride in a bar above the bottom nav, plus **Review** once the job is done, prefilled with the client, job and phone. On a computer, the job is on the left and its invoices, quotes, expenses and photos are on the right.
 
 Only the three pages changed. The styles live in each page's own stylesheet, keyed to that page, so the shared tools stylesheet and the client portal are untouched. Nothing was removed: ids, names, data attributes, links and scripts were audited against main.
+
+## What changed, 2026-09-28 -- Client portal redesign v2, part 1: the shell, Home and Invoices
+
+Built from the v2 portal design handoff (the portal half of the same package as the Workspace W-series). Part 1 covers the shell, which every signed-in page shares, plus Home and Invoices. Estimates, Visits, Request, Contracts, Settings and sign-in are part 2.
+
+- **Shell (all signed-in pages):**
+  - The phone tab bar is a full-width 84px bar at every width below 1024px. It has Oswald labels, orange for the active tab, and a 54px orange brand hex for Request.
+  - The desktop sidebar is 248px, with the brand hex, an orange **Request work** button, the five tabs, Account, Call/Text and **Sign out**. The last two are added by `portalEnhanceShell()` in `portal-app.js`, so the sidebar markup stays identical on every page.
+  - Payment and Report a problem open as sheets that rise from the bottom on a phone (a centred 480px card on a computer).
+  - Toasts are 56px and sit above the tab bar, and the update card clears the taller bar.
+- **Home:**
+  - A date kicker and an Anton greeting, then one line saying what's next and how many things need you.
+  - The next-visit card has an orange date tile, a confirmed line, and a strip with Add to calendar, Reschedule or cancel and View details.
+  - "Needs your attention" rows each get a tinted icon tile and a 44px button. When there's nothing to do, it says "You're all caught up."
+  - Recent activity is a timeline. Account tiles now include a sixth (Settings).
+  - "At a glance" shows two rings: jobs under warranty and invoices paid. Check-ups due isn't loaded on Home, so it's left out rather than adding a query.
+  - A Refer a friend link opens Settings.
+- **Invoices:**
+  - The amount due is shown in 56px Anton, above **Pay $N** or **Pay all · $N**. When everything is paid, a green "All paid up" appears in its place.
+  - The ring card adds an invoice count. The chart's bars use the portal's colour tokens.
+  - Each card leads with what the invoice was for and has one orange **Pay now**.
+  - The payment sheet shows "Step 1 of 2 / Step 2 of 2". **Continue** stays disabled until you sign. When the payment goes through, a green check shows the amount Stripe confirmed.
+- **Header** on Home and Invoices: a kicker, the title, a round Report-a-problem button (the same `#reportBugLink`, moved up) and your initials (the existing Settings link).
+
+Nothing was removed: an audit of ids, names, `data-*`, hrefs and scripts (base vs. new) came back empty. Every Supabase, Stripe, edge-function, auth, MFA, biometric, PDF, ICS and unread path is unchanged; `portal-app.js` only gained new functions. The portal stays dark-only. Verified with the full suite, `check-consistency`, `check-undefined-vars` and headless-Chromium screenshots at 390 and 1440, in `docs/client-portal-redesign-v2-part1/`.
+
+Tests changed, all because the design changed on purpose:
+- `desktop-app-shell` pins the new 248px sidebar and 1240px content width.
+- `portal-usability-pr3` and `unread-messages`: the estimate row's button reads "Review", an empty inbox renders "all caught up" instead of nothing, and an all-paid Invoices page shows "All paid up".
+- `dashboard-invoice-pdf` allows a second class on the paid-date line.
