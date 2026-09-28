@@ -120,9 +120,52 @@
     background:var(--bg-panel-2); border:1px solid var(--border); border-radius:8px; padding:14px;
     font-family:monospace; font-size:15px; line-height:1.9; color:var(--white); text-align:center; margin-bottom:16px;
   }
+  /* Workspace redesign W5 (2026-09-28): sign-in joins the one-app system.
+     Presentation only -- every step, its order, every field and the MFA
+     flow are untouched (docs/INTERNAL-MFA-ENFORCEMENT.md). Page-local on
+     purpose: tools/styles-tools.css is shared with the portal, and its
+     test-pinned .login-box{} rule stays as it is; these later, scoped
+     rules override it. The card is flush left under an orange top rule,
+     with an Anton title, 50px fields and a 52px primary button. On a
+     phone (<=480px) it rises into place as a bottom sheet; under
+     reduced motion it simply appears. */
+  body.th-tool-page[data-th-page="login"] .login-box {
+    text-align: left; border-radius: var(--th-radius-card);
+    background: var(--bg-panel); border: 1px solid var(--border);
+    box-shadow: inset 0 var(--th-rule) 0 var(--orange), var(--shadow-hover);
+  }
+  body.th-tool-page[data-th-page="login"] .login-box .login-logo { display: block; margin: 0 0 18px; }
+  body.th-tool-page[data-th-page="login"] .login-box .login-title {
+    font-family: var(--font-display); font-weight: 400; font-size: 34px; line-height: 1.02;
+    text-transform: uppercase; letter-spacing: .4px; color: var(--text); margin-bottom: 8px;
+  }
+  body.th-tool-page[data-th-page="login"] .login-box .login-sub { margin-bottom: 24px; }
+  body.th-tool-page[data-th-page="login"] .login-box .login-field label {
+    font-family: var(--font-ui); text-transform: uppercase; letter-spacing: 1px; font-size: 11.5px; color: var(--text-dim);
+  }
+  body.th-tool-page[data-th-page="login"] .login-box .login-field input { min-height: 50px; border-radius: var(--th-radius-control); }
+  body.th-tool-page[data-th-page="login"] .login-box .login-btn { min-height: 52px; }
+  body.th-tool-page[data-th-page="login"] .login-box .mfa-step-title {
+    font-family: var(--font-display); font-weight: 400; font-size: 26px; line-height: 1.05;
+    text-transform: uppercase; letter-spacing: .4px; color: var(--text);
+  }
+  body.th-tool-page[data-th-page="login"] .login-box .mfa-code-input { min-height: 50px; border-radius: var(--th-radius-control); }
+  body.th-tool-page[data-th-page="login"] .login-box .mfa-recovery-codes-list { border-radius: var(--th-radius-control); }
+  /* The QR sits centred over the manual-entry line (it was a block image
+     left-aligned inside a centred wrapper). */
+  body.th-tool-page[data-th-page="login"] .login-box .mfa-qr-wrap img { display: block; margin: 0 auto; }
+  @media (max-width: 480px) {
+    body.th-tool-page[data-th-page="login"] { align-items: flex-end; padding-top: 0; padding-left: 0; padding-right: 0; padding-bottom: 0; }
+    body.th-tool-page[data-th-page="login"] .login-box {
+      max-width: none; border-radius: 18px 18px 0 0; border-bottom: 0;
+      padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+      animation: th-w-sheet-in var(--th-dur-sheet) var(--th-ease);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) { body.th-tool-page[data-th-page="login"] .login-box { animation: none; } }
 </style>
 </head>
-<body>
+<body data-th-page="login">
 
 <div class="login-box">
   <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises" class="login-logo">
