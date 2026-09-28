@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" style="background:#0a0a0a;">
+<html class="page-careers" lang="en" style="background:#0a0a0a;">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -61,7 +61,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/styles.css?v=bf45bd2f80">
+<link rel="stylesheet" href="/styles.css?v=69118e5c8e">
 <link rel="stylesheet" href="/blog/blog.css?v=62fcdbf83c">
 <script type="application/ld+json">
 {
@@ -212,66 +212,85 @@
 
   <div class="blog-article">
     <p>Triple H Enterprises is looking for one part-time helper to join Steven on handyman and appliance repair jobs around St. George and Southern Utah. This isn't a punch-a-clock job &mdash; it's built around a flexible, choose-your-own-hours schedule and pay per completed job, so the work fits around your life instead of the other way around.</p>
+    <!-- P6 redesign (2026-09-28): the two facts people decide on, pulled up
+         from the Schedule and Pay paragraphs below (aria-hidden so they are
+         read once, in place). -->
+    <div class="careers-facts" aria-hidden="true">
+      <span><b>$35&ndash;$100+</b> per completed job</span>
+      <span><b>No fixed shift</b> you pick which jobs fit your week</span>
+    </div>
 
-    <h2 data-reveal>What the schedule actually looks like</h2>
-    <p>There's no fixed shift. Jobs get offered as they come in, and you pick which ones fit your week &mdash; a few hours here and there, one day a week, or several, whatever works for you right now. Good for someone who wants real, flexible part-time work without committing to a set schedule.</p>
+    <div class="careers-glance">
+      <section class="careers-card">
+        <h2 data-reveal>What the schedule actually looks like</h2>
+        <p>There's no fixed shift. Jobs get offered as they come in, and you pick which ones fit your week &mdash; a few hours here and there, one day a week, or several, whatever works for you right now. Good for someone who wants real, flexible part-time work without committing to a set schedule.</p>
+      </section>
+      <section class="careers-card">
+        <h2 data-reveal>Pay</h2>
+        <p>Pay is per completed job, not hourly &mdash; most jobs land in the $35&ndash;$100+ range depending on the size and complexity of the work, and you'll know what a job pays before you take it. The more efficient and capable you are, the better that works out per hour on the clock.</p>
+      </section>
+    </div>
 
-    <h2 data-reveal>Pay</h2>
-    <p>Pay is per completed job, not hourly &mdash; most jobs land in the $35&ndash;$100+ range depending on the size and complexity of the work, and you'll know what a job pays before you take it. The more efficient and capable you are, the better that works out per hour on the clock.</p>
+    <div class="careers-columns">
+      <section class="careers-col">
+        <h2 data-reveal>What you'd be doing</h2>
+        <ul>
+        <li>Helping diagnose and fix washers, dryers, dishwashers, and other household appliances</li>
+        <li>General handyman work &mdash; drywall patches, fixture swaps, assembly, and small repairs</li>
+        <li>Driving to job sites around St. George, Washington City, Hurricane, Santa Clara, and Ivins</li>
+        <li>Representing Triple H professionally in a customer's home</li>
+        </ul>
+      </section>
+      <section class="careers-col">
+        <h2 data-reveal>What we're looking for</h2>
+        <ul>
+        <li>Basic repair knowledge &mdash; appliances, plumbing, drywall, or general handyman experience</li>
+        <li>A valid driver's license and reliable transportation</li>
+        <li>Your own basic hand tools (or a real willingness to build up a set)</li>
+        <li>Comfortable lifting and moving appliances and materials, sometimes 75+ lbs with help</li>
+        <li>A smartphone, for job details, photos, and texting updates</li>
+        <li>Reliable and on time &mdash; when you take a job, the customer is counting on you showing up</li>
+        <li>Comfortable being in a customer's home and representing the business well</li>
+        <li>Based in or near St. George, Utah</li>
+        <li>Willing to pass a background check</li>
+        </ul>
+      </section>
+    </div>
 
-    <h2 data-reveal>What you'd be doing</h2>
-    <ul>
-      <li>Helping diagnose and fix washers, dryers, dishwashers, and other household appliances</li>
-      <li>General handyman work &mdash; drywall patches, fixture swaps, assembly, and small repairs</li>
-      <li>Driving to job sites around St. George, Washington City, Hurricane, Santa Clara, and Ivins</li>
-      <li>Representing Triple H professionally in a customer's home</li>
-    </ul>
-
-    <h2 data-reveal>What we're looking for</h2>
-    <ul>
-      <li>Basic repair knowledge &mdash; appliances, plumbing, drywall, or general handyman experience</li>
-      <li>A valid driver's license and reliable transportation</li>
-      <li>Your own basic hand tools (or a real willingness to build up a set)</li>
-      <li>Comfortable lifting and moving appliances and materials, sometimes 75+ lbs with help</li>
-      <li>A smartphone, for job details, photos, and texting updates</li>
-      <li>Reliable and on time &mdash; when you take a job, the customer is counting on you showing up</li>
-      <li>Comfortable being in a customer's home and representing the business well</li>
-      <li>Based in or near St. George, Utah</li>
-      <li>Willing to pass a background check</li>
-    </ul>
-
+    <section class="careers-apply">
     <h2 data-reveal id="apply">Apply</h2>
-    <form id="applyForm" method="POST" aria-label="Apply for the part-time handyman helper position">
-      <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off">
-      <div class="form-row">
-        <div class="field">
-          <label for="applyName">Name</label>
-          <input id="applyName" name="name" type="text" autocomplete="name" placeholder="Jane Smith" required>
-        </div>
-        <div class="field">
-          <label for="applyPhone">Phone</label>
-          <input id="applyPhone" name="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="(435) 414-1667" required>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="field full">
-          <label for="applyEmail">Email <span class="hero-lead-optional">(optional)</span></label>
-          <input id="applyEmail" name="email" type="email" autocomplete="email" placeholder="you@email.com">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="field full">
-          <label for="applyExperience">Repair experience &amp; availability</label>
-          <textarea id="applyExperience" name="experience" rows="4" placeholder="What repair or handyman experience do you have, and roughly when are you generally available?" required></textarea>
-        </div>
-      </div>
-      <div class="form-footer">
-        <button type="submit" class="btn orange" id="applySubmitBtn">Submit Application</button>
-        <span class="form-status" id="applyStatus" role="status" aria-live="polite">Sending your application...</span>
-      </div>
-    </form>
-
-    <p>Prefer to talk first? Call or text <a class="js-phone-link js-phone-text" href="tel:+14354141667">(435) 414-1667</a>, or email <a class="js-email-link js-email-text" href="mailto:steve@triplehenterprisesllc.biz">steve@triplehenterprisesllc.biz</a> directly.</p>
+        <form id="applyForm" method="POST" aria-label="Apply for the part-time handyman helper position">
+          <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off">
+          <div class="form-row">
+            <div class="field">
+              <label for="applyName">Name</label>
+              <input id="applyName" name="name" type="text" autocomplete="name" placeholder="Jane Smith" required>
+            </div>
+            <div class="field">
+              <label for="applyPhone">Phone</label>
+              <input id="applyPhone" name="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="(435) 414-1667" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field full">
+              <label for="applyEmail">Email <span class="hero-lead-optional">(optional)</span></label>
+              <input id="applyEmail" name="email" type="email" autocomplete="email" placeholder="you@email.com">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field full">
+              <label for="applyExperience">Repair experience &amp; availability</label>
+              <textarea id="applyExperience" name="experience" rows="4" placeholder="What repair or handyman experience do you have, and roughly when are you generally available?" required></textarea>
+            </div>
+          </div>
+          <div class="form-footer">
+            <button type="submit" class="btn orange" id="applySubmitBtn">Submit Application</button>
+            <span class="form-status" id="applyStatus" role="status" aria-live="polite">Sending your application...</span>
+          </div>
+        </form>
+    
+        <p>Prefer to talk first? Call or text <a class="js-phone-link js-phone-text" href="tel:+14354141667">(435) 414-1667</a>, or email <a class="js-email-link js-email-text" href="mailto:steve@triplehenterprisesllc.biz">steve@triplehenterprisesllc.biz</a> directly.</p>
+    </section>
   </div>
 </div>
 

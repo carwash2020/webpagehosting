@@ -5714,3 +5714,13 @@ Changed while applying: the pinned bar's glass effect moved to a layer that avoi
 All 16 posts' text, headings, photos, links and schema are unchanged. Styles are scoped to `html.page-blog` / `html.page-blog-post`. About, Our Work, Careers and the service pages (which share `blog.css`) are pixel-identical before and after. Verified with the full suite, `check-consistency`, `check-undefined-vars`, lint and the visual snapshot; `check-links.py` has only the known sandbox-proxy Unsplash failures, same as main. Screenshots are in `docs/blog-2026-09-28/`.
 
 Test changed: `tests/design/blog-index-cards.test.js` finds each card by its link instead of by its position in the file, since the index is now grouped into shelves.
+
+## What changed, 2026-09-28 -- Careers recruits; Privacy and Terms are navigable; the 404 helps (P6 redesign)
+
+Designed in Claude Design from the P6 brief, then applied and checked here.
+
+- **Careers** opens with a display hero and the two facts people decide on: pay per job and no fixed shift. Schedule and pay are cards, duties and requirements sit side by side, and Apply is a clear final panel. The form and its fields are unchanged.
+- **Privacy and Terms** get an "On this page" list (a sidebar on desktop, collapsible on phones) and numbered sections. When the Terms text is edited in Site Content, the list rebuilds itself from the new headings. Not a word of the legal text changed.
+- **The 404 page** now offers the main parts of the site (Services, Our Work, the blog, Areas, About, booking) alongside Home and Call.
+
+Styles are scoped to `html.page-careers` / `html.page-legal`, and the 404 keeps its own inline styles. The homepage, About, Our Work, the blog and the landing pages are unchanged. Verified with the full suite, `check-consistency`, `check-undefined-vars`, lint and the visual snapshot; `check-links.py` has only the known sandbox-proxy Unsplash failures, same as main. Screenshots are in `docs/careers-legal-404-2026-09-28/`.
