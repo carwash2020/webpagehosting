@@ -282,13 +282,17 @@ function portalBiometricLockGate(email, client) {
 
     const overlay = document.createElement('div');
     overlay.className = 'biometric-lock-overlay';
+    // v2 look (2026-09-28): a Face ID glyph, "Portal locked", and the
+    // same two buttons (unlock; sign out and use the password instead).
+    // Text and classes only -- the unlock and sign-out paths are unchanged.
     overlay.innerHTML =
       '<div class="biometric-lock-box">' +
-      '<svg viewBox="0 0 24 24" aria-hidden="true" class="biometric-lock-icon"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>' +
-      '<div class="biometric-lock-title">Locked</div>' +
+      '<svg viewBox="0 0 24 24" aria-hidden="true" class="biometric-lock-icon"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9.5v1M15 9.5v1M12 9.5v3.5h-1M9.5 15.5a3.5 3.5 0 0 0 5 0"/></svg>' +
+      '<div class="biometric-lock-kicker">Triple H client portal</div>' +
+      '<div class="biometric-lock-title">Portal locked</div>' +
       '<div class="biometric-lock-sub">Unlock with Face ID, Touch ID, or your device PIN.</div>' +
-      '<button class="btn blue" id="biometricUnlockBtn" style="width:100%; justify-content:center; margin-top:18px;">Unlock</button>' +
-      '<button class="small-btn" id="biometricFallbackBtn" style="margin-top:12px;">Use password instead</button>' +
+      '<button class="btn orange" id="biometricUnlockBtn" style="width:100%; justify-content:center; margin-top:18px;">Unlock with Face ID</button>' +
+      '<button class="small-btn" id="biometricFallbackBtn" style="margin-top:12px;">Sign out</button>' +
       '</div>';
     document.body.appendChild(overlay);
 
@@ -303,7 +307,7 @@ function portalBiometricLockGate(email, client) {
         resolve();
       } else {
         btn.disabled = false;
-        btn.textContent = 'Unlock';
+        btn.textContent = 'Unlock with Face ID';
       }
     }
 
@@ -379,10 +383,10 @@ function portalFaceIdInsteadOfCode(email, onUseCode) {
     overlay.className = 'biometric-lock-overlay';
     overlay.innerHTML =
       '<div class="biometric-lock-box" role="dialog" aria-modal="true" aria-labelledby="faceIdStepTitle">' +
-      '<svg viewBox="0 0 24 24" aria-hidden="true" class="biometric-lock-icon"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>' +
+      '<svg viewBox="0 0 24 24" aria-hidden="true" class="biometric-lock-icon"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9.5v1M15 9.5v1M12 9.5v3.5h-1M9.5 15.5a3.5 3.5 0 0 0 5 0"/></svg>' +
       '<div class="biometric-lock-title" id="faceIdStepTitle">Confirm it’s you</div>' +
       '<div class="biometric-lock-sub">On this device, Face ID, Touch ID, or your device PIN stands in for your 2FA code.</div>' +
-      '<button class="btn blue" id="faceIdStepBtn" style="width:100%; justify-content:center; margin-top:18px;">Continue with Face ID</button>' +
+      '<button class="btn orange" id="faceIdStepBtn" style="width:100%; justify-content:center; margin-top:18px;">Continue with Face ID</button>' +
       '<button class="small-btn" id="faceIdStepCodeBtn" style="margin-top:12px;">Use my 2FA code instead</button>' +
       '</div>';
     document.body.appendChild(overlay);

@@ -389,9 +389,21 @@
     .dev-section-sub { flex-basis: 100%; }
     .dev-health-run { margin-bottom: 20px; }
   }
+  /* Workspace redesign W5 (2026-09-28): panels on the one-app surface.
+     Page-local on purpose (tools/styles-tools.css is shared with the
+     portal). Always-open panel headings carry the same 2px rule as W1's
+     section labels, drawn between the title and the "?" bubble.
+     Collapsible panels are the lighter tier (09-24): no panel face, just
+     the outline, and no rule -- their one-line hint already fills that
+     slot, and the phone hint re-ordering above stays in charge. */
+  body.th-tool-page[data-th-page="dev-tools"] .dev-panel.is-collapsible { background: transparent; }
+  body.th-tool-page[data-th-page="dev-tools"] .dev-panel:not(.is-collapsible) > .dev-panel-heading::after {
+    content: ''; flex: 1 1 24px; min-width: 24px; height: var(--th-rule); background: var(--border); order: 1;
+  }
+  body.th-tool-page[data-th-page="dev-tools"] .dev-panel:not(.is-collapsible) > .dev-panel-heading > *:not(:first-child) { order: 2; }
 </style>
 </head>
-<body>
+<body data-th-page="dev-tools">
 <a href="#devMainView" class="skip-link">Skip to main content</a>
 
 <div id="devBlockedView" class="dev-blocked" style="display:none;">

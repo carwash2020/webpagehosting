@@ -5739,6 +5739,16 @@ Designed in Claude Design from the B1 brief, then applied and checked here.
 
 Nothing about availability, holds, validation or submission changed: the pages' markup and scripts are exactly as before, and each page only gains CSS in its own `<style>`. Verified with the full suite (the booking tests pass 145/145), `check-consistency`, `check-undefined-vars`, and a before/after booking walk at desktop and phone widths; `check-links.py` has only the known sandbox-proxy Unsplash failures, same as main. Screenshots are in `docs/booking-ticket-2026-09-28/`.
 
+## What changed, 2026-09-28 -- Workspace redesign W2: Home, Jobs, Job detail
+
+Package 2 of the Workspace redesign, on top of W1.
+
+- **Home** opens on the day as a headline: the greeting in large Anton caps, with today's job count as a big orange figure. The next job is the orange-tinted hero. The quick actions are tiles, with New job the one filled primary. The Needs-attention lanes show their urgency as a coloured dot instead of a coloured edge. On a computer (≥1200px), Home is a two-column cockpit: the next job and what needs you on the left, quick actions and Your week on the right, and the Business drawers full width below.
+- **Jobs**: on a computer, Add a Job sits beside Recurring Job Templates, and the sort and status filters share one row. Board columns are ruled. Recurring templates stay an inline card (they open themselves when a template is due) rather than popping a sheet.
+- **Job detail**: the title is larger and uppercase, the money numbers are one ruled strip, and the next-step buttons are bigger. On a phone, Call, Text, Directions, Invoice and Expense ride in a bar above the bottom nav, plus **Review** once the job is done, prefilled with the client, job and phone. On a computer, the job is on the left and its invoices, quotes, expenses and photos are on the right.
+
+Only the three pages changed. The styles live in each page's own stylesheet, keyed to that page, so the shared tools stylesheet and the client portal are untouched. Nothing was removed: ids, names, data attributes, links and scripts were audited against main.
+
 ## What changed, 2026-09-28 -- Client portal redesign v2, part 1: the shell, Home and Invoices
 
 Built from the v2 portal design handoff (the portal half of the same package as the Workspace W-series). Part 1 covers the shell, which every signed-in page shares, plus Home and Invoices. Estimates, Visits, Request, Contracts, Settings and sign-in are part 2.
@@ -5768,3 +5778,30 @@ Tests changed, all because the design changed on purpose:
 - `desktop-app-shell` pins the new 248px sidebar and 1240px content width.
 - `portal-usability-pr3` and `unread-messages`: the estimate row's button reads "Review", an empty inbox renders "all caught up" instead of nothing, and an all-paid Invoices page shows "All paid up".
 - `dashboard-invoice-pdf` allows a second class on the paid-date line.
+
+## What changed, 2026-09-28 -- Workspace redesign W3: Money
+
+On a wide screen, Invoices and Quotes now lay out as a builder: the client and job details are on the left, and the line items and totals sit beside them under an orange rule. Recent shows invoices and quotes side by side under a ruled summary strip. Quick charge's amount is a big display field. Finance's Cost Lookup is a panel with a sticky Results box. Contracts' three document tabs stick under the header, and each document's sections sit in two columns. The signature pads are an inline card again, not a sheet. Runway now shares the rest of the app's header rule, status dot, underline tabs, flat cards, bottom bar and sidebar. CSS and attributes only: no numbers, data, sync, Stripe or PDF paths changed. Every rule is scoped to its own page (`body.th-tool-page[data-th-page="..."]`) inside that page's `<style>`, so `tools/styles-tools.css` and the portal are untouched. Full writeup in `docs/specialist-logs/visual.md`, 2026-09-28.
+
+## What changed, 2026-09-28 -- Workspace redesign W4: Clients, routes, reviews, wiki
+
+Clients and client detail read as one list and one profile. On a computer, the Clients directory runs in two columns, and client detail puts the person on the left and their history on the right. Route Planner shows the map beside the stops and cost analyzer, and Review Requests shows the message preview beside the form. The Appliance Wiki's search stays pinned under the app bar as you scroll. Styling only: every rule lives in its own page's `<style>`, keyed to that page, so `tools/styles-tools.css` and the client portal are untouched. Full writeup in `docs/specialist-logs/visual.md`, 2026-09-28.
+
+## What changed, 2026-09-28 -- Client portal redesign v2, part 2: Estimates, Visits, Request, Contracts, Settings and sign-in
+
+The rest of the v2 portal handoff, on part 1's shell. Every page now shares the same app bar: a kicker, the title, the round Report-a-problem button and your initials.
+
+- **Estimates:** each estimate leads with what it's for, in large type. The Total sits under an orange rule, with **Approve** and **Decline** below it. Ask a question and the PDF are small links. The shared time picker has 64×76 day chips and a three-column grid of times. The Estimates tab shows a dot when something is waiting.
+- **Visits:** a due check-up is a hero card with **Schedule this visit**. Warranty shows a ring per job with the days left inside, orange in the last week. Each visit card has a date tile, Done and warranty pills, a photo grid, and **View receipt** and **Messages**. Photos open in a sheet on a phone. Your messages are orange bubbles.
+- **Request work:** "What needs fixing?" heads the form. **How soon?** is a three-way choice, with Urgent in red. Photos sit in a 4-up grid, and the button is a full-width **Send request**. Your requests show a progress bar labelled Sent, Reviewed, Scheduled and Done, with Messages and Cancel beside each other.
+- **Contracts:** a pending contract shows price, when, where and payment in a 2×2 grid, taken from the contract's own text. Then Read full contract, the signature pad, and **Sign** / **Decline**. Contracts now has Report a problem too, and a back arrow on a phone.
+- **Settings:** your initials in the brand hex, your name, and the six rows with their live status lines. The email preferences are switches, and the buttons match the rest of the app.
+- **Sign in, set password and the lock screen** are a single centred card with the brand hex. Sign in adds "No sign-up here". The lock screen reads "Portal locked", with **Unlock with Face ID** and **Sign out**. The steps are unchanged: password, the code if two-step is on, forgot password, the reset link to set-password, and the Face ID lock.
+
+Nothing was removed. An audit of ids, names, `data-*`, hrefs, scripts and handlers (base vs. new) came back empty. Every Supabase, Stripe, edge-function, auth, MFA, biometric, PDF, ICS and unread path is unchanged. The portal stays dark-only. Verified with the full suite, `check-consistency`, `check-undefined-vars`, `check-links.py` (the known sandbox-proxy failures only), and the sign-in, two-step, reset and set-password steps walked in headless Chromium on base and on this branch with identical results. Screenshots are in `docs/client-portal-redesign-v2-part2/`.
+
+One test changed, because the design changed on purpose: `portal-visits` expects the orange "Pick a time" button (`btn orange schedule-cta`).
+
+## What changed, 2026-09-28 -- Workspace redesign W5: back office and sign-in
+
+Settings, Dev Tools, Site Content, sign-in and reset password join the same app system as the rest of the Workspace. Settings has ruled section labels, 56px rows, the account name in the display face, a red-edged Session card, and two columns on a wide screen. Dev Tools and Site Content panel headings carry the same rule. Sign-in and reset password are a flush-left card under an orange top rule, with larger fields and button; on a phone the card rises from the bottom as a sheet. Sign-in, two-factor and reset keep exactly the same steps, order, fields and logic (only CSS and a page key on `<body>` changed; the flows were walked before and after with stubbed auth and matched). All styles live in each page's own `<style>`, scoped to `body.th-tool-page[data-th-page=…]`; `tools/styles-tools.css` (shared with the portal) is untouched. Full write-up in `docs/specialist-logs/visual.md`, 2026-09-28.

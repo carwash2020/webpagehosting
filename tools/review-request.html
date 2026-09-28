@@ -145,9 +145,28 @@
   .review-status-received { color: #6fcf97 !important; font-weight: 600; }
   .review-status-no_response { color: var(--text-dim); }
   .review-status-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* ==========================================================================
+     W4 (2026-09-28) -- People + field redesign, this page only. Moved here,
+     rule for rule, from the package's styles-tools.css block: every rule is
+     keyed to body.th-tool-page[data-th-page="review-request"], and the shared sheet
+     is also loaded by the nine portal pages, so it stays untouched.
+     ========================================================================== */
+  /* ---- Review requests: who's due, the message, and its preview side by side ---- */
+  body.th-tool-page[data-th-page="review-request"] .message-preview-wrap {
+    border-radius: var(--th-radius-card); background: var(--bg-panel-2); border: 1px solid var(--border);
+  }
+  @media (min-width: 1200px) {
+    body.th-tool-page[data-th-page="review-request"] #panel-send.is-active {
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 20px; align-items: start; grid-auto-flow: row dense;
+    }
+    body.th-tool-page[data-th-page="review-request"] #panel-send > * { grid-column: 1; min-width: 0; }
+    body.th-tool-page[data-th-page="review-request"] #panel-send > .form-section:nth-child(3) { grid-column: 2; grid-row: 1 / span 2; position: sticky; top: 130px; }
+    body.th-tool-page[data-th-page="review-request"] #panel-send > #sentLogSection { grid-column: 2; }
+  }
 </style>
 </head>
-<body>
+<body data-th-page="review-request">
 
 <div id="roleBlockedOverlay" class="role-blocked-overlay">
   <div class="tool-title" style="font-size:22px;">Not available here</div>

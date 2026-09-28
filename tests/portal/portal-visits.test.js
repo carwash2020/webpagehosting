@@ -216,7 +216,7 @@ test('an upcoming quote visit offers Add to calendar and the real Reschedule or 
 
 test('"Pick a time for this job" is a real primary button now, not a dim underlined text link', () => {
   const fn = extractFn(QUOTES, 'quoteSchedulePanelHtml');
-  assert.match(fn, /class="btn blue schedule-cta" onclick="toggleScheduleForm\(\$\{quoteId\}\)"/);
+  assert.match(fn, /class="btn orange schedule-cta" onclick="toggleScheduleForm\(\$\{quoteId\}\)"/);
   assert.match(QUOTES, /quoteSchedulePanelHtml\(q\.id, 'Pick a time for this job'\)/);
   assert.match(QUOTES, /quoteSchedulePanelHtml\(q\.id, 'Pick a new time'\)/);
 });
