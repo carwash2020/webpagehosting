@@ -5641,3 +5641,13 @@ Public site and Dev Tools. Found by the bug lane's end-to-end pass over the day'
 Checked, not changed: every other flow behaves the same before and after the redesigns. That covers portal invoice payment (including short/over/exact amounts through the real webhook), Quick Charge, sign-in with 2FA and Face ID, every Dev Tools tab, the job, invoice, quote and client flows, portal requests, estimates, messages and contracts, booking and manage-by-link pages, Workspace Compliance edits, and both service workers. Details are in `docs/specialist-logs/bugfix.md`. Two questions are in `docs/ACTION-ITEMS.md`, and two visual notes are in `docs/specialist-logs/visual.md`.
 
 Tests: `tests/design/service-card-landing-pages.test.js` (19) and `tests/dev-tools/live-consistency-page-list.test.js` (12). Both fail on the previous code.
+
+## What changed, 2026-09-28 -- Client portal's "update available" banner no longer pops up on nearly every open
+
+Reported directly: "the portal needs the same fix for updates we did for the tools, it also pops up every time." Ports the 2026-09-24 tools fix (`tools/tools-nav-pwa.js`, see `docs/specialist-logs/bugfix.md`) to `portal/portal-update.js`, which had the same bug: the portal service worker's `CACHE_NAME` is re-stamped by `fix-versions` several times a day, and a waiting/newly-installed worker alone (with no check that the open page actually needed it) was enough to show the banner -- so it showed on almost every open or foreground resume right after any deploy, even on a page that had just loaded the current version over the network.
+
+`checkForUpdate()` now only uses a waiting/installed worker as a cue to verify: it records the scripts/stylesheets this page actually loaded, fetches its own URL fresh, and shows the banner only when the live copy is genuinely ahead. Each page load asks at most once (dismissing or updating stops it asking again), and the foreground recheck is throttled to once per 5 minutes instead of firing on every tab switch. No other portal behavior changed.
+
+Verified: full suite 4253/4254 (the 1 failure is the known `check-links.py` sandbox-proxy limitation), `check-consistency`, `check-undefined-vars`, `fix-versions` (bumped the 9 pages' `portal-update.js?v=` stamps and the portal service worker's `CACHE_NAME`).
+
+Tests: `tests/portal/portal-update-banner.test.js` (7, new; 5 fail on the previous code).

@@ -3,6 +3,77 @@
 Started 2026-09-16, alongside the `tripleh-bugfix` skill. See `README.md` in
 this directory for how these logs work.
 
+## 2026-09-28 -- Portal "update available" banner on nearly every open: the tools fix, ported
+
+Reported directly: "the portal needs the same fix for updates we did for the
+tools, it also pops up every time." The 2026-09-24 entry above
+("'Update available' banner on nearly every open: correct guard, wrong
+signal") fixed the same bug in `tools/tools-nav-pwa.js`; `portal/portal-update.js`
+had never gotten the equivalent fix and still had the original shape of
+that bug.
+
+**Root cause, same shape as the tools fix:** the portal service worker's
+`CACHE_NAME` (`portal/service-worker.js`) is re-stamped by `npm run
+fix-versions` whenever any precached file changes -- several times a day,
+same rate as the tools worker. `portal-update.js`'s `checkForUpdate()`
+treated "a waiting worker exists" or "a newly-installed worker's
+`statechange` fired with a controller already present" as sufficient to
+show the banner, with no check that the page which just loaded (already
+fetched network-first, with fresh `?v=` stamps) actually needed it. Every
+open or foreground resume after any deploy showed the banner on an
+already-current page.
+
+**Fix, ported from `tools-nav-pwa.js`'s 2026-09-24 fix, adapted to the
+portal's own registration flow (not a copy-paste -- the portal has no
+Money-tab/sidebar shell and uses `getRegistration(scope)` + a `waiting`/
+`updatefound` flow rather than a bare `controllerchange` listener):** a
+waiting or newly-installed worker is now only a cue to verify. The page
+records the scripts/stylesheets it actually loaded (`pageBuildParts()`,
+`buildHash()` for inline content -- same FNV-1a identity hash and the same
+one-way "live has something running doesn't" comparison as the tools
+version), fetches its own URL fresh (`cache: 'no-store'`), and only calls
+`showBanner()` when the live copy is genuinely ahead
+(`verifyAndMaybeShow()`). A `shown` flag (set on show or on dismiss) means
+each page load asks at most once, and the foreground `visibilitychange`
+recheck is now throttled to once per 5 minutes, matching the tools app's
+own throttle, instead of firing on every single tab/app switch.
+
+**Gotcha hit while testing this:** the portal service worker calls
+`self.skipWaiting()` on install (like the tools worker), so a real update
+never sits in a visible "waiting" state long enough to matter in
+practice -- the `updatefound` -> `installing.state === 'installed'` path
+(checked against `navigator.serviceWorker.controller` to tell an update
+from a first-ever install) is the one that actually fires. A test fake
+that dispatches `updatefound`/`statechange` synchronously inside
+`reg.update()` fires before the caller's own `reg.addEventListener('updatefound',
+...)` line runs (the code calls `reg.update().catch(...)` and only then
+attaches the listener, correct in a real browser since `update()` is a
+real network round trip); the fake needs a `setTimeout` so the listener
+is attached first, same as an actual async update check would allow.
+
+**Also hit, unrelated to this fix:** `check-undefined-vars.js` failed
+transiently with a duplicate `MIN_LEAD_HOURS` in `portal/jobs.html` while
+the full suite's `tests/scripts/check-undefined-vars.test.js` (which
+deliberately writes that duplicate into the real file mid-test, then
+restores it) was still running in the background -- exactly the documented
+2026-09-25 gotcha ("never run the suite in the working tree you're
+updating"). Re-ran after the suite finished; clean. A separate, unrelated
+local artifact -- stray `.claude/worktrees/agent-*` scratch checkouts left
+behind by earlier sessions (gitignored, never part of the repo) sitting in
+the working tree -- made two unrelated tests
+(`booking-direct-insert-lockdown.test.js`'s "no other file inserts
+straight into th_bookings" and `trust-badge-and-review-attribution.test.js`'s
+cache-bust stamp check) fail by scanning those extra files. Removing the
+directory (gitignored, safe) fixed both; full suite then ran 4253/4254,
+the one remaining failure being the already-known `check-links.py`
+sandbox-proxy limitation.
+
+Test: `tests/portal/portal-update-banner.test.js` (7, new; 5 of 7 fail on
+the previous `portal-update.js`). Same harness shape as
+`tests/tools/app-update-card.test.js`: one device replayed across several
+real `portal/login.html` opens, with a fake `navigator.serviceWorker` that
+models the portal worker's own `skipWaiting()`-on-install behavior.
+
 One seed entry, carried over from before this log existed: the full local
 test suite has a known, pre-existing gap in
 `tests/workspace/finance-split.test.js` — its "fix-versions actually
