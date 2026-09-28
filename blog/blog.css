@@ -304,6 +304,136 @@ html.reveal-ready .blog-index-list [data-reveal]:nth-child(3) { transition-delay
   .blog-index-item { flex-direction: column; gap: 14px; }
 }
 
+/* === Redesign P5 (2026-09-28): Blog index and post template (17 pages) -- scoped to html.page-blog / html.page-blog-post === */
+/* The blog is a symptom library laid out like a diary. The index is now
+   a library: a featured "start here" post, a sticky jump bar, and one
+   shelf per appliance (static markup; every card is its unchanged
+   .blog-index-item, moved). Posts get a diagnostic header (title block
+   and lead diagram in one frame), sticky on-page navigation built from
+   the post's own H2s, a stronger reading-progress bar (site-motion.js
+   already drives --read), and callout panels where the post pivots to
+   "When it's something else" and "Is it worth fixing?". Hooks sit on
+   <html> (the body class is pinned by blueprint-background-coverage),
+   so services/About/Our Work/Careers, which also load this file, never
+   match anything below. */
+
+html.page-blog .blog-body,
+html.page-blog-post .blog-body{max-width:1180px; padding:0 24px;}
+
+/* ---- index ---- */
+html.page-blog .blog-header{padding:72px 0 36px; border-bottom:0;}
+html.page-blog .blog-title{font-size:clamp(56px, 8vw, 112px); line-height:.92;}
+html.page-blog .blog-dek{max-width:56ch; font-size:19px;}
+html.page-blog .blog-shelf-label{margin:0 0 12px; font-family:var(--font-ui); font-weight:600; font-size:12px; letter-spacing:2.2px; text-transform:uppercase; color:var(--orange-text-vivid);}
+html.page-blog .blog-featured .blog-index-list{margin-bottom:36px;}
+html.page-blog .blog-featured .blog-index-item{
+  padding:34px 36px;
+  gap:28px;
+  align-items:center;
+  border-color:var(--orange-tint-border);
+  background:linear-gradient(135deg, var(--bg-panel-2), var(--bg-panel) 70%);
+  box-shadow:var(--shadow-hover);
+}
+html.page-blog .blog-featured .blog-index-item-icon{width:72px; height:72px; border-radius:16px;}
+html.page-blog .blog-featured .blog-index-item-icon svg{width:36px; height:36px;}
+html.page-blog .blog-featured .blog-index-item-title{font-family:var(--font-display); font-weight:400; font-size:clamp(28px, 3.4vw, 42px); line-height:1.05; letter-spacing:.3px;}
+html.page-blog .blog-featured .blog-index-item-dek{font-size:17.5px; max-width:60ch;}
+
+/* Apply-time fix (2026-09-28): sticky and backdrop-filter on one element is
+   the WebKit ghosting pattern the header fix moved onto ::before. The bar is
+   a sticky wrapper with the glass on ::before; the link row inside keeps its
+   own sideways scroll (a ::before on the scroller would slide with it). */
+html.page-blog .blog-shelf-bar{
+  position:sticky;
+  top:73px;
+  z-index:30;
+  isolation:isolate;
+  margin:0 -24px 12px;
+}
+html.page-blog .blog-shelf-bar::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  background:var(--bg-glass);
+  -webkit-backdrop-filter:blur(14px) saturate(1.3);
+  backdrop-filter:blur(14px) saturate(1.3);
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+  pointer-events:none;
+}
+html.page-blog .blog-shelf-nav{
+  display:flex;
+  gap:8px;
+  overflow-x:auto;
+  scrollbar-width:none;
+  padding:10px 24px;
+}
+html.page-blog .blog-shelf-nav::-webkit-scrollbar{display:none;}
+html.page-blog .blog-shelf-nav a{flex-shrink:0; display:inline-flex; align-items:center; gap:8px; min-height:40px; padding:8px 14px; border-radius:999px; border:1px solid var(--border); background:var(--bg-panel); color:var(--text); font-family:var(--font-ui); font-size:13px; letter-spacing:1px; text-transform:uppercase; text-decoration:none; white-space:nowrap;}
+html.page-blog .blog-shelf-nav a span{display:inline-grid; place-items:center; min-width:20px; height:20px; padding:0 5px; border-radius:999px; background:var(--bg-panel-3); color:var(--text-dim); font-size:11px; letter-spacing:0; box-sizing:border-box;}
+html.page-blog .blog-shelf-nav a:focus-visible{color:var(--orange-text-vivid);}
+@media (hover:hover){html.page-blog .blog-shelf-nav a:hover{color:var(--orange-text-vivid);}}
+/* the site-wide section{padding:88px 0} and section + section border (styles.css) are reset for the new <section>s */
+html.page-blog .blog-shelf{padding:40px 0 0; border-top:0; scroll-margin-top:130px;}
+html.page-blog .blog-shelf-title{display:flex; align-items:center; gap:16px; margin:0 0 18px; font-family:var(--font-display); font-weight:400; font-size:clamp(28px, 3.4vw, 40px); line-height:1; color:var(--white);}
+html.page-blog .blog-shelf-title::after{content:""; flex:1; height:1px; background:linear-gradient(90deg, var(--border), transparent);}
+html.page-blog .blog-shelf .blog-index-list{display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap:14px; margin-bottom:0;}
+html.page-blog .blog-shelf .blog-index-item{flex-direction:column; gap:14px; height:100%; box-sizing:border-box;}
+html.page-blog .blog-shelf:last-of-type{padding-bottom:64px;}
+
+/* ---- post ---- */
+html.page-blog-post .post-hero{display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr); gap:40px; align-items:center; padding:56px 0 40px;}
+html.page-blog-post .post-hero .blog-header{padding:0; border-bottom:0;}
+html.page-blog-post .post-hero .blog-title{font-size:clamp(38px, 4.8vw, 64px); line-height:1;}
+html.page-blog-post .post-hero .blog-diagram{margin:0; width:100%; max-height:440px; object-fit:cover; border-radius:16px; border:1px solid var(--border); box-shadow:var(--shadow-hover);}
+
+html.page-blog-post .post-layout{display:grid; grid-template-columns:220px minmax(0,1fr); column-gap:56px; align-items:start; padding-top:32px; border-top:1px solid var(--border);}
+html.page-blog-post .post-layout > .post-toc{grid-column:1; grid-row:1 / span 50; position:sticky; top:100px;}
+html.page-blog-post .post-layout > :not(.post-toc){grid-column:2; max-width:680px;}
+html.page-blog-post .post-toc summary{cursor:pointer; list-style:none; margin:0 0 12px; font-family:var(--font-ui); font-weight:600; font-size:12px; letter-spacing:2.2px; text-transform:uppercase; color:var(--orange-text-vivid);}
+html.page-blog-post .post-toc summary::-webkit-details-marker{display:none;}
+html.page-blog-post .post-toc ol{list-style:none; margin:0; padding:0 0 0 14px; border-left:2px solid var(--border); display:grid; gap:12px; counter-reset:toc;}
+html.page-blog-post .post-toc li{counter-increment:toc;}
+html.page-blog-post .post-toc a{display:block; color:var(--text-dim); font-family:var(--font-ui); font-size:14px; line-height:1.35; text-decoration:none;}
+html.page-blog-post .post-toc a::before{content:counter(toc, decimal-leading-zero) " "; color:var(--orange-text-vivid); font-size:11px; letter-spacing:1px;}
+html.page-blog-post .post-toc a:focus-visible{color:var(--text);}
+@media (hover:hover){html.page-blog-post .post-toc a:hover{color:var(--text);}}
+html.page-blog-post .blog-article h2[id]{scroll-margin-top:100px;}
+
+html.page-blog-post .post-pivot,
+html.page-blog-post .post-worth{margin:40px 0; padding:28px 30px; border-radius:16px; border:1px solid var(--orange-tint-border); background:linear-gradient(160deg, var(--orange-tint-soft), var(--bg-panel) 55%);}
+html.page-blog-post .post-worth{border-color:var(--blue-dark); background:linear-gradient(160deg, color-mix(in srgb, var(--blue) 8%, transparent), var(--bg-panel) 55%);}
+html.page-blog-post .post-pivot h2,
+html.page-blog-post .post-worth h2{margin-top:0;}
+html.page-blog-post .post-pivot p:last-child,
+html.page-blog-post .post-worth p:last-child{margin-bottom:0;}
+html.page-blog-post .post-pivot-call{display:flex; flex-wrap:wrap; align-items:center; gap:12px 20px; margin-top:22px;}
+
+html.page-blog-post .blog-related-list{display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap:12px;}
+html.page-blog-post .blog-related-list a,
+html.page-blog-post .blog-related-list a:last-child{padding:18px 20px; border:1px solid var(--border); border-radius:12px; background:var(--bg-panel);}
+
+html.page-blog-post .read-progress{top:73px; height:4px; z-index:58;}
+html.page-blog-post .read-progress i{box-shadow:0 0 12px color-mix(in srgb, var(--orange) 60%, transparent);}
+
+@media (max-width: 860px) {
+  html.page-blog .blog-header{padding:44px 0 24px;}
+  html.page-blog .blog-featured .blog-index-item{flex-direction:column; align-items:flex-start; padding:24px 22px; gap:16px;}
+  html.page-blog-post .post-hero{grid-template-columns:minmax(0,1fr); gap:24px; padding:36px 0 28px;}
+  html.page-blog-post .post-hero .blog-title{font-size:clamp(32px, 9vw, 44px);}
+  html.page-blog-post .post-layout{grid-template-columns:minmax(0,1fr);}
+  html.page-blog-post .post-layout > .post-toc,
+  html.page-blog-post .post-layout > :not(.post-toc){grid-column:1; grid-row:auto; position:static; max-width:none;}
+  html.page-blog-post .post-toc{margin:0 0 24px; padding:14px 16px; border:1px solid var(--border); border-radius:12px; background:var(--bg-panel);}
+  html.page-blog-post .post-toc summary{margin:0;}
+  html.page-blog-post .post-toc details[open] summary{margin-bottom:12px;}
+  html.page-blog-post .post-pivot,
+  html.page-blog-post .post-worth{padding:22px 18px;}
+  html.page-blog-post .read-progress{top:64px;}
+}
+/* === end Redesign P5 === */
+
 @media (max-width: 640px) {
   .blog-title { font-size: 28px; }
   .blog-article { font-size: 16px; }

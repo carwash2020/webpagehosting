@@ -2385,3 +2385,80 @@ Second package from the public-site redesign sweep. It arrived in the right shap
 - **Screenshots** are in `docs/landing-template-2026-09-28/`.
 
 **Still open for P2's apply.** The combined Claude Design export includes a later P1 revision that moves its hook to `html.page-home` and drops the h1 line spans. P2 was built on top of that revision, so P2's `index.html` must be 3-way merged against it (base = that P1 revision, ours = main). Whole-file copying it would undo P1's merged hero.
+
+## 2026-09-28 -- P4 About + Our Work (html.page-about / html.page-our-work), applied from a Claude Design package
+
+Third package from the public-site sweep. I applied the later revision from the combined Claude Design export (17:40), not the first P4 zip; only its `styles.css` block and patch differed. Hooks sit on `<html>`. `rule1-audit` found nothing missing on either page. About's paragraphs are re-ordered into the new layout, not dropped: the design's own audit found the sorted word list identical to base.
+
+**What shipped.**
+- **About:** a split typographic hero with the Triple H badge (no photo of Steven exists, so no portrait, and no stock), an aria-hidden pull-quote from the accountability paragraph, the experience as a timeline of the existing paragraphs, and "What that means for your repair" as a proof grid.
+- **Our Work:** a featured kitchen-tile project built from four of its own photos, a sticky filter bar with per-category counts, a fixed-ratio grid for thin categories (four photos or fewer) via one `.is-few` toggle, and a lightbox with a position counter and tap-to-zoom. The IO lazy loader, the 61-photo count and the lightbox list order are untouched.
+
+**Changed at apply time, and why (four of these were test failures the package's `APPLY.md` said wouldn't happen):**
+- **A comment that quoted the literals it was avoiding.** The block's opening comment named `.quote-block{`, `.lightbox-overlay{` and `.gallery-category{` with their braces. That left `styles.css` with three unbalanced braces (the brace-balance test counts comments too). It also put a third literal `.quote-block{` between the two real ones, which F34 reads by position. Reworded without braces. **Standing rule for any CSS comment: never write a `{` or `}` in it.** P3 hit the same thing at apply time.
+- **The About badge used the full 531px orange logo, unstamped**, in a slot the logo-variant test didn't know. It now uses `srcset` 176w/531w with `sizes="(max-width: 860px) 120px, 360px"` and `?v=` stamps on both files. The test gained an `about-hero` slot, as its own failure message asks ("decide its size and add it here"). It's separate from `hero`, so the homepage-badge rules stay the homepage's. A mutation check (dropping the slot class) still fails it.
+- **The sticky filter bar combined `position:sticky` and `backdrop-filter` on one element.** That's the WebKit ghosting pattern the header fix moved onto `::before` (`theme-toggle.test.js`). The bar is now a new `.gallery-filters-bar` wrapper that sticks and carries the glass on `::before`, with `isolation:isolate`. The chip row inside keeps its own sideways scroll; a `::before` on the scroller itself would have slid away with the chips.
+- **The one-row chip strip clipped "Kitchen Tile: Finished" and "Other Work" off the right edge on desktop**, with the scrollbar hidden, so two filters had no visible cue. Desktop keeps the base wrapping (the bar is two rows, 114px tall at 1440). Phones keep the one-row scroller, inside P4's existing 860px block.
+- **Chip counts were typed into the markup** (All 61, Flooring 4, and so on), and would go wrong the first time a photo is added. The filter script now computes them from the tiles on load; the typed numbers stay as the no-JS fallback. They matched the tiles exactly.
+
+**Verification.**
+- **Suite:** full suite 4253/4254 (the known `check-links.py` sandbox-proxy failure). `check-consistency`, `check-undefined-vars`, lint and the visual snapshot are clean.
+- **Leaks:** pixel diffs of the homepage, Hurricane, handyman-repairs, Careers and a blog post (390/1440, dark/light) show no visible change. Two homepage strips were re-shot and are capture noise.
+- **Interactions:**
+  - All 61 photos filter correctly, with a thin category flipping to `.is-few`.
+  - The lightbox opens with its counter reading "1 / 61", then "2 / 61", and tap-to-zoom works.
+  - Escape closes it.
+  - Lazy loading fills all 61 photos on scroll, and About's FAQ behaves as before.
+- **Screenshots:** `docs/about-our-work-2026-09-28/`.
+
+**Still open.** `content.md` (from the design session): there's no real photo of Steven for the About hero; if one is ever added it goes in `.about-hero-badge`. Also, the brief said 62 gallery photos, but base has 61.
+
+## 2026-09-28 -- P5 blog index and post template (html.page-blog / html.page-blog-post, 17 pages), applied from a Claude Design package
+
+Fourth package from the public-site sweep. I used the later revision in the combined export. `rule1-audit` found nothing missing on any of the 17 files.
+
+**What shipped.**
+- **Index:** the 16 cards (markup unchanged) are regrouped into a "Start here" featured post, a sticky appliance jump bar with counts, and six shelves (Washer, Dryer, Dishwasher, Fridge, Oven, Around the house).
+- **Posts:**
+  - The header and lead image form a split `.post-hero`.
+  - Each H2 gets an id, and an "In this post" contents rail is built from them.
+  - The "something else" and "worth fixing" sections become tinted `section.post-pivot` / `section.post-worth` callouts, each with a call line (`btn orange js-phone-link` plus "or book a visit online").
+- **Unchanged:** no JS, and `site-motion.js`'s read-meta/progress are restyled only. All 61 new in-page anchors resolve to real ids, and every new call link dials the real number.
+
+**Changed at apply time, and why:**
+- **The shelf bar was `position:sticky` plus `backdrop-filter` on one horizontal scroller.** That's the WebKit ghosting pattern P4's filter bar had. It gets the same fix: a `.blog-shelf-bar` wrapper sticks and carries the glass on `::before`, and the link row keeps its sideways scroll. `theme-toggle.test.js` only scans `styles.css`, so this one wasn't caught by a test; the bug is the same either way.
+- **Two new hovers weren't behind `(hover:hover)`**: the shelf links and the post contents links. Both are now guarded, with `:focus-visible` kept as its own rule. The no-sticky-hover test only checks the blog-index cards in `blog.css`, so again no test caught it.
+- **`blog-index-cards.test.js` sliced cards out of the index by file position.** With the featured post moved to the top, one slice came back empty, and two others passed only because they now spanned most of the page. All three now find each card by its link (`cardFor(href)`). A mutation check (breaking the to-do card's icon) still fails the test.
+
+**Checked, not changed:**
+- **The new `<section>`s.** The post callouts are `<section>` elements, and `styles.css`'s bare `section{padding:88px 0}` / `section + section{border-top}` rules (X4) would reach them. P5's scoped `.post-pivot` / `.post-worth` rules out-specify both, confirmed in render.
+- **Lead photos are hotlinked Unsplash images, unchanged from main.** The sandbox proxy blocks them (the same URLs behind the known `check-links.py` failures), so screenshots show alt text; production loads them.
+- **For the bug/perf lane (logged, not changed):** the lead photo now sits above the fold but keeps `loading="lazy"`, which can push back first paint on posts. The shelf counts in `blog/index.html` are typed in by hand; unlike Our Work, the index has no script to derive them, so whoever adds a post updates both.
+
+**Verification.**
+- **Tests and checks:** full suite 4253/4254 (the known `check-links.py` sandbox-proxy failure). `check-consistency`, `check-undefined-vars`, lint and the visual snapshot are clean.
+- **No leakage:** pixel diffs of About, Our Work, Careers and two service pages (these load `blog.css`), at 390/1440 in dark and light, show no visible change. The one Our Work strip was re-shot and is capture noise.
+- **Screenshots:** `docs/blog-2026-09-28/`.
+
+## 2026-09-28 -- P6 Careers, Privacy, Terms and 404 (html.page-careers / html.page-legal), applied from a Claude Design package
+
+Fifth package from the public-site sweep; the P6 zip and the combined export were identical. `rule1-audit` found nothing missing on any of the four pages, and the legal text is verbatim. No existing `<script>` changed on any page. Privacy and Terms each gain one small script, which builds the contents list.
+
+**What shipped.**
+- **Careers:** a display hero with the pay and schedule facts pulled up as aria-hidden chips. Schedule and pay become cards, duties and requirements sit side by side, and the application is a panel (same fields and the same submission path).
+- **Privacy and Terms:** an "On this page" list built from each document's own `<h4>`s. It's a sticky sidebar on desktop and collapsible on phones, with numbered sections. On Terms it re-runs through a MutationObserver when the `site_terms` CMS fetch replaces `#termsBody`, so a later edit in Site Content re-flows it.
+- **404:** a brand moment plus the site's main destinations (the home page, services, Our Work, the blog, areas, About, booking), still self-contained with its own inline styles.
+
+**Changed at apply time, and why:**
+- **A block comment quoted `section{padding:88px 0}`, braces and all.** The count balanced, but it's the same trap P3 and P4 hit, so it's reworded without braces. That's the standing rule now: never put a brace in a CSS comment.
+- **The legal contents links' `:hover` wasn't behind `(hover:hover)`.** It is now guarded, with `:focus-visible` kept as its own rule.
+
+**Verification.**
+- **Suite and checks.** Full suite 4253/4254; the one failure is the known `check-links.py` sandbox-proxy failure. `check-consistency`, `check-undefined-vars`, lint and the visual snapshot are clean.
+- **Leaks.** Pixel diffs of the homepage, About, Our Work, a blog post and Hurricane (390/1440, dark and light) show no visible change beyond the homepage capture-noise strips seen in every round.
+- **Interactions.**
+  - Careers' application form keeps its fields (`_gotcha`, name, phone, email, experience) and still blocks an empty submit.
+  - Privacy builds 12 contents entries and Terms 16. Every target exists, and clicking one lands on its section.
+  - With a stubbed `site_terms` response, the Terms body and its contents list both show the CMS headings.
+  - The 404's original two links are kept, and six more real destinations are added.
+- **Screenshots** are in `docs/careers-legal-404-2026-09-28/`.

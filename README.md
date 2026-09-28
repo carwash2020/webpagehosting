@@ -5685,3 +5685,46 @@ No copy, links, schema or scripts changed. Styles are scoped to `html.page-landi
 ## What changed, 2026-09-28 -- Workspace redesign W1: one app system
 
 Every Workspace page now shares one look: flat surfaces, sections divided by strong rules, and tabs as an underline bar. The header shows a single sync status dot, and add/edit forms open as bottom sheets on a phone or side panels on a computer, all sharing one motion. Shell presentation only -- no data, auth or sync paths changed. Foundation layer of the v2 Workspace redesign (packages W2-W5 build on this); the client portal (which shares `tools/styles-tools.css`) is confirmed unaffected, since every new rule is scoped to `body.th-tool-page` and portal pages never load the script that would add that class. Full writeup in `docs/specialist-logs/visual.md`, 2026-09-28.
+
+## What changed, 2026-09-28 -- About reads as a story, Our Work as a portfolio (P4 redesign)
+
+Designed in Claude Design from the P4 brief, then applied and checked here.
+
+- **About** opens with a split hero: the "Meet Steven Robinson" headline, the opening paragraph and the Triple H badge. Steven's experience is a timeline, a pull-quote sets the accountability line apart, and "What that means for your repair" is a proof grid. Same words as before, re-laid out.
+- **Our Work** opens on a featured kitchen-tile project built from four of its own photos. The filter bar stays pinned while you scroll and shows how many photos are in each category. Categories with only a few photos use a tidier grid. The photo viewer shows "3 / 61" and zooms in on a tap.
+
+Changed while applying:
+- The filter bar's glass effect moved to a layer that avoids a Safari rendering bug.
+- On desktop the filters wrap onto a second line, so none are hidden.
+- The category counts are now worked out from the photos themselves, so they stay right when new photos are added.
+- The About badge uses the small logo files like the rest of the site.
+
+Every photo, caption, filter and review is still there, and the gallery's lazy loading is unchanged. Styles are scoped to `html.page-about` / `html.page-our-work`; the homepage, landing pages, Careers and the blog are pixel-identical before and after. Verified with the full suite, `check-consistency`, `check-undefined-vars`, lint and the visual snapshot; `check-links.py` has only the known sandbox-proxy Unsplash failures, same as main. Screenshots are in `docs/about-our-work-2026-09-28/`.
+
+Test changed: `tests/design/public-logo-variants.test.js` knows the About hero badge as its own `about-hero` slot (the test's own failure message asks for this). Its sizing checks still apply to it.
+
+## What changed, 2026-09-28 -- The blog reads as a symptom library (P5 redesign)
+
+Designed in Claude Design from the P5 brief, then applied and checked here.
+
+- **Blog index:** opens with a "Start here" featured post. A bar that stays pinned while you scroll jumps to shelves by appliance (Washer, Dryer, Dishwasher, Fridge, Oven, Around the house), with a count on each.
+- **Every post:**
+  - The title, summary and lead photo sit side by side at the top.
+  - An "In this post" list links to each section.
+  - The "when it's something else" and "is it worth fixing?" sections are highlighted callouts with a Call button and a link to book online.
+
+Changed while applying: the pinned bar's glass effect moved to a layer that avoids a Safari rendering bug, and link hover colours no longer stick after a tap on phones.
+
+All 16 posts' text, headings, photos, links and schema are unchanged. Styles are scoped to `html.page-blog` / `html.page-blog-post`. About, Our Work, Careers and the service pages (which share `blog.css`) are pixel-identical before and after. Verified with the full suite, `check-consistency`, `check-undefined-vars`, lint and the visual snapshot; `check-links.py` has only the known sandbox-proxy Unsplash failures, same as main. Screenshots are in `docs/blog-2026-09-28/`.
+
+Test changed: `tests/design/blog-index-cards.test.js` finds each card by its link instead of by its position in the file, since the index is now grouped into shelves.
+
+## What changed, 2026-09-28 -- Careers recruits; Privacy and Terms are navigable; the 404 helps (P6 redesign)
+
+Designed in Claude Design from the P6 brief, then applied and checked here.
+
+- **Careers** opens with a display hero and the two facts people decide on: pay per job and no fixed shift. Schedule and pay are cards, duties and requirements sit side by side, and Apply is a clear final panel. The form and its fields are unchanged.
+- **Privacy and Terms** get an "On this page" list (a sidebar on desktop, collapsible on phones) and numbered sections. When the Terms text is edited in Site Content, the list rebuilds itself from the new headings. Not a word of the legal text changed.
+- **The 404 page** now offers the main parts of the site (Services, Our Work, the blog, Areas, About, booking) alongside Home and Call.
+
+Styles are scoped to `html.page-careers` / `html.page-legal`, and the 404 keeps its own inline styles. The homepage, About, Our Work, the blog and the landing pages are unchanged. Verified with the full suite, `check-consistency`, `check-undefined-vars`, lint and the visual snapshot; `check-links.py` has only the known sandbox-proxy Unsplash failures, same as main. Screenshots are in `docs/careers-legal-404-2026-09-28/`.

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" style="background:#0a0a0a;">
+<html class="page-blog-post" lang="en" style="background:#0a0a0a;">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -60,8 +60,8 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/styles.css?v=85022057c1">
-<link rel="stylesheet" href="/blog/blog.css?v=8c0107810e">
+<link rel="stylesheet" href="/styles.css?v=69118e5c8e">
+<link rel="stylesheet" href="/blog/blog.css?v=62fcdbf83c">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -209,6 +209,9 @@
 
 <main id="main">
 <div class="blog-body">
+  <!-- P5 redesign (2026-09-28): diagnostic header -- the title block and the
+       lead diagram share one hero frame. -->
+  <div class="post-hero">
   <div class="blog-header">
     <div class="blog-kicker"><a href="/blog/">Triple H Enterprises Blog</a></div>
     <h1 class="blog-title">Oven Not Heating Right? What's Actually Wrong With Your Range</h1>
@@ -217,15 +220,30 @@
   </div>
 
   <img class="blog-diagram" src="https://images.unsplash.com/photo-1556909172-54557c7e4fb7?fm=jpg&q=80&w=1400&auto=format&fit=crop" alt="A kitchen range and oven built into dark cabinetry with a farmhouse sink nearby" loading="lazy">
+  </div>
 
+  <div class="post-layout">
+  <!-- P5 redesign (2026-09-28): on-page navigation built from this post's own
+       H2s (sticky beside the article on desktop, collapsible on phones). -->
+  <nav class="post-toc" aria-label="In this post">
+    <details open>
+      <summary>In this post</summary>
+      <ol>
+        <li><a href="#the-oven-says-350-and-it-isn-t">The oven says 350 and it isn't</a></li>
+        <li><a href="#uneven-baking-especially-electric">Uneven baking, especially electric</a></li>
+        <li><a href="#gas-burner-clicks-but-won-t-light">Gas burner clicks but won't light</a></li>
+        <li><a href="#is-it-worth-fixing">Is it worth fixing?</a></li>
+      </ol>
+    </details>
+  </nav>
   <div class="blog-article">
     <p>Range and oven calls tend to break into three different complaints that all get lumped under "it's not heating right": the oven runs hot or cold compared to the dial, it bakes unevenly from one side of the rack to the other, or a burner clicks without ever lighting. Each one points somewhere different.</p>
 
-    <h2 data-reveal>The oven says 350 and it isn't</h2>
+    <h2 data-reveal id="the-oven-says-350-and-it-isn-t">The oven says 350 and it isn't</h2>
 
     <p>Ovens drift out of calibration over time, and most models have a hidden calibration offset you can adjust yourself in a few button presses, worth checking with an oven thermometer before assuming a part failed. If an oven thermometer shows it's consistently off by the same amount at every temperature, that's a calibration fix. If it swings wildly or won't hold a temperature at all, that's usually the temperature sensor (a thin probe near the back wall) or, on older electric ranges, the control board reading it.</p>
 
-    <h2 data-reveal>Uneven baking, especially electric</h2>
+    <h2 data-reveal id="uneven-baking-especially-electric">Uneven baking, especially electric</h2>
 
     <p>On an electric range, uneven baking is often a bake element that's partially failed, one that still glows but isn't putting out full, even heat across the whole coil. It's a visible part; a bake element with a dark spot, a section that doesn't glow, or visible arcing is usually done. On a gas range, uneven baking more often points to a burner tube that's partially clogged or a convection fan (if the oven has one) that's stopped running, since gas ovens rely more heavily on that air movement to spread heat evenly than electric coil ovens do.</p>
 
@@ -234,17 +252,21 @@
       <p>If the oven runs but the broiler element up top never glows (or vice versa), that's almost always the specific element that failed, not shared wiring. Electric ranges run the bake and broil elements as separate circuits, so one dying while the other works fine is normal, not a sign of a bigger electrical problem.</p>
     </div>
 
-    <h2 data-reveal>Gas burner clicks but won't light</h2>
+    <h2 data-reveal id="gas-burner-clicks-but-won-t-light">Gas burner clicks but won't light</h2>
     <p>A repeated clicking sound with no flame is almost always the igniter itself, either too weak to create a spark hot enough to light the gas, or one that's cracked and needs replacing outright. It's a common, inexpensive part on most gas ranges. If the igniter glows but the burner still won't catch, check for a clogged burner port first, food debris and boil-overs build up there over time and block the actual gas flow even when the spark is working fine.</p>
 
-    <h2 data-reveal>Is it worth fixing?</h2>
+    <section class="post-worth">
+    <h2 data-reveal id="is-it-worth-fixing">Is it worth fixing?</h2>
 
     <p>Almost always, yes, for exactly the reason above: a bake element, an igniter, or a temperature sensor are all standard, inexpensive parts on most ranges, and none of them say anything about the rest of the unit. Where it stops making sense is a failed control board on an older range, since that part alone can run close to the cost of a mid-range replacement oven.</p>
+      <p class="post-pivot-call"><a href="tel:+14354141667" class="btn orange js-phone-link">Call <span class="js-phone-text">(435) 414-1667</span></a> <a href="/booking.html" class="cta-quiet-link">or book a visit online</a></p>
+    </section>
 
     <div class="blog-cta">
       <p>Oven running hot, cold, uneven, or a burner that won't light? We can usually diagnose it and, in a lot of cases, fix it same visit.</p>
       <a href="tel:4354141667" class="btn orange js-phone-link js-phone-text">Call (435) 414-1667</a>
     </div>
+  </div>
   </div>
 
   <div class="blog-related">

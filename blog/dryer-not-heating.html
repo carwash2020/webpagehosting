@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" style="background:#0a0a0a;">
+<html class="page-blog-post" lang="en" style="background:#0a0a0a;">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -60,8 +60,8 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/styles.css?v=85022057c1">
-<link rel="stylesheet" href="/blog/blog.css?v=8c0107810e">
+<link rel="stylesheet" href="/styles.css?v=69118e5c8e">
+<link rel="stylesheet" href="/blog/blog.css?v=62fcdbf83c">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -209,6 +209,9 @@
 
 <main id="main">
 <div class="blog-body">
+  <!-- P5 redesign (2026-09-28): diagnostic header -- the title block and the
+       lead diagram share one hero frame. -->
+  <div class="post-hero">
   <div class="blog-header">
     <div class="blog-kicker"><a href="/blog/">Triple H Enterprises Blog</a></div>
     <h1 class="blog-title">Dryer Running But Not Heating? Here's the Part That's Almost Always Dead</h1>
@@ -217,13 +220,27 @@
   </div>
 
   <img class="blog-diagram" src="https://images.unsplash.com/photo-1632923565835-6582b54f2105?fm=jpg&q=80&w=1400&auto=format&fit=crop" alt="A stacked washer and dryer in a home laundry room" loading="lazy">
+  </div>
 
+  <div class="post-layout">
+  <!-- P5 redesign (2026-09-28): on-page navigation built from this post's own
+       H2s (sticky beside the article on desktop, collapsible on phones). -->
+  <nav class="post-toc" aria-label="In this post">
+    <details open>
+      <summary>In this post</summary>
+      <ol>
+        <li><a href="#how-to-know-it-s-actually-this-and-not-something">How to know it's actually this, and not something bigger</a></li>
+        <li><a href="#why-it-blew-in-the-first-place">Why it blew in the first place</a></li>
+        <li><a href="#is-it-worth-fixing-or-is-the-dryer-just-old">Is it worth fixing, or is the dryer just old?</a></li>
+      </ol>
+    </details>
+  </nav>
   <div class="blog-article">
     <p>We get some version of this call two or three times a week: "My dryer still spins, but nothing's drying anymore." Sometimes people describe it as running colder than it used to. Sometimes it's a load that used to take forty minutes now going ninety with no results. Almost every time, it's the same eighteen-dollar part.</p>
 
     <p>It's called a thermal fuse, and it sits on the blower housing. That's the metal box at the back of the machine that the exhaust air passes through. Its whole job is to protect the dryer from overheating. Once it does its job, it's done for good. It's not a breaker you can reset. It's a one-time-use fuse, and if it's blown, the heating element gets no power at all, even though the motor and drum keep running just fine.</p>
 
-    <h2 data-reveal>How to know it's actually this, and not something bigger</h2>
+    <h2 data-reveal id="how-to-know-it-s-actually-this-and-not-something">How to know it's actually this, and not something bigger</h2>
 
     <p>The tell is pretty specific. If your dryer:</p>
     <ul>
@@ -238,20 +255,24 @@
       <p>On Whirlpool-built dryers (that covers Whirlpool, Maytag, Kenmore, KitchenAid, and Roper, since they all come off the same lines), it's almost always part <span class="part-number">WP3392519</span>. Fifteen to twenty dollars in parts. The labor is the harder part, since it means pulling the front or back panel to get at the housing.</p>
     </div>
 
-    <h2 data-reveal>Why it blew in the first place</h2>
+    <h2 data-reveal id="why-it-blew-in-the-first-place">Why it blew in the first place</h2>
 
     <p>Here's the thing nobody tells you when you just swap the fuse and move on: something usually made it blow. Almost always, it's a restricted exhaust vent. Lint builds up somewhere in the duct run, behind the machine, at a joint, or right at the outside vent flap, and the dryer starts running hotter than it's supposed to, because the hot air it's pushing out has nowhere to go fast enough.</p>
 
     <p>If you just replace the fuse and never touch the vent, you're buying yourself a few weeks or months before it blows again. We always check the full vent run when we're already back there. It's ten extra minutes, and it's the difference between a fix that lasts and a repeat call. If it turns out to be more than the thermal fuse, that's the kind of repair we handle as part of our <a href="/services/washer-dryer-repair.html">washer & dryer repair service</a>.</p>
 
-    <h2 data-reveal>Is it worth fixing, or is the dryer just old?</h2>
+    <section class="post-worth">
+    <h2 data-reveal id="is-it-worth-fixing-or-is-the-dryer-just-old">Is it worth fixing, or is the dryer just old?</h2>
 
     <p>For this specific problem, almost always worth fixing, regardless of the dryer's age. A blown thermal fuse isn't a sign the machine is dying. It's a sign the vent needs cleaning, which is true of a ten-year-old dryer and a two-year-old one alike. We'd only start talking replacement if you're also seeing other issues stack up on top of it: a drum that's started squealing, a control board acting up, that kind of thing.</p>
+      <p class="post-pivot-call"><a href="tel:+14354141667" class="btn orange js-phone-link">Call <span class="js-phone-text">(435) 414-1667</span></a> <a href="/booking.html" class="cta-quiet-link">or book a visit online</a></p>
+    </section>
 
     <div class="blog-cta">
       <p>Dryer not heating, or not sure what you're looking at? We can usually get it diagnosed and fixed same visit.</p>
       <a href="tel:4354141667" class="btn orange js-phone-link js-phone-text">Call (435) 414-1667</a>
     </div>
+  </div>
   </div>
 
   <div class="blog-related">

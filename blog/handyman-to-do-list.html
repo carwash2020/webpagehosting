@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" style="background:#0a0a0a;">
+<html class="page-blog-post" lang="en" style="background:#0a0a0a;">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -58,8 +58,8 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/styles.css?v=85022057c1">
-<link rel="stylesheet" href="/blog/blog.css?v=8c0107810e">
+<link rel="stylesheet" href="/styles.css?v=69118e5c8e">
+<link rel="stylesheet" href="/blog/blog.css?v=62fcdbf83c">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -207,6 +207,9 @@
 
 <main id="main">
 <div class="blog-body">
+  <!-- P5 redesign (2026-09-28): diagnostic header -- the title block and the
+       lead diagram share one hero frame. -->
+  <div class="post-hero">
   <div class="blog-header">
     <div class="blog-kicker"><a href="/blog/">Triple H Enterprises Blog</a></div>
     <h1 class="blog-title">The Small Jobs Everyone Forgets Until It's Time to Sell</h1>
@@ -215,19 +218,33 @@
   </div>
 
   <img class="blog-diagram" src="https://images.unsplash.com/photo-1756027583186-a04a19e4f6ce?fm=jpg&q=80&w=1400&auto=format&fit=crop" alt="Assorted hand tools including wrenches, pliers, and a hammer" loading="lazy">
+  </div>
 
+  <div class="post-layout">
+  <!-- P5 redesign (2026-09-28): on-page navigation built from this post's own
+       H2s (sticky beside the article on desktop, collapsible on phones). -->
+  <nav class="post-toc" aria-label="In this post">
+    <details open>
+      <summary>In this post</summary>
+      <ol>
+        <li><a href="#the-dead-satellite-dish">The dead satellite dish</a></li>
+        <li><a href="#wire-management-behind-the-tv">Wire management behind the TV</a></li>
+        <li><a href="#cabinet-and-door-hardware">Cabinet and door hardware</a></li>
+      </ol>
+    </details>
+  </nav>
   <div class="blog-article">
     <p>We were at a property in Little Valley last month doing what sounded like one job, baseboards and a side cabinet, and left having done four. Once we were in the house, the homeowner started pointing at things: the wire hider behind the TV that had come loose, a pocket door that needed new hardware, an old satellite dish still bolted to the roof from a service nobody's used in years. None of it was urgent. All of it had been sitting there long enough that she'd stopped seeing it.</p>
 
     <p>That's the pattern with this kind of work. It's not that people don't notice. It's that they see it every day, which is exactly why it stops registering. Then a realtor walks through, or family's coming for a holiday, and suddenly it's the only thing anyone can see.</p>
 
-    <h2 data-reveal>The dead satellite dish</h2>
+    <h2 data-reveal id="the-dead-satellite-dish">The dead satellite dish</h2>
     <p>This one's more common than you'd think. A household switches to streaming, cancels the satellite service, and the dish just... stays. Bolted to the roof or the side of the house, cable still run into a wall plate that doesn't connect to anything anymore. It's not hurting anything sitting there, but it's an immediate, visible sign that nobody's touched the outside of the house in years. Taking it down and patching the mounting holes is usually under an hour of work.</p>
 
-    <h2 data-reveal>Wire management behind the TV</h2>
+    <h2 data-reveal id="wire-management-behind-the-tv">Wire management behind the TV</h2>
     <p>Almost every home we go into has some version of this: a tangle of cables running from the TV down to a soundbar, a cable box, a gaming console, all visible against the wall. A wire hider (either a paintable channel or a fabric sleeve, depending on the wall and the look you want) takes it from "obviously never finished" to "looks like it was built this way." It's a small job that has an outsized effect on how a whole room reads.</p>
 
-    <h2 data-reveal>Cabinet and door hardware</h2>
+    <h2 data-reveal id="cabinet-and-door-hardware">Cabinet and door hardware</h2>
     <p>Loose hinges, cabinet doors that don't sit flush, a pocket door that rattles or won't latch: these are the kind of thing homeowners live with for years because none of them feel urgent enough to call someone about on their own. But they're also some of the fastest, cheapest fixes we do. Most of the time it's a fifteen-minute adjustment or a hardware swap, not a repair. This is exactly the kind of work covered under our <a href="/services/handyman-repairs.html">general handyman repairs</a>, and it's usually the fastest bang for the buck before a house goes on the market.</p>
 
     <div class="fix-callout">
@@ -241,6 +258,7 @@
       <p>Got a list of small stuff you've been meaning to get to? Bring it all. We're happy to knock out several in one visit.</p>
       <a href="tel:4354141667" class="btn orange js-phone-link js-phone-text">Call (435) 414-1667</a>
     </div>
+  </div>
   </div>
 
   <div class="blog-related">

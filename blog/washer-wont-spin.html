@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" style="background:#0a0a0a;">
+<html class="page-blog-post" lang="en" style="background:#0a0a0a;">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -60,8 +60,8 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/styles.css?v=85022057c1">
-<link rel="stylesheet" href="/blog/blog.css?v=8c0107810e">
+<link rel="stylesheet" href="/styles.css?v=69118e5c8e">
+<link rel="stylesheet" href="/blog/blog.css?v=62fcdbf83c">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -209,6 +209,9 @@
 
 <main id="main">
 <div class="blog-body">
+  <!-- P5 redesign (2026-09-28): diagnostic header -- the title block and the
+       lead diagram share one hero frame. -->
+  <div class="post-hero">
   <div class="blog-header">
     <div class="blog-kicker"><a href="/blog/">Triple H Enterprises Blog</a></div>
     <h1 class="blog-title">Washer Won't Spin? It's Usually a Belt or a Switch</h1>
@@ -217,21 +220,37 @@
   </div>
 
   <img class="blog-diagram" src="https://images.unsplash.com/photo-1551761429-8232f9f5955c?fm=jpg&q=80&w=1400&auto=format&fit=crop" alt="A row of front-load washing machines with their doors open" loading="lazy">
+  </div>
 
+  <div class="post-layout">
+  <!-- P5 redesign (2026-09-28): on-page navigation built from this post's own
+       H2s (sticky beside the article on desktop, collapsible on phones). -->
+  <nav class="post-toc" aria-label="In this post">
+    <details open>
+      <summary>In this post</summary>
+      <ol>
+        <li><a href="#rule-out-the-load-first">Rule out the load first</a></li>
+        <li><a href="#the-lid-or-door-switch">The lid or door switch</a></li>
+        <li><a href="#the-drive-belt">The drive belt</a></li>
+        <li><a href="#when-it-s-something-else">When it's something else</a></li>
+        <li><a href="#is-it-worth-fixing">Is it worth fixing?</a></li>
+      </ol>
+    </details>
+  </nav>
   <div class="blog-article">
     <p>A washer that won't spin looks like a bigger problem than it usually is. The machine fills, washes, and often drains just fine, and then the spin either never starts or the drum barely turns. The usual causes are a worn drive belt, a failed lid or door switch, or a load the washer has decided is too unbalanced to spin. Those are parts, or a reload, not a reason to replace the machine.</p>
 
-    <h2 data-reveal>Rule out the load first</h2>
+    <h2 data-reveal id="rule-out-the-load-first">Rule out the load first</h2>
 
     <p>Modern washers check the balance of the load before they spin up. If it's lopsided, they try to redistribute it, then slow down or skip the spin rather than shake themselves apart. A single heavy item is the classic trigger: a bath mat, a comforter, or a few towels bunched to one side. Spread the load out and run a drain-and-spin cycle on its own. If it spins normally, nothing is broken.</p>
 
     <p>It's also worth making sure the water actually left. Most washers won't go into a fast spin while the drum still holds water, so if there's water sitting in there at the end of the cycle, the real problem is <a href="/blog/washer-wont-drain.html">a washer that won't drain</a>, not the spin.</p>
 
-    <h2 data-reveal>The lid or door switch</h2>
+    <h2 data-reveal id="the-lid-or-door-switch">The lid or door switch</h2>
 
     <p>A washer has to know the lid or door is shut before it spins, because a drum at full speed is dangerous to reach into. On many top-loaders, a failed lid switch lets the machine fill and agitate normally but stops it from spinning. On a front-loader, a failing door lock more often stops the cycle earlier or throws an error partway through. Either way, many machines show an error code or a flashing lock light when this happens. Note it before you call.</p>
 
-    <h2 data-reveal>The drive belt</h2>
+    <h2 data-reveal id="the-drive-belt">The drive belt</h2>
 
     <p>On belt-drive washers, the motor turns the drum through a rubber belt that stretches, glazes, and eventually slips or breaks. The tell is a motor you can hear running while the drum barely turns, sometimes with a burning-rubber smell. Many newer washers are direct-drive, with no belt at all, so on those the same symptom points to the motor coupling or another drive part instead.</p>
 
@@ -240,18 +259,26 @@
       <p>Lid switches, door locks, drive belts, and motor couplings are all standard parts, and replacing one is often a same-visit job. The bigger repairs, a failed transmission or worn tub bearings, are much less common, and we'll tell you if that's what we find before any work starts.</p>
     </div>
 
-    <h2 data-reveal>When it's something else</h2>
+    <section class="post-pivot">
+    <h2 data-reveal id="when-it-s-something-else">When it's something else</h2>
 
     <p>If the drum does spin but the clothes come out wetter than they used to, check the cycle first: delicate and hand-wash settings spin slowly on purpose. If it spins with a loud roar or grinding, that points to the tub bearings, which is worth catching before it gets worse. And if the washer won't do anything at all, no lights and no sound, that's a power or switch problem, not a spin problem.</p>
 
-    <h2 data-reveal>Is it worth fixing?</h2>
+    
+      <p class="post-pivot-call"><a href="tel:+14354141667" class="btn orange js-phone-link">Call <span class="js-phone-text">(435) 414-1667</span></a> <a href="/booking.html" class="cta-quiet-link">or book a visit online</a></p>
+    </section>
+
+    <section class="post-worth">
+    <h2 data-reveal id="is-it-worth-fixing">Is it worth fixing?</h2>
 
     <p>For a switch, a belt, or a coupling, yes, almost always. Those parts wear out on otherwise healthy machines, and replacing one says nothing about the rest of the washer. It becomes a replacement conversation when it's the transmission or the tub bearings on an older machine, or when this is one of several unrelated problems stacking up.</p>
+    </section>
 
     <div class="blog-cta">
       <p>Clothes coming out soaking wet? We can usually find what's stopping the spin and fix it same visit.</p>
       <a href="tel:4354141667" class="btn orange js-phone-link js-phone-text">Call (435) 414-1667</a>
     </div>
+  </div>
   </div>
 
   <div class="blog-related">

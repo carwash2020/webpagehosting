@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" style="background:#0a0a0a;">
+<html class="page-blog-post" lang="en" style="background:#0a0a0a;">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -60,8 +60,8 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/styles.css?v=85022057c1">
-<link rel="stylesheet" href="/blog/blog.css?v=8c0107810e">
+<link rel="stylesheet" href="/styles.css?v=69118e5c8e">
+<link rel="stylesheet" href="/blog/blog.css?v=62fcdbf83c">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -209,6 +209,9 @@
 
 <main id="main">
 <div class="blog-body">
+  <!-- P5 redesign (2026-09-28): diagnostic header -- the title block and the
+       lead diagram share one hero frame. -->
+  <div class="post-hero">
   <div class="blog-header">
     <div class="blog-kicker"><a href="/blog/">Triple H Enterprises Blog</a></div>
     <h1 class="blog-title">Washer Leaking Water? Where the Puddle Is Tells You What Failed</h1>
@@ -217,13 +220,28 @@
   </div>
 
   <img class="blog-diagram" src="https://images.unsplash.com/photo-1721395285456-05a8b9b45b9f?fm=jpg&q=80&w=1400&auto=format&fit=crop" alt="A stacked washer and dryer tucked into a modern bathroom laundry nook" loading="lazy">
+  </div>
 
+  <div class="post-layout">
+  <!-- P5 redesign (2026-09-28): on-page navigation built from this post's own
+       H2s (sticky beside the article on desktop, collapsible on phones). -->
+  <nav class="post-toc" aria-label="In this post">
+    <details open>
+      <summary>In this post</summary>
+      <ol>
+        <li><a href="#where-the-water-shows-up">Where the water shows up</a></li>
+        <li><a href="#what-to-do-until-it-s-fixed">What to do until it's fixed</a></li>
+        <li><a href="#when-it-s-something-else">When it's something else</a></li>
+        <li><a href="#is-it-worth-fixing">Is it worth fixing?</a></li>
+      </ol>
+    </details>
+  </nav>
   <div class="blog-article">
     <p>Most washer problems are an inconvenience. A leak can actually cost you, because the water doesn't stay under the machine. It soaks into the subfloor, wicks up into drywall, and works its way under cabinets and flooring, and that damage adds up far faster than the repair does. If there's water on the laundry room floor, this is the washer call worth making sooner rather than later.</p>
 
     <p>The good news is that the cause is usually one of three things: the door seal, a hose connection, or the pump. Where the water shows up, and when in the cycle it shows up, will usually point to which one.</p>
 
-    <h2 data-reveal>Where the water shows up</h2>
+    <h2 data-reveal id="where-the-water-shows-up">Where the water shows up</h2>
 
     <ul>
       <li>Front of the machine, under the door: on a front-loader, this is usually the rubber door seal. It can tear, or something like a sock, a hair tie, or a coin can get caught in its fold and hold it open just enough to let water past</li>
@@ -238,22 +256,30 @@
       <p>Door seals, fill hoses, hose washers, and drain pumps are all standard replacement parts. A worn hose connection can be a quick fix on the spot; a torn door seal or a failed pump is a part swap. None of them is, on its own, a reason to replace the washer.</p>
     </div>
 
-    <h2 data-reveal>What to do until it's fixed</h2>
+    <h2 data-reveal id="what-to-do-until-it-s-fixed">What to do until it's fixed</h2>
 
     <p>Turn off the two water supply valves behind the washer, hot and cold, and hold off on running more loads until someone has looked at it. If water has reached the outlet or the cord, switch the washer off at the breaker before you touch anything. If you caught it mid-cycle, make a note of where the water first appeared before you mop up. That's the single most useful clue you can give us.</p>
 
-    <h2 data-reveal>When it's something else</h2>
+    <section class="post-pivot">
+    <h2 data-reveal id="when-it-s-something-else">When it's something else</h2>
 
     <p>Not every puddle near the washer comes from the washer. If water is backing up out of the drain pipe the washer empties into, rather than out of the machine itself, that's usually a clog in the house drain line, which is plumbing work and part of our <a href="/services/plumbing-repairs.html">plumbing repair service</a>. Too much detergent, or regular detergent in a machine built for HE, can also push suds out of a front-loader and look a lot like a leak. And if the water is staying inside the drum after the cycle ends, that's a drain problem, not a leak.</p>
 
-    <h2 data-reveal>Is it worth fixing?</h2>
+    
+      <p class="post-pivot-call"><a href="tel:+14354141667" class="btn orange js-phone-link">Call <span class="js-phone-text">(435) 414-1667</span></a> <a href="/booking.html" class="cta-quiet-link">or book a visit online</a></p>
+    </section>
+
+    <section class="post-worth">
+    <h2 data-reveal id="is-it-worth-fixing">Is it worth fixing?</h2>
 
     <p>For the common causes, yes, almost always. A seal, a hose, or a pump says nothing about the overall health of the machine. It only turns into a replacement conversation in the rarer cases: a cracked outer tub, or an older washer that's already had other, unrelated problems stacking up on top of this one. Once it's fixed, it's worth checking the fill hoses every so often for bulges, cracks, or rust at the fittings. A hose that lets go while nobody's home is a genuinely expensive afternoon.</p>
+    </section>
 
     <div class="blog-cta">
       <p>Water on the laundry room floor? Shut off the supply valves and give us a call. We can usually find the source and get it fixed same visit.</p>
       <a href="tel:4354141667" class="btn orange js-phone-link js-phone-text">Call (435) 414-1667</a>
     </div>
+  </div>
   </div>
 
   <div class="blog-related">
