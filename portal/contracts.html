@@ -71,7 +71,7 @@
     width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border);
     background: var(--bg-panel-2); color: var(--text-dim); text-decoration: none; cursor: pointer;
   }
-  .portal-icon-btn:hover { border-color: var(--orange); color: var(--orange-light); }
+  @media (hover:hover){.portal-icon-btn:hover { border-color: var(--orange); color: var(--orange-light); }}
   .portal-icon-btn svg { width: 18px; height: 18px; }
   .contract-card {
     background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 10px;
@@ -94,7 +94,7 @@
   .contract-section-title { font-family:var(--font-ui); font-weight: 600; font-size: 14px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin: 20px 0 10px; }
   .contract-section-title:first-child { margin-top: 0; }
   .contract-body-toggle { display: block; margin-top: 10px; font-size: 12.5px; color: var(--text-dim); text-decoration: underline; cursor: pointer; background: none; border: none; font-family: inherit; padding: 0; }
-  .contract-body-toggle:hover { color: var(--orange-light); }
+  @media (hover:hover){.contract-body-toggle:hover { color: var(--orange-light); }}
   .contract-body { margin-top: 10px; display: none; border-top: 1px solid var(--border); padding-top: 10px; }
   .contract-body.is-open { display: block; }
   .contract-block-heading { font-family:var(--font-ui); font-weight: 700; font-size: 15px; color: var(--white); margin: 12px 0 4px; }
@@ -115,20 +115,38 @@
   .contract-actions button { flex: 1; justify-content: center; }
   .responded-note { color: var(--text-dim); font-size: 12.5px; margin-top: 8px; }
   .contract-error { color: #e05252; font-size: 12.5px; margin: 6px 0 0; }
+  /* Report a problem (v2 part 2): the same sheet every other signed-in page has. */
+  .report-bug-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 1000; }
+  .report-bug-modal { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 24px; max-width: 400px; width: 100%; }
+  .report-bug-title { font-family:var(--font-ui); font-weight: 600; font-size: 18px; color: var(--white); margin-bottom: 6px; }
+  .report-bug-sub { font-size: 13px; color: var(--text-dim); margin-bottom: 14px; }
+  .report-bug-modal textarea { width: 100%; padding: 11px 13px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 8px; color: var(--white); font-size: 16px; font-family: inherit; box-sizing: border-box; resize: vertical; }
+  .report-bug-error { color: #e05252; font-size: 13px; margin: 8px 0 0; min-height: 1px; }
+  .report-bug-success { color: #4caf78; font-size: 14px; margin: 4px 0; line-height: 1.5; }
+  .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
+  .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=aaf32af090">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=29ee73927e">
 </head>
 <body class="portal-page">
 
-<div class="portal-header">
+<!-- App bar (v2 shell, part 2, 2026-09-28) -- the same one home.html and
+     dashboard.html carry: kicker + Anton title, the round Report-a-problem
+     button (this page's one #reportBugLink, moved up from the page foot)
+     and the round account button. #clientEmailDisplay and #signOutBtn
+     stay in the markup (Sign out shows in the rail and Settings). -->
+<div class="portal-header portal-appbar">
   <div class="portal-header-left">
+    <a href="/portal/home.html" class="portal-icon-btn portal-back-btn" aria-label="Back to Home" title="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></a>
     <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
     <div>
-      <div class="portal-title">Your Contracts</div>
+      <div class="portal-kicker">Account</div>
+      <div class="portal-title">Contracts</div>
       <div class="portal-sub" id="clientEmailDisplay"></div>
     </div>
   </div>
   <div class="portal-header-actions">
+    <button type="button" class="portal-icon-btn portal-report-btn" id="reportBugLink" aria-label="Report a problem" title="Report a problem"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.5"/><circle cx="12" cy="17.2" r=".6"/></svg></button>
     <a href="/portal/settings.html" class="portal-icon-btn" aria-label="Settings" title="Settings">
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
     </a>
@@ -233,35 +251,59 @@
     if (body) body.classList.toggle('is-open');
   }
 
+  // The 2x2 facts on a pending card (v2, 2026-09-28): price, when, where
+  // and payment, read from the same field / total blocks the full text
+  // below shows -- nothing new is fetched or stored. A fact the contract
+  // doesn't have is left out; with none, there's no grid at all.
+  const CONTRACT_FACTS = [
+    { label: 'Price', match: /price|rate per|labor/i, total: true },
+    { label: 'When', match: /date|preferred day/i },
+    { label: 'Where', match: /address/i },
+    { label: 'Payment', match: /balance|deposit|billing|payment/i },
+  ];
+  function contractFactsHtml(blocks) {
+    if (!Array.isArray(blocks)) return '';
+    const facts = CONTRACT_FACTS.map((f) => {
+      const hit = (f.total && blocks.find((b) => b.type === 'totalHighlight' && b.value)) ||
+        blocks.find((b) => b.type === 'field' && b.value && f.match.test(b.label || ''));
+      return hit ? '<div class="contract-fact"><span class="contract-fact-label">' + escapeHtml(f.label) + '</span><span class="contract-fact-value">' + escapeHtml(hit.value) + '</span></div>' : '';
+    }).filter(Boolean);
+    return facts.length ? '<div class="contract-facts">' + facts.join('') + '</div>' : '';
+  }
+
+  // v2 card: kicker, Anton title, status pill, the facts grid (pending
+  // only), Read full contract, then the signature pad and Sign / Decline.
+  // A signed or declined contract is one compact row with its date.
   function renderContractCard(c) {
     const statusClass = c.status === 'signed' ? 'is-signed' : c.status === 'declined' ? 'is-declined' : 'is-pending';
     const statusLabel = c.status === 'signed' ? 'Signed' : c.status === 'declined' ? 'Declined' : 'Pending';
     const isPending = c.status === 'pending';
 
     return `
-      <div class="contract-card" id="contract-card-${c.id}" data-contract-id="${c.id}">
+      <div class="contract-card is-${c.status === 'signed' ? 'signed' : c.status === 'declined' ? 'declined' : 'pending'}" id="contract-card-${c.id}" data-contract-id="${c.id}">
         <div class="contract-card-top">
-          <div>
+          <div class="contract-card-head">
+            <div class="contract-kicker">${isPending ? 'From Triple H &middot; ' : ''}<span class="contract-meta">${formatDate(c.created_at)}</span></div>
             <div class="contract-title">${escapeHtml(c.contract_title)}</div>
-            <div class="contract-meta">${formatDate(c.created_at)}</div>
           </div>
-          <span class="contract-status ${statusClass}">${statusLabel}</span>
+          <span class="contract-status ${statusClass}">${isPending ? 'Needs your signature' : statusLabel}</span>
         </div>
+        ${isPending ? contractFactsHtml(c.blocks) : ''}
         <button type="button" class="contract-body-toggle" onclick="toggleContractBody(${c.id})">Read full contract</button>
         <div class="contract-body" id="contractBody-${c.id}">${renderContractBody(c.blocks)}</div>
         ${isPending ? `
           <div class="signature-pad-wrap">
-            <div class="signature-pad-label">Draw your signature to sign below</div>
+            <div class="signature-pad-label">Sign with your finger or mouse</div>
             <canvas id="signatureCanvas-${c.id}" width="600" height="180" style="width:100%; max-width:560px; height:160px; background:#ffffff; border:1px solid var(--border); border-radius:8px; touch-action:none; cursor:crosshair; display:block;"></canvas>
             <div class="signature-pad-actions">
-              <button type="button" class="secondary-btn" onclick="clearContractSignature(${c.id})">Clear</button>
+              <button type="button" class="secondary-btn signature-clear-btn" onclick="clearContractSignature(${c.id})">Clear</button>
               <span id="signatureStatus-${c.id}" style="color:var(--text-dim); font-size:13px;"></span>
             </div>
           </div>
           <div class="contract-error" id="contractError-${c.id}"></div>
           <div class="contract-actions">
-            <button class="btn blue" onclick="respondToContract(${c.id}, 'sign', this)">Sign</button>
-            <button class="btn secondary-btn" onclick="respondToContract(${c.id}, 'decline', this)">Decline</button>
+            <button class="btn orange contract-sign-btn" onclick="respondToContract(${c.id}, 'sign', this)">Sign</button>
+            <button class="btn secondary-btn contract-decline-btn" onclick="respondToContract(${c.id}, 'decline', this)">Decline</button>
           </div>
         ` : `
           <div class="responded-note">${c.status === 'signed' ? 'Signed' : 'Declined'}${c.responded_at ? ' on ' + formatDate(c.responded_at) : ''}.</div>
@@ -298,6 +340,7 @@
       return;
     }
     document.getElementById('clientEmailDisplay').textContent = session.user.email;
+    if (typeof portalSetHeaderInitials === 'function') portalSetHeaderInitials(session.user.email);
     await portalGuardWithBiometricLock(session.user.email, client);
     // Keeps the Request/Jobs unread badges on the bottom nav while
     // browsing other tabs (2026-09-22). Fire-and-forget; never throws.
@@ -397,6 +440,102 @@
 
   renderContracts();
   initPortalPullToRefresh(renderContracts);
+</script>
+
+<!--
+  Report a problem (2026-09-02) -- extended from dashboard.html, the
+  only page that originally had it, to every signed-in portal page.
+  Works whether or not the client is signed in (client_email is best-
+  effort, from the current session if one exists) since a real problem
+  can happen on any page, not just Invoices.
+-->
+
+<div class="report-bug-overlay" id="reportBugOverlay" style="display:none;">
+  <div class="report-bug-modal">
+    <div class="report-bug-title" id="reportBugTitle">Report a problem</div>
+    <p class="report-bug-sub" id="reportBugSub">Tell us what happened. We'll take a look.</p>
+    <div id="reportBugFormArea">
+      <textarea id="reportBugMessage" placeholder="What went wrong?" rows="4" aria-label="Describe what went wrong"></textarea>
+      <div class="report-bug-error" id="reportBugError"></div>
+      <div class="report-bug-actions">
+        <button class="btn secondary-btn" id="reportBugCancel" type="button">Cancel</button>
+        <button class="btn orange" id="reportBugSubmit" type="button">Send</button>
+      </div>
+    </div>
+    <div class="report-bug-success" id="reportBugSuccess" style="display:none;">Thanks, we got your report and will take a look.</div>
+  </div>
+</div>
+
+
+<script>
+  (function () {
+    const link = document.getElementById('reportBugLink');
+    const overlay = document.getElementById('reportBugOverlay');
+    const cancelBtn = document.getElementById('reportBugCancel');
+    const submitBtn = document.getElementById('reportBugSubmit');
+    const messageInput = document.getElementById('reportBugMessage');
+    const errorEl = document.getElementById('reportBugError');
+    const formArea = document.getElementById('reportBugFormArea');
+    const successEl = document.getElementById('reportBugSuccess');
+
+    let releaseReportBugFocusTrap = null;
+    function openReportBug() {
+      overlay.style.display = 'flex';
+      formArea.style.display = 'block';
+      successEl.style.display = 'none';
+      messageInput.value = '';
+      errorEl.textContent = '';
+      releaseReportBugFocusTrap = trapFocusWithin(overlay);
+    }
+    function closeReportBug() {
+      overlay.style.display = 'none';
+      if (releaseReportBugFocusTrap) { releaseReportBugFocusTrap(); releaseReportBugFocusTrap = null; }
+    }
+    link.addEventListener('click', openReportBug);
+    cancelBtn.addEventListener('click', closeReportBug);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeReportBug(); });
+    document.addEventListener('keydown', (e) => {
+      if (overlay.style.display === 'none') return;
+      if (e.key === 'Escape') closeReportBug();
+    });
+
+    submitBtn.addEventListener('click', async () => {
+      const message = messageInput.value.trim();
+      if (!message) { errorEl.textContent = 'Please describe the problem first.'; return; }
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sending...';
+      errorEl.textContent = '';
+      let clientEmail = null;
+      try {
+        const { data } = await client.auth.getSession();
+        clientEmail = data.session ? data.session.user.email : null;
+      } catch (e) { /* not signed in, that's fine -- report goes in anonymous */ }
+      try {
+        const res = await fetch('https://csvfqdjuobylgafgolho.supabase.co/rest/v1/portal_bug_reports', {
+          method: 'POST',
+          headers: {
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs',
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            client_email: clientEmail,
+            message: message,
+            page_url: window.location.pathname,
+            user_agent: navigator.userAgent,
+          }),
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        formArea.style.display = 'none';
+        successEl.style.display = 'block';
+      } catch (e) {
+        errorEl.textContent = "Couldn't send that. Please call us instead.";
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Send';
+      }
+    });
+  })();
 </script>
 
 <script src="/portal/portal-update.js?v=a89036ddc5" defer></script>

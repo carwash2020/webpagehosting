@@ -183,7 +183,7 @@
     padding: 12px 14px; color: var(--white); text-decoration: none;
     transition: background .15s ease;
   }
-  .settings-link:hover { background: rgba(255, 255, 255, .03); }
+  @media (hover:hover){.settings-link:hover { background: rgba(255, 255, 255, .03); }}
   .settings-link:focus-visible { outline: 2px solid var(--orange-light); outline-offset: -2px; }
   .settings-link-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
   .settings-link-title { font-size: 15px; font-weight: 600; color: var(--white); }
@@ -245,15 +245,15 @@
     width: 20px; height: 20px; fill: none; stroke: currentColor;
     stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
   }
-  .settings-back:hover { background: rgba(255, 255, 255, .04); }
+  @media (hover:hover){.settings-back:hover { background: rgba(255, 255, 255, .04); }}
 
   /* Signed Authorizations: a record to look up now and then, so it's a
      closed disclosure. Uses the portal-wide <summary> chevron from
      portal-polish.css (the same one as "View details" on invoices and
      quotes); this only makes the row full-width with a two-line label. */
   body.portal-page .set-disclosure > summary { display: flex; gap: 12px; cursor: pointer; }
-  body.portal-page .set-disclosure > summary:hover { color: inherit; }
-  body.portal-page .set-disclosure > summary:hover .set-card-title { color: var(--orange-light); }
+  @media (hover:hover){body.portal-page .set-disclosure > summary:hover { color: inherit; }}
+  @media (hover:hover){body.portal-page .set-disclosure > summary:hover .set-card-title { color: var(--orange-light); }}
   .set-disclosure-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
   .set-disclosure .set-card-title { margin-bottom: 0; }
   .set-disclosure-hint { font-size: 13px; color: var(--text-dim); }
@@ -337,7 +337,7 @@
     #addHomeScreenCard.is-generic { display: none; }
   }
   .report-bug-link { display: block; margin-top: 14px; font-size: 12px; color: var(--text-dim); text-decoration: underline; cursor: pointer; text-align: center; background: none; border: none; font-family: inherit; padding: 0; }
-  .report-bug-link:hover { color: var(--orange-light); }
+  @media (hover:hover){.report-bug-link:hover { color: var(--orange-light); }}
   .report-bug-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 1000; }
   .report-bug-modal { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 24px; max-width: 400px; width: 100%; }
   .report-bug-title { font-family:var(--font-ui); font-weight: 600; font-size: 18px; color: var(--white); margin-bottom: 6px; }
@@ -348,19 +348,29 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=aaf32af090">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=29ee73927e">
 </head>
 <body class="portal-page">
 
-<div class="portal-header">
+<!-- App bar (v2 shell, part 2, 2026-09-28) -- the same one home.html and
+     dashboard.html carry: kicker + Anton title, the round Report-a-problem
+     button (this page's one #reportBugLink, moved up from the page foot).
+     No account button: this is the page it opens. #clientEmailDisplay and
+     #signOutBtn stay in the markup (Sign out shows in the rail and at the
+     foot of the menu). -->
+<div class="portal-header portal-appbar">
   <div class="portal-header-left">
     <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
     <div>
+      <div class="portal-kicker">Account</div>
       <div class="portal-title">Settings</div>
       <div class="portal-sub" id="clientEmailDisplay"></div>
     </div>
   </div>
-  <button class="secondary-btn" id="signOutBtn">Sign out</button>
+  <div class="portal-header-actions">
+    <button type="button" class="portal-icon-btn portal-report-btn" id="reportBugLink" aria-label="Report a problem" title="Report a problem"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.5"/><circle cx="12" cy="17.2" r=".6"/></svg></button>
+    <button class="secondary-btn" id="signOutBtn">Sign out</button>
+  </div>
 </div>
 
 <!-- Desktop app shell (2026-09-22). On a phone this wrapper is
@@ -1709,7 +1719,6 @@
   effort, from the current session if one exists) since a real problem
   can happen on any page, not just Invoices.
 -->
-<button type="button" class="report-bug-link" id="reportBugLink">Report a problem</button>
 
 <div class="report-bug-overlay" id="reportBugOverlay" style="display:none;">
   <div class="report-bug-modal">

@@ -1559,3 +1559,772 @@ body.portal-page .pay-done-sub { margin: 0; font-size: 14px; color: var(--text-d
   body.portal-page .page-split:has(#payFirstArea) > .page-split-side { grid-column: 1; grid-row: 1; min-width: 0; }
   body.portal-page .page-split:has(#payFirstArea) > .page-split-main { grid-column: 2; grid-row: 1; min-width: 0; }
 }
+
+/* ==========================================================
+   27. Portal redesign v2, part 2 (2026-09-28): Estimates, Visits,
+       Request work, Contracts, Settings, and sign-in
+   ==========================================================
+   The rest of the v2 handoff (portal/README.md section 6), in the same
+   language as section 26 and built on its tokens and shell (the app
+   bar, the sheets, the flat orange primary). Every rule is scoped to
+   body.portal-page, or for the two signed-out pages to
+   body:has(.login-box), the hook sections 1 and 7 already use; nothing
+   here can reach /tools/ or the public site. Dark only. */
+
+/* ---------- 27a. one card language ---------- */
+body.portal-page .quote-card,
+body.portal-page .job-card,
+body.portal-page .wo-card,
+body.portal-page .contract-card,
+body.portal-page .wo-form-card,
+body.portal-page .set-card,
+body.portal-page .history-download,
+body.portal-page .warranty-overview,
+body.portal-page .checkup-banner,
+body.portal-page .wo-success {
+  background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--portal-radius-xl);
+  box-shadow: none; padding: 18px; margin: 0 0 16px; box-sizing: border-box;
+}
+body.portal-page .quote-section-title,
+body.portal-page .contract-section-title,
+body.portal-page .wo-section-title,
+body.portal-page .warranty-overview-title,
+body.portal-page .history-download-title,
+body.portal-page .set-card-title {
+  font-family: var(--font-ui); font-size: 12.5px; font-weight: 500; letter-spacing: 1.4px;
+  text-transform: uppercase; color: var(--text-dim); margin: 0 0 10px;
+}
+body.portal-page .quote-section-title,
+body.portal-page .contract-section-title { margin: 22px 0 10px; }
+body.portal-page .quote-section-title:first-child,
+body.portal-page .contract-section-title:first-child { margin-top: 0; }
+body.portal-page .set-card-title { color: var(--text); margin-bottom: 4px; }
+
+/* Status pills: the Invoices pill shape (Oswald, uppercase, 999px). */
+body.portal-page .quote-status,
+body.portal-page .contract-status,
+body.portal-page .wo-status,
+body.portal-page .job-status-pill,
+body.portal-page .job-warranty {
+  display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;
+  padding: 3px 10px; border-radius: 999px; border: 1px solid transparent;
+  font-family: var(--font-ui); font-size: 11px; font-weight: 500; letter-spacing: .8px;
+  text-transform: uppercase; line-height: 1.6; white-space: nowrap;
+}
+body.portal-page .quote-status.is-pending,
+body.portal-page .contract-status.is-pending,
+body.portal-page .wo-status.is-reviewing,
+body.portal-page .wo-status.is-quoted,
+body.portal-page .job-warranty.is-active { background: var(--tone-blue-bg); color: var(--tone-blue-fg); border-color: transparent; }
+body.portal-page .quote-status.is-approved,
+body.portal-page .contract-status.is-signed,
+body.portal-page .wo-status.is-completed,
+body.portal-page .job-status-pill { background: var(--tone-green-bg); color: var(--tone-green-fg); border-color: transparent; }
+body.portal-page .wo-status.is-scheduled,
+body.portal-page .wo-status.is-submitted { background: var(--tone-orange-bg); color: var(--tone-orange-fg); border-color: transparent; }
+body.portal-page .quote-status.is-declined,
+body.portal-page .contract-status.is-declined,
+body.portal-page .wo-status.is-declined,
+body.portal-page .wo-status.is-cancelled,
+body.portal-page .job-warranty.is-expired { background: var(--bg-panel-3); color: var(--text-dim); border-color: transparent; }
+
+/* Quiet pill buttons: the secondary actions on every card. */
+body.portal-page .quote-question-toggle,
+body.portal-page .quote-pdf-btn,
+body.portal-page .job-receipt-link,
+body.portal-page .portal-thread-toggle,
+body.portal-page .wo-card-actions .btn.secondary-btn,
+body.portal-page .wo-cancel-ask,
+body.portal-page .signature-clear-btn,
+body.portal-page .contract-body-toggle,
+body.portal-page .history-download-btn,
+body.portal-page .checkup-booked-actions .small-btn,
+body.portal-page .quote-visit-actions .btn.secondary-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  width: auto; min-height: 44px; margin: 0; padding: 0 16px; box-sizing: border-box;
+  border: 1px solid var(--border); border-radius: 999px;
+  background: none; background-image: none; box-shadow: none; color: var(--text);
+  font-family: var(--font-app); font-size: 13.5px; font-weight: 600; letter-spacing: 0; text-transform: none;
+  text-decoration: none; cursor: pointer; transition: border-color .15s ease, color .15s ease, transform .12s ease;
+}
+@media (hover:hover){
+  body.portal-page .quote-question-toggle:hover,
+  body.portal-page .quote-pdf-btn:hover,
+  body.portal-page .job-receipt-link:hover,
+  body.portal-page .portal-thread-toggle:hover,
+  body.portal-page .signature-clear-btn:hover,
+  body.portal-page .contract-body-toggle:hover,
+  body.portal-page .history-download-btn:hover,
+  body.portal-page .checkup-booked-actions .small-btn:hover,
+  body.portal-page .quote-visit-actions .btn.secondary-btn:hover { border-color: var(--orange-tint-border); color: var(--orange-light); transform: none; box-shadow: none; }
+  body.portal-page .wo-card-actions .btn.secondary-btn:hover,
+  body.portal-page .wo-cancel-ask:hover { border-color: var(--tone-red-fg); color: var(--tone-red-fg); }
+}
+body.portal-page .quote-question-toggle:active,
+body.portal-page .quote-pdf-btn:active,
+body.portal-page .job-receipt-link:active,
+body.portal-page .portal-thread-toggle:active,
+body.portal-page .wo-card-actions .btn.secondary-btn:active,
+body.portal-page .wo-cancel-ask:active,
+body.portal-page .signature-clear-btn:active,
+body.portal-page .contract-body-toggle:active,
+body.portal-page .history-download-btn:active { transform: scale(.97); }
+body.portal-page .wo-card-actions .btn.secondary-btn,
+body.portal-page .wo-cancel-ask { color: var(--tone-red-fg); border-color: color-mix(in srgb, var(--tone-red-fg) 35%, transparent); }
+body.portal-page .portal-thread-toggle[aria-expanded="true"] { border-color: var(--orange-tint-border); color: var(--text); }
+body.portal-page .portal-thread-toggle.has-unread { border-color: var(--orange-tint-border); background: var(--tone-orange-bg); }
+body.portal-page .portal-unread-pill { background: var(--orange); color: var(--portal-ink); }
+
+/* Big actions: Approve / Sign (flat orange, 26c) and Decline (red tint). */
+body.portal-page .quote-actions,
+body.portal-page .contract-actions {
+  display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 10px; margin: 14px 0 0;
+}
+body.portal-page .quote-actions .btn,
+body.portal-page .contract-actions .btn,
+body.portal-page .schedule-cta,
+body.portal-page .schedule-confirm-btn,
+body.portal-page .checkup-schedule-btn,
+body.portal-page .wo-submit-btn {
+  min-height: 54px; border-radius: var(--portal-radius-control); justify-content: center;
+  font-family: var(--font-ui); font-size: 15px; font-weight: 500; letter-spacing: .9px; text-transform: uppercase;
+}
+body.portal-page .quote-approve-btn,
+body.portal-page .contract-sign-btn,
+body.portal-page .schedule-cta,
+body.portal-page .schedule-confirm-btn,
+body.portal-page .checkup-schedule-btn,
+body.portal-page .wo-submit-btn { box-shadow: 3px 3px 0 var(--orange-dark); }
+body.portal-page .quote-decline-btn,
+body.portal-page .contract-decline-btn {
+  background: var(--tone-red-bg); background-image: none; box-shadow: none;
+  border: 1px solid color-mix(in srgb, var(--tone-red-fg) 35%, transparent); color: var(--tone-red-fg);
+}
+@media (hover:hover){
+  body.portal-page .quote-decline-btn:hover,
+  body.portal-page .contract-decline-btn:hover { border-color: var(--tone-red-fg); color: var(--tone-red-fg); transform: none; box-shadow: none; }
+}
+body.portal-page .quote-decline-btn:active,
+body.portal-page .contract-decline-btn:active { transform: scale(.98); }
+body.portal-page .responded-note { font-size: 13.5px; color: var(--text-dim); margin: 12px 0 0; }
+
+/* ---------- 27b. Estimates (quotes.html) ---------- */
+body.portal-page .quotes-pending-banner {
+  gap: 12px; padding: 14px 16px; margin: 0 0 16px; border-radius: var(--portal-radius-tile);
+  border: 1px solid var(--orange-tint-border); border-left-width: 1px;
+  background: linear-gradient(160deg, var(--orange-tint-glow), transparent 60%), var(--bg-panel);
+}
+body.portal-page .quotes-pending-icon { width: 40px; height: 40px; border-radius: 12px; background: var(--tone-orange-bg); color: var(--tone-orange-fg); }
+body.portal-page .quotes-pending-title { font-size: 15.5px; font-weight: 700; color: var(--text); }
+body.portal-page .quotes-pending-sub { font-size: 13.5px; color: var(--text-dim); }
+body.portal-page .quote-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin: 0; }
+body.portal-page .quote-card-head { min-width: 0; }
+body.portal-page .quote-kicker {
+  font-family: var(--font-ui); font-size: 12px; font-weight: 500; letter-spacing: 1.4px;
+  text-transform: uppercase; color: var(--orange-light); line-height: 1.4;
+}
+body.portal-page .quote-kicker .quote-number,
+body.portal-page .quote-kicker .quote-desc {
+  display: inline; margin: 0; font: inherit; letter-spacing: inherit; color: inherit;
+}
+body.portal-page .quote-title {
+  margin: 4px 0 0; font-family: var(--font-display); font-size: 28px; font-weight: 400; line-height: 1.02;
+  letter-spacing: .3px; text-transform: uppercase; color: var(--text); overflow-wrap: anywhere;
+}
+body.portal-page .quote-card:not(.is-pending) .quote-title { font-size: 21px; }
+body.portal-page .quote-card:not(.is-pending) .quote-kicker { color: var(--text-dim); }
+body.portal-page .quote-card .line-item-details { margin-top: 12px; }
+body.portal-page .quote-total-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  margin: 14px 0 0; padding-top: 12px; border-top: 2px solid var(--orange);
+}
+body.portal-page .quote-total-label {
+  font-family: var(--font-ui); font-size: 12.5px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text-dim);
+}
+body.portal-page .quote-total-row .quote-total {
+  font-family: var(--font-display); font-weight: 400; font-size: 30px; line-height: 1;
+  color: var(--orange-light); font-variant-numeric: tabular-nums;
+}
+body.portal-page .quote-card:not(.is-pending) .quote-total-row { border-top: 1px solid var(--portal-hairline); }
+body.portal-page .quote-card:not(.is-pending) .quote-total-row .quote-total { font-size: 22px; color: var(--text); }
+body.portal-page .quote-card-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+body.portal-page .quote-question-form { margin-top: 12px; }
+body.portal-page .quote-question-form textarea,
+body.portal-page .portal-prompt-textarea {
+  min-height: 96px; padding: 12px 14px; border-radius: var(--portal-radius-control);
+  background: var(--bg-panel-3); border: 1px solid var(--border); color: var(--text); font-size: 16px;
+}
+body.portal-page .quote-question-form textarea:focus { outline: none; border-color: var(--orange); }
+body.portal-page .quote-question-form .btn { min-height: 48px; border-radius: var(--portal-radius-control); }
+body.portal-page .quote-question-error,
+body.portal-page .schedule-error,
+body.portal-page .contract-error { color: var(--tone-red-fg); }
+body.portal-page .quote-question-success { color: var(--tone-green-fg); }
+body.portal-page .schedule-cta { width: 100%; margin-top: 14px; }
+/* The booked visit behind an approved estimate. */
+body.portal-page .quote-visit {
+  margin-top: 14px; padding: 14px; gap: 14px; border-radius: var(--portal-radius-tile);
+  background: var(--tone-blue-bg); border: 1px solid color-mix(in srgb, var(--tone-blue-fg) 25%, transparent); border-left-width: 1px;
+}
+body.portal-page .quote-visit.is-cancelled { background: var(--tone-orange-bg); border-color: var(--orange-tint-border); }
+body.portal-page .quote-visit.is-past { background: var(--bg-panel-3); border-color: var(--border); }
+body.portal-page .quote-visit-date,
+body.portal-page .checkup-booked-date {
+  width: 56px; border: 0; border-radius: 14px; background: var(--bg-panel); overflow: hidden;
+}
+body.portal-page .quote-visit-date .m,
+body.portal-page .checkup-booked-date .m {
+  background: none; color: var(--tone-blue-fg); font-family: var(--font-ui); font-size: 11px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; padding: 6px 0 0;
+}
+body.portal-page .quote-visit-date .d,
+body.portal-page .checkup-booked-date .d { font-family: var(--font-display); font-weight: 400; font-size: 26px; color: var(--text); padding: 0 0 6px; }
+body.portal-page .quote-visit-label,
+body.portal-page .checkup-booked-kicker {
+  font-family: var(--font-ui); font-size: 11.5px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--tone-blue-fg);
+}
+body.portal-page .quote-visit-when,
+body.portal-page .checkup-booked-when { font-size: 15px; font-weight: 700; color: var(--text); }
+body.portal-page .quote-visit-actions .btn,
+body.portal-page .checkup-booked-actions .small-btn { min-height: 44px; border-radius: 999px; }
+body.portal-page .quote-visit-actions .btn.orange { flex: 1 1 200px; font-size: 13px; }
+
+/* ---------- 27c. the shared time picker (Estimates, Visits, Request) ---------- */
+body.portal-page .schedule-panel.is-open { margin-top: 14px; }
+body.portal-page .date-row { gap: 8px; padding-bottom: 6px; margin-bottom: 12px; scrollbar-width: none; }
+body.portal-page .date-row::-webkit-scrollbar { display: none; }
+body.portal-page .date-row-wrap::after { background: linear-gradient(to right, transparent, var(--bg-panel)); bottom: 6px; }
+body.portal-page .date-btn {
+  flex: 0 0 64px; width: 64px; min-width: 64px; min-height: 76px; box-sizing: border-box; padding: 6px 2px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  border-radius: var(--portal-radius-control); border: 1px solid var(--border); background: var(--bg-panel-3); color: var(--text);
+}
+body.portal-page .date-btn .dow {
+  font-family: var(--font-ui); font-size: 11px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--text-dim);
+}
+body.portal-page .date-btn .dom { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 24px; line-height: 1.05; }
+body.portal-page .date-btn .avail { margin-top: 1px; font-size: 10.5px; color: var(--tone-green-fg); }
+body.portal-page .date-btn.is-selected { background: var(--orange); border-color: var(--orange); color: var(--portal-ink); }
+body.portal-page .date-btn.is-selected .dow,
+body.portal-page .date-btn.is-selected .dom,
+body.portal-page .date-btn.is-selected .avail { color: var(--portal-ink); }
+body.portal-page .date-btn.is-unavailable { background: transparent; }
+body.portal-page .slots-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+body.portal-page .slot-btn {
+  min-height: 46px; padding: 0 4px; border-radius: 12px; border: 1px solid var(--border);
+  background: var(--bg-panel-3); color: var(--text); font-family: var(--font-app); font-size: 14.5px; font-weight: 600;
+}
+body.portal-page .slot-btn.is-selected { background: var(--tone-orange-bg); border-color: var(--orange); color: var(--orange-light); font-weight: 700; }
+body.portal-page .slot-skel { height: 46px; border-radius: 12px; background: var(--bg-panel-3); }
+body.portal-page .booking-picker-retry { grid-column: 1 / -1; }
+body.portal-page .schedule-summary { margin: 12px 0 0; font-size: 14.5px; font-weight: 600; color: var(--text); }
+body.portal-page .schedule-confirm-btn { margin-top: 12px !important; }
+
+/* ---------- 27d. Visits (jobs.html) ---------- */
+body.portal-page .checkup-note { margin: 0 0 8px; font-size: 12.5px; color: var(--text-dim); }
+body.portal-page .checkup-banner {
+  display: block; padding: 18px; border-color: var(--orange-tint-border);
+  background: linear-gradient(160deg, var(--orange-tint-glow), transparent 55%), var(--bg-panel);
+}
+body.portal-page .checkup-banner.is-not-due { background: var(--bg-panel); border-color: var(--border); color: inherit; }
+body.portal-page .checkup-banner.is-booked {
+  display: flex; gap: 14px; align-items: flex-start; border-color: color-mix(in srgb, var(--tone-blue-fg) 25%, transparent);
+  background: linear-gradient(160deg, var(--tone-blue-bg), transparent 60%), var(--bg-panel);
+}
+body.portal-page .checkup-kicker {
+  font-family: var(--font-ui); font-size: 12px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--orange-light);
+}
+body.portal-page .checkup-banner.is-not-due .checkup-kicker { color: var(--text-dim); }
+body.portal-page .checkup-title {
+  margin: 4px 0 4px; font-family: var(--font-display); font-size: 26px; font-weight: 400; line-height: 1.05;
+  letter-spacing: .3px; text-transform: uppercase; color: var(--text);
+}
+body.portal-page .checkup-banner.is-booked .checkup-title { font-size: 20px; }
+body.portal-page .checkup-banner .checkup-due-label {
+  display: block; padding: 0; border: 0; background: none; border-radius: 0;
+  font-family: var(--font-app); font-size: 14.5px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--text-dim);
+}
+body.portal-page .checkup-schedule-btn {
+  display: inline-flex; width: auto; margin-top: 14px; padding: 0 22px; text-decoration: none;
+}
+body.portal-page .checkup-booked-actions { gap: 8px; margin-top: 12px; }
+
+body.portal-page .warranty-overview { padding: 16px 18px 6px; }
+body.portal-page .warranty-overview-title { margin: 0 0 4px; }
+body.portal-page .warranty-overview-row {
+  display: flex; align-items: center; justify-content: flex-start; gap: 14px;
+  padding: 10px 0; font-size: 14px; color: var(--text); border-top: 1px solid var(--portal-hairline);
+}
+body.portal-page .warranty-overview-row:first-of-type { border-top: 0; }
+body.portal-page .warranty-overview-ring { position: relative; width: 54px; height: 54px; flex-shrink: 0; color: var(--tone-green-fg); }
+body.portal-page .warranty-overview-row.is-ending .warranty-overview-ring { color: var(--orange); }
+body.portal-page .warranty-overview-ring .warranty-ring { width: 54px; height: 54px; display: block; }
+body.portal-page .warranty-overview-ring .warranty-ring-track { opacity: 1; stroke: var(--bg-panel-3); }
+body.portal-page .warranty-overview-num {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 17px; color: var(--text); font-variant-numeric: tabular-nums;
+}
+body.portal-page .warranty-overview-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+body.portal-page .warranty-overview-job { font-size: 15.5px; font-weight: 700; color: var(--text); overflow-wrap: anywhere; }
+body.portal-page .warranty-overview-text .warranty-overview-days { display: block; font-size: 13px; color: var(--text-dim); }
+
+body.portal-page .history-download { display: block; }
+body.portal-page .history-download-title { margin: 0 0 4px; }
+body.portal-page .history-download-sub { font-size: 14px; color: var(--text-dim); margin: 0 0 12px; }
+
+body.portal-page .job-card-top { display: flex; align-items: flex-start; justify-content: flex-start; gap: 14px; }
+body.portal-page .job-date-tile {
+  width: 52px; min-height: 58px; flex-shrink: 0; box-sizing: border-box; border-radius: 14px; background: var(--bg-panel-3);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px 0;
+}
+body.portal-page .job-date-tile .m { font-family: var(--font-ui); font-size: 11px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--text-dim); }
+body.portal-page .job-date-tile .d { font-family: var(--font-display); font-size: 24px; line-height: 1.05; color: var(--text); }
+body.portal-page .job-card-main { min-width: 0; flex: 1; }
+body.portal-page .job-title { font-size: 16.5px; font-weight: 700; color: var(--text); line-height: 1.3; overflow-wrap: anywhere; }
+body.portal-page .job-date { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+body.portal-page .job-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+body.portal-page .job-warranty { padding-left: 6px; }
+body.portal-page .job-photos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+body.portal-page .job-photos a { width: auto; height: auto; aspect-ratio: 1; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+body.portal-page .job-photos a:active { transform: scale(.98); }
+body.portal-page .job-card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+body.portal-page .job-card-actions .portal-thread-toggle { margin-top: 0; }
+body.portal-page .job-messages-panel,
+body.portal-page .wo-messages-panel { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--portal-hairline); }
+
+/* Threads: my bubbles orange, Triple H's on the raised surface. */
+body.portal-page .portal-msg.is-client .portal-msg-bubble { background: var(--orange); border: 0; color: var(--portal-ink); }
+body.portal-page .portal-msg.is-internal .portal-msg-bubble { background: var(--bg-panel-2); border: 1px solid var(--border); color: var(--text); }
+body.portal-page .portal-msg.is-internal .portal-msg-sender { color: var(--tone-blue-fg); }
+body.portal-page .portal-msg-bubble { border-radius: 18px; padding: 10px 14px; font-size: 15px; }
+body.portal-page .portal-composer { background: var(--bg-panel-3); border-radius: 24px; }
+body.portal-page .portal-composer:focus-within { border-color: var(--orange-tint-border); }
+body.portal-page .portal-composer-send { width: 44px; height: 44px; background: var(--orange); color: var(--portal-ink); }
+
+/* "Triple H replied": one bar above the page, the same tint as Home's hero. */
+body.portal-page .portal-reply-notice {
+  padding: 12px 14px 8px; margin: 0 0 16px; border-radius: var(--portal-radius-tile);
+  border: 1px solid var(--orange-tint-border); border-left-width: 1px;
+  background: linear-gradient(160deg, var(--orange-tint-glow), transparent 60%), var(--bg-panel);
+}
+body.portal-page .portal-reply-notice-icon { width: 38px; height: 38px; border-radius: 0; clip-path: var(--hex); background: var(--orange); color: var(--portal-ink); }
+body.portal-page .portal-reply-notice-title { font-family: var(--font-ui); font-size: 12.5px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text); }
+body.portal-page .portal-reply-notice-open { font-family: var(--font-ui); font-weight: 500; letter-spacing: .9px; text-transform: uppercase; }
+
+/* The photo lightbox rides the same sheet motion as payment and report. */
+body.portal-page .lightbox-overlay { background: var(--th-scrim); }
+body.portal-page .lightbox-img-wrap {
+  box-sizing: border-box; background: var(--bg-panel); border: 1px solid var(--border); box-shadow: var(--shadow-sheet);
+  border-radius: 24px; padding: 14px; max-width: 480px; width: calc(100% - 32px);
+}
+body.portal-page .lightbox-overlay img { max-width: 100%; max-height: 64vh; border-radius: 14px; }
+body.portal-page .lightbox-caption { color: var(--text-dim); font-family: var(--font-ui); font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; }
+body.portal-page .lightbox-close,
+body.portal-page .lightbox-nav {
+  width: 44px; height: 44px; min-width: 44px; padding: 0; border-radius: 50%; border: 1px solid var(--border);
+  background: var(--bg-panel-3); color: var(--text); font-size: 20px; display: flex; align-items: center; justify-content: center;
+}
+@media (hover:hover){body.portal-page .lightbox-nav:hover{ background: var(--bg-panel-2); border-color: var(--orange-tint-border); }}
+body.portal-page .lightbox-nav:active,
+body.portal-page .lightbox-close:active { transform: translateY(-50%) scale(.95); }
+body.portal-page .lightbox-close:active { transform: scale(.95); }
+@media (max-width: 1023px) {
+  body.portal-page .lightbox-overlay { justify-content: flex-end; }
+  body.portal-page .lightbox-img-wrap {
+    width: 100%; max-width: none; max-height: none; border-radius: 24px 24px 0 0; border-width: 1px 0 0;
+    padding: 26px 14px 12px; position: relative;
+  }
+  body.portal-page .lightbox-overlay.is-visible .lightbox-img-wrap { transform: none; animation: portalSheetUp var(--th-dur-sheet) var(--th-ease); }
+  body.portal-page .lightbox-img-wrap::before {
+    content: ''; position: absolute; top: 10px; left: 50%; width: 40px; height: 5px; margin-left: -20px;
+    border-radius: 3px; background: var(--bg-panel-3);
+  }
+  body.portal-page .lightbox-caption { width: 100%; max-width: none; margin: 0; padding: 4px 0 calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--bg-panel); }
+  body.portal-page .lightbox-nav { top: auto; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); transform: none; }
+  body.portal-page .lightbox-nav:active { transform: scale(.95); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.portal-page .lightbox-overlay.is-visible .lightbox-img-wrap { animation: none; }
+}
+
+/* ---------- 27e. Request work (work-orders.html) ---------- */
+body.portal-page .wo-intro { font-size: 14px; margin: 0 0 16px; }
+body.portal-page .wo-success {
+  border-color: color-mix(in srgb, var(--tone-green-fg) 35%, transparent);
+  background: linear-gradient(160deg, var(--tone-green-bg), transparent 60%), var(--bg-panel);
+}
+body.portal-page .wo-success-title { font-family: var(--font-display); font-weight: 400; font-size: 26px; text-transform: uppercase; color: var(--tone-green-fg); }
+body.portal-page .wo-form-heading {
+  margin: 0 0 14px; font-family: var(--font-display); font-size: 26px; line-height: 1.05;
+  text-transform: uppercase; letter-spacing: .3px; color: var(--text);
+}
+body.portal-page .wo-field { margin-bottom: 16px; }
+body.portal-page .wo-field > label,
+body.portal-page .set-field > label {
+  font-family: var(--font-ui); font-size: 11.5px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-dim);
+}
+body.portal-page .wo-field .wo-hint { font-family: var(--font-app); font-size: 12.5px; }
+body.portal-page .wo-field input[type="text"],
+body.portal-page .wo-field input[type="tel"],
+body.portal-page .wo-field textarea,
+body.portal-page .set-field input {
+  min-height: 50px; padding: 12px 14px; border-radius: var(--portal-radius-control);
+  background: var(--bg-panel-3); border: 1px solid var(--border); color: var(--text); font-size: 16px;
+}
+body.portal-page .wo-field textarea { min-height: 110px; }
+body.portal-page .wo-field input:focus,
+body.portal-page .wo-field textarea:focus,
+body.portal-page .set-field input:focus { border-color: var(--orange); background: var(--bg-panel-3); }
+body.portal-page .wo-field.has-error input[type="text"],
+body.portal-page .wo-field.has-error textarea { border-color: var(--tone-red-fg); background: var(--tone-red-bg); }
+body.portal-page .wo-char-count { font-family: var(--font-ui); font-size: 11px; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
+body.portal-page .wo-form-divider { border-top-color: var(--portal-hairline); }
+/* How soon? -- a three-way segmented choice; Urgent is red-tinted. */
+body.portal-page .wo-urgency-row {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;
+  padding: 4px; border-radius: var(--portal-radius-control); background: var(--bg-panel-3);
+}
+body.portal-page .wo-urgency-btn {
+  min-height: 56px; padding: 6px 4px; border: 1px solid transparent; border-radius: 10px; background: none; color: var(--text);
+  font-family: var(--font-ui); font-size: 13.5px; font-weight: 500; letter-spacing: .9px; text-transform: uppercase;
+}
+body.portal-page .wo-urgency-btn svg { display: none; }
+body.portal-page .wo-urgency-btn .wo-urgency-sub { font-family: var(--font-app); font-size: 11px; letter-spacing: 0; text-transform: none; }
+body.portal-page .wo-urgency-btn.is-selected { background: var(--tone-orange-bg); border-color: var(--orange); color: var(--orange-light); }
+body.portal-page .wo-urgency-btn[data-urgency="urgent"].is-selected { background: var(--tone-red-bg); border-color: var(--tone-red-fg); color: var(--tone-red-fg); }
+body.portal-page .wo-urgency-btn[data-urgency="urgent"].is-selected .wo-urgency-sub { color: var(--tone-red-fg); }
+body.portal-page .wo-urgency-btn:active { transform: scale(.97); }
+/* Photos: a 4-up grid, a remove x on each, a dashed Add tile. */
+body.portal-page .wo-photo-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+body.portal-page .wo-photo-add,
+body.portal-page .wo-photo-thumb { width: auto; height: auto; aspect-ratio: 1; border-radius: var(--portal-radius-control); }
+body.portal-page .wo-photo-add {
+  border: 1px dashed var(--border); background: none; color: var(--orange-light);
+  font-family: var(--font-app); font-size: 12px; font-weight: 600;
+}
+@media (hover:hover){body.portal-page .wo-photo-add:hover{ border-color: var(--orange); }}
+body.portal-page .wo-photo-add:active { transform: scale(.97); }
+body.portal-page .wo-photo-thumb { overflow: visible; border: 0; }
+body.portal-page .wo-photo-thumb img { border-radius: var(--portal-radius-control); }
+body.portal-page .wo-photo-thumb-remove {
+  top: 5px; right: 5px; width: 24px; height: 24px; background: rgba(0, 0, 0, .7); color: var(--text); font-size: 14px;
+}
+body.portal-page .wo-photo-error,
+body.portal-page .wo-error { color: var(--tone-red-fg); }
+/* Preferred time: the shared picker, opened from a quiet link. */
+body.portal-page .wo-field-schedule .schedule-toggle {
+  display: inline-flex; align-items: center; min-height: 44px; text-decoration: none; font-size: 14px; font-weight: 600;
+}
+body.portal-page #woScheduleSummary {
+  padding: 10px 10px 10px 14px; border-radius: var(--portal-radius-control); background: var(--tone-orange-bg); border: 1px solid var(--orange-tint-border);
+}
+body.portal-page #woScheduleSummary .small-btn { min-height: 40px; border-radius: 999px; }
+body.portal-page .wo-prefill-note { color: var(--tone-blue-fg); }
+body.portal-page .wo-prefill-note::before { background: var(--tone-blue-fg); }
+body.portal-page .wo-submit-btn { width: 100%; min-height: 56px; margin-top: 10px !important; font-size: 16px; }
+
+/* My requests. */
+body.portal-page .wo-open-banner {
+  gap: 12px; padding: 14px 16px; margin: 0 0 12px; border-radius: var(--portal-radius-tile);
+  border: 1px solid color-mix(in srgb, var(--tone-blue-fg) 25%, transparent); border-left-width: 1px; background: var(--bg-panel);
+}
+body.portal-page .wo-open-icon { width: 40px; height: 40px; border-radius: 12px; background: var(--tone-blue-bg); color: var(--tone-blue-fg); }
+body.portal-page .wo-open-title { font-size: 15px; font-weight: 700; color: var(--text); }
+body.portal-page .wo-card { padding: 16px; margin-bottom: 12px; }
+body.portal-page .wo-card-top { gap: 12px; }
+body.portal-page .wo-card-title { font-size: 16px; font-weight: 700; color: var(--text); }
+body.portal-page .wo-card-date { font-size: 12.5px; color: var(--text-dim); }
+body.portal-page .wo-card-desc { font-size: 14px; color: var(--text); margin-top: 10px; }
+body.portal-page .wo-progress-wrap { margin: 14px 0 2px; }
+body.portal-page .wo-progress { gap: 4px; margin: 0; }
+body.portal-page .wo-progress-seg { height: 5px; border-radius: 3px; background: var(--bg-panel-3); }
+body.portal-page .wo-progress-seg.is-filled { background: var(--orange); }
+body.portal-page .wo-progress-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin-top: 6px; }
+body.portal-page .wo-progress-step {
+  font-family: var(--font-ui); font-size: 10.5px; font-weight: 500; letter-spacing: .9px; text-transform: uppercase; color: var(--text-dim);
+}
+body.portal-page .wo-progress-step.is-reached { color: var(--text); }
+body.portal-page .wo-progress-step.is-now { color: var(--orange-light); }
+body.portal-page .wo-card .wo-urgency-tag,
+body.portal-page .wo-card .wo-scheduled-tag { margin-top: 10px; }
+body.portal-page .wo-scheduled-tag { background: var(--tone-orange-bg); border-color: var(--orange-tint-border); color: var(--orange-light); }
+body.portal-page .wo-urgency-tag.is-urgent { background: var(--tone-red-bg); color: var(--tone-red-fg); }
+body.portal-page .wo-card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; }
+body.portal-page .wo-card-actions .portal-thread-toggle { margin-top: 0; }
+body.portal-page .wo-cancel-ask { text-decoration: none; }
+
+/* ---------- 27f. Contracts (contracts.html) ---------- */
+/* Back chevron: phone only (the rail is the way around on a computer). */
+body.portal-page .portal-appbar .portal-back-btn svg { fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+@media (min-width: 1024px) { body.portal-page .portal-appbar .portal-back-btn { display: none; } }
+body.portal-page .contract-card.is-pending { border-color: var(--orange-tint-border); }
+body.portal-page .contract-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin: 0; }
+body.portal-page .contract-card-head { min-width: 0; }
+body.portal-page .contract-kicker {
+  font-family: var(--font-ui); font-size: 12px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--orange-light);
+}
+body.portal-page .contract-kicker .contract-meta { display: inline; margin: 0; font: inherit; color: inherit; }
+body.portal-page .contract-title {
+  margin: 4px 0 0; font-family: var(--font-display); font-size: 28px; font-weight: 400; line-height: 1.02;
+  letter-spacing: .3px; text-transform: uppercase; color: var(--text); overflow-wrap: anywhere;
+}
+body.portal-page .contract-card:not(.is-pending) .contract-title { font-size: 20px; }
+body.portal-page .contract-card:not(.is-pending) .contract-kicker { color: var(--text-dim); }
+body.portal-page .contract-facts {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 14px 0 0;
+  border: 1px solid var(--border); border-radius: var(--portal-radius-control); overflow: hidden;
+}
+body.portal-page .contract-fact { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; min-width: 0; border-top: 1px solid var(--portal-hairline); }
+body.portal-page .contract-fact:nth-child(-n+2) { border-top: 0; }
+body.portal-page .contract-fact:nth-child(even) { border-left: 1px solid var(--portal-hairline); }
+body.portal-page .contract-fact-label { font-family: var(--font-ui); font-size: 10.5px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-dim); }
+body.portal-page .contract-fact-value { font-size: 14px; font-weight: 700; color: var(--text); overflow-wrap: anywhere; }
+body.portal-page .contract-body-toggle { margin-top: 14px; }
+body.portal-page .contract-body { border-top-color: var(--portal-hairline); margin-top: 12px; padding-top: 12px; }
+body.portal-page .contract-block-section-label { font-family: var(--font-ui); font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; font-size: 12px; }
+body.portal-page .signature-pad-wrap { margin-top: 16px; }
+body.portal-page .signature-pad-label {
+  font-family: var(--font-ui); font-size: 11.5px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-dim);
+}
+body.portal-page .signature-pad-wrap canvas { max-width: none !important; border-radius: var(--portal-radius-control) !important; border: 1px dashed var(--border) !important; }
+body.portal-page .signature-pad-actions { justify-content: space-between; }
+
+/* ---------- 27g. Settings (settings.html) ---------- */
+body.portal-page .settings-index { gap: 12px; }
+body.portal-page .settings-profile {
+  min-height: 84px; padding: 16px; gap: 14px; border-radius: var(--portal-radius-xl); box-shadow: none;
+  border: 1px solid var(--orange-tint-border); background: linear-gradient(160deg, var(--orange-tint-glow), transparent 60%), var(--bg-panel);
+}
+body.portal-page .settings-avatar {
+  width: 54px; height: 54px; border-radius: 0; clip-path: var(--hex); background: var(--orange); color: var(--portal-ink);
+  font-family: var(--font-ui); font-size: 18px; font-weight: 500; letter-spacing: .6px;
+}
+body.portal-page .settings-profile .settings-link-title {
+  font-family: var(--font-display); font-size: 22px; font-weight: 400; text-transform: uppercase; letter-spacing: .3px; line-height: 1.05;
+}
+body.portal-page .settings-profile .settings-link-summary { overflow-wrap: anywhere; -webkit-line-clamp: 3; }
+body.portal-page .settings-menu { border-radius: var(--portal-radius-xl); box-shadow: none; background: var(--bg-panel); }
+body.portal-page .settings-link { min-height: 64px; padding: 12px 16px; }
+body.portal-page .settings-menu .settings-link + .settings-link { border-top-color: var(--portal-hairline); }
+body.portal-page .settings-icon { width: 38px; height: 38px; border-radius: 12px; background: var(--tone-orange-bg); color: var(--tone-orange-fg); }
+body.portal-page .settings-link-title { font-size: 15.5px; font-weight: 700; color: var(--text); }
+body.portal-page .settings-link-summary.is-good { color: var(--tone-green-fg); }
+body.portal-page .settings-link-summary.is-warning { color: var(--tone-red-fg); }
+body.portal-page .settings-link:active { background: var(--bg-panel-3); }
+body.portal-page #signOutBtnSettings {
+  min-height: 52px; border-radius: var(--portal-radius-control); background: var(--tone-red-bg); background-image: none; box-shadow: none;
+  border: 1px solid color-mix(in srgb, var(--tone-red-fg) 35%, transparent); color: var(--tone-red-fg);
+  font-family: var(--font-ui); font-size: 14px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase;
+}
+@media (hover:hover){body.portal-page #signOutBtnSettings:hover{ border-color: var(--tone-red-fg); color: var(--tone-red-fg); transform: none; box-shadow: none; }}
+body.portal-page #signOutBtnSettings:active { transform: scale(.98); }
+body.portal-page .settings-pane-title {
+  font-family: var(--font-display); font-size: 30px; font-weight: 400; text-transform: uppercase; letter-spacing: .3px; line-height: 1.05;
+}
+/* Back inside a section: a round chevron plus "All settings". */
+body.portal-page .settings-back {
+  min-height: 44px; margin: 0 0 12px -2px; padding: 0 14px 0 6px; border: 1px solid var(--border); border-radius: 999px;
+  color: var(--text); font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase;
+}
+body.portal-page .settings-back:active { transform: scale(.97); }
+body.portal-page .set-card { padding: 18px; }
+body.portal-page .set-card-sub { font-size: 14px; }
+body.portal-page .set-row { border-bottom-color: var(--portal-hairline); padding: 12px 0; align-items: center; }
+body.portal-page .set-row-val { color: var(--text); overflow-wrap: anywhere; }
+body.portal-page .set-card-badge { background: var(--tone-green-bg); color: var(--tone-green-fg); border-color: transparent; }
+body.portal-page .set-card-exp-warning { color: var(--tone-red-fg); }
+body.portal-page .set-msg.is-ok { color: var(--tone-green-fg); }
+body.portal-page .set-msg.is-error { color: var(--tone-red-fg); }
+/* The page's primary buttons (Save, Add a card, Update password, the
+   two-step, Face ID and push toggles, Copy link, Update app) take the
+   flat orange primary. Class names in the markup are unchanged. */
+body.portal-page .settings-panes .btn.blue {
+  background: var(--orange); background-image: none; border: 0; box-shadow: 3px 3px 0 var(--orange-dark); color: var(--portal-ink);
+  min-height: 50px; border-radius: var(--portal-radius-control);
+  font-family: var(--font-ui); font-size: 14.5px; font-weight: 500; letter-spacing: .9px; text-transform: uppercase;
+}
+@media (hover:hover){body.portal-page .settings-panes .btn.blue:hover{ filter: brightness(1.06); box-shadow: 3px 3px 0 var(--orange-dark); transform: none; }}
+body.portal-page .settings-panes .btn.blue:active { box-shadow: none; transform: translate(1px, 1px); }
+body.portal-page .settings-panes .btn.blue:disabled { opacity: .45; box-shadow: none; }
+body.portal-page .settings-panes .btn.secondary-btn,
+body.portal-page .settings-panes .small-btn { min-height: 44px; border-radius: 999px; }
+body.portal-page .settings-panes .btn.orange { min-height: 50px; border-radius: var(--portal-radius-control); }
+body.portal-page #mfaCodeInput,
+body.portal-page #mfaDisableCodeInput,
+body.portal-page #addCardSignerName {
+  min-height: 50px; border-radius: var(--portal-radius-control) !important; background: var(--bg-panel-3) !important;
+}
+body.portal-page #mfaQrImg { border-radius: var(--portal-radius-control) !important; }
+body.portal-page .settings-panes .pay-auth-box { background: var(--bg-panel-3); border: 1px solid var(--border); border-radius: var(--portal-radius-tile); }
+/* Email switches: the same checkbox, drawn as a switch. */
+body.portal-page .set-toggle-row {
+  justify-content: space-between; min-height: 52px; padding: 8px 0; flex-direction: row-reverse;
+  border-bottom-color: var(--portal-hairline); font-size: 15px; color: var(--text);
+}
+body.portal-page .set-toggle-row input[type="checkbox"] {
+  -webkit-appearance: none; appearance: none; position: relative; margin: 0;
+  width: 46px; height: 28px; flex-shrink: 0; border-radius: 999px; background: var(--bg-panel-3);
+  border: 1px solid var(--border); transition: background .18s var(--th-ease), border-color .18s ease; cursor: pointer;
+}
+body.portal-page .set-toggle-row input[type="checkbox"]::after {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%;
+  background: var(--text-dim); transition: transform .18s var(--th-ease), background .18s ease;
+}
+body.portal-page .set-toggle-row input[type="checkbox"]:checked { background: var(--orange); border-color: var(--orange); }
+body.portal-page .set-toggle-row input[type="checkbox"]:checked::after { transform: translateX(18px); background: var(--portal-ink); }
+body.portal-page .set-toggle-row input[type="checkbox"]:focus-visible { outline: 2px solid var(--orange-light); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  body.portal-page .set-toggle-row input[type="checkbox"],
+  body.portal-page .set-toggle-row input[type="checkbox"]::after { transition: none; }
+}
+body.portal-page .auth-entry { border-bottom-color: var(--portal-hairline); }
+body.portal-page #referralLinkText { font-family: var(--font-app); color: var(--orange-light); }
+@media (min-width: 1024px) {
+  body.portal-page .settings-shell { grid-template-columns: minmax(300px, 420px) minmax(0, 1fr); gap: 24px; }
+  body.portal-page .settings-link.is-current { background: var(--tone-orange-bg); }
+  body.portal-page .settings-profile.is-current { background: linear-gradient(160deg, var(--orange-tint-glow), transparent 60%), var(--bg-panel); }
+  body.portal-page .settings-pane-title { font-size: 30px; }
+}
+
+/* ---------- 27h. the biometric lock and the Face ID step ---------- */
+body.portal-page .biometric-lock-overlay,
+body:has(.login-box) .biometric-lock-overlay { background: var(--bg); }
+body.portal-page .biometric-lock-box,
+body:has(.login-box) .biometric-lock-box {
+  max-width: 400px; box-sizing: border-box; padding: 32px 26px 26px;
+  background: var(--bg-panel); border: 1px solid var(--border); border-radius: 24px; box-shadow: var(--shadow-sheet);
+}
+body.portal-page .biometric-lock-icon,
+body:has(.login-box) .biometric-lock-icon {
+  width: 72px; height: 72px; padding: 16px; box-sizing: border-box; border-radius: 0; clip-path: var(--hex);
+  background: var(--tone-orange-bg); stroke: var(--orange-light); stroke-width: 1.7;
+}
+body.portal-page .biometric-lock-kicker,
+body:has(.login-box) .biometric-lock-kicker {
+  font-family: var(--font-ui); font-size: 12px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--orange-light); margin-bottom: 4px;
+}
+body.portal-page .biometric-lock-title,
+body:has(.login-box) .biometric-lock-title {
+  font-family: var(--font-display); font-size: 32px; font-weight: 400; text-transform: uppercase; letter-spacing: .3px; line-height: 1.05; color: var(--text);
+}
+body.portal-page .biometric-lock-box .btn,
+body:has(.login-box) .biometric-lock-box .btn {
+  min-height: 54px; border-radius: var(--portal-radius-control, 14px); box-shadow: 3px 3px 0 var(--orange-dark);
+  font-family: var(--font-ui); font-weight: 500; letter-spacing: .9px; text-transform: uppercase;
+}
+body.portal-page .biometric-lock-box .small-btn,
+body:has(.login-box) .biometric-lock-box .small-btn { min-height: 44px; padding: 0 16px; border-radius: 999px; }
+
+/* ---------- 27i. Sign in and set password (no shell) ---------- */
+body:has(.login-box) { --login-radius-control: 14px; }
+body:has(.login-box) .login-box {
+  max-width: 400px; box-sizing: border-box; padding: 30px 26px 24px; text-align: left;
+  background: var(--bg-panel); border: 1px solid var(--border); border-radius: 24px;
+  box-shadow: var(--shadow-sheet);
+}
+body:has(.login-box) .login-logo { display: none; }
+body:has(.login-box) .login-hex {
+  display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; margin: 0 0 16px;
+  clip-path: var(--hex); background: var(--orange); color: #1a0d02;
+  font-family: var(--font-display); font-size: 20px; letter-spacing: .3px;
+}
+body:has(.login-box) .login-kicker {
+  font-family: var(--font-ui); font-size: 12px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--orange-light);
+}
+body:has(.login-box) .login-title {
+  margin: 6px 0 6px; font-family: var(--font-display); font-size: 34px; font-weight: 400; line-height: 1.02;
+  letter-spacing: .3px; text-transform: uppercase; color: var(--text);
+}
+body:has(.login-box) .login-sub { font-size: 15px; line-height: 1.5; margin-bottom: 22px; }
+body:has(.login-box) .login-field label {
+  font-family: var(--font-ui); font-size: 11.5px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-dim);
+}
+body:has(.login-box) .login-field input {
+  min-height: 50px; padding: 12px 14px; border-radius: var(--login-radius-control);
+  background: var(--bg-panel-3); border: 1px solid var(--border); color: var(--text);
+}
+body:has(.login-box) .login-field input:focus { outline: none; border-color: var(--orange); }
+body:has(.login-box) .login-btn {
+  min-height: 54px; border-radius: var(--login-radius-control); box-shadow: 3px 3px 0 var(--orange-dark);
+  font-family: var(--font-ui); font-size: 16px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase;
+}
+body:has(.login-box) .login-btn:active { box-shadow: none; transform: translate(1px, 1px); }
+/* Flat orange primary (U01), as 26c does for the signed-in pages. */
+body:has(.login-box) .btn.orange {
+  background: var(--orange); background-image: none; border: 0; color: #1a0d02;
+  box-shadow: 3px 3px 0 var(--orange-dark);
+  font-family: var(--font-ui); font-weight: 500; letter-spacing: 1px; text-transform: uppercase;
+}
+@media (hover:hover){body:has(.login-box) .btn.orange:hover{ filter: brightness(1.06); box-shadow: 3px 3px 0 var(--orange-dark); transform: translate(-1px, -1px); }}
+body:has(.login-box) .btn.orange:active { box-shadow: none; transform: translate(1px, 1px); }
+body:has(.login-box) .btn.orange:disabled { opacity: .55; box-shadow: none; transform: none; }
+body:has(.login-box) .secondary-btn {
+  background: var(--bg-panel-3); background-image: none; box-shadow: none; border: 1px solid var(--border); color: var(--text);
+}
+body:has(.login-box) .forgot-link {
+  display: flex; align-items: center; justify-content: center; min-height: 44px; margin-top: 6px;
+  color: var(--orange-light); font-size: 14.5px; font-weight: 600; text-align: center;
+}
+body:has(.login-box) .login-foot { margin: 16px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--text-dim); text-align: center; }
+body:has(.login-box) .login-foot a { color: var(--orange-light) !important; }
+body:has(.login-box) .login-nosignup { padding-top: 16px; border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+body:has(.login-box) .login-nosignup + .login-foot { margin-top: 6px !important; }
+body:has(.login-box) .report-bug-link { display: block; width: 100%; min-height: 44px; margin-top: 4px; text-align: center; }
+body:has(.login-box) .login-success:not(:empty) {
+  border: 1px solid color-mix(in srgb, var(--tone-green-fg) 35%, transparent); border-left-width: 1px;
+  background: var(--tone-green-bg); color: var(--tone-green-fg); border-radius: var(--login-radius-control); padding: 12px 14px;
+}
+body:has(.login-box) .login-error:not(:empty) {
+  border: 1px solid color-mix(in srgb, var(--tone-red-fg) 35%, transparent); border-left-width: 1px;
+  background: var(--tone-red-bg); color: var(--tone-red-fg); border-radius: var(--login-radius-control); padding: 12px 14px;
+}
+body:has(.login-box) .login-back-btn {
+  display: flex; align-items: center; justify-content: center; width: 100%; min-height: 54px; box-sizing: border-box;
+  border-radius: var(--login-radius-control); background: var(--orange); background-image: none; color: #1a0d02; border: 0;
+  font-family: var(--font-ui); font-size: 16px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase;
+}
+body:has(.login-box) #backToLoginBtn[style*="inline-block"] { display: flex !important; }
+/* The two-step code, and the report sheet: the same card, over a scrim. */
+body:has(.login-box) .report-bug-overlay { background: var(--th-scrim); }
+body:has(.login-box) .report-bug-modal {
+  max-width: 400px; box-sizing: border-box; padding: 26px 24px 22px; text-align: left;
+  background: var(--bg-panel); border: 1px solid var(--border); border-radius: 24px; box-shadow: var(--shadow-sheet);
+  animation: portalSheetFade .2s var(--th-ease);
+}
+body:has(.login-box) .report-bug-title {
+  font-family: var(--font-display); font-size: 26px; font-weight: 400; text-transform: uppercase; letter-spacing: .3px; color: var(--text);
+}
+body:has(.login-box) .mfa-challenge-modal input {
+  min-height: 56px; border-radius: var(--login-radius-control); background: var(--bg-panel-3);
+  font-family: var(--font-display); font-size: 26px; letter-spacing: 8px;
+}
+body:has(.login-box) .report-bug-actions button { min-height: 50px; border-radius: var(--login-radius-control); font-family: var(--font-ui); font-size: 15px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; }
+body:has(.login-box) .report-bug-modal textarea { border-radius: var(--login-radius-control); background: var(--bg-panel-3); }
+@media (prefers-reduced-motion: reduce) {
+  body:has(.login-box) .report-bug-modal { animation: none; }
+}
+@media (max-width: 480px) {
+  body:has(.login-box) .login-box { padding: 26px 20px 20px; }
+}
+/* The v2 card carries a labelled progress track, so section 23's thin
+   bottom-edge track would say the same thing twice. */
+body.portal-page .wo-card::after { content: none; }
+/* The remaining secondary buttons on these pages go flat too. */
+body.portal-page .quote-question-form .btn.secondary-btn,
+body.portal-page .settings-panes .btn.secondary-btn,
+body.portal-page .settings-panes .small-btn,
+body.portal-page #woScheduleSummary .small-btn,
+body.portal-page .biometric-lock-box .small-btn,
+body:has(.login-box) .biometric-lock-box .small-btn {
+  background: var(--bg-panel-3); background-image: none; box-shadow: none; border: 1px solid var(--border); color: var(--text);
+}
+body.portal-page .settings-panes .small-btn.danger { color: var(--tone-red-fg); border-color: color-mix(in srgb, var(--tone-red-fg) 35%, transparent); }
+@media (min-width: 700px) {
+  body.portal-page .job-photos { grid-template-columns: repeat(auto-fill, minmax(110px, 150px)); }
+}
+body:has(.login-box) .login-field label .login-hint { font-family: var(--font-app); font-size: 12.5px; color: var(--text-dim); }
+/* The section heading takes focus when a section opens (a landing spot
+   for screen readers, tabindex -1), not a control: no focus frame. */
+body.portal-page .settings-pane-title:focus { outline: none; box-shadow: none; }
+@media (min-width: 700px) {
+  body.portal-page .wo-photo-row { grid-template-columns: repeat(4, minmax(0, 120px)); }
+}

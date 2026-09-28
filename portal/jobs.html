@@ -161,7 +161,7 @@
     width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border);
     background: var(--bg-panel-2); color: var(--text-dim); text-decoration: none; cursor: pointer;
   }
-  .portal-icon-btn:hover { border-color: var(--orange); color: var(--orange-light); }
+  @media (hover:hover){.portal-icon-btn:hover { border-color: var(--orange); color: var(--orange-light); }}
   .portal-icon-btn svg { width: 18px; height: 18px; }
   /* Fixed 2026-09-02, from a direct screenshot: with flex-wrap and
      flex:1 on 5 items, the 5th item (Jobs) couldn't fit on the first
@@ -189,7 +189,7 @@
     display: inline-block; margin-top: 8px; font-size: 12.5px; font-weight: 600; color: var(--orange-light);
     text-decoration: none; padding: 6px 12px; border: 1px solid var(--orange-tint-border); border-radius: 8px; background: var(--orange-tint-soft);
   }
-  .job-receipt-link:hover { text-decoration: underline; }
+  @media (hover:hover){.job-receipt-link:hover { text-decoration: underline; }}
   .job-warranty.is-active { background: rgba(76,175,80,0.15); color: #4caf50; }
   .job-warranty.is-expired { background: var(--bg-panel); color: var(--text-dim); }
   /* Warranty overview (2026-09-03). */
@@ -287,7 +287,7 @@
   .schedule-summary { font-size: 13.5px; color: var(--text); margin: 10px 0; }
   .schedule-error { color: #e05252; font-size: 12.5px; margin: 6px 0 0; }
   .report-bug-link { display: block; margin-top: 14px; font-size: 12px; color: var(--text-dim); text-decoration: underline; cursor: pointer; text-align: center; background: none; border: none; font-family: inherit; padding: 0; }
-  .report-bug-link:hover { color: var(--orange-light); }
+  @media (hover:hover){.report-bug-link:hover { color: var(--orange-light); }}
   .report-bug-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 1000; }
   .report-bug-modal { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 24px; max-width: 400px; width: 100%; }
   .report-bug-title { font-family:var(--font-ui); font-weight: 600; font-size: 18px; color: var(--white); margin-bottom: 6px; }
@@ -298,19 +298,26 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=aaf32af090">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=29ee73927e">
 </head>
 <body class="portal-page">
 
-<div class="portal-header">
+<!-- App bar (v2 shell, part 2, 2026-09-28) -- the same one home.html and
+     dashboard.html carry: kicker + Anton title, the round Report-a-problem
+     button (this page's one #reportBugLink, moved up from the page foot)
+     and the round account button. #clientEmailDisplay and #signOutBtn
+     stay in the markup (Sign out shows in the rail and Settings). -->
+<div class="portal-header portal-appbar">
   <div class="portal-header-left">
     <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
     <div>
-      <div class="portal-title">Your Jobs</div>
+      <div class="portal-kicker">Your home</div>
+      <div class="portal-title">Visits</div>
       <div class="portal-sub" id="clientEmailDisplay"></div>
     </div>
   </div>
   <div class="portal-header-actions">
+    <button type="button" class="portal-icon-btn portal-report-btn" id="reportBugLink" aria-label="Report a problem" title="Report a problem"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.5"/><circle cx="12" cy="17.2" r=".6"/></svg></button>
     <a href="/portal/settings.html" class="portal-icon-btn" aria-label="Settings" title="Settings">
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
     </a>
@@ -366,7 +373,7 @@
      there's at least one job. -->
 <div class="history-download" id="historyDownload" hidden>
   <div class="history-download-text">
-    <div class="history-download-title">Your service history</div>
+    <div class="history-download-title">Service history</div>
     <div class="history-download-sub">Every job we've done, with dates and invoices, as one PDF -- handy when you sell the house or file a claim.</div>
   </div>
   <button type="button" class="btn secondary-btn history-download-btn" id="historyDownloadBtn" onclick="downloadServiceHistory()">Download PDF</button>
@@ -469,17 +476,18 @@
     return `
       <div class="checkup-banner ${due.isDue ? '' : 'is-not-due'}">
         <div style="width:100%;">
+          <div class="checkup-kicker">${due.isDue ? 'Check-up due' : 'Check-up'}</div>
           <div class="checkup-title">${escapeHtml(c.title)}</div>
           <div class="checkup-due-label">${escapeHtml(due.label)}</div>
           ${due.isDue ? `
-            <button type="button" class="schedule-toggle" onclick="toggleCheckupSchedule(${c.id})">Schedule this visit</button>
+            <button type="button" class="btn orange schedule-toggle checkup-schedule-btn" onclick="toggleCheckupSchedule(${c.id})">Schedule this visit</button>
             <div class="schedule-panel" id="checkupSchedulePanel-${c.id}">
               <div class="date-row" id="checkupDateRow-${c.id}"></div>
               <div class="slots-grid" id="checkupSlotsGrid-${c.id}"></div>
               <div class="slots-empty" id="checkupSlotsEmpty-${c.id}" style="display:none;">No open times that day. Try another.</div>
               <div class="schedule-summary" id="checkupScheduleSummary-${c.id}" style="display:none;"></div>
               <div class="schedule-error" id="checkupScheduleError-${c.id}"></div>
-              <button class="btn blue" style="width:100%; justify-content:center; margin-top:8px; display:none;" id="checkupScheduleConfirmBtn-${c.id}" onclick="confirmCheckupSchedule(${c.id})">Confirm this time</button>
+              <button class="btn orange schedule-confirm-btn" style="width:100%; justify-content:center; margin-top:8px; display:none;" id="checkupScheduleConfirmBtn-${c.id}" onclick="confirmCheckupSchedule(${c.id})">Confirm this time</button>
             </div>
           ` : ''}
         </div>
@@ -799,11 +807,16 @@
     if (!covered.length) { el.innerHTML = ''; return; }
 
     el.innerHTML =
+      // v2 (2026-09-28): one row per job -- a large ring with the days
+      // left in its middle (orange in the last week, green before that),
+      // then the job and "N days left". Same numbers as before.
       '<div class="warranty-overview">' +
       '<div class="warranty-overview-title">' + covered.length + ' job' + (covered.length === 1 ? '' : 's') + ' still under warranty</div>' +
       covered.map(x =>
-        '<div class="warranty-overview-row"><span>' + escapeHtml(x.job.title) + '</span>' +
-        '<span class="warranty-overview-days">' + warrantyRingSvg(x.daysLeft / 30) + x.daysLeft + ' day' + (x.daysLeft === 1 ? '' : 's') + ' left</span></div>'
+        '<div class="warranty-overview-row' + (x.daysLeft <= 7 ? ' is-ending' : '') + '">' +
+        '<span class="warranty-overview-ring">' + warrantyRingSvg(x.daysLeft / 30) + '<span class="warranty-overview-num" aria-hidden="true">' + x.daysLeft + '</span></span>' +
+        '<span class="warranty-overview-text"><span class="warranty-overview-job">' + escapeHtml(x.job.title) + '</span>' +
+        '<span class="warranty-overview-days">' + x.daysLeft + ' day' + (x.daysLeft === 1 ? '' : 's') + ' left</span></span></div>'
       ).join('') +
       '</div>';
   }
@@ -983,20 +996,34 @@
     }
   }
 
+  // The month/day for a visit card's date tile (v2, presentation only).
+  function jobDateTileHtml(jobDate) {
+    const d = new Date(jobDate + 'T00:00:00');
+    if (isNaN(d.getTime())) return '';
+    return '<div class="job-date-tile" aria-hidden="true"><span class="m">' + d.toLocaleDateString('en-US', { month: 'short' }) + '</span><span class="d">' + String(d.getDate()).padStart(2, '0') + '</span></div>';
+  }
+
+  // v2 card (2026-09-28): a date tile, the title and date, a Done pill
+  // (a job only reaches the portal once it's marked done) beside the
+  // warranty pill, the photo grid, then View receipt and Messages side
+  // by side. Same ids, links and handlers as before.
   function renderJobCard(j) {
     const hasPhotos = Array.isArray(j.photo_storage_paths) && j.photo_storage_paths.length > 0;
     return `
       <div class="job-card" id="job-card-${j.id}">
         <div class="job-card-top">
-          <div>
+          ${jobDateTileHtml(j.job_date)}
+          <div class="job-card-main">
             <div class="job-title">${escapeHtml(j.title)}</div>
             <div class="job-date">${formatDate(j.job_date)}</div>
+            <div class="job-pills"><span class="job-status-pill">Done</span>${warrantyBadgeHtml(j.job_date)}</div>
           </div>
-          ${warrantyBadgeHtml(j.job_date)}
         </div>
-        ${j.linked_invoice_number ? `<a class="job-receipt-link" href="/portal/dashboard.html?invoice=${encodeURIComponent(j.linked_invoice_number)}">View Receipt</a>` : ''}
         ${hasPhotos ? `<div class="job-photos" id="jobPhotos-${j.id}"><p style="color:var(--text-dim); font-size:12px;">Loading photos...</p></div>` : ''}
+        <div class="job-card-actions">
+        ${j.linked_invoice_number ? `<a class="job-receipt-link" href="/portal/dashboard.html?invoice=${encodeURIComponent(j.linked_invoice_number)}">View Receipt</a>` : ''}
         <button type="button" class="job-messages-toggle portal-thread-toggle${jobUnreadCounts[j.id] ? ' has-unread' : ''}" onclick="toggleJobMessages(${j.id}, this)" aria-expanded="false" aria-controls="jobMessages-${j.id}">${JOB_THREAD_ICON}Messages${jobUnreadBadgeHtml(j.id)}</button>
+        </div>
         <div class="job-messages-panel" id="jobMessages-${j.id}" style="display:none;"></div>
       </div>
     `;
@@ -1265,6 +1292,7 @@
       return;
     }
     document.getElementById('clientEmailDisplay').textContent = session.user.email;
+    if (typeof portalSetHeaderInitials === 'function') portalSetHeaderInitials(session.user.email);
     await portalGuardWithBiometricLock(session.user.email, client);
 
     // Shown immediately, before the fetch (2026-09-03) -- same
@@ -1332,7 +1360,6 @@
   effort, from the current session if one exists) since a real problem
   can happen on any page, not just Invoices.
 -->
-<button type="button" class="report-bug-link" id="reportBugLink">Report a problem</button>
 
 <div class="report-bug-overlay" id="reportBugOverlay" style="display:none;">
   <div class="report-bug-modal">

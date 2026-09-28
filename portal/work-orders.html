@@ -166,7 +166,7 @@
     width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border);
     background: var(--bg-panel-2); color: var(--text-dim); text-decoration: none; cursor: pointer;
   }
-  .portal-icon-btn:hover { border-color: var(--orange); color: var(--orange-light); }
+  @media (hover:hover){.portal-icon-btn:hover { border-color: var(--orange); color: var(--orange-light); }}
   .portal-icon-btn svg { width: 18px; height: 18px; }
   /* Fixed 2026-09-02, from a direct screenshot: with flex-wrap and
      flex:1 on 5 items, the 5th item (Jobs) couldn't fit on the first
@@ -296,7 +296,7 @@
     background: var(--bg-panel-2); color: var(--text-dim); cursor: pointer; font-family: inherit;
     flex-direction: column; gap: 4px; font-size: 10.5px; font-weight: 600;
   }
-  .wo-photo-add:hover { border-color: var(--orange); color: var(--orange-light); }
+  @media (hover:hover){.wo-photo-add:hover { border-color: var(--orange); color: var(--orange-light); }}
   .wo-photo-add svg { width: 22px; height: 22px; }
   .wo-photo-add.is-disabled { opacity: 0.4; cursor: default; pointer-events: none; }
   .wo-photo-thumb { border: 1px solid var(--border); overflow: hidden; }
@@ -374,7 +374,7 @@
     background: none; border: 0; color: var(--text-dim); font: inherit; font-size: 13px;
     text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
   }
-  .wo-cancel-ask:hover { color: var(--orange-light); }
+  @media (hover:hover){.wo-cancel-ask:hover { color: var(--orange-light); }}
   /* A real progress track (2026-09-07): the status pill already told a
      client where a request stood, but as a single word with no sense
      of how much further there was to go. Reuses the exact real pipeline
@@ -417,7 +417,7 @@
   .empty-state.is-error .empty-state-icon { background: rgba(255,167,38,0.12); color: #ffa726; }
   .empty-state-title { margin: 0; }
   .report-bug-link { display: block; margin-top: 14px; font-size: 12px; color: var(--text-dim); text-decoration: underline; cursor: pointer; text-align: center; background: none; border: none; font-family: inherit; padding: 0; }
-  .report-bug-link:hover { color: var(--orange-light); }
+  @media (hover:hover){.report-bug-link:hover { color: var(--orange-light); }}
   .report-bug-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 1000; }
   .report-bug-modal { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 24px; max-width: 400px; width: 100%; }
   .report-bug-title { font-family:var(--font-ui); font-weight: 600; font-size: 18px; color: var(--white); margin-bottom: 6px; }
@@ -428,19 +428,26 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=aaf32af090">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=29ee73927e">
 </head>
 <body class="portal-page">
 
-<div class="portal-header">
+<!-- App bar (v2 shell, part 2, 2026-09-28) -- the same one home.html and
+     dashboard.html carry: kicker + Anton title, the round Report-a-problem
+     button (this page's one #reportBugLink, moved up from the page foot)
+     and the round account button. #clientEmailDisplay and #signOutBtn
+     stay in the markup (Sign out shows in the rail and Settings). -->
+<div class="portal-header portal-appbar">
   <div class="portal-header-left">
     <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
     <div>
-      <div class="portal-title">Request Work</div>
+      <div class="portal-kicker">New request</div>
+      <div class="portal-title">Request work</div>
       <div class="portal-sub" id="clientEmailDisplay"></div>
     </div>
   </div>
   <div class="portal-header-actions">
+    <button type="button" class="portal-icon-btn portal-report-btn" id="reportBugLink" aria-label="Report a problem" title="Report a problem"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.5"/><circle cx="12" cy="17.2" r=".6"/></svg></button>
     <a href="/portal/settings.html" class="portal-icon-btn" aria-label="Settings" title="Settings">
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
     </a>
@@ -496,6 +503,7 @@
 <div class="page-split is-wide-side">
 <div class="page-split-main">
 <div class="wo-form-card" id="requestForm">
+  <div class="wo-form-heading" aria-hidden="true">What needs fixing?</div>
   <div class="wo-field" id="woTitleField">
     <label for="woTitle">What do you need done? <span class="wo-required">Required</span>
       <span class="wo-hint">A short summary &mdash; e.g. "Dishwasher won't drain"</span>
@@ -592,7 +600,7 @@
 
   <div class="wo-error" id="woError" style="display:none;"></div>
 
-  <button class="btn blue" style="width:100%; justify-content:center; margin-top:6px;" id="woSubmitBtn">Send Request</button>
+  <button class="btn orange wo-submit-btn" style="width:100%; justify-content:center; margin-top:6px;" id="woSubmitBtn">Send Request</button>
   <div class="portal-nav-clearance" aria-hidden="true"></div>
 </div>
 </div>
@@ -1009,7 +1017,10 @@
     const step = PROGRESS_STEPS[statusKey];
     if (!step) return ''; // "declined" (or anything unrecognized): closed, not partway through anything
     const segs = [1, 2, 3, 4].map(n => `<span class="wo-progress-seg${n <= step ? ' is-filled' : ''}"></span>`).join('');
-    return `<div class="wo-progress" role="img" aria-label="Progress: ${escapeHtml(PROGRESS_STEP_LABELS[step - 1])}, step ${step} of 4">${segs}</div>`;
+    // v2 (2026-09-28): the four stages named under the bar (visual only;
+    // the aria-label above already says where it stands).
+    const names = ['Sent', 'Reviewed', 'Scheduled', 'Done'].map((label, i) => `<span class="wo-progress-step${i + 1 <= step ? ' is-reached' : ''}${i + 1 === step ? ' is-now' : ''}">${label}</span>`).join('');
+    return `<div class="wo-progress-wrap"><div class="wo-progress" role="img" aria-label="Progress: ${escapeHtml(PROGRESS_STEP_LABELS[step - 1])}, step ${step} of 4">${segs}</div><div class="wo-progress-steps" aria-hidden="true">${names}</div></div>`;
   }
 
   function renderRequestCard(wo) {
@@ -1030,20 +1041,22 @@
         <div class="wo-card-desc">${escapeHtml(wo.description)}</div>
         ${urgencyLabel ? `<div class="wo-urgency-tag${urgentClass}">${escapeHtml(urgencyLabel)}</div>` : ''}
         ${(statusKey === 'scheduled' && wo.scheduled_at) ? `<div class="wo-scheduled-tag">Scheduled for ${escapeHtml(formatScheduledAt(wo.scheduled_at))}</div>` : ''}
+        <div class="wo-card-actions">
         <button type="button" class="wo-messages-toggle portal-thread-toggle${woUnreadCounts[wo.id] ? ' has-unread' : ''}" onclick="toggleMessages(${wo.id}, this)" aria-expanded="false" aria-controls="woMessages-${wo.id}">${THREAD_ICON}Messages${woUnreadBadgeHtml(wo.id)}</button>
-        <div class="wo-messages-panel" id="woMessages-${wo.id}" style="display:none;"></div>
         <!-- Cancel (2026-09-19), requested directly -- only while still
              'submitted': once Steve has started reviewing/quoting/
              scheduling it, cancelling here would just make the request
              silently disappear from his own queue (which filters on an
              explicit list of "open" statuses) with no record of why,
              so past that point the fix is a real call or text instead. -->
-        ${statusKey === 'submitted' ? `<button type="button" class="btn secondary-btn" style="width:100%; justify-content:center; margin-top:8px;" onclick="cancelWorkOrder(${wo.id})">Cancel request</button>` : ''}
+        ${statusKey === 'submitted' ? `<button type="button" class="btn secondary-btn" onclick="cancelWorkOrder(${wo.id})">Cancel request</button>` : ''}
         <!-- Past 'submitted' (2026-09-22): not a status change -- Steve
              may have parts ordered or a time held -- but no longer
              "call or text us" either. It asks, in the request's own
              thread, and he confirms there. -->
         ${ASK_TO_CANCEL_STATUSES.includes(statusKey) ? `<button type="button" class="wo-cancel-ask" onclick="askToCancelWorkOrder(${wo.id})">Need to cancel?</button>` : ''}
+        </div>
+        <div class="wo-messages-panel" id="woMessages-${wo.id}" style="display:none;"></div>
       </div>
     `;
   }
@@ -1429,6 +1442,7 @@
     const { data: { session } } = await client.auth.getSession();
     if (!session) { window.location.replace('/portal/login.html'); return; }
     document.getElementById('clientEmailDisplay').textContent = session.user.email;
+    if (typeof portalSetHeaderInitials === 'function') portalSetHeaderInitials(session.user.email);
     await portalGuardWithBiometricLock(session.user.email, client);
     prefillRequestContact(session.user.email);
     renderMyRequests();
@@ -1451,7 +1465,6 @@
   effort, from the current session if one exists) since a real problem
   can happen on any page, not just Invoices.
 -->
-<button type="button" class="report-bug-link" id="reportBugLink">Report a problem</button>
 
 <div class="report-bug-overlay" id="reportBugOverlay" style="display:none;">
   <div class="report-bug-modal">
