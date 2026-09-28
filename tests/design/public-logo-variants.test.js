@@ -43,9 +43,13 @@ const TAGS = publicHtml().flatMap((file) => {
 const slotOf = ({ file, before }) => {
   const last = (s) => before.lastIndexOf(s);
   if (file === '404.html') return '404';
-  const hero = last('class="hero-badge"'), brand = last('class="brand"'), footer = last('class="footer-brand"');
-  const top = Math.max(hero, brand, footer);
-  return top === -1 ? 'unknown' : top === hero ? 'hero' : top === footer ? 'footer' : 'brand';
+  // The About page's hero badge (P4, 2026-09-28) is its own slot: up to
+  // 360px on desktop and 120px on phones, from the orange 176/531 pair. It
+  // is kept apart from 'hero' so the homepage-badge rules below stay the
+  // homepage's.
+  const hero = last('class="hero-badge"'), about = last('class="about-hero-badge"'), brand = last('class="brand"'), footer = last('class="footer-brand"');
+  const top = Math.max(hero, about, brand, footer);
+  return top === -1 ? 'unknown' : top === hero ? 'hero' : top === about ? 'about-hero' : top === footer ? 'footer' : 'brand';
 };
 
 const STYLES = fs.readFileSync(repo('styles.css'), 'utf8');

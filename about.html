@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" style="background:#0a0a0a;">
+<html class="page-about" lang="en" style="background:#0a0a0a;">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -61,7 +61,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/styles.css?v=0a19c4e5a2">
+<link rel="stylesheet" href="/styles.css?v=bf45bd2f80">
 <link rel="stylesheet" href="/blog/blog.css?v=8c0107810e">
 <script type="application/ld+json">
 {
@@ -253,28 +253,53 @@
 
 <main id="main">
 <div class="blog-body">
-  <div class="blog-header">
-    <div class="blog-kicker">Triple H Enterprises</div>
-    <h1 class="blog-title">Meet Steven Robinson</h1>
+  <!-- P4 redesign (2026-09-28): the header is now a split hero (kicker,
+       name, the opening paragraph, and the Triple H badge). No photo of
+       Steven exists in images/, so the hero is typographic; no stock. -->
+  <div class="blog-header about-hero">
+    <div class="about-hero-copy">
+      <div class="blog-kicker">Triple H Enterprises</div>
+      <h1 class="blog-title">Meet Steven Robinson</h1>
+      <p class="about-hero-lead">Triple H Enterprises is an independent handyman and appliance repair business based in St. George, Utah, founded and run by Steven Robinson. Right now, when you call, you're talking directly with Steven, not a call center or a rotating cast of subcontractors.</p>
+    </div>
+    <div class="about-hero-badge" aria-hidden="true">
+      <img src="/images/logo-signature-orange.webp?v=202608142300" srcset="/images/logo-signature-orange-176.webp?v=202609251200 176w, /images/logo-signature-orange.webp?v=202608142300 531w" sizes="(max-width: 860px) 120px, 360px" alt="" width="531" height="488">
+    </div>
   </div>
 
   <div class="blog-article">
-    <p>Triple H Enterprises is an independent handyman and appliance repair business based in St. George, Utah, founded and run by Steven Robinson. Right now, when you call, you're talking directly with Steven, not a call center or a rotating cast of subcontractors.</p>
-    <p>That means fewer surprises and real accountability. Steven's name is on the business, and on every job it takes on.</p>
-    <p>Outside of work, Steven is a father of three. That same sense of responsibility carries over into every job: showing up on time, doing it right, and treating your home the way he'd want his own family's home treated.</p>
-    <p>Triple H Enterprises is a registered Utah LLC. Steven is also an Eagle Scout, which is where a lot of that same show-up-and-do-it-right habit started.</p>
+    <div class="about-story">
+      <div class="about-story-copy">
+        <p>That means fewer surprises and real accountability. Steven's name is on the business, and on every job it takes on.</p>
+        <p>Outside of work, Steven is a father of three. That same sense of responsibility carries over into every job: showing up on time, doing it right, and treating your home the way he'd want his own family's home treated.</p>
+      </div>
+      <!-- Pull-quote: a sentence from the paragraph beside it, repeated for
+           emphasis only (aria-hidden so screen readers hear it once). -->
+      <blockquote class="about-pullquote" aria-hidden="true"><p>Steven's name is on the business, and on every job it takes on.</p></blockquote>
+    </div>
 
     <h2 data-reveal>Where the experience comes from</h2>
 
-    <p>Before starting Triple H, Steven spent more than a decade working as a maintenance technician and, later, maintenance manager across industrial and commercial sites: food and beverage manufacturing plants, a large warehouse distribution center, and car wash facilities. That work meant diagnosing and repairing motors, pumps, valves, and electrical systems on equipment that couldn't afford much downtime, on a schedule of real preventative maintenance, not just fixing things after they broke.</p>
-
-    <p>Along the way he picked up a genuinely broad set of hands-on skills: electrical and mechanical troubleshooting, pump and valve rebuilds, welding and fabrication (stick, MIG, and TIG), and hands-on time with industrial control systems. He holds an Automation Technician certificate, and is trained and certified in lockout/tagout, forklift, and scissor lift safety. He also spent time as a Certified Nursing Assistant, work that's a world away from repair, but the same thing was true there as it is on every job now: showing up reliably and treating people's homes and routines with real care.</p>
+    <!-- The experience as a timeline. Each step is an existing paragraph;
+         the short marks are phrases lifted from that paragraph
+         (aria-hidden, so nothing is read twice). -->
+    <ol class="about-timeline">
+      <li><span class="about-tl-mark" aria-hidden="true">More than a decade</span>
+        <p>Before starting Triple H, Steven spent more than a decade working as a maintenance technician and, later, maintenance manager across industrial and commercial sites: food and beverage manufacturing plants, a large warehouse distribution center, and car wash facilities. That work meant diagnosing and repairing motors, pumps, valves, and electrical systems on equipment that couldn't afford much downtime, on a schedule of real preventative maintenance, not just fixing things after they broke.</p>
+      </li>
+      <li><span class="about-tl-mark" aria-hidden="true">Automation Technician certificate</span>
+        <p>Along the way he picked up a genuinely broad set of hands-on skills: electrical and mechanical troubleshooting, pump and valve rebuilds, welding and fabrication (stick, MIG, and TIG), and hands-on time with industrial control systems. He holds an Automation Technician certificate, and is trained and certified in lockout/tagout, forklift, and scissor lift safety. He also spent time as a Certified Nursing Assistant, work that's a world away from repair, but the same thing was true there as it is on every job now: showing up reliably and treating people's homes and routines with real care.</p>
+      </li>
+      <li class="is-now"><span class="about-tl-mark" aria-hidden="true">Triple H Enterprises</span>
+        <p>Triple H Enterprises is a registered Utah LLC. Steven is also an Eagle Scout, which is where a lot of that same show-up-and-do-it-right habit started.</p>
+      </li>
+    </ol>
 
     <h2 data-reveal>What that means for your repair</h2>
 
-    <p>A washer, dryer, dishwasher, or fridge is, underneath the cabinet, the same kind of thing Steven spent years keeping running in much bigger, less forgiving environments: motors, pumps, valves, and electrical controls. That background is exactly why Triple H can usually diagnose what's actually wrong instead of guessing, and why a repair holds instead of coming back a month later.</p>
-
-    <div class="values">
+    <div class="about-proof">
+      <p class="about-proof-lead">A washer, dryer, dishwasher, or fridge is, underneath the cabinet, the same kind of thing Steven spent years keeping running in much bigger, less forgiving environments: motors, pumps, valves, and electrical controls. That background is exactly why Triple H can usually diagnose what's actually wrong instead of guessing, and why a repair holds instead of coming back a month later.</p>
+      <div class="values">
       <div class="value-pill" id="pillHonesty">
         <div class="word">HONESTY</div>
         <p>Clear answers about what's wrong and what it'll cost to fix it.</p>
@@ -287,6 +312,7 @@
         <div class="word">HELPFULNESS</div>
         <p>Treats your home, and your time, like they actually matter.</p>
       </div>
+    </div>
     </div>
 
     <div class="quote-block">
