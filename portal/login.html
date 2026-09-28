@@ -135,9 +135,9 @@
   .login-success { color: #4caf78; font-size: 14px; margin: 4px 0 16px; line-height: 1.5; }
   .login-btn { width: 100%; justify-content: center; }
   .forgot-link { display: block; margin-top: 14px; font-size: 13px; color: var(--text-dim); text-decoration: none; cursor: pointer; }
-  .forgot-link:hover { color: var(--orange-light); }
+  @media (hover:hover){.forgot-link:hover { color: var(--orange-light); }}
   .report-bug-link { display: block; margin-top: 14px; font-size: 12px; color: var(--text-dim); text-decoration: underline; cursor: pointer; text-align: center; background: none; border: none; font-family: inherit; padding: 0; }
-  .report-bug-link:hover { color: var(--orange-light); }
+  @media (hover:hover){.report-bug-link:hover { color: var(--orange-light); }}
   .report-bug-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 1000; }
   .report-bug-modal { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; padding: 24px; max-width: 400px; width: 100%; }
   .report-bug-title { font-family:var(--font-ui); font-weight: 600; font-size: 18px; color: var(--white); margin-bottom: 6px; }
@@ -155,14 +155,19 @@
     letter-spacing: 2px; text-align: center; margin: 4px 0 0;
   }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=aaf32af090">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=18429e0310">
 </head>
 <body>
 
 <div class="login-box">
+  <!-- v2 card (2026-09-28): the brand hex, a kicker and an Anton title.
+       The logo image stays in the markup (hidden by portal-polish.css).
+       Restyle only: every field, id, handler and step below is unchanged. -->
+  <span class="login-hex" aria-hidden="true">HHH</span>
   <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises" class="login-logo">
-  <div class="login-title" id="pageTitle">Client Portal</div>
-  <div class="login-sub" id="loginSub">Sign in to view and pay your invoices.</div>
+  <div class="login-kicker">Triple H client portal</div>
+  <div class="login-title" id="pageTitle">Sign in</div>
+  <div class="login-sub" id="loginSub">See your invoices, estimates and visits, and pay in a tap.</div>
 
   <form id="loginForm">
     <div class="login-field">
@@ -175,10 +180,11 @@
     </div>
     <div class="login-error" id="loginError"></div>
     <div class="login-success" id="loginSuccess" style="display:none;"></div>
-    <button type="submit" class="btn blue login-btn" id="loginSubmitBtn">Sign In</button>
+    <button type="submit" class="btn orange login-btn" id="loginSubmitBtn">Sign In</button>
     <a class="forgot-link" id="forgotLink">Forgot your password?</a>
   </form>
-  <p style="font-size:12px; color:var(--text-dim); margin-top:20px;">By signing in you agree to Triple H Enterprises' <a href="/terms.html" style="color:var(--text-dim); text-decoration:underline;">Terms and Conditions</a> and <a href="/privacy.html" style="color:var(--text-dim); text-decoration:underline;">Privacy Policy</a>.</p>
+  <p class="login-foot login-nosignup">No sign-up here: your account is created when Triple H sends your first invoice.</p>
+  <p class="login-foot" style="font-size:12px; color:var(--text-dim); margin-top:20px;">By signing in you agree to Triple H Enterprises' <a href="/terms.html" style="color:var(--text-dim); text-decoration:underline;">Terms and Conditions</a> and <a href="/privacy.html" style="color:var(--text-dim); text-decoration:underline;">Privacy Policy</a>.</p>
   <button type="button" class="report-bug-link" id="reportBugLink">Report a problem</button>
 
 <div class="report-bug-overlay" id="reportBugOverlay" style="display:none;">
