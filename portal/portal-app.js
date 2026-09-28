@@ -1285,3 +1285,104 @@ function portalScrollToHash() {
   el.classList.add('is-highlighted');
 }
 
+
+// ---------- App shell v2 (2026-09-28, portal redesign part 1) ----------
+// Presentation only. The rail markup is identical on every signed-in
+// page (desktop-app-shell.test.js pins that), so the two rail extras the
+// v2 shell adds -- the orange "Request work" button under the brand and a
+// "Sign out" row at the bottom -- are added here, once, rather than
+// hand-copied into nine pages. Sign out reuses the page's own existing
+// button (#signOutBtn, or Settings' #signOutBtnSettings) by clicking it,
+// so the one real sign-out path per page stays the only one.
+function portalEnhanceShell() {
+  const rail = document.querySelector('.portal-rail');
+  if (!rail || rail.querySelector('.portal-rail-cta')) return;
+  const brand = rail.querySelector('.portal-rail-brand');
+  const cta = document.createElement('a');
+  cta.className = 'portal-rail-cta';
+  cta.href = '/portal/work-orders.html';
+  cta.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Request work</span>';
+  if (brand && brand.nextSibling) rail.insertBefore(cta, brand.nextSibling);
+  else rail.insertBefore(cta, rail.firstChild);
+
+  const pageSignOut = document.getElementById('signOutBtn') || document.getElementById('signOutBtnSettings');
+  if (pageSignOut) {
+    const out = document.createElement('button');
+    out.type = 'button';
+    out.className = 'portal-rail-signout';
+    out.textContent = 'Sign out';
+    out.addEventListener('click', () => pageSignOut.click());
+    rail.appendChild(out);
+  }
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', portalEnhanceShell);
+} else {
+  portalEnhanceShell();
+}
+
+// The header's round account button: the client's initials instead of
+// the gear, once a page knows a name or email. The link itself (the
+// existing Settings icon button) is untouched; the gear stays in the
+// markup and shows again if no initials are set.
+function portalInitialsFor(nameOrEmail) {
+  const raw = String(nameOrEmail || '').trim();
+  if (!raw) return '';
+  const base = raw.includes('@') ? raw.split('@')[0].replace(/[._-]+/g, ' ') : raw;
+  const parts = base.split(/\s+/).filter(Boolean);
+  const letters = parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : (parts[0] || '').slice(0, 2);
+  return letters.toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+function portalSetHeaderInitials(nameOrEmail) {
+  const btn = document.querySelector('.portal-header .portal-icon-btn[aria-label="Settings"]');
+  if (!btn) return;
+  const initials = portalInitialsFor(nameOrEmail);
+  let span = btn.querySelector('.portal-avatar-initials');
+  if (!span) {
+    span = document.createElement('span');
+    span.className = 'portal-avatar-initials';
+    span.setAttribute('aria-hidden', 'true');
+    btn.appendChild(span);
+  }
+  span.textContent = initials;
+  btn.classList.toggle('has-initials', !!initials);
+}
+
+// Estimates tab dot (pending estimates), the same idea as the Invoices
+// dot above. The nav markup is shared by every page, so the dot element
+// is created on first use. Only pages that already load quotes call it
+// (Home); it never queries on its own.
+function portalApplyNavEstimatesDot(hasPending) {
+  const link = document.querySelector('.portal-nav a[href="/portal/quotes.html"]');
+  if (!link) return;
+  let dot = link.querySelector('.portal-nav-dot');
+  if (!dot) {
+    if (!hasPending) return;
+    dot = document.createElement('span');
+    dot.className = 'portal-nav-dot';
+    dot.setAttribute('aria-hidden', 'true');
+    const svg = link.querySelector('svg');
+    if (svg && svg.nextSibling) link.insertBefore(dot, svg.nextSibling);
+    else link.appendChild(dot);
+  }
+  dot.hidden = !hasPending;
+  dot.classList.toggle('is-visible', !!hasPending);
+}
+
+// The payment sheet's "Continue" stays disabled until the signature pad
+// has a signature (v2, 2026-09-28). Presentation only: it watches the
+// pad's own status line, which signature-pad.js fills with "Signature
+// captured" on the first stroke and clears on Clear. The submit handlers
+// still validate the name and the drawing themselves.
+function portalGateOnSignature(statusId, buttonId) {
+  const statusEl = document.getElementById(statusId);
+  const btn = document.getElementById(buttonId);
+  if (!statusEl || !btn || typeof MutationObserver !== 'function') return;
+  const sync = () => {
+    const signed = !!statusEl.textContent.trim();
+    btn.disabled = !signed;
+    btn.setAttribute('aria-disabled', signed ? 'false' : 'true');
+  };
+  sync();
+  new MutationObserver(sync).observe(statusEl, { childList: true, characterData: true, subtree: true });
+}
