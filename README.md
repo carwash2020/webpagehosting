@@ -5768,3 +5768,7 @@ Tests changed, all because the design changed on purpose:
 - `desktop-app-shell` pins the new 248px sidebar and 1240px content width.
 - `portal-usability-pr3` and `unread-messages`: the estimate row's button reads "Review", an empty inbox renders "all caught up" instead of nothing, and an all-paid Invoices page shows "All paid up".
 - `dashboard-invoice-pdf` allows a second class on the paid-date line.
+
+## What changed, 2026-09-28 -- Workspace redesign W5: back office and sign-in
+
+Settings, Dev Tools, Site Content, sign-in and reset password join the same app system as the rest of the Workspace. Settings has ruled section labels, 56px rows, the account name in the display face, a red-edged Session card, and two columns on a wide screen. Dev Tools and Site Content panel headings carry the same rule. Sign-in and reset password are a flush-left card under an orange top rule, with larger fields and button; on a phone the card rises from the bottom as a sheet. Sign-in, two-factor and reset keep exactly the same steps, order, fields and logic (only CSS and a page key on `<body>` changed; the flows were walked before and after with stubbed auth and matched). All styles live in each page's own `<style>`, scoped to `body.th-tool-page[data-th-page=…]`; `tools/styles-tools.css` (shared with the portal) is untouched. Full write-up in `docs/specialist-logs/visual.md`, 2026-09-28.
