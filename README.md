@@ -5724,3 +5724,13 @@ Designed in Claude Design from the P6 brief, then applied and checked here.
 - **The 404 page** now offers the main parts of the site (Services, Our Work, the blog, Areas, About, booking) alongside Home and Call.
 
 Styles are scoped to `html.page-careers` / `html.page-legal`, and the 404 keeps its own inline styles. The homepage, About, Our Work, the blog and the landing pages are unchanged. Verified with the full suite, `check-consistency`, `check-undefined-vars`, lint and the visual snapshot; `check-links.py` has only the known sandbox-proxy Unsplash failures, same as main. Screenshots are in `docs/careers-legal-404-2026-09-28/`.
+
+## What changed, 2026-09-28 -- Booking builds a ticket as you go (B1 redesign)
+
+Designed in Claude Design from the B1 brief, then applied and checked here.
+
+- **Booking** now builds a ticket as you go. The "Your Appointment" card has an orange edge and punched notches, and each choice stamps onto it as you make it. The step rail fills in orange as you move through the steps.
+- **The confirmation** is the finished ticket, stamped "Booked", with Add to calendar right under it.
+- **Manage-booking and manage-job** open on the same ticket.
+
+Nothing about availability, holds, validation or submission changed: the pages' markup and scripts are exactly as before, and each page only gains CSS in its own `<style>`. Verified with the full suite (the booking tests pass 145/145), `check-consistency`, `check-undefined-vars`, and a before/after booking walk at desktop and phone widths; `check-links.py` has only the known sandbox-proxy Unsplash failures, same as main. Screenshots are in `docs/booking-ticket-2026-09-28/`.

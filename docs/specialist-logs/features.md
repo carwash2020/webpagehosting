@@ -3358,4 +3358,8 @@ Implementation idea: let a page pick its data set (for example `data-triage-set=
 
 Not a fit for drywall, handyman or assembly: those are scope-of-work jobs, not diagnoses.
 
+## 2026-09-28 -- hand-off from the B1 booking redesign (not built): more on the sidebar ticket
+
+The B1 pass turned booking.html's "Your Appointment" sidebar into a ticket that stamps each choice as it's made (see `visual.md`, same date). Claude Design suggested the ticket also show the service address and how long the slot is held. That needs a new sidebar row and the flow to fill it (markup and JS), so it was out of scope for a presentation-only pass and is logged here instead.
+
 <!-- Add new entries above this line -->

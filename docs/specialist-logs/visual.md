@@ -2448,3 +2448,41 @@ Fifth package from the public-site sweep; the P6 zip and the combined export wer
   - With a stubbed `site_terms` response, the Terms body and its contents list both show the CMS headings.
   - The 404's original two links are kept, and six more real destinations are added.
 - **Screenshots** are in `docs/careers-legal-404-2026-09-28/`.
+
+## 2026-09-28 -- B1 booking flow as a ticket (booking, manage-booking, manage-job), applied from a Claude Design package
+
+Sixth package from the public-site sweep. All three pages are standalone, so there's no shared stylesheet and no page hook. Each page gets one commented CSS block appended to the end of its own inline `<style>`, using only that page's copied tokens. No markup and no JS changed: each file equals main once the block is removed. `booking-flow.js` and `portal-polish.css` (the portal pickers) are untouched. `rule1-audit` finds nothing missing on any of the three pages.
+
+**What shipped.**
+- **Booking sidebar ("Your Appointment") is a ticket:**
+  - It has an orange edge, punched notches and a perforated rule under the eyebrow.
+  - Pending rows read as italic placeholders.
+  - A chosen service or time turns Anton and gets a rotated check stamp as soon as the existing JS drops `.is-pending`.
+- **Step rail:** bigger nodes, a ring on the active step, and 3px connectors that fill orange for done steps.
+- **Service cards:** larger padding and names, and an orange ring on the selected card.
+- **Confirmation:** `.conf-detail` is framed as the finished ticket with a rotated "Booked" stamp. The stamp is CSS content with empty alt text, so screen readers skip it. Next steps sit below a perforated rule.
+- **Manage-booking and manage-job:** open on the same ticket.
+- **Motion:** stamps and step entry animate only under `no-preference`.
+
+**Changed at apply time, and why:**
+- **The package's `.booking-sidebar{position:relative}` unstuck the sidebar.** It came later in the cascade than the base `position:sticky; top:24px`, so the "Your Appointment" card would have scrolled away on the long contact step. The declaration is removed; the stamps are positioned against `.sidebar-item`, which has its own `position:relative`. Verified: scrolling the contact step 700px keeps the sidebar at 24px from the top, same as main.
+- **The sidebar notches sat 30px below the perforated rule** (mask at 88px, rule at 58px). They're moved to 58px so they punch through the rule, which is the point of the motif.
+- **Long service names ran under the stamps.** "General Handyman Repairs" in 20px Anton reaches the sidebar's check stamp, and at 320px the confirmation label reaches the "Booked" stamp. Chosen sidebar rows get 44px of right padding and the confirmation label 80px, so names wrap clear of both stamps.
+- **The confirmation ticket was 460px wide under a 480px button row.** Its `max-width` and auto margins are dropped, so it follows the column and lines up with Add to calendar.
+- **At 320px the step connectors vanished.** Three 38px nodes plus letter-spaced labels left them zero width, and the connector is the progress line. On 600px and narrower the nodes are 30px with tighter label spacing, and the connectors keep a visible length.
+- **The phone summary became a rounded box but stayed full-bleed**, so its corners were clipped at the screen edge. It now floats inset (`margin:8px 16px 0; top:8px`).
+- **Manage pages:**
+  - Their cards are only 93-155px tall, so notches at 88px landed on the bottom corners. They now sit at mid-height, the classic ticket punch.
+  - The package's opacity rule for `.btn.outline` / `.btn-secondary` / `button.link-btn` inside the card matched nothing (the buttons render after the card), so it's dropped.
+
+**Verification.**
+- **Suite and checks.** Full suite 4253/4254; the one failure is the known `check-links.py` sandbox-proxy failure. `tests/booking` passes 145/145. `check-consistency` and `check-undefined-vars` are clean.
+- **Booking walk.** Run before and after at 1440, 390 and 320, with Supabase stubbed:
+  - The panels go service, then date/time, then contact.
+  - An empty Confirm is still blocked (3 invalid fields).
+  - A filled one reaches the confirmation, with the calendar actions and manage link in place.
+  - Zero page errors on either side.
+- **Manage pages.** With stub records, both render and keep their reschedule/cancel buttons.
+- **Reduced motion.** Everything renders fully composed with no animation.
+- **Leaks.** None possible outside these three pages: the change is inline `<style>` only, and the portal pickers are untouched by construction.
+- **Screenshots** are in `docs/booking-ticket-2026-09-28/`.
