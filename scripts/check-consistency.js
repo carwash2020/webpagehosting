@@ -365,6 +365,19 @@ function tourInjectedMarkupSrc() {
 }
 function tourSelectorResolves(selector, pageSrc) {
   if (selector.startsWith('#')) return pageSrc.includes('id="' + selector.slice(1) + '"');
+  // W1 (2026-09-28) form sheets: tools-effects.js turns any qualifying
+  // .form-section into a .th-sheet-trigger[aria-controls="<id>"] row at
+  // RUNTIME, with the id taken from the section itself -- so the trigger's
+  // own markup never appears literally in either the page or the injected
+  // shell JS for a static scan to find. What guarantees it exists is the
+  // section it wraps: a static id="<id>" on a .form-section is enough (see
+  // tools-effects.js's own sheetable() check), so confirm that instead.
+  const sheetTrigger = selector.match(/^\.th-sheet-trigger\[aria-controls="([^"]+)"\]$/);
+  if (sheetTrigger) {
+    const id = sheetTrigger[1];
+    return new RegExp('class="[^"]*\\bform-section\\b[^"]*"[^>]*\\sid="' + id + '"').test(pageSrc) ||
+      new RegExp('\\sid="' + id + '"[^>]*class="[^"]*\\bform-section\\b').test(pageSrc);
+  }
   if (selector.startsWith('.')) {
     const injected = tourInjectedMarkupSrc();
     return selector.slice(1).split('.').every(c =>

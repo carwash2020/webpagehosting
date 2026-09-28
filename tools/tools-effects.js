@@ -3,8 +3,9 @@
 // mixing dialogs, media, navigation, and PWA concerns together).
 //
 // This file: completion celebration, help/info modal content, icon-search
-// toggle, row-exit animation, swipe-back-to-workspace gesture, and the
-// form-section collapse/expand toggle.
+// toggle, row-exit animation, swipe-back-to-workspace gesture, the
+// form-section collapse/expand toggle, and (W1, 2026-09-28) the form
+// sheets that present those collapsible forms out of the reading flow.
 //
 // Split was verified lossless before any of these files were touched --
 // the 4 pieces were confirmed to concatenate back into a byte-for-byte
@@ -495,4 +496,131 @@ function setupPullToRefresh(refreshFn) {
     }
   }, { passive: true });
 }
+
+// ---------------------------------------------------------------------------
+// FORM SHEETS (W1, Workspace redesign, 2026-09-28). Every add/edit form
+// that already collapses behind a .form-section-header (Add a Job, Add a
+// Contact, Recurring Job Templates, Log Income/Expense, Add Inventory...)
+// now opens out of the reading flow: a bottom sheet on a phone, a side
+// panel under the app bar on a computer (styles-tools.css, "W1.10").
+// Presentation only. toggleFormSection() above still owns open/closed
+// through the same is-collapsed class, so every page's own edit, cancel,
+// save and #hash paths that call it keep working unchanged; this layer
+// only watches that class. In the form's old place sits one tappable row
+// (.th-sheet-trigger) that mirrors the form's own heading, badges and all.
+// Opt a section out with data-th-inline (the contract signature pads,
+// whose canvases size themselves to the reading column).
+(function () {
+  if (typeof document === 'undefined' || typeof MutationObserver === 'undefined') return;
+  var sections = [];
+  var current = null;
+  var returnTo = null;
+  var scrim = null;
+
+  function sheetable(el) {
+    if (!el.id || el.hasAttribute('data-th-inline') || el.classList.contains('th-sheetable')) return false;
+    var head = el.querySelector(':scope > .form-section-header');
+    return !!(head && el.querySelector(':scope > .form-section-body') &&
+      /toggleFormSection/.test(head.getAttribute('onclick') || ''));
+  }
+  // The heading, minus anything interactive or id-bearing, so the trigger
+  // never duplicates an id or nests a button in a button.
+  function headingHtml(section) {
+    var h = section.querySelector(':scope > .form-section-header h3');
+    if (!h) return '';
+    var c = h.cloneNode(true);
+    c.querySelectorAll('button, a, input, select, textarea').forEach(function (n) { n.remove(); });
+    c.querySelectorAll('[id]').forEach(function (n) { n.removeAttribute('id'); });
+    return c.innerHTML.trim();
+  }
+  function hasFields(section) {
+    return !!section.querySelector('.form-section-body input:not([type="hidden"]), .form-section-body select, .form-section-body textarea');
+  }
+  function close(section) {
+    if (!section || section.classList.contains('is-collapsed')) return;
+    if (typeof toggleFormSection === 'function') toggleFormSection(section.id);
+    else section.classList.add('is-collapsed');
+  }
+  function openSection() {
+    for (var i = 0; i < sections.length; i++) if (!sections[i].classList.contains('is-collapsed')) return sections[i];
+    return null;
+  }
+  function update() {
+    var open = openSection();
+    document.body.classList.toggle('th-formsheet-open', !!open);
+    sections.forEach(function (s) {
+      var t = s._thTrigger;
+      if (t) t.setAttribute('aria-expanded', s === open ? 'true' : 'false');
+    });
+    if (open && open !== current) {
+      current = open;
+      open.style.transform = ''; open.style.opacity = ''; open.style.transition = '';
+      open.scrollTop = 0;
+      if (typeof haptic === 'function') haptic('light');
+      // Ready to type on a computer; on a phone the keyboard would cover
+      // the sheet before it has finished rising.
+      var fine = window.matchMedia && window.matchMedia('(min-width: 1024px) and (pointer: fine)').matches;
+      var field = fine ? open.querySelector('.form-section-body input:not([type="hidden"]):not([type="checkbox"]), .form-section-body textarea, .form-section-body select') : null;
+      setTimeout(function () {
+        try { (field || open).focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+      }, 60);
+    } else if (!open && current) {
+      var back = returnTo || current._thTrigger;
+      current = null; returnTo = null;
+      if (back && typeof back.focus === 'function') { try { back.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+    }
+  }
+  function enhance(section) {
+    section.classList.add('th-sheetable');
+    section.setAttribute('role', 'dialog');
+    section.setAttribute('tabindex', '-1');
+    var h = section.querySelector(':scope > .form-section-header h3');
+    if (h) section.setAttribute('aria-label', (h.textContent || '').replace(/\?/g, '').trim());
+    var t = document.createElement('button');
+    t.type = 'button';
+    t.className = 'th-sheet-trigger' + (hasFields(section) ? '' : ' is-browse');
+    t.setAttribute('aria-controls', section.id);
+    t.setAttribute('aria-haspopup', 'dialog');
+    t.setAttribute('aria-expanded', 'false');
+    var icon = hasFields(section) ? 'plus' : 'clipboard';
+    t.innerHTML = '<span class="th-sheet-trigger-icon" aria-hidden="true"><svg class="th-icon"><use href="#icon-' + icon + '" xlink:href="#icon-' + icon + '"></use></svg></span>' +
+      '<span class="th-sheet-trigger-label"></span><span class="th-sheet-trigger-go" aria-hidden="true">\u203a</span>';
+    var label = t.querySelector('.th-sheet-trigger-label');
+    function syncLabel() { label.innerHTML = headingHtml(section); }
+    syncLabel();
+    if (h) new MutationObserver(syncLabel).observe(h, { childList: true, subtree: true, characterData: true });
+    section.parentNode.insertBefore(t, section);
+    section._thTrigger = t;
+    t.addEventListener('click', function () {
+      returnTo = t;
+      if (typeof toggleFormSection === 'function') toggleFormSection(section.id, true);
+      else section.classList.remove('is-collapsed');
+    });
+    if (typeof attachSwipeToDismiss === 'function') attachSwipeToDismiss(section, function () { close(section); });
+    sections.push(section);
+  }
+  function init() {
+    document.querySelectorAll('.form-section').forEach(function (s) { if (sheetable(s)) enhance(s); });
+    if (!sections.length) return;
+    scrim = document.createElement('div');
+    scrim.className = 'th-formsheet-scrim';
+    scrim.setAttribute('aria-hidden', 'true');
+    scrim.addEventListener('click', function () { close(openSection()); });
+    document.body.appendChild(scrim);
+    var mo = new MutationObserver(update);
+    sections.forEach(function (s) { mo.observe(s, { attributes: true, attributeFilter: ['class'] }); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      var open = openSection();
+      if (!open) return;
+      // Another dialog on top (a confirm, the palette, a sheet) closes first.
+      if (document.querySelector('.help-modal-overlay.is-open, .th-cmdk-overlay.is-open, #customDialogOverlay.is-open, .th-sheet:not([hidden])')) return;
+      e.preventDefault();
+      close(open);
+    });
+    update();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
 

@@ -3321,3 +3321,381 @@ body .th-shift-input:focus-visible {
   outline: 2px solid var(--orange);
   outline-offset: 2px;
 }
+
+
+/* ==========================================================================
+   W1 -- ONE APP SYSTEM (2026-09-28, Workspace redesign brief W)
+   One surface language for every tool page: flat panels on a flat ground,
+   2px structural rules instead of gradient faces and glows, uppercase
+   Oswald labels that carry a rule out to the edge, underline tabs, a
+   header with a single status dot, and one motion language for every
+   sheet (the More drawer, Create, help, and the add/edit forms, which
+   now open as bottom sheets on a phone and side panels on a computer).
+   Every rule is scoped to body.th-tool-page: the nine portal pages load
+   this file too. Appended last so it wins without !important; the first
+   @media block for every query string still belongs to the rules above,
+   which several tests read.
+   ========================================================================== */
+
+/* ---- W1.1 ground: flat, no ambient glow ---- */
+/* A flat image layer, not background-color: every page's <html> carries an
+   inline dark background (the FOUC guard), which a color would lose to in
+   light mode. */
+html:has(body.th-tool-page) { background-image: linear-gradient(var(--bg), var(--bg)); }
+body.th-tool-page::before { opacity: .45; }
+
+/* ---- W1.2 surfaces: one flat panel, one radius, no gradient face ---- */
+body.th-tool-page .section-block, body.th-tool-page .dev-panel, body.th-tool-page .form-section,
+body.th-tool-page .card, body.th-tool-page .metric-card, body.th-tool-page .stat-box, body.th-tool-page .job-card,
+body.th-tool-page .compliance-card, body.th-tool-page .lead-card, body.th-tool-page .th-card,
+body.th-tool-page .settings-section, body.th-tool-page .pos-card {
+  background: var(--bg-panel);
+  background-image: none;
+  border: 1px solid var(--border);
+  border-radius: var(--th-radius-card);
+  box-shadow: none;
+}
+body.th-tool-page .th-card-hero::after { display: none; }
+body.th-tool-page .th-card-hero,
+body.th-tool-page #section-actionitems {
+  border-color: var(--orange-tint-border);
+  background: linear-gradient(var(--orange-tint-soft), var(--orange-tint-soft)), var(--bg-panel);
+}
+
+/* ---- W1.3 section labels: uppercase, flush left, a 2px rule to the edge ---- */
+body.th-tool-page .section-heading, body.th-tool-page .dev-panel-heading {
+  font-family: var(--font-ui); text-transform: uppercase;
+  font-size: 13px; font-weight: 600; letter-spacing: 1.4px; color: var(--text);
+  border-bottom: 0; border-image: none; gap: 12px;
+}
+body.th-tool-page .section-heading::before, body.th-tool-page .dev-panel-heading::before { display: none; }
+body.th-tool-page .section-heading::after {
+  content: ''; order: 1; flex: 1 1 24px; min-width: 24px; height: var(--th-rule);
+  background: var(--border);
+}
+body.th-tool-page .section-heading > span:first-child,
+body.th-tool-page .section-heading > *:first-child { margin-right: 0; }
+body.th-tool-page .section-heading > *:not(:first-child) { order: 2; }
+body.th-tool-page .section-heading-icon.is-priority {
+  background: var(--orange); box-shadow: none; border-radius: 6px; clip-path: var(--hex);
+}
+body.th-tool-page .form-section h3 {
+  font-size: 13px; letter-spacing: 1.4px; color: var(--text);
+}
+body.th-tool-page .dash-group-label {
+  display: flex; align-items: center; gap: 12px;
+  font-family: var(--font-display); font-size: 22px; letter-spacing: .6px; text-transform: uppercase;
+  color: var(--text); margin: 34px 0 14px;
+}
+body.th-tool-page .dash-group-label::after { content: ''; flex: 1; height: var(--th-rule); background: var(--orange); opacity: .55; }
+
+/* ---- W1.4 numbers: Anton, tabular, one size per tier ---- */
+body.th-tool-page .metric-card .metric-value, body.th-tool-page .stat-box .value,
+body.th-tool-page .job-stat-value, body.th-tool-page .client-stat-value {
+  font-family: var(--font-display); font-variant-numeric: tabular-nums; letter-spacing: .3px; text-shadow: none;
+}
+body.th-tool-page .metric-card .metric-label, body.th-tool-page .job-stat-label, body.th-tool-page .client-stat-label {
+  font-family: var(--font-ui); text-transform: uppercase; letter-spacing: 1.2px; font-size: 11.5px; color: var(--text-dim);
+}
+/* The metrics grid reads as one instrument panel: cells share their rules. */
+body.th-tool-page .metrics-grid {
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border); border-radius: var(--th-radius-card); overflow: hidden;
+}
+body.th-tool-page .metrics-grid > .metric-card { border: 0; border-radius: 0; margin: 0; }
+body.th-tool-page .metrics-grid > .metric-card-hero { background: linear-gradient(var(--orange-tint-soft), var(--orange-tint-soft)), var(--bg-panel); }
+
+/* ---- W1.5 app bar: solid, a 2px rule, one status dot ---- */
+body.th-tool-page .hub-header, body.th-tool-page .tool-header {
+  border-bottom: 0;
+  box-shadow: inset 0 calc(-1 * var(--th-rule)) 0 var(--border);
+}
+body.th-tool-page .hub-header::before, body.th-tool-page .tool-header::before {
+  background: var(--bg);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+body.th-tool-page.th-scrolled .hub-header, body.th-tool-page.th-scrolled .tool-header {
+  box-shadow: inset 0 calc(-1 * var(--th-rule)) 0 var(--orange-tint-border);
+}
+body.th-tool-page .hub-title {
+  font-size: 24px; line-height: 1; text-transform: uppercase; letter-spacing: .6px; color: var(--text);
+}
+@media (max-width: 720px) { body.th-tool-page .hub-title { font-size: 21px; } }
+body.th-tool-page .hub-header img { border-radius: 0; }
+/* The status dot (tools-nav-pwa.js mounts the page's own realtime badge
+   and unsynced-changes badge into .th-status, right after the title). The
+   words stay in the DOM for screen readers and in the title tooltip; the
+   badge is still the retry button when it's red. */
+body.th-tool-page .th-status { display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; }
+body.th-tool-page .th-status .realtime-badge {
+  margin: 0; padding: 0; min-width: 32px; min-height: 32px; justify-content: center;
+  font-size: 0; border-radius: 50%; text-decoration: none;
+}
+body.th-tool-page .th-status .realtime-badge > span:not(.realtime-dot) {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+}
+body.th-tool-page .th-status .realtime-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  background: var(--status-idle);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-idle) 24%, transparent);
+  animation: th-w-dot-wait 1.4s ease-in-out infinite;
+}
+body.th-tool-page .th-status .realtime-dot.is-live {
+  background: var(--status-live);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-live) 24%, transparent);
+  animation: none;
+}
+body.th-tool-page .th-status .realtime-dot.is-error {
+  background: var(--status-error);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-error) 28%, transparent);
+  animation: none;
+}
+body.th-tool-page .th-status .pending-changes-badge {
+  margin: 0; min-width: 24px; min-height: 32px; justify-content: center; font-size: 0; color: transparent;
+}
+body.th-tool-page .th-status .pending-changes-badge::before {
+  content: ''; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--orange); box-shadow: 0 0 0 3px var(--orange-tint-border);
+}
+@keyframes th-w-dot-wait { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+body.th-tool-page .hub-sub.th-hub-sub-empty { display: none; }
+body.th-tool-page .tool-sub:has(> #syncStatusText:only-child) { font-size: 12px; margin: -4px 0 12px; }
+
+/* ---- W1.6 tabs: an underline bar, full width, 48px targets ---- */
+body.th-tool-page .tabs, body.th-tool-page .contract-tabs {
+  display: flex; flex-wrap: nowrap; gap: 0; overflow-x: auto; scrollbar-width: none;
+  background: transparent; border: 0; border-radius: 0; padding: 0;
+  box-shadow: inset 0 calc(-1 * var(--th-rule)) 0 var(--border);
+  margin-bottom: 18px;
+}
+body.th-tool-page .tabs::-webkit-scrollbar, body.th-tool-page .contract-tabs::-webkit-scrollbar { display: none; }
+body.th-tool-page .tabs.tabs-sticky::before { border-radius: 0; background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
+body.th-tool-page .tab-btn, body.th-tool-page .contract-tab {
+  flex: 0 0 auto; border-radius: 0; background: none; box-shadow: none; border: 0;
+  min-height: 48px; padding: 12px 16px;
+  font-family: var(--font-ui); font-size: 13px; font-weight: 600; letter-spacing: 1.1px; text-transform: uppercase;
+  color: var(--text-dim);
+}
+body.th-tool-page .tab-btn.is-active, body.th-tool-page .contract-tab.is-active {
+  color: var(--text); background: none;
+  box-shadow: inset 0 -3px 0 var(--orange);
+}
+body.th-tool-page .tab-btn:active, body.th-tool-page .contract-tab:active { background: var(--bg-panel-2); transform: none; }
+@media (hover: hover) {
+  body.th-tool-page .tab-btn:hover, body.th-tool-page .contract-tab:hover { background: var(--bg-panel-2); color: var(--text); }
+}
+@media (max-width: 720px) {
+  body.th-tool-page .tabs.tabs-sticky { margin-left: -12px; margin-right: -12px; padding: 0 4px; }
+  body.th-tool-page .tab-btn, body.th-tool-page .contract-tab { padding: 12px 12px; }
+}
+
+/* ---- W1.7 controls: chips, sort/filter groups, period toggles ---- */
+body.th-tool-page .sort-group, body.th-tool-page .period-toggle, body.th-tool-page .th-chips {
+  display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px;
+}
+body.th-tool-page .sort-btn, body.th-tool-page .period-btn {
+  flex: 0 0 auto; min-height: 36px; padding: 0 14px; border-radius: 999px;
+  background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-dim);
+  font-family: var(--font-ui); font-size: 13px; letter-spacing: .3px; box-shadow: none;
+}
+body.th-tool-page .sort-btn.is-active, body.th-tool-page .period-btn.is-active {
+  background: var(--text); border-color: var(--text); color: var(--bg);
+}
+body.th-tool-page .sort-btn:active, body.th-tool-page .period-btn:active { transform: scale(.97); }
+@media (hover: hover) {
+  body.th-tool-page .sort-btn:hover, body.th-tool-page .period-btn:hover { border-color: var(--orange-tint-border); }
+}
+body.th-tool-page .secondary-btn {
+  background: var(--bg-panel-2); border: 1px solid var(--border); box-shadow: none;
+}
+
+/* ---- W1.8 rows: adjacent list items group into one ruled list ---- */
+body.th-tool-page .dash-list-item {
+  border-radius: 0; margin: 0; box-shadow: none;
+  background: transparent; border: 0; border-bottom: 1px solid var(--border);
+}
+body.th-tool-page .dash-list-item:last-child { border-bottom: 0; }
+body.th-tool-page .dash-list-item:active { background: var(--bg-panel-2); }
+body.th-tool-page .th-list { gap: 0; }
+body.th-tool-page .th-list > .th-row { border-radius: 0; border-width: 0 0 1px; margin: 0; }
+body.th-tool-page .th-list > .th-row:first-child { border-top-left-radius: var(--th-radius-card); border-top-right-radius: var(--th-radius-card); border-top-width: 1px; }
+body.th-tool-page .th-list > .th-row:last-child { border-bottom-left-radius: var(--th-radius-card); border-bottom-right-radius: var(--th-radius-card); }
+body.th-tool-page .th-list > .th-row { border-left-width: 1px; border-right-width: 1px; }
+body.th-tool-page .job-card { margin-bottom: 8px; }
+
+/* ---- W1.9 empty + loading: one quiet vocabulary ---- */
+body.th-tool-page .empty-state, body.th-tool-page .empty-state-small {
+  border: 0; border-radius: var(--th-radius-card); background: transparent; box-shadow: none;
+}
+body.th-tool-page .skeleton-line { border-radius: 4px; }
+
+/* ---- W1.10 form sheets ----
+   tools-effects.js marks every add/edit form that already collapses
+   (.form-section.is-collapsed with a .form-section-header) as
+   .th-sheetable and puts a .th-sheet-trigger row where it used to sit.
+   toggleFormSection() still owns open/closed through is-collapsed; this
+   only changes where the open form appears. Phone/tablet: a bottom
+   sheet. Desktop: a side panel under the app bar, the list still in
+   view beside it. Both directions animate (visibility + transform), so
+   there is an exit, not just an entrance. */
+body.th-tool-page .th-sheet-trigger {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  min-height: 56px; margin: 0 0 12px; padding: 8px 14px 8px 10px;
+  background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-card);
+  color: var(--text); text-align: left; cursor: pointer;
+  font-family: var(--font-ui); font-size: 14px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--th-dur-quick) var(--th-ease), border-color var(--th-dur-quick) ease;
+}
+body.th-tool-page .th-sheet-trigger-icon {
+  width: 36px; height: 36px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  clip-path: var(--hex); background: var(--orange); color: #1a0d02;
+}
+body.th-tool-page .th-sheet-trigger-icon .th-icon { width: 18px; height: 18px; margin: 0; color: currentColor; stroke-width: 2.4; }
+body.th-tool-page .th-sheet-trigger.is-browse .th-sheet-trigger-icon { background: var(--bg-panel-3); color: var(--orange-light); }
+body.th-tool-page .th-sheet-trigger-label { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+body.th-tool-page .th-sheet-trigger-go { color: var(--text-dim); font-size: 20px; line-height: 1; }
+body.th-tool-page .th-sheet-trigger:active { transform: scale(.985); background: var(--bg-panel-2); }
+@media (hover: hover) { body.th-tool-page .th-sheet-trigger:hover { border-color: var(--orange-tint-border); } }
+
+body.th-tool-page .form-section.th-sheetable {
+  position: fixed; z-index: 946; left: 0; right: 0; bottom: 0; top: auto;
+  margin: 0; width: auto;
+  max-height: min(90dvh, 860px); overflow-y: auto; overscroll-behavior: contain;
+  border: 0; border-top: 1px solid var(--border); border-radius: 18px 18px 0 0;
+  padding: 0 16px calc(28px + env(safe-area-inset-bottom, 0px));
+  box-shadow: var(--shadow-sheet);
+  transform: none; visibility: visible; opacity: 1;
+  transition: transform var(--th-dur-sheet) var(--th-ease), visibility 0s linear 0s;
+}
+body.th-tool-page .form-section.th-sheetable.is-collapsed {
+  transform: translateY(104%); visibility: hidden; pointer-events: none;
+  transition: transform .22s var(--th-ease-exit), visibility 0s linear .22s;
+}
+body.th-tool-page .form-section.th-sheetable > .form-section-body,
+body.th-tool-page .form-section.th-sheetable.is-collapsed > .form-section-body {
+  max-height: none; opacity: 1; overflow: visible; margin-top: 14px; transition: none;
+}
+body.th-tool-page .form-section.th-sheetable > .form-section-header {
+  position: sticky; top: 0; z-index: 3; margin: 0 -16px; padding: 22px 16px 12px;
+  background: var(--bg-panel); box-shadow: inset 0 -1px 0 var(--border);
+}
+/* The grab handle, drawn inside the sticky header so it stays put. */
+body.th-tool-page .form-section.th-sheetable > .form-section-header::before {
+  content: ''; position: absolute; top: 8px; left: 50%; width: 40px; height: 5px; margin-left: -20px;
+  border-radius: 999px; background: var(--border);
+}
+body.th-tool-page .form-section.th-sheetable > .form-section-header h3 { font-size: 15px; }
+body.th-tool-page .form-section.th-sheetable .collapse-chevron {
+  width: 40px; height: 40px; border-radius: 50%; transform: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--bg-panel-2); font-size: 0; color: var(--text);
+}
+body.th-tool-page .form-section.th-sheetable .collapse-chevron::before { content: '\00d7'; font-size: 24px; line-height: 1; }
+body.th-tool-page .th-formsheet-scrim {
+  position: fixed; inset: 0; z-index: 944; background: var(--th-scrim);
+  opacity: 0; visibility: hidden;
+  transition: opacity var(--th-dur-sheet) var(--th-ease), visibility 0s linear var(--th-dur-sheet);
+}
+body.th-tool-page.th-formsheet-open .th-formsheet-scrim { opacity: 1; visibility: visible; transition: opacity var(--th-dur-sheet) var(--th-ease), visibility 0s; }
+body.th-tool-page.th-formsheet-open { overflow: hidden; }
+@media (min-width: 1024px) {
+  body.th-tool-page .form-section.th-sheetable {
+    left: auto; top: 61px; right: 0; bottom: 0;
+    width: min(var(--th-sheet-w), 44vw); max-height: none;
+    border: 0; border-left: var(--th-rule) solid var(--border); border-radius: 0;
+    padding: 0 24px 32px; box-shadow: var(--shadow-panel-side);
+  }
+  body.th-tool-page .form-section.th-sheetable.is-collapsed { transform: translateX(104%); }
+  body.th-tool-page .form-section.th-sheetable > .form-section-header { margin: 0 -24px; padding: 16px 24px 14px; }
+  body.th-tool-page .form-section.th-sheetable > .form-section-header::before { display: none; }
+  body.th-tool-page .th-formsheet-scrim { left: 240px; top: 61px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.th-tool-page .form-section.th-sheetable,
+  body.th-tool-page .form-section.th-sheetable.is-collapsed { transform: none; }
+  body.th-tool-page .form-section.th-sheetable.is-collapsed { opacity: 0; }
+}
+
+/* ---- W1.11 shell sheets: one motion for More, Create and help ---- */
+@keyframes th-w-sheet-in { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes th-w-panel-in { from { transform: translateY(12px) scale(.985); opacity: 0; } to { transform: none; opacity: 1; } }
+body.th-tool-page .th-sheet-backdrop { background: var(--th-scrim); }
+body.th-tool-page .th-sheet-panel { box-shadow: var(--shadow-sheet); border-top: 1px solid var(--border); }
+body.th-tool-page .th-sheet-handle { width: 40px; height: 5px; background: var(--border); }
+body.th-tool-page .th-sheet-title { font-size: 13px; letter-spacing: 1.4px; color: var(--text); }
+@media (max-width: 720px) {
+  body.th-tool-page .th-sheet-panel { border-radius: 18px 18px 0 0; animation: th-w-sheet-in var(--th-dur-sheet) var(--th-ease); }
+}
+body.th-tool-page .th-more-sheet-link, body.th-tool-page .th-create-tile { border-radius: var(--th-radius-card); }
+body.th-tool-page .help-modal { border-radius: var(--th-radius-card); box-shadow: var(--shadow-hover); }
+@media (max-width: 720px) {
+  body.th-tool-page .help-modal-overlay.is-open { align-items: flex-end; padding: 0; }
+  body.th-tool-page .help-modal-overlay.is-open .help-modal {
+    width: 100%; max-width: none; margin: 0; max-height: 90dvh;
+    border-radius: 18px 18px 0 0; padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    animation: th-w-sheet-in var(--th-dur-sheet) var(--th-ease);
+  }
+}
+@media (min-width: 721px) {
+  body.th-tool-page .help-modal-overlay.is-open .help-modal { animation: th-w-panel-in .22s var(--th-ease); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.th-tool-page .th-sheet-panel,
+  body.th-tool-page .help-modal-overlay.is-open .help-modal { animation: none; }
+}
+
+/* ---- W1.12 bottom bar: solid, a 2px rule, a lit edge over the current tab ---- */
+body.th-tool-page .th-bottom-nav {
+  background: var(--bg-panel); -webkit-backdrop-filter: none; backdrop-filter: none;
+  border-top: 0; box-shadow: inset 0 var(--th-rule) 0 var(--border);
+}
+body.th-tool-page .th-bottom-nav a { position: relative; text-transform: uppercase; letter-spacing: .8px; }
+body.th-tool-page .th-bottom-nav a.is-active { color: var(--text); }
+body.th-tool-page .th-bottom-nav a.is-active::before {
+  content: ''; position: absolute; top: -8px; left: 50%; width: 28px; margin-left: -14px; height: 3px;
+  background: var(--orange); border-radius: 0 0 3px 3px;
+}
+body.th-tool-page .th-bottom-nav .th-bn-create-label { text-transform: uppercase; letter-spacing: .8px; }
+
+/* ---- W1.13 desktop sidebar: a ruled rail, an indicator on the current page ---- */
+body.th-tool-page .th-desktop-sidebar {
+  background: var(--bg-panel); border-right: 0;
+  box-shadow: inset calc(-1 * var(--th-rule)) 0 0 var(--border);
+  padding: 14px 12px 20px;
+}
+body.th-tool-page .th-sidebar-brand {
+  border-bottom: var(--th-rule) solid var(--border); padding: 6px 8px 16px; margin: 0 -12px 12px; padding-left: 20px;
+  font-size: 18px; text-transform: uppercase;
+}
+body.th-tool-page .th-sidebar-brand img { border-radius: 0; }
+body.th-tool-page .th-sidebar-group {
+  display: flex; align-items: center; gap: 8px;
+  margin: 16px 10px 6px; padding: 0;
+  font-family: var(--font-ui); font-size: 11px; font-weight: 600; letter-spacing: 1.6px; text-transform: uppercase;
+  color: var(--text-dim);
+}
+body.th-tool-page .th-sidebar-group::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+body.th-tool-page .th-sidebar-link { position: relative; min-height: 40px; padding: 5px 10px; border-radius: var(--th-radius-control); }
+body.th-tool-page .th-sidebar-link.is-active { background: var(--orange-tint-soft); color: var(--text); }
+body.th-tool-page .th-sidebar-link.is-active::before {
+  content: ''; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; background: var(--orange);
+}
+body.th-tool-page .th-sidebar-link.is-active .th-hex-icon { background: var(--orange); box-shadow: none; }
+body.th-tool-page .th-sidebar-new { border-radius: var(--th-radius-control); justify-content: flex-start; }
+
+/* ---- W1.14 toasts and dialogs join the same surface ---- */
+body.th-tool-page .th-toast { border-radius: var(--th-radius-control); background: var(--bg-panel-3); box-shadow: var(--shadow-hover); }
+body.th-tool-page .quick-actions-sheet { border-radius: 18px 18px 0 0; box-shadow: var(--shadow-sheet); }
+
+/* ---- W1.15 fields: one field look, 48px on a phone ---- */
+body.th-tool-page .form-field input, body.th-tool-page .form-field select, body.th-tool-page .form-field textarea {
+  border-radius: var(--th-radius-control);
+}
+body.th-tool-page .form-field label {
+  font-family: var(--font-ui); text-transform: uppercase; letter-spacing: 1px; font-size: 11.5px; color: var(--text-dim);
+}
+@media (max-width: 720px) {
+  body.th-tool-page .form-field input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+  body.th-tool-page .form-field select { min-height: 48px; }
+}
