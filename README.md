@@ -5681,3 +5681,7 @@ All 16 landing pages (8 cities, 8 services). Designed in Claude Design from the 
 Changed while applying: the "Serving ..." pill no longer stretches across the column. It keeps full contrast in light mode now that the hero has no dark photo behind it. The desktop pill no longer covers the footer's Cookie Preferences link.
 
 No copy, links, schema or scripts changed. Styles are scoped to `html.page-landing`, and the homepage, About, Our Work, Careers and the blog are pixel-identical before and after. Verified with the full suite, `check-consistency`, `check-undefined-vars`, lint and the visual snapshot; `check-links.py` has only the known sandbox-proxy Unsplash failures, same as main. Screenshots are in `docs/landing-template-2026-09-28/`.
+
+## What changed, 2026-09-28 -- Workspace redesign W1: one app system
+
+Every Workspace page now shares one look: flat surfaces, sections divided by strong rules, and tabs as an underline bar. The header shows a single sync status dot, and add/edit forms open as bottom sheets on a phone or side panels on a computer, all sharing one motion. Shell presentation only -- no data, auth or sync paths changed. Foundation layer of the v2 Workspace redesign (packages W2-W5 build on this); the client portal (which shares `tools/styles-tools.css`) is confirmed unaffected, since every new rule is scoped to `body.th-tool-page` and portal pages never load the script that would add that class. Full writeup in `docs/specialist-logs/visual.md`, 2026-09-28.
