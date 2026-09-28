@@ -1142,9 +1142,68 @@
   @media (prefers-reduced-motion: reduce) {
     html.th-nav-slow .th-nav-progress::after { animation: none; transform: none; width: 100%; background: var(--orange); opacity: .75; }
   }
+
+  /* ==========================================================================
+     W1 + W3 (2026-09-28, Workspace redesign brief W): this page's own copy
+     of the one-app system in styles-tools.css ("W1" and "W3" blocks). It
+     loads neither shared sheet, so the shell language is repeated here by
+     hand, the same way the nav CSS above already is. Keep the two in step.
+     ========================================================================== */
+  :root{
+    --th-ease: cubic-bezier(.2,.8,.2,1);
+    --th-dur-sheet: .3s;
+    --th-rule: 2px;
+    --th-radius-card: 10px;
+    --th-radius-control: 8px;
+    --th-scrim: rgba(0,0,0,.56);
+    --status-live: #3ad66b;
+    --status-error: #ff6a5c;
+    --status-idle: #6b6e76;
+  }
+  [data-theme="light"] body.th-tool-page { --th-scrim: rgba(32,29,24,.36); --status-live: #1c8f45; --status-error: #c4372b; --status-idle: #9a958c; }
+  body.th-tool-page header#mainContent { box-shadow: inset 0 calc(-1 * var(--th-rule)) 0 var(--border); padding-bottom: 2px; }
+  body.th-tool-page header#mainContent h1 { font-size: 30px; line-height: 1.02; color: var(--text); letter-spacing: .5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  body.th-tool-page header#mainContent p { font-size: 13px; }
+  /* Apply-time fix: at 30px the title ran under the phone header's three
+     round buttons (clock, search, grid: ~146px from the edge, more than the
+     104px the rule above reserves). Below the sidebar breakpoint it steps
+     down to the other pages' .hub-title sizes and clears all three. */
+  @media (max-width: 1023px) { body.th-tool-page header#mainContent h1 { font-size: 24px; padding-right: 146px; } }
+  @media (max-width: 720px) { body.th-tool-page header#mainContent h1 { font-size: 21px; } }
+  body.th-tool-page .th-status { display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; }
+  body.th-tool-page .th-status .realtime-badge { margin: 0; padding: 0; min-width: 32px; min-height: 32px; display: inline-flex; align-items: center; justify-content: center; font-size: 0; border-radius: 50%; }
+  body.th-tool-page .th-status .realtime-badge > span:not(.realtime-dot) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+  body.th-tool-page .th-status .realtime-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--status-idle); box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-idle) 24%, transparent); }
+  body.th-tool-page .th-status .realtime-dot.is-live { background: var(--status-live); box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-live) 24%, transparent); animation: none; }
+  body.th-tool-page .th-status .realtime-dot.is-error { background: var(--status-error); box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-error) 28%, transparent); animation: none; }
+  body.th-tool-page .tabs { gap: 0; padding-top: 0; box-shadow: inset 0 calc(-1 * var(--th-rule)) 0 var(--border); }
+  body.th-tool-page .rw-tab-btn { background: none; border-radius: 0; min-height: 48px; padding: 12px 16px; letter-spacing: 1.1px; color: var(--text-dim); }
+  body.th-tool-page .rw-tab-btn.is-active { background: none; color: var(--text); box-shadow: inset 0 -3px 0 var(--orange); }
+  body.th-tool-page .rw-tab-btn:active { background: var(--bg-elevated); }
+  @media (hover:hover){ body.th-tool-page .rw-tab-btn:hover { background: var(--bg-elevated); color: var(--text); } }
+  body.th-tool-page .card { background: var(--bg-card); background-image: none; border: 1px solid var(--border); border-radius: var(--th-radius-card); box-shadow: none; }
+  body.th-tool-page .card-hero { background: linear-gradient(var(--orange-tint-soft), var(--orange-tint-soft)), var(--bg-card); border-color: var(--orange-tint-border); }
+  body.th-tool-page .card-hero .estimate-headline { text-shadow: none; }
+  body.th-tool-page .card-header h3 { font-family: var(--font-ui); font-weight: 600; font-size: 13px; letter-spacing: 1.4px; color: var(--text); }
+  body.th-tool-page .stat-box { border-radius: var(--th-radius-control); }
+  body.th-tool-page .th-bottom-nav { background: var(--bg-card); -webkit-backdrop-filter: none; backdrop-filter: none; border-top: 0; box-shadow: inset 0 var(--th-rule) 0 var(--border); }
+  body.th-tool-page .th-bottom-nav a { position: relative; text-transform: uppercase; letter-spacing: .8px; }
+  body.th-tool-page .th-bottom-nav a.is-active { color: var(--text); }
+  body.th-tool-page .th-bottom-nav a.is-active::before { content: ''; position: absolute; top: -8px; left: 50%; width: 28px; margin-left: -14px; height: 3px; background: var(--orange); border-radius: 0 0 3px 3px; }
+  body.th-tool-page .th-desktop-sidebar { background: var(--bg-card); border-right: 0; box-shadow: inset calc(-1 * var(--th-rule)) 0 0 var(--border); }
+  body.th-tool-page .th-sidebar-group { display: flex; align-items: center; gap: 8px; font-family: var(--font-ui); font-size: 11px; font-weight: 600; letter-spacing: 1.6px; text-transform: uppercase; color: var(--text-dim); }
+  body.th-tool-page .th-sidebar-group::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  body.th-tool-page .th-sidebar-link { position: relative; border-radius: var(--th-radius-control); }
+  body.th-tool-page .th-sidebar-link.is-active { background: var(--orange-tint-soft); color: var(--text); }
+  body.th-tool-page .th-sidebar-link.is-active::before { content: ''; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; background: var(--orange); }
+  body.th-tool-page .th-sheet-backdrop { background: var(--th-scrim); }
+  body.th-tool-page .th-more-sheet-link, body.th-tool-page .th-create-tile { border-radius: var(--th-radius-card); }
+  @keyframes th-w-sheet-in { from { transform: translateY(100%); } to { transform: none; } }
+  @media (max-width: 720px) { body.th-tool-page .th-sheet-panel { border-radius: 18px 18px 0 0; animation: th-w-sheet-in var(--th-dur-sheet) var(--th-ease); } }
+  @media (prefers-reduced-motion: reduce) { body.th-tool-page .th-sheet-panel { animation: none; } }
 </style>
 </head>
-<body class="th-has-sidebar">
+<body class="th-has-sidebar" data-th-page="runway-dashboard">
 
 <div id="roleBlockedOverlay" class="role-blocked-overlay">
   <div class="tool-title" style="font-size:22px;">Not available here</div>
