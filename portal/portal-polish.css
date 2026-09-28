@@ -2017,7 +2017,7 @@ body.portal-page .wo-field-schedule .schedule-toggle {
 body.portal-page #woScheduleSummary {
   padding: 10px 10px 10px 14px; border-radius: var(--portal-radius-control); background: var(--tone-orange-bg); border: 1px solid var(--orange-tint-border);
 }
-body.portal-page #woScheduleSummary .small-btn { min-height: 40px; border-radius: 999px; }
+body.portal-page #woScheduleSummary .small-btn { min-height: 44px; border-radius: 999px; }
 body.portal-page .wo-prefill-note { color: var(--tone-blue-fg); }
 body.portal-page .wo-prefill-note::before { background: var(--tone-blue-fg); }
 body.portal-page .wo-submit-btn { width: 100%; min-height: 56px; margin-top: 10px !important; font-size: 16px; }
