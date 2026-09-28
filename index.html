@@ -81,7 +81,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="styles.css?v=6d29f79247">
+<link rel="stylesheet" href="styles.css?v=7318c745aa">
 <!-- Improvement roadmap (2026-09-09), tier 1: the hero background is a
      CSS background-image (see .hero in styles.css), so the browser
      doesn't discover it until CSS is parsed -- likely this page's LCP
@@ -290,7 +290,7 @@
 <script src="/js/cookie-consent.js?v=14d2625000" defer></script>
 <script src="/js/utm-tracking.js?v=5aa2d867e3" defer></script>
 </head>
-<body class="has-blueprint-bg">
+<body class="has-blueprint-bg page-home">
 <div class="bg-blueprint" aria-hidden="true"></div>
 <a href="#home" class="skip-link">Skip to main content</a>
 
@@ -411,10 +411,47 @@
 
   <section class="hero">
     <div class="hero-plane" aria-hidden="true"></div>
+    <!-- P1 redesign (2026-09-28): a third depth plane between the grid and
+         the copy -- the site's own gear / wrench / drop icons redrawn as
+         blueprint sketches. Decorative only; motion lives in styles.css. -->
+    <div class="hero-tools" aria-hidden="true">
+      <svg class="hero-tool-gear" viewBox="-3 -3 30 30" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+        <g class="gear-body"><g class="gear-spin">
+          <g stroke-opacity=".34" stroke-width="1"><line x1="12" y1="-2.5" x2="12" y2="26.5" stroke-dasharray="14 5 2 5" vector-effect="non-scaling-stroke"/><line x1="-2.5" y1="12" x2="26.5" y2="12" stroke-dasharray="14 5 2 5" vector-effect="non-scaling-stroke"/><circle cx="12" cy="12" r="11.9" vector-effect="non-scaling-stroke"/><circle cx="12" cy="12" r="6.6" stroke-dasharray="3 5" vector-effect="non-scaling-stroke"/></g>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" transform="translate(.16 .12)" stroke-opacity=".34" stroke-width="1" vector-effect="non-scaling-stroke"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" stroke-opacity=".85" stroke-width="1.7" vector-effect="non-scaling-stroke"/>
+          <circle cx="12" cy="12" r="3" stroke-opacity=".85" stroke-width="1.7" vector-effect="non-scaling-stroke"/>
+          <circle cx="12" cy="12" r="1.25" stroke-opacity=".55" stroke-width="1" vector-effect="non-scaling-stroke"/>
+        </g></g>
+        <g class="gear-label"><path d="M15.1 8.9 L21.4 2.6 H25.6" stroke-opacity=".7" stroke-width="1" vector-effect="non-scaling-stroke"/><text x="21.6" y="2.1" fill="currentColor" stroke="none" fill-opacity=".85">Ø 24 · 8 TEETH</text></g>
+      </svg>
+      <svg class="hero-tool-wrench" viewBox="-3 -3 30 30" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+        <line x1="1.2" y1="22.8" x2="22.4" y2="1.6" stroke-opacity=".16" stroke-width="1" stroke-dasharray="12 5 2 5" vector-effect="non-scaling-stroke"/>
+        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" transform="translate(.16 .12)" stroke-opacity=".16" stroke-width="1" vector-effect="non-scaling-stroke"/>
+        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" stroke-opacity=".42" stroke-width="1.7" vector-effect="non-scaling-stroke"/>
+        <circle cx="4.6" cy="19.4" r=".8" stroke-opacity=".3" stroke-width="1" vector-effect="non-scaling-stroke"/>
+        <g class="wrench-dim"><path d="M6.3 24.6 L24.6 6.3 M5.2 23.5 L7.4 25.7 M23.5 5.2 L25.7 7.4" stroke-opacity=".4" stroke-width="1" vector-effect="non-scaling-stroke"/><text x="17.4" y="17.2" fill="currentColor" stroke="none" fill-opacity=".6">L 150</text></g>
+      </svg>
+      <svg class="hero-tool-drop" viewBox="-3 -3 30 30" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+        <line x1="12" y1="0" x2="12" y2="25" stroke-opacity=".16" stroke-width="1" stroke-dasharray="10 4 2 4" vector-effect="non-scaling-stroke"/>
+        <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" transform="translate(.16 .12)" stroke-opacity=".18" stroke-width="1" vector-effect="non-scaling-stroke"/>
+        <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" stroke-opacity=".5" stroke-width="1.7" vector-effect="non-scaling-stroke"/>
+        <path d="M8.1 13.6 a4.3 4.3 0 0 0 1.9 4.4" stroke-opacity=".42" stroke-width="1.4" vector-effect="non-scaling-stroke"/>
+        <ellipse cx="12" cy="24.2" rx="6.5" ry=".9" stroke-opacity=".3" stroke-width="1" vector-effect="non-scaling-stroke"/>
+        <ellipse cx="12" cy="24.2" rx="3.4" ry=".45" stroke-opacity=".22" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"/>
+      </svg>
+    </div>
+    <!-- P1 redesign (2026-09-28): the one column is now three named groups so
+         styles.css can place them as planes -- copy (headline, live status
+         joined to Schedule/Call), aside (the lead card, still after the CTAs
+         and before the badge), and proof. #openStatus moved up to sit
+         directly on top of .hero-ctas; #nextOpening sits under them. Every
+         id, field and class is unchanged. -->
     <div class="wrap hero-grid">
-      <div>
-        <h1>HANDYMAN AND APPLIANCE REPAIR, DONE RIGHT.</h1>
+      <div class="hero-copy">
+        <h1><span class="hero-h1-line"><span>HANDYMAN AND</span></span> <span class="hero-h1-line"><span>APPLIANCE REPAIR,</span></span> <span class="hero-h1-line"><span>DONE RIGHT.</span></span></h1>
         <p class="lede">Serving St. George and Southern Utah, Triple H Enterprises fixes what's broken &mdash; washers, dryers, plumbing, and the jobs that keep getting put off. Owner on the call. Honest price before we start.</p>
+        <p class="open-status hero-open-status" id="openStatus" hidden><span class="dot"></span><span id="openStatusText" class="open-status-text"></span></p>
         <div class="hero-ctas">
           <a href="/booking.html" class="btn orange">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -425,6 +462,13 @@
             Call <span class="js-phone-text">(435) 414-1667</span>
           </a>
         </div>
+        <!-- U04 fix (High-Impact Upgrades, 2026-09-08): the real next
+             available slot from the actual booking system, beside the
+             pill above -- not shown at all if that lookup fails or is
+             slow, so the pill above always stands on its own. -->
+        <p class="next-opening" id="nextOpening" hidden></p>
+      </div>
+      <div class="hero-aside">
         <form class="hero-lead-form" id="heroLeadForm" method="POST" aria-label="Send job details">
           <p class="hero-lead-kicker">Or send the details &mdash; <strong>we'll call you back.</strong></p>
           <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off">
@@ -496,6 +540,8 @@
           </div>
           <p class="hero-intent-more"><a href="#faq" id="intentFaqMore">See all FAQs</a></p>
         </div>
+      </div>
+      <div class="hero-proof">
         <p class="cta-proof">
           <span class="cta-proof-stars js-review-stars" aria-hidden="true">★★★★★</span>
           <span class="js-review-text">5.0 from 7 Google reviews &mdash; <span class="cta-proof-quote">&ldquo;Steven was wonderful! Got our washer fixed quickly&hellip;&rdquo;</span></span>
@@ -504,12 +550,6 @@
         </p>
         <p class="hero-referral">Refer a neighbor &mdash; <strong>$25 credit</strong> on your next visit once their job is paid.</p>
         <p class="hero-motto" data-reveal><span>Honesty.</span> <span>Hustle.</span> <span>Helpfulness.</span></p>
-        <p class="open-status" id="openStatus" hidden><span class="dot"></span><span id="openStatusText" class="open-status-text"></span></p>
-        <!-- U04 fix (High-Impact Upgrades, 2026-09-08): the real next
-             available slot from the actual booking system, beside the
-             pill above -- not shown at all if that lookup fails or is
-             slow, so the pill above always stands on its own. -->
-        <p class="next-opening" id="nextOpening" hidden></p>
       </div>
       <div class="hero-badge">
         <img class="logo-img" src="/images/logo-signature.webp?v=202608010300" srcset="/images/logo-signature-176.webp?v=202609251200 176w, /images/logo-signature-288.webp?v=202609251200 288w, /images/logo-signature.webp?v=202608010300 550w" sizes="(max-width: 860px) 96px, 440px" alt="Triple H Enterprises badge" width="550" height="506">
