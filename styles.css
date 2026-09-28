@@ -4691,6 +4691,190 @@
     line-height:1.7;
   }
 
+  /* === Redesign P3 (2026-09-28): City and service landing-page template (16 pages) -- scoped to html.page-landing === */
+  /* Sixteen pages, one template, and they looked interchangeable. The
+     template now makes each page's unique content the feature: a hero of
+     its own (no canyon photo; the display line and a locator plate that
+     lights this page's city on the existing diagram positions), the
+     city-specific section as a split feature band, a clear spine (what
+     we handle, local Q&A, trust), the radius diagram drawing a trail to
+     this page's city, and reviews + FAQ + schedule as one closing
+     surface, with Call / Schedule kept on screen at every width.
+     Hook lives on <html>, not <body>: blueprint-background-coverage and
+     F31 pin <body class="has-blueprint-bg"> exactly. Nothing here
+     touches index.html, and text-only .service-card stays display:block
+     with its 8px heading gap (service-card-landing-pages.test.js). */
+
+  /* hero */
+  html.page-landing .hero{background:transparent; padding:88px 0 80px;}
+  html.page-landing .hero::before{background:radial-gradient(circle, var(--orange-tint-glow), transparent 62%);}
+  html.page-landing .hero h1{color:var(--white); font-size:clamp(44px, 6.2vw, 88px); line-height:.96; letter-spacing:.3px; margin-top:14px;}
+  html.page-landing .hero .btn.outline{color:var(--orange-text-vivid); border-color:var(--orange-tint-border);}
+  @media (hover:hover){
+    html.page-landing .hero .btn.outline:hover{background:var(--orange-tint-soft); color:var(--orange-text-vivid); border-color:var(--orange-text-vivid);}
+  }
+  html.page-landing .landing-hero{display:grid; grid-template-columns:minmax(0,1fr); column-gap:64px; align-items:start;}
+  html.page-landing .landing-hero:has(> .landing-plate){grid-template-columns:minmax(0,1.3fr) minmax(0,.7fr);}
+  html.page-landing .landing-hero > *{grid-column:1;}
+  /* Apply-time fix (2026-09-28): as a grid item the inline-flex coverage pill
+     stretched to the whole column ("Serving Hurricane" became a long bar).
+     Named by its two variants so the one bare .coverage-badge rule stays
+     the shared base rule the pill-idiom tests read. */
+  html.page-landing .landing-hero > .coverage-badge.is-standard,
+  html.page-landing .landing-hero > .coverage-badge.is-by-request{justify-self:start;}
+  /* Apply-time fix (2026-09-28): the pill's dark glass was made to sit on
+     the canyon photo. With the photo gone from the landing hero, light mode
+     put light text on grey glass over a light page (about 4.3:1). */
+  html.page-landing[data-theme="light"] .landing-hero > .coverage-badge.is-standard,
+  html.page-landing[data-theme="light"] .landing-hero > .coverage-badge.is-by-request{background:var(--bg-glass); color:var(--text); border-color:var(--border);}
+  html.page-landing .landing-hero > .landing-plate{
+    grid-column:2;
+    grid-row:1 / span 8;
+    align-self:center;
+    display:flex;
+    flex-direction:column-reverse;
+    border:1px solid var(--border);
+    border-radius:16px;
+    background:linear-gradient(160deg, var(--bg-panel-2), var(--bg-panel));
+    box-shadow:var(--shadow-hover);
+    overflow:hidden;
+  }
+  html.page-landing .landing-plate .hero-distance-chip{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    margin:0;
+    padding:18px 20px 20px;
+    border:0;
+    border-top:1px solid var(--border);
+    border-radius:0;
+    background:none;
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
+    font-family:var(--font-display);
+    font-size:24px;
+    line-height:1.15;
+    letter-spacing:.3px;
+    color:var(--text);
+  }
+  html.page-landing .landing-plate .hero-distance-chip svg{width:22px; height:22px; margin-top:2px;}
+  html.page-landing .landing-plate-map{
+    display:block;
+    width:100%;
+    height:auto;
+    background-image:
+      repeating-linear-gradient(90deg, var(--border) 0 1px, transparent 1px 30px),
+      repeating-linear-gradient(0deg, var(--border) 0 1px, transparent 1px 30px);
+  }
+  html.page-landing .lp-ring{fill:none; stroke:var(--blue); stroke-opacity:.35; stroke-width:1.5; stroke-dasharray:3 6;}
+  html.page-landing .lp-node{fill:var(--text-dim); fill-opacity:.55;}
+  html.page-landing .lp-node.is-request{fill:var(--orange-dark);}
+  html.page-landing .lp-node.is-focus,
+  html.page-landing .lp-hub{fill:var(--orange); fill-opacity:1;}
+  html.page-landing .lp-node.is-focus,
+  html.page-landing .lp-hub.is-focus{filter:drop-shadow(0 0 8px color-mix(in srgb, var(--orange) 70%, transparent));}
+  html.page-landing .lp-spoke{stroke:var(--orange); stroke-width:3; stroke-linecap:round;}
+
+  /* the city's own section, promoted to a split feature band */
+  html.page-landing .landing-local{
+    padding:84px 0;
+    background:linear-gradient(180deg, var(--bg-panel), transparent);
+    border-top:1px solid var(--border);
+    border-bottom:1px solid var(--border);
+  }
+  html.page-landing .landing-local .wrap{display:grid; grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr); column-gap:64px; row-gap:18px; align-items:start;}
+  html.page-landing .landing-local .section-head{grid-column:1; grid-row:1 / span 6; margin:0;}
+  html.page-landing .landing-local .section-head h2{font-size:clamp(34px, 4.6vw, 58px); line-height:1;}
+  html.page-landing .landing-local .wrap > p{grid-column:2; margin:0; max-width:62ch;}
+  html.page-landing .landing-local-lead{font-size:20px; line-height:1.6; color:var(--text);}
+  html.page-landing .landing-local-more{font-size:16.5px; line-height:1.6; color:var(--text-dim);}
+  html.page-landing .landing-local-stat{padding:16px 18px; border-radius:12px; border:1px solid var(--orange-tint-border); background:var(--orange-tint-soft); font-size:16px; line-height:1.5; color:var(--text);}
+  html.page-landing .landing-local-stat strong{display:block; margin-bottom:4px; font-family:var(--font-ui); font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--orange-text-vivid);}
+
+  /* what we handle: text-only cards keep display:block and the 8px gap */
+  html.page-landing .services-grid{grid-template-columns:repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap:12px;}
+  html.page-landing .services-grid .service-card:not(:has(> .service-icon)){border-top:2px solid var(--orange-tint-border); border-radius:12px; padding:22px 22px 24px; cursor:default;}
+  html.page-landing .services-grid .service-card h3{font-size:22px; letter-spacing:.4px;}
+
+  /* local Q&A: a divided list beside its heading, not stacked boxes */
+  html.page-landing section:has(> .wrap > .faq-list) .wrap{display:grid; grid-template-columns:minmax(0,.7fr) minmax(0,1.3fr); column-gap:56px; align-items:start;}
+  html.page-landing section:has(> .wrap > .faq-list) .section-head{margin:0;}
+  html.page-landing .faq-list{max-width:none; border-top:1px solid var(--border);}
+  html.page-landing .landing-qa{padding:18px 0; border-bottom:1px solid var(--border);}
+  html.page-landing .landing-qa-q{margin:0 0 8px; font-family:var(--font-ui); font-weight:600; font-size:16px; letter-spacing:.3px;}
+  html.page-landing .landing-qa-a{margin:0; max-width:68ch; color:var(--text-dim); font-size:15.5px; line-height:1.55;}
+
+  /* trust strip: one joined band */
+  html.page-landing .trust-strip-section .trust-grid{gap:0; border:1px solid var(--border); border-radius:14px; overflow:hidden; background:var(--bg-panel);}
+  html.page-landing .trust-strip-section .trust-item{border-radius:0; box-shadow:none; background:transparent; border-right:1px solid var(--border);}
+  html.page-landing .trust-strip-section .trust-item:last-child{border-right:0;}
+
+  /* locator: the diagram draws a trail from St. George to this page's city */
+  html.page-landing .areas-map-section .radius-figure{padding:12px; border:1px solid var(--border); border-radius:16px; background:var(--bg-panel);}
+  html.page-landing .radius-trail{fill:none; stroke:var(--orange); stroke-width:3; stroke-linecap:round; filter:drop-shadow(0 0 6px color-mix(in srgb, var(--orange) 70%, transparent));}
+  @keyframes landingTrail{from{stroke-dashoffset:1;} to{stroke-dashoffset:0;}}
+  @media (prefers-reduced-motion: no-preference){
+    html.page-landing.reveal-ready .radius-figure .radius-trail,
+    html.page-landing.reveal-ready .landing-plate .lp-spoke{stroke-dasharray:1; stroke-dashoffset:1;}
+    html.page-landing.reveal-ready .radius-figure.is-visible .radius-trail{animation:landingTrail 1.6s cubic-bezier(.2,.7,.2,1) .4s forwards;}
+    html.page-landing.reveal-ready .landing-plate .lp-spoke{animation:landingTrail 1.4s cubic-bezier(.2,.7,.2,1) .6s forwards;}
+  }
+
+  /* closing sequence: reviews, FAQ and schedule on one surface */
+  html.page-landing #local-reviews,
+  html.page-landing #local-faq,
+  html.page-landing #schedule{background:var(--bg-panel); border-top:0;}
+  html.page-landing #local-reviews{position:relative; border-top:1px solid var(--border);}
+  html.page-landing #local-reviews::before{content:""; position:absolute; left:0; top:-1px; width:38%; height:2px; background:linear-gradient(90deg, var(--orange), transparent);}
+  html.page-landing #local-reviews .reviews-wall{max-width:none; grid-template-columns:repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap:12px;}
+  html.page-landing #local-faq{padding-top:24px;}
+  html.page-landing #local-faq .wrap{display:grid; grid-template-columns:minmax(0,.55fr) minmax(0,1.45fr); column-gap:48px; align-items:start; padding-top:36px; border-top:1px solid var(--border);}
+  html.page-landing #local-faq .section-head{grid-column:1; margin:0;}
+  html.page-landing #local-faq .faq-plain-list{grid-column:2; grid-row:1 / span 2; max-width:none; margin:0;}
+  html.page-landing #local-faq .wrap > .blog-teaser-more{grid-column:1; grid-row:2; text-align:left; margin:12px 0 0;}
+  html.page-landing #schedule{padding-top:32px;}
+  html.page-landing #schedule .section-head h2{font-size:clamp(32px, 4.4vw, 54px);}
+  html.page-landing #schedule .booking-grid{max-width:none; padding:28px; border-radius:18px; border:1px solid var(--orange-tint-border); background:linear-gradient(135deg, var(--bg-panel-2), var(--bg)); box-shadow:var(--shadow-hover);}
+
+  /* Call / Schedule stay on screen on desktop too (phones keep the base bar) */
+  @media (min-width:761px){
+    html.page-landing .sticky-call{display:flex; left:auto; right:24px; bottom:24px; width:auto; padding:6px; gap:6px; border:1px solid var(--border); border-radius:12px; background:var(--bg-glass); box-shadow:var(--shadow-hover);}
+    html.page-landing .sticky-call .btn{flex:0 0 auto; min-height:44px; padding:11px 16px;}
+    /* Apply-time fix (2026-09-28): the floating pill (61px tall, 24px up)
+       sat on the footer's Cookie Preferences link at the bottom of the page,
+       with nothing left to scroll. Room below the footer keeps it reachable. */
+    html.page-landing body{padding-bottom:96px;}
+  }
+  /* Desktop pill fades in once the hero is scrolled past, where scroll timelines exist; elsewhere it simply stays visible. */
+  @keyframes landingPillIn{from{opacity:0; transform:translateY(16px); visibility:hidden;} to{opacity:1; transform:none; visibility:visible;}}
+  @supports (animation-timeline: scroll()){
+    @media (min-width:761px){
+      html.page-landing .sticky-call{animation:landingPillIn linear both; animation-timeline:scroll(root); animation-range:35vh 65vh;}
+    }
+  }
+
+  @media (max-width:860px){
+    html.page-landing .hero{padding:40px 0 48px; text-align:left;}
+    html.page-landing .hero h1{font-size:clamp(40px, 11vw, 56px);}
+    html.page-landing .landing-hero:has(> .landing-plate){grid-template-columns:minmax(0,1fr);}
+    html.page-landing .landing-hero > .landing-plate{grid-column:1; grid-row:auto; margin:22px 0 4px; flex-direction:row-reverse; align-items:stretch;}
+    html.page-landing .landing-plate .landing-plate-map{width:42%; flex-shrink:0; border-right:1px solid var(--border);}
+    html.page-landing .landing-plate .hero-distance-chip{border-top:0; font-size:19px; padding:14px 16px; align-self:center;}
+    html.page-landing .landing-local{padding:52px 0;}
+    html.page-landing .landing-local .wrap,
+    html.page-landing section:has(> .wrap > .faq-list) .wrap,
+    html.page-landing #local-faq .wrap{grid-template-columns:minmax(0,1fr);}
+    html.page-landing .landing-local .section-head,
+    html.page-landing .landing-local .wrap > p,
+    html.page-landing #local-faq .section-head,
+    html.page-landing #local-faq .faq-plain-list,
+    html.page-landing #local-faq .wrap > .blog-teaser-more{grid-column:1; grid-row:auto;}
+    html.page-landing .landing-local-lead{font-size:18px;}
+    html.page-landing .trust-strip-section .trust-item{border-right:0; border-bottom:1px solid var(--border);}
+    html.page-landing #schedule .booking-grid{padding:18px;}
+  }
+  /* === end Redesign P3 === */
+
 /* ---------- cookie consent banner ----------
    Injected by /cookie-consent.js on first visit to any public page that
    loads Google Analytics. Uses the same theme tokens as everything else
