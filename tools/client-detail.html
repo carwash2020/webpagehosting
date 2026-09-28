@@ -147,9 +147,31 @@
   .client-delete-row .small-btn.danger { flex-shrink: 0; }
   [data-theme="light"] .client-delete-row .small-btn.danger { color: #b3261e; border-color: rgba(179,38,30,0.45); }
   .client-deleted-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  /* ==========================================================================
+     W4 (2026-09-28) -- People + field redesign, this page only. Moved here,
+     rule for rule, from the package's styles-tools.css block: every rule is
+     keyed to body.th-tool-page[data-th-page="client-detail"], and the shared sheet
+     is also loaded by the nine portal pages, so it stays untouched.
+     ========================================================================== */
+  /* ---- Client detail: the person, what they owe, what's next ---- */
+  body.th-tool-page[data-th-page="client-detail"] .client-hero {
+    background: var(--bg-panel); background-image: none; border: 1px solid var(--border); border-radius: var(--th-radius-card); box-shadow: none;
+  }
+  body.th-tool-page[data-th-page="client-detail"] .client-hero-name { font-family: var(--font-display); font-size: 32px; line-height: 1.02; text-transform: uppercase; }
+  body.th-tool-page[data-th-page="client-detail"] .client-stat-row { gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--th-radius-card); overflow: hidden; }
+  body.th-tool-page[data-th-page="client-detail"] .client-stat { background: var(--bg-panel); border: 0; border-radius: 0; }
+  body.th-tool-page[data-th-page="client-detail"] .client-next { border-radius: var(--th-radius-card); }
+  @media (min-width: 1100px) {
+    body.th-tool-page[data-th-page="client-detail"] #clientContent {
+      display: grid; grid-template-columns: minmax(360px, .95fr) minmax(0, 1.05fr); column-gap: 20px; align-items: start;
+    }
+    body.th-tool-page[data-th-page="client-detail"] #clientContent > .client-hero { grid-column: 1; grid-row: 1 / span 12; }
+    body.th-tool-page[data-th-page="client-detail"] #clientContent > :not(.client-hero) { grid-column: 2; min-width: 0; }
+  }
 </style>
 </head>
-<body>
+<body data-th-page="client-detail">
 
 <!-- Bug fix (2026-09-22): same fix as job-detail.html -- see its comment
      for the full reasoning. A standalone loading state, visible from

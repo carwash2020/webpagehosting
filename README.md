@@ -5769,6 +5769,10 @@ Tests changed, all because the design changed on purpose:
 - `portal-usability-pr3` and `unread-messages`: the estimate row's button reads "Review", an empty inbox renders "all caught up" instead of nothing, and an all-paid Invoices page shows "All paid up".
 - `dashboard-invoice-pdf` allows a second class on the paid-date line.
 
+## What changed, 2026-09-28 -- Workspace redesign W4: Clients, routes, reviews, wiki
+
+Clients and client detail read as one list and one profile. On a computer, the Clients directory runs in two columns, and client detail puts the person on the left and their history on the right. Route Planner shows the map beside the stops and cost analyzer, and Review Requests shows the message preview beside the form. The Appliance Wiki's search stays pinned under the app bar as you scroll. Styling only: every rule lives in its own page's `<style>`, keyed to that page, so `tools/styles-tools.css` and the client portal are untouched. Full writeup in `docs/specialist-logs/visual.md`, 2026-09-28.
+
 ## What changed, 2026-09-28 -- Workspace redesign W5: back office and sign-in
 
 Settings, Dev Tools, Site Content, sign-in and reset password join the same app system as the rest of the Workspace. Settings has ruled section labels, 56px rows, the account name in the display face, a red-edged Session card, and two columns on a wide screen. Dev Tools and Site Content panel headings carry the same rule. Sign-in and reset password are a flush-left card under an orange top rule, with larger fields and button; on a phone the card rises from the bottom as a sheet. Sign-in, two-factor and reset keep exactly the same steps, order, fields and logic (only CSS and a page key on `<body>` changed; the flows were walked before and after with stubbed auth and matched). All styles live in each page's own `<style>`, scoped to `body.th-tool-page[data-th-page=…]`; `tools/styles-tools.css` (shared with the portal) is untouched. Full write-up in `docs/specialist-logs/visual.md`, 2026-09-28.
