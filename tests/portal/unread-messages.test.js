@@ -298,7 +298,8 @@ function runAttention(summary) {
 
 test('an open request with nothing new is no longer a "Reply" to-do', () => {
   const html = runAttention({ requests: [{ id: 4, status: 'reviewing', title: 'Leak' }], unread: [] });
-  assert.equal(html, '');
+  // v2 (2026-09-28): an empty inbox says "You're all caught up." -- no rows.
+  assert.doesNotMatch(html, /attention-item/);
   assert.doesNotMatch(HOME, /'We may have a question, or an update waiting'/, 'the old guessing copy should no longer be rendered');
 });
 
@@ -335,7 +336,7 @@ test('several unread threads sum up and link to the newest one', () => {
 });
 
 test('a missing unread list never throws', () => {
-  assert.equal(runAttention({}), '');
+  assert.doesNotMatch(runAttention({}), /attention-item/);
 });
 
 test('Home loads unread counts with the rest of the summary and job titles for the message item', () => {

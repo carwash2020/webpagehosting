@@ -94,10 +94,12 @@ test('the action inbox sorts unpaid invoices before contracts, quotes, and reque
   });
   const payAt = html.indexOf('>Pay<');
   const signAt = html.indexOf('>Sign<');
-  const approveAt = html.indexOf('>Approve<');
+  // The estimate row's button reads "Review" since the v2 redesign
+  // (2026-09-28): the tap opens the estimate, where approve/decline live.
+  const approveAt = html.indexOf('>Review<');
   const replyAt = html.indexOf('>Reply<');
   assert.ok(payAt >= 0 && signAt > payAt && approveAt > signAt && replyAt > approveAt,
-    'expected Pay, then Sign, then Approve, then Reply');
+    'expected Pay, then Sign, then Review, then Reply');
 });
 
 test('inbox Pay / Approve / Sign / Reply use existing page links, not new APIs', () => {
@@ -124,7 +126,10 @@ test('scheduled visits are not duplicated as inbox rows', () => {
     requests: [{ id: 1, status: 'scheduled', scheduled_at: '2026-09-20T10:00:00Z', title: 'Visit' }],
     contracts: [],
   });
-  assert.equal(html, '');
+  // v2 (2026-09-28): an empty inbox renders "You're all caught up."
+  // instead of nothing -- but still no action rows.
+  assert.doesNotMatch(html, /attention-item/);
+  assert.match(html, /all caught up/);
 });
 
 test('inbox cards are real action items, not a single text row', () => {
@@ -186,7 +191,12 @@ test('pay-first shows amount, invoice-date context, and the existing pay handler
 });
 
 test('pay-first hides when every invoice is paid, and does not invent a due_date column', () => {
-  assert.equal(runPayFirst([{ id: 1, paid: true, total: 50, invoice_date: '2026-09-01' }]), '');
+  // v2 (2026-09-28): all paid shows a green "All paid up" hero with no
+  // pay handler; no invoices at all still renders nothing.
+  const paidUp = runPayFirst([{ id: 1, paid: true, total: 50, invoice_date: '2026-09-01' }]);
+  assert.match(paidUp, /All paid up/);
+  assert.doesNotMatch(paidUp, /startPayment|startBulkPayment/);
+  assert.equal(runPayFirst([]), '');
   assert.doesNotMatch(extractFn(DASHBOARD, 'renderPayFirst'), /\.due_date\b/);
   assert.match(DASHBOARD, /function renderPayFirst\(invoices\)/);
   const renderFn = extractFn(DASHBOARD, 'renderInvoices');
