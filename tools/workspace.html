@@ -691,9 +691,124 @@
   .welcome-overlay.is-fading { opacity: 0; }
   .welcome-overlay img { width: 72px; height: 72px; object-fit: contain; }
   .welcome-overlay-text { font-family:var(--font-ui); font-size: 22px; color: var(--white); letter-spacing: .02em; }
+
+  /* ==========================================================================
+     Workspace redesign W2 -- DAILY (2026-09-28): Home -- the day as a headline, then a cockpit
+     Package W2 of the v2 Workspace redesign, built on W1 (the append-only
+     body.th-tool-page block at the end of styles-tools.css). Kept in this
+     page's own <style> (which loads after styles-tools.css, so it wins at
+     equal specificity) rather than appended to the shared sheet: every rule
+     is keyed to this page's body[data-th-page], so it has no business in a
+     file the nine portal pages also load. Source order is untouched; the
+     desktop arrangement is CSS grid placement only.
+     The ink colour on the filled orange tile is the repo's existing #1a0d02
+     glyph colour (styles-tools.css uses it literally); declared once here as a
+     page-local token so no rule below carries a bare hex.
+     ========================================================================== */
+  body.th-tool-page[data-th-page="workspace"] { --th-ink-on-orange: #1a0d02; }
+  /* ---- Home: the day as a headline, then a cockpit ---- */
+  body.th-tool-page[data-th-page="workspace"] .greeting-banner {
+    background: none; border: 0; border-radius: 0; box-shadow: inset 0 calc(-1 * var(--th-rule)) 0 var(--border);
+    padding: 6px 0 16px; margin-bottom: 18px; align-items: flex-end;
+  }
+  body.th-tool-page[data-th-page="workspace"] .greeting-banner-greeting {
+    font-size: 34px; line-height: 1.02; text-transform: uppercase; letter-spacing: .4px; color: var(--text);
+  }
+  body.th-tool-page[data-th-page="workspace"] .greeting-banner-date {
+    font-family: var(--font-ui); text-transform: uppercase; letter-spacing: 1.2px; font-size: 12.5px; width: 100%;
+  }
+  body.th-tool-page[data-th-page="workspace"] .greeting-banner-number { font-size: 48px; color: var(--orange); }
+  body.th-tool-page[data-th-page="workspace"] .greeting-banner-label { font-family: var(--font-ui); letter-spacing: 1.2px; }
+  @media (max-width: 720px) {
+    body.th-tool-page[data-th-page="workspace"] .greeting-banner { padding: 2px 0 12px; margin-bottom: 14px; }
+    body.th-tool-page[data-th-page="workspace"] .greeting-banner-greeting { font-size: 26px; }
+    body.th-tool-page[data-th-page="workspace"] .greeting-banner-number { font-size: 34px; }
+  }
+  body.th-tool-page[data-th-page="workspace"] .today-next-job {
+    background: linear-gradient(var(--orange-tint-soft), var(--orange-tint-soft)), var(--bg-panel);
+    border: 1px solid var(--orange-tint-border); border-radius: var(--th-radius-card); box-shadow: none;
+  }
+  body.th-tool-page[data-th-page="workspace"] .today-next-job-label,
+  body.th-tool-page[data-th-page="workspace"] .today-money-label,
+  body.th-tool-page[data-th-page="workspace"] .today-restofday-label {
+    font-family: var(--font-ui); font-weight: 600; font-size: 12px; letter-spacing: 1.4px; color: var(--text);
+    display: flex; align-items: center; gap: 10px;
+  }
+  body.th-tool-page[data-th-page="workspace"] .today-next-job-label::after,
+  body.th-tool-page[data-th-page="workspace"] .today-money-label::after,
+  body.th-tool-page[data-th-page="workspace"] .today-restofday-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  body.th-tool-page[data-th-page="workspace"] .today-next-job-title { font-size: 28px; line-height: 1.05; text-transform: uppercase; }
+  body.th-tool-page[data-th-page="workspace"] .today-money,
+  body.th-tool-page[data-th-page="workspace"] .today-restofday {
+    background: var(--bg-panel); background-image: none; border: 1px solid var(--border); border-radius: var(--th-radius-card); box-shadow: none;
+  }
+  body.th-tool-page[data-th-page="workspace"] .today-money.is-warning { border-color: var(--status-error); }
+  body.th-tool-page[data-th-page="workspace"] .today-money-row-value { font-family: var(--font-display); font-weight: 400; font-size: 22px; letter-spacing: .3px; }
+  /* Quick actions: tiles, not a row of links. */
+  body.th-tool-page[data-th-page="workspace"] .dash-primary-strip { gap: 8px; }
+  body.th-tool-page[data-th-page="workspace"] .dash-primary-action {
+    min-height: 56px; border-radius: var(--th-radius-control); box-shadow: none;
+    background: var(--bg-panel); border: 1px solid var(--border); color: var(--text);
+    font-family: var(--font-ui); text-transform: uppercase; letter-spacing: .9px; font-weight: 600;
+    justify-content: flex-start; text-align: left; padding: 10px 12px;
+  }
+  body.th-tool-page[data-th-page="workspace"] .dash-primary-action:first-child { background: var(--orange); border-color: var(--orange); color: var(--th-ink-on-orange); }
+  body.th-tool-page[data-th-page="workspace"] .dash-primary-action:active { transform: scale(.98); }
+  @media (hover: hover) {
+    body.th-tool-page[data-th-page="workspace"] .dash-primary-action:hover { background: var(--bg-panel-2); border-color: var(--orange-tint-border); color: var(--text); }
+    body.th-tool-page[data-th-page="workspace"] .dash-primary-action:first-child:hover { background: var(--orange-light); border-color: var(--orange-light); color: var(--th-ink-on-orange); }
+  }
+  /* Needs-attention lanes: the tone lives in a dot beside the lane name,
+     not a coloured left edge. Urgent lanes keep full weight; a clear lane
+     compresses. */
+  body.th-tool-page[data-th-page="workspace"] .ops-lane {
+    border: 1px solid var(--border); border-radius: var(--th-radius-card); background: var(--bg-panel); box-shadow: none;
+  }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane[data-priority] { border-left: 1px solid var(--border); }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane[data-priority="now"]:not(.is-clear) { border-color: color-mix(in srgb, var(--status-error) 45%, var(--border)); }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane-label {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-ui); text-transform: uppercase; letter-spacing: 1.3px; font-weight: 600;
+  }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane-label::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane[data-priority="now"] .ops-lane-label::before { background: var(--status-error); }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane[data-priority="soon"] .ops-lane-label::before { background: var(--orange); }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane[data-priority="later"] .ops-lane-label::before { background: var(--blue); }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane[data-priority="money"] .ops-lane-label::before { background: var(--orange-light); }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane.is-clear { opacity: 1; background: transparent; border-style: dashed; }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane.is-clear .ops-lane-label { color: var(--text-dim); }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane-count {
+    font-family: var(--font-display); font-size: 18px; background: none; border: 0; padding: 0; color: var(--text);
+  }
+  body.th-tool-page[data-th-page="workspace"] .week-card { border-radius: var(--th-radius-card); box-shadow: none; background: var(--bg-panel); border: 1px solid var(--border); }
+  /* Desktop: two columns -- what needs you on the left, the quick actions
+     and your week beside it -- then the Business drawers full width. */
+  @media (min-width: 1200px) {
+    body.th-tool-page[data-th-page="workspace"] {
+      display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(300px, 1fr);
+      column-gap: 20px; grid-auto-flow: row dense; align-content: start;
+    }
+    body.th-tool-page[data-th-page="workspace"] > * { grid-column: 1 / -1; min-width: 0; }
+    body.th-tool-page[data-th-page="workspace"] > #todayHero,
+    body.th-tool-page[data-th-page="workspace"] > #section-actionitems { grid-column: 1; }
+    body.th-tool-page[data-th-page="workspace"] > #dashPrimaryStrip,
+    body.th-tool-page[data-th-page="workspace"] > #weekCard { grid-column: 2; align-self: start; }
+    body.th-tool-page[data-th-page="workspace"] > #dashPrimaryStrip { grid-template-columns: 1fr 1fr; margin-bottom: 14px; }
+    body.th-tool-page[data-th-page="workspace"] > #weekCard { margin-top: 0; }
+    /* Apply-time fix: in the ~430px cockpit column the week card's
+       side-by-side chart + stat row (built for a full-width card)
+       overflowed the viewport by ~40px and the bars ran under the
+       stats. Use the same stacked arrangement the card already uses
+       on a phone (the max-width: 720px block above). */
+    body.th-tool-page[data-th-page="workspace"] > #weekCard .week-body { flex-direction: column; align-items: stretch; gap: 14px; }
+    body.th-tool-page[data-th-page="workspace"] > #weekCard .week-chart { max-width: none; }
+    body.th-tool-page[data-th-page="workspace"] > #weekCard .week-bars { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+    body.th-tool-page[data-th-page="workspace"] > #weekCard .week-stats { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    body.th-tool-page[data-th-page="workspace"] > #weekCard .week-stats.is-four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
 </style>
 </head>
-<body>
+<body data-th-page="workspace">
 <a href="#todayHero" class="skip-link">Skip to main content</a>
 
 

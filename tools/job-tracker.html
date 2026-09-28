@@ -519,9 +519,48 @@
   @media (prefers-reduced-motion: reduce) {
     #calGrid.cal-slide-next, #calGrid.cal-slide-prev, #calDayJobs.cal-detail-fade, #calDetailHeading.cal-detail-fade { animation: none; }
   }
+
+  /* ==========================================================================
+     Workspace redesign W2 -- DAILY (2026-09-28): Jobs -- ruled board, sheets beside templates on desktop
+     Package W2 of the v2 Workspace redesign, built on W1 (the append-only
+     body.th-tool-page block at the end of styles-tools.css). Kept in this
+     page's own <style> (which loads after styles-tools.css, so it wins at
+     equal specificity) rather than appended to the shared sheet: every rule
+     is keyed to this page's body[data-th-page], so it has no business in a
+     file the nine portal pages also load. Source order is untouched; the
+     desktop arrangement is CSS grid placement only.
+     ========================================================================== */
+  /* ---- Jobs ---- */
+  body.th-tool-page[data-th-page="job-tracker"] .job-card { border-radius: var(--th-radius-card); }
+  body.th-tool-page[data-th-page="job-tracker"] .board-column { background: transparent; border: 1px solid var(--border); border-radius: var(--th-radius-card); box-shadow: none; }
+  body.th-tool-page[data-th-page="job-tracker"] .board-column-header {
+    font-family: var(--font-ui); text-transform: uppercase; letter-spacing: 1.3px; font-weight: 600;
+    box-shadow: inset 0 calc(-1 * var(--th-rule)) 0 var(--border);
+  }
+  body.th-tool-page[data-th-page="job-tracker"] .job-bulk-action-bar { border-radius: var(--th-radius-card); box-shadow: var(--shadow-hover); }
+  @media (min-width: 1024px) {
+    /* Add a Job and Recurring templates side by side; sort and status
+       filters share one toolbar row; the list gets the rest. */
+    body.th-tool-page[data-th-page="job-tracker"] #tab-jobs.is-active {
+      display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 12px; align-items: start;
+    }
+    body.th-tool-page[data-th-page="job-tracker"] #tab-jobs > * { grid-column: 1 / -1; min-width: 0; }
+    body.th-tool-page[data-th-page="job-tracker"] #tab-jobs > .th-sheet-trigger { grid-column: 1; }
+    body.th-tool-page[data-th-page="job-tracker"] #tab-jobs > #templatesFormSection { grid-column: 2; margin-bottom: 12px; }
+    body.th-tool-page[data-th-page="job-tracker"] #tab-jobs > .controls-row { grid-column: 1; margin-bottom: 12px; }
+    body.th-tool-page[data-th-page="job-tracker"] #tab-jobs > #statusFilterGroup { grid-column: 2; justify-self: end; margin-bottom: 12px; }
+    body.th-tool-page[data-th-page="job-tracker"] #tab-contacts.is-active {
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 12px; align-items: start;
+    }
+    body.th-tool-page[data-th-page="job-tracker"] #tab-contacts > * { grid-column: 1 / -1; min-width: 0; }
+    body.th-tool-page[data-th-page="job-tracker"] #tab-contacts > .th-sheet-trigger { grid-column: 1; }
+    body.th-tool-page[data-th-page="job-tracker"] #tab-contacts > #contactSearchWrap { grid-column: 2; }
+  }
+  body.th-tool-page[data-th-page="job-tracker"] .notes-sidebar,
+  body.th-tool-page[data-th-page="job-tracker"] .notes-editor .form-section { border-radius: var(--th-radius-card); }
 </style>
 </head>
-<body>
+<body data-th-page="job-tracker">
 <a href="#mainContent" class="skip-link">Skip to main content</a>
 
 <div class="hub-header">
@@ -619,7 +658,7 @@
     </div>
   </div>
 
-  <div class="form-section is-collapsed" id="templatesFormSection">
+  <div class="form-section is-collapsed" id="templatesFormSection" data-th-inline>
     <div class="form-section-header" onclick="toggleFormSection('templatesFormSection')">
       <h3>Recurring Job Templates <span id="templatesDueBadge"></span> <button class="help-btn" onclick="event.stopPropagation(); openCardInfo('templates')" aria-label="What is this?" title="What is this?">?</button></h3>
       <span class="collapse-chevron">&#9660;</span>

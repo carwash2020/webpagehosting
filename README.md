@@ -5729,6 +5729,16 @@ Designed in Claude Design from the P6 brief, then applied and checked here.
 
 Styles are scoped to `html.page-careers` / `html.page-legal`, and the 404 keeps its own inline styles. The homepage, About, Our Work, the blog and the landing pages are unchanged. Verified with the full suite, `check-consistency`, `check-undefined-vars`, lint and the visual snapshot; `check-links.py` has only the known sandbox-proxy Unsplash failures, same as main. Screenshots are in `docs/careers-legal-404-2026-09-28/`.
 
+## What changed, 2026-09-28 -- Workspace redesign W2: Home, Jobs, Job detail
+
+Package 2 of the Workspace redesign, on top of W1.
+
+- **Home** opens on the day as a headline: the greeting in large Anton caps, with today's job count as a big orange figure. The next job is the orange-tinted hero. The quick actions are tiles, with New job the one filled primary. The Needs-attention lanes show their urgency as a coloured dot instead of a coloured edge. On a computer (≥1200px), Home is a two-column cockpit: the next job and what needs you on the left, quick actions and Your week on the right, and the Business drawers full width below.
+- **Jobs**: on a computer, Add a Job sits beside Recurring Job Templates, and the sort and status filters share one row. Board columns are ruled. Recurring templates stay an inline card (they open themselves when a template is due) rather than popping a sheet.
+- **Job detail**: the title is larger and uppercase, the money numbers are one ruled strip, and the next-step buttons are bigger. On a phone, Call, Text, Directions, Invoice and Expense ride in a bar above the bottom nav, plus **Review** once the job is done, prefilled with the client, job and phone. On a computer, the job is on the left and its invoices, quotes, expenses and photos are on the right.
+
+Only the three pages changed. The styles live in each page's own stylesheet, keyed to that page, so the shared tools stylesheet and the client portal are untouched. Nothing was removed: ids, names, data attributes, links and scripts were audited against main.
+
 ## What changed, 2026-09-28 -- Client portal redesign v2, part 1: the shell, Home and Invoices
 
 Built from the v2 portal design handoff (the portal half of the same package as the Workspace W-series). Part 1 covers the shell, which every signed-in page shares, plus Home and Invoices. Estimates, Visits, Request, Contracts, Settings and sign-in are part 2.
