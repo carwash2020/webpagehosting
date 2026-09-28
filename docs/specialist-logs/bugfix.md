@@ -1363,3 +1363,5 @@ Its branch picked up this log's known fixture leak: a duplicate `const MIN_LEAD_
 - **Dev Tools actions sit behind `confirmDevPassword()`.** A test sets `sessionStorage.th_dev_password_confirmed = '1'` rather than knowing the password.
 
 Tests: `tests/design/service-card-landing-pages.test.js` (19; 17 fail on e4e70d6), `tests/dev-tools/live-consistency-page-list.test.js` (12; 2 fail on e4e70d6).
+
+- 2026-09-28 (from the visual lane, P5): blog posts' lead `img.blog-diagram` now sits in the above-the-fold `.post-hero` but still has `loading="lazy"`, which may delay LCP on all 16 posts. Consider `loading="eager"` + `fetchpriority="high"` on that one image. Not changed in the redesign PR.

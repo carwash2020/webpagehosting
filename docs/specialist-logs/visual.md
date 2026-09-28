@@ -2398,3 +2398,30 @@ Third package from the public-site sweep. I applied the later revision from the 
 - **Screenshots:** `docs/about-our-work-2026-09-28/`.
 
 **Still open.** `content.md` (from the design session): there's no real photo of Steven for the About hero; if one is ever added it goes in `.about-hero-badge`. Also, the brief said 62 gallery photos, but base has 61.
+
+## 2026-09-28 -- P5 blog index and post template (html.page-blog / html.page-blog-post, 17 pages), applied from a Claude Design package
+
+Fourth package from the public-site sweep. I used the later revision in the combined export. `rule1-audit` found nothing missing on any of the 17 files.
+
+**What shipped.**
+- **Index:** the 16 cards (markup unchanged) are regrouped into a "Start here" featured post, a sticky appliance jump bar with counts, and six shelves (Washer, Dryer, Dishwasher, Fridge, Oven, Around the house).
+- **Posts:**
+  - The header and lead image form a split `.post-hero`.
+  - Each H2 gets an id, and an "In this post" contents rail is built from them.
+  - The "something else" and "worth fixing" sections become tinted `section.post-pivot` / `section.post-worth` callouts, each with a call line (`btn orange js-phone-link` plus "or book a visit online").
+- **Unchanged:** no JS, and `site-motion.js`'s read-meta/progress are restyled only. All 61 new in-page anchors resolve to real ids, and every new call link dials the real number.
+
+**Changed at apply time, and why:**
+- **The shelf bar was `position:sticky` plus `backdrop-filter` on one horizontal scroller.** That's the WebKit ghosting pattern P4's filter bar had. It gets the same fix: a `.blog-shelf-bar` wrapper sticks and carries the glass on `::before`, and the link row keeps its sideways scroll. `theme-toggle.test.js` only scans `styles.css`, so this one wasn't caught by a test; the bug is the same either way.
+- **Two new hovers weren't behind `(hover:hover)`**: the shelf links and the post contents links. Both are now guarded, with `:focus-visible` kept as its own rule. The no-sticky-hover test only checks the blog-index cards in `blog.css`, so again no test caught it.
+- **`blog-index-cards.test.js` sliced cards out of the index by file position.** With the featured post moved to the top, one slice came back empty, and two others passed only because they now spanned most of the page. All three now find each card by its link (`cardFor(href)`). A mutation check (breaking the to-do card's icon) still fails the test.
+
+**Checked, not changed:**
+- **The new `<section>`s.** The post callouts are `<section>` elements, and `styles.css`'s bare `section{padding:88px 0}` / `section + section{border-top}` rules (X4) would reach them. P5's scoped `.post-pivot` / `.post-worth` rules out-specify both, confirmed in render.
+- **Lead photos are hotlinked Unsplash images, unchanged from main.** The sandbox proxy blocks them (the same URLs behind the known `check-links.py` failures), so screenshots show alt text; production loads them.
+- **For the bug/perf lane (logged, not changed):** the lead photo now sits above the fold but keeps `loading="lazy"`, which can push back first paint on posts. The shelf counts in `blog/index.html` are typed in by hand; unlike Our Work, the index has no script to derive them, so whoever adds a post updates both.
+
+**Verification.**
+- **Tests and checks:** full suite 4253/4254 (the known `check-links.py` sandbox-proxy failure). `check-consistency`, `check-undefined-vars`, lint and the visual snapshot are clean.
+- **No leakage:** pixel diffs of About, Our Work, Careers and two service pages (these load `blog.css`), at 390/1440 in dark and light, show no visible change. The one Our Work strip was re-shot and is capture noise.
+- **Screenshots:** `docs/blog-2026-09-28/`.

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" style="background:#0a0a0a;">
+<html class="page-blog-post" lang="en" style="background:#0a0a0a;">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -61,7 +61,7 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="/styles.css?v=bf45bd2f80">
-<link rel="stylesheet" href="/blog/blog.css?v=8c0107810e">
+<link rel="stylesheet" href="/blog/blog.css?v=62fcdbf83c">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -209,6 +209,9 @@
 
 <main id="main">
 <div class="blog-body">
+  <!-- P5 redesign (2026-09-28): diagnostic header -- the title block and the
+       lead diagram share one hero frame. -->
+  <div class="post-hero">
   <div class="blog-header">
     <div class="blog-kicker"><a href="/blog/">Triple H Enterprises Blog</a></div>
     <h1 class="blog-title">Dryer Won't Turn On? It's Usually a Switch or a Fuse, Not a Dead Dryer</h1>
@@ -217,11 +220,26 @@
   </div>
 
   <img class="blog-diagram" src="https://images.unsplash.com/photo-1632923565835-6582b54f2105?fm=jpg&q=80&w=1400&auto=format&fit=crop" alt="A stacked washer and dryer in a home laundry room" loading="lazy">
+  </div>
 
+  <div class="post-layout">
+  <!-- P5 redesign (2026-09-28): on-page navigation built from this post's own
+       H2s (sticky beside the article on desktop, collapsible on phones). -->
+  <nav class="post-toc" aria-label="In this post">
+    <details open>
+      <summary>In this post</summary>
+      <ol>
+        <li><a href="#first-rule-out-the-things-that-aren-t-the-dryer">First, rule out the things that aren't the dryer</a></li>
+        <li><a href="#the-three-parts-that-usually-cause-it">The three parts that usually cause it</a></li>
+        <li><a href="#when-it-s-something-else">When it's something else</a></li>
+        <li><a href="#is-it-worth-fixing">Is it worth fixing?</a></li>
+      </ol>
+    </details>
+  </nav>
   <div class="blog-article">
     <p>A dryer that won't start feels like the worst version of a dryer problem, because nothing happens at all. In practice, the usual causes are some of the smallest parts in the machine. A dryer has a chain of switches and safety parts that all have to agree before the motor is allowed to run, and when one link in that chain fails, the whole machine just sits there.</p>
 
-    <h2 data-reveal>First, rule out the things that aren't the dryer</h2>
+    <h2 data-reveal id="first-rule-out-the-things-that-aren-t-the-dryer">First, rule out the things that aren't the dryer</h2>
 
     <p>A few checks cost nothing and take two minutes:</p>
     <ul>
@@ -231,7 +249,7 @@
     </ul>
     <p>If you want to look further than that yourself, unplug the dryer first, and on a gas dryer, leave anything connected to the gas line alone.</p>
 
-    <h2 data-reveal>The three parts that usually cause it</h2>
+    <h2 data-reveal id="the-three-parts-that-usually-cause-it">The three parts that usually cause it</h2>
 
     <p>The first is the door switch. The dryer won't run with the door open, and it relies on a small switch to know the door is shut. When that switch wears out, or the latch or the tab that presses it breaks, the dryer thinks the door is always open. If the door feels loose when it closes, or you have to lean on it to get the dryer to start, that's a strong hint.</p>
 
@@ -244,18 +262,26 @@
       <p>Door switches, thermal fuses, and start switches are all standard parts behind a panel or two, and often a same-visit swap. If it's the thermal fuse, we check the full vent run before we leave, because a fuse replaced without fixing the airflow will just blow again.</p>
     </div>
 
-    <h2 data-reveal>When it's something else</h2>
+    <section class="post-pivot">
+    <h2 data-reveal id="when-it-s-something-else">When it's something else</h2>
 
     <p>Listen when you press Start. If you hear a hum but the drum doesn't turn, let go of the button. That means the start circuit is doing its job and the problem is further down the line: the motor, or something binding the drum. On some models a broken drive belt also stops the dryer from starting, because a switch on the idler senses the belt is gone. And if the dryer does run but makes a loud thumping or grinding noise, that's usually the drum rollers or the idler pulley, and worth catching early before a small repair becomes a bigger one.</p>
 
-    <h2 data-reveal>Is it worth fixing?</h2>
+    
+      <p class="post-pivot-call"><a href="tel:+14354141667" class="btn orange js-phone-link">Call <span class="js-phone-text">(435) 414-1667</span></a> <a href="/booking.html" class="cta-quiet-link">or book a visit online</a></p>
+    </section>
+
+    <section class="post-worth">
+    <h2 data-reveal id="is-it-worth-fixing">Is it worth fixing?</h2>
 
     <p>Almost always. A dryer that won't start is rarely a dryer at the end of its life, since the usual causes are a few small switches and a fuse. We'd only start talking replacement if it turns out to be the motor on an older machine, or if this is one of several unrelated problems showing up in a short stretch.</p>
+    </section>
 
     <div class="blog-cta">
       <p>Dryer dead when you press Start? We can usually track down the part and get it running again same visit.</p>
       <a href="tel:4354141667" class="btn orange js-phone-link js-phone-text">Call (435) 414-1667</a>
     </div>
+  </div>
   </div>
 
   <div class="blog-related">
