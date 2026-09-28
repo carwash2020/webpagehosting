@@ -172,7 +172,9 @@ test('the More drawer is an app grid of the remaining pages plus two utility row
   const labels = [...sheet.querySelectorAll('.th-more-sheet-link')].map(a => a.textContent.trim());
   // Website is in the DOM for everyone but hidden unless the account can
   // manage site content -- see website-nav-entry.test.js.
-  assert.deepEqual(labels, ['Route Planner', 'Runway Dashboard', 'Contracts', 'Reviews', 'Appliance Wiki', 'Website', 'Dev Tools', 'Settings']);
+  // Insights (v2, 2026-09-28) is Home's #insights view: a sidebar row
+  // ("Analytics") the drawer derives a tile from, like every other page.
+  assert.deepEqual(labels, ['Route Planner', 'Runway Dashboard', 'Insights', 'Contracts', 'Reviews', 'Appliance Wiki', 'Website', 'Dev Tools', 'Settings']);
   let helped = 0;
   w.openHelpModal = () => { helped++; };
   sheet.querySelector('[data-th-util="help"]').click();

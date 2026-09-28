@@ -185,6 +185,12 @@
     { group: 'Money',  href: '/tools/invoice-generator.html',  icon: 'receipt',  label: 'Invoices' },
     { group: 'Money',  href: '/tools/finance.html',            icon: 'dollar',   label: 'Finance' },
     { group: 'Money',  href: '/tools/runway-dashboard.html',   icon: 'chart',    label: 'Runway Dashboard' },
+    // Insights (v2, 2026-09-28): Home's Business Snapshot + Analytics as
+    // their own screen -- a view toggle on the dashboard itself, the same
+    // hash-routed pattern as Job Tracker's #calendar. The More drawer
+    // picks it up from here like every other destination; moreLabel is
+    // its tile name there.
+    { group: 'Insights', href: '/tools/workspace.html#insights', icon: 'trending', label: 'Analytics', moreLabel: 'Insights' },
     { group: 'Office', href: '/tools/contract-generator.html', icon: 'scroll',   label: 'Contracts' },
     { group: 'Office', href: '/tools/review-request.html',     icon: 'star',     label: 'Reviews' },
     { group: 'Office', href: '/tools/parts-reference.html',    icon: 'book',     label: 'Appliance Wiki' },
@@ -222,15 +228,28 @@
     { label: 'Review ask',   hint: 'Text a Google review link',   icon: 'star',    href: '/tools/review-request.html', perm: 'canManageReviews' }
   ];
 
+  // A destination may carry a hash (/tools/workspace.html#insights, v2): it
+  // is the current one when both path and hash match, and it takes "current"
+  // away from the plain page it lives on while that hash is showing.
+  function destIsHere(d) {
+    var parts = String(d.href).split('#');
+    if (parts[0] !== path) return false;
+    var hash = (window.location && window.location.hash || '').replace(/^#/, '');
+    if (parts.length > 1) return hash === parts[1];
+    return !SIDEBAR_DESTS.some(function (o) {
+      var op = String(o.href).split('#');
+      return op.length > 1 && op[0] === path && op[1] === hash;
+    });
+  }
   function isMorePage() {
-    return MORE_DESTS.some(function (d) { return path === d.href; });
+    return MORE_DESTS.some(destIsHere);
   }
 
   function iconSvg(name) {
     return '<svg class="th-icon" aria-hidden="true"><use href="#icon-' + name + '" xlink:href="#icon-' + name + '"></use></svg>';
   }
 
-  function destLinksHtml(dests) {
+  function destLinksHtml(dests, useMoreLabel) {
     var html = '';
     var lastGroup = '';
     dests.forEach(function (d) {
@@ -238,15 +257,30 @@
         html += '<div class="th-sidebar-group">' + d.group + '</div>';
         lastGroup = d.group;
       }
-      var active = path === d.href ? ' is-active' : '';
-      var current = path === d.href ? ' aria-current="page"' : '';
+      var here = destIsHere(d);
+      var active = here ? ' is-active' : '';
+      var current = here ? ' aria-current="page"' : '';
       var hidden = d.hideUntilAllowed ? ' style="display: none"' : '';
       html += '<a href="' + d.href + '" class="th-sidebar-link' + active + '"' + current + hidden + '>' +
         '<span class="th-hex-icon">' + iconSvg(d.icon) + '</span>' +
-        '<span>' + d.label + '</span></a>';
+        '<span>' + ((useMoreLabel && d.moreLabel) || d.label) + '</span></a>';
     });
     return html;
   }
+  // Re-marks the current sidebar row / More tile / More button when only the
+  // hash changes (Home <-> Insights), since no page load re-injects them.
+  function refreshHereMarks() {
+    document.querySelectorAll('a.th-sidebar-link, a.th-more-sheet-link').forEach(function (a) {
+      var d = SIDEBAR_DESTS.filter(function (x) { return x.href === a.getAttribute('href'); })[0];
+      if (!d) return;
+      var here = destIsHere(d);
+      a.classList.toggle('is-active', here);
+      if (here) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    });
+    var menuBtn = document.querySelector('.th-hdr-menu');
+    if (menuBtn) menuBtn.classList.toggle('is-active', isMorePage());
+  }
+  window.addEventListener('hashchange', refreshHereMarks);
 
   // ---- sheets (More drawer + Create) -------------------------------------
   // Both are bottom sheets on a phone and centred cards on a tablet; the
@@ -369,14 +403,14 @@
     sheet.id = 'thMoreSheet';
     sheet.className = 'th-more-sheet th-sheet';
     sheet.setAttribute('hidden', '');
-    var tiles = MORE_DESTS.map(function (d) { return { href: d.href, icon: d.icon, label: d.label, hideUntilAllowed: d.hideUntilAllowed }; });
+    var tiles = MORE_DESTS.map(function (d) { return { href: d.href, icon: d.icon, label: d.label, moreLabel: d.moreLabel, hideUntilAllowed: d.hideUntilAllowed }; });
     sheet.innerHTML =
       '<div class="th-more-sheet-backdrop th-sheet-backdrop" data-th-sheet-close="1"></div>' +
       '<div class="th-more-sheet-panel th-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="thMoreSheetTitle">' +
         '<div class="th-more-sheet-handle th-sheet-handle" aria-hidden="true"></div>' +
         '<h2 class="th-more-sheet-title th-sheet-title" id="thMoreSheetTitle">More tools</h2>' +
         '<div class="th-more-sheet-links">' +
-          destLinksHtml(tiles).replace(/th-sidebar-link/g, 'th-more-sheet-link') +
+          destLinksHtml(tiles, true).replace(/th-sidebar-link/g, 'th-more-sheet-link') +
         '</div>' +
         '<div class="th-more-sheet-utils">' +
           (pageHelpButton() ? '<button type="button" class="th-more-sheet-util" data-th-util="help">' + iconSvg('help') + '<span>How this page works</span></button>' : '') +
@@ -386,6 +420,13 @@
     document.body.appendChild(sheet);
     wireSheet(sheet);
     sheet.addEventListener('click', function (e) {
+      // A tile that only changes this page's hash (Insights, on Home) never
+      // navigates, so the drawer has to step aside itself.
+      var tile = e.target && e.target.closest && e.target.closest('a.th-more-sheet-link');
+      if (tile && String(tile.getAttribute('href')).split('#')[0] === path && tile.getAttribute('href').indexOf('#') > -1) {
+        closeSheet('thMoreSheet', false);
+        return;
+      }
       var util = e.target && e.target.closest && e.target.closest('[data-th-util]');
       if (!util) return;
       var which = util.getAttribute('data-th-util');
@@ -691,10 +732,58 @@
       '</button>' +
       '<div class="th-sidebar-links">' +
       destLinksHtml(SIDEBAR_DESTS) +
-      '</div>';
+      '</div>' +
+      // Account chip (v2, 2026-09-28): who is signed in, at the foot of the
+      // rail, opening Settings. Filled from the stored session and the role
+      // once it loads (fillSidebarAccount); empty until then, never a guess.
+      '<a href="/tools/settings.html" class="th-sidebar-account" aria-label="Account and settings">' +
+        '<span class="th-sidebar-account-avatar" aria-hidden="true"></span>' +
+        '<span class="th-sidebar-account-text"><span class="th-sidebar-account-name"></span><span class="th-sidebar-account-role"></span></span>' +
+      '</a>';
     document.body.insertBefore(sidebar, document.body.firstChild);
     sidebar.querySelector('.th-sidebar-new').addEventListener('click', function () { openCreate(this); });
+    fillSidebarAccount();
   }
+
+  var ROLE_WORDS = { owner: 'Owner', developer: 'Developer', employee: 'Employee', admin: 'Admin', office: 'Office', tech: 'Tech' };
+  function fillSidebarAccount() {
+    var chip = document.querySelector('.th-sidebar-account');
+    if (!chip) return;
+    var email = '';
+    try { var s = (typeof getStoredSession === 'function') ? getStoredSession() : null; email = (s && s.email) || ''; } catch (e) { /* ignore */ }
+    var first = '';
+    try { first = (typeof getCurrentUserFirstName === 'function' && getCurrentUserFirstName()) || ''; } catch (e) { /* ignore */ }
+    if (first && first.indexOf('@') > -1) first = first.split('@')[0];
+    var name = first || (email ? email.split('@')[0] : '');
+    var roleInfo = null;
+    try { roleInfo = (typeof getCurrentUserRole === 'function') ? getCurrentUserRole() : null; } catch (e) { /* ignore */ }
+    var roleKey = roleInfo && (typeof roleInfo === 'string' ? roleInfo : roleInfo.roleName);
+    var role = roleKey ? (ROLE_WORDS[String(roleKey).toLowerCase()] || String(roleKey)) : '';
+    chip.hidden = !name;
+    chip.querySelector('.th-sidebar-account-avatar').textContent = name ? name.slice(0, 2).toUpperCase() : '';
+    chip.querySelector('.th-sidebar-account-name').textContent = name;
+    chip.querySelector('.th-sidebar-account-role').textContent = role || email;
+  }
+  window.addEventListener('th-role-loaded', fillSidebarAccount);
+
+  // Header kicker (v2, 2026-09-28): a small Oswald line over the page title
+  // -- the section the page belongs to (Work / Money / Insights / Office),
+  // or whatever the page sets with thSetHeaderKicker() (Home shows the date).
+  function injectHeaderKicker() {
+    var title = document.querySelector('.hub-header .hub-title');
+    if (!title || title.parentNode.querySelector('.th-kicker')) return;
+    var own = SIDEBAR_DESTS.filter(function (d) { return String(d.href).split('#')[0] === path; })[0];
+    var kicker = document.createElement('span');
+    kicker.className = 'th-kicker';
+    kicker.textContent = document.body.getAttribute('data-th-kicker') || (own ? own.group : '');
+    title.parentNode.insertBefore(kicker, title);
+    title.parentNode.classList.add('th-has-kicker');
+  }
+  window.thSetHeaderKicker = function (text) {
+    var k = document.querySelector('.hub-header .th-kicker');
+    if (k) k.textContent = text || '';
+    else document.body.setAttribute('data-th-kicker', text || '');
+  };
 
   function barItemHtml(d) {
     if (d.create) {
@@ -751,6 +840,7 @@
     document.body.classList.add('th-tool-page');
     markPage();
     if (onLogin) return;
+    injectHeaderKicker();
     mountStatusDot();
     document.body.classList.add('th-has-bottomnav');
     injectSidebar();
@@ -1802,6 +1892,12 @@ if (typeof document !== 'undefined') {
     '<symbol id="icon-play" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M8 5.2v13.6a.9.9 0 0 0 1.37.77l10.6-6.8a.9.9 0 0 0 0-1.54L9.37 4.43A.9.9 0 0 0 8 5.2z"/></symbol>' +
     '<symbol id="icon-stop" viewBox="0 0 24 24"><rect fill="currentColor" stroke="none" x="6" y="6" width="12" height="12" rx="2.5"/></symbol>' +
     '<symbol id="icon-mic" viewBox="0 0 24 24"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5V6a3.5 3.5 0 0 0-7 0v5.5A3.5 3.5 0 0 0 12 15z"/><path d="M6 11.5a6 6 0 0 0 12 0"/><line x1="12" y1="17.5" x2="12" y2="21"/><line x1="8.5" y1="21" x2="15.5" y2="21"/></symbol>' +
+
+    // Row action menu (v2, 2026-09-28): Duplicate, a plain check, Download, Open.
+    '<symbol id="icon-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="1.6"/><path d="M15.5 5.5V5a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 5v8A1.5 1.5 0 0 0 6 14.5h.5"/></symbol>' +
+    '<symbol id="icon-check" viewBox="0 0 24 24"><polyline points="5 12.5 10 17.5 19.5 7"/></symbol>' +
+    '<symbol id="icon-download" viewBox="0 0 24 24"><line x1="12" y1="4" x2="12" y2="15"/><polyline points="7.5 10.5 12 15 16.5 10.5"/><line x1="5" y1="19.5" x2="19" y2="19.5"/></symbol>' +
+    '<symbol id="icon-external" viewBox="0 0 24 24"><path d="M13.5 4.5h6v6"/><line x1="19.5" y1="4.5" x2="11" y2="13"/><path d="M17.5 13.5v5a1.5 1.5 0 0 1-1.5 1.5H6a1.5 1.5 0 0 1-1.5-1.5V8A1.5 1.5 0 0 1 6 6.5h5"/></symbol>' +
 
     '<symbol id="icon-terminal" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M7 9.3l3.3 2.7-3.3 2.7"/><line x1="12" y1="14.7" x2="16.5" y2="14.7"/></symbol>' +
 
