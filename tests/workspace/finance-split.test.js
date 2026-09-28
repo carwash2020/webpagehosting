@@ -2178,7 +2178,21 @@ test('every one of the 25 tour steps has a highlightSelector, and every selector
     // good enough here since every selector used is a plain id, class,
     // or single-attribute match, not a compound/descendant selector.
     let ok;
-    if (selector.startsWith('#')) {
+    // W1 (2026-09-28) form sheets: tools-effects.js turns any qualifying
+    // .form-section into a .th-sheet-trigger[aria-controls="<id>"] row at
+    // RUNTIME, with the id taken from the section itself, so the trigger's
+    // own markup is never literally present in the page or injected shell
+    // JS for this substring check to find. A static id="<id>" on a
+    // .form-section is what actually guarantees the trigger gets created
+    // (see tools-effects.js's own sheetable() check), so confirm that
+    // instead -- same fix already made in scripts/check-consistency.js's
+    // checkTourHealth for the same selector shape.
+    const sheetTriggerMatch = selector.match(/^\.th-sheet-trigger\[aria-controls="([^"]+)"\]$/);
+    if (sheetTriggerMatch) {
+      const id = sheetTriggerMatch[1];
+      ok = new RegExp('class="[^"]*\\bform-section\\b[^"]*"[^>]*\\sid="' + id + '"').test(pageSrc)
+        || new RegExp('\\sid="' + id + '"[^>]*class="[^"]*\\bform-section\\b').test(pageSrc);
+    } else if (selector.startsWith('#')) {
       ok = pageSrc.includes('id="' + selector.slice(1) + '"');
     } else if (selector.startsWith('.')) {
       // Compound class selectors (e.g. .tabs.tabs-sticky) need every
@@ -2815,7 +2829,12 @@ test('the tour health check genuinely catches a broken highlightSelector, not ju
   const tourPath = path.join(__dirname, '..', '..', 'tools', 'tools-tour.js');
   const original = fs.readFileSync(tourPath, 'utf8');
   try {
-    const broken = original.replace("highlightSelector: '#addJobBtn'", "highlightSelector: '#thisElementDoesNotExist'");
+    // W1 (2026-09-28) made the Jobs step's highlightSelector a comma list
+    // (".th-sheet-trigger[...], #addJobBtn"), so the old exact-field match
+    // no longer applies -- replace just the #addJobBtn part instead, which
+    // still breaks the step (every comma alternative must resolve) and
+    // still proves the checker catches a genuinely broken selector.
+    const broken = original.replace('#addJobBtn', '#thisElementDoesNotExist');
     fs.writeFileSync(tourPath, broken);
     const result = runCheckConsistency();
     assert.equal(result.passed, false, 'should have failed with a broken selector');

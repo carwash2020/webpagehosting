@@ -710,9 +710,48 @@
       '<span>' + d.label + '</span></a>';
   }
 
+  // W1 (2026-09-28): a page key for the per-page layouts in styles-tools.css
+  // (body.th-tool-page[data-th-page="job-tracker"] ...). Pages may also
+  // carry it in their own markup so the layout applies at first paint.
+  function markPage() {
+    if (document.body.hasAttribute('data-th-page')) return;
+    var m = path.match(/\/tools\/([a-z0-9-]+)\.html$/);
+    if (m) document.body.setAttribute('data-th-page', m[1]);
+  }
+
+  // W1 (2026-09-28): one status dot in the header instead of the live-sync
+  // words. The page's own badge (whatever its ids: realtimeBadge, jtBadge)
+  // moves next to the title inside .th-status, so every page's
+  // updateRealtimeBadge() and retryLiveSync() keep finding it by id; the
+  // words stay for screen readers and become the tooltip. The page's
+  // unsynced-changes badge rides along as a second, orange dot.
+  function mountStatusDot() {
+    var badge = document.querySelector('.hub-header .realtime-badge, header#mainContent .realtime-badge, #realtimeBadge');
+    var title = document.querySelector('.hub-header .hub-title, header#mainContent h1');
+    if (!badge || !title || badge.closest('.th-status')) return;
+    var from = badge.parentNode;
+    var holder = document.createElement('span');
+    holder.className = 'th-status';
+    if (title.tagName === 'H1') title.insertBefore(holder, title.querySelector('.help-btn'));
+    else title.parentNode.insertBefore(holder, title.nextSibling);
+    holder.appendChild(badge);
+    var pending = document.getElementById('pendingChangesBadge');
+    if (pending) holder.appendChild(pending);
+    var words = badge.querySelector('span:not(.realtime-dot)');
+    function tip() {
+      var t = words ? (words.textContent || '').trim() : '';
+      if (t) { badge.title = t; badge.setAttribute('aria-label', t); }
+    }
+    tip();
+    if (words && typeof MutationObserver !== 'undefined') new MutationObserver(tip).observe(words, { childList: true, characterData: true, subtree: true });
+    if (from && from.classList && from.classList.contains('hub-sub') && !from.children.length) from.classList.add('th-hub-sub-empty');
+  }
+
   function inject() {
     document.body.classList.add('th-tool-page');
+    markPage();
     if (onLogin) return;
+    mountStatusDot();
     document.body.classList.add('th-has-bottomnav');
     injectSidebar();
     injectFlagButton();

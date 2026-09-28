@@ -255,6 +255,23 @@
     --tone-purple-bg: rgba(201, 164, 255, 0.14);
     --tone-red-fg: #ff8080;
     --tone-red-bg: rgba(255, 90, 90, 0.14);
+    /* Workspace W1 "one app" system (2026-09-28): base declarations for the
+       tokens tools/styles-tools.css reads. Nothing on the public site uses
+       them; they live here so tools-light-mode.test.js finds every var(). */
+    --th-ease: cubic-bezier(.2,.8,.2,1);
+    --th-ease-exit: cubic-bezier(.4,0,1,1);
+    --th-dur-sheet: .3s;
+    --th-dur-quick: .16s;
+    --th-radius-card: 10px;
+    --th-radius-control: 8px;
+    --th-rule: 2px;
+    --th-sheet-w: 460px;
+    --th-scrim: rgba(0,0,0,.56);
+    --shadow-sheet: 0 -20px 48px -16px rgba(0,0,0,.7);
+    --shadow-panel-side: -24px 0 48px -20px rgba(0,0,0,.7);
+    --status-live: #3ad66b;
+    --status-error: #ff6a5c;
+    --status-idle: #6b6e76;
   }
 
   /* Light theme (2026-08-20): the JS toggle has always correctly set
@@ -292,6 +309,14 @@
     --shadow-active: 0 1px 3px rgba(0,0,0,.16);
     --bg-glass: rgba(255,255,255,.66);
     --glass-highlight: rgba(255,255,255,.55);
+    /* Workspace W1 (2026-09-28): light-ground values for the scrim, the
+       sheet shadows and the status dot. */
+    --th-scrim: rgba(32,29,24,.36);
+    --shadow-sheet: 0 -16px 40px -16px rgba(32,29,24,.28);
+    --shadow-panel-side: -20px 0 40px -20px rgba(32,29,24,.28);
+    --status-live: #1c8f45;
+    --status-error: #c4372b;
+    --status-idle: #9a958c;
   }
 
   *{box-sizing:border-box;}

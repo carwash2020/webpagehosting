@@ -263,7 +263,15 @@ test('the look: a green pill and an amber dot in the header, a sidebar row like 
   }
   assert.match(CSS, /body \.th-shift-input \{[\s\S]*?font-size: 16px;/);
   assert.match(CSS, /\.th-shift-error:empty \{ display: none; \}/);
-  assert.doesNotMatch(CSS.slice(CSS.indexOf('/* ---- Shift clock')), /animation/, 'nothing ticks or pulses: that is the job clock\'s bar');
+  // Bounded to the Shift clock section itself (up to the next `/* ----`
+  // section header), not sliced to end-of-file: W1 (2026-09-28) appends a
+  // whole new system block after this section, including its own
+  // legitimate motion (the status dot pulse, sheet transitions) that has
+  // nothing to do with the shift clock and shouldn't trip this assertion.
+  const shiftSectionStart = CSS.indexOf('/* ---- Shift clock');
+  const nextSectionStart = CSS.indexOf('/* ----', shiftSectionStart + 1);
+  const shiftSection = nextSectionStart === -1 ? CSS.slice(shiftSectionStart) : CSS.slice(shiftSectionStart, nextSectionStart);
+  assert.doesNotMatch(shiftSection, /animation/, 'nothing ticks or pulses: that is the job clock\'s bar');
 });
 
 test('the job clock\'s bar is untouched: a running job clock and a shift show side by side', () => {
