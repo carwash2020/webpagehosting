@@ -2371,3 +2371,30 @@ Second package from the public-site redesign sweep. It arrived in the right shap
 - **Screenshots** are in `docs/landing-template-2026-09-28/`.
 
 **Still open for P2's apply.** The combined Claude Design export includes a later P1 revision that moves its hook to `html.page-home` and drops the h1 line spans. P2 was built on top of that revision, so P2's `index.html` must be 3-way merged against it (base = that P1 revision, ours = main). Whole-file copying it would undo P1's merged hero.
+
+## 2026-09-28 -- P4 About + Our Work (html.page-about / html.page-our-work), applied from a Claude Design package
+
+Third package from the public-site sweep. I applied the later revision from the combined Claude Design export (17:40), not the first P4 zip; only its `styles.css` block and patch differed. Hooks sit on `<html>`. `rule1-audit` found nothing missing on either page. About's paragraphs are re-ordered into the new layout, not dropped: the design's own audit found the sorted word list identical to base.
+
+**What shipped.**
+- **About:** a split typographic hero with the Triple H badge (no photo of Steven exists, so no portrait, and no stock), an aria-hidden pull-quote from the accountability paragraph, the experience as a timeline of the existing paragraphs, and "What that means for your repair" as a proof grid.
+- **Our Work:** a featured kitchen-tile project built from four of its own photos, a sticky filter bar with per-category counts, a fixed-ratio grid for thin categories (four photos or fewer) via one `.is-few` toggle, and a lightbox with a position counter and tap-to-zoom. The IO lazy loader, the 61-photo count and the lightbox list order are untouched.
+
+**Changed at apply time, and why (four of these were test failures the package's `APPLY.md` said wouldn't happen):**
+- **A comment that quoted the literals it was avoiding.** The block's opening comment named `.quote-block{`, `.lightbox-overlay{` and `.gallery-category{` with their braces. That left `styles.css` with three unbalanced braces (the brace-balance test counts comments too). It also put a third literal `.quote-block{` between the two real ones, which F34 reads by position. Reworded without braces. **Standing rule for any CSS comment: never write a `{` or `}` in it.** P3 hit the same thing at apply time.
+- **The About badge used the full 531px orange logo, unstamped**, in a slot the logo-variant test didn't know. It now uses `srcset` 176w/531w with `sizes="(max-width: 860px) 120px, 360px"` and `?v=` stamps on both files. The test gained an `about-hero` slot, as its own failure message asks ("decide its size and add it here"). It's separate from `hero`, so the homepage-badge rules stay the homepage's. A mutation check (dropping the slot class) still fails it.
+- **The sticky filter bar combined `position:sticky` and `backdrop-filter` on one element.** That's the WebKit ghosting pattern the header fix moved onto `::before` (`theme-toggle.test.js`). The bar is now a new `.gallery-filters-bar` wrapper that sticks and carries the glass on `::before`, with `isolation:isolate`. The chip row inside keeps its own sideways scroll; a `::before` on the scroller itself would have slid away with the chips.
+- **The one-row chip strip clipped "Kitchen Tile: Finished" and "Other Work" off the right edge on desktop**, with the scrollbar hidden, so two filters had no visible cue. Desktop keeps the base wrapping (the bar is two rows, 114px tall at 1440). Phones keep the one-row scroller, inside P4's existing 860px block.
+- **Chip counts were typed into the markup** (All 61, Flooring 4, and so on), and would go wrong the first time a photo is added. The filter script now computes them from the tiles on load; the typed numbers stay as the no-JS fallback. They matched the tiles exactly.
+
+**Verification.**
+- **Suite:** full suite 4253/4254 (the known `check-links.py` sandbox-proxy failure). `check-consistency`, `check-undefined-vars`, lint and the visual snapshot are clean.
+- **Leaks:** pixel diffs of the homepage, Hurricane, handyman-repairs, Careers and a blog post (390/1440, dark/light) show no visible change. Two homepage strips were re-shot and are capture noise.
+- **Interactions:**
+  - All 61 photos filter correctly, with a thin category flipping to `.is-few`.
+  - The lightbox opens with its counter reading "1 / 61", then "2 / 61", and tap-to-zoom works.
+  - Escape closes it.
+  - Lazy loading fills all 61 photos on scroll, and About's FAQ behaves as before.
+- **Screenshots:** `docs/about-our-work-2026-09-28/`.
+
+**Still open.** `content.md` (from the design session): there's no real photo of Steven for the About hero; if one is ever added it goes in `.about-hero-badge`. Also, the brief said 62 gallery photos, but base has 61.

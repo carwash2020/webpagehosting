@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" style="background:#0a0a0a;">
+<html class="page-our-work" lang="en" style="background:#0a0a0a;">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -61,7 +61,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/styles.css?v=0a19c4e5a2">
+<link rel="stylesheet" href="/styles.css?v=bf45bd2f80">
 <link rel="stylesheet" href="/blog/blog.css?v=8c0107810e">
 <script type="application/ld+json">
 {
@@ -249,20 +249,50 @@
     <p class="blog-dek">A few recent jobs. More get added as they come in.</p>
   </div>
 
+  <!-- P4 redesign (2026-09-28): a featured project up top, built only from
+       existing real photos of one kitchen tile job and their existing
+       captions. Each image is a .gallery-tile with its own data-index, so
+       the page's existing lightbox wiring opens it in place. Outside
+       #galleryGrid, so the gallery's 61-photo count, lazy loader and
+       filters are untouched. -->
+  <section class="work-feature" aria-label="Featured project">
+    <div class="gallery-tile has-photo work-feature-main" data-index="42">
+      <img src="images/gallery/tile-finished-kitchen-wide-2.webp" width="1400" height="787" alt="Finished tile flooring, kitchen view">
+      <div class="gallery-caption">Finished tile flooring, kitchen view</div>
+    </div>
+    <div class="work-feature-steps">
+      <div class="gallery-tile has-photo work-feature-step" data-index="20">
+        <img src="images/gallery/tile-kitchen-before-1.webp" width="1400" height="787" alt="Original kitchen tile, before">
+        <div class="gallery-caption"><b>Kitchen Tile: Before &amp; Demo</b> Original kitchen tile, before</div>
+      </div>
+      <div class="gallery-tile has-photo work-feature-step" data-index="36">
+        <img src="images/gallery/tile-install-progress-wide.webp" width="1152" height="2048" alt="Tile installation in progress">
+        <div class="gallery-caption"><b>Kitchen Tile: Installation</b> Tile installation in progress</div>
+      </div>
+      <div class="gallery-tile has-photo work-feature-step" data-index="41">
+        <img src="images/gallery/tile-finished-kitchen-wide.webp" width="1152" height="2048" alt="Finished tile flooring, full kitchen view">
+        <div class="gallery-caption"><b>Kitchen Tile: Finished</b> Finished tile flooring, full kitchen view</div>
+      </div>
+    </div>
+  </section>
+
+
   <!-- Filter chips (item 2, visual improvements pass) -- one real button
        per gallery-category heading below, plus "All". Clicking one hides
        every tile (and category header) that doesn't match via a
        data-category attribute, wired up in the script near the gallery
        lightbox further down this page. -->
-  <div class="gallery-filters" role="group" aria-label="Filter gallery by category">
-    <button type="button" class="gallery-filter-chip" data-filter="all" aria-pressed="true">All</button>
-    <button type="button" class="gallery-filter-chip" data-filter="flooring-before-demo" aria-pressed="false">Flooring: Before &amp; Demo</button>
-    <button type="button" class="gallery-filter-chip" data-filter="flooring-installation" aria-pressed="false">Flooring: Installation</button>
-    <button type="button" class="gallery-filter-chip" data-filter="flooring-finished" aria-pressed="false">Flooring: Finished</button>
-    <button type="button" class="gallery-filter-chip" data-filter="kitchen-tile-before-demo" aria-pressed="false">Kitchen Tile: Before &amp; Demo</button>
-    <button type="button" class="gallery-filter-chip" data-filter="kitchen-tile-installation" aria-pressed="false">Kitchen Tile: Installation</button>
-    <button type="button" class="gallery-filter-chip" data-filter="kitchen-tile-finished" aria-pressed="false">Kitchen Tile: Finished</button>
-    <button type="button" class="gallery-filter-chip" data-filter="other-work" aria-pressed="false">Other Work</button>
+  <div class="gallery-filters-bar">
+    <div class="gallery-filters" role="group" aria-label="Filter gallery by category">
+      <button type="button" class="gallery-filter-chip" data-filter="all" aria-pressed="true">All <span class="chip-count">61</span></button>
+      <button type="button" class="gallery-filter-chip" data-filter="flooring-before-demo" aria-pressed="false">Flooring: Before &amp; Demo <span class="chip-count">4</span></button>
+      <button type="button" class="gallery-filter-chip" data-filter="flooring-installation" aria-pressed="false">Flooring: Installation <span class="chip-count">4</span></button>
+      <button type="button" class="gallery-filter-chip" data-filter="flooring-finished" aria-pressed="false">Flooring: Finished <span class="chip-count">12</span></button>
+      <button type="button" class="gallery-filter-chip" data-filter="kitchen-tile-before-demo" aria-pressed="false">Kitchen Tile: Before &amp; Demo <span class="chip-count">14</span></button>
+      <button type="button" class="gallery-filter-chip" data-filter="kitchen-tile-installation" aria-pressed="false">Kitchen Tile: Installation <span class="chip-count">7</span></button>
+      <button type="button" class="gallery-filter-chip" data-filter="kitchen-tile-finished" aria-pressed="false">Kitchen Tile: Finished <span class="chip-count">16</span></button>
+      <button type="button" class="gallery-filter-chip" data-filter="other-work" aria-pressed="false">Other Work <span class="chip-count">4</span></button>
+    </div>
   </div>
 
   <div class="gallery-grid gallery-masonry" id="galleryGrid">
@@ -652,6 +682,7 @@
   <button class="lightbox-nav lightbox-prev" id="lightboxPrev" aria-label="Previous">&#10094;</button>
   <div class="lightbox-img-wrap"><img id="lightboxImg" src="" alt=""></div>
   <button class="lightbox-nav lightbox-next" id="lightboxNext" aria-label="Next">&#10095;</button>
+  <div class="lightbox-count" id="lightboxCount" aria-live="polite"></div>
   <div class="lightbox-caption" id="lightboxCaption"></div>
 </div>
 
@@ -977,6 +1008,10 @@
     lightboxImg.src = galleryItems[i].src;
     lightboxImg.alt = galleryItems[i].caption;
     lightboxCaption.textContent = galleryItems[i].caption;
+    // P4 (2026-09-28): position counter, and zoom resets per photo.
+    const count = document.getElementById('lightboxCount');
+    if (count) count.textContent = (i + 1) + ' / ' + galleryItems.length;
+    lightbox.classList.remove('is-zoomed');
     lightbox.classList.add('is-visible');
   }
   function closeLightbox() {
@@ -991,6 +1026,12 @@
     tile.addEventListener('click', () => openLightbox(parseInt(tile.dataset.index, 10)));
   });
   document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
+  // P4 (2026-09-28): tap or click the photo to zoom in on the detail.
+  lightboxImg.addEventListener('click', (e) => {
+    const r = lightboxImg.getBoundingClientRect();
+    lightboxImg.style.transformOrigin = ((e.clientX - r.left) / r.width * 100) + '% ' + ((e.clientY - r.top) / r.height * 100) + '%';
+    lightbox.classList.toggle('is-zoomed');
+  });
   document.getElementById('lightboxPrev').addEventListener('click', () => showNext(-1));
   document.getElementById('lightboxNext').addEventListener('click', () => showNext(1));
   lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
@@ -1013,6 +1054,16 @@
     const headers = document.querySelectorAll('#galleryGrid .gallery-category[data-category]');
     if (!chips.length) return;
 
+    // Chip counts (P4, applied 2026-09-28) come from the tiles themselves, so
+    // they stay right when a photo is added; the numbers in the markup are
+    // only the no-JS fallback.
+    chips.forEach((chip) => {
+      const out = chip.querySelector('.chip-count');
+      if (!out) return;
+      const f = chip.dataset.filter;
+      out.textContent = String([...tiles].filter((t) => f === 'all' || t.dataset.category === f).length);
+    });
+
     chips.forEach((chip) => {
       chip.addEventListener('click', () => {
         const filter = chip.dataset.filter;
@@ -1027,6 +1078,11 @@
           h.classList.toggle('is-filtered-out', !show);
           h.hidden = !show;
         });
+        // P4 (2026-09-28): a category with only a few photos gets the
+        // two-column layout instead of three thin columns.
+        const grid = document.getElementById('galleryGrid');
+        const visible = [...tiles].filter((t) => !t.hidden).length;
+        if (grid) grid.classList.toggle('is-few', filter !== 'all' && visible <= 4);
       });
     });
   })();
