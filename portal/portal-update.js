@@ -24,16 +24,128 @@
       current version" regardless of what the browser thinks.
 
    Safe by construction: everything is inside try/catch, and if service
-   workers are unavailable the file does nothing at all. */
+   workers are unavailable the file does nothing at all.
+
+   REPEATING-BANNER FIX (2026-09-28) -- reported: "it pops up every time",
+   the same bug the tools app had and fixed on 2026-09-24 (see
+   tools-nav-pwa.js's "APP UPDATE AVAILABLE" comment for the full story).
+   Root cause here was the same shape: the portal service worker's
+   CACHE_NAME is re-stamped by `npm run fix-versions` whenever any
+   precached file changes -- several times a day, same as the tools
+   worker -- so `reg.waiting` or an `updatefound` -> installed worker was
+   true on almost every open or foreground, even though the page that
+   just loaded came from the network (HTML is network-first, ?v= stamps
+   are fresh) and was already current. A waiting/installed worker was
+   treated as "show the banner," with no check that THIS page actually
+   needs it.
+
+   Now a waiting/newly-installed worker is only a cue to CHECK: the page
+   records the scripts/stylesheets it actually loaded, fetches its own
+   URL fresh, and compares. The banner shows only when the live copy has
+   something this page doesn't -- a real update this page is missing.
+   Once shown or dismissed, this page load never checks again (the new
+   version arrives on the next natural navigation anyway), and a
+   foreground resume is throttled the same way the tools app throttles
+   it, so this does not hammer the network on every tab switch. */
 (function () {
   if (!('serviceWorker' in navigator)) return;
 
   var SCOPE = '/portal/';
   var BANNER_ID = 'portalUpdateBanner';
   var RELOAD_GUARD = 'th-portal-updating';
+  var CHECK_THROTTLE_MS = 5 * 60 * 1000;
+
+  var runningParts = null;
+  var shown = false; // shown or dismissed: this page asks once
+  var verifying = false;
+  var lastCheckAt = 0;
 
   function getRegistration() {
     return navigator.serviceWorker.getRegistration(SCOPE);
+  }
+
+  // FNV-1a, 32-bit. Identity only, not security. Mirrors tools-nav-pwa.js's
+  // thBuildHash so an inline script/style change (no URL change) still
+  // counts as a real update.
+  function buildHash(str) {
+    var h = 0x811c9dc5;
+    for (var i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 0x01000193);
+    }
+    return (h >>> 0).toString(16);
+  }
+
+  // What a page document runs: its scripts and stylesheets. Works on the
+  // live document and on one parsed from fetched HTML (DOMParser, where
+  // nothing executes), so refs are resolved by hand against the page URL
+  // rather than read from the resolved src/href properties.
+  function pageBuildParts(doc, baseHref) {
+    var parts = [];
+    var els = doc.querySelectorAll('script, style, link[rel~="stylesheet"]');
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      var tag = el.tagName.toLowerCase();
+      var ref = tag === 'link' ? el.getAttribute('href') : (tag === 'script' ? el.getAttribute('src') : null);
+      if (ref) {
+        try {
+          var u = new URL(ref, baseHref);
+          parts.push((tag === 'link' ? 'css:' : 'js:') + u.origin + u.pathname + u.search);
+        } catch (e) { /* unparseable URL -- nothing to compare */ }
+        continue;
+      }
+      var text = (el.textContent || '').trim();
+      if (text) parts.push((tag === 'style' ? 'style:' : 'inline:') + buildHash(text));
+    }
+    return parts;
+  }
+
+  // True only when the live page has something this page didn't load.
+  // Extras on this side are fine (scripts added at runtime), so this is
+  // a one-way check.
+  function pageIsBehind(running, live) {
+    if (!live.length) return false; // not a page we can read -- don't guess
+    var runningSet = {};
+    for (var i = 0; i < running.length; i++) runningSet[running[i]] = true;
+    for (var j = 0; j < live.length; j++) {
+      if (!runningSet[live[j]]) return true;
+    }
+    return false;
+  }
+
+  function captureRunningParts() {
+    if (!runningParts) runningParts = pageBuildParts(document, location.href);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', captureRunningParts);
+  else captureRunningParts();
+
+  function fetchLiveParts() {
+    var url = location.pathname + location.search;
+    return fetch(url, { cache: 'no-store', credentials: 'same-origin' }).then(function (res) {
+      var type = (res.headers.get('content-type') || '').toLowerCase();
+      if (!res.ok || type.indexOf('text/html') === -1) return [];
+      return res.text().then(function (html) {
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        return pageBuildParts(doc, location.href);
+      });
+    });
+  }
+
+  // A waiting/newly-installed worker is only a cue to verify -- see the
+  // header comment. Shows the banner only if this page is genuinely
+  // behind the live copy.
+  function verifyAndMaybeShow() {
+    if (shown || verifying) return;
+    captureRunningParts();
+    verifying = true;
+    fetchLiveParts()
+      .then(function (liveParts) {
+        if (shown || !pageIsBehind(runningParts, liveParts)) return;
+        shown = true;
+        showBanner();
+      })
+      .catch(function () { /* offline or blocked -- stay quiet */ })
+      .then(function () { verifying = false; });
   }
 
   function showBanner() {
@@ -63,7 +175,7 @@
     dismiss.className = 'portal-update-dismiss';
     dismiss.setAttribute('aria-label', 'Dismiss update notice');
     dismiss.textContent = '×';
-    dismiss.addEventListener('click', function () { bar.remove(); });
+    dismiss.addEventListener('click', function () { shown = true; bar.remove(); });
 
     bar.appendChild(text);
     bar.appendChild(update);
@@ -109,11 +221,12 @@
   };
 
   function checkForUpdate() {
+    if (shown) return;
     getRegistration().then(function (reg) {
       if (!reg) return;
 
       if (reg.waiting && navigator.serviceWorker.controller) {
-        showBanner();
+        verifyAndMaybeShow();
         return;
       }
 
@@ -125,7 +238,7 @@
         incoming.addEventListener('statechange', function () {
           // controller present means this is an update, not a first install
           if (incoming.state === 'installed' && navigator.serviceWorker.controller) {
-            showBanner();
+            verifyAndMaybeShow();
           }
         });
       });
@@ -144,10 +257,16 @@
     if (document.readyState === 'complete') checkForUpdate();
     else window.addEventListener('load', checkForUpdate);
   }
+  lastCheckAt = Date.now(); // this load's own check just ran (or was skipped)
 
   // An installed app is usually resumed, not reloaded, so this is the
-  // check that actually catches new versions in practice.
+  // check that actually catches new versions in practice. Throttled the
+  // same way the tools app throttles its own foreground check, so
+  // switching tabs/apps repeatedly does not re-fetch on every switch.
   document.addEventListener('visibilitychange', function () {
-    if (document.visibilityState === 'visible') checkForUpdate();
+    if (document.visibilityState !== 'visible' || shown) return;
+    if (Date.now() - lastCheckAt < CHECK_THROTTLE_MS) return;
+    lastCheckAt = Date.now();
+    checkForUpdate();
   });
 })();
