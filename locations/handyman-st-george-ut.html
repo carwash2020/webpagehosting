@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" style="background:#0a0a0a;">
+<html class="page-landing page-landing--city" lang="en" style="background:#0a0a0a;">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -81,7 +81,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/styles.css?v=7318c745aa">
+<link rel="stylesheet" href="/styles.css?v=0a19c4e5a2">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -378,10 +378,13 @@
 
 <main id="home">
   <section class="hero">
-    <div class="wrap">
+    <div class="wrap landing-hero">
       <p class="coverage-badge is-standard"><span class="dot"></span>Home Base &middot; St. George</p>
       <h1>Handyman & Appliance Repair in St. George, Utah</h1>
-      <p class="hero-distance-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>You're right here &mdash; this is where we're based</p>
+      <div class="landing-plate">
+        <p class="hero-distance-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>You're right here &mdash; this is where we're based</p>
+        <svg class="landing-plate-map" viewBox="190 50 450 310" aria-hidden="true" focusable="false"><circle class="lp-ring" cx="380" cy="210" r="150"/><circle class="lp-node" cx="482" cy="158" r="5"/><circle class="lp-node" cx="539" cy="218" r="5"/><circle class="lp-node" cx="222" cy="227" r="5"/><circle class="lp-node" cx="518" cy="102" r="5"/><circle class="lp-node" cx="608" cy="182" r="5"/><circle class="lp-node is-request" cx="300" cy="78" r="5"/><circle class="lp-node is-request" cx="263" cy="332" r="5"/><circle class="lp-hub is-focus" cx="380" cy="210" r="12"/></svg>
+      </div>
       <p class="hero-lede">St. George isn't a drive for us, it's home. Every truck, every
             tool, and every day starts right here, which means St. George jobs
             usually get the shortest wait and the easiest scheduling of anywhere
@@ -407,12 +410,12 @@
     </div>
   </section>
 
-  <section>
+  <section class="landing-local">
     <div class="wrap">
       <div class="section-head" data-reveal>
         <h2>Home Base, Every Neighborhood</h2>
       </div>
-      <p style="max-width:68ch; color:var(--text-dim); font-size:16px;">Downtown and the older streets around it, plus established
+      <p class="landing-local-lead">Downtown and the older streets around it, plus established
             neighborhoods like Bloomington, Sunbrook, and Little Valley, tend
             to bring the calls you'd expect from a house that's been
             standing for a while: aging water heaters and dishwashers,
@@ -422,7 +425,7 @@
             installation, furniture and shelving assembly, TV mounts, smart
             home devices, and the punch-list work that comes with a house
             that's still fairly new.</p>
-      <p style="max-width:68ch; color:var(--text-dim); font-size:16px; margin-top:16px;"><strong>Where we're based:</strong> St. George is our home base, not a route we drive in on. That means St. George addresses typically get the fastest response and the most flexible scheduling of anywhere we cover.</p>
+      <p class="landing-local-more"><strong>Where we're based:</strong> St. George is our home base, not a route we drive in on. That means St. George addresses typically get the fastest response and the most flexible scheduling of anywhere we cover.</p>
     </div>
   </section>
 
@@ -459,17 +462,17 @@
         <h2>Common Questions</h2>
       </div>
       <div class="faq-list">
-        <div style="border:1px solid var(--border); border-radius:var(--radius); background:var(--bg-panel); margin-bottom:12px; padding:20px 22px;">
-          <h3 style="font-family:var(--font-ui); font-weight:600; font-size:15.5px; margin:0 0 8px;">Do you charge a trip fee inside St. George?</h3>
-          <p style="color:var(--text-dim); font-size:14.5px; margin:0; max-width:68ch;">Almost never. St. George is home base, so nearly every address in town falls comfortably inside the free 15-mile radius. Only the far outer edges of the city might see the standard $25 trip fee, and we'll always tell you upfront if that applies.</p>
+        <div class="landing-qa">
+          <h3 class="landing-qa-q">Do you charge a trip fee inside St. George?</h3>
+          <p class="landing-qa-a">Almost never. St. George is home base, so nearly every address in town falls comfortably inside the free 15-mile radius. Only the far outer edges of the city might see the standard $25 trip fee, and we'll always tell you upfront if that applies.</p>
         </div>
-        <div style="border:1px solid var(--border); border-radius:var(--radius); background:var(--bg-panel); margin-bottom:12px; padding:20px 22px;">
-          <h3 style="font-family:var(--font-ui); font-weight:600; font-size:15.5px; margin:0 0 8px;">Do you work on appliances as well as general repairs?</h3>
-          <p style="color:var(--text-dim); font-size:14.5px; margin:0; max-width:68ch;">Yes. Appliance diagnostics and repair is a core part of what we do, alongside general handyman work like plumbing fixes, drywall and paint, and assembly/installation.</p>
+        <div class="landing-qa">
+          <h3 class="landing-qa-q">Do you work on appliances as well as general repairs?</h3>
+          <p class="landing-qa-a">Yes. Appliance diagnostics and repair is a core part of what we do, alongside general handyman work like plumbing fixes, drywall and paint, and assembly/installation.</p>
         </div>
-        <div style="border:1px solid var(--border); border-radius:var(--radius); background:var(--bg-panel); margin-bottom:12px; padding:20px 22px;">
-          <h3 style="font-family:var(--font-ui); font-weight:600; font-size:15.5px; margin:0 0 8px;">How is pricing handled?</h3>
-          <p style="color:var(--text-dim); font-size:14.5px; margin:0; max-width:68ch;">We diagnose the issue in person first, then give you a clear price before any work starts. Nothing gets billed as a surprise on the back end.</p>
+        <div class="landing-qa">
+          <h3 class="landing-qa-q">How is pricing handled?</h3>
+          <p class="landing-qa-a">We diagnose the issue in person first, then give you a clear price before any work starts. Nothing gets billed as a surprise on the back end.</p>
         </div>
       </div>
     </div>

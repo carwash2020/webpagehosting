@@ -2339,3 +2339,35 @@ First package from the public-site redesign sweep (7 Claude Design briefs; this 
 **Hand-off.** The design session also prototyped `#revealJob`, `#teardownStage` and `#areas`. Those are P2's, run after this merges; the prototype stays with that session.
 
 **For the user to judge, not changed.** At 1440x900 with both site banners showing, Schedule now sits near the bottom of the first screen (about y=840, versus y=525 before), because the four-line Anton headline is taller. It's still above the fold at 1440x900 and on phones. On a 1366x768 laptop it would be below the fold.
+
+## 2026-09-28 -- P3 landing template (html.page-landing, 16 pages), applied from a Claude Design package
+
+Second package from the public-site redesign sweep. It arrived in the right shape the first time: 16 whole page files, a `styles.css` patch plus block, and a thorough `APPLY.md` with its own rule-1 audit.
+
+**What shipped.**
+- **Hook.** The hook sits on `<html>` (`page-landing` plus `page-landing--city`/`--service`), not on `<body>`. The design session chose that to avoid the two tests that pinned `<body class="has-blueprint-bg">` exactly; P1 has since loosened those tests, but `<html>` is fine too.
+- **Hero.** It has its own composition, with no canyon photo, so the fixed blueprint shows through. The existing distance chip is wrapped in place in a `.landing-plate` card with a small locator diagram. The diagram reuses the service-radius SVG's own coordinates, so no geography is new.
+- **City section.** It's a split feature band.
+- **Common Questions.** These were 44 identical inline-styled boxes and are now a divided list with classes.
+- **Trust strip.** It's one joined band.
+- **Radius diagram.** It draws an orange trail from St. George to the page's city.
+- **Closing sequence.** Reviews, FAQ and schedule read as one sequence.
+- **Desktop call pill.** The shared `nav.sticky-call` also shows on desktop (>=761px) as a floating pill. It fades in after the hero where scroll timelines exist, and otherwise stays visible.
+- **Unchanged.** No copy, links, JSON-LD or scripts changed. `rule1-audit` found nothing missing on any of the 16 pages.
+
+**Changed at apply time, and why:**
+- **The coverage pill stretched into a bar.** "Serving Hurricane" became a full-column strip because the new hero `.wrap` is a CSS grid, and grid items stretch, so the `inline-flex` pill got blockified. The fix is `justify-self:start`. It's written against `.coverage-badge.is-standard` / `.is-by-request`, so the literal `.coverage-badge{` stays the one shared base rule that the pill-idiom tests read. That's the same trap P1 hit with `.open-status{`.
+- **Light-mode contrast on that pill fell to about 4.3:1.** Its dark glass was made to sit on the canyon photo, and the photo is gone here. A scoped `html.page-landing[data-theme="light"]` rule gives it `--bg-glass` / `--text` / `--border`, which measures 16.3:1 rendered, the same as dark mode.
+- **The desktop pill covered the footer's Cookie Preferences link** at the bottom of the page, with nothing left to scroll, so an existing control was unreachable. `html.page-landing body{padding-bottom:96px}` goes inside the pill's own `@media (min-width:761px)` block. Phones already reserve space for the bar.
+
+**Checked, not changed:**
+- **The canyon photo leaving the landing heroes.** It's the generic hero background shared by every hero, not city imagery. The 09-18 "local imagery" item settled that no per-city photos exist, and used the distance chip and the radius map instead; both are kept and promoted. So this is a design choice, not a removed capability. Called out in the PR for a human look.
+- **Full-page screenshots showed the trust strip, map, triage pills and reviews blank.** That's a capture artifact, not a regression. A fast scroll-walk outruns `site-motion.js`'s IntersectionObserver reveals, and the same 12 `[data-reveal]` elements stay hidden before and after P3. In a real viewport every child is visible, with motion on and off. Use reduced motion for full-page documentation shots.
+
+**Verification.**
+- **Tests and checks.** The full suite is clean except the known `check-links.py` Unsplash sandbox failures, same as main. `check-consistency`, `check-undefined-vars`, lint and the visual snapshot are clean.
+- **No leakage.** Pixel diffs of the homepage, About, Our Work, Careers and a blog post, at 390/1440 in dark and light, show no visible change. The one homepage strip difference also appears between two captures of the same code.
+- **Interactions.** The triage verdict, the FAQ `<details>`, and both call/book links behave the same before and after at 1440 and 390.
+- **Screenshots** are in `docs/landing-template-2026-09-28/`.
+
+**Still open for P2's apply.** The combined Claude Design export includes a later P1 revision that moves its hook to `html.page-home` and drops the h1 line spans. P2 was built on top of that revision, so P2's `index.html` must be 3-way merged against it (base = that P1 revision, ours = main). Whole-file copying it would undo P1's merged hero.

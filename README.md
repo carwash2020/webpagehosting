@@ -5667,3 +5667,17 @@ Scoped to the homepage only (`body.page-home`). Landing pages, About and the blo
 Verified: full suite, `check-consistency`, `check-undefined-vars`, lint and the visual snapshot are clean; `check-links.py` has the known sandbox-proxy Unsplash failures only, same as main. Screenshots at 320-1440, dark/light and reduced motion are in `docs/homepage-hero-2026-09-28/`.
 
 Tests changed (capability kept, markup assertion loosened): `tests/design/frontend-design-tells-removed.test.js` (headline text + no accent, instead of exact markup), `tests/design/blueprint-background-coverage.test.js` and `tests/design/coverage-map-divider-perf-hero-faq.test.js` (allow a page's own scope class after `has-blueprint-bg`).
+
+## What changed, 2026-09-28 -- City and service landing pages lead with their own local content (P3 redesign)
+
+All 16 landing pages (8 cities, 8 services). Designed in Claude Design from the P3 brief, then applied and checked here.
+
+- **Each page's own hero.** The city or service name at display size over the site's blueprint backdrop, with a small locator card beside it showing where the city sits relative to St. George. The card wraps the existing distance line.
+- **The local section is a feature band** right after the hero, and each city's "Common Questions" reads as a clean list.
+- **The service-area map draws a trail** from St. George to the page's city.
+- **Reviews, FAQ and booking run as one closing sequence.**
+- **Call / Book stays on screen on desktop too**, as a small floating pill that appears once you've scrolled past the hero. On phones the bar is unchanged.
+
+Changed while applying: the "Serving ..." pill no longer stretches across the column. It keeps full contrast in light mode now that the hero has no dark photo behind it. The desktop pill no longer covers the footer's Cookie Preferences link.
+
+No copy, links, schema or scripts changed. Styles are scoped to `html.page-landing`, and the homepage, About, Our Work, Careers and the blog are pixel-identical before and after. Verified with the full suite, `check-consistency`, `check-undefined-vars`, lint and the visual snapshot; `check-links.py` has only the known sandbox-proxy Unsplash failures, same as main. Screenshots are in `docs/landing-template-2026-09-28/`.
