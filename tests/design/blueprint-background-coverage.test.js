@@ -35,10 +35,12 @@ const PAGES = [
 test('every public marketing page carries the blueprint background (has-blueprint-bg on <body> + a following .bg-blueprint div)', () => {
   for (const page of PAGES) {
     const html = fs.readFileSync(repo(page), 'utf8');
-    assert.match(html, /<body class="has-blueprint-bg">/, `${page} should have <body class="has-blueprint-bg">`);
+    // A page may add its own scope hook after has-blueprint-bg (the 2026-09-28
+    // redesign passes scope their CSS as body.page-home, body.page-landing, ...).
+    assert.match(html, /<body class="has-blueprint-bg(?: [a-z0-9-]+)*">/, `${page} should have <body class="has-blueprint-bg">`);
     assert.match(
       html,
-      /<body class="has-blueprint-bg">\s*<div class="bg-blueprint" aria-hidden="true"><\/div>/,
+      /<body class="has-blueprint-bg(?: [a-z0-9-]+)*">\s*<div class="bg-blueprint" aria-hidden="true"><\/div>/,
       `${page} should have the .bg-blueprint div immediately after <body>`
     );
   }

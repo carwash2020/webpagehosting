@@ -3058,6 +3058,311 @@
     .hero-plane{display:none;}
   }
 
+  /* === Redesign P1 (2026-09-28): Homepage: hero and first screen -- scoped to body.page-home === */
+  /* The hero read as one flat document. It is now four planes -- canyon
+     photo (.hero::before), blueprint grid (.hero-plane), tool sketches
+     (.hero-tools) and the copy + lead card -- with a staged entry and
+     scroll separation. All motion is transform/opacity and CSS-only:
+     entry keyframes sit behind prefers-reduced-motion:no-preference,
+     scroll separation behind @supports (animation-timeline: scroll()),
+     so reduced-motion visitors and older browsers get the finished,
+     composed layout with nothing mid-animation. Hero surfaces keep fixed
+     dark rgba values for the reason the base .hero rules give: the photo
+     backdrop never flips with the theme. Everything below the hero uses
+     theme tokens. Only index.html carries body.page-home, so none of
+     this reaches the 16 landing pages (#444). */
+
+  /* planes */
+  body.page-home .hero{
+    padding:72px 0 128px;
+    min-height:calc(100svh - 73px);
+    background:rgb(8 8 8);
+    isolation:isolate;
+  }
+  body.page-home .hero::before{
+    content:"";
+    display:block;
+    inset:-6% 0;
+    width:auto;
+    height:auto;
+    z-index:-2;
+    background:
+      linear-gradient(to bottom, rgba(8,8,8,0) 55%, rgba(8,8,8,.9) 100%),
+      linear-gradient(100deg, rgba(8,8,8,.8) 0%, rgba(8,8,8,.58) 42%, rgba(8,8,8,.32) 70%, rgba(8,8,8,.18) 100%),
+      url('/images/hero-bg-canyon.webp?v=202608241900') center 70% / cover no-repeat;
+  }
+  body.page-home .hero::after{
+    content:"";
+    display:block;
+    inset:auto 0 0 0;
+    width:auto;
+    height:220px;
+    z-index:1;
+    background:linear-gradient(to bottom, rgba(8,8,8,0), var(--bg));
+  }
+  body.page-home .hero-plane{
+    opacity:.9;
+    z-index:-1;
+    background-image:
+      repeating-linear-gradient(90deg, rgba(255,255,255,.07) 0 1px, transparent 1px 140px),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.07) 0 1px, transparent 1px 140px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.028) 0 1px, transparent 1px 28px),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.028) 0 1px, transparent 1px 28px);
+    -webkit-mask-image:radial-gradient(ellipse 75% 70% at 72% 42%, #000 15%, transparent 75%);
+    mask-image:radial-gradient(ellipse 75% 70% at 72% 42%, #000 15%, transparent 75%);
+  }
+  body.page-home .hero-tools{position:absolute; inset:0; z-index:0; pointer-events:none;}
+  body.page-home .hero-tools svg{position:absolute; height:auto; overflow:visible;}
+  body.page-home .hero-tools text{font-family:var(--font-ui); font-size:.95px; letter-spacing:.12px;}
+  body.page-home .hero-tool-gear{right:10%; top:24%; width:33%; max-width:560px; color:var(--orange);}
+  body.page-home .hero-tool-gear .gear-label{color:var(--orange-light);}
+  body.page-home .hero-tool-gear .gear-body,
+  body.page-home .hero-tool-gear .gear-spin{transform-box:fill-box; transform-origin:center;}
+  body.page-home .hero-tool-gear .gear-body{transform:rotate(-14deg);}
+  body.page-home .hero-tool-wrench{right:34%; bottom:12%; width:17%; max-width:260px; color:rgb(232 232 232); transform:rotate(18deg);}
+  body.page-home .hero-tool-wrench .wrench-dim{color:var(--blue-light);}
+  body.page-home .hero-tool-drop{right:2%; bottom:8%; width:11%; max-width:160px; color:var(--blue-light);}
+
+  /* layout: copy | lead card, proof under the copy, badge on the card corner */
+  body.page-home .hero-grid{
+    grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr);
+    grid-template-areas:"copy aside" "proof aside";
+    grid-template-rows:auto 1fr;
+    column-gap:64px;
+    row-gap:26px;
+    align-items:start;
+    z-index:2;
+  }
+  body.page-home .hero-copy{grid-area:copy;}
+  body.page-home .hero-aside{grid-area:aside; position:relative;}
+  body.page-home .hero-proof{grid-area:proof; display:grid; gap:14px;}
+  body.page-home .hero-badge{
+    grid-area:aside;
+    justify-self:end;
+    align-self:start;
+    width:132px;
+    margin:-62px -34px 0 0;
+    padding:0;
+    position:relative;
+    z-index:3;
+    pointer-events:none;
+  }
+  body.page-home .hero-badge img{width:100%; height:auto; filter:drop-shadow(0 16px 26px rgba(0,0,0,.6));}
+
+  /* headline */
+  body.page-home .hero h1{margin:0; font-size:clamp(46px, 6.8vw, 100px); line-height:.93; letter-spacing:.5px;}
+  body.page-home .hero-h1-line{display:block; overflow:hidden; padding-bottom:.03em;}
+  body.page-home .hero-h1-line > span{display:block;}
+  body.page-home .hero p.lede{margin:22px 0 0; max-width:540px; font-size:18.5px; line-height:1.5;}
+
+  /* live status joined to Schedule/Call as one conversion plate */
+  body.page-home .hero .hero-open-status{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:6px 14px;
+    width:100%;
+    max-width:560px;
+    box-sizing:border-box;
+    margin:28px 0 0;
+    padding:14px 18px;
+    border-radius:12px 12px 0 0;
+    border:1px solid rgba(255,255,255,.12);
+    border-bottom:0;
+    background:rgba(10,10,10,.62);
+    font-size:14px;
+    letter-spacing:.6px;
+  }
+  body.page-home .hero .hero-open-status[hidden]{display:none;}
+  body.page-home .hero .hero-open-status.is-open{border-color:rgba(58,214,107,.38);}
+  body.page-home .hero .hero-open-status.is-closed{border-color:var(--orange-tint-border);}
+  body.page-home .hero .hero-open-status .dot{width:12px; height:12px;}
+  body.page-home .hero .hero-open-status b{font-family:var(--font-display); font-weight:400; font-size:24px; letter-spacing:1px; line-height:1;}
+  body.page-home .hero .hero-open-status a{color:var(--orange-light);}
+  body.page-home .hero .hero-ctas{
+    max-width:560px;
+    box-sizing:border-box;
+    margin-top:28px;
+    padding:14px 18px;
+    gap:12px;
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:12px;
+    background:rgba(10,10,10,.62);
+    -webkit-backdrop-filter:blur(12px) saturate(1.3);
+    backdrop-filter:blur(12px) saturate(1.3);
+  }
+  body.page-home .hero .hero-open-status:not([hidden]) + .hero-ctas{margin-top:0; border-radius:0 0 12px 12px; border-top-color:rgba(255,255,255,.08);}
+  body.page-home .hero .hero-open-status.is-open:not([hidden]) + .hero-ctas{border-color:rgba(58,214,107,.38); border-top-color:rgba(255,255,255,.08);}
+  body.page-home .hero .hero-open-status.is-closed:not([hidden]) + .hero-ctas{border-color:var(--orange-tint-border); border-top-color:rgba(255,255,255,.08);}
+  body.page-home .hero .next-opening{margin:10px 0 0;}
+
+  /* lead card on its own plane; the gear sketch reads through it */
+  body.page-home .hero .hero-lead-form{
+    max-width:none;
+    margin:0;
+    padding:22px 22px 18px;
+    border-radius:14px;
+    background:linear-gradient(160deg, rgba(22,22,22,.5), rgba(10,10,10,.6));
+    box-shadow:0 1px 0 rgba(255,255,255,.07) inset, var(--shadow-hover), 0 18px 40px -20px color-mix(in srgb, var(--orange) 20%, transparent);
+  }
+  body.page-home .hero .hero-lead-kicker{margin-bottom:16px; font-size:17px;}
+  body.page-home .hero .hero-lead-form .field{min-width:0;}
+  body.page-home .hero .hero-lead-form input,
+  body.page-home .hero .hero-lead-form select,
+  body.page-home .hero .hero-lead-form textarea{width:100%; min-width:0; box-sizing:border-box;}
+  body.page-home .hero-intent-faq{
+    max-width:none;
+    margin:18px 0 0;
+    padding:14px 16px 12px;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(10,10,10,.56);
+    -webkit-backdrop-filter:blur(14px);
+    backdrop-filter:blur(14px);
+  }
+  body.page-home .hero .cta-proof,
+  body.page-home .hero-referral{margin:0;}
+  body.page-home .hero-motto{margin:4px 0 0;}
+
+  /* first scroll continues the hero: no rules between sections, the
+     fixed blueprint backdrop shows through, stats become a glass strip */
+  body.page-home .page-jump{background:var(--bg-glass); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);}
+  body.page-home .stats-bar{padding:28px 0 0; background:transparent; border:0;}
+  body.page-home .stats-grid{
+    gap:0;
+    text-align:left;
+    border:1px solid var(--border);
+    border-radius:14px;
+    background:var(--bg-glass);
+    -webkit-backdrop-filter:blur(16px) saturate(1.3);
+    backdrop-filter:blur(16px) saturate(1.3);
+    box-shadow:var(--shadow-hover);
+    overflow:hidden;
+  }
+  body.page-home .stat-item{padding:22px 24px; border-right:1px solid var(--border);}
+  body.page-home .stat-item:last-child{border-right:0;}
+  body.page-home .trust,
+  body.page-home #services,
+  body.page-home #triage{border-top:0; background:transparent;}
+
+  /* service cards: staggered reveal, and a hover lift that actually runs
+     (the old transform lift lost to [data-reveal]; translate is a separate
+     property, so the reveal transform and the hover can't collide) */
+  body.page-home #services .service-card{
+    --d:0ms;
+    transition:opacity .6s ease var(--d), transform .7s cubic-bezier(.2,.75,.2,1) var(--d), translate .2s ease, border-color .2s ease, box-shadow .2s ease;
+  }
+  body.page-home #services .service-card:nth-child(2){--d:80ms;}
+  body.page-home #services .service-card:nth-child(3){--d:160ms;}
+  body.page-home #services .service-card:nth-child(4){--d:240ms;}
+  body.page-home #services .service-card:nth-child(5){--d:320ms;}
+  body.page-home #services .service-card:nth-child(6){--d:400ms;}
+  @media (hover:hover){
+    body.page-home #services .service-card:hover{translate:0 -4px; box-shadow:var(--shadow-hover);}
+  }
+
+  /* triage as the centerpiece: one wide panel, result beside the picker */
+  body.page-home #triage .triage-shell{
+    max-width:none;
+    padding:0;
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    border-radius:16px;
+    overflow:hidden;
+    box-shadow:var(--shadow-hover);
+  }
+  body.page-home #triage .triage-step{margin:0; padding:26px 28px;}
+  body.page-home #triage .triage-result{
+    margin:0;
+    padding:26px 28px;
+    border-top:1px solid var(--border);
+    background:linear-gradient(180deg, var(--orange-tint-soft), transparent 60%);
+  }
+  body.page-home #triage .triage-verdict{font-size:clamp(26px, 3vw, 36px); line-height:1.05;}
+  @media (min-width:861px){
+    body.page-home #triage .triage-shell:has(> .triage-result:not([hidden])){grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);}
+    body.page-home #triage .triage-shell:has(> .triage-result:not([hidden])) .triage-result{border-top:0; border-left:1px solid var(--border);}
+  }
+
+  /* entry sequence */
+  @keyframes homeRise{from{opacity:0; transform:translateY(22px);}}
+  @keyframes homeLine{from{transform:translateY(108%);}}
+  @keyframes homeFade{from{opacity:0;}}
+  @keyframes homeGearSpin{to{transform:rotate(360deg);}}
+  @media (prefers-reduced-motion:no-preference){
+    body.page-home .hero-h1-line > span{animation:homeLine 1s cubic-bezier(.2,.75,.2,1) .15s both;}
+    body.page-home .hero-h1-line:nth-child(2) > span{animation-delay:.27s;}
+    body.page-home .hero-h1-line:nth-child(3) > span{animation-delay:.39s;}
+    body.page-home .hero p.lede{animation:homeRise .8s ease .6s both;}
+    body.page-home .hero .hero-open-status,
+    body.page-home .hero .hero-ctas{animation:homeRise .8s ease .75s both;}
+    body.page-home .hero .hero-lead-form{animation:homeRise 1.1s cubic-bezier(.2,.75,.2,1) .9s both;}
+    body.page-home .hero-intent-faq{animation:homeFade .9s ease 1.15s both;}
+    body.page-home .hero-proof > *{animation:homeFade .9s ease 1s both;}
+    body.page-home .hero-tools svg{animation:homeFade 1.2s ease .5s both;}
+    body.page-home .hero-tool-gear .gear-spin{animation:homeGearSpin 36s linear infinite;}
+  }
+
+  /* scroll separation: the planes move at different rates */
+  @keyframes homeCopyOut{to{transform:translateY(-50px); opacity:.25;}}
+  @keyframes homeAsideOut{to{transform:translateY(-150px);}}
+  @keyframes homePhotoOut{to{transform:translateY(170px);}}
+  @keyframes homeToolsOut{to{transform:translateY(-130px);}}
+  @keyframes homeGearTurn{from{transform:rotate(-14deg);} to{transform:rotate(106deg);}}
+  @supports (animation-timeline: scroll()){
+    @media (prefers-reduced-motion:no-preference){
+      body.page-home .hero-copy,
+      body.page-home .hero-proof{animation:homeCopyOut linear both; animation-timeline:scroll(root); animation-range:0 90vh;}
+      body.page-home .hero-aside{animation:homeAsideOut linear both; animation-timeline:scroll(root); animation-range:0 100vh;}
+      body.page-home .hero::before{animation:homePhotoOut linear both; animation-timeline:scroll(root); animation-range:0 100vh;}
+      body.page-home .hero-tools{animation:homeToolsOut linear both; animation-timeline:scroll(root); animation-range:0 100vh;}
+      body.page-home .hero-tool-gear .gear-body{animation:homeGearTurn linear both; animation-timeline:scroll(root); animation-range:0 100vh;}
+    }
+  }
+
+  /* phone: composed on its own, not a shrunk desktop. Crest stays above
+     Schedule/Call (Connor 2026-09-17); copy and card don't drift apart. */
+  @media (max-width:860px){
+    body.page-home .hero{padding:24px 0 150px; min-height:0;}
+    body.page-home .hero::before{
+      display:block;
+      background:
+        linear-gradient(to bottom, rgba(8,8,8,.35) 0%, rgba(8,8,8,.55) 60%, rgba(8,8,8,.85) 100%),
+        url('/images/hero-bg-canyon-mobile.webp?v=202608241900') center 70% / cover no-repeat;
+    }
+    body.page-home .hero::after{display:block;}
+    body.page-home .hero-grid{
+      grid-template-columns:minmax(0,1fr);
+      grid-template-areas:"badge" "copy" "aside" "proof";
+      grid-template-rows:none;
+      row-gap:24px;
+      text-align:left;
+    }
+    body.page-home .hero-badge{grid-area:badge; justify-self:start; width:84px; margin:0;}
+    body.page-home .hero h1{font-size:clamp(40px, 11.6vw, 52px);}
+    body.page-home .hero p.lede{margin:16px 0 0; font-size:16.5px;}
+    body.page-home .hero .hero-ctas{flex-direction:column; align-items:stretch;}
+    body.page-home .hero .hero-ctas .btn{width:100%;}
+    body.page-home .hero .hero-lead-form{margin:0; max-width:none; background:linear-gradient(160deg, rgba(28,28,28,.93), rgba(12,12,12,.94));}
+    body.page-home .hero-intent-faq{margin:14px 0 0; max-width:none;}
+    body.page-home .hero .cta-proof,
+    body.page-home .hero-referral{justify-content:flex-start; text-align:left; margin-left:0; margin-right:0;}
+    body.page-home .hero-motto{justify-content:flex-start;}
+    body.page-home .hero-tool-gear{right:-30%; top:-3%; width:84%; opacity:.5;}
+    body.page-home .hero-tool-wrench{right:-8%; bottom:3%; width:42%; opacity:.45;}
+    body.page-home .hero-tool-drop{display:none;}
+    body.page-home .hero-copy,
+    body.page-home .hero-aside,
+    body.page-home .hero-proof{animation:none;}
+    body.page-home .stat-item:nth-child(2){border-right:0;}
+    body.page-home .stat-item:nth-child(-n+2){border-bottom:1px solid var(--border);}
+  }
+  @media (max-width:480px){
+    body.page-home .stat-item{border-right:0; border-bottom:1px solid var(--border);}
+    body.page-home .stat-item:last-child{border-bottom:0;}
+  }
+  /* === end Redesign P1 === */
+
   /* ---------- 6. the exploded appliance ---------- */
   /* A washer drawn as a shop diagram that the visitor rebuilds themselves
      by dragging, rather than by being forced to scroll through a long

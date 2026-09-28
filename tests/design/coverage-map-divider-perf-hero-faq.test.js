@@ -46,7 +46,7 @@ test('F31: the blueprint background moved off body\'s own background-attachment:
   assert.match(STYLES, /body\.has-blueprint-bg\{background:transparent;\}/);
   for (const file of ['index.html', 'locations/handyman-cedar-city-ut.html', 'locations/handyman-hurricane-ut.html', 'locations/handyman-la-verkin-ut.html', 'locations/handyman-leeds-ut.html', 'locations/handyman-mesquite-nv.html', 'locations/handyman-santa-clara-ivins-ut.html', 'locations/handyman-st-george-ut.html', 'locations/handyman-washington-city-ut.html']) {
     const src = fs.readFileSync(repo(file), 'utf8');
-    assert.match(src, /<body class="has-blueprint-bg">/, `${file} should carry the has-blueprint-bg class`);
+    assert.match(src, /<body class="has-blueprint-bg(?: [a-z0-9-]+)*">/, `${file} should carry the has-blueprint-bg class`);
     assert.match(src, /<div class="bg-blueprint" aria-hidden="true"><\/div>/, `${file} should have the fixed backdrop element`);
   }
 });

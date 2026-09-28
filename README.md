@@ -5651,3 +5651,19 @@ Reported directly: "the portal needs the same fix for updates we did for the too
 Verified: full suite 4253/4254 (the 1 failure is the known `check-links.py` sandbox-proxy limitation), `check-consistency`, `check-undefined-vars`, `fix-versions` (bumped the 9 pages' `portal-update.js?v=` stamps and the portal service worker's `CACHE_NAME`).
 
 Tests: `tests/portal/portal-update-banner.test.js` (7, new; 5 fail on the previous code).
+
+## What changed, 2026-09-28 -- Homepage hero rebuilt with real depth (P1 redesign)
+
+The first screen of the homepage. Designed in Claude Design from the P1 brief, then applied and checked here.
+
+- **Layered hero.** The canyon photo, the blueprint grid, a new set of sketched tool drawings and the headline/lead card now sit on separate planes. They animate in on load and drift apart as you scroll, done in CSS only. With reduced motion, or in a browser without scroll-driven animation, the finished layout shows with nothing half-animated.
+- **Open/closed status joined to Schedule and Call** as one plate, directly on top of the buttons.
+- **The lead form is an elevated card beside the headline** on desktop, with the logo badge on its corner. On phones the hero is composed separately: one left-aligned column with the badge on top.
+- **The first scroll reads as part of the hero:** the stats strip, Why Choose, What We Fix and the "Is it worth fixing?" tool lose their section dividers. Service cards reveal in sequence and now lift on hover. A triage result appears beside the picker on desktop.
+- **The headline stays one colour.** The design's orange accent on "DONE RIGHT." was dropped, since that split was removed on purpose earlier.
+
+Scoped to the homepage only (`body.page-home`). Landing pages, About and the blog are pixel-identical before and after. Every form field, id, link and script is unchanged; the open/closed status and next-opening line moved within the hero.
+
+Verified: full suite, `check-consistency`, `check-undefined-vars`, lint and the visual snapshot are clean; `check-links.py` has the known sandbox-proxy Unsplash failures only, same as main. Screenshots at 320-1440, dark/light and reduced motion are in `docs/homepage-hero-2026-09-28/`.
+
+Tests changed (capability kept, markup assertion loosened): `tests/design/frontend-design-tells-removed.test.js` (headline text + no accent, instead of exact markup), `tests/design/blueprint-background-coverage.test.js` and `tests/design/coverage-map-divider-perf-hero-faq.test.js` (allow a page's own scope class after `has-blueprint-bg`).

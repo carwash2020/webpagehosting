@@ -67,7 +67,13 @@ test('the shared .eyebrow/.accent CSS is fully retired from styles.css', () => {
 });
 
 test('the hero headline is no longer split into two colors -- one clean sentence, no single-word accent', () => {
-  assert.match(INDEX, /<h1>HANDYMAN AND APPLIANCE REPAIR, DONE RIGHT\.<\/h1>/);
+  // P1 redesign (2026-09-28): each line of the h1 sits in its own span for the
+  // line-by-line entry reveal, so this reads the headline's text rather than
+  // its exact markup. What it protects is unchanged: one sentence, one colour.
+  const h1 = INDEX.match(/<h1>([\s\S]*?)<\/h1>/)[1];
+  assert.equal(h1.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(), 'HANDYMAN AND APPLIANCE REPAIR, DONE RIGHT.');
+  assert.doesNotMatch(h1, /accent/, 'no accent span inside the hero headline');
+  assert.doesNotMatch(STYLES, /\.hero-h1-line[^{]*\{[^}]*color:/, 'no per-line colour on the headline');
 });
 
 test('the hero location is real prose now, not a floating label -- no information was dropped', () => {
