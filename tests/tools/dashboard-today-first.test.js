@@ -177,18 +177,23 @@ test('the shared stylesheet no longer carries the dead tile-grid rules, and runw
   assert.doesNotMatch(runway, /tool-tile|section-tools|everythingElseChips/);
 });
 
-test('the tour\'s seven dashboard steps follow the page top to bottom, then teach the nav shell, Create, and search (2026-09-22 tutorial rewrite + app shell v2)', () => {
+test('the tour\'s seven dashboard steps follow the page top to bottom (Insights as its own view since v2), then teach the nav shell, Create, and search (2026-09-22 tutorial rewrite + app shell v2)', () => {
   const steps = [...TOUR.matchAll(/\{ page: '\/tools\/workspace\.html', highlightSelector: '([^']+)', title: '([^']+)'/g)].map(m => [m[1], m[2]]);
   assert.deepEqual(steps, [
     ['#todayHero', 'Today'],
     ['#section-actionitems', 'Needs attention'],
     ['#dashPrimaryStrip', 'Quick actions'],
-    ['#section-snapshot', 'Business'],
+    // v2 (2026-09-28): Business Snapshot + Analytics are Home's Insights view;
+    // the step still targets #section-snapshot and switches the view first.
+    ['#section-snapshot', 'Insights'],
     ['.th-desktop-sidebar, .th-bottom-nav', 'Getting around'],
     ['.th-sidebar-new, .th-bn-create', 'Create anything'],
     ['.th-sidebar-search-trigger, .th-hdr-search', 'Search anywhere'],
   ]);
   for (const [selector] of steps.slice(0, 4)) assert.match(WORKSPACE, new RegExp('id="' + selector.slice(1) + '"'), `${selector} must exist on the page`);
+  const insights = TOUR.match(/highlightSelector: '#section-snapshot', title: 'Insights'[^\n]*onShow: \{ fn: 'showDashView', args: \['insights'\] \}/);
+  assert.ok(insights, 'the Insights step opens the Insights view before highlighting it');
+  assert.match(WORKSPACE, /function showDashView\(view\)/);
 });
 
 test('the help modal describes the new layout and no longer mentions the chip row, the Tools section, or the retired Show on Calendar checkbox', () => {

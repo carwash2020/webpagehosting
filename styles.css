@@ -286,6 +286,8 @@
     --th-ink-on-red: #1a0605;
     --th-field: #1b1c20;
     --th-rail: #0e0f12;
+    /* Set per ring inline by thRingSvg() (tools-dialogs.js); 86px default. */
+    --th-ring-size: 86px;
   }
 
   /* Light theme (2026-08-20): the JS toggle has always correctly set

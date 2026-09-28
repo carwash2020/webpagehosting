@@ -646,6 +646,10 @@ function showQuickActionSheet(title, actions, options) {
 //    getMenu may return null to skip a row. Without getMenu, the menu is
 //    built from the row's own controls (4), titled from the row's
 //    data-row-title attribute (or its first .th-row-title / heading text).
+//    To point at controls a render function already emits WITHOUT touching
+//    its markup, pass selector specs; each render is re-marked at runtime:
+//      attachRowMenu(listEl, '.lead-card', { buttonHost: '.dash-list-item-right',
+//        actions: [{ kind: 'delete', selector: '.small-btn.danger', label: 'Delete lead' }] });
 //
 // 4) Zero-JS-change rows: mark the row's EXISTING buttons/links with
 //    data-row-action="edit|extra|duplicate|delete|open" (and optionally
@@ -708,8 +712,20 @@ function attachRowMenu(containerEl, rowSelector, options) {
   if (!containerEl || containerEl._thRowMenu) return;
   options = options || {};
   containerEl._thRowMenu = true;
+  const mark = (row) => {
+    (options.actions || []).forEach(spec => {
+      if (!spec || !spec.selector) return;
+      row.querySelectorAll(spec.selector).forEach(el => {
+        if (el.hasAttribute('data-row-action') || el.closest('.th-row-menu-btn')) return;
+        el.setAttribute('data-row-action', spec.kind || 'other');
+        if (spec.label) el.setAttribute('data-row-action-label', spec.label);
+        if (spec.icon) el.setAttribute('data-row-action-icon', spec.icon);
+      });
+    });
+  };
   const menuFor = (row) => {
     if (typeof options.getMenu === 'function') return options.getMenu(row);
+    mark(row);
     const actions = rowMenuActionsFromButtons(row);
     return actions.length ? { title: rowMenuTitle(row), actions } : null;
   };
@@ -733,6 +749,7 @@ function attachRowMenu(containerEl, rowSelector, options) {
   if (options.decorate === false) return;
   const decorate = () => {
     containerEl.querySelectorAll(rowSelector).forEach(row => {
+      mark(row);
       if (row.querySelector('.th-row-menu-btn')) { row.classList.add('th-has-row-menu'); return; }
       const m = menuFor(row);
       if (!m || !m.actions || !m.actions.length) return;

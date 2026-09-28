@@ -3699,3 +3699,348 @@ body.th-tool-page .form-field label {
   body.th-tool-page .form-field input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
   body.th-tool-page .form-field select { min-height: 48px; }
 }
+
+/* ==========================================================================
+   V2 -- APP REDESIGN v2, SHELL + SHARED PIECES (2026-09-28)
+   design_handoff_workspace_app_v2 §7 and §9, on top of W1 above. Every rule
+   is scoped to body.th-tool-page (the nine portal pages load this file and
+   never carry that class). Appended last so it wins without !important;
+   every first-match @media block a test reads still belongs to the rules
+   above. Colours are tokens only (styles.css :root / [data-theme="light"],
+   "Workspace v2" block); prototype hexes were mapped with the handoff's §6.
+   Shared with the sibling packages (Money, People + field, Back office):
+     V2.3 rings (.th-ring, from thRingSvg / thDonutSvg in tools-dialogs.js)
+     V2.4 action sheet + row ⋯ (.quick-actions-*, .th-row-menu-btn)
+     V2.9 page primitives (.th-v2-card, .th-v2-seg, .th-v2-chip, .th-v2-pill,
+          .th-v2-row, .th-v2-icon-tile, .th-v2-add, .th-v2-rule-head)
+   ========================================================================== */
+
+/* ---- V2.1 app bar: a kicker over an Anton title, the dot right after ---- */
+body.th-tool-page .hub-header-left.th-has-kicker { flex-wrap: wrap; row-gap: 0; column-gap: 8px; }
+body.th-tool-page .hub-header-left.th-has-kicker > img { display: none; }
+body.th-tool-page .th-kicker {
+  flex: 0 0 100%; min-width: 0; order: -1;
+  font-family: var(--font-ui); font-size: 11.5px; font-weight: 500; line-height: 1.25;
+  letter-spacing: 1.4px; text-transform: uppercase; color: var(--text-dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+body.th-tool-page .th-kicker:empty { display: none; }
+body.th-tool-page .hub-header-left.th-has-kicker .hub-title { font-size: 24px; line-height: 1.1; letter-spacing: .4px; }
+body.th-tool-page .th-hdr-btn { width: 42px; height: 42px; background: var(--bg-panel); border-color: var(--border); }
+@media (max-width: 720px) { body.th-tool-page .th-hdr-btn { width: 44px; height: 44px; } }
+
+/* ---- V2.2 bottom bar: Oswald labels, orange when current, a raised + hex ---- */
+body.th-tool-page .th-bottom-nav a, body.th-tool-page .th-bottom-nav .th-bn-create {
+  font-family: var(--font-ui); font-size: 11px; letter-spacing: .7px; text-transform: uppercase; color: var(--text-dim);
+}
+body.th-tool-page .th-bottom-nav a.is-active { color: var(--orange); }
+body.th-tool-page .th-bottom-nav a.is-active::before { display: none; }
+body.th-tool-page .th-bottom-nav a .th-bn-icon,
+body.th-tool-page .th-bottom-nav a.is-active .th-bn-icon { background: none; border: 0; clip-path: none; width: 30px; height: 28px; }
+body.th-tool-page .th-bottom-nav a .th-bn-icon .th-icon { width: 23px; height: 23px; color: currentColor; }
+body.th-tool-page .th-bottom-nav a.is-active .th-bn-icon .th-icon { color: var(--orange); }
+body.th-tool-page .th-bottom-nav a:active .th-bn-icon { background: none; transform: scale(.92); }
+body.th-tool-page .th-bottom-nav .th-bn-create { color: var(--orange-light); }
+body.th-tool-page .th-bn-create-disc { width: 52px; height: 52px; margin-top: -18px; }
+body.th-tool-page .th-bn-create-disc .th-icon { width: 24px; height: 24px; color: var(--th-ink-on-orange); stroke-width: 2.6; }
+
+/* ---- V2.3 rings, donuts and gauges (thRingSvg / thDonutSvg) ---- */
+body.th-tool-page .th-ring {
+  position: relative; flex-shrink: 0;
+  width: var(--th-ring-size, 86px); height: var(--th-ring-size, 86px);
+}
+body.th-tool-page .th-ring > svg { display: block; overflow: visible; }
+body.th-tool-page .th-ring-track { stroke: var(--th-hairline); }
+body.th-tool-page .th-ring-fill { stroke: var(--orange); }
+body.th-tool-page .th-ring--orange .th-ring-track { stroke: var(--tone-orange-bg); }
+body.th-tool-page .th-ring--green .th-ring-track { stroke: var(--tone-green-bg); }
+body.th-tool-page .th-ring--green .th-ring-fill { stroke: var(--tone-green-fg); }
+body.th-tool-page .th-ring--blue .th-ring-track { stroke: var(--tone-blue-bg); }
+body.th-tool-page .th-ring--blue .th-ring-fill { stroke: var(--tone-blue-fg); }
+body.th-tool-page .th-ring--red .th-ring-track { stroke: var(--tone-red-bg); }
+body.th-tool-page .th-ring--red .th-ring-fill { stroke: var(--tone-red-fg); }
+body.th-tool-page .th-ring--purple .th-ring-track { stroke: var(--tone-purple-bg); }
+body.th-tool-page .th-ring--purple .th-ring-fill { stroke: var(--tone-purple-fg); }
+body.th-tool-page .th-ring--idle .th-ring-fill { stroke: var(--text-faint); }
+body.th-tool-page .th-ring-seg--orange { stroke: var(--orange); }
+body.th-tool-page .th-ring-seg--green { stroke: var(--tone-green-fg); }
+body.th-tool-page .th-ring-seg--blue { stroke: var(--tone-blue-fg); }
+body.th-tool-page .th-ring-seg--red { stroke: var(--tone-red-fg); }
+body.th-tool-page .th-ring-seg--purple { stroke: var(--tone-purple-fg); }
+body.th-tool-page .th-ring-seg--idle { stroke: var(--text-faint); }
+body.th-tool-page .th-ring--donut .th-ring-fill { stroke-linecap: butt; }
+body.th-tool-page .th-ring-center {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; line-height: 1; pointer-events: none;
+}
+body.th-tool-page .th-ring-center b, body.th-tool-page .th-ring-value {
+  font-family: var(--font-display); font-weight: 400; font-size: 19px; color: var(--text);
+  font-variant-numeric: tabular-nums; letter-spacing: .2px;
+}
+body.th-tool-page .th-ring-center span, body.th-tool-page .th-ring-of { margin-top: 3px; font-size: 10.5px; color: var(--text-dim); }
+@media (prefers-reduced-motion: reduce) { body.th-tool-page .th-ring-fill { transition: none !important; } }
+
+/* ---- V2.4 action sheets (showQuickActionSheet / openRowMenu) and the row ⋯ ----
+   Phone and tablet: a bottom sheet (radius 24, handle, slides up). Computer:
+   a 440px side panel under the app bar, the page still in view beside it.
+   The Remind / Text / Shift sheets ride the same classes, so they move too. */
+body.th-tool-page .quick-actions-overlay.is-shown { background: var(--th-scrim); }
+body.th-tool-page .quick-actions-sheet {
+  max-width: 560px; background: var(--bg-panel); background-image: none;
+  border: 0; border-top: 1px solid var(--border); border-radius: 24px 24px 0 0;
+  padding: 10px 16px calc(30px + env(safe-area-inset-bottom, 0px));
+  max-height: 88dvh; overflow-y: auto; overscroll-behavior: contain;
+  box-shadow: var(--shadow-sheet);
+  transition: transform var(--th-dur-sheet) var(--th-ease);
+}
+body.th-tool-page .quick-actions-handle { width: 40px; height: 5px; border-radius: 3px; background: var(--border); margin: 0 auto 12px; }
+body.th-tool-page .quick-actions-title {
+  text-align: left; padding: 0 4px 10px;
+  font-family: var(--font-ui); font-size: 12px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text-dim);
+}
+body.th-tool-page .quick-actions-sub { margin: -6px 4px 12px; font-size: 13.5px; color: var(--text-dim); }
+body.th-tool-page .quick-actions-btn {
+  display: flex; align-items: center; gap: 14px; width: 100%; min-height: 54px; margin: 0 0 6px; padding: 0 16px;
+  text-align: left; border: 1px solid var(--border); border-radius: 14px; background: var(--th-field);
+  color: var(--text); font-family: var(--font-ui); font-size: 15px; font-weight: 500; letter-spacing: .8px; text-transform: uppercase;
+  transition: transform var(--th-dur-quick) var(--th-ease), border-color var(--th-dur-quick) ease;
+}
+body.th-tool-page .quick-actions-btn .th-icon { width: 19px; height: 19px; margin: 0; flex-shrink: 0; color: var(--orange-light); }
+body.th-tool-page .quick-actions-btn:active { transform: scale(.985); background: var(--bg-panel-2); }
+body.th-tool-page .quick-actions-btn:disabled { opacity: .5; }
+body.th-tool-page .quick-actions-btn.is-danger {
+  color: var(--tone-red-fg); border-color: color-mix(in srgb, var(--status-error) 38%, transparent);
+  background: color-mix(in srgb, var(--status-error) 8%, var(--bg-panel));
+}
+body.th-tool-page .quick-actions-btn.is-danger .th-icon { color: currentColor; }
+body.th-tool-page .quick-actions-cancel {
+  justify-content: center; margin: 8px 0 0; background: none; border: 1px solid var(--border);
+  color: var(--text); font-weight: 600; letter-spacing: .9px; font-size: 14px; min-height: 52px;
+}
+@media (hover: hover) {
+  body.th-tool-page .quick-actions-btn:hover { border-color: var(--orange-tint-border); }
+  body.th-tool-page .quick-actions-btn.is-danger:hover { border-color: var(--status-error); }
+}
+@media (min-width: 1024px) {
+  body.th-tool-page .quick-actions-overlay { top: 61px; left: 240px; justify-content: flex-end; align-items: stretch; }
+  body.th-tool-page .quick-actions-sheet {
+    width: 440px; max-width: 440px; max-height: none; height: 100%; border-radius: 0;
+    border-top: 0; border-left: var(--th-rule) solid var(--border);
+    padding: 22px 22px 30px; box-shadow: var(--shadow-panel-side);
+    transform: translateX(104%);
+  }
+  body.th-tool-page .quick-actions-overlay.is-shown .quick-actions-sheet { transform: none; }
+  body.th-tool-page .quick-actions-handle { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.th-tool-page .quick-actions-sheet { transform: none; opacity: 0; transition: opacity .15s ease; }
+  body.th-tool-page .quick-actions-overlay.is-shown .quick-actions-sheet { opacity: 1; }
+}
+/* The ⋯ on a row: 38px round (44px under a finger), quiet until touched. */
+body.th-tool-page .th-row-menu-btn {
+  width: 38px; height: 38px; flex-shrink: 0; padding: 0; border: 0; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: none; color: var(--text-dim); cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+body.th-tool-page .th-row-menu-btn .th-icon { width: 20px; height: 20px; margin: 0; }
+body.th-tool-page .th-row-menu-btn:active { background: var(--bg-panel-2); transform: scale(.94); }
+body.th-tool-page .th-row-menu-btn:focus-visible { color: var(--orange-light); }
+@media (hover: hover) { body.th-tool-page .th-row-menu-btn:hover { color: var(--text); background: var(--bg-panel-2); } }
+@media (pointer: coarse) { body.th-tool-page .th-row-menu-btn { width: 44px; height: 44px; } }
+/* A row with a ⋯ shows only its primary action; the controls marked
+   data-row-action live in the sheet (they stay in the DOM -- the sheet
+   clicks them, so every existing handler and confirm still runs). */
+body.th-tool-page .th-has-row-menu [data-row-action] { display: none !important; }
+
+/* ---- V2.5 Create: quick add, the paste chip, a 3x3 of tiles ---- */
+body.th-tool-page .th-create-sheet .th-sheet-panel { border-radius: 24px 24px 0 0; padding-top: 10px; }
+body.th-tool-page .th-create-head .th-sheet-title {
+  font-family: var(--font-display); font-weight: 400; font-size: 24px; letter-spacing: .4px; text-transform: uppercase; color: var(--text);
+}
+body.th-tool-page .th-create-close {
+  width: 38px; height: 38px; margin: -6px 0 0; background: var(--th-field); color: var(--text); font-size: 22px;
+}
+body.th-tool-page .th-qa-field { min-height: 52px; border-radius: 16px; background: var(--th-field); border-color: var(--orange-tint-border); }
+body.th-tool-page .th-qa-mic { background: none; border: 0; color: var(--orange-light); }
+body.th-tool-page .th-qa-paste {
+  min-height: 36px; margin: 10px 0 6px; padding: 0 14px; background: none; border: 1px solid var(--border);
+  color: var(--text); font-weight: 500; font-size: 13.5px;
+}
+body.th-tool-page .th-qa-paste .th-icon { color: var(--orange-light); }
+body.th-tool-page .th-create-grid { gap: 8px; margin-top: 10px; }
+body.th-tool-page .th-create-tile {
+  min-height: 96px; padding: 12px; gap: 0; align-items: flex-start; justify-content: space-between; text-align: left;
+  background: var(--th-field); border: 1px solid var(--border); border-radius: 16px;
+}
+body.th-tool-page .th-create-tile .th-hex-icon { width: 34px; height: 34px; background: var(--tone-orange-bg); border: 0; }
+body.th-tool-page .th-create-tile .th-hex-icon .th-icon { width: 17px; height: 17px; color: var(--orange-light); }
+body.th-tool-page .th-create-label {
+  margin-top: auto; padding-top: 10px; font-family: var(--font-ui); font-size: 14px; font-weight: 500;
+  letter-spacing: .6px; text-transform: uppercase; color: var(--text);
+}
+body.th-tool-page .th-create-hint { margin-top: 2px; font-size: 11.5px; line-height: 1.3; color: var(--text-dim); }
+body.th-tool-page .th-create-tile:active { transform: scale(.97); }
+@media (min-width: 1024px) {
+  body.th-tool-page .th-create-sheet { padding-top: 90px; }
+  body.th-tool-page .th-create-sheet .th-sheet-panel { border-radius: 24px; padding: 18px 20px 22px; }
+}
+
+/* ---- V2.6 More: a 3x3 grid of 92px tiles, icon over label ---- */
+body.th-tool-page .th-more-sheet-panel { border-radius: 24px 24px 0 0; }
+body.th-tool-page .th-more-sheet-title {
+  font-family: var(--font-display); font-weight: 400; font-size: 24px; letter-spacing: .4px; color: var(--text);
+}
+body.th-tool-page .th-more-sheet-link {
+  min-height: 92px; gap: 8px; background: var(--th-field); border-radius: 16px;
+  font-family: var(--font-ui); font-size: 13px; letter-spacing: .5px; text-transform: uppercase;
+}
+body.th-tool-page .th-more-sheet-link .th-hex-icon { background: none; border: 0; clip-path: none; width: 26px; height: 26px; }
+body.th-tool-page .th-more-sheet-link .th-hex-icon .th-icon { width: 22px; height: 22px; color: var(--orange-light); }
+body.th-tool-page .th-more-sheet-link.is-active { background: var(--tone-orange-bg); color: var(--orange-light); }
+
+/* ---- V2.7 desktop sidebar: plain icons, a tinted current row, the account chip ---- */
+body.th-tool-page .th-desktop-sidebar { background: var(--th-rail); padding: 18px 14px; }
+body.th-tool-page .th-sidebar-brand { font-family: var(--font-display); font-size: 19px; letter-spacing: .5px; border-bottom: 0; margin: 0 0 6px; padding: 4px 8px 16px; }
+body.th-tool-page .th-sidebar-new {
+  min-height: 44px; padding: 0 14px; gap: 10px; border: 0; border-radius: 12px; margin-bottom: 6px;
+  background: var(--orange); color: var(--th-ink-on-orange); box-shadow: none;
+  font-family: var(--font-ui); font-size: 14px; letter-spacing: .8px; text-transform: uppercase;
+}
+body.th-tool-page .th-sidebar-new .th-icon { color: currentColor; stroke-width: 2.4; }
+body.th-tool-page .th-sidebar-new .th-sidebar-search-kbd { margin-left: auto; background: color-mix(in srgb, var(--th-ink-on-orange) 18%, transparent); color: currentColor; border: 0; }
+body.th-tool-page .th-sidebar-search-trigger {
+  min-height: 40px; margin-bottom: 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-panel); color: var(--text-dim);
+}
+body.th-tool-page .th-sidebar-group { color: var(--text-faint); margin: 14px 10px 6px; }
+body.th-tool-page .th-sidebar-group::after { display: none; }
+body.th-tool-page .th-sidebar-link {
+  min-height: 40px; padding: 0 12px; gap: 12px; border-radius: 10px;
+  font-family: var(--font-app); font-size: 14.5px; font-weight: 400; letter-spacing: 0; color: var(--text-dim);
+}
+body.th-tool-page .th-sidebar-link .th-hex-icon,
+body.th-tool-page .th-sidebar-link.is-active .th-hex-icon { width: 20px; height: 20px; background: none; border: 0; clip-path: none; box-shadow: none; }
+body.th-tool-page .th-sidebar-link .th-hex-icon .th-icon,
+body.th-tool-page .th-sidebar-link.is-active .th-hex-icon .th-icon { width: 18px; height: 18px; color: currentColor; }
+body.th-tool-page .th-sidebar-link.is-active {
+  background: var(--tone-orange-bg); color: var(--orange-light); font-weight: 600; box-shadow: none;
+}
+body.th-tool-page .th-sidebar-link.is-active::before { display: none; }
+body.th-tool-page .th-sidebar-link:active { transform: scale(.985); }
+body.th-tool-page .th-sidebar-account {
+  margin-top: auto; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 14px 8px 0;
+  border-top: 1px solid var(--border); text-decoration: none; color: var(--text);
+}
+body.th-tool-page .th-sidebar-account[hidden] { display: none; }
+body.th-tool-page .th-sidebar-account-avatar {
+  width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--th-field); border: 1px solid var(--border); font-family: var(--font-ui); font-size: 13px;
+}
+body.th-tool-page .th-sidebar-account-text { display: flex; flex-direction: column; min-width: 0; }
+body.th-tool-page .th-sidebar-account-name { font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.th-tool-page .th-sidebar-account-role { font-size: 12px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (hover: hover) {
+  body.th-tool-page .th-sidebar-link:hover { background: var(--bg-panel-2); color: var(--text); }
+  body.th-tool-page .th-sidebar-link.is-active:hover { background: var(--tone-orange-bg); color: var(--orange-light); }
+  body.th-tool-page .th-sidebar-new:hover { background: var(--orange-light); color: var(--th-ink-on-orange); }
+  body.th-tool-page .th-sidebar-account:hover .th-sidebar-account-name { color: var(--orange-light); }
+}
+
+/* ---- V2.8 toasts: 56px, radius 16, an orange Undo pill ---- */
+body.th-tool-page .th-toast {
+  min-height: 56px; border-radius: 16px; padding: 8px 10px 8px 18px; max-width: 520px;
+  background: var(--bg-panel-3); border: 1px solid var(--border); border-left: 1px solid var(--border);
+  font-size: 14.5px; color: var(--text);
+}
+body.th-tool-page .th-toast-undo-btn {
+  margin-left: auto; min-height: 36px; padding: 0 14px; border-radius: 999px;
+  background: var(--orange); color: var(--th-ink-on-orange);
+  font-family: var(--font-ui); font-size: 13px; letter-spacing: .8px; text-transform: uppercase;
+}
+@media (hover: hover) { body.th-tool-page .th-toast-undo-btn:hover { background: var(--orange-light); color: var(--th-ink-on-orange); } }
+
+/* ---- V2.9 page primitives (shared by every v2 page) ---- */
+body.th-tool-page .th-v2-card {
+  background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl);
+  padding: 16px 18px; min-width: 0;
+}
+body.th-tool-page .th-v2-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; min-height: 28px; }
+body.th-tool-page .th-v2-card-title, body.th-tool-page .th-v2-kicker {
+  font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text); margin: 0;
+}
+body.th-tool-page .th-v2-kicker { font-size: 12px; color: var(--orange-light); }
+body.th-tool-page .th-v2-card-note { font-size: 13px; color: var(--text-dim); }
+body.th-tool-page .th-v2-link {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 2px;
+  background: none; border: 0; cursor: pointer; text-decoration: none;
+  font-family: var(--font-ui); font-size: 13px; letter-spacing: .8px; text-transform: uppercase; color: var(--orange-light);
+}
+body.th-tool-page .th-v2-link .th-icon { width: 15px; height: 15px; margin: 0; }
+body.th-tool-page .th-v2-count {
+  min-width: 22px; height: 22px; padding: 0 7px; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--status-error); color: var(--th-ink-on-red); font-size: 12px; font-weight: 700; font-family: var(--font-app);
+}
+body.th-tool-page .th-v2-count:empty { display: none; }
+/* Segmented control: a 4px-padded track, the current segment filled --text. */
+body.th-tool-page .th-v2-seg {
+  display: inline-flex; gap: 4px; padding: 4px; max-width: 100%; overflow-x: auto; scrollbar-width: none;
+  background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-track);
+}
+body.th-tool-page .th-v2-seg::-webkit-scrollbar { display: none; }
+body.th-tool-page .th-v2-seg > button, body.th-tool-page .th-v2-seg > a {
+  flex: 0 0 auto; min-height: 38px; padding: 0 14px; border: 0; border-radius: var(--th-radius-seg); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; text-decoration: none;
+  background: none; color: var(--text-dim); box-shadow: none;
+  font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: .8px; text-transform: uppercase;
+}
+body.th-tool-page .th-v2-seg > .is-active, body.th-tool-page .th-v2-seg > [aria-pressed="true"] { background: var(--text); color: var(--bg); }
+body.th-tool-page .th-v2-seg > button:active, body.th-tool-page .th-v2-seg > a:active { transform: scale(.97); }
+@media (hover: hover) { body.th-tool-page .th-v2-seg > button:not(.is-active):hover, body.th-tool-page .th-v2-seg > a:not(.is-active):hover { color: var(--text); } }
+@media (pointer: coarse) { body.th-tool-page .th-v2-seg > button, body.th-tool-page .th-v2-seg > a { min-height: 44px; } }
+/* Chips: 38px pills; the current one filled orange. */
+body.th-tool-page .th-v2-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+body.th-tool-page .th-v2-chips::-webkit-scrollbar { display: none; }
+body.th-tool-page .th-v2-chip {
+  flex-shrink: 0; min-height: 38px; padding: 0 14px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+  background: var(--bg-panel); color: var(--text); border: 1px solid var(--border);
+  font-family: var(--font-app); font-size: 13.5px; font-weight: 600; letter-spacing: 0; text-transform: none;
+}
+body.th-tool-page .th-v2-chip.is-active { background: var(--orange); border-color: var(--orange); color: var(--th-ink-on-orange); }
+@media (pointer: coarse) { body.th-tool-page .th-v2-chip { min-height: 44px; } }
+/* Pills: status and money words. */
+body.th-tool-page .th-v2-pill {
+  display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 999px; white-space: nowrap;
+  font-family: var(--font-app); font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none;
+  background: var(--th-field); color: var(--text);
+}
+body.th-tool-page .th-v2-pill.is-orange { background: var(--tone-orange-bg); color: var(--tone-orange-fg); }
+body.th-tool-page .th-v2-pill.is-blue { background: var(--tone-blue-bg); color: var(--tone-blue-fg); }
+body.th-tool-page .th-v2-pill.is-green { background: var(--tone-green-bg); color: var(--tone-green-fg); }
+body.th-tool-page .th-v2-pill.is-red { background: var(--tone-red-bg); color: var(--tone-red-fg); }
+body.th-tool-page .th-v2-pill.is-purple { background: var(--tone-purple-bg); color: var(--tone-purple-fg); }
+/* A ruled list row: icon tile, title over meta, trailing bits. */
+body.th-tool-page .th-v2-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid var(--th-hairline); min-width: 0; }
+body.th-tool-page .th-v2-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+body.th-tool-page .th-v2-row-title { font-size: 14.5px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+body.th-tool-page .th-v2-row-meta { font-size: 12.5px; color: var(--text-dim); overflow-wrap: anywhere; }
+body.th-tool-page .th-v2-icon-tile {
+  width: 36px; height: 36px; flex-shrink: 0; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--tone-orange-bg); color: var(--tone-orange-fg);
+}
+body.th-tool-page .th-v2-icon-tile .th-icon { width: 18px; height: 18px; margin: 0; color: currentColor; }
+body.th-tool-page .th-v2-icon-tile.is-red { background: var(--tone-red-bg); color: var(--tone-red-fg); }
+body.th-tool-page .th-v2-icon-tile.is-blue { background: var(--tone-blue-bg); color: var(--tone-blue-fg); }
+body.th-tool-page .th-v2-icon-tile.is-green { background: var(--tone-green-bg); color: var(--tone-green-fg); }
+/* The dashed "+ Add ..." row button. */
+body.th-tool-page .th-v2-add {
+  display: flex; align-items: center; justify-content: center; width: 100%; min-height: 44px; margin: 6px 0 4px;
+  border: 1px dashed var(--border); border-radius: 12px; background: none; cursor: pointer; text-decoration: none;
+  color: var(--orange-light); font-family: var(--font-ui); font-size: 13px; letter-spacing: .8px; text-transform: uppercase;
+}
+body.th-tool-page .th-v2-add:active { transform: scale(.985); }
+@media (hover: hover) { body.th-tool-page .th-v2-add:hover { border-color: var(--orange-tint-border); background: var(--orange-tint-soft); } }
+/* An Anton section header carrying an orange rule to the edge. */
+body.th-tool-page .th-v2-rule-head {
+  display: flex; align-items: center; gap: 12px; margin: 8px 0 0;
+  font-family: var(--font-display); font-weight: 400; font-size: 22px; letter-spacing: .4px; text-transform: uppercase; color: var(--text);
+}
+body.th-tool-page .th-v2-rule-head::after { content: ''; flex: 1; height: var(--th-rule); background: var(--orange-tint-border); }
