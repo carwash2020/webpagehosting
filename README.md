@@ -5768,3 +5768,7 @@ Tests changed, all because the design changed on purpose:
 - `desktop-app-shell` pins the new 248px sidebar and 1240px content width.
 - `portal-usability-pr3` and `unread-messages`: the estimate row's button reads "Review", an empty inbox renders "all caught up" instead of nothing, and an all-paid Invoices page shows "All paid up".
 - `dashboard-invoice-pdf` allows a second class on the paid-date line.
+
+## What changed, 2026-09-28 -- Workspace redesign W4: Clients, routes, reviews, wiki
+
+Clients and client detail read as one list and one profile. On a computer, the Clients directory runs in two columns, and client detail puts the person on the left and their history on the right. Route Planner shows the map beside the stops and cost analyzer, and Review Requests shows the message preview beside the form. The Appliance Wiki's search stays pinned under the app bar as you scroll. Styling only: every rule lives in its own page's `<style>`, keyed to that page, so `tools/styles-tools.css` and the client portal are untouched. Full writeup in `docs/specialist-logs/visual.md`, 2026-09-28.
