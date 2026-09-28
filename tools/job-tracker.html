@@ -521,43 +521,243 @@
   }
 
   /* ==========================================================================
-     Workspace redesign W2 -- DAILY (2026-09-28): Jobs -- ruled board, sheets beside templates on desktop
-     Package W2 of the v2 Workspace redesign, built on W1 (the append-only
-     body.th-tool-page block at the end of styles-tools.css). Kept in this
-     page's own <style> (which loads after styles-tools.css, so it wins at
-     equal specificity) rather than appended to the shared sheet: every rule
-     is keyed to this page's body[data-th-page], so it has no business in a
-     file the nine portal pages also load. Source order is untouched; the
-     desktop arrangement is CSS grid placement only.
+     Workspace app redesign v2 -- JOBS (2026-09-28)
+     design_handoff_workspace_app_v2 §8.3, replacing W2's Jobs look. Keyed to
+     this page's body[data-th-page]; the shell pieces (row ⋯ sheet, rings,
+     .th-v2-* primitives) are in styles-tools.css "V2". Tokens only.
+     Judgment call: at 1024px and up the list view stays the sortable table
+     it has been since 2026-08-20 (restyled here), rather than the prototype's
+     cards -- the table was asked for directly and tests pin it; the v2 cards
+     are the phone and tablet list, and every board card.
      ========================================================================== */
-  /* ---- Jobs ---- */
-  body.th-tool-page[data-th-page="job-tracker"] .job-card { border-radius: var(--th-radius-card); }
-  body.th-tool-page[data-th-page="job-tracker"] .board-column { background: transparent; border: 1px solid var(--border); border-radius: var(--th-radius-card); box-shadow: none; }
-  body.th-tool-page[data-th-page="job-tracker"] .board-column-header {
-    font-family: var(--font-ui); text-transform: uppercase; letter-spacing: 1.3px; font-weight: 600;
-    box-shadow: inset 0 calc(-1 * var(--th-rule)) 0 var(--border);
+  body.th-tool-page[data-th-page="job-tracker"] { --jt-gap: 14px; }
+  /* Status carries one tone everywhere (v2): Booked blue, Working orange, Done green. */
+  body.th-tool-page[data-th-page="job-tracker"] .badge { border-radius: 999px; font-family: var(--font-app); font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; padding: 3px 9px; }
+  body.th-tool-page[data-th-page="job-tracker"] .badge-status.status-not-started { background: var(--tone-blue-bg); color: var(--tone-blue-fg); }
+  body.th-tool-page[data-th-page="job-tracker"] .badge-status.status-in-progress { background: var(--tone-orange-bg); color: var(--tone-orange-fg); border-color: transparent; }
+  body.th-tool-page[data-th-page="job-tracker"] .badge-status.status-done { background: var(--tone-green-bg); color: var(--tone-green-fg); border-color: transparent; }
+  body.th-tool-page[data-th-page="job-tracker"] .badge-high { background: var(--tone-red-bg); color: var(--tone-red-fg); }
+  body.th-tool-page[data-th-page="job-tracker"] .badge-medium { background: var(--tone-orange-bg); color: var(--tone-orange-fg); }
+  body.th-tool-page[data-th-page="job-tracker"] .badge-low { background: var(--tone-blue-bg); color: var(--tone-blue-fg); }
+  body.th-tool-page[data-th-page="job-tracker"] .badge-money.is-invoiced { background: var(--tone-blue-bg); color: var(--tone-blue-fg); border-color: transparent; }
+  body.th-tool-page[data-th-page="job-tracker"] .badge-money.is-overdue { background: var(--tone-red-bg); color: var(--tone-red-fg); border-color: transparent; }
+  body.th-tool-page[data-th-page="job-tracker"] .badge-money.is-paid, body.th-tool-page[data-th-page="job-tracker"] .badge-warranty.is-active { background: var(--tone-green-bg); color: var(--tone-green-fg); border-color: transparent; }
+  body.th-tool-page[data-th-page="job-tracker"] .badge-money.is-to-invoice { background: var(--orange); color: var(--th-ink-on-orange); }
+
+  /* ---- Jobs / Contacts / Notes: a segmented control ---- */
+  body.th-tool-page[data-th-page="job-tracker"] .tabs, body.th-tool-page[data-th-page="job-tracker"] .tabs.tabs-sticky {
+    display: inline-flex; width: auto; max-width: 100%; gap: 4px; padding: 4px; margin: 0 0 var(--jt-gap);
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-track); box-shadow: none;
   }
-  body.th-tool-page[data-th-page="job-tracker"] .job-bulk-action-bar { border-radius: var(--th-radius-card); box-shadow: var(--shadow-hover); }
+  body.th-tool-page[data-th-page="job-tracker"] .tabs.tabs-sticky::before { border-radius: inherit; background: var(--bg-panel); }
+  body.th-tool-page[data-th-page="job-tracker"] .tab-btn {
+    min-height: 38px; padding: 0 16px; border-radius: var(--th-radius-seg); box-shadow: none;
+    font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: .8px; color: var(--text-dim);
+  }
+  body.th-tool-page[data-th-page="job-tracker"] .tab-btn.is-active { background: var(--text); color: var(--bg); box-shadow: none; }
+  body.th-tool-page[data-th-page="job-tracker"] .tab-btn:active { background: var(--bg-panel-2); }
+  body.th-tool-page[data-th-page="job-tracker"] .tab-btn.is-active:active { background: var(--text); transform: scale(.97); }
+  @media (hover: hover) { body.th-tool-page[data-th-page="job-tracker"] .tab-btn:hover { background: none; color: var(--text); } body.th-tool-page[data-th-page="job-tracker"] .tab-btn.is-active:hover { background: var(--text); color: var(--bg); } }
+  @media (pointer: coarse) { body.th-tool-page[data-th-page="job-tracker"] .tab-btn { min-height: 44px; } }
+  @media (max-width: 720px) { body.th-tool-page[data-th-page="job-tracker"] .tabs.tabs-sticky { margin-left: 0; margin-right: 0; padding: 4px; } }
+
+  /* ---- Search, then List / Board / Calendar ---- */
+  body.th-tool-page[data-th-page="job-tracker"] #tab-jobs > .tool-form-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px; }
+  body.th-tool-page[data-th-page="job-tracker"] #jobSearchWrap {
+    flex: 1 1 240px; min-height: 46px; padding: 0 6px 0 4px; display: flex; align-items: center;
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-track);
+  }
+  body.th-tool-page[data-th-page="job-tracker"] #jobSearchWrap .icon-search-toggle { border: 0; background: none; color: var(--text-dim); width: 36px; }
+  body.th-tool-page[data-th-page="job-tracker"] #jobSearchWrap .icon-search-input,
+  body.th-tool-page[data-th-page="job-tracker"] #jobSearchWrap.is-expanded .icon-search-input {
+    flex: 1; width: auto; min-width: 0; opacity: 1; margin: 0; padding: 10px 28px 10px 4px; border: 0; background: none; font-size: 16px;
+  }
+  body.th-tool-page[data-th-page="job-tracker"] #jobSearchWrap:focus-within { border-color: var(--orange-tint-border); }
+  body.th-tool-page[data-th-page="job-tracker"] .job-view-switch, body.th-tool-page[data-th-page="job-tracker"] #jobViewSwitch {
+    display: inline-flex; gap: 4px; padding: 4px; overflow: visible;
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-track);
+  }
+  body.th-tool-page[data-th-page="job-tracker"] #jobViewSwitch .sort-btn, body.th-tool-page[data-th-page="job-tracker"] .controls-row .sort-btn {
+    min-height: 38px; padding: 0 14px; border: 0; border-radius: var(--th-radius-seg); background: none; color: var(--text-dim);
+    font-family: var(--font-ui); font-size: 13px; letter-spacing: .8px; text-transform: uppercase;
+  }
+  body.th-tool-page[data-th-page="job-tracker"] #jobViewSwitch .sort-btn.is-active, body.th-tool-page[data-th-page="job-tracker"] .controls-row .sort-btn.is-active { background: var(--text); color: var(--bg); }
+  body.th-tool-page[data-th-page="job-tracker"] .controls-row { margin-bottom: 10px; }
+  body.th-tool-page[data-th-page="job-tracker"] .controls-row .sort-group { display: inline-flex; gap: 4px; padding: 4px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-track); }
+  @media (pointer: coarse) { body.th-tool-page[data-th-page="job-tracker"] #jobViewSwitch .sort-btn, body.th-tool-page[data-th-page="job-tracker"] .controls-row .sort-btn { min-height: 44px; } }
+  body.th-tool-page[data-th-page="job-tracker"] #jobSelectModeBtn, body.th-tool-page[data-th-page="job-tracker"] #tab-jobs [data-density-toggle] { min-height: 44px; border-radius: 12px; }
+
+  /* ---- Filter chips with counts ---- */
+  body.th-tool-page[data-th-page="job-tracker"] #statusFilterGroup { gap: 8px; margin-bottom: var(--jt-gap) !important; }
+  body.th-tool-page[data-th-page="job-tracker"] #statusFilterGroup .sort-btn {
+    min-height: 38px; padding: 0 14px; border-radius: 999px; background: var(--bg-panel); border: 1px solid var(--border); color: var(--text);
+    font-family: var(--font-app); font-size: 13.5px; font-weight: 600; letter-spacing: 0; text-transform: none; white-space: nowrap;
+  }
+  body.th-tool-page[data-th-page="job-tracker"] #statusFilterGroup .sort-btn.is-active { background: var(--orange); border-color: var(--orange); color: var(--th-ink-on-orange); }
+  body.th-tool-page[data-th-page="job-tracker"] .jt-chip-n { opacity: .7; margin-left: 4px; }
+  body.th-tool-page[data-th-page="job-tracker"] .jt-chip-n:empty { display: none; }
+  body.th-tool-page[data-th-page="job-tracker"] #statusFilterGroup .sort-btn-count { background: var(--th-ink-on-orange); color: var(--orange); }
+  body.th-tool-page[data-th-page="job-tracker"] #statusFilterGroup .sort-btn:not(.is-active) .sort-btn-count { background: var(--orange); color: var(--th-ink-on-orange); }
+  @media (pointer: coarse) { body.th-tool-page[data-th-page="job-tracker"] #statusFilterGroup .sort-btn { min-height: 44px; } }
+
+  /* ---- Groups: Today, Tomorrow, Next 7 days ... ---- */
+  body.th-tool-page[data-th-page="job-tracker"] .job-group-head { margin: 18px 2px 8px; font-size: 12px; font-weight: 500; letter-spacing: 1.4px; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="job-tracker"] .job-group-head.is-today { color: var(--orange-light); }
+  body.th-tool-page[data-th-page="job-tracker"] .job-group-head.is-overdue { color: var(--tone-red-fg); }
+
+  /* ---- The job card: a date block, the job, and a strip of what you do next ---- */
+  body.th-tool-page[data-th-page="job-tracker"] .job-card {
+    border: 1px solid var(--border); border-left-width: 1px; border-radius: var(--th-radius-tile);
+    background: var(--bg-panel); box-shadow: none; margin-bottom: 8px;
+  }
+  body.th-tool-page[data-th-page="job-tracker"] .job-card.priority-high, body.th-tool-page[data-th-page="job-tracker"] .job-card.priority-medium, body.th-tool-page[data-th-page="job-tracker"] .job-card.priority-low { border-left-color: var(--border); }
+  body.th-tool-page[data-th-page="job-tracker"] .job-card.is-done { opacity: .72; }
+  body.th-tool-page[data-th-page="job-tracker"] .job-card-swipe-inner {
+    display: grid; grid-template-columns: 56px minmax(0, 1fr); column-gap: 14px;
+    grid-template-areas: "sel sel" "time top" "time meta" "time notes" "act act" "photos photos";
+    align-items: start; padding: 14px 16px 0; background: var(--bg-panel);
+  }
+  body.th-tool-page[data-th-page="job-tracker"] .job-card-select { grid-area: sel; }
+  body.th-tool-page[data-th-page="job-tracker"] .jc-time {
+    grid-area: time; align-self: start; border-radius: 12px; background: var(--th-field); padding: 8px 0;
+    display: flex; flex-direction: column; align-items: center; line-height: 1;
+  }
+  body.th-tool-page[data-th-page="job-tracker"] .jc-time b { font-family: var(--font-display); font-weight: 400; font-size: 18px; color: var(--text); }
+  body.th-tool-page[data-th-page="job-tracker"] .jc-time span { margin-top: 3px; font-size: 10.5px; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="job-tracker"] .jc-time.is-today { background: var(--tone-orange-bg); }
+  body.th-tool-page[data-th-page="job-tracker"] .jc-time.is-today b, body.th-tool-page[data-th-page="job-tracker"] .jc-time.is-today span { color: var(--tone-orange-fg); }
+  body.th-tool-page[data-th-page="job-tracker"] .job-card-top { grid-area: top; margin: 0 0 2px; flex-direction: column; align-items: flex-start; gap: 6px; }
+  body.th-tool-page[data-th-page="job-tracker"] .job-card-title { font-family: var(--font-app); font-size: 16px; font-weight: 600; color: var(--text); }
+  body.th-tool-page[data-th-page="job-tracker"] .job-card-title.is-done-text { color: var(--text-dim); }
+  body.th-tool-page[data-th-page="job-tracker"] .job-card-top .job-badges { order: 2; justify-content: flex-start; }
+  body.th-tool-page[data-th-page="job-tracker"] .job-card-meta { grid-area: meta; font-size: 13.5px; margin: 0 0 4px; }
+  body.th-tool-page[data-th-page="job-tracker"] .job-card-meta .jc-when { color: var(--text-dim); font-weight: 400; }
+  body.th-tool-page[data-th-page="job-tracker"] .job-card-notes { grid-area: notes; font-size: 13px; margin: 2px 0 6px; }
+  body.th-tool-page[data-th-page="job-tracker"] .job-card-actions {
+    grid-area: act; display: flex; flex-wrap: wrap; gap: 1px; margin: 12px -16px 0; padding: 0;
+    background: var(--border); border-top: 1px solid var(--border);
+  }
+  body.th-tool-page[data-th-page="job-tracker"] .job-card-actions > * { flex: 1 1 0; }
+  body.th-tool-page[data-th-page="job-tracker"] .job-card-actions .job-done-btn, body.th-tool-page[data-th-page="job-tracker"] .job-card-actions .job-quick-btn, body.th-tool-page[data-th-page="job-tracker"] .job-card-actions .job-more-btn {
+    min-width: 0; min-height: 48px; width: auto; height: auto; margin: 0; border: 0; border-radius: 0; box-shadow: none;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    background: var(--bg-panel); color: var(--orange-light);
+    font-family: var(--font-ui); font-size: 12.5px; font-weight: 500; letter-spacing: .7px; text-transform: uppercase;
+  }
+  body.th-tool-page[data-th-page="job-tracker"] .job-card-actions .job-more-btn { margin-left: 0; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="job-tracker"] .job-card-actions .job-done-btn { color: var(--tone-green-fg); background: var(--bg-panel); }
+  body.th-tool-page[data-th-page="job-tracker"] .job-card-actions .job-done-btn::before {
+    content: ''; width: 16px; height: 16px; background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+  body.th-tool-page[data-th-page="job-tracker"] .job-card-actions > *:active { background: var(--bg-panel-2); }
+  @media (hover: hover) { body.th-tool-page[data-th-page="job-tracker"] .job-card-actions .job-quick-btn:hover, body.th-tool-page[data-th-page="job-tracker"] .job-card-actions .job-done-btn:hover { background: var(--bg-panel-2); } }
+  /* Desktop board cards still carry the full row; give it room to wrap. */
   @media (min-width: 1024px) {
-    /* Add a Job and Recurring templates side by side; sort and status
-       filters share one toolbar row; the list gets the rest. */
-    body.th-tool-page[data-th-page="job-tracker"] #tab-jobs.is-active {
-      display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 12px; align-items: start;
-    }
+    body.th-tool-page[data-th-page="job-tracker"] .job-card-actions > .status-select, body.th-tool-page[data-th-page="job-tracker"] .job-card-actions > .small-btn:not(.job-done-btn), body.th-tool-page[data-th-page="job-tracker"] .job-card-actions > a.small-btn { flex: 1 1 auto; border-radius: 0; margin: 0; min-height: 44px; }
+  }
+  body.th-tool-page[data-th-page="job-tracker"] .job-card [id^="photos-"] { grid-area: photos; }
+  body.th-tool-page[data-th-page="job-tracker"] .job-card-swipe-action { background: var(--tone-green-fg); }
+  body.th-tool-page[data-th-page="job-tracker"] .job-card-swipe-action .small-btn { color: var(--th-ink-on-green); }
+  @media (min-width: 768px) and (max-width: 1023px) {
+    body.th-tool-page[data-th-page="job-tracker"] .job-card-swipe-inner { padding: 10px 14px 0; }
+    body.th-tool-page[data-th-page="job-tracker"] .job-card-actions { margin: 8px -14px 0; }
+  }
+  body.th-tool-page.is-compact-density[data-th-page="job-tracker"] .job-card-swipe-inner { padding: 10px 14px 0; }
+
+  /* ---- Board: three columns, Not started / In progress / Done ---- */
+  body.th-tool-page[data-th-page="job-tracker"] .jobs-board-wrap { gap: 12px; }
+  body.th-tool-page[data-th-page="job-tracker"] .board-column { flex: 1 0 260px; background: var(--th-rail); border: 1px solid var(--border); border-radius: var(--th-radius-tile); padding: 0; box-shadow: none; }
+  body.th-tool-page[data-th-page="job-tracker"] .board-column-header {
+    padding: 14px 16px 8px; border: 0; box-shadow: none;
+    font-family: var(--font-ui); font-size: 12.5px; font-weight: 500; letter-spacing: 1.3px; text-transform: uppercase; color: var(--text);
+  }
+  body.th-tool-page[data-th-page="job-tracker"] .board-col-dot { width: 9px; height: 9px; }
+  body.th-tool-page[data-th-page="job-tracker"] .board-col-dot.status-not-started { background: var(--tone-blue-fg); }
+  body.th-tool-page[data-th-page="job-tracker"] .board-col-dot.status-in-progress { background: var(--orange); }
+  body.th-tool-page[data-th-page="job-tracker"] .board-col-dot.status-done { background: var(--tone-green-fg); }
+  body.th-tool-page[data-th-page="job-tracker"] .board-column-body { padding: 4px 12px 12px; }
+  body.th-tool-page[data-th-page="job-tracker"] .board-column-body .job-card { border-radius: 14px; margin-bottom: 8px; }
+  body.th-tool-page[data-th-page="job-tracker"] .board-column-body .job-card-swipe-inner { grid-template-columns: minmax(0, 1fr); grid-template-areas: "sel" "top" "meta" "notes" "act"; padding: 12px 14px 0; }
+  body.th-tool-page[data-th-page="job-tracker"] .board-column-body .jc-time { display: none; }
+  body.th-tool-page[data-th-page="job-tracker"] .board-column-body .job-card-meta .jc-when { color: var(--orange-light); font-family: var(--font-ui); font-size: 12px; letter-spacing: .8px; text-transform: uppercase; }
+  body.th-tool-page[data-th-page="job-tracker"] .board-column-body .job-card-actions { margin: 10px -14px 0; }
+  body.th-tool-page[data-th-page="job-tracker"] .board-column-body .job-card-notes { display: none; }
+
+  /* ---- Calendar: seven columns, dots, the day's jobs ---- */
+  body.th-tool-page[data-th-page="job-tracker"] .jobs-calendar-wrap .form-section { border-radius: var(--th-radius-xl); padding: 16px; }
+  body.th-tool-page[data-th-page="job-tracker"] .cal-grid { gap: 6px; }
+  body.th-tool-page[data-th-page="job-tracker"] .cal-dow { font-family: var(--font-ui); font-size: 11px; letter-spacing: 1px; }
+  body.th-tool-page[data-th-page="job-tracker"] .cal-day { border-radius: 14px; background: var(--th-field); border: 1px solid var(--border); padding: 8px; aspect-ratio: auto; min-height: 78px; }
+  body.th-tool-page[data-th-page="job-tracker"] .cal-day.is-empty { background: none; border: 0; }
+  body.th-tool-page[data-th-page="job-tracker"] .cal-day-num { font-family: var(--font-display); font-size: 17px; color: var(--text); }
+  body.th-tool-page[data-th-page="job-tracker"] .cal-day.is-today { background: var(--tone-orange-bg); border: 1px solid var(--orange-tint-border); }
+  body.th-tool-page[data-th-page="job-tracker"] .cal-day.is-today .cal-day-num { color: var(--tone-orange-fg); font-weight: 400; }
+  body.th-tool-page[data-th-page="job-tracker"] .cal-day.is-selected { background: var(--tone-blue-bg); border-color: var(--tone-blue-fg); }
+  body.th-tool-page[data-th-page="job-tracker"] .cal-nav-btn { border-radius: 12px; width: 44px; height: 44px; }
+  body.th-tool-page[data-th-page="job-tracker"] .cal-month-label { font-family: var(--font-display); font-weight: 400; font-size: 24px; text-transform: uppercase; letter-spacing: .4px; }
+  body.th-tool-page[data-th-page="job-tracker"] .cal-day-detail h3, body.th-tool-page[data-th-page="job-tracker"] #calDowDensitySection h3 { font-family: var(--font-ui); font-size: 13px; letter-spacing: 1.4px; text-transform: uppercase; }
+  @media (max-width: 480px) { body.th-tool-page[data-th-page="job-tracker"] .cal-day { padding: 5px; border-radius: 10px; min-height: 54px; } body.th-tool-page[data-th-page="job-tracker"] .cal-day-num { font-size: 14px; } }
+
+  /* ---- Recurring job templates: an inline card, rows with a ⋯ ---- */
+  body.th-tool-page[data-th-page="job-tracker"] #templatesFormSection { border-radius: var(--th-radius-xl); padding: 4px 18px 8px; }
+  body.th-tool-page[data-th-page="job-tracker"] #templatesFormSection .form-section-header h3 { font-family: var(--font-ui); font-size: 13px; letter-spacing: 1.4px; }
+  body.th-tool-page[data-th-page="job-tracker"] #templatesDueBadge.template-due-badge { border-radius: 999px; font-family: var(--font-app); font-size: 12px; letter-spacing: 0; text-transform: none; }
+  body.th-tool-page[data-th-page="job-tracker"] .template-item { padding: 11px 0; border-bottom: 0; border-top: 1px solid var(--th-hairline); }
+  body.th-tool-page[data-th-page="job-tracker"] .template-item-title { font-family: var(--font-app); font-size: 14.5px; font-weight: 600; color: var(--text); }
+  body.th-tool-page[data-th-page="job-tracker"] .template-item-actions { align-items: center; }
+  body.th-tool-page[data-th-page="job-tracker"] #templatesFormSection .form-section-body > .secondary-btn {
+    display: flex; align-items: center; justify-content: center; width: 100%; min-height: 44px; margin: 6px 0 10px !important;
+    border: 1px dashed var(--border); border-radius: 12px; background: none; box-shadow: none;
+    color: var(--orange-light); font-family: var(--font-ui); font-size: 13px; letter-spacing: .8px; text-transform: uppercase;
+  }
+
+  /* ---- Contacts: one card, ruled rows ---- */
+  body.th-tool-page[data-th-page="job-tracker"] #contactsList:not(:empty) { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl); padding: 4px 18px; }
+  body.th-tool-page[data-th-page="job-tracker"] #contactsList .contact-card { margin: 0; padding: 11px 0; background: none; border: 0; border-top: 1px solid var(--th-hairline); border-radius: 0; box-shadow: none; }
+  body.th-tool-page[data-th-page="job-tracker"] #contactsList .contact-card:first-child { border-top: 0; }
+  body.th-tool-page[data-th-page="job-tracker"] #contactsList .contact-card:hover { transform: none; box-shadow: none; }
+  body.th-tool-page[data-th-page="job-tracker"] .contact-card-text h4 { font-family: var(--font-app); font-size: 14.5px; font-weight: 600; color: var(--text); }
+  body.th-tool-page[data-th-page="job-tracker"] .contact-card-text p { font-size: 12.5px; }
+  body.th-tool-page[data-th-page="job-tracker"] #contactSearchWrap { width: 100%; margin-bottom: 12px; }
+
+  /* ---- Notes: a list and the editor side by side on a computer ---- */
+  body.th-tool-page[data-th-page="job-tracker"] .notes-sidebar, body.th-tool-page[data-th-page="job-tracker"] .notes-editor .form-section { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl); padding: 14px 16px; }
+  body.th-tool-page[data-th-page="job-tracker"] .notes-sidebar { flex: 1 1 280px; }
+  body.th-tool-page[data-th-page="job-tracker"] .notes-editor { flex: 1.4 1 340px; }
+  body.th-tool-page[data-th-page="job-tracker"] .note-list-item { margin: 0; padding: 11px 0; background: none; border: 0; border-top: 1px solid var(--th-hairline); border-radius: 0; }
+  body.th-tool-page[data-th-page="job-tracker"] .note-list-item.is-active { background: none; }
+  body.th-tool-page[data-th-page="job-tracker"] .note-list-item.is-active .note-list-item-text h4 { color: var(--orange-light); }
+  body.th-tool-page[data-th-page="job-tracker"] .note-list-item-text h4 { font-family: var(--font-app); font-size: 14.5px; font-weight: 600; color: var(--text); }
+  body.th-tool-page[data-th-page="job-tracker"] .note-list-item .small-btn.danger { width: 38px; min-width: 38px; padding: 0; border: 0; background: none; color: var(--text-dim); font-size: 20px; }
+  @media (pointer: coarse) { body.th-tool-page[data-th-page="job-tracker"] .note-list-item .small-btn.danger { width: 44px; min-width: 44px; } }
+  body.th-tool-page[data-th-page="job-tracker"] .note-new-btn { border-radius: 999px; min-height: 40px; }
+  body.th-tool-page[data-th-page="job-tracker"] #noteEditorSection::before {
+    content: 'Editing \00b7  saves as you type'; display: block; margin-bottom: 8px;
+    font-family: var(--font-ui); font-size: 11.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-dim);
+  }
+  body.th-tool-page[data-th-page="job-tracker"] #noteTitle { font-family: var(--font-display); font-size: 24px; text-transform: uppercase; }
+
+  /* ---- The desktop table, in the v2 surface ---- */
+  body.th-tool-page[data-th-page="job-tracker"] .jobs-table-wrap { border-radius: var(--th-radius-xl); box-shadow: none; background: var(--bg-panel); }
+  body.th-tool-page[data-th-page="job-tracker"] .jobs-table thead th { background: var(--bg-panel); font-size: 11.5px; letter-spacing: 1.1px; }
+  body.th-tool-page[data-th-page="job-tracker"] .jobs-table tbody td { border-bottom-color: var(--th-hairline); }
+
+  /* ---- Add a Job / Add a Contact triggers and the bulk bar ---- */
+  body.th-tool-page[data-th-page="job-tracker"] .job-bulk-action-bar { border-radius: var(--th-radius-tile); box-shadow: var(--shadow-hover); }
+  @media (min-width: 1024px) {
+    body.th-tool-page[data-th-page="job-tracker"] #tab-jobs.is-active { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 14px; align-items: start; }
     body.th-tool-page[data-th-page="job-tracker"] #tab-jobs > * { grid-column: 1 / -1; min-width: 0; }
     body.th-tool-page[data-th-page="job-tracker"] #tab-jobs > .th-sheet-trigger { grid-column: 1; }
     body.th-tool-page[data-th-page="job-tracker"] #tab-jobs > #templatesFormSection { grid-column: 2; margin-bottom: 12px; }
     body.th-tool-page[data-th-page="job-tracker"] #tab-jobs > .controls-row { grid-column: 1; margin-bottom: 12px; }
     body.th-tool-page[data-th-page="job-tracker"] #tab-jobs > #statusFilterGroup { grid-column: 2; justify-self: end; margin-bottom: 12px; }
-    body.th-tool-page[data-th-page="job-tracker"] #tab-contacts.is-active {
-      display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 12px; align-items: start;
-    }
+    body.th-tool-page[data-th-page="job-tracker"] #tab-contacts.is-active { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 14px; align-items: start; }
     body.th-tool-page[data-th-page="job-tracker"] #tab-contacts > * { grid-column: 1 / -1; min-width: 0; }
     body.th-tool-page[data-th-page="job-tracker"] #tab-contacts > .th-sheet-trigger { grid-column: 1; }
     body.th-tool-page[data-th-page="job-tracker"] #tab-contacts > #contactSearchWrap { grid-column: 2; }
   }
-  body.th-tool-page[data-th-page="job-tracker"] .notes-sidebar,
-  body.th-tool-page[data-th-page="job-tracker"] .notes-editor .form-section { border-radius: var(--th-radius-card); }
 </style>
 </head>
 <body data-th-page="job-tracker">
@@ -704,12 +904,12 @@
   </div>
 
   <div class="sort-group" id="statusFilterGroup" style="margin-bottom: 16px;">
-    <button class="sort-btn is-active" data-status-filter="not-done" onclick="setStatusFilter('not-done')">Active</button>
-    <button class="sort-btn" data-status-filter="not-started" onclick="setStatusFilter('not-started')">Not Started</button>
-    <button class="sort-btn" data-status-filter="in-progress" onclick="setStatusFilter('in-progress')">In Progress</button>
-    <button class="sort-btn" data-status-filter="done" onclick="setStatusFilter('done')">Completed</button>
+    <button class="sort-btn is-active" data-status-filter="not-done" onclick="setStatusFilter('not-done')">Active <span class="jt-chip-n" data-filter-count="not-done"></span></button>
+    <button class="sort-btn" data-status-filter="not-started" onclick="setStatusFilter('not-started')">Not Started <span class="jt-chip-n" data-filter-count="not-started"></span></button>
+    <button class="sort-btn" data-status-filter="in-progress" onclick="setStatusFilter('in-progress')">In Progress <span class="jt-chip-n" data-filter-count="in-progress"></span></button>
+    <button class="sort-btn" data-status-filter="done" onclick="setStatusFilter('done')">Completed <span class="jt-chip-n" data-filter-count="done"></span></button>
     <button class="sort-btn" data-status-filter="to-invoice" onclick="setStatusFilter('to-invoice')">To invoice <span class="sort-btn-count" id="toInvoiceFilterCount"></span></button>
-    <button class="sort-btn" data-status-filter="all" onclick="setStatusFilter('all')">All</button>
+    <button class="sort-btn" data-status-filter="all" onclick="setStatusFilter('all')">All <span class="jt-chip-n" data-filter-count="all"></span></button>
   </div>
 
   <div id="jobsList"></div>
@@ -2007,6 +2207,17 @@
     });
   }
 
+  // v2 (2026-09-28): each filter chip shows how many jobs it holds (search
+  // applied, same as the list). To invoice keeps its own orange count.
+  function updateStatusFilterCounts(jobs) {
+    const n = { 'not-done': 0, 'not-started': 0, 'in-progress': 0, done: 0, all: jobs.length };
+    jobs.forEach(j => { if (j.status !== 'done') n['not-done']++; if (n[j.status] !== undefined) n[j.status]++; });
+    document.querySelectorAll('#statusFilterGroup [data-filter-count]').forEach(el => {
+      const v = n[el.getAttribute('data-filter-count')];
+      el.textContent = v ? String(v) : '';
+    });
+  }
+
   function setStatusFilter(filter) {
     currentStatusFilter = filter;
     document.querySelectorAll('#statusFilterGroup .sort-btn').forEach(b => b.classList.toggle('is-active', b.dataset.statusFilter === filter));
@@ -2202,11 +2413,20 @@
     // button row still shows on a desktop board card.
     const telHref = job.phone ? 'tel:' + String(job.phone).replace(/[^\d+]/g, '') : '';
     const mapsHref = job.address ? 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(job.address) : '';
+    // v2 (2026-09-28): the card's date block -- the day over the weekday
+    // (or Today), from the job's own date. Jobs carry no time of day, so
+    // the prototype's "8:30 AM" slot shows the date instead.
+    const jcDay = job.date ? new Date(job.date + 'T00:00:00') : null;
+    const jcHasDay = !!jcDay && !isNaN(jcDay.getTime());
+    const jcIsToday = jcHasDay && jcDay.toDateString() === new Date().toDateString();
+    const jcTimeHtml = '<div class="jc-time' + (jcIsToday ? ' is-today' : '') + '" aria-hidden="true"><b>' + (jcHasDay ? jcDay.getDate() : '\u2014') + '</b><span>' +
+      (jcHasDay ? (jcIsToday ? 'Today' : jcDay.toLocaleDateString('en-US', { weekday: 'short' })) : 'No date') + '</span></div>';
     return `
       <div class="job-card priority-${job.priority} ${isDone ? 'is-done' : ''}${moneyPillHtml.includes('is-to-invoice') ? ' needs-invoice' : ''} ${job.id === justAddedJobId ? 'list-row-enter' : ''}" data-job-id="${job.id}">
         ${(opts.enableSwipe && !isDone) ? `<div class="job-card-swipe-action"><button class="small-btn" onclick="setJobStatus(${job.id}, 'done')">Done</button></div>` : ''}
         <div class="job-card-swipe-inner">
         ${jobSelectionMode ? `<label class="job-card-select"><input type="checkbox" ${selectedJobIds.has(job.id) ? 'checked' : ''} onchange="toggleJobSelected(${job.id}, this.checked)"></label>` : ''}
+        ${jcTimeHtml}
         <div class="job-card-top">
           <h4 class="job-card-title ${isDone ? 'is-done-text' : ''}">${personDot(job.lastEditedBy, 'Last edited by')}<a href="/tools/job-detail.html?id=${job.id}" style="color:inherit; text-decoration:none;">${escapeHtml(job.title)}</a></h4>
           <div class="job-badges">
@@ -2293,6 +2513,7 @@
     const marginData = { invoices: marginInvoices, expenses: marginExpenses, manualIncome: marginManualIncome, toInvoiceIds: new Set(toInvoiceRows.map(r => r.job.id)) };
     const toInvoiceCountEl = document.getElementById('toInvoiceFilterCount');
     if (toInvoiceCountEl) toInvoiceCountEl.textContent = toInvoiceRows.length ? String(toInvoiceRows.length) : '';
+    updateStatusFilterCounts(allJobs);
 
     // The board always shows all 3 statuses side by side, regardless of
     // the Active/Not Started/In Progress/Completed/All filter below --
@@ -2438,34 +2659,34 @@
     // The job's clock (2026-09-23, rework part 9) leads: on site it's the
     // thing you reach for first.
     if (typeof thJobClockSince === 'function' && typeof thStartClock === 'function') {
-      if (thJobClockSince(job) !== null) actions.push({ label: 'Stop the clock (' + thFormatClock(thJobClockElapsedMs(job)) + ')', onClick: () => thStopClock(jobId) });
-      else if (job.status !== 'done') actions.push({ label: 'Start the clock', onClick: () => thStartClock(jobId) });
+      if (thJobClockSince(job) !== null) actions.push({ label: 'Stop the clock (' + thFormatClock(thJobClockElapsedMs(job)) + ')', icon: 'stop', onClick: () => thStopClock(jobId) });
+      else if (job.status !== 'done') actions.push({ label: 'Start the clock', icon: 'play', onClick: () => thStartClock(jobId) });
     }
     if (job.status !== 'done') {
-      actions.push({ label: 'Mark Done', onClick: () => setJobStatus(jobId, 'done') });
+      actions.push({ label: 'Mark Done', icon: 'check', onClick: () => setJobStatus(jobId, 'done') });
     }
     // Client texts (2026-09-23, rework part 12): On my way / Running late /
     // All done, written from the job.
     if (job.phone && typeof thOpenTextSheet === 'function') {
-      actions.push({ label: 'Text ' + escapeHtml(String(job.client || '').trim().split(/\s+/)[0] || 'the client'), onClick: () => thOpenTextSheet(jobId) }); // the sheet renders labels as HTML
+      actions.push({ label: 'Text ' + escapeHtml(String(job.client || '').trim().split(/\s+/)[0] || 'the client'), icon: 'message', onClick: () => thOpenTextSheet(jobId) }); // the sheet renders labels as HTML
     }
-    if (job.status === 'not-started') actions.push({ label: 'Start (In Progress)', onClick: () => setJobStatus(jobId, 'in-progress') });
-    if (job.status !== 'not-started') actions.push({ label: 'Back to Not Started', onClick: () => setJobStatus(jobId, 'not-started') });
-    actions.push({ label: 'Open job', onClick: () => { location.href = '/tools/job-detail.html?id=' + encodeURIComponent(jobId); } });
-    actions.push({ label: 'Photos', onClick: () => {
+    if (job.status === 'not-started') actions.push({ label: 'Start (In Progress)', icon: 'play', onClick: () => setJobStatus(jobId, 'in-progress') });
+    if (job.status !== 'not-started') actions.push({ label: 'Back to Not Started', icon: 'shuffle', onClick: () => setJobStatus(jobId, 'not-started') });
+    actions.push({ label: 'Open job', icon: 'external', onClick: () => { location.href = '/tools/job-detail.html?id=' + encodeURIComponent(jobId); } });
+    actions.push({ label: 'Photos', icon: 'camera', onClick: () => {
       if (document.getElementById('photos-' + jobId)) toggleJobPhotos(jobId, job.title);
       else location.href = '/tools/job-detail.html?id=' + encodeURIComponent(jobId);
     } });
-    actions.push({ label: 'Create invoice', onClick: () => { location.href = '/tools/invoice-generator.html?jobRef=' + jobId; } });
+    actions.push({ label: 'Create invoice', icon: 'receipt', onClick: () => { location.href = '/tools/invoice-generator.html?jobRef=' + jobId; } });
     const stage = (job.status === 'done' && typeof thJobMoneyStage === 'function')
       ? thJobMoneyStage(job, thRead(TH_KEYS.invoices, []), thRead(TH_KEYS.income, []).filter(e => e.origin !== 'invoice')).stage
       : null;
-    if (stage === 'to-invoice') actions.push({ label: 'No charge (warranty, favor)', onClick: () => setJobNoCharge(jobId, true) });
-    if (stage === 'no-charge') actions.push({ label: 'Needs an invoice after all', onClick: () => setJobNoCharge(jobId, false) });
-    if (job.clientEmail && !job.confirmationSentAt) actions.push({ label: 'Send confirmation email', onClick: () => sendJobConfirmationEmail(jobId) });
-    actions.push({ label: 'Log Expense', onClick: () => showQuickExpenseModal(jobId, job.title) });
-    actions.push({ label: 'Edit', onClick: () => editJob(jobId) });
-    actions.push({ label: 'Delete', isDanger: true, onClick: () => deleteJob(jobId) });
+    if (stage === 'to-invoice') actions.push({ label: 'No charge (warranty, favor)', icon: 'check-circle', onClick: () => setJobNoCharge(jobId, true) });
+    if (stage === 'no-charge') actions.push({ label: 'Needs an invoice after all', icon: 'receipt', onClick: () => setJobNoCharge(jobId, false) });
+    if (job.clientEmail && !job.confirmationSentAt) actions.push({ label: 'Send confirmation email', icon: 'mail', onClick: () => sendJobConfirmationEmail(jobId) });
+    actions.push({ label: 'Log Expense', icon: 'camera', onClick: () => showQuickExpenseModal(jobId, job.title) });
+    actions.push({ label: 'Edit', icon: 'edit', kind: 'edit', onClick: () => editJob(jobId) });
+    actions.push({ label: 'Delete', isDanger: true, icon: 'trash', kind: 'delete', onClick: () => deleteJob(jobId) });
     showQuickActionSheet(escapeHtml(job.title), actions);
   }
 
@@ -2919,6 +3140,23 @@
   // above) -- History/Edit/Delete without needing the button row scrolled
   // into view. One call on page load; attachLongPress delegates via the
   // container so it keeps working across every re-render.
+  // v2 (2026-09-28): the row menu on template and contact rows, mapped onto
+  // the buttons their render functions already draw (tools-dialogs.js
+  // attachRowMenu). Contacts keep their own long-press sheet.
+  function initJobsRowMenus() {
+    if (typeof attachRowMenu !== 'function') return;
+    const tpl = document.getElementById('templatesList');
+    if (tpl) attachRowMenu(tpl, '.template-item', { buttonHost: '.template-item-actions', actions: [
+      { kind: 'edit', selector: 'button[onclick^="editTemplatePrompt"]', label: 'Edit template' },
+      { kind: 'delete', selector: '.small-btn.danger', label: 'Delete template' },
+    ] });
+    const contacts = document.getElementById('contactsList');
+    if (contacts) attachRowMenu(contacts, '.contact-card', { buttonHost: '.contact-card-text + div', longPress: false, actions: [
+      { kind: 'edit', selector: 'button[onclick^="editContact"]', label: 'Edit contact' },
+      { kind: 'delete', selector: '.small-btn.danger', label: 'Delete contact' },
+    ] });
+  }
+
   function initContactCardLongPress() {
     if (typeof attachLongPress !== 'function') return; // tools-dialogs.js not loaded (some minimal test sandboxes)
     const container = document.getElementById('contactsList');
@@ -3436,6 +3674,7 @@
       attachVoiceDictation('jobNotes', 'jobNotesMicBtn');
       renderContacts();
       initContactCardLongPress();
+      initJobsRowMenus();
       renderTemplates();
       initNotes();
 
