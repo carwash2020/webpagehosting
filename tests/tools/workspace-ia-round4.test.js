@@ -14,30 +14,24 @@ const read = (f) => fs.readFileSync(path.join(TOOLS, f), 'utf8');
 const TOUR = read('tools-tour.js');
 const PALETTE = read('tools-command-palette.js');
 
-test('tour steps cover every tab on the tabbed pages, and each tab step puts its tab on screen first via the page\'s own switch function', () => {
+// First Impressions handoff (2026-09-29): the 25-step, every-tab
+// tutorial was replaced by a 6-step tour teaching the one real loop
+// (add a job, track it, invoice it, get paid, watch what's owed, and
+// where help lives) -- see tools/tools-tour.js's own header comment.
+test('the tour is exactly 6 steps, each with a real highlightSelector', () => {
   const steps = [...TOUR.matchAll(/\{ page: '\/tools\/([\w-]+\.html)', highlightSelector: '([^']+)', title: '[^']+', body: '(?:[^'\\]|\\.)*'(?:, onShow: \{ fn: '(\w+)', args: \[([^\]]*)\] \})? \}/g)]
     .map(m => ({ page: m[1], selector: m[2], fn: m[3], args: m[4] }));
-  assert.equal(steps.length, 25, 'every step should parse');
-  const tabSteps = steps.filter(s => /^\[data-tab="/.test(s.selector));
-  for (const s of tabSteps) {
-    const tab = s.selector.match(/data-tab="([^"]+)"/)[1];
-    assert.ok(read(s.page).includes('data-tab="' + tab + '"'), `${s.page} has a ${tab} tab`);
-    assert.ok(s.fn, `${s.page} ${tab} step should activate its tab (onShow)`);
-    assert.ok(read(s.page).includes('function ' + s.fn + '('), `${s.page} defines ${s.fn}`);
-    assert.equal(s.args, `'${tab}'`);
-  }
-  // Every Finance and Invoice tab is taught.
-  const financeTabs = [...read('finance.html').matchAll(/class="tab-btn[^"]*" data-tab="(\w+)"/g)].map(m => m[1]);
-  const invoiceTabs = [...read('invoice-generator.html').matchAll(/data-tab="(\w+)" onclick="activateGenTab/g)].map(m => m[1]);
-  const taughtFinance = tabSteps.filter(s => s.page === 'finance.html').map(s => s.args.replace(/'/g, ''));
-  const taughtInvoice = steps.filter(s => s.page === 'invoice-generator.html').map(s => s.args && s.args.replace(/'/g, ''));
-  for (const t of financeTabs) assert.ok(taughtFinance.includes(t) || t === 'inventory', `Finance ${t} tab has a tour step`);
-  assert.match(TOUR, /<strong>Inventory<\/strong>/, 'Inventory is covered inside the Cost Lookup step');
-  for (const t of invoiceTabs) assert.ok(taughtInvoice.includes(t), `Invoice ${t} tab has a tour step`);
+  assert.equal(steps.length, 6, 'every step should parse');
+  // The one onShow step (Get paid) puts Invoices' Recent tab on screen.
+  const getPaidStep = steps.find(s => s.selector.includes('toggleInvoicePaid'));
+  assert.ok(getPaidStep);
+  assert.equal(getPaidStep.fn, 'activateGenTab');
+  assert.equal(getPaidStep.args, "'recent'");
+  assert.ok(read(getPaidStep.page).includes('function activateGenTab('), `${getPaidStep.page} defines activateGenTab`);
 });
 
 test('the tour engine calls onShow before highlighting, picks the first VISIBLE candidate of a comma list, and shows a step counter', () => {
-  const dom = new JSDOM('<!DOCTYPE html><html><head><style>.hidden{display:none}</style></head><body><nav class="th-desktop-sidebar hidden">side</nav><nav class="th-bottom-nav">bar</nav><button data-tab="quote">Quote</button></body></html>', {
+  const dom = new JSDOM('<!DOCTYPE html><html><head><style>.hidden{display:none}</style></head><body><nav class="th-sidebar-new hidden">side</nav><button class="th-bn-create">+</button><button onclick="toggleInvoicePaid(1)">Mark Paid</button></body></html>', {
     url: 'https://example.com/tools/workspace.html', runScripts: 'dangerously',
   });
   const { window } = dom;
@@ -46,19 +40,17 @@ test('the tour engine calls onShow before highlighting, picks the first VISIBLE 
   const calls = [];
   window.activateGenTab = (t) => calls.push(t);
   const s = window.document.createElement('script'); s.textContent = TOUR; window.document.head.appendChild(s);
-  // Step 4 is "Getting around": '.th-desktop-sidebar, .th-bottom-nav'.
-  window.renderAppTourStep(4);
-  assert.ok(window.document.querySelector('.th-bottom-nav').classList.contains('th-tour-highlight'), 'the visible bar is highlighted');
-  assert.ok(!window.document.querySelector('.th-desktop-sidebar').classList.contains('th-tour-highlight'), 'the hidden sidebar is not');
-  assert.equal(window.document.querySelector('.onboarding-count').textContent, '5 / 25');
-  // A tab step calls the page's switch function by name first.
-  // const bindings in a classic script are not window properties; find the
-  // step index from the source text instead.
-  const quoteIdx = [...TOUR.matchAll(/highlightSelector: '([^']+)'/g)].findIndex(m => m[1] === '[data-tab="quote"]');
-  assert.ok(quoteIdx > 0);
-  window.renderAppTourStep(quoteIdx);
-  assert.deepEqual(calls, ['quote']);
-  assert.ok(window.document.querySelector('[data-tab="quote"]').classList.contains('th-tour-highlight'));
+  // Step 0 ("Add a job"): '.th-sidebar-new, .th-bn-create'.
+  window.renderAppTourStep(0);
+  assert.ok(window.document.querySelector('.th-bn-create').classList.contains('th-tour-highlight'), 'the visible + button is highlighted');
+  assert.ok(!window.document.querySelector('.th-sidebar-new').classList.contains('th-tour-highlight'), 'the hidden sidebar entry is not');
+  assert.equal(window.document.querySelector('.onboarding-count').textContent, '1 OF 6');
+  // The "Get paid" step calls the page's switch function by name first.
+  const getPaidIdx = [...TOUR.matchAll(/highlightSelector: '([^']+)'/g)].findIndex(m => m[1].includes('toggleInvoicePaid'));
+  assert.ok(getPaidIdx > 0);
+  window.renderAppTourStep(getPaidIdx);
+  assert.deepEqual(calls, ['recent']);
+  assert.ok(window.document.querySelector('[onclick="toggleInvoicePaid(1)"]').classList.contains('th-tour-highlight'));
 });
 
 test('the command palette lists every action before you type, filters them by title or keyword, and gates the finance-domain ones the way the nav does', () => {

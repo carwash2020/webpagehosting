@@ -135,7 +135,10 @@ test('Job Detail gets a one-tap row -- Call / Text / Directions from the job, In
   assert.match(fn, /if \(allowed\('canViewFinance'\)\) quick\.push\(\['\/tools\/finance\.html\?job=' \+ encodeURIComponent\(j\.id\) \+ '#expenses', 'camera', 'Expense'\]\);/);
 });
 
-test('the tour and the help text describe the card as it is now', () => {
-  assert.match(TOUR, /Each card has <strong>Done<\/strong>, <strong>Call<\/strong>, <strong>Directions<\/strong>/);
+test('the help text describes the card as it is now', () => {
+  // First Impressions handoff (2026-09-29): the tour's "Track it" step
+  // is now one short sentence about the status control, not a
+  // card-by-card walkthrough -- the full description lives in help.
+  assert.match(TOUR, /Track it/);
   assert.match(JT, /grouped by when \(Overdue, Today, Tomorrow, Next 7 days, Later\)/);
 });

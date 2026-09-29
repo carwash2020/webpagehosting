@@ -191,5 +191,8 @@ test('the nav lost Calendar and the phone bar gained Clients (12 sidebar destina
   assert.doesNotMatch(sidebar, /\/tools\/pos\.html/, 'POS is the Quick charge tab inside Invoices now');
   assert.doesNotMatch(NAV, /\/tools\/calendar\.html/);
   assert.doesNotMatch(TOUR, /\/tools\/calendar\.html/, 'the tour no longer visits a redirect stub');
-  assert.match(TOUR, /Switch between List, Board, and Calendar/);
+  // First Impressions handoff (2026-09-29): the 6-step tour no longer
+  // has a dedicated "one list, three views" step; the Calendar view's
+  // own one-time page tip (job-tracker.html, th_tip_calendar) covers it.
+  assert.match(JT, /thPageTip\('calendar', 'Tap any day for its jobs/);
 });

@@ -48,7 +48,11 @@
 (function () {
   if (typeof document === 'undefined') return;
   var path = (window.location && window.location.pathname) || '';
-  var onLogin = /\/login\.html$/.test(path);
+  // First Impressions handoff (2026-09-29): reset-password.html joins
+  // login.html here -- it's a sign-in-adjacent page too (no app nav
+  // makes sense before a real session exists), not a page anyone should
+  // navigate away from mid-reset.
+  var onLogin = /\/(login|reset-password)\.html$/.test(path);
 
   // Money: one tab over two pages. MONEY_LAST_KEY is a per-device
   // convenience (plain localStorage, never synced), the same kind of
@@ -2684,4 +2688,30 @@ function thQuickAddContext() {
     if (v && !vendorSeen[v.toLowerCase()]) { vendorSeen[v.toLowerCase()] = true; vendors.push(v); }
   });
   return { clients: clients, vendors: vendors, jobs: jobs };
+}
+
+// One-time page tips (First Impressions handoff, 2026-09-29): an inline
+// dismissible card at the top of a main page's content -- shown until
+// dismissed (localStorage th_tip_<page>), and never while the first-run
+// tour is in progress (tools-tour.js's APP_TOUR_STEP_KEY), so a person
+// is never shown two "here's how this works" prompts at once. `anchor`
+// is the element the tip is inserted directly before.
+function thPageTip(pageKey, bodyHtml, anchor) {
+  try {
+    if (localStorage.getItem('th_tip_' + pageKey)) return;
+    if (localStorage.getItem('th_app_tour_step') !== null) return;
+  } catch (e) { return; }
+  if (!anchor || !anchor.parentNode) return;
+  var card = document.createElement('div');
+  card.className = 'th-page-tip';
+  card.setAttribute('role', 'note');
+  card.innerHTML =
+    '<div class="th-page-tip-text"><p class="th-page-tip-kicker">Tip</p><p class="th-page-tip-body"></p></div>' +
+    '<button type="button" class="th-page-tip-close" aria-label="Dismiss tip">&times;</button>';
+  card.querySelector('.th-page-tip-body').textContent = bodyHtml;
+  card.querySelector('.th-page-tip-close').addEventListener('click', function () {
+    try { localStorage.setItem('th_tip_' + pageKey, '1'); } catch (e) { /* ignore */ }
+    card.remove();
+  });
+  anchor.parentNode.insertBefore(card, anchor);
 }

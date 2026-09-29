@@ -30,7 +30,7 @@
     },
     onboarding: {
       title: 'Onboarding tour',
-      body: `<p>The 3-step Dashboard walkthrough (Snapshot, Action Items, Tools) that new visitors see, shown exactly once per logged-in account -- keyed to the account's email specifically, not just the browser, so if Connor and Steve ever share a device, dismissing it on one account doesn't hide it from the other.</p><p>"Replay quick tour" forces it to run again regardless of whether it's already been seen, by opening the Dashboard with a one-time override in the URL. It clears itself from the URL as soon as the tour finishes or gets skipped.</p>`,
+      body: `<p>The 6-step first-run tour (add a job, track it, invoice it, get paid, watch what's owed, and where help lives) that a new sign-in sees once on Home, shown exactly once per logged-in account -- keyed to the account's email specifically, not just the browser, so if Connor and Steve ever share a device, dismissing it on one account doesn't hide it from the other.</p><p>Settings' "Replay tour" forces it to run again regardless of whether it's already been seen, by opening the Dashboard with a one-time override in the URL (<code>?tour=1</code>). It clears itself from the URL as soon as the tour finishes or gets skipped.</p>`,
     },
     roles: {
       title: 'Account permissions',

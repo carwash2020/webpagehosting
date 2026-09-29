@@ -43,12 +43,12 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=f42fc259e4">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=667d7647f8">
 <script src="/tools/auth.js?v=c1e56c6904"></script>
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=240c40d38d" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=7e8fb6ef3d" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -209,14 +209,114 @@
     }
   }
   @media (prefers-reduced-motion: reduce) { body.th-tool-page[data-th-page="login"] .login-box { animation: none; } }
+
+  /* First Impressions handoff (2026-09-29) -- the shared sign-in step
+     shell (docs handoff "design_handoff_first_impressions"). Additive on
+     top of every rule above: no id, field, or auth call changed, only
+     the shell around them. The brand block (logo/tagline/pill) sits
+     above the existing card; steps 2+ gain a top bar with Back, a
+     centred small logo + app label, and a 2-segment progress line. */
+  .th-brand { display:flex; flex-direction:column; align-items:center; gap:14px; margin:0 0 22px; text-align:center; }
+  .th-brand-logo { width:128px; height:auto; }
+  .th-brand-tagline { font-family:var(--font-ui); font-weight:500; font-size:12.5px; letter-spacing:2.6px; text-transform:uppercase; color:var(--text-dim); }
+  .th-app-pill {
+    font-family:var(--font-ui); font-weight:600; font-size:11px; letter-spacing:1.6px; text-transform:uppercase;
+    color:var(--orange-light); background:rgba(255,128,0,.1); border:1px solid rgba(255,128,0,.3);
+    border-radius:999px; padding:5px 12px;
+  }
+  [data-theme="light"] .th-app-pill { background:rgba(216,95,10,.08); border-color:rgba(216,95,10,.28); }
+
+  .th-step-topbar { display:none; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .th-step-topbar.is-shown { display:flex; }
+  .th-step-back {
+    width:44px; height:44px; border-radius:14px; background:var(--bg-panel-2); border:1px solid var(--border);
+    color:var(--text); font-size:18px; display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .th-step-brand { display:flex; align-items:center; gap:8px; }
+  .th-step-brand img { width:30px; height:auto; }
+  .th-step-brand span { font-family:var(--font-ui); font-weight:600; font-size:11px; letter-spacing:1.6px; text-transform:uppercase; color:var(--text-dim); }
+  .th-step-spacer { width:44px; height:44px; flex-shrink:0; }
+  .th-step-progress { display:none; gap:6px; margin:0 0 18px; }
+  .th-step-progress.is-shown { display:flex; }
+  .th-step-progress .seg { flex:1; height:3px; border-radius:2px; background:var(--border); transition:background .2s var(--th-ease); }
+  .th-step-progress .seg.is-filled { background:var(--orange); }
+
+  .th-step-title { font-family:var(--font-display); font-weight:400; font-size:30px; line-height:1.05; text-transform:uppercase; letter-spacing:.4px; color:var(--text); margin:0 0 8px; }
+  .th-step-body { font-size:14.5px; line-height:1.5; color:var(--text-dim); margin:0 0 18px; }
+
+  /* 6-box code grid, with the single real input painted over it at
+     opacity 0 -- preserves iOS autofill/paste and the existing
+     mfaChallengeCodeInput id, tests and auto-submit exactly as-is. */
+  .th-code-boxes-wrap { position:relative; margin-bottom:12px; }
+  .th-code-boxes { display:grid; grid-template-columns:repeat(6, 1fr); gap:8px; }
+  .th-code-box {
+    height:60px; border-radius:12px; background:var(--th-field); border:1.5px solid var(--border);
+    display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:28px; color:var(--text-dim);
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .th-code-box.is-filled { color:var(--text); }
+  .th-code-box.is-current { border-color:var(--orange); box-shadow:0 0 0 3px rgba(255,128,0,.22); }
+  .th-code-boxes-wrap.is-shaking .th-code-boxes { animation: th-code-shake .3s var(--th-ease); }
+  @keyframes th-code-shake { 0%,100%{ transform:translateX(0);} 20%{ transform:translateX(-6px);} 40%{ transform:translateX(6px);} 60%{ transform:translateX(-4px);} 80%{ transform:translateX(4px);} }
+  #mfaChallengeCodeInput.th-code-real-input {
+    position:absolute; inset:0; width:100%; height:100%; opacity:0; margin:0; padding:0; border:0; background:transparent;
+    letter-spacing:0; font-size:16px; text-align:left;
+  }
+  .th-code-hint { font-size:13px; color:var(--text-dim); margin:0 0 4px; }
+  /* Recovery mode reuses #mfaChallengeView rather than a separate DOM
+     step (its own id, submit handler and auth call are untouched) --
+     toggled purely by this class, which is exactly what "its own step"
+     means visually: a different title/body and the monospace field
+     instead of the 6-box grid, matching the handoff. */
+  #mfaChallengeView:not(.is-recovery) .th-recovery-only { display:none; }
+  #mfaChallengeView.is-recovery .th-code-only { display:none; }
+  #mfaChallengeView #mfaRecoveryCodeInput.th-recovery-field {
+    width:100%; min-height:56px; border-radius:12px; background:var(--th-field); border:1px solid var(--border);
+    font-family:monospace; font-size:20px; letter-spacing:3px; text-align:center; color:var(--text); margin:0 0 12px;
+  }
+  #mfaChallengeView #mfaRecoveryCodeInput.th-recovery-field:focus { outline:none; border-color:var(--orange); box-shadow:0 0 0 3px rgba(255,128,0,.22); }
+
+  .th-success-tile { width:56px; height:56px; border-radius:18px; background:rgba(58,201,106,.12); border:1px solid #3ac96a; color:#3ac96a; display:flex; align-items:center; justify-content:center; font-size:26px; margin:0 0 18px; }
+  .th-success-tile.is-error { background:rgba(224,85,77,.12); border-color:#e0554d; color:#e0554d; }
+
+  .th-secondary-btn.login-btn {
+    background:var(--th-field); border:1px solid var(--border); box-shadow:none; color:var(--text);
+    font-family:var(--font-ui); font-size:15px; letter-spacing:.9px; text-transform:uppercase; min-height:52px; border-radius:var(--th-radius-track);
+  }
+
+  /* Face ID offer sheet -- shown once per device/account after the
+     first full sign-in, reusing the portal's WebAuthn-availability +
+     localStorage-flag pattern (see startFaceIdOffer() below). */
+  .th-faceid-scrim { position:fixed; inset:0; background:rgba(0,0,0,.56); display:flex; align-items:flex-end; justify-content:center; z-index:1200; }
+  .th-faceid-sheet {
+    width:100%; max-width:460px; background:var(--bg-panel); border-top:1px solid var(--border);
+    border-radius:28px 28px 0 0; padding:10px 24px 34px; display:flex; flex-direction:column; align-items:center; gap:16px;
+    box-shadow:0 -20px 48px -16px rgba(0,0,0,.7); text-align:center;
+  }
+  .th-faceid-grabber { width:40px; height:5px; border-radius:3px; background:var(--border); }
+  .th-faceid-icon { width:64px; height:64px; border-radius:20px; border:2px solid var(--orange); display:flex; align-items:center; justify-content:center; color:var(--orange); font-size:28px; }
+  .th-faceid-title { font-family:var(--font-display); font-size:28px; line-height:1.05; text-transform:uppercase; color:var(--text); margin:0; }
+  .th-faceid-body { font-size:14.5px; line-height:1.5; color:var(--text-dim); margin:0; }
+  .th-faceid-foot { font-size:12.5px; color:var(--text-dim); text-align:center; }
 </style>
 </head>
 <body data-th-page="login">
 
 <div class="login-box">
-  <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises" class="login-logo">
-  <div class="login-title">Triple H Workspace</div>
-  <div class="login-sub">Sign in to continue.</div>
+  <div class="th-step-topbar" id="thStepTopbar">
+    <button type="button" class="th-step-back" id="thStepBackBtn" aria-label="Back">&larr;</button>
+    <span class="th-step-brand"><img src="/images/logo-signature-orange-176.webp?v=202608142300" alt=""><span>Workspace</span></span>
+    <span class="th-step-spacer" aria-hidden="true"></span>
+  </div>
+  <div class="th-step-progress" id="thStepProgress"><span class="seg" data-seg="1"></span><span class="seg" data-seg="2"></span></div>
+
+  <div class="th-brand" id="thBrandBlock">
+    <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises" class="th-brand-logo">
+    <div class="th-brand-tagline">Honesty. Hustle. Helpfulness.</div>
+    <span class="th-app-pill">Workspace</span>
+  </div>
+  <div class="login-title th-step-title" id="loginTitle">Sign In</div>
+  <div class="login-sub" id="loginSubtitle">Jobs, invoices and money, all in one place.</div>
 
   <form id="loginForm">
     <div class="login-field">
@@ -233,31 +333,60 @@
       <label for="rememberMe">Remember me for 30 days</label>
     </div>
     <button type="submit" class="primary-btn login-btn" id="loginBtn">Sign In</button>
-    <button type="button" id="forgotPasswordLink" style="background:none; border:none; color:var(--text-dim); font-size:13px; margin-top:14px; cursor:pointer; text-decoration:underline;">Forgot password?</button>
+    <button type="button" id="forgotPasswordLink" style="background:none; border:none; color:var(--text-dim); font-size:14px; min-height:44px; width:100%; margin-top:6px; cursor:pointer; text-decoration:none;">Forgot your password?</button>
   </form>
 
-  <div id="forgotPasswordPanel" style="display:none; margin-top:18px; text-align:left;">
-    <p style="color:var(--text-dim); font-size:13.5px; margin-bottom:12px;">Enter your email and we'll send a link to reset your password.</p>
+  <div id="forgotPasswordPanel" style="display:none; text-align:left;">
+    <div class="th-step-title" style="font-size:30px;">Reset your password</div>
+    <p class="th-step-body">Enter your email and we'll send a link to reset your password.</p>
     <div class="login-field">
       <label for="resetEmail">Email</label>
       <input type="email" id="resetEmail" autocomplete="username">
     </div>
     <div class="login-error" id="resetError"></div>
-    <div id="resetSuccess" style="display:none; color:#6fcf97; font-size:13.5px; margin:4px 0 16px;">Check your email for a reset link.</div>
-    <button type="button" class="secondary-btn" id="sendResetBtn" style="width:100%; justify-content:center;">Send reset link</button>
-    <button type="button" id="cancelResetLink" style="background:none; border:none; color:var(--text-dim); font-size:13px; margin-top:14px; cursor:pointer; text-decoration:underline; width:100%;">Back to sign in</button>
+    <div id="resetSuccess" style="display:none;"></div>
+    <button type="button" class="primary-btn login-btn" id="sendResetBtn" style="width:100%; justify-content:center;">Send reset link</button>
+    <button type="button" id="cancelResetLink" style="background:none; border:none; color:var(--text-dim); font-size:14px; min-height:44px; margin-top:6px; cursor:pointer; text-decoration:none; width:100%;">Back to sign in</button>
+  </div>
+
+  <!-- Link sent (First Impressions handoff, 2026-09-29): shown after a
+       successful reset-link request instead of an inline success line,
+       so every step -- including this confirmation -- replaces the
+       previous one rather than stacking under it. -->
+  <div id="resetLinkSentPanel" style="display:none; text-align:left;">
+    <div class="th-success-tile">&#10003;</div>
+    <div class="th-step-title" style="font-size:30px;">Check your email</div>
+    <p class="th-step-body" id="resetLinkSentBody"></p>
+    <p class="th-step-body" style="margin-top:-10px;">The link opens a page to choose a new password. It works once.</p>
+    <button type="button" class="th-secondary-btn login-btn" id="resetLinkSentBackBtn" style="width:100%; justify-content:center;">Back to sign in</button>
+    <button type="button" id="resetLinkSendAgainLink" style="background:none; border:none; color:var(--text-dim); font-size:14px; min-height:44px; margin-top:6px; cursor:pointer; text-decoration:none; width:100%;">Didn't get it? Send again</button>
   </div>
 
   <!-- Two-factor challenge (2026-09-22) -- shown only when the account
        signing in already has a verified TOTP factor. Password has already
        been checked by this point; the session it produced is held in
        memory only (see finishSignInWithMfaCheck() below) and is not
-       persisted to storage until this step also succeeds. -->
+       persisted to storage until this step also succeeds. First
+       Impressions handoff (2026-09-29): the 6-box grid and the
+       recovery-code copy are presentation only -- #mfaChallengeCodeInput
+       stays the one real input (autofill/paste/auto-submit unchanged)
+       and recovery mode still toggles the same two fields, just under
+       an .is-recovery class instead of a second DOM step. -->
   <div id="mfaChallengeView" style="display:none; text-align:left;">
-    <div class="mfa-step-title">Enter your code</div>
-    <div class="mfa-step-sub">Open your authenticator app and enter the 6-digit code for Triple H Workspace.</div>
-    <input type="text" id="mfaChallengeCodeInput" class="mfa-code-input" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" placeholder="123456" maxlength="6" style="display:none;">
-    <input type="text" id="mfaRecoveryCodeInput" class="mfa-code-input" style="display:none; letter-spacing:2px; font-size:16px;" placeholder="XXXX-XXXX" autocomplete="off">
+    <div class="mfa-step-title th-code-only">Enter your code</div>
+    <div class="mfa-step-sub th-code-only">Open your authenticator app and enter the 6-digit code for Triple H.</div>
+    <div class="mfa-step-title th-recovery-only">Use a recovery code</div>
+    <div class="mfa-step-sub th-recovery-only">Enter one of the one-time codes you saved when you set up two-factor. Each code works once.</div>
+    <div class="th-code-boxes-wrap th-code-only" id="thCodeBoxesWrap">
+      <div class="th-code-boxes" id="thCodeBoxes" aria-hidden="true">
+        <span class="th-code-box"></span><span class="th-code-box"></span><span class="th-code-box"></span>
+        <span class="th-code-box"></span><span class="th-code-box"></span><span class="th-code-box"></span>
+      </div>
+      <input type="text" id="mfaChallengeCodeInput" class="mfa-code-input th-code-real-input" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" placeholder="123456" maxlength="6">
+    </div>
+    <p class="th-code-hint th-code-only">Paste works too. It checks as soon as the sixth digit is in.</p>
+    <input type="text" id="mfaRecoveryCodeInput" class="mfa-code-input th-recovery-field th-recovery-only" style="display:none;" placeholder="XXXX-XXXX" autocomplete="off">
+    <p class="th-code-hint th-recovery-only" style="display:none;">Using a code removes your old authenticator. You'll set up a new one next.</p>
     <div class="login-error" id="mfaChallengeError"></div>
     <button type="button" class="primary-btn login-btn" id="mfaChallengeSubmitBtn">Verify</button>
     <button type="button" class="mfa-link-btn" id="mfaUseRecoveryCodeLink">Use a recovery code instead</button>
@@ -300,6 +429,22 @@
     </div>
     <button type="button" class="primary-btn login-btn" id="mfaRecoveryCodesContinueBtn">I've saved these -- Continue</button>
   </div>
+
+  <!-- Face ID offer (First Impressions handoff, 2026-09-29): a bottom
+       sheet shown once per device/account, right after the first full
+       sign-in. See finishSignInFlow() above. -->
+  <div id="thFaceIdOfferStep" style="display:none;"></div>
+</div>
+<div class="th-faceid-scrim" id="thFaceIdScrim" style="display:none;">
+  <div class="th-faceid-sheet" role="dialog" aria-modal="true" aria-labelledby="thFaceIdTitle">
+    <div class="th-faceid-grabber" aria-hidden="true"></div>
+    <div class="th-faceid-icon" aria-hidden="true">&#9673;</div>
+    <div class="th-faceid-title" id="thFaceIdTitle">Use Face ID next time?</div>
+    <p class="th-faceid-body">Skip the password and code on this phone. If Face ID fails, your 6-digit code is one tap away.</p>
+    <button type="button" class="primary-btn login-btn" id="thFaceIdTurnOnBtn" style="width:100%; justify-content:center;">Turn on Face ID</button>
+    <button type="button" class="th-secondary-btn login-btn" id="thFaceIdNotNowBtn" style="width:100%; justify-content:center;">Not now</button>
+    <p class="th-faceid-foot">You can change this later in Settings.</p>
+  </div>
 </div>
 
 <script>
@@ -322,6 +467,47 @@
     window.location.href = ALLOWED_RETURN_PATHS.has(returnTo) ? returnTo : '/tools/workspace.html';
   }
 
+  // Face ID offer (First Impressions handoff, 2026-09-29) -- after every
+  // full sign-in (never after a Face ID unlock, since Workspace has no
+  // unlock flow yet to stand in for). Reuses the portal's own pattern
+  // (portal-app.js: WebAuthn-availability check + a per-account
+  // localStorage flag) rather than a second, diverging mechanism, kept
+  // local to this page since tools/ has no shared biometric module yet.
+  function thWebAuthnAvailable() {
+    return typeof window.PublicKeyCredential !== 'undefined' && typeof navigator.credentials !== 'undefined';
+  }
+  function thFaceIdOfferedKey(email) { return 'th_workspace_faceid_offered_' + String(email || '').toLowerCase(); }
+  function thFaceIdEnabledKey(email) { return 'th_workspace_biometric_lock_' + String(email || '').toLowerCase(); }
+  async function finishSignInFlow() {
+    const email = (pendingSession && pendingSession.email) || '';
+    if (!thWebAuthnAvailable() || !email) { redirectAfterLogin(); return; }
+    let offered = null;
+    try { offered = localStorage.getItem(thFaceIdOfferedKey(email)); } catch (e) { /* ignore */ }
+    if (offered) { redirectAfterLogin(); return; }
+    document.getElementById('thFaceIdScrim').style.display = 'flex';
+    document.getElementById('thFaceIdTurnOnBtn').onclick = async () => {
+      try {
+        await navigator.credentials.create({
+          publicKey: {
+            challenge: new Uint8Array(32),
+            rp: { name: 'Triple H Workspace' },
+            user: { id: new Uint8Array(16), name: email, displayName: email },
+            pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
+            authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+            timeout: 60000,
+          },
+        });
+        localStorage.setItem(thFaceIdEnabledKey(email), '1');
+      } catch (e) { /* device declined or unsupported -- not fatal, just don't set the flag */ }
+      try { localStorage.setItem(thFaceIdOfferedKey(email), '1'); } catch (e) { /* ignore */ }
+      redirectAfterLogin();
+    };
+    document.getElementById('thFaceIdNotNowBtn').onclick = () => {
+      try { localStorage.setItem(thFaceIdOfferedKey(email), '1'); } catch (e) { /* ignore */ }
+      redirectAfterLogin();
+    };
+  }
+
   // Two-factor authentication (2026-09-22) -- see the "TWO-FACTOR
   // AUTHENTICATION (MFA)" block in auth.js for the full design and why
   // this is raw fetch() rather than the supabase-js client the portal's
@@ -336,12 +522,39 @@
   let pendingFactorId = null;
   let pendingRecoveryMode = false;
 
+  // First Impressions handoff (2026-09-29): every step now replaces the
+  // previous one through this same showStep(), extended (not replaced)
+  // with the new steps -- the shared shell (top bar + progress) shows
+  // itself for anything other than the step-1 form, and the brand block
+  // only ever shows on step 1.
+  const TH_ALL_STEPS = ['loginForm', 'forgotPasswordPanel', 'resetLinkSentPanel', 'mfaChallengeView', 'mfaEnrollView', 'mfaRecoveryCodesView', 'thFaceIdOfferStep'];
+  const TH_STEP_PROGRESS = { forgotPasswordPanel: 1, mfaChallengeView: 1, mfaEnrollView: 1, resetLinkSentPanel: 2, mfaRecoveryCodesView: 2, thFaceIdOfferStep: 2 };
   function showStep(id) {
-    ['loginForm', 'mfaChallengeView', 'mfaEnrollView', 'mfaRecoveryCodesView'].forEach((stepId) => {
+    TH_ALL_STEPS.forEach((stepId) => {
       const el = document.getElementById(stepId);
       if (el) el.style.display = stepId === id ? '' : 'none';
     });
+    const isFirst = id === 'loginForm';
+    document.getElementById('thBrandBlock').style.display = isFirst ? '' : 'none';
+    document.getElementById('loginTitle').style.display = isFirst ? '' : 'none';
+    document.getElementById('thStepTopbar').classList.toggle('is-shown', !isFirst);
+    document.getElementById('thStepProgress').classList.toggle('is-shown', !isFirst);
+    if (!isFirst) {
+      const filled = TH_STEP_PROGRESS[id] || 1;
+      document.querySelectorAll('#thStepProgress .seg').forEach((seg) => {
+        seg.classList.toggle('is-filled', Number(seg.dataset.seg) <= filled);
+      });
+    }
   }
+  document.getElementById('thStepBackBtn').addEventListener('click', () => {
+    // A single, predictable back target for every step-2+ screen: sign
+    // in. Nothing here changes auth state -- it's the same as Cancel.
+    if (pendingSession && (document.getElementById('mfaChallengeView').style.display !== 'none' || document.getElementById('mfaEnrollView').style.display !== 'none')) {
+      cancelPendingLoginAndReset();
+      return;
+    }
+    showStep('loginForm');
+  });
 
   function cancelPendingLoginAndReset() {
     pendingSession = null;
@@ -394,6 +607,8 @@
       document.getElementById('mfaChallengeCodeInput').value = '';
       document.getElementById('mfaChallengeError').textContent = '';
       document.getElementById('mfaUseRecoveryCodeLink').textContent = 'Use a recovery code instead';
+      document.getElementById('mfaChallengeView').classList.remove('is-recovery');
+      paintCodeBoxes();
       showStep('mfaChallengeView');
       document.getElementById('mfaChallengeCodeInput').focus();
       return;
@@ -409,7 +624,7 @@
     }
 
     persistSession(pendingSession, pendingRememberMe);
-    redirectAfterLogin();
+    finishSignInFlow();
   });
 
   // ---- Challenge step (already-enrolled account) ----
@@ -424,8 +639,32 @@
     document.getElementById('mfaUseRecoveryCodeLink').textContent = pendingRecoveryMode
       ? 'Use your authenticator app instead'
       : 'Use a recovery code instead';
+    document.getElementById('mfaChallengeView').classList.toggle('is-recovery', pendingRecoveryMode);
+    paintCodeBoxes();
     (pendingRecoveryMode ? document.getElementById('mfaRecoveryCodeInput') : document.getElementById('mfaChallengeCodeInput')).focus();
   });
+
+  // First Impressions handoff (2026-09-29): paints the 6 boxes from the
+  // one real input's value -- purely visual, never a second source of
+  // truth for the code itself.
+  function paintCodeBoxes() {
+    const val = document.getElementById('mfaChallengeCodeInput').value || '';
+    const current = val.length;
+    document.querySelectorAll('#thCodeBoxes .th-code-box').forEach((box, i) => {
+      box.textContent = val[i] || '';
+      box.classList.toggle('is-filled', !!val[i]);
+      box.classList.toggle('is-current', i === Math.min(current, 5) && current < 6);
+    });
+  }
+  function shakeCodeBoxes() {
+    const wrap = document.getElementById('thCodeBoxesWrap');
+    wrap.classList.remove('is-shaking');
+    void wrap.offsetWidth;
+    wrap.classList.add('is-shaking');
+    document.getElementById('mfaChallengeCodeInput').value = '';
+    paintCodeBoxes();
+    document.getElementById('mfaChallengeCodeInput').focus();
+  }
 
   // Auto-submit once a full, valid 6-digit code is entered (2026-09-22 UX
   // pass) -- a single code box, not 6 separate digit boxes, so there's no
@@ -435,6 +674,7 @@
   // is a different (and variable) length/format.
   document.getElementById('mfaChallengeCodeInput').addEventListener('input', (e) => {
     e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    paintCodeBoxes();
     if (/^\d{6}$/.test(e.target.value)) document.getElementById('mfaChallengeSubmitBtn').click();
   });
 
@@ -472,7 +712,7 @@
       }
       btn.disabled = false; btn.textContent = 'Verify';
       persistSession(pendingSession, pendingRememberMe);
-      redirectAfterLogin();
+      finishSignInFlow();
       return;
     }
 
@@ -481,14 +721,14 @@
     btn.disabled = true; btn.textContent = 'Verifying...';
     const result = await mfaChallengeAndVerify(pendingSession.access_token, pendingFactorId, code);
     btn.disabled = false; btn.textContent = 'Verify';
-    if (!result.ok) { errorEl.textContent = result.error; return; }
+    if (!result.ok) { errorEl.textContent = result.error; shakeCodeBoxes(); return; }
     persistSession({
       access_token: result.access_token,
       refresh_token: result.refresh_token,
       expires_at: result.expires_at,
       email: result.email || pendingSession.email,
     }, pendingRememberMe);
-    redirectAfterLogin();
+    finishSignInFlow();
   });
 
   document.getElementById('mfaChallengeCancelLink').addEventListener('click', cancelPendingLoginAndReset);
@@ -596,7 +836,7 @@
       // Settings has its own "Generate recovery codes" action to retry
       // this later.
       persistSession(pendingSession, pendingRememberMe);
-      redirectAfterLogin();
+      finishSignInFlow();
       return;
     }
 
@@ -642,7 +882,7 @@
 
   document.getElementById('mfaRecoveryCodesContinueBtn').addEventListener('click', () => {
     persistSession(pendingSession, pendingRememberMe);
-    redirectAfterLogin();
+    finishSignInFlow();
   });
 
   function escapeHtmlForLogin(s) {
@@ -650,24 +890,20 @@
   }
 
   document.getElementById('forgotPasswordLink').addEventListener('click', () => {
-    document.getElementById('loginForm').style.display = 'none';
-    document.getElementById('forgotPasswordPanel').style.display = '';
     document.getElementById('resetEmail').value = document.getElementById('loginEmail').value;
     document.getElementById('resetError').textContent = '';
     document.getElementById('resetSuccess').style.display = 'none';
+    showStep('forgotPasswordPanel');
   });
 
   document.getElementById('cancelResetLink').addEventListener('click', () => {
-    document.getElementById('forgotPasswordPanel').style.display = 'none';
-    document.getElementById('loginForm').style.display = '';
+    showStep('loginForm');
   });
 
-  document.getElementById('sendResetBtn').addEventListener('click', async () => {
+  async function sendResetLink() {
     const email = document.getElementById('resetEmail').value.trim();
     const errorEl = document.getElementById('resetError');
-    const successEl = document.getElementById('resetSuccess');
     errorEl.textContent = '';
-    successEl.style.display = 'none';
     if (!email) { errorEl.textContent = 'Enter your email first.'; return; }
 
     const btn = document.getElementById('sendResetBtn');
@@ -678,8 +914,12 @@
     btn.textContent = 'Send reset link';
 
     if (!result.ok) { errorEl.textContent = result.error; return; }
-    successEl.style.display = '';
-  });
+    document.getElementById('resetLinkSentBody').textContent = 'If an account exists for ' + email + ', a reset link is on its way.';
+    showStep('resetLinkSentPanel');
+  }
+  document.getElementById('sendResetBtn').addEventListener('click', sendResetLink);
+  document.getElementById('resetLinkSentBackBtn').addEventListener('click', () => showStep('loginForm'));
+  document.getElementById('resetLinkSendAgainLink').addEventListener('click', sendResetLink);
 
   // Sent here by checkInternalMfaSession() in auth.js: this session only
   // passed the password, and the account has an authenticator, so the

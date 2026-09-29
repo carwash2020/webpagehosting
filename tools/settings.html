@@ -52,13 +52,13 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=f42fc259e4">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=667d7647f8">
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=240c40d38d" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=7e8fb6ef3d" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
-<script src="/tools/tools-tour.js?v=5728732237" defer></script>
+<script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <script src="/tools/sync.js?v=0e885bb435" defer></script>
 <script src="/tools/push-notifications.js?v=180abd2a84" defer></script>
 <style>
@@ -443,6 +443,9 @@
   document.addEventListener('DOMContentLoaded', async function () {
     try {
     initAppTour();
+    if (typeof thPageTip === 'function') {
+      thPageTip('settings', 'Turn on two-factor or Face ID right from Sign-in & Security, further down this page.', document.querySelector('.settings-account'));
+    }
     document.getElementById('settingsMainView').style.display = '';
     // Backup & Restore moved to Dev Tools (2026-09-22) -- a full
     // account-wide export/restore is an admin/dev capability, not

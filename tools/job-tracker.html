@@ -52,16 +52,16 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=f42fc259e4">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=667d7647f8">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=0e885bb435" defer></script>
 <script src="/tools/data-layer.js?v=b2586a446b" defer></script>
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=240c40d38d" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=7e8fb6ef3d" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
-<script src="/tools/tools-tour.js?v=5728732237" defer></script>
+<script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -3637,6 +3637,11 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     initAppTour();
+    if (typeof thPageTip === 'function') {
+      thPageTip('jobs', "Tap a job's status to move it along. Status, sort and view live under Filter.", document.getElementById('jobsList'));
+      var calWrap = document.getElementById('jobsCalendarWrap');
+      if (calWrap) thPageTip('calendar', 'Tap any day for its jobs, and Add to Phone to export it to your own calendar.', calWrap.querySelector('.form-section') || calWrap);
+    }
     (async function init() {
       try {
       // Item #12 (2026-08-16): the real loading gap on this page is this
