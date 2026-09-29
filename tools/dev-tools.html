@@ -4139,6 +4139,16 @@
       el.classList.toggle('is-bad', fail > 0);
     }
 
+    var DT_Q_DEFAULT_ICON = {
+      health: '#icon-check-circle',
+      data: '#icon-folder',
+      sync: '#icon-shuffle',
+      notifications: '#icon-bell',
+      ops: '#icon-rocket',
+      reports: '#icon-trending',
+      access: '#icon-lock',
+    };
+
     function render() {
       const a = answers();
       Object.keys(a.out).forEach(tab => {
@@ -4147,9 +4157,8 @@
         const [tone, answer, detail] = a.out[tab];
         if (b.getAttribute('data-th-tone') !== tone) b.setAttribute('data-th-tone', tone);
         const use = b.querySelector('.th-dt-q-icon use');
-        if (use) {
-          if (!use.hasAttribute('data-th-icon')) use.setAttribute('data-th-icon', use.getAttribute('href'));
-          const icon = tone === 'orange' ? '#icon-warning' : use.getAttribute('data-th-icon');
+        if (use && Object.prototype.hasOwnProperty.call(DT_Q_DEFAULT_ICON, tab)) {
+          const icon = tone === 'orange' ? '#icon-warning' : DT_Q_DEFAULT_ICON[tab];
           if (use.getAttribute('href') !== icon) { use.setAttribute('href', icon); use.setAttribute('xlink:href', icon); }
         }
         const ans = b.querySelector('[data-dt-answer]');
