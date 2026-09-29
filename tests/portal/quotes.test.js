@@ -129,7 +129,12 @@ test('portal quote status is read live, never written back into the local quote 
   const fnMatch = generatorHtml.match(/async function refreshPortalQuoteStatuses\(\) \{[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate the refreshPortalQuoteStatuses function body');
   assert.doesNotMatch(fnMatch[0], /saveQuoteLog/);
-  assert.match(fnMatch[0], /rest\/v1\/client_portal_quotes/);
+  // Goes through the internal_read_client_portal_quotes RPC, not the base
+  // table directly (2026-09-29 RLS hardening,
+  // docs/specialist-logs/security.md): the table's own SELECT policy is
+  // now client-only, and staff cross-client reads are gated inside this
+  // SECURITY DEFINER function instead.
+  assert.match(fnMatch[0], /rest\/v1\/rpc\/internal_read_client_portal_quotes/);
   assert.match(fnMatch[0], /rest\/v1\/quote_questions/);
 });
 

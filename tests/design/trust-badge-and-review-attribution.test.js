@@ -84,7 +84,11 @@ test('the styles.css cache-bust stamp was bumped and stayed in sync across every
   // the path at all, so nothing in it (spaces, quotes, `;`, etc.) could
   // ever be interpreted as shell syntax.
   const referencingFiles = require('child_process')
-    .execFileSync('grep', ['-rl', 'styles.css?v=', '--include=*.html', repo()], { encoding: 'utf8' })
+    // --exclude-dir=.claude: that holds harness-managed scratch
+    // worktrees/agent state, not repo source -- without it, a session
+    // with background agents running picks up their (potentially
+    // stale) scratch copies as if they were real pages.
+    .execFileSync('grep', ['-rl', '--exclude-dir=.claude', 'styles.css?v=', '--include=*.html', repo()], { encoding: 'utf8' })
     .trim().split('\n').filter(Boolean);
   assert.ok(referencingFiles.length >= 30, `expected many pages to reference styles.css, found ${referencingFiles.length}`);
   for (const file of referencingFiles) {
