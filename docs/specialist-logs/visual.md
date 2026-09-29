@@ -2792,3 +2792,64 @@ The first homepage package was a prototype file (`Homepage.dc.html`). It was sen
 - **Zero page errors** throughout.
 - **Screenshots:** `docs/homepage-story-2026-09-28/prototype-port/`.
 - **Still to come, in their own PRs:** the prototype's service-area map (all 17 pages that carry the diagram) and the Services/Areas header menus (site-wide).
+
+## 2026-09-29 -- the service-area map from Claude Design's first homepage prototype, on all 17 pages that carry the diagram
+
+The first homepage prototype (`Homepage.dc.html`) drew the service area as a real map. It never reached the site: every page kept the hand-placed spoke diagram. This pass ports the prototype's map to the homepage and all 16 city and service pages that carry the diagram, so they share one drawing.
+
+**What shipped.**
+- **A real map.** Every town is placed from its latitude and longitude (equirectangular, cos 37.1 degrees), as the prototype did. The prototype's 760x760 space is projected into the site's 760x480 frame by `gen_map.py` (kept in the session scratchpad; the SVG comment records the method).
+- **Map layers:**
+  - I-15, SR-9 and the Virgin River;
+  - a faint grid and a warm glow on St. George;
+  - the 15-mile no-trip-fee radius as a labelled ring;
+  - a compass.
+- **A looping route.** A short orange highlight travels the day's route (hub, Santa Clara, Washington City, Leeds, Cedar City, La Verkin, Hurricane, back, Mesquite). It's the revised export's `.radius-trail-loop`. It plays only under `prefers-reduced-motion: no-preference`, after the reveal, and is invisible otherwise.
+- **The ring toggle.** "No trip fee within 15 miles" is a real `aria-pressed` button that shows or hides the ring (`js/service-area-map.js`, new, in `GLOBAL_SHARED_FILES`). On phones it sits below the drawing.
+- **By-request towns.** Cedar City and Mesquite are off the edge of the drawing, so their dashed lines run toward the real town and end at a labelled chip ("By request · about an hour north").
+- **The list beside the map on desktop (>=981px).** The `.radius-key` (11 pages) or `.areas-links` (6 pages) now sits in a 260-340px column beside the map, instead of the key being phone-only and the links sitting below. Each standard town's note ("About 20 minutes east") moves off the drawing and into that list, so the map reads cleanly. The notes stay in the SVG markup.
+- **Hover linking.** On the `.radius-key` pages, hovering a town in the list lights it on the map (`.is-linked`), the same state the homepage's town cards already drive.
+
+**Kept, per the diagram's contract** (tests and CSS depend on it):
+- one flat `<g data-city>` per town (spoke, node, name, note);
+- 5 solid spokes with `pathLength="1"` and 2 dashed by-request ones;
+- the hub drawn last, and a 760x480 viewBox;
+- `data-focus` on the 8 location and 3 St. George service pages, and the `.radius-trail` to the focus town on the 7 location pages;
+- the phone zoom, which now applies to the base layer and trail too, so the roads line up with the towns.
+
+The spoke draw-in, the focus dimming and the key/links reveal are unchanged.
+
+**Tests changed, and why:**
+- **`service-area-bearings`:**
+  - It read the hub as a fixed (380, 210). It now reads it from the `st-george` group, since the map puts St. George where its coordinates put it.
+  - Washington City's expected bearing goes from ~63 to ~55. The 09-25 "~63" was an estimate. From St. George (37.0965N 113.5684W) to Washington City (37.1305N 113.5083W) the real bearing is ~55, and the map draws that.
+  - Leeds (~52) and the La Verkin/Hurricane ordering are unchanged, and the new drawing passes them as-is.
+- **`service-area-phone-layout`:**
+  - The key test said "hidden on desktop"; the key now shows beside the map on desktop.
+  - It still asserts the base `display:none`, the phone `display:grid` and the 16px phone floor.
+  - It also asserts that any desktop key font-size sits inside a min-width query, because the desktop rules are more specific than the phone block and would otherwise undercut that floor. Mutation-checked: moving a desktop font-size out of the query fails it.
+- **`round-3-visual-polish`** (the 09-08 "no concentric orbit rings" test):
+  - Its ban on `.radius-ring` and `class="radius-ring"` is unchanged, so the orbit rings can't come back.
+  - The map's single 15-mile ring is a different thing, so it gets its own class, `.radius-fee-ring`.
+  - The test gains a check that this ring stays one circle with its "15 MI · NO TRIP FEE" label, never a set of orbits.
+
+**Changed at build time, and why:**
+- **The map block goes at the end of `styles.css`.** Placed before the base radius CSS, it lost the cascade on equal-specificity rules.
+- **The compass SVG is pinned to 16x22.** The base `.radius-figure svg` sizing blew it up to the map's width.
+- **The desktop two-column placement is inside `min-width:981px`.** Pages without a `.section-head` use a more specific `:not(:has())` placement, and on phones that beat the reset, so the list overlapped the map.
+- **Labels centred on their node, as round-3 requires.** The prototype put Hurricane's label to the left of its node, and the two by-request chips beside theirs. `round-3-visual-polish` allows off-centre labels only for the three north-east towns, so Hurricane sits centred under its node, and each chip is centred on its node (above for Cedar City, below for Mesquite). The ring's own label moved to the ring's 9 o'clock, because the centred Cedar City chip covered it at the top.
+- **The phone ring toggle is static, below the drawing.** Floated over a 340px-wide map, it covered Mesquite's dashed line.
+- **Fixed in passing.** P2's "two map lines stop short of their dots (Santa Clara, La Verkin)" is gone: every spoke is now computed to its node's centre.
+
+**Checked, not changed:**
+- **On phones the map shows only the "ST. GEORGE" label**, as before. The key or links list right below carries the town names at 16px, as the phone-layout tests require.
+
+**Verification.**
+- **All 17 pages at 1440 and 390, dark, plus light on 3 pages and reduced motion on 2:**
+  - zero page errors and no sideways overflow;
+  - the list never overlaps the drawing;
+  - the ring toggle flips `aria-pressed` and hides the ring;
+  - key hover lights the matching town.
+- **Rendered inventory** (`visible-inv`): nothing lost on the 17 pages.
+- **Suite and checks:** see the PR.
+- **Screenshots:** `docs/service-area-map-2026-09-29/{before,after}`.

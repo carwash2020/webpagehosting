@@ -4512,6 +4512,7 @@
   body.page-home .trust .trust-item p{font-size:15.5px; line-height:1.5;}
   /* === end Prototype port === */
 
+
   /* Improvement roadmap (2026-09-09): homepage "Recent Work" strip.
      Reuses .gallery-tile/.gallery-tile.has-photo (defined above for the
      "Our Work" modal) at a smaller fixed size in a horizontal row,
@@ -4820,13 +4821,13 @@
     .radius-figure text{display:none;}
     .radius-figure g[data-city]{
       transform-box:view-box;
-      transform-origin:380px 210px;
-      transform:translateY(30px) scale(1.5);
+      transform-origin:335.3px 251.3px;
+      transform:translateY(25px) scale(1.25);
     }
     .radius-figure .radius-spoke{stroke-width:2;}
     .radius-figure .radius-hub-name{
       display:inline;
-      font-size:30px;
+      font-size:36px;
       transform:translateY(10px);
       /* A halo in the page colour, so the two spokes under the name
          don't cut through the letters. */
@@ -5730,3 +5731,204 @@ body:has(.cookie-banner) .back-to-top{
   .cookie-banner-actions{justify-content:stretch;}
   .cookie-banner-actions .cookie-btn{flex:1 1 0;}
 }
+
+  /* === Service-area map (2026-09-29): the prototype's map on all 17 pages that carry the diagram === */
+  /* The drawing (see the comment inside the SVG) keeps the diagram's
+     contract, so every rule above still applies: spokes draw in, nodes
+     pulse, data-focus lights a page's own town, the areas-link hover
+     links. This block adds the map layers, lays the town list beside
+     the map, and gives the 15-mile ring its switch. */
+  /* Beside the map from 981px up; below it, the page's normal flow. */
+  @media (min-width:981px){
+    .wrap:has(> .radius-figure){
+      display:grid;
+      grid-template-columns:minmax(0, 1fr) minmax(260px, 340px);
+      column-gap:18px;
+      align-items:start;
+    }
+    .wrap:has(> .radius-figure) > *{grid-column:1 / -1;}
+    .wrap:has(> .radius-figure) > .radius-figure{grid-column:1; grid-row:2 / span 3;}
+    .wrap:has(> .radius-figure) > .radius-legend,
+    .wrap:has(> .radius-figure) > .radius-key,
+    .wrap:has(> .radius-figure) > .areas-links{grid-column:2;}
+    .wrap:has(> .radius-figure) > .radius-legend{grid-row:2;}
+    .wrap:has(> .radius-figure) > .radius-key,
+    .wrap:has(> .radius-figure) > .areas-links{grid-row:3;}
+    .wrap:has(> .radius-figure):not(:has(> .section-head)) > .radius-figure{grid-row:1 / span 3;}
+    .wrap:has(> .radius-figure):not(:has(> .section-head)) > .radius-legend{grid-row:1;}
+    .wrap:has(> .radius-figure):not(:has(> .section-head)) > .radius-key,
+    .wrap:has(> .radius-figure):not(:has(> .section-head)) > .areas-links{grid-row:2;}
+  }
+
+  html.page-landing .areas-map-section .radius-figure,
+  body.page-home #areas .radius-figure,
+  .radius-figure{
+    position:relative;
+    display:block;
+    margin:0 0 18px;
+    padding:0;
+    border:1px solid var(--border);
+    border-radius:16px;
+    background:var(--bg-panel);
+    overflow:hidden;
+    box-shadow:var(--shadow-hover);
+  }
+  .radius-figure svg{display:block; max-width:none;}
+  .radius-grid-line{stroke:var(--border); stroke-width:1; vector-effect:non-scaling-stroke;}
+  .radius-grid{opacity:.55;}
+  .radius-river{fill:none; stroke:var(--blue); stroke-opacity:.28; stroke-width:2.5; stroke-linecap:round; vector-effect:non-scaling-stroke;}
+  .radius-road{fill:none; stroke:var(--text-dim); stroke-opacity:.3; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; vector-effect:non-scaling-stroke;}
+  .radius-road.is-minor{stroke-opacity:.22; stroke-width:2;}
+  .radius-figure .radius-road-label{font-size:10.5px; letter-spacing:.2em; fill:var(--text-dim); opacity:.7;}
+  .radius-fee-ring{transition:opacity .3s ease;}
+  .radius-fee-ring circle{fill:rgba(58,160,255,.05); stroke:var(--blue); stroke-opacity:.6; stroke-width:1.3; stroke-dasharray:3 5; vector-effect:non-scaling-stroke;}
+  .radius-figure .radius-fee-ring text{font-size:10.5px; letter-spacing:.16em; fill:var(--blue-text);}
+  .radius-figure.is-ring-off .radius-fee-ring{opacity:0;}
+  .radius-route{fill:none; stroke:#ff8000; stroke-opacity:.55; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:70 930; vector-effect:non-scaling-stroke; opacity:0;}
+  @keyframes radiusRoute{to{stroke-dashoffset:-1000;}}
+  @media (prefers-reduced-motion: no-preference){
+    html.reveal-ready .radius-figure.is-visible .radius-route{opacity:1; animation:radiusRoute 9s linear 1.6s infinite;}
+  }
+  .radius-chip{fill:var(--bg-panel-2); stroke:var(--orange-tint-border); stroke-width:1.2; stroke-dasharray:4 3; vector-effect:non-scaling-stroke;}
+  .radius-figure g.is-request .radius-name{font-size:12px; letter-spacing:.06em; text-transform:uppercase;}
+  .radius-figure g.is-request .radius-note{font-size:10.5px;}
+  /* the notes live in the list beside the map; the chips keep theirs */
+  .radius-figure g[data-city]:not(.is-request) .radius-note{display:none;}
+  .radius-figure .radius-name,
+  .radius-figure .radius-hub-name{paint-order:stroke; stroke:var(--bg-panel); stroke-width:4px; stroke-linejoin:round;}
+  .radius-figure .radius-name{font-size:14px;}
+
+  .radius-compass{
+    position:absolute;
+    top:12px; right:12px;
+    display:grid;
+    justify-items:center;
+    gap:2px;
+    padding:6px 8px;
+    border-radius:8px;
+    background:var(--bg-glass);
+    border:1px solid var(--border);
+    font-family:var(--font-ui);
+    font-size:11px;
+    letter-spacing:1px;
+    color:var(--text-dim);
+    pointer-events:none;
+  }
+  /* the map's own svg rules above also reach this icon; pin it */
+  .radius-figure .radius-compass svg{display:block; width:16px; height:22px; max-width:none;}
+  .radius-compass-edge{fill:none; stroke:var(--text-dim); stroke-width:1.2;}
+  .radius-compass-fill{fill:var(--orange);}
+  .radius-ring-toggle{
+    position:absolute;
+    top:12px; left:12px;
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    min-height:40px;
+    padding:8px 12px;
+    border-radius:10px;
+    border:1px solid var(--blue);
+    background:var(--bg-glass);
+    color:var(--text);
+    font-family:var(--font-ui);
+    font-size:12.5px;
+    letter-spacing:1.2px;
+    text-transform:uppercase;
+    cursor:pointer;
+  }
+  .radius-ring-toggle[aria-pressed="false"]{border-color:var(--border);}
+  .radius-ring-switch{position:relative; flex-shrink:0; width:34px; height:20px; border-radius:999px; background:var(--blue); transition:background-color .2s ease;}
+  .radius-ring-switch::after{content:""; position:absolute; top:3px; left:17px; width:14px; height:14px; border-radius:50%; background:#fff; transition:left .2s ease;}
+  .radius-ring-toggle[aria-pressed="false"] .radius-ring-switch{background:var(--bg-panel-3);}
+  .radius-ring-toggle[aria-pressed="false"] .radius-ring-switch::after{left:3px;}
+  .radius-ring-toggle:focus-visible{outline:2px solid var(--orange); outline-offset:2px;}
+
+  /* the town list beside the map: the key on the 11 pages without town
+     cards, the town cards on the 6 with them */
+  .wrap:has(> .radius-figure) > .radius-legend{justify-content:flex-start; margin:0 0 12px; flex-wrap:wrap; gap:6px 16px;}
+  .wrap:has(> .radius-figure) > .radius-key{
+    display:grid;
+    gap:6px;
+    margin:0;
+    padding:0;
+    list-style:none;
+  }
+  .wrap:has(> .radius-figure) > .radius-key li{
+    position:relative;
+    display:grid;
+    gap:1px;
+    padding:9px 12px 9px 40px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:var(--bg-panel);
+  }
+  .wrap:has(> .radius-figure) > .radius-key li::before{
+    content:"";
+    position:absolute;
+    left:14px; top:14px;
+    width:10px; height:10px;
+    border-radius:50%;
+    border:2px solid var(--blue-light);
+    background:var(--bg-panel-2);
+  }
+  .wrap:has(> .radius-figure) > .radius-key li.is-request::before{border-color:var(--orange); border-style:dashed;}
+  .wrap:has(> .radius-figure) > .radius-key li.is-hub::before{border:0; background:var(--orange);}
+  .wrap:has(> .radius-figure) > .radius-key b{font-family:var(--font-ui); font-weight:600; letter-spacing:.8px; color:var(--text);}
+  .wrap:has(> .radius-figure) > .radius-key li.is-request b{color:var(--orange-text);}
+  .wrap:has(> .radius-figure) > .radius-key small{font-family:var(--font-ui); letter-spacing:.4px; color:var(--text-dim);}
+  /* desktop sizes only: on phones the key keeps its 16px floor (the
+     <=760px block above), which these more specific rules would beat */
+  @media (min-width:761px){
+    .wrap:has(> .radius-figure) > .radius-key b{font-size:14.5px;}
+    .wrap:has(> .radius-figure) > .radius-key small{font-size:12.5px;}
+  }
+  .wrap:has(> .radius-figure) > .areas-links{display:grid; grid-template-columns:minmax(0, 1fr); gap:6px; margin:0;}
+  .wrap:has(> .radius-figure) > .areas-links .areas-link{
+    position:relative;
+    display:grid;
+    gap:1px;
+    padding:9px 36px 9px 40px;
+    border-radius:10px;
+    text-align:left;
+  }
+  .wrap:has(> .radius-figure) > .areas-links .areas-link::before{
+    content:"";
+    position:absolute;
+    left:14px; top:14px;
+    width:10px; height:10px;
+    border-radius:50%;
+    border:2px solid var(--blue-light);
+    background:var(--bg-panel-2);
+  }
+  .wrap:has(> .radius-figure) > .areas-links .areas-link.is-request::before{border-color:var(--orange); border-style:dashed;}
+  .wrap:has(> .radius-figure) > .areas-links .areas-link.is-hub::before{border:0; background:var(--orange);}
+  .wrap:has(> .radius-figure) > .areas-links .areas-link::after{
+    content:"\203A" / "";
+    position:absolute;
+    right:14px; top:50%;
+    transform:translateY(-52%);
+    font-size:22px;
+    line-height:1;
+    color:var(--text-dim);
+  }
+  .radius-key li.is-linked,
+  .radius-figure[data-focus="st-george"] ~ .radius-key li[data-city="st-george"]{border-color:var(--orange-tint-border);}
+
+  @media (max-width:980px){
+    .wrap:has(> .radius-figure) > .areas-links{grid-template-columns:repeat(auto-fill, minmax(min(100%, 240px), 1fr));}
+    .wrap:has(> .radius-figure) > .radius-key{grid-template-columns:repeat(auto-fill, minmax(min(100%, 240px), 1fr));}
+  }
+  @media (max-width:760px){
+    .radius-figure .radius-base,
+    .radius-figure .radius-trail{
+      transform-box:view-box;
+      transform-origin:335.3px 251.3px;
+      transform:translateY(25px) scale(1.25);
+    }
+    .radius-figure .radius-chip{display:none;}
+    /* On a phone the drawing is too small to float the toggle over: it sat on
+       Mesquite's dashed line. It drops below the drawing instead. */
+    .radius-ring-toggle{position:static; margin:8px 10px 10px; min-height:36px; padding:6px 10px; font-size:11px;}
+    .radius-compass{top:8px; right:8px; padding:4px 6px;}
+  }
+  /* === end Service-area map === */
