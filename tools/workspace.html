@@ -79,7 +79,7 @@
 <script src="/tools/push-notifications.js?v=180abd2a84" defer></script>
 <script src="/tools/data-layer.js?v=b2586a446b" defer></script>
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
-<script src="/tools/tools-dialogs.js?v=33e55c2858" defer></script>
+<script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=240c40d38d" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
@@ -2644,20 +2644,7 @@
     const scheduledAtUtc = zonedTimeToUtc(dateVal, hh, mm);
 
     try {
-      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/client_portal_work_orders?id=eq.${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': 'Bearer ' + getAuthToken(),
-        },
-        body: JSON.stringify({ status: 'scheduled', scheduled_at: scheduledAtUtc.toISOString(), updated_at: new Date().toISOString() }),
-      });
-      if (!res.ok) {
-        const body = await res.text();
-        throw new Error('HTTP ' + res.status + ': ' + body.slice(0, 160));
-      }
+      await updateWorkRequest(id, 'scheduled', scheduledAtUtc.toISOString());
       showToast('Scheduled -- the client has been emailed.');
       loadAndRenderWorkRequests();
     } catch (e) {
@@ -2665,27 +2652,42 @@
     }
   }
 
-  // Moves a request along the workflow. A direct PATCH is correct
-  // here: client_portal_work_orders' RLS grants UPDATE to any account
-  // with an account_roles row, and the status CHECK constraint on the
-  // table itself rejects any value outside the known set -- so a
-  // typo in the caller can't write a nonsense status.
+  // Every staff write to a work order (schedule, or move it along the
+  // workflow) goes through internal_update_client_portal_work_order()
+  // (sql/security/internal_update_client_portal_work_order.sql). Since
+  // #469 (2026-09-29) the table's SELECT policy is client-only, and
+  // Postgres applies SELECT policies to an UPDATE's WHERE clause -- so the
+  // direct PATCH ...?id=eq.X this used to send matched 0 rows from a staff
+  // session and still came back 204: "Scheduled"/"Request updated." with
+  // nothing saved. The RPC re-checks the staff gate, returns the updated
+  // row (an empty result is a real failure, reported as one), and the
+  // table's status CHECK still rejects any value outside the known set.
+  async function updateWorkRequest(id, status, scheduledAtIso) {
+    if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/internal_update_client_portal_work_order`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + getAuthToken(),
+      },
+      body: JSON.stringify({ p_id: Number(id), p_status: status, p_scheduled_at: scheduledAtIso || null }),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error('HTTP ' + res.status + ': ' + body.slice(0, 160));
+    }
+    const rows = await res.json().catch(() => null);
+    if (!Array.isArray(rows) || !rows.length) {
+      throw new Error("That request wasn't updated -- it may have been removed. Refresh and try again.");
+    }
+    return rows[0];
+  }
+
+  // Moves a request along the workflow.
   async function advanceWorkRequest(id, newStatus) {
     try {
-      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/client_portal_work_orders?id=eq.${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': 'Bearer ' + getAuthToken(),
-        },
-        body: JSON.stringify({ status: newStatus, updated_at: new Date().toISOString() }),
-      });
-      if (!res.ok) {
-        const body = await res.text();
-        throw new Error('HTTP ' + res.status + ': ' + body.slice(0, 160));
-      }
+      await updateWorkRequest(id, newStatus);
       showToast('Request updated.');
       loadAndRenderWorkRequests();
     } catch (e) {

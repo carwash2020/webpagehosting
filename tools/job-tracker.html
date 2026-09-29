@@ -57,7 +57,7 @@
 <script src="/tools/sync.js?v=0e885bb435" defer></script>
 <script src="/tools/data-layer.js?v=b2586a446b" defer></script>
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
-<script src="/tools/tools-dialogs.js?v=33e55c2858" defer></script>
+<script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=240c40d38d" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
@@ -3666,7 +3666,9 @@
       // all moved with them and no longer exist on this page.
       renderJobs();
       initJobCardLongPress();
-      if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => { renderJobs(); renderContacts(); renderNotesList(); });
+      // (pull-to-refresh is wired once, above the await -- a second call
+      // here stacked a second set of listeners, so every pull refreshed and
+      // buzzed twice; removed 2026-09-29.)
       wireSearchClear('jobSearch', renderJobs);
       initJobsTableSort();
       wireSearchClear('contactSearch', renderContacts);

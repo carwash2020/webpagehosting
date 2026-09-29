@@ -101,9 +101,13 @@ test('confirming an approval warns, but does not block, scheduling outside real 
   assert.match(body.slice(afterWarnIdx), /const scheduledAtUtc = zonedTimeToUtc\(dateVal, hh, mm\);/);
 });
 
-test('approving sends both status and scheduled_at together in one PATCH', () => {
+test('approving sends both status and scheduled_at together in one write (the staff RPC since #469)', () => {
   const fnMatch = WORKSPACE.match(/async function confirmWorkOrderApproval\(id\)[\s\S]*?\n  \}\n/);
-  assert.match(fnMatch[0], /status: 'scheduled', scheduled_at: scheduledAtUtc\.toISOString\(\)/);
+  assert.match(fnMatch[0], /await updateWorkRequest\(id, 'scheduled', scheduledAtUtc\.toISOString\(\)\)/);
+  // ...and updateWorkRequest puts both in the one RPC call, so the
+  // on_work_order_scheduled trigger's email has the time.
+  const helper = WORKSPACE.match(/async function updateWorkRequest\(id, status, scheduledAtIso\)[\s\S]*?\n  \}\n/);
+  assert.match(helper[0], /p_status: status, p_scheduled_at: scheduledAtIso \|\| null/);
 });
 
 test('workspace.html loads the shared business-hours file for the approval form\'s real-hours warning', () => {
