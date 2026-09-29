@@ -284,6 +284,98 @@
     #content .booking-card{animation:b1In .35s ease both;}
   }
   /* === end Redesign B1 === */
+  /* === Header menus (2026-09-29) ===
+     The Services and Areas menus from the rest of the site, added to this
+     page's focused header between the logo and the phone number. They are
+     details/summary disclosures, so they open on tap or click and with the
+     keyboard, and work without the script below it; the script only keeps
+     one open at a time and closes it on a click elsewhere or Escape. Same
+     look as the site's menus: a caret that flips while open, dark panel,
+     orange row hover, and the Areas list marked like the service-area map
+     key (St. George home base, Cedar City and Mesquite by request). On a
+     phone each panel spans the header's width. */
+  header.site-header .wrap{position:relative;}
+  .bk-menus{display:flex; align-items:center; gap:2px; margin-left:auto;}
+  .bk-menu{position:relative;}
+  .bk-menu > summary{
+    list-style:none; cursor:pointer;
+    display:inline-flex; align-items:center; gap:7px;
+    min-height:44px; padding:8px 10px; border-radius:8px;
+    font-family:var(--font-ui); font-size:13.5px; font-weight:500;
+    letter-spacing:1px; text-transform:uppercase; white-space:nowrap;
+    color:#d8d8d8;
+    transition:color .15s ease, background-color .15s ease;
+  }
+  .bk-menu > summary::-webkit-details-marker{display:none;}
+  .bk-menu > summary::after{
+    content:""; flex:none;
+    width:6px; height:6px; margin-top:-4px;
+    border-right:1.6px solid currentColor; border-bottom:1.6px solid currentColor;
+    transform:rotate(45deg); opacity:.65;
+    transition:transform .18s ease, opacity .18s ease;
+  }
+  .bk-menu[open] > summary{color:#ffffff; background:var(--orange-tint-soft);}
+  .bk-menu[open] > summary::after{transform:translateY(4px) rotate(225deg); opacity:1;}
+  @media (hover:hover){.bk-menu > summary:hover{color:#ffffff;}}
+  .bk-menu > summary:focus-visible{outline:2px solid var(--orange-light); outline-offset:2px;}
+  .bk-menu-panel{
+    position:absolute; top:100%; right:0; z-index:60;
+    margin-top:8px; padding:6px; min-width:260px;
+    background:var(--bg-panel); border:1px solid var(--border); border-radius:10px;
+    box-shadow:0 4px 14px -4px rgba(0,0,0,.5), 0 14px 34px -14px rgba(0,0,0,.65);
+  }
+  .bk-menu-list{list-style:none; margin:0; padding:0; display:grid; gap:1px;}
+  .bk-menu-list a{
+    display:flex; align-items:center; gap:10px;
+    min-height:40px; padding:9px 14px; border-radius:6px;
+    font-family:var(--font-ui); font-size:13px; font-weight:500;
+    letter-spacing:1px; text-transform:uppercase; white-space:nowrap;
+    color:var(--text); text-decoration:none;
+    transition:background-color .15s ease, color .15s ease;
+  }
+  .bk-menu-list a:focus-visible{background:var(--orange-tint-soft); color:var(--orange); outline:2px solid var(--orange-light); outline-offset:-2px;}
+  @media (hover:hover){.bk-menu-list a:hover{background:var(--orange-tint-soft); color:var(--orange);}}
+  .bk-menu-list a[href^="/locations/"]::before{
+    content:""; flex:none;
+    width:9px; height:9px; box-sizing:border-box; border-radius:50%;
+    border:1.6px solid #3aa0ff;
+  }
+  .bk-menu-list a[href="/locations/handyman-st-george-ut.html"]::before{background:var(--orange); border-color:var(--orange);}
+  .bk-menu-list a[href="/locations/handyman-cedar-city-ut.html"]::before,
+  .bk-menu-list a[href="/locations/handyman-mesquite-nv.html"]::before{border-color:var(--orange); border-style:dashed;}
+  .bk-menu-list a[href="/locations/handyman-cedar-city-ut.html"]::after,
+  .bk-menu-list a[href="/locations/handyman-mesquite-nv.html"]::after{
+    content:"By request"; margin-left:auto; padding-left:16px;
+    font-size:10.5px; letter-spacing:1.2px; color:var(--orange);
+  }
+  .bk-menu-list a[href="/locations/handyman-st-george-ut.html"]::after{
+    content:"Home base"; margin-left:auto; padding-left:16px;
+    font-size:10.5px; letter-spacing:1.2px; color:var(--text-dim);
+  }
+  .bk-menu-note{
+    margin:4px 0 0; padding:9px 14px 5px; border-top:1px solid var(--border);
+    font-family:var(--font-ui); font-size:12px; letter-spacing:.3px; color:var(--text-dim);
+  }
+  @media (max-width:640px){
+    .bk-menus{gap:0;}
+    .bk-menu{position:static;}
+    .bk-menu > summary{padding:8px 7px; font-size:12.5px; letter-spacing:.6px; gap:6px;}
+    .bk-menu-panel{left:16px; right:16px; min-width:0;}
+    .bk-menu-list a{min-height:44px; white-space:normal;}
+    header.site-header .wrap{column-gap:4px;}
+  }
+  /* Under 380px the logo, both menus and the phone number no longer fit
+     on one line, so the menus drop to a second row as two equal buttons. */
+  @media (max-width:379px){
+    header.site-header .wrap{flex-wrap:wrap; row-gap:8px;}
+    .bk-menus{order:3; flex-basis:100%; margin-left:0; gap:8px;}
+    .bk-menu{flex:1;}
+    .bk-menu > summary{width:100%; justify-content:center; border:1px solid var(--border);}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .bk-menu > summary, .bk-menu > summary::after, .bk-menu-list a{transition:none;}
+  }
+  /* === end Header menus === */
 </style>
 <!-- Shared business-hours data (2026-09-03) -- see business-hours.js's
      own header comment. This page used to keep its own fourth
@@ -302,12 +394,65 @@
       <img src="/images/logo-signature-176.webp?v=202609251200" alt="Triple H Enterprises logo" width="176" height="162">
       <span class="brand-name">TRIPLE H ENTERPRISES</span>
     </a>
+    <nav class="bk-menus" aria-label="Services and areas">
+      <details class="bk-menu">
+        <summary>Services</summary>
+        <div class="bk-menu-panel">
+          <ul class="bk-menu-list">
+            <li><a href="/services/washer-dryer-repair.html">Washer &amp; Dryer Repair</a></li>
+            <li><a href="/services/plumbing-repairs.html">Plumbing Repairs</a></li>
+            <li><a href="/services/drywall-painting.html">Drywall &amp; Painting</a></li>
+            <li><a href="/services/handyman-repairs.html">General Handyman Repairs</a></li>
+            <li><a href="/services/assembly-installation.html">Assembly &amp; Installation</a></li>
+          </ul>
+        </div>
+      </details>
+      <details class="bk-menu">
+        <summary>Areas</summary>
+        <div class="bk-menu-panel">
+          <ul class="bk-menu-list">
+            <li><a href="/locations/handyman-st-george-ut.html">St. George</a></li>
+            <li><a href="/locations/handyman-washington-city-ut.html">Washington City</a></li>
+            <li><a href="/locations/handyman-hurricane-ut.html">Hurricane</a></li>
+            <li><a href="/locations/handyman-santa-clara-ivins-ut.html">Santa Clara &amp; Ivins</a></li>
+            <li><a href="/locations/handyman-leeds-ut.html">Leeds</a></li>
+            <li><a href="/locations/handyman-la-verkin-ut.html">La Verkin</a></li>
+            <li><a href="/locations/handyman-cedar-city-ut.html">Cedar City</a></li>
+            <li><a href="/locations/handyman-mesquite-nv.html">Mesquite, NV</a></li>
+          </ul>
+        </div>
+      </details>
+    </nav>
     <a href="tel:+14354141667" class="phone-link js-phone-link js-phone-text">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
       (435) 414-1667
     </a>
   </div>
 </header>
+<script>
+// Header menus (2026-09-29): the Services and Areas <details> open and
+// close on their own; this keeps one open at a time and closes it on a
+// click or tap elsewhere, or on Escape (focus returns to its summary).
+(function () {
+  const menus = document.querySelectorAll('.bk-menu');
+  function closeOthers(keep) {
+    menus.forEach(function (m) { if (m !== keep) m.open = false; });
+  }
+  menus.forEach(function (m) {
+    m.addEventListener('toggle', function () { if (m.open) closeOthers(m); });
+  });
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.bk-menu')) closeOthers(null);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    const open = document.querySelector('.bk-menu[open]');
+    if (!open) return;
+    open.open = false;
+    open.querySelector('summary').focus();
+  });
+})();
+</script>
 
 <main class="wrap">
   <h1>Manage Your Booking</h1>
