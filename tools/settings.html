@@ -56,7 +56,7 @@
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
 <script src="/tools/tools-dialogs.js?v=33e55c2858" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=a1d4851522" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=240c40d38d" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <script src="/tools/tools-tour.js?v=5728732237" defer></script>
 <script src="/tools/sync.js?v=0e885bb435" defer></script>
@@ -136,6 +136,132 @@
     body.th-tool-page[data-th-page="settings"] #settingsMainView > .hub-sub + .settings-section,
     body.th-tool-page[data-th-page="settings"] #settingsMainView > .danger-zone { grid-column: 1 / -1; }
   }
+
+  /* Workspace app redesign v2 §8.13 (2026-09-29), on top of W5 (whose
+     rules above still apply: the grid, the hero/Session full-width
+     placement, the wrapping name and email). Each section is now an
+     iOS-style group: the label above, the rows in one radius-22 card,
+     the description as a footnote under it (flex order, so the markup
+     order and every test that reads it are unchanged). The danger zone's
+     red edge moves from the section to its card, so W5's fix holds. */
+  body.th-tool-page[data-th-page="settings"] #settingsMainView > .settings-section {
+    display: flex; flex-direction: column; min-width: 0;
+    background: none; border: 0; border-radius: 0; padding: 0; margin-bottom: 22px; box-shadow: none;
+  }
+  body.th-tool-page[data-th-page="settings"] #settingsMainView > .settings-section > h2 {
+    order: 0; font-size: 12px; font-weight: 500; letter-spacing: 1.3px; color: var(--text-dim); margin: 0 4px 8px;
+  }
+  body.th-tool-page[data-th-page="settings"] #settingsMainView > .settings-section > .th-set-card { order: 1; }
+  body.th-tool-page[data-th-page="settings"] #settingsMainView > .settings-section > .settings-desc {
+    order: 2; margin: 8px 4px 10px; font-size: 12.5px; line-height: 1.5; color: var(--text-dim);
+  }
+  body.th-tool-page[data-th-page="settings"] .th-set-card {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl);
+    overflow: hidden; min-width: 0;
+  }
+  body.th-tool-page[data-th-page="settings"] .th-set-card > .settings-row {
+    justify-content: flex-start; gap: 14px; min-height: 60px; padding: 10px 16px;
+    border-bottom: 0; border-top: 1px solid var(--th-hairline);
+  }
+  body.th-tool-page[data-th-page="settings"] .th-set-card > .settings-row:first-child { border-top: 0; }
+  body.th-tool-page[data-th-page="settings"] .th-set-row-main { flex: 1 1 auto; min-width: 0; }
+  body.th-tool-page[data-th-page="settings"] .th-set-card .settings-row-label { font-size: 15px; font-weight: 600; color: var(--text); }
+  body.th-tool-page[data-th-page="settings"] .th-set-card .settings-row-sub { font-size: 12.5px; color: var(--text-dim); overflow-wrap: anywhere; }
+  body.th-tool-page[data-th-page="settings"] .th-set-card > .settings-row > .secondary-btn:not(.th-set-switch) {
+    flex-shrink: 0; min-height: 38px; padding: 0 14px; border-radius: 999px; white-space: nowrap;
+    font-size: 13px; font-weight: 600; justify-content: center;
+  }
+  body.th-tool-page[data-th-page="settings"] .th-set-card > .settings-row > .secondary-btn:not(.th-set-switch):active { transform: scale(.97); }
+  body.th-tool-page[data-th-page="settings"] .th-set-chev::after {
+    content: ''; display: inline-block; vertical-align: 1px; flex: none; align-self: center; box-sizing: border-box; width: 7px; height: 7px; margin-left: 8px;
+    border-top: 2px solid currentColor; border-right: 2px solid currentColor; transform: rotate(45deg); opacity: .7;
+  }
+  /* The enrol area, the new codes and the status line sit inside the 2FA
+     card, under its rows. */
+  body.th-tool-page[data-th-page="settings"] .th-set-card > #mfaSettingsEnrollArea,
+  body.th-tool-page[data-th-page="settings"] .th-set-card > #mfaSettingsCodesDisplay,
+  body.th-tool-page[data-th-page="settings"] .th-set-card > #mfaSettingsMsg { padding: 0 16px 16px; }
+  body.th-tool-page[data-th-page="settings"] .th-set-card > #mfaSettingsMsg { margin: 0; font-size: 13px; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="settings"] .th-set-mfa-pill { display: none; flex-shrink: 0; }
+  body.th-tool-page[data-th-page="settings"] #mfaSection[data-th-mfa="on"] .th-set-mfa-pill { display: inline-flex; }
+  body.th-tool-page[data-th-page="settings"] #mfaRecoveryCodesRow .th-row-menu-btn { flex-shrink: 0; margin-left: -6px; }
+  /* On a phone the row shows just its label and the ⋯, which holds
+     Generate new codes (the same button, clicked by the sheet). */
+  @media (max-width: 480px) {
+    body.th-tool-page[data-th-page="settings"] #mfaRecoveryCodesRow.th-has-row-menu #mfaRegenerateCodesBtn { display: none; }
+  }
+
+  /* Switches: density, dark mode and push. The button keeps its own text
+     and aria-pressed (tools-light-mode.test.js reads both); the text is
+     visually tucked away and the button draws a 50x30 switch. It is on
+     for Compact, for Dark (aria-pressed="false" = not light), and for
+     push when the page's own button offers "Turn off". The caption
+     beside it says the state in words. */
+  body.th-tool-page[data-th-page="settings"] .th-set-card .th-set-switch {
+    position: relative; flex-shrink: 0; width: 54px; min-width: 54px; height: 44px; min-height: 44px; padding: 0;
+    background: none; border: 0; border-radius: 22px; box-shadow: none; font-size: 0; color: transparent; overflow: hidden;
+  }
+  body.th-tool-page[data-th-page="settings"] .th-set-card .th-set-switch::before {
+    content: ''; position: absolute; left: 2px; top: 7px; width: 50px; height: 30px; border-radius: 15px;
+    background: var(--border); transition: background-color .2s var(--th-ease);
+  }
+  body.th-tool-page[data-th-page="settings"] .th-set-card .th-set-switch::after {
+    content: ''; position: absolute; left: 5px; top: 10px; width: 24px; height: 24px; border-radius: 50%;
+    background: var(--text); box-shadow: var(--shadow-resting); transition: transform .2s var(--th-ease);
+  }
+  html[data-theme="light"] body.th-tool-page[data-th-page="settings"] .th-set-card .th-set-switch::after { background: var(--bg-panel); }
+  body.th-tool-page[data-th-page="settings"] .th-set-card [data-density-toggle][aria-pressed="true"]::before,
+  body.th-tool-page[data-th-page="settings"] .th-set-card #toolsThemeToggleBtn[aria-pressed="false"]::before,
+  body.th-tool-page[data-th-page="settings"] .th-set-card #settingsPushToggleBtn[data-th-on="true"]::before { background: var(--status-live); }
+  body.th-tool-page[data-th-page="settings"] .th-set-card [data-density-toggle][aria-pressed="true"]::after,
+  body.th-tool-page[data-th-page="settings"] .th-set-card #toolsThemeToggleBtn[aria-pressed="false"]::after,
+  body.th-tool-page[data-th-page="settings"] .th-set-card #settingsPushToggleBtn[data-th-on="true"]::after { transform: translateX(20px); }
+  body.th-tool-page[data-th-page="settings"] .th-set-card .th-set-switch:disabled { opacity: .45; cursor: not-allowed; }
+  body.th-tool-page[data-th-page="settings"] .th-set-card .th-set-switch:active:not(:disabled) { transform: scale(.95); }
+  @media (prefers-reduced-motion: reduce) {
+    body.th-tool-page[data-th-page="settings"] .th-set-card .th-set-switch::before,
+    body.th-tool-page[data-th-page="settings"] .th-set-card .th-set-switch::after { transition: none; }
+  }
+  body.th-tool-page[data-th-page="settings"] .th-set-state { flex-shrink: 0; font-size: 12.5px; color: var(--text-dim); white-space: nowrap; }
+  body.th-tool-page[data-th-page="settings"] .th-set-state[data-th-state-for="density"]::before { content: "Comfortable"; }
+  body.th-tool-page[data-th-page="settings"] .settings-row:has([data-density-toggle][aria-pressed="true"]) .th-set-state::before { content: "Compact"; }
+  body.th-tool-page[data-th-page="settings"] .th-set-state[data-th-state-for="theme"]::before { content: "Dark"; }
+  body.th-tool-page[data-th-page="settings"] .settings-row:has(#toolsThemeToggleBtn[aria-pressed="true"]) .th-set-state::before { content: "Light"; }
+  body.th-tool-page[data-th-page="settings"] .settings-row:has(#settingsPushToggleBtn[data-th-on="true"]) .th-set-state::before { content: "On"; }
+  body.th-tool-page[data-th-page="settings"] .settings-row:has(#settingsPushToggleBtn[data-th-on="false"]) .th-set-state::before { content: "Off"; }
+  @media (max-width: 419px) { body.th-tool-page[data-th-page="settings"] .th-set-state { display: none; } }
+
+  /* Account hero: the brand hex with initials, the name in Anton, the
+     email wrapping anywhere, and the role as an orange pill. */
+  body.th-tool-page[data-th-page="settings"] #settingsMainView > .settings-account {
+    flex-direction: row; flex-wrap: wrap; align-items: center; gap: 14px 16px; padding: 18px;
+    background: linear-gradient(135deg, var(--tone-orange-bg), transparent 62%), var(--bg-panel);
+    border: 1px solid var(--orange-tint-border); border-radius: var(--th-radius-xl);
+  }
+  body.th-tool-page[data-th-page="settings"] .th-set-avatar {
+    width: 64px; height: 64px; flex-shrink: 0; clip-path: var(--hex); background: var(--orange); color: var(--th-ink-on-orange);
+    display: flex; align-items: center; justify-content: center; font-family: var(--font-ui); font-size: 20px; font-weight: 600; letter-spacing: .6px;
+  }
+  body.th-tool-page[data-th-page="settings"] .th-set-account-main { flex: 1 1 160px; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  body.th-tool-page[data-th-page="settings"] #settingsMainView > .settings-account h2 {
+    margin: 0; font-size: 11.5px; font-weight: 500; letter-spacing: 1.3px; color: var(--orange-light);
+  }
+  html[data-theme="light"] body.th-tool-page[data-th-page="settings"] #settingsMainView > .settings-account h2 { color: var(--orange-text); }
+  body.th-tool-page[data-th-page="settings"] #settingsMainView > .settings-account h2::after { display: none; }
+  body.th-tool-page[data-th-page="settings"] .settings-account .settings-account-name { font-size: 28px; line-height: 1.02; color: var(--text); }
+  body.th-tool-page[data-th-page="settings"] .settings-account .settings-account-email { font-size: 14px; color: var(--text-dim); margin: 0; }
+  body.th-tool-page[data-th-page="settings"] .settings-account .settings-role-badge {
+    margin: 0 0 0 auto; flex-shrink: 0; padding: 5px 12px; border: 0; border-radius: 999px;
+    background: var(--tone-orange-bg); color: var(--tone-orange-fg); font-size: 12.5px; font-weight: 700; text-transform: none; letter-spacing: 0;
+  }
+
+  /* Session: the red edge now rides on the card; the row and its button
+     read red. */
+  body.th-tool-page[data-th-page="settings"] .danger-zone .th-set-card { border-color: color-mix(in srgb, var(--status-error) 45%, var(--border)); }
+  body.th-tool-page[data-th-page="settings"] .danger-zone .settings-row-label { color: var(--tone-red-fg); }
+  body.th-tool-page[data-th-page="settings"] .danger-zone .settings-row > .secondary-btn {
+    color: var(--tone-red-fg); background: var(--tone-red-bg); border-color: color-mix(in srgb, var(--status-error) 40%, var(--border));
+  }
 </style>
 </head>
 <body data-th-page="settings">
@@ -152,65 +278,91 @@
   </div>
   <p class="hub-sub">Account, display, notifications, and two-factor authentication.</p>
 
-  <div class="settings-section">
-    <h2>Account</h2>
-    <div class="settings-account-name" id="settingsAccountName">&nbsp;</div>
-    <div class="settings-account-email" id="settingsAccountEmail"></div>
+  <!-- Workspace app redesign v2 §8.13 (2026-09-29): an account hero, then
+       each section as an iOS-style group -- its label above, its rows in
+       one card (60px, a 36px tinted icon tile, label + sub, then a switch,
+       pill or button), its description as the footnote under the card.
+       Every section, row, id, button, handler and line of copy is the one
+       that was here; the rows only gained an icon tile and a wrapper, and
+       the three toggles gained a state caption. -->
+  <div class="settings-section settings-account">
+    <span class="th-set-avatar" id="settingsAvatar" aria-hidden="true"></span>
+    <div class="th-set-account-main">
+      <h2>Account</h2>
+      <div class="settings-account-name" id="settingsAccountName">&nbsp;</div>
+      <div class="settings-account-email" id="settingsAccountEmail"></div>
+    </div>
     <div class="settings-role-badge" id="settingsRoleBadge" style="display:none;"></div>
   </div>
 
   <div class="settings-section">
     <h2>Display</h2>
     <p class="settings-desc">A personal preference for this device -- doesn't affect how the app looks for anyone else.</p>
-    <div class="settings-row">
-      <div>
-        <div class="settings-row-label">Row density</div>
-        <div class="settings-row-sub">Compact view fits more on screen at once.</div>
+    <div class="th-set-card">
+      <div class="settings-row">
+        <span class="th-v2-icon-tile" aria-hidden="true"><svg class="th-icon"><use href="#icon-grid" xlink:href="#icon-grid"></use></svg></span>
+        <div class="th-set-row-main">
+          <div class="settings-row-label">Row density</div>
+          <div class="settings-row-sub">Compact view fits more on screen at once.</div>
+        </div>
+        <span class="th-set-state" data-th-state-for="density" aria-hidden="true"></span>
+        <button class="secondary-btn th-set-switch" data-density-toggle onclick="toggleDensityPreference()" aria-pressed="false">Compact view</button>
       </div>
-      <button class="secondary-btn" data-density-toggle onclick="toggleDensityPreference()" aria-pressed="false">Compact view</button>
-    </div>
-    <div class="settings-row">
-      <div>
-        <div class="settings-row-label">Color theme</div>
-        <div class="settings-row-sub">Applies across every page in the tool suite, not just this one.</div>
+      <div class="settings-row">
+        <span class="th-v2-icon-tile" aria-hidden="true"><svg class="th-icon"><use href="#icon-moon" xlink:href="#icon-moon"></use></svg></span>
+        <div class="th-set-row-main">
+          <div class="settings-row-label">Color theme</div>
+          <div class="settings-row-sub">Applies across every page in the tool suite, not just this one.</div>
+        </div>
+        <span class="th-set-state" data-th-state-for="theme" aria-hidden="true"></span>
+        <button class="secondary-btn th-set-switch" id="toolsThemeToggleBtn" onclick="toggleToolsThemePreference()" aria-pressed="false">Light mode</button>
       </div>
-      <button class="secondary-btn" id="toolsThemeToggleBtn" onclick="toggleToolsThemePreference()" aria-pressed="false">Light mode</button>
     </div>
   </div>
 
   <div class="settings-section">
     <h2>Notifications</h2>
     <p class="settings-desc">Push alerts for tomorrow's jobs, overdue invoices, new leads, and the weekly summary -- sent to this device specifically.</p>
-    <div class="settings-row">
-      <div>
-        <div class="settings-row-label">Push notifications</div>
-        <div class="settings-row-sub" id="settingsPushStatus">Checking...</div>
+    <div class="th-set-card">
+      <div class="settings-row">
+        <span class="th-v2-icon-tile" aria-hidden="true"><svg class="th-icon"><use href="#icon-bell" xlink:href="#icon-bell"></use></svg></span>
+        <div class="th-set-row-main">
+          <div class="settings-row-label">Push notifications</div>
+          <div class="settings-row-sub" id="settingsPushStatus">Checking...</div>
+        </div>
+        <span class="th-set-state" data-th-state-for="push" aria-hidden="true"></span>
+        <button class="secondary-btn th-set-switch" id="settingsPushToggleBtn" onclick="handleSettingsPushToggle()">Turn on</button>
       </div>
-      <button class="secondary-btn" id="settingsPushToggleBtn" onclick="handleSettingsPushToggle()">Turn on</button>
     </div>
   </div>
 
   <div class="settings-section">
     <h2>Quick tour</h2>
     <p class="settings-desc">A full walkthrough of every page in this app &mdash; where everything is and how to use it, tab by tab &mdash; shown once automatically the first time you open the Dashboard. About two minutes; you can stop any time and pick up where you left off.</p>
-    <div class="settings-row">
-      <div>
-        <div class="settings-row-label">Replay the tour</div>
-        <div class="settings-row-sub">Runs the whole walkthrough again from the start.</div>
+    <div class="th-set-card">
+      <div class="settings-row">
+        <span class="th-v2-icon-tile" aria-hidden="true"><svg class="th-icon"><use href="#icon-play" xlink:href="#icon-play"></use></svg></span>
+        <div class="th-set-row-main">
+          <div class="settings-row-label">Replay the tour</div>
+          <div class="settings-row-sub">Runs the whole walkthrough again from the start.</div>
+        </div>
+        <a href="/tools/workspace.html?tour=1" class="secondary-btn th-set-chev" style="text-decoration:none;">Replay tour</a>
       </div>
-      <a href="/tools/workspace.html?tour=1" class="secondary-btn" style="text-decoration:none;">Replay tour</a>
     </div>
   </div>
 
   <div class="settings-section">
     <h2>Password</h2>
     <p class="settings-desc">Sends a reset link to your own email address -- there's no in-app password field, since Supabase Auth doesn't accept a password change without re-verifying it's really you first.</p>
-    <div class="settings-row">
-      <div>
-        <div class="settings-row-label">Change password</div>
-        <div class="settings-row-sub" id="settingsPwStatus">&nbsp;</div>
+    <div class="th-set-card">
+      <div class="settings-row">
+        <span class="th-v2-icon-tile" aria-hidden="true"><svg class="th-icon"><use href="#icon-lock" xlink:href="#icon-lock"></use></svg></span>
+        <div class="th-set-row-main">
+          <div class="settings-row-label">Change password</div>
+          <div class="settings-row-sub" id="settingsPwStatus">&nbsp;</div>
+        </div>
+        <button class="secondary-btn" id="settingsPwResetBtn" onclick="handleSettingsPasswordReset()">Send reset link</button>
       </div>
-      <button class="secondary-btn" id="settingsPwResetBtn" onclick="handleSettingsPasswordReset()">Send reset link</button>
     </div>
   </div>
 
@@ -228,11 +380,14 @@
     <h2>Two-Factor Authentication</h2>
     <p class="settings-desc" id="mfaSettingsDesc">Checking your account&hellip;</p>
     <p class="settings-desc" id="mfaSettingsWhyNote" style="display:none; margin-top:-10px;">A stolen or guessed password alone won't be enough to get in -- worth the extra few seconds at sign-in.</p>
+    <div class="th-set-card">
     <div class="settings-row">
-      <div>
+      <span class="th-v2-icon-tile" aria-hidden="true"><svg class="th-icon"><use href="#icon-shield" xlink:href="#icon-shield"></use></svg></span>
+      <div class="th-set-row-main">
         <div class="settings-row-label">Authenticator app</div>
         <div class="settings-row-sub" id="mfaSettingsStatus">Checking...</div>
       </div>
+      <span class="th-v2-pill is-green th-set-mfa-pill" aria-hidden="true">On</span>
       <button class="secondary-btn" id="mfaSettingsToggleBtn" disabled>Loading...</button>
     </div>
     <div id="mfaSettingsEnrollArea" style="display:none; margin-top:14px;">
@@ -249,8 +404,9 @@
         <button class="primary-btn" id="mfaSettingsVerifyBtn" type="button" style="flex:1; justify-content:center;">Verify &amp; Turn On</button>
       </div>
     </div>
-    <div class="settings-row" id="mfaRecoveryCodesRow" style="display:none;">
-      <div>
+    <div class="settings-row" id="mfaRecoveryCodesRow" style="display:none;" data-row-title="Recovery codes">
+      <span class="th-v2-icon-tile" aria-hidden="true"><svg class="th-icon"><use href="#icon-key" xlink:href="#icon-key"></use></svg></span>
+      <div class="th-set-row-main">
         <div class="settings-row-label">Recovery codes</div>
         <div class="settings-row-sub" id="mfaRecoveryCodesStatus">&nbsp;</div>
       </div>
@@ -265,16 +421,20 @@
       </div>
     </div>
     <div class="settings-desc" id="mfaSettingsMsg" style="display:none; margin-top:10px;"></div>
+    </div>
   </div>
 
   <div class="settings-section danger-zone">
     <h2>Session</h2>
-    <div class="settings-row">
-      <div>
-        <div class="settings-row-label">Sign out</div>
-        <div class="settings-row-sub">You'll need to log in again on this device.</div>
+    <div class="th-set-card">
+      <div class="settings-row">
+        <span class="th-v2-icon-tile is-red" aria-hidden="true"><svg class="th-icon"><use href="#icon-logout" xlink:href="#icon-logout"></use></svg></span>
+        <div class="th-set-row-main">
+          <div class="settings-row-label">Sign out</div>
+          <div class="settings-row-sub">You'll need to log in again on this device.</div>
+        </div>
+        <button class="secondary-btn" onclick="signOut()">Sign out</button>
       </div>
-      <button class="secondary-btn" onclick="signOut()">Sign out</button>
     </div>
   </div>
 </div>
@@ -720,6 +880,67 @@
     e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
     if (/^\d{6}$/.test(e.target.value)) handleVerifyMfaEnrollSettings();
   });
+</script>
+<script>
+  // Workspace app redesign v2 §8.13 (2026-09-29) -- presentation only.
+  // Reads what the page above already rendered (the account name, the
+  // push button's own label, the 2FA status line) and mirrors it onto
+  // the hex avatar, the push switch and the 2FA "On" pill. It makes no
+  // auth, MFA or network call and writes no data; the recovery-codes
+  // row menu only clicks the page's own buttons, so every confirm dialog
+  // is the one that was already there.
+  (function () {
+    function thSettingsInitials(text) {
+      const t = String(text || '').replace(/ /g, ' ').trim();
+      if (!t) return '';
+      const words = (t.indexOf('@') > 0 ? t.split('@')[0] : t).split(/[\s._-]+/).filter(Boolean);
+      return ((words[0] || '').charAt(0) + (words.length > 1 ? words[words.length - 1].charAt(0) : '')).toUpperCase();
+    }
+    function thSettingsSync() {
+      const name = document.getElementById('settingsAccountName');
+      const avatar = document.getElementById('settingsAvatar');
+      if (name && avatar) {
+        const ini = thSettingsInitials(name.textContent);
+        if (avatar.textContent !== ini) avatar.textContent = ini;
+      }
+      const push = document.getElementById('settingsPushToggleBtn');
+      if (push) {
+        const label = (push.textContent || '').trim();
+        const on = label === 'Turn off' ? 'true' : label === 'Turn on' ? 'false' : 'unknown';
+        if (push.getAttribute('data-th-on') !== on) push.setAttribute('data-th-on', on);
+      }
+      const mfa = document.getElementById('mfaSection');
+      const mfaStatus = document.getElementById('mfaSettingsStatus');
+      if (mfa && mfaStatus) {
+        const state = /^On\b/.test((mfaStatus.textContent || '').trim()) ? 'on' : 'off';
+        if (mfa.getAttribute('data-th-mfa') !== state) mfa.setAttribute('data-th-mfa', state);
+      }
+    }
+    const root = document.getElementById('settingsMainView');
+    if (root && typeof MutationObserver !== 'undefined') {
+      new MutationObserver(thSettingsSync).observe(root, { subtree: true, childList: true, characterData: true });
+    }
+    thSettingsSync();
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const section = document.getElementById('mfaSection');
+      if (!section || typeof attachRowMenu !== 'function') return;
+      attachRowMenu(section, '#mfaRecoveryCodesRow', {
+        longPress: false,
+        getMenu: function () {
+          const regen = document.getElementById('mfaRegenerateCodesBtn');
+          const toggle = document.getElementById('mfaSettingsToggleBtn');
+          const status = document.getElementById('mfaRecoveryCodesStatus');
+          const actions = [];
+          if (regen) actions.push({ kind: 'extra', label: 'Generate new codes', icon: 'key', disabled: regen.disabled, onClick: function () { regen.click(); } });
+          if (toggle && (toggle.textContent || '').trim() === 'Turn off') {
+            actions.push({ kind: 'delete', label: 'Turn off two-factor and delete these codes', disabled: toggle.disabled, onClick: function () { toggle.click(); } });
+          }
+          return { title: 'Recovery codes', subtitle: status ? (status.textContent || '').trim() : '', actions: actions };
+        },
+      });
+    });
+  })();
 </script>
 
 </body>
