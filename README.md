@@ -5861,3 +5861,7 @@ Nothing was removed; every ⋯ runs the row's existing handler, confirm and undo
 **Sign-in and reset password** are a centred card on a phone and a computer, with the brand hex, larger fields and a bigger button. The steps, their order and all sign-in, two-factor and reset logic are exactly as before. Only CSS changed, and every path was walked before and after with identical results.
 
 Nothing was removed; every action still runs the page's existing handler and confirm dialog. Full write-up in `docs/specialist-logs/visual.md`, 2026-09-29.
+
+## What changed, 2026-09-29 -- Fix: Today card oversized on a phone
+
+The v2 Today summary card (greeting, date, "Nothing left on today's schedule" / stop count, and the three rings) could render up to ~550px tall on a phone with each ring stretched to 280px, instead of the compact ~250px card the redesign intended -- a leftover pre-v2 mobile CSS rule (`flex-direction: column`) still applied under 560px wide because the new rule never named that property to override it. Fixed by setting `flex-direction: row` explicitly on the v2 rule. CSS only; no markup, ids, or JS changed. Full write-up in `docs/specialist-logs/visual.md`, 2026-09-29.
