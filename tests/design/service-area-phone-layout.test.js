@@ -146,7 +146,8 @@ for (const { page, html } of PAGES) {
     const key = html.match(/<ul class="radius-key"[^>]*>([\s\S]*?)<\/ul>/);
     assert.ok(key, 'expected a .radius-key after the diagram');
     assert.ok(html.indexOf('<ul class="radius-key"') > html.indexOf('class="radius-figure'), 'the key follows the figure (the data-focus rules use ~)');
-    const rows = [...key[1].matchAll(/<li(?: class="([^"]*)")? data-city="([a-z-]+)"><b>([^<]*)<\/b> <small>([^<]*)<\/small><\/li>/g)];
+    // tabindex="0": each town is a keyboard stop (Package A4, 2026-09-29).
+    const rows = [...key[1].matchAll(/<li(?: class="([^"]*)")? data-city="([a-z-]+)" tabindex="0"><b>([^<]*)<\/b> <small>([^<]*)<\/small><\/li>/g)];
     const groups = svgGroups(html);
     assert.deepEqual(rows.map((r) => r[2]).sort(), Object.keys(groups).sort(), 'the key and the SVG list the same cities');
     for (const [, cls = '', city, name, note] of rows) {

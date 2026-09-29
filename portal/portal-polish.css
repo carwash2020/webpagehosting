@@ -557,10 +557,17 @@ body.portal-page details.line-item-details > .line-item-details-wrap > div {
 .portal-page input:focus-visible,
 .portal-page select:focus-visible,
 .portal-page textarea:focus-visible {
-  outline: 2px solid var(--orange);
+  /* Package A3 (2026-09-29): the shared token from /styles.css. Plain
+     --orange measured 3.35:1 on the light ground. */
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
-  box-shadow: 0 0 0 5px rgba(255, 128, 0, .16);
+  box-shadow: 0 0 0 5px var(--focus-halo);
 }
+.portal-page input:focus-visible,
+.portal-page select:focus-visible,
+.portal-page textarea:focus-visible { outline-offset: 0; border-color: var(--focus-ring); }
+/* filled orange buttons: a 3px band of ground so the ring never merges with the fill */
+.portal-page .btn.orange:focus-visible { outline-offset: 3px; }
 
 /* ---------- 14. reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
@@ -2171,7 +2178,7 @@ body.portal-page .set-toggle-row input[type="checkbox"]::after {
 }
 body.portal-page .set-toggle-row input[type="checkbox"]:checked { background: var(--orange); border-color: var(--orange); }
 body.portal-page .set-toggle-row input[type="checkbox"]:checked::after { transform: translateX(18px); background: var(--portal-ink); }
-body.portal-page .set-toggle-row input[type="checkbox"]:focus-visible { outline: 2px solid var(--orange-light); outline-offset: 2px; }
+body.portal-page .set-toggle-row input[type="checkbox"]:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   body.portal-page .set-toggle-row input[type="checkbox"],
   body.portal-page .set-toggle-row input[type="checkbox"]::after { transition: none; }

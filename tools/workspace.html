@@ -67,8 +67,8 @@
     document.documentElement.style.colorScheme = saved === 'light' ? 'light' : 'dark';
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=07696986d4">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=5ee5e06e3e">
+<link rel="stylesheet" href="/styles.css?v=f201d6d01a">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=f42fc259e4">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=0e885bb435" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -924,6 +924,15 @@
   body.th-tool-page[data-th-page="workspace"] .ops-lane .income-settled .dash-list-item::before { background: var(--tone-green-bg); }
   body.th-tool-page[data-th-page="workspace"] .ops-lane .income-settled .dash-list-item::after { background: var(--tone-green-fg); }
   body.th-tool-page[data-th-page="workspace"] .ops-lane .empty-state-small { padding: 10px 0 12px; }
+  /* Contrast (Package A2, 2026-09-29): a lane with nothing in it recedes
+     (.is-clear, opacity .72), which took its dim label and empty line
+     under 4.5:1 (3.95:1 on the Money lane, measured). Full-strength text
+     in a clear lane lands at ~8:1 after the fade, so the lane still reads
+     as quiet by its fade, size and case, not by failing contrast. */
+  body.th-tool-page[data-th-page="workspace"] .ops-lane.is-clear .ops-lane-header .ops-lane-label,
+  body.th-tool-page[data-th-page="workspace"] .ops-lane.is-clear .empty-state-small { color: var(--text); }
+  body.th-tool-page[data-th-page="workspace"] #lane-money .ops-lane-header .ops-lane-label { font-size: 12px; }
+  body.th-tool-page[data-th-page="workspace"] #invoicesList .empty-state-small { font-size: 14px; }
   /* The lane's own action: a 34px pill; everything else is in the ⋯. */
   body.th-tool-page[data-th-page="workspace"] .ops-lane .dash-list-item-right { gap: 6px; align-items: center; }
   body.th-tool-page[data-th-page="workspace"] .ops-lane .lead-toggle-btn, body.th-tool-page[data-th-page="workspace"] .ops-lane .small-btn, body.th-tool-page[data-th-page="workspace"] .ops-lane .paid-toggle-btn:not(.is-remind), body.th-tool-page[data-th-page="workspace"] .today-money .paid-toggle-btn:not(.is-remind) {
@@ -1492,7 +1501,7 @@
       <div class="form-section is-collapsed" id="secureDocsUploadCard" style="margin-top:10px;">
         <div class="form-section-body">
           <div class="tool-form-row">
-            <div class="form-field"><label>Category</label>
+            <div class="form-field"><label for="secureDocCategory">Category</label>
               <select id="secureDocCategory">
                 <option value="insurance">Insurance</option>
                 <option value="business-formation">Business Formation</option>
@@ -1506,7 +1515,7 @@
             <div class="form-field"><label>Label</label><input type="text" id="secureDocLabel" placeholder="e.g. General Liability Policy 2026"></div>
           </div>
           <div class="tool-form-row">
-            <div class="form-field"><label>File</label><input type="file" id="secureDocFile" accept=".pdf,.png,.jpg,.jpeg"></div>
+            <div class="form-field"><label for="secureDocFile">File</label><input type="file" id="secureDocFile" accept=".pdf,.png,.jpg,.jpeg"></div>
           </div>
           <button class="primary-btn" id="secureDocUploadBtn" onclick="uploadSecureDocumentUI()">Upload</button>
           <div class="upload-progress-bar" id="secureDocUploadProgress" style="display:none;"></div>

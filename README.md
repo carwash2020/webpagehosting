@@ -5962,3 +5962,18 @@ Found on screenshots after the redesigns landed. Layout only; no button does any
 - **Homepage reviews.** The featured review has its own row and the rest pair up, so with four reviews the last one sat alone in a half-empty row. When the count leaves one over, that last review now takes the full row. An odd count still pairs up as before.
 
 Tests: `tests/design/visual-fixes-2026-09-29.test.js` (5; all 5 fail on the previous code).
+
+## What changed, 2026-09-29 -- Accessibility pass (Claude Design Package A): 44px taps, one focus ring, the map by keyboard, labelled fields
+
+The first of Claude Design's four next-pass packages. How things look and read to assistive tech only; no button does anything different.
+
+- **Bigger taps on phones.** The Settings row buttons (Send reset link, two-factor, Sign out) are back to 44px. The homepage's Before/Split/After toggles and Control Panel/Board chips, and the map's "No trip fee within 15 miles" toggle on a phone, are 44px too.
+- **One focus ring everywhere.** Pressing Tab now shows the same orange ring on the public site, the client portal and the Workspace, in dark and light mode. Filled orange buttons get a small gap so the ring doesn't blend into them. Form fields in the Workspace and the portal had no keyboard ring at all; they get one now. Workspace buttons keep their own rounded corners when focused, where before they were squared off.
+- **The service-area map works with a keyboard.** On the 11 city and service pages with the town list beside the map, Tab moves through the towns. Each one lights its town on the map, as hovering does, with a ring around the town's dot.
+- **Readable text.** An empty Workspace Home lane fades back, and it faded its own label and "No invoices yet" text below readable contrast; that text is full strength now, so it still reads after the fade. The Route Planner's "Open Full Route" button now tells screen readers when it's inactive (before any stop is entered). The empty-map line is darker too.
+- **Labelled fields.** 18 Workspace fields on Finance, Contracts, Route Planner, Runway, Workspace and the Appliance Wiki now have their visible label tied to them. Tapping the label focuses the field, and screen readers read it. On a phone, the Invoices and Contracts search boxes are 16px, so iOS no longer zooms into them.
+- **Portal invoice chart.** The bars could be reached with Tab but were hidden from screen readers. They're announced now, for example "INV-1001, $425.50, Unpaid, 9/12".
+
+An automated WCAG scan across 32 pages went from 25 problems on 8 pages to none. Details and the places the code differed from the package are in `docs/specialist-logs/visual.md`.
+
+Tests: `tests/design/package-a-accessibility.test.js` (9; all 9 fail on the previous code).

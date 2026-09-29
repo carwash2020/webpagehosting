@@ -2914,3 +2914,47 @@ Direct follow-up to the Today-card fix above, requested after confirming the siz
 `renderTodayHero()` now hides `#todayHero` entirely when `getTodaysJobs()` is empty, and unhides it the moment a real job exists again -- verified with Playwright (mocked auth/Supabase): the card is `display: none` / 0 height with an empty schedule, and renders normally (Next Job label, title, actions) the instant a job is added and the dashboard re-renders. Uses `heroEl.style.display`, not the `hidden` attribute/property: `#todayHero`'s own v2 rule sets `display: block`, and since author CSS always wins over the UA stylesheet's `[hidden] { display: none }` regardless of selector specificity, `.hidden = true` alone would have silently no-op'd here.
 
 The Today's route card's own, separate empty state ("Nothing on the schedule for today. Add a job") was left as-is -- it carries a distinct, still-useful action (a direct link to add a job), unlike the Up Next card's empty state, which added nothing the greeting line didn't already say.
+
+## 2026-09-29 -- Claude Design next pass, Package A (accessibility), applied
+
+Source: Claude Design's reply to `claude-design-brief-2026-09-29.md` (packages A–D, `handoff/package-A.css`, prototype `Package A Accessibility.dc.html`). Package A covers items 1–5. B–D are still to do, one package per PR.
+
+**Applied as specified.**
+- **A1, 44px floor.**
+  - Settings row buttons go from 38px to 44px, with a 44px minimum width.
+  - The homepage `.reveal-view` toggles and `.td-chip` chips go from 40px to 44px, with padding 10px top and bottom.
+  - The ring toggle on phones goes from 36px/11px to 44px/13px. Desktop stays 40px.
+  - These edits are made in place in the existing rules, not stacked as overrides.
+- **A3, one ring.**
+  - `--focus-ring` and `--focus-halo` are defined once in `styles.css`: `:root` holds the dark values and `[data-theme="light"]` the light ones. All three surfaces load that file.
+  - The public base rule uses the tokens and now also covers `summary`, `[role=button]` and `[tabindex]`. The attribute selectors are inside `:where()`, so they don't raise specificity over components' own rules.
+  - Offsets are 3px on filled orange buttons (`.btn.orange`, `.primary-btn`, …) and on card links, 0 on fields (the border takes the ring colour), and -2px with no halo on rows in clipped menus.
+  - The tools `:focus-visible` rule uses the tokens. Its `border-radius: 4px` is deleted, as a real diff rather than an override.
+  - The portal's section 13 and the one-off orange rings (teardown and reveal chips, ring toggle, nav dropdown, gallery chips) all use the token now.
+- **A4, map by keyboard.**
+  - Each `.radius-key li` on the 11 pages has `tabindex="0"`.
+  - `js/service-area-map.js` mirrors `focusin`/`focusout` onto the hover's `.is-linked` toggling.
+  - The same script draws a `.radius-focus` circle (node r + 5) in each town group. It's drawn by the script rather than in markup, because `.is-linked` needs the script anyway, and this saves editing 17 SVGs.
+  - A row that's linked, or focused, takes the shared ring.
+- **A5.** 16px phone fields in the tools, phone-only. It changed exactly 2 visible fields (`#invoiceSearch` and `#contractSearch`, 14px to 16px), measured across 15 tool pages.
+
+**Where the code disagreed with the package, and what was done instead:**
+- **A2 causes.** Measured with axe in both themes:
+  - **Money lane.** The cause wasn't a tinted ground. `.ops-lane.is-clear { opacity: .72 }` fades any lane with nothing in it, and the fade took the dim label and empty line to 3.95:1. Fixing only `#lane-money` would have left the other lanes failing whenever they're clear. The fix is on `.ops-lane.is-clear`: `--text` there lands at about 8:1 after the fade. The 12px/14px sizes from the package are kept.
+  - **Open Route.** `#openRouteBtn` was failing only in its *disabled* state (`.is-disabled`, opacity .4, no stops yet). It's an `<a>`, so nothing told assistive tech it was inactive. `updateRoute()` now sets `aria-disabled="true"` wherever it adds `.is-disabled` and removes it where it enables the link. WCAG exempts inactive controls. The pinned `#140900` ink measures about 7.8:1 once there's a stop.
+- **A4 desktop key.** The package's `@media (min-width:761px) .radius-key` block wasn't applied. The key has already shown beside the map at desktop since the 2026-09-29 map port (`.wrap:has(> .radius-figure) > .radius-key`, a single column in the sidebar), so the block would have fought that layout. Only the focus and linked states were added. They're written against both the plain and the `.wrap:has()` selectors, because the desktop key's selector is (0,3,1).
+- **A5 labels.** All 14 listed fields, and 4 more the scan found (`#taxRate`, `#pwo_email`, `#pwo_workOrderDate`, `#pwo_description`), already had a visible `<label>` in the same `.form-field`. They needed `for=` only. The package expected new visible labels for `#pwo_contactPicker` and `#secureDocCategory`, but both already have one ("Use an existing contact (optional)", "Category"), so no copy changed.
+- **Fields had no ring at all on the tools and the portal.** `body .form-field input:focus, … body select:focus {outline: none}` in `styles-tools.css` sits at (0,2,2) and removed every field's outline, and the portal loads that sheet too. A `:focus-visible` twin with the same selectors now comes right after it. The tap tint (border plus soft glow) is unchanged for mouse and touch focus.
+- **The package's `body.th-tool-page { --orange-text: … }` line wasn't applied.** Tools pages load `styles.css`, so `--orange-text` is already defined there, and the tokens don't need it.
+
+**Found in passing and fixed.** `portal/dashboard.html` `#invoiceChartSvg` was `aria-hidden="true"` around keyboard-focusable `role="button"` bars that each have their own label. So keyboard users tabbed onto controls that screen readers couldn't see (axe `aria-hidden-focus`). It's now `role="group" aria-label="Invoice history"`.
+
+**Verification.**
+- **axe (WCAG 2.2 AA tags, 390px, dark).** Before: 25 violations on 8 of 32 pages (color-contrast 4, label 15, select-name 3, aria-hidden-focus 1). After: 0 on 32 of 32. The 4 contrast elements were also re-measured in light mode at 390 and 1440, and all pass.
+- **Browser checks.**
+  - Every chip, toggle and settings button measures 44px.
+  - The ring is `#ffb347` in dark and `#994a00` in light on the public, tools and portal surfaces.
+  - The offsets are 3px on `.btn.orange` (public and portal) and 0 on fields (tools, portal).
+  - Tabbing into the map key links that town's group, and its `.radius-focus` shows at opacity 1. Tab moves to the next town, and exactly one group stays linked.
+  - Before the change, the key items couldn't take focus at all.
+- **Test.** `tests/design/package-a-accessibility.test.js` has 9 tests, all failing on origin/main 86a9f37. It includes a jsdom run of `service-area-map.js` on the Hurricane page: focusin/out, the ring geometry, and idempotence.

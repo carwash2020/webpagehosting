@@ -51,8 +51,8 @@
     document.documentElement.style.colorScheme = saved === 'light' ? 'light' : 'dark';
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=07696986d4">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=5ee5e06e3e">
+<link rel="stylesheet" href="/styles.css?v=f201d6d01a">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=f42fc259e4">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=0e885bb435" defer></script>
 <script src="/tools/data-layer.js?v=b2586a446b" defer></script>
@@ -369,11 +369,11 @@
     </div>
     <p class="inline-note" id="clientHistoryNote"></p>
     <div class="tool-form-row">
-      <div class="form-field"><label>Labor hours</label><input type="number" id="hours" value="1" min="0" step="0.25" oninput="calculateCost()"></div>
-      <div class="form-field"><label>Hourly rate ($)</label><input type="number" id="rate" value="75" min="0" step="1" oninput="calculateCost()"></div>
+      <div class="form-field"><label for="hours">Labor hours</label><input type="number" id="hours" value="1" min="0" step="0.25" oninput="calculateCost()"></div>
+      <div class="form-field"><label for="rate">Hourly rate ($)</label><input type="number" id="rate" value="75" min="0" step="1" oninput="calculateCost()"></div>
     </div>
     <div class="tool-form-row">
-      <div class="form-field"><label>Parts/materials cost ($)</label><input type="number" id="parts" value="0" min="0" step="0.01" oninput="calculateCost()"></div>
+      <div class="form-field"><label for="parts">Parts/materials cost ($)</label><input type="number" id="parts" value="0" min="0" step="0.01" oninput="calculateCost()"></div>
     </div>
     <div class="checkbox-row">
       <input type="checkbox" id="firstTimeClient" onchange="calculateCost()">
@@ -387,7 +387,7 @@
   <div class="form-section">
     <h3>Sales Tax <button class="help-btn" onclick="openCardInfo('salesTax')" aria-label="What is this?" title="What is this?">?</button></h3>
     <div class="tool-form-row">
-      <div class="form-field" style="max-width:220px;"><label>Sales tax rate (%)</label><input type="number" id="taxRate" value="6.75" min="0" step="0.01" onchange="saveTaxSettings(); calculateCost();" oninput="calculateCost()"></div>
+      <div class="form-field" style="max-width:220px;"><label for="taxRate">Sales tax rate (%)</label><input type="number" id="taxRate" value="6.75" min="0" step="0.01" onchange="saveTaxSettings(); calculateCost();" oninput="calculateCost()"></div>
     </div>
     <div class="checkbox-row">
       <input type="checkbox" id="taxLabor" checked onchange="saveTaxSettings(); calculateCost();">

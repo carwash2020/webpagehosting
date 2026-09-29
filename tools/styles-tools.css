@@ -1281,12 +1281,13 @@ html:not([data-theme="light"]) body.th-tool-page {
 *::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
 *::-webkit-scrollbar-thumb:hover { background: var(--orange-dark); background-clip: padding-box; }
 :focus-visible {
-  outline: 2px solid var(--orange);
+  /* The shared ring (Package A3, 2026-09-29): tokens from /styles.css.
+     No border-radius here -- it used to force 4px corners onto every
+     focused control, squaring off 10-14px buttons; the outline follows
+     each element's own radius now. */
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
-  border-radius: 4px;
-  /* matches the glow language already used on button hovers and card
-     hovers elsewhere, instead of being a plain, generic flat outline */
-  box-shadow: 0 0 0 5px var(--orange-tint-soft);
+  box-shadow: 0 0 0 5px var(--focus-halo);
 }
 /* Bug fix (2026-08-21), reported directly with a screenshot: a stray
    blue box -- the browser's own native focus outline, not this app's
@@ -1629,6 +1630,19 @@ body select:focus, body textarea:focus {
   border-color: var(--orange);
   box-shadow: 0 0 0 3px var(--orange-tint-soft);
   outline: none;
+}
+/* Keyboard focus on a field takes the shared ring, flush with the border
+   (Package A3, 2026-09-29). Same selectors as the :focus rule above, so
+   this wins where it applies; that rule used to leave fields with no ring
+   at all (outline: none), on the tools and the portal alike. */
+body .form-field input:focus-visible, body .form-field select:focus-visible, body .form-field textarea:focus-visible,
+body input[type="text"]:focus-visible, body input[type="email"]:focus-visible, body input[type="tel"]:focus-visible,
+body input[type="number"]:focus-visible, body input[type="date"]:focus-visible, body input[type="search"]:focus-visible,
+body select:focus-visible, body textarea:focus-visible {
+  border-color: var(--focus-ring);
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 0;
+  box-shadow: 0 0 0 5px var(--focus-halo);
 }
 
 /* ==========================================================================
@@ -2673,10 +2687,11 @@ body:has(.th-update-card.is-shown) .th-install-banner { transform: translateY(16
 .small-btn:focus-visible,
 .tab-btn:focus-visible,
 .help-btn:focus-visible {
-  outline: 2px solid var(--orange);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
-  box-shadow: 0 0 0 5px var(--orange-tint-soft);
+  box-shadow: 0 0 0 5px var(--focus-halo);
 }
+.tool-card:focus-visible { outline-offset: 3px; }
 
 /* an empty list should read as empty, not as a failed load */
 .empty-note,
@@ -3295,6 +3310,14 @@ body .th-remind-text:focus { border-color: var(--orange-light); box-shadow: 0 0 
   .th-shift-row { flex-direction: column; align-items: stretch; }
   .th-shift-row > button { width: 100%; }
 }
+/* Every tool field is at least 16px on a phone, so iOS never zooms into
+   it (Package A5, 2026-09-29). Phone-only, so desktop density is
+   unchanged; max() keeps any field already sized larger. */
+@media (max-width: 760px) {
+  body.th-tool-page input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  body.th-tool-page select,
+  body.th-tool-page textarea { font-size: max(16px, 1em); }
+}
 /* 16px so iOS doesn't zoom into the field. */
 body .th-shift-input {
   width: 100%; box-sizing: border-box; min-height: 48px; padding: 0 12px; border-radius: 12px;
@@ -3318,8 +3341,8 @@ body .th-shift-input:focus { border-color: var(--orange-light); box-shadow: 0 0 
 .dialog-field-input:focus-visible,
 body .th-remind-text:focus-visible,
 body .th-shift-input:focus-visible {
-  outline: 2px solid var(--orange);
-  outline-offset: 2px;
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 0;
 }
 
 

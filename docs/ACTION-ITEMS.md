@@ -1161,7 +1161,10 @@ From the second pass (2026-09-29, #445-#469 and the portal leak fixes):
   reported success and saved nothing (details in bugfix.md, 2026-09-29).
   The Workspace side ships in the same PR.
 
-- **Some v2 phone buttons are under 44px.** Settings (#460) rows now use
+- ~~**Some v2 phone buttons are under 44px.**~~ Done 2026-09-29 (Claude
+  Design next pass, Package A1): the Settings row buttons, the homepage
+  before/after toggles and teardown chips, and the map's ring toggle on a
+  phone are all 44px now. Original note: Settings (#460) rows now use
   38px buttons on a phone (Send reset link, the two-factor button, Sign
   out; all were 44px or more before). The homepage's new before/after
   toggles and Control Panel/Board chips are 40px. All tap fine; nothing is
