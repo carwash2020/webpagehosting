@@ -11,8 +11,8 @@
     },
     {
         "key": "banner1Mode",
-        "value": "builtin",
-        "updated_at": "2026-09-23T22:16:54.048645+00:00"
+        "value": "off",
+        "updated_at": "2026-09-29T05:40:28.351942+00:00"
     },
     {
         "key": "banner2",
@@ -41,8 +41,8 @@
     },
     {
         "key": "googleReviewCount",
-        "value": "6",
-        "updated_at": "2026-09-24T15:47:49.765235+00:00"
+        "value": "7",
+        "updated_at": "2026-09-29T05:40:05.189462+00:00"
     },
     {
         "key": "hoursFriday",
