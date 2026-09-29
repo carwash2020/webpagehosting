@@ -700,7 +700,7 @@
 // row below the text), which is what the old rule's replaced design
 // was doing this for in the first place. workspace.html is precached.
 // Same reasoning as every prior bump in this file's history.
-const CACHE_NAME = 'th-workspace-v362'; // precache-fingerprint:86bc8313e8ac
+const CACHE_NAME = 'th-workspace-v363'; // precache-fingerprint:8536c2e5cade
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
