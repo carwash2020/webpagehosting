@@ -67,8 +67,8 @@
     document.documentElement.style.colorScheme = saved === 'light' ? 'light' : 'dark';
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=0bda75dc09">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=24fa54915c">
+<link rel="stylesheet" href="/styles.css?v=09af5fd852">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=5ee5e06e3e">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=0e885bb435" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -79,11 +79,11 @@
 <script src="/tools/push-notifications.js?v=180abd2a84" defer></script>
 <script src="/tools/data-layer.js?v=b2586a446b" defer></script>
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
-<script src="/tools/tools-dialogs.js?v=310315eb44" defer></script>
+<script src="/tools/tools-dialogs.js?v=33e55c2858" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=f6e4a00a43" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=fd75cec2d8" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
-<script src="/tools/tools-tour.js?v=2c49f16637" defer></script>
+<script src="/tools/tools-tour.js?v=5728732237" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -3874,8 +3874,8 @@
     // v2 (2026-09-28): what's owed as the headline number, the six-month
     // revenue line and this month's invoicing under the Current / Overdue
     // pills -- the same invoices, the same sums Business Snapshot shows.
-    const v2Month = anyFinanceAccessV2() ? monthRevenueV2() : null;
-    const v2Spark = v2Month ? sparkPathV2(monthlyRevenueSeriesV2(6)) : '';
+    const v2Month = (typeof anyFinanceAccessV2 === 'function' && anyFinanceAccessV2() && typeof monthRevenueV2 === 'function') ? monthRevenueV2() : null;
+    const v2Spark = (v2Month && typeof sparkPathV2 === 'function') ? sparkPathV2(monthlyRevenueSeriesV2(6)) : '';
     el.innerHTML = `
       <div class="today-money-label">Money Owed</div>
       <div class="today-money-total">${money(owed.outstandingTotal)}</div>
@@ -4091,8 +4091,8 @@
       if (!title.dataset.baseTitle) title.dataset.baseTitle = title.textContent;
       title.textContent = currentDashView === 'insights' ? 'Insights' : title.dataset.baseTitle;
     }
-    if (typeof thSetHeaderKicker === 'function') {
-      thSetHeaderKicker(currentDashView === 'insights' ? 'Business' : new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }));
+    if (typeof window.thSetHeaderKicker === 'function') {
+      window.thSetHeaderKicker(currentDashView === 'insights' ? 'Business' : new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }));
     }
     if (currentDashView === 'insights') {
       expandSection('snapshot');

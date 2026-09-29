@@ -249,7 +249,7 @@
     return '<svg class="th-icon" aria-hidden="true"><use href="#icon-' + name + '" xlink:href="#icon-' + name + '"></use></svg>';
   }
 
-  function destLinksHtml(dests, useMoreLabel) {
+  function destLinksHtml(dests) {
     var html = '';
     var lastGroup = '';
     dests.forEach(function (d) {
@@ -263,7 +263,7 @@
       var hidden = d.hideUntilAllowed ? ' style="display: none"' : '';
       html += '<a href="' + d.href + '" class="th-sidebar-link' + active + '"' + current + hidden + '>' +
         '<span class="th-hex-icon">' + iconSvg(d.icon) + '</span>' +
-        '<span>' + ((useMoreLabel && d.moreLabel) || d.label) + '</span></a>';
+        '<span>' + d.label + '</span></a>';
     });
     return html;
   }
@@ -403,14 +403,14 @@
     sheet.id = 'thMoreSheet';
     sheet.className = 'th-more-sheet th-sheet';
     sheet.setAttribute('hidden', '');
-    var tiles = MORE_DESTS.map(function (d) { return { href: d.href, icon: d.icon, label: d.label, moreLabel: d.moreLabel, hideUntilAllowed: d.hideUntilAllowed }; });
+    var tiles = MORE_DESTS.map(function (d) { return { href: d.href, icon: d.icon, label: d.moreLabel || d.label, hideUntilAllowed: d.hideUntilAllowed }; });
     sheet.innerHTML =
       '<div class="th-more-sheet-backdrop th-sheet-backdrop" data-th-sheet-close="1"></div>' +
       '<div class="th-more-sheet-panel th-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="thMoreSheetTitle">' +
         '<div class="th-more-sheet-handle th-sheet-handle" aria-hidden="true"></div>' +
         '<h2 class="th-more-sheet-title th-sheet-title" id="thMoreSheetTitle">More tools</h2>' +
         '<div class="th-more-sheet-links">' +
-          destLinksHtml(tiles, true).replace(/th-sidebar-link/g, 'th-more-sheet-link') +
+          destLinksHtml(tiles).replace(/th-sidebar-link/g, 'th-more-sheet-link') +
         '</div>' +
         '<div class="th-more-sheet-utils">' +
           (pageHelpButton() ? '<button type="button" class="th-more-sheet-util" data-th-util="help">' + iconSvg('help') + '<span>How this page works</span></button>' : '') +

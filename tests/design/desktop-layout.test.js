@@ -395,9 +395,12 @@ test('the Today hero is the first thing after the header block -- no chip row, n
   const hero = window.document.getElementById('todayHero');
   assert.ok(hero && !header.contains(hero));
   // Header -> search -> greeting -> hero -> strip -> Needs attention.
-  const ids = [];
-  let el = header.nextElementSibling;
-  while (el) { if (el.id) ids.push(el.id); el = el.nextElementSibling; }
+  // v2 (2026-09-28): the hero, strip and inbox sit inside Home's two column
+  // wrappers (.today-cols), so the order is read in document order after the
+  // header rather than from its top-level siblings only.
+  const ids = [...window.document.querySelectorAll('[id]')]
+    .filter(n => header.compareDocumentPosition(n) & window.Node.DOCUMENT_POSITION_FOLLOWING && !header.contains(n))
+    .map(n => n.id);
   const heroAt = ids.indexOf('todayHero');
   const stripAt = ids.indexOf('dashPrimaryStrip');
   const inboxAt = ids.indexOf('section-actionitems');

@@ -2033,7 +2033,8 @@ test('advancing through workspace.html\'s own 4 steps stays on the same page (no
   w.goToAppTourStep(2);
   assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Quick actions');
   w.goToAppTourStep(3);
-  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Business');
+  // v2 (2026-09-28): Business Snapshot moved to Home's Insights view; same #section-snapshot target.
+  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Insights');
   assert.equal(w.document.querySelector('.onboarding-next').textContent, 'Next', 'step 3 of 15 total is not the last step overall');
 
   w.document.querySelector('.onboarding-back').click();
