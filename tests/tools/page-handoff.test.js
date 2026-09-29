@@ -288,8 +288,12 @@ test('nothing can leave those skeletons behind: the first render runs whether th
   const dash = fn('renderDashboard');
   assert.ok(dash.indexOf('renderGreetingBanner();') > -1 && dash.indexOf('renderTodayHero();') > -1 && dash.indexOf('renderMetrics();') > -1);
   assert.match(fn('renderMetrics'), /renderTodayMoney\(owed\);/);
-  // The empty-day branch clears both hero containers too.
-  assert.match(fn('renderTodayHero'), /if \(todaysJobs\.length === 0\) \{\s*nextEl\.innerHTML = [^;]+;\s*restEl\.innerHTML = '';/);
+  // The empty-day branch hides the whole hero card (2026-09-29: the
+  // greeting card's own summary line already says "nothing scheduled",
+  // so a second card repeating that fact read as a leftover duplicate)
+  // and still clears the rest-of-day container, so neither skeleton is
+  // ever left visible behind it.
+  assert.match(fn('renderTodayHero'), /if \(todaysJobs\.length === 0\) \{[\s\S]*?heroEl\.style\.display = 'none';[\s\S]*?restEl\.innerHTML = '';/);
   assert.match(fn('renderTodayMoney'), /el\.innerHTML = `/);
   assert.match(fn('renderGreetingBanner'), /greetingBannerGreeting'\)\.textContent =/);
   assert.match(fn('renderGreetingBanner'), /greetingBannerNumber'\)\.textContent = count/);
