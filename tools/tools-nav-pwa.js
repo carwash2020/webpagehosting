@@ -1901,6 +1901,11 @@ if (typeof document !== 'undefined') {
 
     '<symbol id="icon-terminal" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M7 9.3l3.3 2.7-3.3 2.7"/><line x1="12" y1="14.7" x2="16.5" y2="14.7"/></symbol>' +
 
+    // Settings v2 (2026-09-29): dark mode, recovery codes, sign out.
+    '<symbol id="icon-moon" viewBox="0 0 24 24"><path d="M20 13.2A8 8 0 1 1 10.8 4a6.3 6.3 0 0 0 9.2 9.2z"/></symbol>' +
+    '<symbol id="icon-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M10.9 12.1L19 4M15.5 7.5l2.5 2.5M17.5 5.5l2 2"/></symbol>' +
+    '<symbol id="icon-logout" viewBox="0 0 24 24"><path d="M9.5 20H6a1.5 1.5 0 0 1-1.5-1.5v-13A1.5 1.5 0 0 1 6 4h3.5"/><polyline points="15.5 16.5 20 12 15.5 7.5"/><line x1="20" y1="12" x2="9.5" y2="12"/></symbol>' +
+
     '<symbol id="icon-book" viewBox="0 0 24 24"><path d="M12 6c-1.9-1.4-4.2-2-6.8-2-.7 0-1.2.6-1.2 1.2v11.6c0 .7.5 1.2 1.2 1.2 2.6 0 4.9.6 6.8 2 1.9-1.4 4.2-2 6.8-2 .7 0 1.2-.5 1.2-1.2V5.2c0-.7-.5-1.2-1.2-1.2-2.6 0-4.9.6-6.8 2z"/><line x1="12" y1="6" x2="12" y2="19"/></symbol>' +
 
     '<symbol id="icon-first-job" viewBox="0 0 48 48"><rect x="8" y="7" width="26" height="34" rx="3"/><rect x="16" y="4" width="10" height="6" rx="1.5"/><line x1="13" y1="19" x2="29" y2="19"/><line x1="13" y1="25" x2="29" y2="25"/><line x1="13" y1="31" x2="23" y2="31"/><circle cx="35" cy="35" r="8" fill="var(--bg-panel-2)" stroke="#ff8000"/><line x1="35" y1="31.5" x2="35" y2="38.5" stroke="#ff8000"/><line x1="31.5" y1="35" x2="38.5" y2="35" stroke="#ff8000"/></symbol>' +
