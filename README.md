@@ -5965,3 +5965,28 @@ Implements `design_handoff_first_impressions` (Workspace + client portal). Prese
 Ambiguities resolved (see the specialist log for the full list): kept the existing card chrome for sign-in step 1 rather than a full card-less phone layout; the recovery-code screen reuses `#mfaChallengeView` under an `.is-recovery` class rather than a second DOM step, so its underlying toggle logic is untouched; the portal's report-a-problem step conversion is scoped to `login.html` (its own step, reached from the footer) -- `set-password.html` keeps its existing overlay, which the handoff doesn't ask to change.
 
 Updated on purpose, not broken: `tests/tools/internal-mfa.test.js` and `internal-mfa-server-enforcement.test.js` (copy/redirect-function-name changes), and the tour-content assertions across `tests/workspace/finance-split.test.js`, `tests/tools/workspace-ia-round4.test.js`, `dashboard-today-first.test.js`, `clients-directory.test.js`, `invoice-from-job.test.js`, `invoices-list-first.test.js`, `job-money-pipeline.test.js`, `job-tracker-calendar-view.test.js`, `jobs-list-app.test.js`, `quick-add.test.js`, and `tests/tools/page-handoff.test.js` (the removed welcome-overlay tests). Full write-up in `docs/specialist-logs/features.md`, 2026-09-29.
+
+## What changed, 2026-09-29 -- Three layout fixes: long leads in Needs attention, Back to Home on the legal pages, the last homepage review
+
+Found on screenshots after the redesigns landed. Layout only; no button does anything different.
+
+- **Workspace Home, Needs attention.** A lead with a long email address pushed Handled and the ⋯ menu onto their own line under the text. The email now wraps inside its own column, and the buttons stay on the right. On a phone too narrow for both, the row still wraps as before. A long message used to stretch the lane (and the column beside it) by a screen. It now starts at four lines with a **Show more** button that opens the rest and reads **Show less** once open. The same applies to job applicants and booking notes. Short messages don't get the button.
+- **Privacy and Terms.** "← Back to Home" sat under the sticky contents list and ran into its last items as the page scrolled to the end. On desktop it now sits under the document, in the text column. It uses the site's label font in orange, with a 44px tap height.
+- **Homepage reviews.** The featured review has its own row and the rest pair up, so with four reviews the last one sat alone in a half-empty row. When the count leaves one over, that last review now takes the full row. An odd count still pairs up as before.
+
+Tests: `tests/design/visual-fixes-2026-09-29.test.js` (5; all 5 fail on the previous code).
+
+## What changed, 2026-09-29 -- Accessibility pass (Claude Design Package A): 44px taps, one focus ring, the map by keyboard, labelled fields
+
+The first of Claude Design's four next-pass packages. How things look and read to assistive tech only; no button does anything different.
+
+- **Bigger taps on phones.** The Settings row buttons (Send reset link, two-factor, Sign out) are back to 44px. The homepage's Before/Split/After toggles and Control Panel/Board chips, and the map's "No trip fee within 15 miles" toggle on a phone, are 44px too.
+- **One focus ring everywhere.** Pressing Tab now shows the same orange ring on the public site, the client portal and the Workspace, in dark and light mode. Filled orange buttons get a small gap so the ring doesn't blend into them. Form fields in the Workspace and the portal had no keyboard ring at all; they get one now. Workspace buttons keep their own rounded corners when focused, where before they were squared off.
+- **The service-area map works with a keyboard.** On the 11 city and service pages with the town list beside the map, Tab moves through the towns. Each one lights its town on the map, as hovering does, with a ring around the town's dot.
+- **Readable text.** An empty Workspace Home lane fades back, and it faded its own label and "No invoices yet" text below readable contrast; that text is full strength now, so it still reads after the fade. The Route Planner's "Open Full Route" button now tells screen readers when it's inactive (before any stop is entered). The empty-map line is darker too.
+- **Labelled fields.** 18 Workspace fields on Finance, Contracts, Route Planner, Runway, Workspace and the Appliance Wiki now have their visible label tied to them. Tapping the label focuses the field, and screen readers read it. On a phone, the Invoices and Contracts search boxes are 16px, so iOS no longer zooms into them.
+- **Portal invoice chart.** The bars could be reached with Tab but were hidden from screen readers. They're announced now, for example "INV-1001, $425.50, Unpaid, 9/12".
+
+An automated WCAG scan across 32 pages went from 25 problems on 8 pages to none. Details and the places the code differed from the package are in `docs/specialist-logs/visual.md`.
+
+Tests: `tests/design/package-a-accessibility.test.js` (9; all 9 fail on the previous code).

@@ -51,8 +51,8 @@
     document.documentElement.style.colorScheme = saved === 'light' ? 'light' : 'dark';
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=be48268cda">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=95071838d9">
+<link rel="stylesheet" href="/styles.css?v=f201d6d01a">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=667d7647f8">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=0e885bb435" defer></script>
 <script src="/tools/data-layer.js?v=b2586a446b" defer></script>
@@ -277,25 +277,25 @@
     <h3>Client &amp; Job Information</h3>
     <div class="tool-form-row">
       <div class="form-field">
-        <label>Use an existing contact (optional)</label>
+        <label for="pwo_contactPicker">Use an existing contact (optional)</label>
         <select id="pwo_contactPicker" onchange="applyContactPicker('pwo', this.value)"><option value="">&mdash; type manually below &mdash;</option></select>
       </div>
     </div>
     <div class="tool-form-row">
-      <div class="form-field"><label>Client Name</label><input type="text" id="pwo_clientName"></div>
-      <div class="form-field"><label>Phone</label><input type="tel" id="pwo_phone"></div>
+      <div class="form-field"><label for="pwo_clientName">Client Name</label><input type="text" id="pwo_clientName"></div>
+      <div class="form-field"><label for="pwo_phone">Phone</label><input type="tel" id="pwo_phone"></div>
     </div>
     <div class="tool-form-row">
-      <div class="form-field"><label>Service Address</label><input type="text" id="pwo_serviceAddress"></div>
-      <div class="form-field"><label>Email</label><input type="email" id="pwo_email"></div>
+      <div class="form-field"><label for="pwo_serviceAddress">Service Address</label><input type="text" id="pwo_serviceAddress"></div>
+      <div class="form-field"><label for="pwo_email">Email</label><input type="email" id="pwo_email"></div>
     </div>
     <div class="tool-form-row">
-      <div class="form-field" style="max-width:220px;"><label>Date of Work Order</label><input type="date" id="pwo_workOrderDate"></div>
+      <div class="form-field" style="max-width:220px;"><label for="pwo_workOrderDate">Date of Work Order</label><input type="date" id="pwo_workOrderDate"></div>
     </div>
   </div>
   <div class="form-section">
     <h3>Description of Work</h3>
-    <div class="form-field"><label>Include any relevant model/serial numbers for appliance repairs</label>
+    <div class="form-field"><label for="pwo_description">Include any relevant model/serial numbers for appliance repairs</label>
       <div style="position:relative;">
         <textarea id="pwo_description"></textarea>
         <button type="button" id="pwoDescriptionMicBtn" class="voice-dictation-btn" style="display:none;" aria-label="Dictate description" title="Dictate description">

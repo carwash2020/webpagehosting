@@ -159,11 +159,14 @@ test('manage pages load on a skeleton card, with the old text kept for screen re
 });
 
 test('one orange focus ring: public, tools and portal', () => {
-  assert.match(read('styles.css'), /textarea:focus-visible\{[\s\S]*?outline:2px solid var\(--orange-text\);/);
-  assert.match(read('tools/styles-tools.css'), /\.help-btn:focus-visible \{\n  outline: 2px solid var\(--orange\);/);
-  assert.match(read('portal/portal-polish.css'), /\.portal-page textarea:focus-visible \{\n  outline: 2px solid var\(--orange\);/);
+  // Since Package A3 (2026-09-29) every surface draws the ring from one
+  // token pair in styles.css, which resolves to the orange text colour.
+  assert.match(read('styles.css'), /--focus-ring:var\(--orange-text\);/);
+  assert.match(read('styles.css'), /textarea:focus-visible\{[\s\S]*?outline:2px solid var\(--focus-ring\);/);
+  assert.match(read('tools/styles-tools.css'), /\.help-btn:focus-visible \{\n  outline: 2px solid var\(--focus-ring\);/);
+  assert.match(read('portal/portal-polish.css'), /\.portal-page textarea:focus-visible \{[^}]*outline: 2px solid var\(--focus-ring\);/);
   assert.doesNotMatch(read('tools/styles-tools.css'), /outline: 2px solid var\(--blue-light\)/);
-  assert.match(read('tools/styles-tools.css'), /body \.th-shift-input:focus-visible \{\n  outline: 2px solid var\(--orange\);/);
+  assert.match(read('tools/styles-tools.css'), /body \.th-shift-input:focus-visible \{\n  outline: 2px solid var\(--focus-ring\);/);
 });
 
 test('Workspace Compliance edit fields are .form-field (T4)', () => {

@@ -64,8 +64,8 @@
     document.documentElement.style.colorScheme = saved === 'light' ? 'light' : 'dark';
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=be48268cda">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=95071838d9">
+<link rel="stylesheet" href="/styles.css?v=f201d6d01a">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=667d7647f8">
 <!-- Real embedded map (2026-09-07), replacing "link-outs only": Leaflet
      + free OpenStreetMap tiles, no API key/cost. Both the JS and the
      CSS's integrity hash were computed directly from `npm install
@@ -278,6 +278,14 @@
     body.th-tool-page[data-th-page="route-planner"] .stop-drag:hover { color: var(--text); }
   }
   body.th-tool-page[data-th-page="route-planner"] #openRouteBtn { margin-top: 10px; min-height: 48px; border-radius: 14px; font-family: var(--font-ui); letter-spacing: .9px; text-transform: uppercase; }
+  /* Contrast (Package A2, 2026-09-29): #openRouteBtn is an <a>, so the
+     site's link colour beat the button ink; pin the ink in every link
+     state (7.80:1 on #ff8000, 5.20:1 on light #d85f0a). The empty-map
+     line used --text-faint (3.58:1). */
+  body.th-tool-page[data-th-page="route-planner"] #openRouteBtn,
+  body.th-tool-page[data-th-page="route-planner"] #openRouteBtn:visited,
+  body.th-tool-page[data-th-page="route-planner"] #openRouteBtn:hover { color: #140900; }
+  body.th-tool-page[data-th-page="route-planner"] #routeMapEmpty { color: var(--text-dim); font-size: 13px; }
 
   /* The map card and the per-stop links. */
   /* isolation keeps Leaflet's own z-index 400-1000 panes and controls
@@ -355,9 +363,9 @@
 <div class="form-section route-cost-card">
   <h3>Cost Analyzer (To &amp; From) <button class="help-btn" onclick="openCardInfo('costAnalyzer')" aria-label="What is this?" title="What is this?">?</button> <span class="realtime-badge" id="realtimeBadge" onclick="retryLiveSync()" title="Live sync"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span></h3>
   <div class="tool-form-row">
-    <div class="form-field"><label>One-way distance (miles)</label><input type="number" id="tripDistance" value="0" min="0" step="0.5" oninput="calculateTripCost()"></div>
-    <div class="form-field"><label>Cost per mile ($)</label><input type="number" id="tripFuelRate" value="0.76" min="0" step="0.01" oninput="calculateTripCost(); saveMileageRate();"></div>
-    <div class="form-field"><label>Sales tax rate (%)</label><input type="number" id="tripTaxRate" value="6.75" min="0" step="0.01" oninput="calculateTripCost()"></div>
+    <div class="form-field"><label for="tripDistance">One-way distance (miles)</label><input type="number" id="tripDistance" value="0" min="0" step="0.5" oninput="calculateTripCost()"></div>
+    <div class="form-field"><label for="tripFuelRate">Cost per mile ($)</label><input type="number" id="tripFuelRate" value="0.76" min="0" step="0.01" oninput="calculateTripCost(); saveMileageRate();"></div>
+    <div class="form-field"><label for="tripTaxRate">Sales tax rate (%)</label><input type="number" id="tripTaxRate" value="6.75" min="0" step="0.01" oninput="calculateTripCost()"></div>
   </div>
   <div class="results-box">
     <div class="result-row"><span class="result-label">Round-trip distance</span><span id="tripMilesResult">0 mi</span></div>
@@ -611,18 +619,23 @@
     if (countEl) countEl.textContent = stops.length ? stops.length + ' stop' + (stops.length === 1 ? '' : 's') : 'No addresses yet';
     const warning = document.getElementById('tooManyWarning');
 
+    // aria-disabled mirrors .is-disabled (Package A2, 2026-09-29): the
+    // faded link is an inactive control, and now says so to assistive tech.
     if (stops.length > 10) {
       warning.style.display = 'block';
       btn.classList.add('is-disabled');
+      btn.setAttribute('aria-disabled', 'true');
       btn.removeAttribute('href');
     } else {
       warning.style.display = 'none';
       const url = buildRouteUrl(stops);
       if (url) {
         btn.classList.remove('is-disabled');
+        btn.removeAttribute('aria-disabled');
         btn.href = url;
       } else {
         btn.classList.add('is-disabled');
+        btn.setAttribute('aria-disabled', 'true');
         btn.removeAttribute('href');
       }
     }

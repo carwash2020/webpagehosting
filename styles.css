@@ -207,6 +207,12 @@
     --orange-text:var(--orange-light);
     --orange-text-vivid:var(--orange);
     --blue-text:var(--blue-light);
+    /* One focus ring on all three surfaces (Package A3, 2026-09-29). The
+       public site, the portal and the tools all load this file, so the
+       pair is defined once here: #ffb347 dark / #994a00 light, 3:1+ on
+       every ground in both themes. */
+    --focus-ring:var(--orange-text);
+    --focus-halo:rgba(255,128,0,.16);
     /* F28 fix (2026-09-07): the post-submit success message was a
        hardcoded green (measured ~1.9:1 on the light background) --
        the one thing a customer must actually see after sending a
@@ -306,6 +312,8 @@
     --orange-text:#994a00;
     --orange-text-vivid:#994a00;
     --blue-text:#1a5a94;
+    --focus-ring:#994a00;
+    --focus-halo:rgba(216,95,10,.14);
     /* Verified against white: 6.51:1. */
     --success-text:#146c34;
     /* Verified against the light-mode input background (--bg-panel-3,
@@ -423,15 +431,37 @@
 
   a:focus-visible,
   button:focus-visible,
+  summary:focus-visible,
+  :where([role="button"], [tabindex]:not([tabindex="-1"])):focus-visible,
   input:focus-visible,
   select:focus-visible,
   textarea:focus-visible{
-    /* Orange, one ring on all three surfaces (X1, 2026-09-25). --orange-text
-       is #ffb347 in dark and #994a00 in light, so the ring holds 3:1+
-       against both grounds; plain --orange would fall under it in light. */
-    outline:2px solid var(--orange-text);
+    /* Orange, one ring on all three surfaces (X1, 2026-09-25), drawn one
+       way everywhere since Package A3 (2026-09-29): --focus-ring is
+       #ffb347 in dark and #994a00 in light, so the ring holds 3:1+
+       against both grounds; plain --orange would fall under it in light.
+       The outline follows each element's own radius. */
+    outline:2px solid var(--focus-ring);
     outline-offset:2px;
-    box-shadow:0 0 0 5px rgba(255,128,0,0.16);
+    box-shadow:0 0 0 5px var(--focus-halo);
+  }
+  /* Filled orange buttons: a 3px band of page ground between ring and
+     fill, since #ffb347 on #ff8000 is only 1.41:1. */
+  .btn.orange:focus-visible, .nav-schedule-btn:focus-visible,
+  .chat-action-btn.primary:focus-visible, .primary-btn:focus-visible,
+  .generate-btn:focus-visible, .dialog-btn-primary:focus-visible,
+  .login-btn:focus-visible{outline-offset:3px;}
+  /* Fields: the ring sits flush and the border lifts to its colour, so
+     it reads as one raised edge. */
+  input:focus-visible, select:focus-visible, textarea:focus-visible{outline-offset:0; border-color:var(--focus-ring);}
+  /* Cards that are links keep their lift, ring at 3px. */
+  .areas-link:focus-visible, .tool-card:focus-visible, .job-card:focus-visible,
+  .invoice-card:focus-visible, .quote-card:focus-visible, .wo-card:focus-visible{outline-offset:3px;}
+  /* Rows inside clipped lists and menus: inset, no halo, so nothing is cut off. */
+  .nav-dropdown-menu a:focus-visible, .th-more-sheet-link:focus-visible,
+  .legal-toc a:focus-visible{outline-offset:-2px; box-shadow:none;}
+  @media (prefers-reduced-motion: no-preference){
+    :focus-visible{transition:outline-offset .12s ease;}
   }
 
   .skip-link{
@@ -2135,6 +2165,13 @@
   html.page-legal .legal-doc .terms-body p,
   html.page-legal .legal-doc .terms-body li{max-width:68ch; font-size:16.5px; line-height:1.7; color:var(--text-dim);}
   html.page-legal .legal-doc .terms-body p{margin:0 0 14px;}
+  /* "Back to Home" is the grid's third child, so it fell into the 240px
+     contents column under the sticky list and ran into its last items as
+     the page scrolled to the end (2026-09-29 fix). It belongs under the
+     document, in the text column, in the site's UI face. */
+  @media (min-width:861px){html.page-legal .legal-doc > p{grid-column:2;}}
+  html.page-legal .legal-doc > p a{display:inline-flex; align-items:center; min-height:44px; font-family:var(--font-ui); font-size:14px; letter-spacing:.3px; color:var(--orange-text-vivid); text-decoration:none;}
+  @media (hover:hover){html.page-legal .legal-doc > p a:hover{text-decoration:underline;}}
 
   @media (max-width:860px){
     html.page-careers .careers-glance,
@@ -2700,7 +2737,7 @@
   }
   @media (hover:hover){.gallery-filter-chip:hover{border-color:var(--blue-text); color:var(--white); transform:translateY(-1px);}}
   .gallery-filter-chip:active{transform:scale(.97);}
-  .gallery-filter-chip:focus-visible{outline:2px solid var(--orange-text); outline-offset:2px;}
+  .gallery-filter-chip:focus-visible{outline:2px solid var(--focus-ring); outline-offset:2px;}
   .gallery-filter-chip[aria-pressed="true"]{
     background:linear-gradient(135deg, #ffb347, #ff8000 60%, #c96400);
     border-color:transparent;
@@ -4093,6 +4130,12 @@
      featured card spans the row alone, so it sizes to its quote (the
      4-line clamp still caps it). */
   body.page-home #reviews .reviews-wall > .review-card:first-child .review-quote{font-size:clamp(22px, 2.6vw, 30px); line-height:1.35; height:auto;}
+  /* With the featured card on its own row, an even number of cards left
+     the last one alone in a half-empty row (four today). It takes the
+     full row too, sized to its quote like the featured card
+     (2026-09-29 fix). An odd count pairs up and is unaffected. */
+  body.page-home #reviews .reviews-wall > .review-card:last-child:nth-child(even){grid-column:1 / -1;}
+  body.page-home #reviews .reviews-wall > .review-card:last-child:nth-child(even) .review-quote{height:auto;}
 
   /* chapter 07 + 08: About and the service area as feature blocks */
   body.page-home #areas > .wrap{max-width:1180px;}
@@ -4150,8 +4193,8 @@
   }
   body.page-home #teardownStage .td-chips{display:flex; flex-wrap:wrap; gap:8px; max-width:520px;}
   body.page-home #teardownStage .td-chip{
-    min-height:40px;
-    padding:8px 14px;
+    min-height:44px; /* 44px tap floor (Package A, 2026-09-29; was 40) */
+    padding:10px 14px;
     border-radius:999px;
     border:1px solid var(--border);
     background:transparent;
@@ -4170,7 +4213,8 @@
   }
   body.page-home #teardownStage .td-chip:focus-visible,
   body.page-home #teardownStage .td-play:focus-visible,
-  body.page-home #teardownStage .td-sym-link:focus-visible{outline:2px solid var(--orange); outline-offset:2px;}
+  body.page-home #teardownStage .td-sym-link:focus-visible{outline:2px solid var(--focus-ring); outline-offset:2px;}
+  body.page-home #teardownStage .td-chip[aria-pressed="true"]:focus-visible{outline-offset:3px;}
 
   /* what the chosen part usually means, from triage.js's own washer data */
   body.page-home #teardownStage .td-sym{
@@ -4390,8 +4434,8 @@
   body.page-home #revealJob > .wrap > .section-head{grid-column:1;}
   body.page-home #revealJob > .wrap > .reveal-views{grid-column:2; display:flex; gap:8px; margin-bottom:28px;}
   body.page-home #revealJob .reveal-view{
-    min-height:40px;
-    padding:8px 14px;
+    min-height:44px; /* 44px tap floor (Package A, 2026-09-29; was 40) */
+    padding:10px 14px;
     border-radius:999px;
     border:1px solid var(--border);
     background:transparent;
@@ -4406,7 +4450,7 @@
   @media (hover:hover){
     body.page-home #revealJob .reveal-view:hover{border-color:var(--orange-tint-border); color:var(--orange-text-vivid);}
   }
-  body.page-home #revealJob .reveal-view:focus-visible{outline:2px solid var(--orange); outline-offset:2px;}
+  body.page-home #revealJob .reveal-view:focus-visible{outline:2px solid var(--focus-ring); outline-offset:2px;}
   body.page-home #revealJob #revealFrame{cursor:ew-resize; touch-action:pan-y; -webkit-user-select:none; user-select:none;}
   body.page-home #revealJob .reveal-handle{
     position:absolute;
@@ -5841,7 +5885,41 @@ body:has(.cookie-banner) .back-to-top{
   .radius-ring-switch::after{content:""; position:absolute; top:3px; left:17px; width:14px; height:14px; border-radius:50%; background:#fff; transition:left .2s ease;}
   .radius-ring-toggle[aria-pressed="false"] .radius-ring-switch{background:var(--bg-panel-3);}
   .radius-ring-toggle[aria-pressed="false"] .radius-ring-switch::after{left:3px;}
-  .radius-ring-toggle:focus-visible{outline:2px solid var(--orange); outline-offset:2px;}
+  .radius-ring-toggle:focus-visible{outline:2px solid var(--focus-ring); outline-offset:3px; box-shadow:0 0 0 6px var(--focus-halo);}
+  .radius-ring-toggle[aria-pressed="false"]:focus-visible .radius-ring-switch{box-shadow:inset 0 0 0 1px var(--text-dim);}
+
+  /* The town key by keyboard (Package A4, 2026-09-29). Each town is a
+     tabindex="0" stop; focusing it adds .is-linked to the row and its map
+     group, exactly as hover does (js/service-area-map.js). The row takes
+     the shared ring, and the linked dot gets a focus-coloured ring 5 units
+     outside it (.radius-focus, drawn by the same script) on top of the
+     existing glow, so the link reads without colour vision. */
+  .radius-key li{cursor:default;}
+  .radius-key li:focus-visible,
+  .radius-key li.is-linked,
+  .wrap:has(> .radius-figure) > .radius-key li:focus-visible,
+  .wrap:has(> .radius-figure) > .radius-key li.is-linked{
+    background:var(--bg-panel-2);
+    outline:2px solid var(--focus-ring);
+    outline-offset:0;
+    box-shadow:0 0 0 5px var(--focus-halo);
+  }
+  .radius-key li.is-linked::before,
+  .wrap:has(> .radius-figure) > .radius-key li.is-linked::before{background:var(--blue-light);}
+  .radius-key li.is-request.is-linked::before,
+  .wrap:has(> .radius-figure) > .radius-key li.is-request.is-linked::before{background:var(--orange);}
+  .radius-key li.is-linked b,
+  .wrap:has(> .radius-figure) > .radius-key li.is-linked b{color:var(--white);}
+  .radius-figure g.is-linked .radius-node{stroke-width:3;}
+  .radius-figure .radius-focus{fill:none; stroke:var(--focus-ring); stroke-width:2; opacity:0; pointer-events:none;}
+  .radius-figure g.is-linked .radius-focus{opacity:1;}
+  @media (prefers-reduced-motion: no-preference){
+    .radius-key li{transition:background-color .15s ease;}
+    .radius-figure .radius-focus{transition:opacity .15s ease;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .radius-ring-switch, .radius-ring-switch::after{transition:none;}
+  }
 
   /* the town list beside the map: the key on the 11 pages without town
      cards, the town cards on the 6 with them */
@@ -5928,7 +6006,7 @@ body:has(.cookie-banner) .back-to-top{
     .radius-figure .radius-chip{display:none;}
     /* On a phone the drawing is too small to float the toggle over: it sat on
        Mesquite's dashed line. It drops below the drawing instead. */
-    .radius-ring-toggle{position:static; margin:8px 10px 10px; min-height:36px; padding:6px 10px; font-size:11px;}
+    .radius-ring-toggle{position:static; margin:8px 10px 10px; min-height:44px; padding:8px 12px; font-size:13px;} /* 44px tap floor (Package A; was 36px / 11px) */
     .radius-compass{top:8px; right:8px; padding:4px 6px;}
   }
   /* === end Service-area map === */
@@ -5978,7 +6056,7 @@ body:has(.cookie-banner) .back-to-top{
     color:var(--text);
     transition:background-color .15s ease, color .15s ease;
   }
-  .nav-links .nav-dropdown-menu a:focus-visible{background:var(--orange-tint-soft); color:var(--orange-text-vivid); outline:2px solid var(--orange); outline-offset:-2px;}
+  .nav-links .nav-dropdown-menu a:focus-visible{background:var(--orange-tint-soft); color:var(--orange-text-vivid); outline:2px solid var(--focus-ring); outline-offset:-2px; box-shadow:none;}
   @media (hover:hover){
     .nav-dropdown:hover > a::after{transform:translateY(4px) rotate(225deg); opacity:1;}
     .nav-links .nav-dropdown-menu a:hover{background:var(--orange-tint-soft); color:var(--orange-text-vivid);}
