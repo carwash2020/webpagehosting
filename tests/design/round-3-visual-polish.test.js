@@ -31,6 +31,13 @@ test('review-card quotes render at a fixed height with line-clamp, so every card
 test('the service-area diagram no longer draws the concentric "orbit ring" background', () => {
   assert.doesNotMatch(STYLES, /\.radius-ring\{/);
   assert.doesNotMatch(INDEX, /class="radius-ring"/);
+  // 2026-09-29: the service-area map draws one ring on purpose -- the
+  // 15-mile no-trip-fee radius, labelled and switchable. It is its own
+  // class, and it has to stay a single ring, never a set of orbits.
+  const fee = INDEX.match(/<g class="radius-fee-ring">([\s\S]*?)<\/g>/);
+  assert.ok(fee, 'expected the 15-mile fee ring');
+  assert.equal((fee[1].match(/<circle/g) || []).length, 1, 'one ring, not concentric ones');
+  assert.match(fee[1], /15 MI &middot; NO TRIP FEE/);
 });
 
 test('the service-area diagram viewBox grew to fit the wider-spaced layout (760x420 -> 760x480), on all 9 pages', () => {

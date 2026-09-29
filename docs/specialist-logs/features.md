@@ -3366,4 +3366,9 @@ The B1 pass turned booking.html's "Your Appointment" sidebar into a ticket that 
 
 The P2 brief allowed a large, wired "5.0" rating in the homepage reviews chapter. Claude Design left it out to keep the review-stats hook counts provably unchanged. If it's wanted, reuse the `js-review-rating-stat` hook. Before adding a second instance, check `js/review-stats.js`'s selector counts and the tests that count the hooks. The brief also allowed a teardown SVG redraw, left out for the same reason with the `tdScrub` state machine.
 
+## 2026-09-29 -- hand-off from the service-area map port (not built): keyboard linking and a live "today's route"
+
+- **Keyboard linking.** Hovering a `.radius-key` town lights it on the map. The key items aren't focusable (plain `<li>`), so there's no keyboard equivalent yet. If the key items ever become links, add `focus`/`blur` to the same handler in `js/service-area-map.js`.
+- **A live route.** The looping orange route is decorative: a fixed tour of the towns. A real "where we are today" line would need the day's schedule, which is private. Don't wire it to booking data on public pages.
+
 <!-- Add new entries above this line -->

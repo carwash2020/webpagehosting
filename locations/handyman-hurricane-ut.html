@@ -81,7 +81,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/styles.css?v=3f425f2175">
+<link rel="stylesheet" href="/styles.css?v=c20d5f6111">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -501,94 +501,93 @@
            treatment (dashed, orange) here exactly as everywhere else. -->
       <div class="radius-figure" data-reveal data-focus="hurricane">
         <svg viewBox="0 0 760 480" role="img" aria-label="Service area diagram centered on St. George, showing Washington City, Hurricane, Santa Clara and Ivins, La Verkin and Leeds as standard coverage, with Cedar City and Mesquite available by request">
-          <!-- Design feedback (2026-09-08): the old concentric "orbit
-               ring" background read as a gimmicky globe/radar motif,
-               and Washington City/Hurricane's spokes were only 15
-               degrees apart -- cramped regardless of the real driving
-               distance between them. Rings are gone. Every city is now
-               placed by angle-from-hub (clockwise from north) and a
-               radius tier -- 160 for standard coverage, 235 for
-               by-request -- spaced at least 50 degrees apart. (Update,
-               2026-09-11: Leeds and La Verkin went into the two open
-               ranges this diagram had reserved, 120-190 and 280-330
-               degrees -- which put Leeds south-east and La Verkin
-               north-west, against their own "north"/"east" notes.)
-               Update, 2026-09-25: Leeds, La Verkin and Washington City
-               now sit on their real bearings from St. George as far as
-               the drawing allows: Leeds 52 degrees (true ~52), Washington
-               City 63 (true ~63), La Verkin 83 (true ~61-68; it can't
-               share Washington City's line, so it sits between it and
-               Hurricane, farther out, as it really is). Those four are
-               inside a real 20-degree wedge, so the 50-degree rule no
-               longer holds there, and their labels sit beside or above
-               the node instead of centered under it. The positions came
-               from a search that measures real label boxes, so a new or
-               moved city needs a fresh collision check in a browser. -->
+          <!-- The service-area map (2026-09-29), ported from Claude Design's first
+               homepage prototype: towns placed from real latitude and longitude
+               (equirectangular, cos 37.1 degrees) and projected into this 760x480
+               frame by scratchpad/gen_map.py, with I-15, SR-9 and the Virgin River
+               drawn in, and the 15-mile no-trip-fee radius as a ring. The drawing
+               keeps the diagram's old contract: one flat <g data-city> per town
+               (spoke, node, name, note), 5 solid spokes and 2 dashed by-request
+               ones, the hub last. Cedar City and Mesquite are off the edge of the
+               drawing, so their dashed lines end at a labelled chip. -->
+          <defs>
+            <pattern id="radiusGrid" width="39.6" height="39.6" patternUnits="userSpaceOnUse" x="31.9" y="13.6"><path d="M39.6 0 H0 V39.6" fill="none" class="radius-grid-line"/></pattern>
+            <radialGradient id="radiusGlow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ff8000" stop-opacity=".13"/><stop offset="1" stop-color="#ff8000" stop-opacity="0"/></radialGradient>
+          </defs>
+          <g class="radius-base" aria-hidden="true">
+            <rect class="radius-grid" x="-40" y="-40" width="840" height="560" fill="url(#radiusGrid)"/>
+            <path class="radius-river" d="M624.1 134.6 C597.7 139.9 591.1 142.5 584.5 147.8 C555.5 163.6 544.9 184.7 505.3 200.6 C452.6 219 413 242.8 366.8 266.5 C320.6 289 281 302.2 244.1 328.5 C201.9 361.5 135.9 401.1 83.1 438.1"/>
+            <path class="radius-road" d="M168.9 381.3 L219 344.4 L267.8 306.1 L307.4 269.2 L335.1 250.7 L381.3 217.7 L413 199.2 L452.6 170.2 L494.8 114.8 L518.5 81.8 L542.3 54.1 L566 34.3 L579.2 -7.9"/>
+            <path class="radius-road is-minor" d="M413 199.2 L452.6 196.6 L492.2 187.4 L550.2 175.5 L566 150.4 L624.1 143.8 L703.3 153.1"/>
+            <text class="radius-road-label" x="257.3" y="287.6" text-anchor="end">I-15</text>
+            <circle class="radius-glow" cx="335.4" cy="251.1" r="197.9" fill="url(#radiusGlow)"/>
+            <g class="radius-fee-ring"><circle cx="335.4" cy="251.1" r="209.8"/><text x="117.6" y="255.1" text-anchor="end">15 MI &middot; NO TRIP FEE</text></g>
+            <path class="radius-route" pathLength="1000" d="M335.4 251.1 L259.3 199.4 L381.7 218.2 L495.2 115.1 L505.3 5.3 L565.9 150 L550.3 175 L335.4 251.1 L96.3 424.9 L335.4 251.1"/>
+          </g>
+          <path class="radius-trail" pathLength="1" d="M335.4 251.1 L550.3 175" aria-hidden="true"/>
+
           <g data-city="washington-city">
-            <line class="radius-spoke" pathLength="1" x1="380" y1="210" x2="482" y2="158"/>
-            <circle class="radius-node" cx="482" cy="158" r="7"/>
-            <text class="radius-name" x="496" y="157" text-anchor="start">Washington City</text>
-            <text class="radius-note" x="496" y="174" text-anchor="start">Right next door</text>
+            <line class="radius-spoke" pathLength="1" x1="335.4" y1="251.1" x2="381.7" y2="218.2"/>
+            <circle class="radius-node" cx="381.7" cy="218.2" r="7"/>
+            <text class="radius-name" x="392.1" y="240.4" text-anchor="start">Washington City</text>
+            <text class="radius-note" x="392.1" y="257.4" text-anchor="start">Right next door</text>
           </g>
 
           <g data-city="hurricane">
-            <line class="radius-spoke" pathLength="1" x1="380" y1="210" x2="539" y2="218"/>
-            <circle class="radius-node" cx="539" cy="218" r="7"/>
-            <text class="radius-name" x="539" y="236" text-anchor="middle">Hurricane</text>
-            <text class="radius-note" x="539" y="253" text-anchor="middle">About 20 minutes east</text>
+            <line class="radius-spoke" pathLength="1" x1="335.4" y1="251.1" x2="550.3" y2="175"/>
+            <circle class="radius-node" cx="550.3" cy="175" r="7"/>
+            <text class="radius-name" x="550.3" y="197.1" text-anchor="middle">Hurricane</text>
+            <text class="radius-note" x="550.3" y="214.1" text-anchor="middle">About 20 minutes east</text>
           </g>
 
           <g data-city="santa-clara-ivins">
-            <line class="radius-spoke" pathLength="1" x1="380" y1="210" x2="222" y2="227"/>
-            <circle class="radius-node" cx="222" cy="227" r="7"/>
-            <text class="radius-name" x="222" y="245" text-anchor="middle">Santa Clara &amp; Ivins</text>
-            <text class="radius-note" x="222" y="262" text-anchor="middle">West side, near Snow Canyon</text>
+            <line class="radius-spoke" pathLength="1" x1="335.4" y1="251.1" x2="259.3" y2="199.4"/>
+            <circle class="radius-node" cx="259.3" cy="199.4" r="7"/>
+            <text class="radius-name" x="259.3" y="186.2" text-anchor="middle">Santa Clara &amp; Ivins</text>
+            <text class="radius-note" x="259.3" y="203.2" text-anchor="middle">West side, near Snow Canyon</text>
           </g>
 
           <g data-city="leeds">
-            <line class="radius-spoke" pathLength="1" x1="380" y1="210" x2="518" y2="102"/>
-            <circle class="radius-node" cx="518" cy="102" r="7"/>
-            <text class="radius-name" x="518" y="71" text-anchor="middle">Leeds</text>
-            <text class="radius-note" x="518" y="88" text-anchor="middle">About 20 minutes north</text>
+            <line class="radius-spoke" pathLength="1" x1="335.4" y1="251.1" x2="495.2" y2="115.1"/>
+            <circle class="radius-node" cx="495.2" cy="115.1" r="7"/>
+            <text class="radius-name" x="495.2" y="101.9" text-anchor="middle">Leeds</text>
+            <text class="radius-note" x="495.2" y="118.9" text-anchor="middle">About 20 minutes north</text>
           </g>
 
           <g data-city="la-verkin">
-            <line class="radius-spoke" pathLength="1" x1="380" y1="210" x2="608" y2="182"/>
-            <circle class="radius-node" cx="608" cy="182" r="7"/>
-            <text class="radius-name" x="622" y="181" text-anchor="start">La Verkin</text>
-            <text class="radius-note" x="622" y="198" text-anchor="start">About 25 minutes east</text>
+            <line class="radius-spoke" pathLength="1" x1="335.4" y1="251.1" x2="565.9" y2="150"/>
+            <circle class="radius-node" cx="565.9" cy="150" r="7"/>
+            <text class="radius-name" x="565.9" y="136.9" text-anchor="middle">La Verkin</text>
+            <text class="radius-note" x="565.9" y="153.9" text-anchor="middle">About 25 minutes east</text>
           </g>
 
           <g data-city="cedar-city" class="is-request">
-            <line class="radius-spoke is-request" x1="380" y1="210" x2="300" y2="78"/>
-            <circle class="radius-node is-request" cx="300" cy="78" r="7"/>
-            <text class="radius-name is-request" x="300" y="96" text-anchor="middle">Cedar City</text>
-            <text class="radius-note" x="300" y="113" text-anchor="middle">By request &middot; about an hour north</text>
+            <line class="radius-spoke is-request" x1="335.4" y1="251.1" x2="505.3" y2="5.3"/>
+            <rect class="radius-chip" x="375.6" y="5.3" width="208.5" height="34.6" rx="5"/>
+            <circle class="radius-node is-request" cx="479.9" cy="44.9" r="7"/>
+            <text class="radius-name is-request" x="479.9" y="19.8" text-anchor="middle">Cedar City</text>
+            <text class="radius-note" x="479.9" y="33.7" text-anchor="middle">By request &middot; about an hour north</text>
           </g>
 
           <g data-city="mesquite" class="is-request">
-            <line class="radius-spoke is-request" x1="380" y1="210" x2="263" y2="332"/>
-            <circle class="radius-node is-request" cx="263" cy="332" r="7"/>
-            <text class="radius-name is-request" x="263" y="350" text-anchor="middle">Mesquite, NV</text>
-            <text class="radius-note" x="263" y="367" text-anchor="middle">By request &middot; about 40 minutes southwest</text>
+            <line class="radius-spoke is-request" x1="335.4" y1="251.1" x2="96.3" y2="424.9"/>
+            <rect class="radius-chip" x="12.9" y="410.3" width="232.2" height="34.6" rx="5"/>
+            <circle class="radius-node is-request" cx="129" cy="398.5" r="7"/>
+            <text class="radius-name is-request" x="129" y="424.8" text-anchor="middle">Mesquite, NV</text>
+            <text class="radius-note" x="129" y="438.7" text-anchor="middle">By request &middot; about 40 minutes southwest</text>
           </g>
 
-          <!-- Hub drawn LAST, after every spoke, so it paints on top of
-               all 7 lines converging on it (2026-09-07, real bug found
-               from a live screenshot: with the hub painted first, in
-               source order, each spoke line painted over it, making
-               spokes look like they pierced straight through the hub
-               dot instead of visibly terminating at it). SVG has no
-               z-index -- later elements always paint over earlier ones
-               at the same stacking context, so document order IS the
-               fix here. -->
-          <path class="radius-trail" pathLength="1" d="M380 210 L539 218" aria-hidden="true"/>
+          <!-- Hub drawn LAST, after every spoke, so it paints on top of the
+               lines converging on it: SVG has no z-index, document order is it. -->
           <g data-city="st-george" class="is-hub">
-            <circle class="radius-hub" cx="380" cy="210" r="10"/>
-            <text class="radius-hub-name" x="380" y="243" text-anchor="middle">ST. GEORGE</text>
-            <text class="radius-note" x="380" y="261" text-anchor="middle">Home base</text>
+            <circle class="radius-hub" cx="335.4" cy="251.1" r="10"/>
+            <text class="radius-hub-name" x="335.4" y="281.1" text-anchor="middle">ST. GEORGE</text>
+            <text class="radius-note" x="335.4" y="298.1" text-anchor="middle">Home base</text>
           </g>
-        </svg>      </div>
+        </svg>
+        <div class="radius-compass" aria-hidden="true"><svg viewBox="0 0 20 28"><path d="M10 1 L17 26 L10 20 L3 26 Z" class="radius-compass-edge"/><path d="M10 1 L10 20 L3 26 Z" class="radius-compass-fill"/></svg>N</div>
+        <button type="button" class="radius-ring-toggle" aria-pressed="true"><span class="radius-ring-switch" aria-hidden="true"></span>No trip fee within 15 miles</button>
+      </div>
       <p class="radius-legend" data-reveal>
         <span><b></b> Standard coverage</span>
         <span><b class="is-request"></b> Available by request</span>
@@ -994,5 +993,6 @@
 <script src="/js/triage.js?v=7fe7dd717f" defer></script>
 <script src="/js/analytics-events.js?v=4a6fd9aa19" defer></script>
 <script src="/js/mobile-nav-collapsible.js?v=cda30dbcff" defer></script>
+<script src="/js/service-area-map.js?v=cf98c8bb91" defer></script>
 </body>
 </html>

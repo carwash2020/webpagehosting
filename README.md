@@ -5892,3 +5892,13 @@ Claude Design's first homepage prototype redrew more than the hero, but only the
 - **The hero** gets its orange "DONE RIGHT." back, a "Free estimate" label on the form, today's hours and "owner on the call" on the open card, and a scroll cue. The trust points under it are open columns.
 
 All homepage-only; no content or links changed. The service-area map and the header menus from the same prototype follow in their own updates.
+
+## What changed, 2026-09-29 -- The service-area diagram becomes a real map, on the homepage and all 16 city and service pages
+
+Ported from Claude Design's first homepage prototype.
+
+- **The map.** Towns are placed from their real coordinates, with I-15, SR-9 and the Virgin River drawn in, and the 15-mile no-trip-fee radius as a ring you can switch on and off. Cedar City and Mesquite, by request, are labelled at the edge.
+- **The town list** sits beside the map on desktop.
+- **On city pages**, hovering a town in the list lights it on the map.
+
+Nothing removed: every town, note, link and the focus-town trail are still there. Screenshots are in `docs/service-area-map-2026-09-29/`.

@@ -89,13 +89,26 @@ test('on a phone the only SVG text left, the hub name, renders at 16px or more',
   }
 });
 
-test('the key is hidden on desktop, shown on phones, and its text is 16px or more', () => {
+test('the key shows on phones at 16px or more, and beside the map on desktop without undercutting that floor', () => {
   assert.match(STYLES, /\.radius-key\{display:none;\}/);
   const { body, start } = phoneBlock('.radius-key');
-  assert.ok(STYLES.indexOf('.radius-key{display:none;}') < start, 'the desktop display:none must come before the phone block');
+  assert.ok(STYLES.indexOf('.radius-key{display:none;}') < start, 'the base display:none must come before the phone block');
   assert.match(rule(body, '.radius-key'), /display:grid/);
   assert.ok(px(rule(body, '.radius-key b'), 'font-size') >= 16);
   assert.ok(px(rule(body, '.radius-key small'), 'font-size') >= 16);
+  // 2026-09-29: the service-area map moved each town's note off the
+  // drawing and into the list beside it, so on desktop the key is that
+  // list. Its desktop rules are more specific than the phone block, so
+  // any font-size they set must sit behind a min-width query, or the
+  // phone floor above would lose the cascade.
+  assert.match(STYLES, /\.wrap:has\(> \.radius-figure\) > \.radius-key\{[^}]*display:grid/);
+  for (const m of STYLES.matchAll(/\.wrap:has\(> \.radius-figure\) > \.radius-key (?:b|small)\{([^}]*)\}/g)) {
+    if (!/font-size/.test(m[1])) continue;
+    const before = STYLES.slice(0, m.index);
+    const open = before.lastIndexOf('@media');
+    assert.ok(open !== -1 && /@media \(min-width:(7[6-9]\d|[89]\d\d|\d{4,})px\)\{/.test(before.slice(open, open + 40)) && before.slice(open).split('{').length - before.slice(open).split('}').length > 0,
+      'a desktop key font-size must be inside a min-width media query');
+  }
 });
 
 test('the .areas-links cards get the same 16px floor, and win the cascade', () => {

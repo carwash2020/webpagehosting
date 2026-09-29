@@ -561,7 +561,7 @@ function fixVersions(dir) {
 // that one real hash -- the same automatic, no-judgment-call mechanism
 // every other shared file already gets, just no longer scoped to a single
 // directory.
-const GLOBAL_SHARED_FILES = ['styles.css', 'js/triage.js', 'js/business-hours.js', 'js/site-motion.js', 'js/analytics-events.js', 'js/site-banners.js', 'js/utm-tracking.js', 'signature-pad.js', 'js/booking-flow.js', 'js/review-stats.js', 'js/pdf-layout.js', 'tools/styles-tools.css', 'blog/blog.css', 'js/cookie-consent.js', 'js/mobile-nav-collapsible.js'];
+const GLOBAL_SHARED_FILES = ['styles.css', 'js/triage.js', 'js/business-hours.js', 'js/site-motion.js', 'js/analytics-events.js', 'js/site-banners.js', 'js/utm-tracking.js', 'signature-pad.js', 'js/booking-flow.js', 'js/review-stats.js', 'js/pdf-layout.js', 'tools/styles-tools.css', 'blog/blog.css', 'js/cookie-consent.js', 'js/mobile-nav-collapsible.js', 'js/service-area-map.js'];
 // js/cookie-consent.js and js/mobile-nav-collapsible.js (2026-09-25): both
 // loaded on every public page with no ?v= at all, so an edit to either sat
 // behind whatever the browser had cached. A bare reference to one of these is
