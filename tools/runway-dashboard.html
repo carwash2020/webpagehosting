@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=c1e56c6904"></script>
+<script src="/tools/auth.js?v=7d9fef1e42"></script>
 <script>
   // Security gate -- same pattern as every other internal tool page.
   // This one matters more than most: it holds real mortgage, debt, and
@@ -207,6 +207,23 @@
     text-align: center; padding: 24px;
   }
   .role-blocked-overlay.is-shown { display: flex; }
+  /* The "you don't have access" screen (Package B6, 2026-09-29), copied
+     from styles-tools.css for the same self-contained reason, plus the
+     overlay's secondary button, which this page never styled. */
+  [data-rb] .th-rb-mark { width: 72px; height: 72px; margin: 0 auto 22px; display: grid; place-items: center; clip-path: polygon(25% 6%, 75% 6%, 97% 50%, 75% 94%, 25% 94%, 3% 50%); background: var(--orange-tint-border); color: var(--orange-light); }
+  [data-rb] .th-rb-mark svg { width: 28px; height: 28px; }
+  [data-rb] h1 { margin: 0 0 12px; font-family: var(--font-display); font-weight: 400; font-size: clamp(30px, 6vw, 44px); line-height: 1.05; letter-spacing: .4px; color: var(--white); text-transform: uppercase; }
+  [data-rb] .th-rb-body { max-width: 440px; margin: 0 auto 26px; font-family: var(--font-app); font-size: 16px; line-height: 1.55; color: var(--text-dim); }
+  [data-rb] .th-rb-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 340px; margin: 0 auto; }
+  [data-rb] .th-rb-actions > * { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; margin: 0; text-decoration: none; box-sizing: border-box; font-family: var(--font-app); }
+  [data-rb]:not(.is-unconfirmed) .th-rb-retry { display: none; }
+  [data-rb].is-unconfirmed .th-rb-switch { display: none; }
+  [data-rb] .role-blocked-retry-note { flex-basis: 100%; }
+  .role-blocked-overlay .secondary-btn { background: var(--bg-panel-3); border: 1px solid var(--border); color: var(--white); border-radius: 8px; padding: 11px 22px; font-family: var(--font-ui); font-size: 14.5px; cursor: pointer; }
+  @media (min-width: 761px) {
+    [data-rb] .th-rb-actions { flex-direction: row; flex-wrap: wrap; justify-content: center; max-width: none; }
+    [data-rb] .th-rb-actions > * { min-width: 180px; }
+  }
   .skip-link{
     font-family:var(--font-ui);
     position:absolute; top:-60px; left:12px;
@@ -1506,11 +1523,15 @@
 </head>
 <body class="th-has-sidebar" data-th-page="runway-dashboard">
 
-<div id="roleBlockedOverlay" class="role-blocked-overlay">
-  <div class="tool-title" style="font-size:22px;">Not available here</div>
-  <p class="tool-sub" style="max-width:420px;">Runway Dashboard isn't part of your role's access. Nothing's wrong with your account -- check with whoever manages roles if you think this should be different.</p>
-  <button class="primary-btn" style="margin-top:12px;" onclick="retryRoleCheck(this, canViewRunway)">Try again</button>
-  <a href="/tools/workspace.html" class="secondary-btn" style="display:inline-block; margin-top:12px; text-decoration:none;">Back to Dashboard</a>
+<div id="roleBlockedOverlay" class="role-blocked-overlay" data-rb role="alert">
+  <div class="th-rb-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+  <h1>Runway</h1>
+  <p class="th-rb-body">This page isn’t part of your account’s access. <span class="th-rb-who"></span> If you need something from here, ask Steve.</p>
+  <div class="th-rb-actions">
+    <a href="/tools/workspace.html" class="primary-btn">Back to Home</a>
+    <button type="button" class="secondary-btn th-rb-switch" onclick="signOut()">Switch account</button>
+    <button type="button" class="secondary-btn th-rb-retry" onclick="retryRoleCheck(this, canViewRunway)">Try again</button>
+  </div>
 </div>
 <!-- F18 fix (2026-09-07): the hand-rolled desktop-only sidebar (+ its own
      local copy of just the 11 icons it needed) that used to live here is

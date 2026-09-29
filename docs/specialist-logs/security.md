@@ -1482,4 +1482,10 @@ Net effect: an internal account signed into `/portal/login.html` with its own cr
 - Confirmed via `pg_class`/`information_schema.role_routine_grants` that the tables have no `FORCE ROW LEVEL SECURITY`, so the `postgres`-owned functions do bypass RLS as intended, and that `anon` has zero grants on the new functions after the follow-up revoke.
 - Full test suite, `check-consistency.js`, `check-undefined-vars.js`, `npm run fix-versions` (service worker cache bump for the 4 changed tool pages).
 
+## 2026-09-29 -- (from the visual lane, Package B) Employee accounts saw money on Workspace Home; the UI is fixed, the device copy is not
+
+- **Found while applying Claude Design Package B.** On Workspace Home, the Today "Money owed" card (`renderTodayMoney()`) and the Income lane (`renderInvoicesList()`) had no permission check. An Employee account with none of the five finance-domain permissions saw every unpaid invoice (client, amount, due date) and the Mark paid and Remind buttons, while Invoices and Finance themselves blocked that account. Only the "To invoice" row inside the card was gated.
+- **Fixed in this PR (UI).** Both now show only when the role is confirmed and has any finance-domain permission, the same rule Business Snapshot used. The figures are left out of the DOM otherwise, and a CSS lock on `body[data-home-money]` is the second layer. A role that hasn't loaded, or couldn't be confirmed, now fails closed. That includes "Your week", whose `canFinance` treated a null role as allowed.
+- **Not fixed, and a question for this lane.** Every staff device still holds the whole `workspace_sync` blob in localStorage, invoices included, because one shared row syncs to everyone. So an Employee who opens devtools can still read the figures the UI now hides. Closing that means per-role sync (a separate employee blob, or relational tables with RLS for invoices), which is a design decision, not a patch.
+
 <!-- Add new entries above this line -->

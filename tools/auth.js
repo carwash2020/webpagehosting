@@ -621,6 +621,11 @@ async function loadCurrentUserRole(overrideAccessToken, overrideEmail) {
     // page's nav/role-dependent UI briefly (and wrongly) believe someone
     // else's login-in-progress account is the one signed in on THIS tab.
     if (!usingOverride) {
+      // body[data-role-state] (2026-09-29, Claude Design Package B): a page
+      // can start "pending" in its own markup and style what shows before
+      // the role is known; this settles it to "ready" (a role row was
+      // confirmed) or "none" (no row, or the check itself failed).
+      try { if (document.body) document.body.setAttribute('data-role-state', _cachedRoleInfo ? 'ready' : 'none'); } catch (e) { /* ignore */ }
       try { window.dispatchEvent(new CustomEvent('th-role-loaded', { detail: _cachedRoleInfo })); } catch (e) { /* ignore */ }
     }
   }
@@ -733,6 +738,35 @@ async function retryRoleCheck(buttonEl, checkFn, reloadFn) {
   note.style.cssText = 'color:#ff8a80; font-size:13px; margin-top:8px;';
   note.textContent = "Still can't confirm access -- if this keeps happening, check your internet connection.";
   buttonEl.insertAdjacentElement('afterend', note);
+}
+
+// The "you don't have access" screen (Claude Design Package B6,
+// 2026-09-29), on the 7 permission-gated pages: #roleBlockedOverlay on
+// Finance, Invoices, Contracts, Reviews and Runway, and the in-page
+// blocked view on Dev Tools and Site Content, each marked [data-rb].
+// Says who is signed in once the role is known. If the check itself
+// failed (no role could be confirmed -- a dropped connection, the case
+// "Try again" exists for), it says that instead and shows Try again;
+// otherwise Try again can't help, so it's hidden.
+function fillRoleBlockedScreens() {
+  const boxes = document.querySelectorAll('[data-rb]');
+  if (!boxes.length) return;
+  const role = getCurrentUserRole();
+  const email = getCurrentUserEmail() || '';
+  const first = getCurrentUserFirstName() || '';
+  const local = email.split('@')[0] || '';
+  const name = first && first.indexOf('@') === -1 ? first : (local ? local.charAt(0).toUpperCase() + local.slice(1) : 'this account');
+  boxes.forEach((box) => {
+    box.classList.toggle('is-unconfirmed', !role);
+    const who = box.querySelector('.th-rb-who');
+    if (!who) return;
+    who.textContent = role
+      ? 'You\u2019re signed in as ' + name + (role.roleName ? ' (' + role.roleName + ')' : '') + '.'
+      : 'We couldn\u2019t confirm this account\u2019s access just now \u2014 check your connection and try again.';
+  });
+}
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  window.addEventListener('th-role-loaded', fillRoleBlockedScreens);
 }
 
 // Decodes the JWT's payload to pull out the logged-in user's ID (the

@@ -112,6 +112,10 @@ function loadDashboard(data) {
     runScripts: 'dangerously', url: 'https://example.com/tools/workspace.html',
     beforeParse(w) {
       w.requireAuth = () => {};
+      // A signed-in Owner: money on Home waits for a confirmed role with a
+      // finance permission (2026-09-29), and auth.js isn't loaded here.
+      w.getCurrentUserRole = () => ({ roleName: 'Owner' });
+      w.canManageInvoices = () => true;
       w.requestAnimationFrame = (cb) => setTimeout(cb, 0); // renderMetrics animates its numbers
       for (const [k, v] of Object.entries(data)) w.localStorage.setItem(k, JSON.stringify(v));
     },

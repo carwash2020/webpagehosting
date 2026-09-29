@@ -5990,3 +5990,14 @@ The first of Claude Design's four next-pass packages. How things look and read t
 An automated WCAG scan across 32 pages went from 25 problems on 8 pages to none. Details and the places the code differed from the package are in `docs/specialist-logs/visual.md`.
 
 Tests: `tests/design/package-a-accessibility.test.js` (9; all 9 fail on the previous code).
+
+## What changed, 2026-09-29 -- Workspace Home opens on your last visit; money only for accounts that may see it; a clearer "no access" screen (Claude Design Package B)
+
+- **Home opens instantly.** It used to show grey placeholders until the network answered. It now shows the day as it was at your last visit straight away, with a small marker by the title: "Updated 5m ago", then "Refreshing", then "Up to date". Anything that changed when the fresh data lands gets a brief orange tint. Requests, leads and bookings still load from the network as before.
+- **Fix: Employee accounts could see money on Home.** The Money owed card and the Income list had no permission check. An account without any money permission saw every unpaid invoice (client, amount, due date) and could tap Mark paid, even though Invoices and Finance blocked it. Both now appear only for accounts with a money permission, the same rule the Business snapshot already followed. Until an account's access is confirmed, Money owed shows a neutral "Checking access" bar.
+- **The "no access" screen.** On Finance, Invoices, Contracts, Reviews, Runway, Dev Tools and Site Content, an account without access now sees the page's name, who is signed in ("You're signed in as Jake (Employee)."), and two buttons: Back to Home and Switch account. If access couldn't be checked at all, for example on a dropped connection, it says so and offers Try again instead.
+- **No more blank screen on Dev Tools and Site Content.** While the access check runs, they show the page's name and a placeholder card instead of nothing.
+
+The Employee fix covers what Home shows. The data itself still syncs to every staff device; that's logged for the security lane in `docs/specialist-logs/security.md`. Details are in `docs/specialist-logs/visual.md`.
+
+Tests: `tests/tools/package-b-loading-access.test.js` (11; all 11 fail on the previous code).
