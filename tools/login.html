@@ -48,7 +48,7 @@
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
 <script src="/tools/tools-dialogs.js?v=33e55c2858" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=a1d4851522" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=240c40d38d" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -160,6 +160,52 @@
       max-width: none; border-radius: 18px 18px 0 0; border-bottom: 0;
       padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
       animation: th-w-sheet-in var(--th-dur-sheet) var(--th-ease);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) { body.th-tool-page[data-th-page="login"] .login-box { animation: none; } }
+  /* Workspace app redesign v2, §8.16 (2026-09-29): visual refinement on
+     top of W5, appended so every rule above stays exactly as it was.
+     CSS only -- no step, field, id or script changed, and the steps and
+     their order are still docs/INTERNAL-MFA-ENFORCEMENT.md's. A centred
+     400px card on a phone and on a computer (v2 replaces W5's phone
+     bottom sheet), radius 22, the brand hex at 56px, Oswald labels over
+     50px fields, a 52px CTA with the U01 offset shadow, and the text
+     links centred under it. The W5 orange top rule gives way to the hex
+     as the brand mark, as in the prototype. */
+  body.th-tool-page[data-th-page="login"] .login-box {
+    max-width: 400px; border-radius: var(--th-radius-xl); padding: 30px 26px;
+    box-shadow: var(--shadow-hover);
+    animation: th-v2-login-in .32s var(--th-ease) both;
+  }
+  body.th-tool-page[data-th-page="login"] .login-box .login-logo { width: 56px; height: auto; margin: 0 0 16px; }
+  body.th-tool-page[data-th-page="login"] .login-box .login-sub { font-size: 14.5px; }
+  body.th-tool-page[data-th-page="login"] .login-box .login-field label { letter-spacing: 1.2px; margin-bottom: 6px; }
+  body.th-tool-page[data-th-page="login"] .login-box .login-field input,
+  body.th-tool-page[data-th-page="login"] .login-box .mfa-code-input {
+    min-height: 50px; border-radius: 12px; background: var(--th-field);
+  }
+  body.th-tool-page[data-th-page="login"] .login-box .mfa-recovery-codes-list { border-radius: 12px; background: var(--th-field); }
+  body.th-tool-page[data-th-page="login"] .login-box .login-btn { border-radius: var(--th-radius-track); }
+  body.th-tool-page[data-th-page="login"] .login-box .primary-btn.login-btn {
+    min-height: 52px; box-shadow: 3px 3px 0 0 var(--orange-dark);
+    font-family: var(--font-ui); font-size: 15px; letter-spacing: .9px; text-transform: uppercase;
+  }
+  body.th-tool-page[data-th-page="login"] .login-box .primary-btn.login-btn:active {
+    transform: translate(2px, 2px); box-shadow: 1px 1px 0 0 var(--orange-dark);
+  }
+  body.th-tool-page[data-th-page="login"] .login-box #forgotPasswordLink,
+  body.th-tool-page[data-th-page="login"] .login-box #cancelResetLink,
+  body.th-tool-page[data-th-page="login"] .login-box .mfa-link-btn {
+    display: block; width: 100%; min-height: 44px; text-align: center; font-size: 13.5px;
+  }
+  @keyframes th-v2-login-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  @media (max-width: 480px) {
+    body.th-tool-page[data-th-page="login"] {
+      align-items: center; padding: max(16px, env(safe-area-inset-top, 0px)) 16px max(16px, env(safe-area-inset-bottom, 0px));
+    }
+    body.th-tool-page[data-th-page="login"] .login-box {
+      max-width: 400px; border-radius: var(--th-radius-xl); border-bottom: 1px solid var(--border);
+      padding: 26px 22px; animation: th-v2-login-in .32s var(--th-ease) both;
     }
   }
   @media (prefers-reduced-motion: reduce) { body.th-tool-page[data-th-page="login"] .login-box { animation: none; } }

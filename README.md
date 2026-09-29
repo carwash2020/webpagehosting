@@ -5827,3 +5827,15 @@ The second v2 package (`design_handoff_workspace_app_v2` §8.5-8.7), built on th
 - **Contracts**: the three types are cards (the open one orange-tinted, with a one-line hint). Each section is a numbered card that says Done or To fill. The signatures card shows the exact authorization sentence from the contract's own PDF template and who is signing, and the two pads are dashed, side by side on a computer. Recent contracts are ruled rows with a ⋯ (Download PDF, Delete).
 
 Nothing was removed; every ⋯ runs the row's existing handler, confirm and undo included, and every number comes from the page's own render math. Runway still loads neither shared stylesheet: its copy of the v2 shell CSS (bottom bar, rings, action sheet, toasts) lives in its own `<style>`. Full write-up in `docs/specialist-logs/visual.md`, 2026-09-29.
+
+## What changed, 2026-09-29 -- Workspace app redesign v2: back office (Settings, Website, Dev Tools, sign-in)
+
+**Settings** opens on an account card: your initials in the brand hex, your name, your email and your role. Below it, each section is a grouped card of rows with an icon, the setting and its current state. Density, dark mode and push notifications are switches. Two-factor shows a green On pill, recovery codes have a ⋯ menu, and Sign out reads red.
+
+**Website** (site content) has a banner at the top that says how many edits aren't on the website yet, with Review changes and Publish. Publish always opens the same "Review before publishing" step as before. A section list with an orange dot marks which sections have edits. Each field says where it shows on the site. Hours are still seven separate days, as one list. FAQ questions and Terms sections each have a ⋯ for Move up, Move down and Delete. Edit history sits beside the editor on a wide screen.
+
+**Dev Tools** opens every tab on a question with its answer ("Is anything broken right now? All clear"), green when fine and orange when something needs a look, with one button for the next step. Panels are rounded cards, logs read as a code block, and Access shows a table of what each role preset can open. Every editable list has a ⋯ menu.
+
+**Sign-in and reset password** are a centred card on a phone and a computer, with the brand hex, larger fields and a bigger button. The steps, their order and all sign-in, two-factor and reset logic are exactly as before. Only CSS changed, and every path was walked before and after with identical results.
+
+Nothing was removed; every action still runs the page's existing handler and confirm dialog. Full write-up in `docs/specialist-logs/visual.md`, 2026-09-29.
