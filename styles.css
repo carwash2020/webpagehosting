@@ -2135,6 +2135,13 @@
   html.page-legal .legal-doc .terms-body p,
   html.page-legal .legal-doc .terms-body li{max-width:68ch; font-size:16.5px; line-height:1.7; color:var(--text-dim);}
   html.page-legal .legal-doc .terms-body p{margin:0 0 14px;}
+  /* "Back to Home" is the grid's third child, so it fell into the 240px
+     contents column under the sticky list and ran into its last items as
+     the page scrolled to the end (2026-09-29 fix). It belongs under the
+     document, in the text column, in the site's UI face. */
+  @media (min-width:861px){html.page-legal .legal-doc > p{grid-column:2;}}
+  html.page-legal .legal-doc > p a{display:inline-flex; align-items:center; min-height:44px; font-family:var(--font-ui); font-size:14px; letter-spacing:.3px; color:var(--orange-text-vivid); text-decoration:none;}
+  @media (hover:hover){html.page-legal .legal-doc > p a:hover{text-decoration:underline;}}
 
   @media (max-width:860px){
     html.page-careers .careers-glance,
@@ -4093,6 +4100,12 @@
      featured card spans the row alone, so it sizes to its quote (the
      4-line clamp still caps it). */
   body.page-home #reviews .reviews-wall > .review-card:first-child .review-quote{font-size:clamp(22px, 2.6vw, 30px); line-height:1.35; height:auto;}
+  /* With the featured card on its own row, an even number of cards left
+     the last one alone in a half-empty row (four today). It takes the
+     full row too, sized to its quote like the featured card
+     (2026-09-29 fix). An odd count pairs up and is unaffected. */
+  body.page-home #reviews .reviews-wall > .review-card:last-child:nth-child(even){grid-column:1 / -1;}
+  body.page-home #reviews .reviews-wall > .review-card:last-child:nth-child(even) .review-quote{height:auto;}
 
   /* chapter 07 + 08: About and the service area as feature blocks */
   body.page-home #areas > .wrap{max-width:1180px;}

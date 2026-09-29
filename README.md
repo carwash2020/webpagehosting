@@ -5952,3 +5952,13 @@ Also checked, new this pass:
 Details are in `docs/specialist-logs/bugfix.md`. Two questions are in `docs/ACTION-ITEMS.md`.
 
 Tests: `tests/tools/work-request-staff-writes.test.js` (7; 6 fail on the previous code) and `tests/tools/haptic-user-activation.test.js` (8; 3 fail on the previous code).
+
+## What changed, 2026-09-29 -- Three layout fixes: long leads in Needs attention, Back to Home on the legal pages, the last homepage review
+
+Found on screenshots after the redesigns landed. Layout only; no button does anything different.
+
+- **Workspace Home, Needs attention.** A lead with a long email address pushed Handled and the ⋯ menu onto their own line under the text. The email now wraps inside its own column, and the buttons stay on the right. On a phone too narrow for both, the row still wraps as before. A long message used to stretch the lane (and the column beside it) by a screen. It now starts at four lines with a **Show more** button that opens the rest and reads **Show less** once open. The same applies to job applicants and booking notes. Short messages don't get the button.
+- **Privacy and Terms.** "← Back to Home" sat under the sticky contents list and ran into its last items as the page scrolled to the end. On desktop it now sits under the document, in the text column. It uses the site's label font in orange, with a 44px tap height.
+- **Homepage reviews.** The featured review has its own row and the rest pair up, so with four reviews the last one sat alone in a half-empty row. When the count leaves one over, that last review now takes the full row. An odd count still pairs up as before.
+
+Tests: `tests/design/visual-fixes-2026-09-29.test.js` (5; all 5 fail on the previous code).

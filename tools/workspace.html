@@ -67,7 +67,7 @@
     document.documentElement.style.colorScheme = saved === 'light' ? 'light' : 'dark';
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=be48268cda">
+<link rel="stylesheet" href="/styles.css?v=07696986d4">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=5ee5e06e3e">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=0e885bb435" defer></script>
@@ -889,6 +889,19 @@
   body.th-tool-page[data-th-page="workspace"] .ops-lane .lead-card-top { margin: 0; align-items: center; }
   body.th-tool-page[data-th-page="workspace"] .ops-lane .lead-card-name, body.th-tool-page[data-th-page="workspace"] .ops-lane .dash-list-item-title { font-family: var(--font-app); font-size: 14.5px; font-weight: 600; color: var(--text); }
   body.th-tool-page[data-th-page="workspace"] .ops-lane .lead-card-meta, body.th-tool-page[data-th-page="workspace"] .ops-lane .dash-list-item-meta { font-size: 12.5px; }
+  /* Lead / applicant rows (2026-09-29 fix). The name + contact column
+     starts from a 12rem basis and shrinks, so a long email wraps inside
+     it (.lead-card-meta already breaks anywhere) instead of pushing
+     Handled + the row menu onto their own line under the text. The row
+     still wraps on a phone too narrow for both. */
+  body.th-tool-page[data-th-page="workspace"] .lead-card-top > div:first-child { flex: 1 1 12rem; }
+  body.th-tool-page[data-th-page="workspace"] .lead-card-top > .dash-list-item-right { flex: 0 0 auto; }
+  /* A long message starts at four lines with a Show more toggle, so one
+     wordy lead can't stretch the lane (and the column beside it) by a
+     screen. */
+  body.th-tool-page[data-th-page="workspace"] .lead-card-details.is-clampable:not(.is-expanded) { display: -webkit-box; -webkit-line-clamp: 4; line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  body.th-tool-page[data-th-page="workspace"] .lead-card-more { display: inline-flex; align-items: center; min-height: 44px; padding: 0; border: 0; background: none; color: var(--orange-text-vivid); font-family: var(--font-app); font-size: 12.5px; font-weight: 600; cursor: pointer; }
+  body.th-tool-page[data-th-page="workspace"] .lead-card-more:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; border-radius: 4px; }
   /* The tinted icon tile: a tile (::before) and its glyph (::after, a mask). */
   body.th-tool-page[data-th-page="workspace"] .ops-lane .dash-list-item::before, body.th-tool-page[data-th-page="workspace"] .ops-lane .lead-card::before {
     content: ''; position: absolute; left: 0; top: 11px; width: 36px; height: 36px; border-radius: 11px;
@@ -2732,9 +2745,10 @@
             <button class="small-btn danger" onclick="deleteApplicantFromDashboard(${a.id})">Delete</button>
           </div>
         </div>
-        ${a.experience ? '<div class="lead-card-details">"' + escapeHtml(a.experience) + '"</div>' : ''}
-        ${a.message ? '<div class="lead-card-details">"' + escapeHtml(a.message) + '"</div>' : ''}
+        ${a.experience ? leadDetailsHtml(a.experience) : ''}
+        ${a.message ? leadDetailsHtml(a.message) : ''}
       </div>`).join('');
+    requestAnimationFrame(() => trimUnneededShowMore(container));
   }
 
   // Undoable-delete tracking for applicants, same pattern as leads.
@@ -2816,9 +2830,41 @@
             <button class="small-btn danger" onclick="deleteLeadFromDashboard(${l.id})">Delete</button>
           </div>
         </div>
-        ${l.details ? '<div class="lead-card-details">"' + escapeHtml(l.details) + '"</div>' : ''}
+        ${l.details ? leadDetailsHtml(l.details) : ''}
       </div>`).join('');
+    requestAnimationFrame(() => trimUnneededShowMore(container));
   }
+
+  // A lead's, applicant's or booking's own words (2026-09-29): anything past about
+  // four lines starts clamped (CSS, .is-clampable) with a Show more
+  // toggle. trimUnneededShowMore() drops the toggle again where the text
+  // turns out to fit, measured once the rows are on screen.
+  const LEAD_DETAILS_CLAMP_CHARS = 220;
+  function leadDetailsHtml(text) {
+    const long = String(text).length > LEAD_DETAILS_CLAMP_CHARS;
+    return '<div class="lead-card-details' + (long ? ' is-clampable' : '') + '">"' + escapeHtml(text) + '"</div>' +
+      (long ? '<button type="button" class="lead-card-more" aria-expanded="false">Show more</button>' : '');
+  }
+  function trimUnneededShowMore(container) {
+    if (!container) return;
+    container.querySelectorAll('.lead-card-details.is-clampable').forEach((box) => {
+      if (box.clientHeight && box.scrollHeight <= box.clientHeight + 1) {
+        box.classList.remove('is-clampable');
+        const btn = box.nextElementSibling;
+        if (btn && btn.classList.contains('lead-card-more')) btn.remove();
+      }
+    });
+  }
+  document.addEventListener('click', (e) => {
+    const btn = e.target && e.target.closest && e.target.closest('.lead-card-more');
+    if (!btn) return;
+    const box = btn.previousElementSibling;
+    if (!box) return;
+    const open = !box.classList.contains('is-expanded');
+    box.classList.toggle('is-expanded', open);
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    btn.textContent = open ? 'Show less' : 'Show more';
+  });
 
   // Item #13 extended (2026-08-20): undoable-delete tracking for leads.
   const pendingDeleteLeadIds = new Map();
@@ -2892,9 +2938,10 @@
             <button class="small-btn danger" onclick="deleteBookingFromDashboard(${b.id})">Delete</button>
           </div>
         </div>
-        ${b.notes ? '<div class="lead-card-details">"' + escapeHtml(b.notes) + '"</div>' : ''}
+        ${b.notes ? leadDetailsHtml(b.notes) : ''}
       </div>`;
     }).join('');
+    requestAnimationFrame(() => trimUnneededShowMore(container));
   }
 
   async function convertBookingToJob(id) {

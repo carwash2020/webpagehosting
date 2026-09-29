@@ -1486,3 +1486,31 @@ Two questions went to ACTION-ITEMS.md: v2 phone buttons under 44px (Settings 38p
 - **Header centers can be help buttons.** Playwright clicks an element's center. On job-tracker's Recurring Templates header at 390px, that's the "?" (which stops propagation), so the section doesn't open. Click near the title.
 - **Hit-test a control where a person would have it.** `scrollIntoViewIfNeeded()` can leave a row flush with the top edge, under a sticky `.hub-header`. And `styles.css` sets `html{scroll-behavior:smooth}`, so a scripted scroll is still moving when you measure. Scroll it to `block: 'center'` with `behavior: 'instant'` and wait for the box to settle, then call `elementFromPoint`.
 - **Harness state leaks through localStorage.** review-request.html never pulls the blob, so a "Mark received" persists across reloads in the harness. Re-seed its keys per load.
+
+## 2026-09-29 (later) -- Three layout slips from the owner's screenshots: Needs attention lead rows, legal Back to Home, homepage review orphan
+
+Reported with screenshots. All three are CSS/markup-level; no handler changed.
+
+- **Needs attention lead rows (tools/workspace.html).**
+  - **Cause:** `.lead-card-top` is a wrapping flex row. The name/contact column had no basis, so its min-content was the longest unbroken line (a long email), and `.dash-list-item-right` (Handled + ⋯) wrapped under it. Details had no cap, so one long pitch (a 700-character SEO offer in the screenshot) made the lane about 280px taller and stretched the grid row.
+  - **Fix:**
+    - The first column gets `flex: 1 1 12rem` and the button group `flex: 0 0 auto`. `.lead-card-meta` already breaks anywhere, so the email wraps inside the column.
+    - `leadDetailsHtml()` renders details over 220 characters with `.is-clampable`: a 4-line `line-clamp` plus a `<button type="button" class="lead-card-more" aria-expanded="false">Show more</button>`, 44px tall, with a focus ring. A delegated click handler toggles `.is-expanded`, `aria-expanded` and the label.
+    - After each render, `trimUnneededShowMore()` measures and drops the toggle where the text fits anyway.
+    - Leads, both applicant fields and booking notes use it.
+  - **Proof, 1352px desktop:**
+    - Before, on main: Pat Riley and Vaani had `actionsOnRight: false`, with details 281px and 151px tall.
+    - After: both are `true`, with details 86px and Show more. Show more expands to 281px, and the button reads "Show less" with `aria-expanded="true"`.
+    - At 390px the rows still wrap, as `workspace-ops-inbox.test.js` expects.
+- **Legal Back to Home (privacy.html, terms.html).**
+  - **Cause:** the `<p><a>← Back to Home</a></p>` is the third child of the two-column `.legal-doc` grid, so it auto-placed into the 240px contents column, row 2. The contents list is `position: sticky` within the grid, and a sticky box moves within its containing block. Near the end of the page, the list slid down over the link (the screenshot's overlap with "Changes to This Policy").
+  - **Fix:** `grid-column: 2` at ≥861px (the grid's own breakpoint). The link gets the UI face (Oswald, 14px, orange) and a 44px inline-flex tap height.
+  - **Proof:** before, the overlap check was `true` with the Newsreader face. After, it is `false` with the link at x=456 (the text column) and Oswald.
+- **Homepage reviews orphan (styles.css).**
+  - **Cause:** the featured first card spans the row, and the rest sit in 2 columns. With 4 cards, card 4 sat alone in a half-empty row.
+  - **Fix:** `.review-card:last-child:nth-child(even)` spans `1 / -1`, with `height:auto` on its quote like the featured card. An odd count pairs up and is unaffected. The wall holds only `.review-card` children (test-guarded), so `:nth-child` counts cards.
+  - **Proof:** screenshots at 1440px show the last card spanning. At 390px the layout is single-column, so nothing changes there.
+
+Checks: check-consistency, check-undefined-vars, check-visual-snapshot (6/6) and lint are clean. check-links reports only the 10 Unsplash URLs this sandbox's proxy refuses, identically on main. Stamps were re-run with `npm run fix-versions` (workspace v368, portal v174). The full suite results are in the PR.
+
+Test: `tests/design/visual-fixes-2026-09-29.test.js` (5). The first four cover the column basis, the clamp and toggle markup plus the helper in all three templates, the Show more/less toggle and trim in jsdom, and the legal column rule. The fifth covers the review span rule and the card-only wall. All 5 fail on origin/main 86a9f37.
