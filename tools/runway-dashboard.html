@@ -1201,6 +1201,307 @@
   @keyframes th-w-sheet-in { from { transform: translateY(100%); } to { transform: none; } }
   @media (max-width: 720px) { body.th-tool-page .th-sheet-panel { border-radius: 18px 18px 0 0; animation: th-w-sheet-in var(--th-dur-sheet) var(--th-ease); } }
   @media (prefers-reduced-motion: reduce) { body.th-tool-page .th-sheet-panel { animation: none; } }
+
+  /* ==========================================================================
+     Workspace app redesign v2 (2026-09-29) -- this page's own copy of the
+     shared v2 shell pieces, plus Runway's v2 look (design_handoff §8.6).
+     Same isolation as the W1 + W3 block above: this page loads neither
+     styles.css nor styles-tools.css (26 class-name collisions, see the tour
+     CSS comment), so the rules below mirror styles-tools.css "V2.2" (bottom
+     bar), "V2.3" (rings), "V2.4" (action sheet + row ⋯, with the base
+     .quick-actions-* rules it builds on) and "V2.8" (toasts), and the
+     tokens they read are declared here with styles.css's own values. The
+     JS (openRowMenu / attachRowMenu / thRingSvg) is the shared
+     tools-dialogs.js this page already loads. Keep the copies in step.
+     ========================================================================== */
+  :root{
+    --th-radius-xl: 22px;
+    --th-radius-tile: 18px;
+    --th-radius-track: 14px;
+    --th-radius-seg: 10px;
+    --th-hairline: #1f2126;
+    --th-ink-on-orange: #1a0d02;
+    --th-field: #1b1c20;
+    --th-dur-quick: .16s;
+    --th-ring-size: 86px;
+    --shadow-sheet: 0 -20px 48px -16px rgba(0,0,0,.7);
+    --shadow-panel-side: -24px 0 48px -20px rgba(0,0,0,.7);
+    --tone-orange-fg: #ffb347;
+    --tone-orange-bg: rgba(255, 128, 0, 0.16);
+    --tone-blue-fg: #9fd0ff;
+    --tone-blue-bg: rgba(159, 208, 255, 0.14);
+    --tone-green-fg: #3ad66b;
+    --tone-green-bg: rgba(58, 214, 107, 0.14);
+    --tone-purple-fg: #c9a4ff;
+    --tone-purple-bg: rgba(201, 164, 255, 0.14);
+    --tone-red-fg: #ff8080;
+    --tone-red-bg: rgba(255, 90, 90, 0.14);
+  }
+  [data-theme="light"] body.th-tool-page {
+    --th-hairline: #ebe7e0;
+    --th-field: #f2f0ec;
+    --shadow-sheet: 0 -16px 40px -16px rgba(32,29,24,.28);
+    --shadow-panel-side: -20px 0 40px -20px rgba(32,29,24,.28);
+    --tone-orange-fg: #a84408;
+    --tone-orange-bg: rgba(216, 95, 10, 0.1);
+    --tone-blue-fg: #0650bd;
+    --tone-blue-bg: rgba(6, 80, 189, 0.1);
+    --tone-green-fg: #146c34;
+    --tone-green-bg: rgba(20, 108, 52, 0.1);
+    --tone-purple-fg: #7a4fd1;
+    --tone-purple-bg: rgba(122, 79, 209, 0.1);
+    --tone-red-fg: #b3261e;
+    --tone-red-bg: rgba(179, 38, 30, 0.1);
+  }
+
+  /* ---- V2.2 bottom bar (mirrored): Oswald labels, orange when current, the raised + hex ---- */
+  body.th-tool-page .th-bottom-nav a, body.th-tool-page .th-bottom-nav .th-bn-create {
+    font-family: var(--font-ui); font-size: 11px; letter-spacing: .7px; text-transform: uppercase; color: var(--text-dim);
+  }
+  body.th-tool-page .th-bottom-nav a.is-active { color: var(--orange); }
+  body.th-tool-page .th-bottom-nav a.is-active::before { display: none; }
+  body.th-tool-page .th-bottom-nav a .th-bn-icon,
+  body.th-tool-page .th-bottom-nav a.is-active .th-bn-icon { background: none; border: 0; clip-path: none; width: 30px; height: 28px; }
+  body.th-tool-page .th-bottom-nav a .th-bn-icon .th-icon { width: 23px; height: 23px; color: currentColor; }
+  body.th-tool-page .th-bottom-nav a.is-active .th-bn-icon .th-icon { color: var(--orange); }
+  body.th-tool-page .th-bottom-nav a:active .th-bn-icon { background: none; transform: scale(.92); }
+  body.th-tool-page .th-bottom-nav .th-bn-create { color: var(--orange-light); }
+  body.th-tool-page .th-bn-create-disc { width: 52px; height: 52px; margin-top: -18px; }
+  body.th-tool-page .th-bn-create-disc .th-icon { width: 24px; height: 24px; color: var(--th-ink-on-orange); stroke-width: 2.6; }
+
+  /* ---- V2.3 rings, donuts and gauges (mirrored; thRingSvg / thDonutSvg) ---- */
+  body.th-tool-page .th-ring { position: relative; flex-shrink: 0; width: var(--th-ring-size, 86px); height: var(--th-ring-size, 86px); }
+  body.th-tool-page .th-ring > svg { display: block; overflow: visible; }
+  body.th-tool-page .th-ring-track { stroke: var(--th-hairline); }
+  body.th-tool-page .th-ring-fill { stroke: var(--orange); }
+  body.th-tool-page .th-ring--orange .th-ring-track { stroke: var(--tone-orange-bg); }
+  body.th-tool-page .th-ring--green .th-ring-track { stroke: var(--tone-green-bg); }
+  body.th-tool-page .th-ring--green .th-ring-fill { stroke: var(--tone-green-fg); }
+  body.th-tool-page .th-ring--blue .th-ring-track { stroke: var(--tone-blue-bg); }
+  body.th-tool-page .th-ring--blue .th-ring-fill { stroke: var(--tone-blue-fg); }
+  body.th-tool-page .th-ring--red .th-ring-track { stroke: var(--tone-red-bg); }
+  body.th-tool-page .th-ring--red .th-ring-fill { stroke: var(--tone-red-fg); }
+  body.th-tool-page .th-ring--purple .th-ring-track { stroke: var(--tone-purple-bg); }
+  body.th-tool-page .th-ring--purple .th-ring-fill { stroke: var(--tone-purple-fg); }
+  body.th-tool-page .th-ring--idle .th-ring-fill { stroke: var(--text-faint); }
+  body.th-tool-page .th-ring-center {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; line-height: 1; pointer-events: none;
+  }
+  body.th-tool-page .th-ring-center b { font-family: var(--font-display); font-weight: 400; font-size: 19px; color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: .2px; }
+  body.th-tool-page .th-ring-center span { margin-top: 3px; font-size: 10.5px; color: var(--text-dim); font-family: var(--font-app); }
+  @media (prefers-reduced-motion: reduce) { body.th-tool-page .th-ring-fill { transition: none !important; } }
+
+  /* ---- V2.4 action sheet (mirrored, with the base rules it builds on) and the row ⋯ ---- */
+  body.th-tool-page .quick-actions-overlay {
+    position: fixed; inset: 0; z-index: 950; background: rgba(0,0,0,0);
+    display: flex; align-items: flex-end; justify-content: center; transition: background .2s ease;
+  }
+  body.th-tool-page .quick-actions-overlay.is-shown { background: var(--th-scrim); }
+  body.th-tool-page .quick-actions-sheet {
+    width: 100%; max-width: 560px; background: var(--bg-card); border: 0; border-top: 1px solid var(--border); border-radius: 24px 24px 0 0;
+    padding: 10px 16px calc(30px + env(safe-area-inset-bottom, 0px));
+    max-height: 88dvh; overflow-y: auto; overscroll-behavior: contain; box-shadow: var(--shadow-sheet);
+    transform: translateY(100%); transition: transform var(--th-dur-sheet) var(--th-ease);
+  }
+  body.th-tool-page .quick-actions-overlay.is-shown .quick-actions-sheet { transform: translateY(0); }
+  body.th-tool-page .quick-actions-handle { width: 40px; height: 5px; border-radius: 3px; background: var(--border); margin: 0 auto 12px; }
+  body.th-tool-page .quick-actions-title {
+    text-align: left; padding: 0 4px 10px;
+    font-family: var(--font-ui); font-size: 12px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text-dim);
+  }
+  body.th-tool-page .quick-actions-sub { margin: -6px 4px 12px; font-size: 13.5px; color: var(--text-dim); font-family: var(--font-app); }
+  body.th-tool-page .quick-actions-btn {
+    display: flex; align-items: center; gap: 14px; width: 100%; min-height: 54px; margin: 0 0 6px; padding: 0 16px; cursor: pointer;
+    text-align: left; border: 1px solid var(--border); border-radius: 14px; background: var(--th-field);
+    color: var(--text); font-family: var(--font-ui); font-size: 15px; font-weight: 500; letter-spacing: .8px; text-transform: uppercase;
+    transition: transform var(--th-dur-quick) var(--th-ease), border-color var(--th-dur-quick) ease;
+  }
+  body.th-tool-page .quick-actions-btn .th-icon { width: 19px; height: 19px; margin: 0; flex-shrink: 0; color: var(--orange-light); }
+  body.th-tool-page .quick-actions-btn:active { transform: scale(.985); background: var(--bg-panel-2); }
+  body.th-tool-page .quick-actions-btn:disabled { opacity: .5; }
+  body.th-tool-page .quick-actions-btn.is-danger {
+    color: var(--tone-red-fg); border-color: color-mix(in srgb, var(--status-error) 38%, transparent);
+    background: color-mix(in srgb, var(--status-error) 8%, var(--bg-card));
+  }
+  body.th-tool-page .quick-actions-btn.is-danger .th-icon { color: currentColor; }
+  body.th-tool-page .quick-actions-cancel {
+    justify-content: center; margin: 8px 0 0; background: none; border: 1px solid var(--border);
+    color: var(--text); font-weight: 600; letter-spacing: .9px; font-size: 14px; min-height: 52px;
+  }
+  @media (hover: hover) {
+    body.th-tool-page .quick-actions-btn:hover { border-color: var(--orange-tint-border); }
+    body.th-tool-page .quick-actions-btn.is-danger:hover { border-color: var(--status-error); }
+  }
+  @media (min-width: 1024px) {
+    body.th-tool-page .quick-actions-overlay { top: 61px; left: 240px; justify-content: flex-end; align-items: stretch; }
+    body.th-tool-page .quick-actions-sheet {
+      width: 440px; max-width: 440px; max-height: none; height: 100%; border-radius: 0;
+      border-top: 0; border-left: var(--th-rule) solid var(--border);
+      padding: 22px 22px 30px; box-shadow: var(--shadow-panel-side); transform: translateX(104%);
+    }
+    body.th-tool-page .quick-actions-overlay.is-shown .quick-actions-sheet { transform: none; }
+    body.th-tool-page .quick-actions-handle { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    body.th-tool-page .quick-actions-overlay { transition: none; }
+    body.th-tool-page .quick-actions-sheet { transform: none; opacity: 0; transition: opacity .15s ease; }
+    body.th-tool-page .quick-actions-overlay.is-shown .quick-actions-sheet { opacity: 1; }
+  }
+  body.th-tool-page .th-row-menu-btn {
+    width: 38px; height: 38px; flex-shrink: 0; padding: 0; border: 0; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: none; color: var(--text-dim); cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  }
+  body.th-tool-page .th-row-menu-btn .th-icon { width: 20px; height: 20px; margin: 0; }
+  body.th-tool-page .th-row-menu-btn:active { background: var(--bg-panel-2); transform: scale(.94); }
+  body.th-tool-page .th-row-menu-btn:focus-visible { color: var(--orange-light); }
+  @media (hover: hover) { body.th-tool-page .th-row-menu-btn:hover { color: var(--text); background: var(--bg-panel-2); } }
+  @media (pointer: coarse) { body.th-tool-page .th-row-menu-btn { width: 44px; height: 44px; } }
+  body.th-tool-page .th-has-row-menu [data-row-action] { display: none !important; }
+
+  /* ---- V2.8 toasts (mirrored): 56px, radius 16, an orange Undo pill ---- */
+  body.th-tool-page .th-toast {
+    min-height: 56px; border-radius: 16px; padding: 8px 10px 8px 18px; max-width: 520px;
+    background: var(--bg-panel-3); border: 1px solid var(--border); font-size: 14.5px; color: var(--text);
+  }
+  body.th-tool-page .th-toast-undo-btn {
+    margin-left: auto; min-height: 36px; padding: 0 14px; border-radius: 999px; border: 0;
+    background: var(--orange); color: var(--th-ink-on-orange);
+    font-family: var(--font-ui); font-size: 13px; letter-spacing: .8px; text-transform: uppercase;
+  }
+
+  /* ---- Runway v2 (§8.6): Personal | Business | Net worth | Runway as one segmented track ---- */
+  body.th-tool-page .tabs {
+    display: flex; width: max-content; max-width: calc(100% - 40px); gap: 4px; padding: 4px; margin: 8px auto 0 20px;
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--th-radius-track); box-shadow: none;
+  }
+  @media (min-width: 940px) { body.th-tool-page .tabs { margin-left: max(20px, calc((100% - 900px) / 2 + 20px)); } }
+  body.th-tool-page .rw-tab-btn {
+    flex: 0 0 auto; min-height: 38px; padding: 0 14px; border-radius: var(--th-radius-seg); background: none; box-shadow: none;
+    font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: .8px; color: var(--text-dim);
+  }
+  body.th-tool-page .rw-tab-btn.is-active { background: var(--text); color: var(--bg); box-shadow: none; }
+  body.th-tool-page .rw-tab-btn:active { background: var(--bg-elevated); transform: scale(.97); }
+  body.th-tool-page .rw-tab-btn.is-active:active { background: var(--text); }
+  @media (hover:hover){ body.th-tool-page .rw-tab-btn:hover { background: none; color: var(--text); } body.th-tool-page .rw-tab-btn.is-active:hover { background: var(--text); color: var(--bg); } }
+  @media (pointer: coarse) { body.th-tool-page .rw-tab-btn { min-height: 44px; } }
+
+  /* Running text in the Workspace's app face (Archivo), as on every other tool page. */
+  body.th-tool-page main, body.th-tool-page header#mainContent p { font-family: var(--font-app); }
+  body.th-tool-page .form-grid label { font-family: var(--font-ui); letter-spacing: 1.2px; font-size: 11.5px; }
+  body.th-tool-page main input, body.th-tool-page main select { font-family: var(--font-app); border-radius: 12px; min-height: 46px; background: var(--th-field); border-color: var(--border); box-shadow: none; }
+
+  /* ---- Cards: radius 22, Oswald heads, Anton numbers without the gradient ---- */
+  body.th-tool-page .card { border-radius: var(--th-radius-xl); padding: 16px 18px; margin-bottom: 16px; }
+  body.th-tool-page .cat-card { border-radius: var(--th-radius-xl); border-left-width: 1px !important; }
+  body.th-tool-page .card-header h3 { font-family: var(--font-ui); font-weight: 500; font-size: 13px; letter-spacing: 1.4px; color: var(--text); }
+  body.th-tool-page .card-header .subtotal { font-family: var(--font-display); font-weight: 400; font-size: 20px; color: var(--text); letter-spacing: .3px; }
+  body.th-tool-page .stat-box { border-radius: var(--th-radius-tile); background: var(--th-field); text-align: left; padding: 14px 16px; }
+  body.th-tool-page .stat-box .label { font-family: var(--font-ui); font-size: 11.5px; letter-spacing: 1.2px; }
+  body.th-tool-page .stat-box .value,
+  body.th-tool-page .stat-box.blue .value,
+  body.th-tool-page .stat-box.green .value,
+  body.th-tool-page .stat-box.red .value { background: none; -webkit-text-fill-color: currentColor; color: var(--text); font-size: 28px; line-height: 1.05; }
+  body.th-tool-page .stat-box.blue .value { color: var(--tone-blue-fg); }
+  body.th-tool-page .stat-box.green .value { color: var(--tone-green-fg); }
+  body.th-tool-page .stat-box.red .value { color: var(--tone-red-fg); }
+  body.th-tool-page .card-hero .stat-box { background: var(--th-field); }
+  body.th-tool-page .card-hero .stat-box.green { background: var(--tone-green-bg); }
+  body.th-tool-page .note { line-height: 1.5; }
+
+  /* ---- Safe to spend: a green-tint hero, a 132px ring, the amount in Anton 52 ---- */
+  body.th-tool-page .rw-safe-card {
+    background: linear-gradient(135deg, var(--tone-green-bg), var(--bg-card) 65%);
+    border-color: color-mix(in srgb, var(--tone-green-fg) 30%, transparent);
+  }
+  body.th-tool-page .rw-hero { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin: 2px 0 16px; }
+  body.th-tool-page .rw-hero:empty { display: none; }
+  body.th-tool-page .rw-hero .th-ring-center b { font-size: 26px; }
+  body.th-tool-page .rw-hero .th-ring-center span { max-width: 84px; line-height: 1.2; }
+  body.th-tool-page .rw-hero-copy { flex: 1 1 180px; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  body.th-tool-page .rw-kicker { font-family: var(--font-ui); font-size: 12px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--tone-green-fg); }
+  body.th-tool-page .rw-hero-amt { font-family: var(--font-display); font-weight: 400; font-size: 52px; line-height: 1; letter-spacing: .3px; color: var(--text); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  body.th-tool-page .rw-hero-sub { font-family: var(--font-app); font-size: 14px; line-height: 1.45; color: var(--text-dim); }
+  body.th-tool-page .rw-safe-card:has(.rw-hero:not(:empty)) #safeToSpendStats > .stat-box:has(#safeToSpendValue) { display: none; }
+  body.th-tool-page .rw-safe-card:has(.rw-hero:not(:empty)) .estimate-headline { display: none; }
+  @media (max-width: 420px) { body.th-tool-page .rw-hero-amt { font-size: 44px; } }
+
+  /* ---- Runway: months in Anton 52 orange, a gauge toward 6, and the reserve ---- */
+  body.th-tool-page .rw-runway-card .rw-kicker { color: var(--tone-orange-fg); }
+  body.th-tool-page .rw-runway-card .rw-hero-amt { color: var(--tone-orange-fg); }
+  body.th-tool-page .rw-reserve { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-family: var(--font-app); font-size: 12.5px; color: var(--text-dim); }
+  body.th-tool-page .rw-hero.is-gauge .th-ring-center b { color: var(--tone-orange-fg); }
+
+  /* ---- Tiles: tax set-aside, month over month, year over year, monthly burn ---- */
+  body.th-tool-page .rw-tiles { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 16px; }
+  body.th-tool-page .rw-tiles:empty { display: none; }
+  body.th-tool-page .rw-tile {
+    flex: 1 1 150px; min-width: 0; display: flex; flex-direction: column; gap: 4px; padding: 14px 16px;
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--th-radius-tile);
+  }
+  body.th-tool-page .rw-tile-label { font-family: var(--font-ui); font-size: 11.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-dim); }
+  body.th-tool-page .rw-tile-value { font-family: var(--font-display); font-weight: 400; font-size: 28px; line-height: 1.05; color: var(--text); font-variant-numeric: tabular-nums; }
+  body.th-tool-page .rw-tile-sub { font-family: var(--font-app); font-size: 12.5px; font-weight: 600; color: var(--text-dim); }
+  body.th-tool-page .rw-tile-sub.is-up { color: var(--tone-green-fg); }
+  body.th-tool-page .rw-tile-sub.is-down { color: var(--tone-red-fg); }
+
+  /* ---- Monthly history: paired in / out bars ---- */
+  body.th-tool-page .rw-bars { margin: 0 0 14px; }
+  body.th-tool-page .rw-bars:empty { display: none; }
+  body.th-tool-page .rw-bars-key { display: flex; justify-content: flex-end; gap: 14px; margin-bottom: 10px; font-family: var(--font-app); font-size: 12px; color: var(--text-dim); }
+  body.th-tool-page .rw-bars-key i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  body.th-tool-page .rw-bars-plot { display: flex; align-items: flex-end; gap: 10px; height: 160px; }
+  body.th-tool-page .rw-bar-col { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px; }
+  body.th-tool-page .rw-bar-pair { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 3px; }
+  body.th-tool-page .rw-bar { width: 42%; max-width: 16px; min-height: 2px; border-radius: 5px 5px 2px 2px; }
+  body.th-tool-page .rw-bar.is-in, body.th-tool-page .rw-bars-key i.is-in { background: var(--tone-green-fg); }
+  body.th-tool-page .rw-bar.is-out, body.th-tool-page .rw-bars-key i.is-out { background: var(--tone-red-fg); }
+  body.th-tool-page .rw-bar-month { font-family: var(--font-app); font-size: 11px; color: var(--text-dim); white-space: nowrap; }
+  body.th-tool-page table.month-table th { font-family: var(--font-ui); font-size: 11px; letter-spacing: 1.2px; }
+  body.th-tool-page table.month-table td, body.th-tool-page table.month-table th { border-bottom-color: var(--th-hairline); }
+  body.th-tool-page table.month-table td { font-family: var(--font-app); font-size: 13px; }
+
+  /* ---- Net worth: a list, then Update balances ---- */
+  body.th-tool-page #netWorthStats { display: flex; flex-direction: column; gap: 0; }
+  body.th-tool-page #netWorthStats > .stat-box {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0; margin: 0;
+    background: none; border-radius: 0; border-top: 1px solid var(--th-hairline);
+  }
+  body.th-tool-page #netWorthStats > .stat-box:first-child { border-top: 0; }
+  body.th-tool-page #netWorthStats > .stat-box .label { font-family: var(--font-app); font-size: 14px; letter-spacing: 0; text-transform: none; color: var(--text-dim); }
+  body.th-tool-page #netWorthStats > .stat-box .value { margin: 0; font-size: 20px; }
+  body.th-tool-page #netWorthStats > .stat-box[style*="grid-column"] .value { font-size: 30px; }
+  body.th-tool-page .rw-update-btn {
+    width: 100%; min-height: 44px; margin-top: 10px; border-radius: 12px; border: 1px solid var(--border); background: var(--th-field); color: var(--text); cursor: pointer;
+    font-family: var(--font-ui); font-size: 13.5px; letter-spacing: .8px; text-transform: uppercase;
+  }
+  body.th-tool-page .rw-update-btn:active { transform: scale(.985); }
+  @media (hover: hover) { body.th-tool-page .rw-update-btn:hover { border-color: var(--orange-tint-border); } }
+
+  /* ---- Editable lists: ruled rows with a ⋯, and a dashed "+ Add" ---- */
+  body.th-tool-page .row { padding: 11px 0; border-bottom: 0; border-top: 1px solid var(--th-hairline); gap: 12px; flex-wrap: nowrap; }
+  body.th-tool-page .card-header + .row, body.th-tool-page #incomeList > .row:first-child, body.th-tool-page #debtsList > .row:first-child { border-top: 0; }
+  body.th-tool-page .row-label { font-family: var(--font-app); font-size: 14.5px; font-weight: 600; }
+  body.th-tool-page .row-freq { font-family: var(--font-app); font-size: 12.5px; text-transform: none; color: var(--text-dim); margin-top: 2px; }
+  body.th-tool-page .row-amounts { font-family: var(--font-app); font-size: 12.5px; }
+  body.th-tool-page .row-amounts b { color: var(--text); font-weight: 700; font-size: 14.5px; }
+  body.th-tool-page .row-actions { margin-top: 0; align-items: center; flex-wrap: nowrap; }
+  body.th-tool-page .row-actions .var-log-input { width: 130px; min-height: 40px; border-radius: 10px; }
+  body.th-tool-page .row-actions .icon-btn { min-height: 40px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); color: var(--text); font-family: var(--font-ui); letter-spacing: .6px; text-transform: uppercase; font-size: 12px; }
+  @media (max-width: 560px) { body.th-tool-page .row:has(.var-log-input) { flex-wrap: wrap; } body.th-tool-page .row:has(.var-log-input) .row-actions { flex: 1 1 100%; } body.th-tool-page .row-actions .var-log-input { flex: 1; } }
+  body.th-tool-page #openAddIncomeBtn, body.th-tool-page #openAddExpenseBtn, body.th-tool-page #openAddDebtBtn {
+    display: flex; align-items: center; justify-content: center; width: 100%; min-height: 44px; padding: 0 14px;
+    border: 1px dashed var(--border); border-radius: 12px; background: none; box-shadow: none; color: var(--tone-orange-fg);
+    font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: .8px; text-transform: uppercase;
+  }
+  body.th-tool-page #openAddIncomeBtn:active, body.th-tool-page #openAddExpenseBtn:active, body.th-tool-page #openAddDebtBtn:active { transform: scale(.985); box-shadow: none; }
+  @media (hover: hover) {
+    body.th-tool-page #openAddIncomeBtn:hover, body.th-tool-page #openAddExpenseBtn:hover, body.th-tool-page #openAddDebtBtn:hover { border-color: var(--orange-tint-border); background: var(--orange-tint-soft); box-shadow: none; }
+  }
+  body.th-tool-page .cat-add-btn { width: 36px; height: 36px; border-radius: 50%; border-color: var(--border); color: var(--tone-orange-fg); font-size: 18px; }
+  @media (pointer: coarse) { body.th-tool-page .cat-add-btn { width: 44px; height: 44px; } }
+  body.th-tool-page table.month-table tr.th-has-row-menu td:last-child { text-align: right; }
 </style>
 </head>
 <body class="th-has-sidebar" data-th-page="runway-dashboard">
@@ -1274,8 +1575,11 @@
   </div>
 
   <div class="panel" id="panel-personal">
-    <div class="card card-hero">
+    <div class="card card-hero rw-safe-card">
       <div class="card-header"><h3>Safe to Spend <button class="help-btn" onclick="openCardInfo('safeToSpend')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <!-- v2 hero (2026-09-29): the ring and the amount, drawn by
+           renderSafeHero() from renderSafeToSpend()'s own numbers. -->
+      <div class="rw-hero" id="safeToSpendHero"></div>
       <div class="form-grid">
         <div><label>Savings Target (% of what's left)</label><input type="number" inputmode="decimal" id="settingSavingsPct" min="0" max="100" step="1"></div>
       </div>
@@ -1413,6 +1717,9 @@
 
     <div class="card">
       <div class="card-header"><h3>Monthly History</h3></div>
+      <!-- v2 (2026-09-29): the last six logged months as paired in/out bars,
+           drawn by renderMonthBars() from the rows of the table below. -->
+      <div class="rw-bars" id="monthHistoryBars"></div>
       <div class="table-scroll">
         <table class="month-table">
           <thead><tr><th>Month</th><th>Revenue</th><th>Expenses</th><th>Net Profit</th><th>Draws</th><th>Cash</th><th></th></tr></thead>
@@ -1432,6 +1739,7 @@
       <div class="card-header"><h3>Total Net Worth <button class="help-btn" onclick="openCardInfo('netWorth')" aria-label="What is this?" title="What is this?">?</button></h3></div>
       <div class="grand-totals" id="netWorthStats"></div>
       <div class="note" id="netWorthNote"></div>
+      <button type="button" class="rw-update-btn" onclick="rwUpdateBalances()">Update balances</button>
     </div>
 
     <div class="card">
@@ -1467,10 +1775,17 @@
   </div>
 
   <div class="panel" id="panel-runway">
-    <div class="card card-hero">
+    <div class="card card-hero rw-runway-card">
       <div class="card-header"><h3>Overview</h3></div>
+      <!-- v2 (2026-09-29): months of bills your savings cover, as a gauge
+           toward the 6-month goal -- the same efBalance / monthly-bills
+           figure the Emergency Fund note states. renderRunwayHero(). -->
+      <div class="rw-hero is-gauge" id="runwayHero"></div>
       <div class="grand-totals" id="runwayExpenseTotals"></div>
     </div>
+    <!-- v2 tiles (2026-09-29): tax set-aside, month over month, year over
+         year and monthly burn, each the same figure its own card computes. -->
+    <div class="rw-tiles" id="runwayTiles"></div>
 
     <div class="card">
       <div class="card-header"><h3>Income Picture <button class="help-btn" onclick="openCardInfo('incomePicture')" aria-label="What is this?" title="What is this?">?</button></h3></div>
@@ -2470,6 +2785,7 @@ function renderSafeToSpend(total){
     statsEl.innerHTML = '';
     headlineEl.textContent = 'Add your income below to see this';
     noteEl.textContent = '';
+    if(typeof renderSafeHero === 'function') renderSafeHero(null);
     return;
   }
 
@@ -2498,6 +2814,7 @@ function renderSafeToSpend(total){
     headlineEl.textContent = `${fmt(safeToSpend)} is safe to spend this month`;
     noteEl.textContent = `After your bills are paid, you have ${fmt(leftover)} left. We're setting aside ${fmt(savings)} for savings and ${fmt(tax.amount)} for taxes, which leaves ${fmt(safeToSpend)} you can spend guilt-free.`;
   }
+  if(typeof renderSafeHero === 'function') renderSafeHero({ income: totalIncome, bills: total, leftover, putAway: savings + tax.amount, safe: safeToSpend });
 }
 
 function computeNetProfit(m){
@@ -2542,6 +2859,8 @@ function renderMonths(){
   renderMoM(sorted);
   renderYoY(sorted);
   renderTaxSetAside(sorted);
+  if(typeof renderMonthBars === 'function') renderMonthBars(sorted);
+  if(typeof renderRunwayTiles === 'function') renderRunwayTiles();
 }
 
 // ---------------------------------------------------------------------------
@@ -2901,6 +3220,184 @@ function renderNetWorth(){
   }
 }
 
+// ---------------------------------------------------------------------------
+// Workspace app redesign v2 (2026-09-29), design_handoff §8.6. Presentation
+// only: every number below is one the page's own render functions already
+// compute (the same inputs, the same formulas, the same fmt()), drawn as
+// the v2 ring, gauge, tiles and bars. Nothing here reads or writes storage.
+// thRingSvg / thAnimateRings / attachRowMenu come from tools-dialogs.js,
+// which this page already loads; without it these simply draw nothing and
+// the original cards show as before.
+// ---------------------------------------------------------------------------
+// Safe to spend: a 132px ring (share of income that goes to bills) beside
+// the amount in Anton. d is null when there is no income yet.
+function renderSafeHero(d){
+  const host = document.getElementById('safeToSpendHero');
+  if(!host) return;
+  if(!d || typeof thRingSvg !== 'function'){ host.innerHTML = ''; return; }
+  const prev = readPrevStatValue('rwSafeAmt');
+  const used = d.income > 0 ? d.bills / d.income : 0;
+  const pct = Math.round(used * 100);
+  const sub = d.leftover < 0
+    ? `You're short ${fmt(Math.abs(d.leftover))} this month`
+    : `${fmt(d.income)} coming in, ${fmt(d.bills)} to bills, ${fmt(d.putAway)} put away`;
+  host.innerHTML = thRingSvg({
+      value: Math.min(1, used), size: 132, stroke: 14, tone: used > 1 ? 'red' : 'green', key: 'rw-safe',
+      center: '<b>' + pct + '%</b><span>of income to bills</span>',
+      label: pct + '% of monthly income goes to bills and expenses',
+    }) +
+    '<div class="rw-hero-copy"><span class="rw-kicker">Safe to spend</span>' +
+    '<span class="rw-hero-amt" id="rwSafeAmt">' + fmt(d.safe) + '</span>' +
+    '<span class="rw-hero-sub">' + escapeHtml(sub) + '</span></div>';
+  animateStatValue('rwSafeAmt', d.safe, prev);
+  if(typeof thAnimateRings === 'function') thAnimateRings(host);
+}
+
+// Runway: months of bills the savings cover (efBalance / monthly bills,
+// the same figure the Emergency Fund note gives) on a 3/4 gauge toward the
+// 6-month goal, with the reserve under it.
+function renderRunwayHero(min){
+  const host = document.getElementById('runwayHero');
+  if(!host) return;
+  if(typeof thRingSvg !== 'function'){ host.innerHTML = ''; return; }
+  const monthsCovered = min > 0 ? efBalance / min : null;
+  const shown = monthsCovered === null ? '—' : monthsCovered.toFixed(1);
+  const goalPct = monthsCovered === null ? 0 : Math.min(1, monthsCovered / 6);
+  host.innerHTML = thRingSvg({
+      value: goalPct, size: 132, stroke: 14, tone: 'orange', sweep: 0.75, key: 'rw-runway',
+      center: '<b>' + Math.round(goalPct * 100) + '%</b><span>of 6 months</span>',
+      label: monthsCovered === null ? 'Runway: add your bills to see this' : shown + ' months covered, of a 6-month goal',
+    }) +
+    '<div class="rw-hero-copy"><span class="rw-kicker">Runway</span>' +
+    '<span class="rw-hero-amt">' + shown + '</span>' +
+    '<span class="rw-hero-sub">' + (monthsCovered === null ? 'Add your bills on the Personal Budget tab to see this in months.' : 'months of bills your savings cover') + '</span>' +
+    '<span class="rw-reserve"><span>Goal 6 months &middot; ' + fmt(min * 6) + '</span><span>' + fmt(efBalance) + ' in reserve</span></span></div>';
+  if(typeof thAnimateRings === 'function') thAnimateRings(host);
+}
+
+// Tiles: the latest Tax Set-Aside (latestTaxSetAside, as Safe to Spend uses
+// it), Month over Month and Year over Year net profit (renderMoM /
+// renderYoY's own comparison), and the monthly burn (grandTotal).
+function renderRunwayTiles(){
+  const host = document.getElementById('runwayTiles');
+  if(!host) return;
+  const sorted = [...months].sort((a,b)=> a.month.localeCompare(b.month));
+  const arrow = (n) => n > 0 ? '▲' : (n < 0 ? '▼' : '—');
+  const tone = (n) => n > 0 ? 'is-up' : (n < 0 ? 'is-down' : '');
+  const tile = (label, value, sub, cls) => `<div class="rw-tile"><span class="rw-tile-label">${label}</span><span class="rw-tile-value">${value}</span><span class="rw-tile-sub ${cls || ''}">${sub}</span></div>`;
+  const tax = latestTaxSetAside();
+  const out = [tile('Tax set-aside', tax.month ? fmt(tax.amount) : '—',
+    tax.month ? escapeHtml(tax.month) + ' &middot; ' + escapeHtml(String(budgetSettings.taxSetAsideRate)) + '% of revenue' : 'Log a business month')];
+  if(sorted.length >= 2){
+    const curr = sorted[sorted.length - 1], prev = sorted[sorted.length - 2];
+    const d = computeNetProfit(curr) - computeNetProfit(prev);
+    out.push(tile('Month over month', arrow(d) + ' ' + fmt(Math.abs(d)), 'net profit vs ' + escapeHtml(prev.month), tone(d)));
+  } else {
+    out.push(tile('Month over month', '—', 'Log 2 months to compare'));
+  }
+  if(sorted.length){
+    const curr = sorted[sorted.length - 1];
+    const [y, mo] = curr.month.split('-');
+    const lastYearKey = (Number(y) - 1) + '-' + mo;
+    const prior = sorted.find(m => m.month === lastYearKey);
+    if(prior){
+      const d = computeNetProfit(curr) - computeNetProfit(prior);
+      out.push(tile('Year over year', arrow(d) + ' ' + fmt(Math.abs(d)), 'net profit vs ' + escapeHtml(lastYearKey), tone(d)));
+    } else {
+      out.push(tile('Year over year', '—', 'Fills in after a year of months'));
+    }
+  } else {
+    out.push(tile('Year over year', '—', 'Log a business month'));
+  }
+  out.push(tile('Monthly burn', fmt(grandTotal()), 'bills &amp; expenses a month'));
+  host.innerHTML = out.join('');
+}
+
+// Monthly history: the last six logged months as paired bars -- revenue in,
+// costs (expenses + fuel + other, the table's own Expenses column) out.
+function renderMonthBars(sorted){
+  const host = document.getElementById('monthHistoryBars');
+  if(!host) return;
+  const last = sorted.slice(-6);
+  if(!last.length){ host.innerHTML = ''; return; }
+  const data = last.map(m => ({ key: m.month, inn: Number(m.revenue)||0, out: (Number(m.expenses)||0)+(Number(m.fuel)||0)+(Number(m.other)||0) }));
+  const max = Math.max(1, ...data.map(d => Math.max(d.inn, d.out)));
+  const short = (key) => {
+    const [y, mo] = String(key).split('-');
+    const d = new Date(Number(y), Number(mo) - 1, 15);
+    return isNaN(d.getTime()) ? String(key) : d.toLocaleDateString(undefined, { month: 'short' });
+  };
+  const h = (v) => (v / max * 100).toFixed(1) + '%';
+  host.innerHTML = '<div class="rw-bars-key"><span><i class="is-in"></i>In</span><span><i class="is-out"></i>Out</span></div>' +
+    '<div class="rw-bars-plot" role="img" aria-label="Revenue in and costs out, last ' + data.length + ' logged month' + (data.length === 1 ? '' : 's') + '">' +
+    data.map(d => '<div class="rw-bar-col" title="' + escapeAttr(d.key + ': ' + fmt(d.inn) + ' in, ' + fmt(d.out) + ' out') + '">' +
+      '<div class="rw-bar-pair"><span class="rw-bar is-in" style="height:' + h(d.inn) + '"></span><span class="rw-bar is-out" style="height:' + h(d.out) + '"></span></div>' +
+      '<span class="rw-bar-month">' + escapeHtml(short(d.key)) + '</span></div>').join('') +
+    '</div>';
+}
+
+// Update balances: the Emergency Fund balance field (personal savings, the
+// first line of Net Worth); its own change handler saves it (saveEF).
+function rwUpdateBalances(){
+  const el = document.getElementById('ef-balance');
+  if(!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(() => { try { el.focus({ preventScroll: true }); if(el.select) el.select(); } catch(e){ /* ignore */ } }, 250);
+}
+
+// Row ⋯ on every editable list (Personal Income, each bill category, Debts,
+// Monthly History). The menu is built from the row's OWN Edit / Del buttons
+// (attachRowMenu marks them data-row-action and tucks them into the sheet),
+// so each click still runs the listener renderIncome / renderPersonal /
+// renderDebts / renderMonths attached -- openIncomeForm / openForm /
+// openDebtForm, and the confirm + saveIncome / saveExpenses / saveDebts /
+// saveMonths deletes. A hold on the row opens the same sheet.
+function rwRowTitle(row){
+  const l = row.querySelector('.row-label');
+  if(!l) return '';
+  return ((l.childNodes[0] && l.childNodes[0].textContent) || l.textContent || '').trim();
+}
+function rwRowMenu(row){
+  const actions = rowMenuActionsFromButtons(row);
+  if(!actions.length) return null;
+  const amt = row.querySelector('.row-amounts');
+  return { title: rwRowTitle(row) || 'Item', subtitle: amt ? amt.textContent.replace(/\s+/g, ' ').trim() : '', actions };
+}
+function initRunwayRowMenus(){
+  if(typeof attachRowMenu !== 'function' || typeof rowMenuActionsFromButtons !== 'function') return;
+  [
+    ['incomeList', '.row[data-income-row-id]', [{ kind: 'edit', selector: '[data-edit-inc]', label: 'Edit' }, { kind: 'delete', selector: '[data-delete-inc]', label: 'Delete' }]],
+    ['personalCategories', '.row[data-expense-row-id]', [{ kind: 'edit', selector: '[data-edit]', label: 'Edit' }, { kind: 'delete', selector: '[data-delete]', label: 'Delete' }]],
+    ['debtsList', '.row[data-debt-row-id]', [{ kind: 'edit', selector: '[data-edit-debt]', label: 'Edit' }, { kind: 'delete', selector: '[data-delete-debt]', label: 'Delete' }]],
+  ].forEach(([id, rowSel, actions]) => {
+    attachRowMenu(document.getElementById(id), rowSel, { actions, getMenu: rwRowMenu, buttonHost: '.row-actions' });
+  });
+  attachRowMenu(document.getElementById('monthTableBody'), 'tr[data-month-row]', {
+    actions: [{ kind: 'delete', selector: '.danger-btn', label: 'Delete month' }],
+    getMenu: (row) => {
+      const actions = rowMenuActionsFromButtons(row);
+      return actions.length ? { title: row.dataset.monthRow || 'Month', subtitle: 'Net profit ' + ((row.children[3] && row.children[3].textContent) || ''), actions } : null;
+    },
+    buttonHost: 'td:last-child',
+  });
+}
+// loadAll() runs at parse time, before the deferred tools-dialogs.js has
+// defined thRingSvg, so the first paint of the ring, gauge, tiles and bars
+// is drawn again here once it has. Same data, same render functions.
+function rwV2Redraw(){
+  try {
+    if(typeof budgetSettings === 'undefined' || !budgetSettings) return;
+    renderPersonalTotals();
+    const sorted = [...months].sort((a,b)=> a.month.localeCompare(b.month));
+    renderMonthBars(sorted);
+    renderRunwayHero(grandTotal());
+    renderRunwayTiles();
+  } catch(e){ /* data not loaded yet; the next render draws them */ }
+}
+function rwV2Init(){ initRunwayRowMenus(); rwV2Redraw(); }
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', rwV2Init);
+else rwV2Init();
+
 function linearTrendSlope(points){
   const n = points.length;
   const sumX = points.reduce((s,p)=>s+p.x,0);
@@ -3007,6 +3504,8 @@ function renderRunway(){
   drawRevCostChart(sorted);
 
   renderSafeDraw(min);
+  if(typeof renderRunwayHero === 'function') renderRunwayHero(min);
+  if(typeof renderRunwayTiles === 'function') renderRunwayTiles();
 }
 
 // Shared by both charts below (2026-09-07): builds an SVG path for a
