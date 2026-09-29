@@ -58,7 +58,7 @@
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
 <script src="/tools/tools-dialogs.js?v=33e55c2858" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=a1d4851522" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=240c40d38d" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <script src="/tools/sync.js?v=0e885bb435" defer></script>
 <style>
@@ -332,6 +332,167 @@
     content: ''; flex: 1 1 24px; min-width: 24px; height: var(--th-rule); background: var(--border); order: 1;
   }
   body.th-tool-page[data-th-page="site-content"] .dev-panel:not(.is-collapsible) > .dev-panel-heading > *:not(:first-child) { order: 2; }
+
+  /* Workspace app redesign v2 §8.14 (2026-09-29), on top of W5 (the
+     heading rule above stays). A draft banner, a section list (chips on
+     a phone, a sticky list at >=1024px), the fields as cards, Hours as
+     one ruled list of its seven days, and the edit history as a right
+     column at >=1280px. Inputs stay 16px (mobile-zoom-fix.test.js). */
+  body.th-tool-page[data-th-page="site-content"] .th-sc-draft {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 12px 14px; margin: 0 0 16px; padding: 16px 18px;
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl);
+  }
+  body.th-tool-page[data-th-page="site-content"] .th-sc-draft[data-th-state="draft"] {
+    background: linear-gradient(135deg, var(--tone-orange-bg), transparent 62%), var(--bg-panel); border-color: var(--orange-tint-border);
+  }
+  body.th-tool-page[data-th-page="site-content"] .th-sc-draft[data-th-state="error"] { border-color: color-mix(in srgb, var(--status-error) 45%, var(--border)); }
+  body.th-tool-page[data-th-page="site-content"] .th-sc-draft-main { flex: 1 1 220px; min-width: 0; }
+  body.th-tool-page[data-th-page="site-content"] .th-sc-draft-kicker {
+    margin: 0 0 3px; font-family: var(--font-ui); font-size: 12px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text-dim);
+  }
+  body.th-tool-page[data-th-page="site-content"] .th-sc-draft[data-th-state="draft"] .th-sc-draft-kicker { color: var(--orange-text); }
+  body.th-tool-page[data-th-page="site-content"] .th-sc-draft[data-th-state="clean"] .th-sc-draft-kicker { color: var(--tone-green-fg); }
+  body.th-tool-page[data-th-page="site-content"] .th-sc-draft[data-th-state="error"] .th-sc-draft-kicker { color: var(--tone-red-fg); }
+  body.th-tool-page[data-th-page="site-content"] .th-sc-draft-text { margin: 0; font-size: 15.5px; font-weight: 600; color: var(--text); line-height: 1.4; }
+  body.th-tool-page[data-th-page="site-content"] .th-sc-draft-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  body.th-tool-page[data-th-page="site-content"] .th-sc-draft-actions button {
+    min-height: 48px; padding: 0 18px; border-radius: var(--th-radius-track); justify-content: center;
+    font-family: var(--font-ui); font-size: 14px; letter-spacing: .9px; text-transform: uppercase;
+  }
+  body.th-tool-page[data-th-page="site-content"] #scDraftPublishBtn { box-shadow: 3px 3px 0 0 var(--orange-dark); }
+  body.th-tool-page[data-th-page="site-content"] #scDraftPublishBtn:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1px 0 0 var(--orange-dark); }
+  body.th-tool-page[data-th-page="site-content"] .th-sc-draft-actions button:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+
+  /* Layout: one column on a phone, the section list beside the editor
+     from 1024px, and the history as a third column from 1280px. */
+  body.th-tool-page[data-th-page="site-content"] .th-sc-layout { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  body.th-tool-page[data-th-page="site-content"] .th-sc-main,
+  body.th-tool-page[data-th-page="site-content"] .th-sc-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  body.th-tool-page[data-th-page="site-content"] .th-sc-nav {
+    position: sticky; top: 0; z-index: 20; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
+    padding: 8px 0; background: var(--bg);
+  }
+  body.th-tool-page[data-th-page="site-content"] .th-sc-nav::-webkit-scrollbar { display: none; }
+  body.th-tool-page[data-th-page="site-content"] .th-sc-nav-btn {
+    flex-shrink: 0; display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 14px; cursor: pointer; white-space: nowrap;
+    border: 1px solid var(--border); border-radius: 999px; background: var(--bg-panel); color: var(--text);
+    font-family: var(--font-app); font-size: 13.5px; font-weight: 600; letter-spacing: 0; text-transform: none; box-shadow: none;
+  }
+  body.th-tool-page[data-th-page="site-content"] .th-sc-nav-btn.is-active { background: var(--tone-orange-bg); border-color: var(--orange-tint-border); color: var(--orange-text); }
+  body.th-tool-page[data-th-page="site-content"] .th-sc-nav-btn:active { transform: scale(.97); }
+  @media (hover: hover) { body.th-tool-page[data-th-page="site-content"] .th-sc-nav-btn:not(.is-active):hover { border-color: var(--orange-tint-border); } }
+  @media (pointer: coarse) { body.th-tool-page[data-th-page="site-content"] .th-sc-nav-btn { min-height: 44px; } }
+  body.th-tool-page[data-th-page="site-content"] .th-sc-dot { display: none; width: 8px; height: 8px; border-radius: 50%; background: var(--orange); flex-shrink: 0; }
+  body.th-tool-page[data-th-page="site-content"] .th-sc-nav-btn.has-draft .th-sc-dot { display: inline-block; }
+  @media (min-width: 1024px) {
+    body.th-tool-page[data-th-page="site-content"] .th-sc-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); align-items: start; gap: 16px; }
+    body.th-tool-page[data-th-page="site-content"] .th-sc-nav {
+      grid-column: 1; grid-row: 1 / span 2; top: 84px; flex-direction: column; gap: 2px; overflow: visible; padding: 8px;
+      background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl);
+    }
+    body.th-tool-page[data-th-page="site-content"] .th-sc-nav-btn {
+      width: 100%; justify-content: space-between; min-height: 44px; padding: 0 12px; border: 0; border-radius: 12px;
+      background: none; color: var(--text-dim); font-size: 14.5px; font-weight: 500;
+    }
+    body.th-tool-page[data-th-page="site-content"] .th-sc-nav-btn.is-active { background: var(--tone-orange-bg); color: var(--orange-text); font-weight: 600; }
+    @media (hover: hover) { body.th-tool-page[data-th-page="site-content"] .th-sc-nav-btn:not(.is-active):hover { color: var(--text); background: var(--bg-panel-2); } }
+    body.th-tool-page[data-th-page="site-content"] .th-sc-main { grid-column: 2; }
+    body.th-tool-page[data-th-page="site-content"] .th-sc-side { grid-column: 2; }
+  }
+  @media (min-width: 1280px) {
+    body.th-tool-page[data-th-page="site-content"] .th-sc-layout { grid-template-columns: 210px minmax(0, 1fr) 320px; }
+    body.th-tool-page[data-th-page="site-content"] .th-sc-side { grid-column: 3; grid-row: 1; }
+  }
+
+  /* Panels are v2 cards. The editor panel itself is flat -- its groups
+     and fields are the cards, as in the prototype. */
+  body.th-tool-page[data-th-page="site-content"] .dev-panel {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl); padding: 16px 18px;
+  }
+  body.th-tool-page[data-th-page="site-content"] #siteContentPanel { background: none; border: 0; padding: 0; }
+  body.th-tool-page[data-th-page="site-content"] .dev-panel h2 {
+    font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text);
+  }
+  body.th-tool-page[data-th-page="site-content"] .cms-group { margin-bottom: 26px; scroll-margin-top: 64px; }
+  body.th-tool-page[data-th-page="site-content"] .cms-group-title {
+    font-family: var(--font-display); font-weight: 400; font-size: 20px; letter-spacing: .3px; text-transform: uppercase; color: var(--text); margin: 0 0 4px;
+  }
+  body.th-tool-page[data-th-page="site-content"] .cms-group-intro { font-size: 13px; line-height: 1.5; }
+  body.th-tool-page[data-th-page="site-content"] .cms-field {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-tile); padding: 14px 16px; min-width: 0;
+  }
+  body.th-tool-page[data-th-page="site-content"] .cms-field.is-dirty { border-color: var(--orange-tint-border); box-shadow: inset 3px 0 0 var(--orange); }
+  body.th-tool-page[data-th-page="site-content"] .cms-field.has-error { border-color: var(--status-error); box-shadow: inset 3px 0 0 var(--status-error); }
+  body.th-tool-page[data-th-page="site-content"] .cms-field-head { flex-wrap: wrap; row-gap: 2px; }
+  body.th-tool-page[data-th-page="site-content"] .cms-field-head label {
+    font-family: var(--font-ui); font-size: 11.5px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-dim);
+  }
+  body.th-tool-page[data-th-page="site-content"] .cms-dirty-pill {
+    border: 0; padding: 2px 8px; background: var(--tone-orange-bg); color: var(--tone-orange-fg); font-size: 11px; font-weight: 700;
+  }
+  /* "Where it shows", one line under each label (from the page's own
+     "Where does this appear?" notes). Hours carry it on their group. */
+  body.th-tool-page[data-th-page="site-content"] .cms-field-head::after {
+    order: 9; flex: 1 0 100%; font-size: 12px; color: var(--text-faint); letter-spacing: 0; text-transform: none;
+  }
+  body.th-tool-page[data-th-page="site-content"] [data-cms-field="googleRating"] .cms-field-head::after,
+  body.th-tool-page[data-th-page="site-content"] [data-cms-field="googleReviewCount"] .cms-field-head::after { content: "Shows on the homepage, the booking page and the repair pages"; }
+  body.th-tool-page[data-th-page="site-content"] [data-cms-field^="banner1"] .cms-field-head::after { content: "Shows across the top of every public page"; }
+  body.th-tool-page[data-th-page="site-content"] [data-cms-field^="banner2"] .cms-field-head::after { content: "Shows under the top banner on every public page"; }
+  body.th-tool-page[data-th-page="site-content"] [data-cms-field="phone"] .cms-field-head::after { content: "Shows in the header, the footer and every Call and Text button"; }
+  body.th-tool-page[data-th-page="site-content"] [data-cms-field="email"] .cms-field-head::after { content: "Shows in the footer, the contact card and the Terms"; }
+  body.th-tool-page[data-th-page="site-content"] .cms-field-live { font-size: 12.5px; }
+  body.th-tool-page[data-th-page="site-content"] .cms-field-input > input,
+  body.th-tool-page[data-th-page="site-content"] .cms-field-input > select,
+  body.th-tool-page[data-th-page="site-content"] .cms-hours select,
+  body.th-tool-page[data-th-page="site-content"] .cms-hours input {
+    min-height: 48px; padding: 10px 14px; border-radius: 12px; background: var(--th-field); font-size: 16px;
+  }
+  body.th-tool-page[data-th-page="site-content"] .cms-field .small-btn { border-radius: 999px; min-height: 36px; }
+
+  /* Hours: one ruled list, a row per day -- still seven separate fields. */
+  body.th-tool-page[data-th-page="site-content"] .cms-group[data-cms-group="hours"] .cms-group-fields {
+    display: block; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-tile); overflow: hidden;
+  }
+  body.th-tool-page[data-th-page="site-content"] .cms-group[data-cms-group="hours"] .cms-field {
+    display: grid; grid-template-columns: 120px minmax(0, 1fr); align-items: center; column-gap: 12px;
+    border: 0; border-top: 1px solid var(--th-hairline); border-radius: 0; background: none; padding: 10px 16px;
+  }
+  body.th-tool-page[data-th-page="site-content"] .cms-group[data-cms-group="hours"] .cms-field:first-child { border-top: 0; }
+  body.th-tool-page[data-th-page="site-content"] .cms-group[data-cms-group="hours"] .cms-field.is-dirty { box-shadow: inset 3px 0 0 var(--orange); }
+  body.th-tool-page[data-th-page="site-content"] .cms-group[data-cms-group="hours"] .cms-field-head label { font-family: var(--font-app); font-size: 15px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--text); }
+  body.th-tool-page[data-th-page="site-content"] .cms-group[data-cms-group="hours"] .cms-field-input { margin-top: 0; }
+  body.th-tool-page[data-th-page="site-content"] .cms-group[data-cms-group="hours"] .cms-field > .cms-field-error,
+  body.th-tool-page[data-th-page="site-content"] .cms-group[data-cms-group="hours"] .cms-field > .cms-field-history { grid-column: 1 / -1; }
+  @media (max-width: 560px) {
+    body.th-tool-page[data-th-page="site-content"] .cms-group[data-cms-group="hours"] .cms-field { grid-template-columns: minmax(0, 1fr); row-gap: 6px; }
+  }
+
+  /* The last-save strip, the sticky publish bar, the FAQ/Terms items. */
+  body.th-tool-page[data-th-page="site-content"] .cms-last-save { border-radius: var(--th-radius-tile); background: var(--bg-panel); }
+  body.th-tool-page[data-th-page="site-content"] .cms-last-save .secondary-btn { border-radius: 999px; min-height: 40px; }
+  body.th-tool-page[data-th-page="site-content"] .cms-publish-bar {
+    margin: 8px 0 0; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--th-radius-tile);
+    background: var(--bg-panel); box-shadow: var(--shadow-hover);
+  }
+  @media (min-width: 1024px) { body.th-tool-page[data-th-page="site-content"] .cms-publish-bar { padding-right: 76px; } }
+  body.th-tool-page[data-th-page="site-content"] .cms-publish-bar .primary-btn,
+  body.th-tool-page[data-th-page="site-content"] .cms-publish-bar .secondary-btn { border-radius: var(--th-radius-track); }
+  body.th-tool-page[data-th-page="site-content"] .dev-panel.cms-list-item { border-radius: var(--th-radius-tile); padding: 14px 16px; }
+  body.th-tool-page[data-th-page="site-content"] .cms-list-item .th-row-menu-btn { vertical-align: middle; }
+  body.th-tool-page[data-th-page="site-content"] .th-sc-add {
+    flex: 1 1 200px; justify-content: center; min-height: 48px; border: 1px dashed var(--border); border-radius: 14px;
+    background: none; color: var(--orange-text); font-family: var(--font-ui); font-size: 13.5px; letter-spacing: .8px; text-transform: uppercase;
+  }
+  body.th-tool-page[data-th-page="site-content"] .th-sc-add:active { transform: scale(.985); }
+  @media (hover: hover) { body.th-tool-page[data-th-page="site-content"] .th-sc-add:hover { border-color: var(--orange-tint-border); background: var(--orange-tint-soft); } }
+
+  /* Edit history: ruled rows, each Restore a pill. */
+  body.th-tool-page[data-th-page="site-content"] #contentHistoryList { max-height: 560px; }
+  body.th-tool-page[data-th-page="site-content"] #contentHistoryList .dev-check-row { border-bottom: 0; border-top: 1px solid var(--th-hairline); font-size: 13.5px; line-height: 1.45; }
+  body.th-tool-page[data-th-page="site-content"] #contentHistoryList .dev-check-row:first-child { border-top: 0; }
+  body.th-tool-page[data-th-page="site-content"] #contentHistoryList .small-btn { border-radius: 999px; min-height: 34px; color: var(--orange-text); }
+  @media (pointer: coarse) { body.th-tool-page[data-th-page="site-content"] #contentHistoryList .small-btn { min-height: 44px; } }
 </style>
 </head>
 <body data-th-page="site-content">
@@ -355,6 +516,36 @@
 
 <p class="tool-sub">Change the Google rating and review count, banners, hours, phone, email, FAQ, and Terms on the public site. Every change is checked, shown to you side by side before it goes live, and can be undone -- no code push needed.</p>
 
+  <!-- Workspace app redesign v2 §8.14 (2026-09-29): the draft banner, a
+       section list, the editor, and the edit history beside it. The
+       banner counts what the page's own editors already track (a field's
+       is-dirty state, cmsListDiff() for FAQ and Terms). Its Publish button
+       only ever starts one of the page's existing publish flows, each of
+       which opens "Review before publishing" (#cmsReviewOverlay) first --
+       nothing publishes without that review. -->
+  <div class="th-sc-draft" id="scDraftBanner" data-th-state="loading">
+    <div class="th-sc-draft-main">
+      <p class="th-sc-draft-kicker" id="scDraftKicker">Checking the live site</p>
+      <p class="th-sc-draft-text" id="scDraftText">Loading what the website shows right now.</p>
+    </div>
+    <div class="th-sc-draft-actions">
+      <button type="button" class="secondary-btn" id="scDraftReviewBtn" disabled>Review changes</button>
+      <button type="button" class="primary-btn" id="scDraftPublishBtn" disabled>Publish</button>
+    </div>
+  </div>
+
+  <div class="th-sc-layout">
+  <nav class="th-sc-nav" id="scSectionNav" aria-label="Website sections">
+    <button type="button" class="th-sc-nav-btn" data-sc-jump="reviews">Google reviews<span class="th-sc-dot" aria-hidden="true"></span></button>
+    <button type="button" class="th-sc-nav-btn" data-sc-jump="banners">Announcement banners<span class="th-sc-dot" aria-hidden="true"></span></button>
+    <button type="button" class="th-sc-nav-btn" data-sc-jump="hours">Hours &middot; each day<span class="th-sc-dot" aria-hidden="true"></span></button>
+    <button type="button" class="th-sc-nav-btn" data-sc-jump="contact">Phone + email<span class="th-sc-dot" aria-hidden="true"></span></button>
+    <button type="button" class="th-sc-nav-btn" data-sc-jump="faq">FAQ<span class="th-sc-dot" aria-hidden="true"></span></button>
+    <button type="button" class="th-sc-nav-btn" data-sc-jump="terms">Terms &amp; Conditions<span class="th-sc-dot" aria-hidden="true"></span></button>
+    <button type="button" class="th-sc-nav-btn" data-sc-jump="history">Edit history</button>
+  </nav>
+
+  <div class="th-sc-main">
   <!-- The editor is the reason this page exists, so it's always open
        (2026-09-23) -- "open the tool, change the number, confirm, done"
        shouldn't start with expanding a collapsed panel. History, FAQ, and
@@ -372,18 +563,6 @@
     </div>
   </div>
 
-  <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="contenthistory">
-    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
-      <h2>Content edit history</h2>
-      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('contenthistory')" aria-label="What does this do?" title="What does this do?">?</button>
-      <span class="dev-collapse-caret">&#9660;</span>
-    </div>
-    <div class="dev-panel-body">
-      <button class="secondary-btn" style="margin-bottom:12px;" onclick="exportContentBackup()">Download backup (JSON)</button>
-      <div id="contentHistoryList" class="dev-scrollable-list"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div></div>
-    </div>
-  </div>
-
   <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="faq">
     <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
       <h2>FAQ editor</h2>
@@ -395,7 +574,7 @@
       <div id="faqLastSave"></div>
       <div id="faqEditorList"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div></div>
       <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
-        <button class="secondary-btn" onclick="addFaqItem()">+ Add question</button>
+        <button class="secondary-btn th-sc-add" onclick="addFaqItem()">+ Add question</button>
         <button class="primary-btn" id="saveFaqBtn" onclick="saveFaqList()">Review &amp; publish</button>
       </div>
     </div>
@@ -412,10 +591,26 @@
       <div id="termsLastSave"></div>
       <div id="termsEditorList"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div></div>
       <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
-        <button class="secondary-btn" onclick="addTermsItem()">+ Add section</button>
+        <button class="secondary-btn th-sc-add" onclick="addTermsItem()">+ Add section</button>
         <button class="primary-btn" id="saveTermsBtn" onclick="saveTermsList()">Review &amp; publish</button>
       </div>
     </div>
+  </div>
+  </div>
+
+  <div class="th-sc-side">
+  <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="contenthistory">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>Content edit history</h2>
+      <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('contenthistory')" aria-label="What does this do?" title="What does this do?">?</button>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <button class="secondary-btn" style="margin-bottom:12px;" onclick="exportContentBackup()">Download backup (JSON)</button>
+      <div id="contentHistoryList" class="dev-scrollable-list"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div></div>
+    </div>
+  </div>
+  </div>
   </div>
 
   </div>
@@ -1862,6 +2057,164 @@
     }
     if (typeof setupPullToRefresh === 'function') setupPullToRefresh(proceed);
   });
+</script>
+<script>
+  // Workspace app redesign v2 §8.14 (2026-09-29) -- presentation only.
+  // The draft banner and the section dots count what the editors above
+  // already track: a field's is-dirty class, and cmsListDiff() for FAQ
+  // and Terms (a pure read of the working copy). "Publish" clicks the
+  // page's own Review & publish button for the first group with edits,
+  // so it always goes through showCmsReview() (#cmsReviewOverlay) and
+  // the dev-password step -- never straight to the database. "Review
+  // changes" only scrolls to the first edited field. Nothing here reads
+  // or writes site content.
+  (function () {
+    const byId = (id) => document.getElementById(id);
+    function listChanges(name) {
+      try {
+        if (typeof cmsListState === 'undefined' || !cmsListState[name] || !cmsListState[name].loadedOk || typeof cmsListDiff !== 'function') return 0;
+        return cmsListDiff(name).length;
+      } catch (e) { return 0; }
+    }
+    function readState() {
+      const form = byId('siteContentForm');
+      const dirty = form ? Array.from(form.querySelectorAll('.cms-field.is-dirty')) : [];
+      const groups = {};
+      dirty.forEach(f => { const g = f.closest('[data-cms-group]'); if (g) groups[g.getAttribute('data-cms-group')] = true; });
+      const faq = listChanges('faq');
+      const terms = listChanges('terms');
+      if (faq) groups.faq = true;
+      if (terms) groups.terms = true;
+      const errors = (form ? form.querySelectorAll('.cms-field.has-error').length : 0) + document.querySelectorAll('.cms-list-item.has-error').length;
+      const loaded = typeof cmsLoadedOk !== 'undefined' && !!cmsLoadedOk;
+      const failed = !!(form && form.querySelector('.error-state'));
+      return { fields: dirty.length, faq: faq, terms: terms, total: dirty.length + faq + terms, errors: errors, groups: groups, loaded: loaded, failed: failed };
+    }
+    function setText(el, text) { if (el && el.textContent !== text) el.textContent = text; }
+    function render() {
+      const banner = byId('scDraftBanner');
+      if (!banner) return;
+      const s = readState();
+      let state, kicker, text;
+      if (s.failed) {
+        state = 'error'; kicker = 'Could not load the live site';
+        text = 'Nothing can be edited until it loads -- reload to try again.';
+      } else if (!s.loaded) {
+        state = 'loading'; kicker = 'Checking the live site'; text = 'Loading what the website shows right now.';
+      } else if (s.total) {
+        state = s.errors ? 'error' : 'draft';
+        kicker = s.total + ' unpublished edit' + (s.total === 1 ? '' : 's');
+        text = s.errors
+          ? s.errors + ' ' + (s.errors === 1 ? 'needs' : 'need') + ' fixing before anything can publish.'
+          : 'Not on the website yet. Review each change, then publish.' +
+            ((s.fields ? 1 : 0) + (s.faq ? 1 : 0) + (s.terms ? 1 : 0) > 1 ? ' The FAQ and Terms publish on their own.' : '');
+      } else {
+        state = 'clean'; kicker = 'Live'; text = 'Everything on the website matches what you see here.';
+      }
+      if (banner.getAttribute('data-th-state') !== state) banner.setAttribute('data-th-state', state);
+      setText(byId('scDraftKicker'), kicker);
+      setText(byId('scDraftText'), text);
+      const review = byId('scDraftReviewBtn');
+      const publish = byId('scDraftPublishBtn');
+      if (review && review.disabled !== !s.total) review.disabled = !s.total;
+      const canPublish = !!s.total && !s.errors && s.loaded;
+      if (publish && publish.disabled !== !canPublish) publish.disabled = !canPublish;
+      document.querySelectorAll('.th-sc-nav-btn[data-sc-jump]').forEach(btn => {
+        btn.classList.toggle('has-draft', !!s.groups[btn.getAttribute('data-sc-jump')]);
+      });
+    }
+    let queued = false;
+    function schedule() {
+      if (queued) return;
+      queued = true;
+      setTimeout(() => { queued = false; try { render(); } catch (e) { /* presentation only */ } }, 60);
+    }
+    const PANEL_KEYS = { faq: 'faq', terms: 'terms', history: 'contenthistory' };
+    function targetFor(key) {
+      if (PANEL_KEYS[key]) return document.querySelector('.dev-panel[data-collapse-key="' + PANEL_KEYS[key] + '"]');
+      return document.querySelector('#siteContentForm [data-cms-group="' + key + '"]');
+    }
+    function openPanel(panel) {
+      if (panel && panel.classList.contains('is-collapsed') && typeof toggleDevPanel === 'function') {
+        toggleDevPanel(panel.querySelector('.dev-panel-heading'));
+      }
+    }
+    function scrollToEl(el) {
+      if (!el || !el.scrollIntoView) return;
+      const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    }
+    function jump(key) {
+      const el = targetFor(key);
+      if (!el) return;
+      if (PANEL_KEYS[key]) openPanel(el);
+      document.querySelectorAll('.th-sc-nav-btn[data-sc-jump]').forEach(b => b.classList.toggle('is-active', b.getAttribute('data-sc-jump') === key));
+      scrollToEl(el);
+    }
+    function reviewChanges() {
+      const s = readState();
+      const field = document.querySelector('#siteContentForm .cms-field.is-dirty');
+      let target = field;
+      if (!target && (s.faq || s.terms)) {
+        target = targetFor(s.faq ? 'faq' : 'terms');
+        openPanel(target);
+      }
+      if (!target) return;
+      scrollToEl(target);
+      const input = field && field.querySelector('input:not([hidden]), select, textarea');
+      if (input) { try { input.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+    }
+    function publish() {
+      const s = readState();
+      if (!s.total || s.errors) return;
+      const id = s.fields ? 'saveSiteContentBtn' : s.faq ? 'saveFaqBtn' : 'saveTermsBtn';
+      const btn = byId(id);
+      if (btn && !btn.disabled) btn.click();
+    }
+    document.addEventListener('DOMContentLoaded', function () {
+      const nav = byId('scSectionNav');
+      if (nav) nav.addEventListener('click', (e) => {
+        const btn = e.target.closest && e.target.closest('[data-sc-jump]');
+        if (btn) jump(btn.getAttribute('data-sc-jump'));
+      });
+      const reviewBtn = byId('scDraftReviewBtn');
+      if (reviewBtn) reviewBtn.addEventListener('click', reviewChanges);
+      const publishBtn = byId('scDraftPublishBtn');
+      if (publishBtn) publishBtn.addEventListener('click', publish);
+      const root = byId('contentMainView');
+      if (root && typeof MutationObserver !== 'undefined') {
+        new MutationObserver(schedule).observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'hidden'] });
+      }
+      document.addEventListener('input', schedule, true);
+      document.addEventListener('change', schedule, true);
+      schedule();
+      // FAQ and Terms items: Move up / Move down / Delete behind one ⋯.
+      // The sheet clicks each item's own buttons (moveFaqItem,
+      // deleteFaqItem, ...), which stay in the DOM.
+      if (typeof attachRowMenu === 'function') {
+        [['faqEditorList', 'question'], ['termsEditorList', 'section']].forEach(([id, noun]) => {
+          const list = byId(id);
+          if (!list) return;
+          attachRowMenu(list, '.cms-list-item', {
+            buttonHost: ':scope > div:first-child > div',
+            longPress: false,
+            actions: [
+              { kind: 'extra', selector: 'button[title="Move up"]', label: 'Move up' },
+              { kind: 'extra', selector: 'button[title="Move down"]', label: 'Move down' },
+              { kind: 'delete', selector: '.dev-danger-btn', label: 'Delete this ' + noun },
+            ],
+            getMenu: (row) => {
+              const actions = typeof rowMenuActionsFromButtons === 'function' ? rowMenuActionsFromButtons(row) : [];
+              if (!actions.length) return null;
+              const first = row.querySelector('input[type="text"]');
+              const title = (first && first.value.trim()) || ('New ' + noun);
+              return { title: title, actions: actions };
+            },
+          });
+        });
+      }
+    });
+  })();
 </script>
 
 </body>

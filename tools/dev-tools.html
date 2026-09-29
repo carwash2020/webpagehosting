@@ -58,7 +58,7 @@
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
 <script src="/tools/tools-dialogs.js?v=33e55c2858" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=a1d4851522" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=240c40d38d" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <script src="/tools/sync.js?v=0e885bb435" defer></script>
 <style>
@@ -401,6 +401,127 @@
     content: ''; flex: 1 1 24px; min-width: 24px; height: var(--th-rule); background: var(--border); order: 1;
   }
   body.th-tool-page[data-th-page="dev-tools"] .dev-panel:not(.is-collapsible) > .dev-panel-heading > *:not(:first-child) { order: 2; }
+
+  /* Workspace app redesign v2 §8.15 (2026-09-29), on top of W5 (the
+     heading rule and the collapsible-row tier above stay; so do the
+     09-24 sections, their div role="group" labels and every panel's
+     wiring). New here: the tab bar as a v2 segmented track, a question
+     banner at the top of every tab (green when fine, orange when
+     something needs a look), panels as radius-22 cards, ruled rows,
+     logs as a monospace block, the status chips as tiles, and a
+     read-only permissions matrix on Access. */
+  body.th-tool-page[data-th-page="dev-tools"] .dev-tab-bar { gap: 4px; }
+  body.th-tool-page[data-th-page="dev-tools"] .dev-tab-btn,
+  body.th-tool-page[data-th-page="dev-tools"] .dev-tab-bar > a {
+    min-height: 40px; padding: 0 14px; border-radius: var(--th-radius-seg); flex-shrink: 0;
+    font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: .8px; text-transform: uppercase;
+  }
+  body.th-tool-page[data-th-page="dev-tools"] .dev-tab-btn.is-active { background: var(--text); color: var(--bg); font-weight: 500; }
+  body.th-tool-page[data-th-page="dev-tools"] .dev-tab-btn.is-active .th-icon { color: var(--bg); }
+  @media (pointer: coarse) {
+    body.th-tool-page[data-th-page="dev-tools"] .dev-tab-btn,
+    body.th-tool-page[data-th-page="dev-tools"] .dev-tab-bar > a { min-height: 44px; }
+  }
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-tab-count { margin-left: 6px; min-width: 18px; height: 18px; padding: 0 5px; font-size: 11px; letter-spacing: 0; }
+
+  /* The question banner. */
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-q {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin: 0 0 22px; padding: 16px 18px;
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl);
+  }
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-q[data-th-tone="green"] {
+    background: linear-gradient(135deg, var(--tone-green-bg), transparent 65%), var(--bg-panel);
+    border-color: color-mix(in srgb, var(--tone-green-fg) 32%, var(--border));
+  }
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-q[data-th-tone="orange"] {
+    background: linear-gradient(135deg, var(--tone-orange-bg), transparent 65%), var(--bg-panel);
+    border-color: var(--orange-tint-border);
+  }
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-q-icon {
+    width: 50px; height: 50px; flex-shrink: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+    background: var(--th-field); color: var(--text-dim);
+  }
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-q-icon .th-icon { width: 24px; height: 24px; margin: 0; }
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-q[data-th-tone="green"] .th-dt-q-icon { background: var(--tone-green-bg); color: var(--tone-green-fg); }
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-q[data-th-tone="orange"] .th-dt-q-icon { background: var(--tone-orange-bg); color: var(--tone-orange-fg); }
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-q-main { flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-q-kicker {
+    margin: 0; font-family: var(--font-ui); font-size: 11.5px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text-dim);
+  }
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-q-answer {
+    margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 28px; line-height: 1.05; text-transform: uppercase; color: var(--text);
+    overflow-wrap: anywhere;
+  }
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-q-detail { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-q .th-dt-q-action {
+    min-height: 48px; padding: 0 18px; border: 0; border-radius: var(--th-radius-track); white-space: nowrap; justify-content: center;
+    background: var(--orange); color: var(--th-ink-on-orange); box-shadow: 3px 3px 0 0 var(--orange-dark);
+    font-family: var(--font-ui); font-size: 14px; font-weight: 600; letter-spacing: .9px; text-transform: uppercase;
+  }
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-q .th-dt-q-action:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1px 0 0 var(--orange-dark); }
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-q .th-dt-q-action:disabled { opacity: .55; }
+  @media (max-width: 520px) { body.th-tool-page[data-th-page="dev-tools"] .th-dt-q .th-dt-q-action { flex: 1 1 100%; } }
+  body.th-tool-page[data-th-page="dev-tools"] .dev-health-run-row { display: block; }
+  body.th-tool-page[data-th-page="dev-tools"] .dev-health-run { margin-top: -10px; }
+
+  /* Panels are cards. */
+  body.th-tool-page[data-th-page="dev-tools"] .dev-panel {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl); padding: 16px 18px;
+  }
+  body.th-tool-page[data-th-page="dev-tools"] .dev-panel.is-collapsible { border-radius: var(--th-radius-tile); }
+  body.th-tool-page[data-th-page="dev-tools"] .dev-panel h2 {
+    font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text);
+  }
+  body.th-tool-page[data-th-page="dev-tools"] .dev-panel.is-collapsible h2 { font-size: 13px; }
+  body.th-tool-page[data-th-page="dev-tools"] .dev-panel .secondary-btn,
+  body.th-tool-page[data-th-page="dev-tools"] .dev-panel .small-btn { border-radius: 999px; }
+  /* Ruled rows: a hairline above each row, none under the last. */
+  body.th-tool-page[data-th-page="dev-tools"] .dev-check-row,
+  body.th-tool-page[data-th-page="dev-tools"] .dev-issue-row { border-bottom: 0; border-top: 1px solid var(--th-hairline); padding: 11px 0; }
+  body.th-tool-page[data-th-page="dev-tools"] .dev-check-row:first-child,
+  body.th-tool-page[data-th-page="dev-tools"] .dev-issue-row:first-child { border-top: 0; }
+  body.th-tool-page[data-th-page="dev-tools"] .dev-issue-title { font-size: 14.5px; }
+  body.th-tool-page[data-th-page="dev-tools"] .dev-check-status.pass { color: var(--tone-green-fg); }
+  body.th-tool-page[data-th-page="dev-tools"] .dev-check-status.fail { color: var(--tone-red-fg); }
+  body.th-tool-page[data-th-page="dev-tools"] .dev-issue-row .th-row-menu-btn,
+  body.th-tool-page[data-th-page="dev-tools"] .dev-check-row .th-row-menu-btn { flex-shrink: 0; align-self: center; }
+  /* Logs (sync conflicts, client errors) read as a monospace block. */
+  body.th-tool-page[data-th-page="dev-tools"] #syncConflictLog:has(.dev-check-row),
+  body.th-tool-page[data-th-page="dev-tools"] #clientErrorLog:has(.dev-check-row) {
+    padding: 4px 12px; border-radius: 12px; background: var(--bg); max-height: 320px; overflow: auto;
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 12px; line-height: 1.6;
+  }
+  body.th-tool-page[data-th-page="dev-tools"] #syncConflictLog .dev-check-detail,
+  body.th-tool-page[data-th-page="dev-tools"] #clientErrorLog .dev-check-detail { font-size: 11.5px; }
+  /* The four status chips open as a tile grid. */
+  body.th-tool-page[data-th-page="dev-tools"] #devStatusStrip[style*="flex"] { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+  body.th-tool-page[data-th-page="dev-tools"] #devStatusStrip .dev-status-chip {
+    border-radius: 14px; padding: 12px 14px; background: var(--bg-panel); font-size: 13.5px; font-weight: 600; color: var(--text);
+  }
+  body.th-tool-page[data-th-page="dev-tools"] .dev-status-dot.ok { background: var(--tone-green-fg); box-shadow: 0 0 0 3px var(--tone-green-bg); }
+  body.th-tool-page[data-th-page="dev-tools"] .dev-status-dot.warn { background: var(--orange-light); box-shadow: 0 0 0 3px var(--tone-orange-bg); }
+  body.th-tool-page[data-th-page="dev-tools"] .dev-status-dot.bad { background: var(--status-error); box-shadow: 0 0 0 3px var(--tone-red-bg); }
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-verdict {
+    margin: 12px 0 0; font-family: var(--font-display); font-size: 22px; text-transform: uppercase; line-height: 1.1; color: var(--tone-green-fg);
+  }
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-verdict.is-bad { color: var(--tone-red-fg); }
+  /* Access: the permissions matrix. */
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-matrix-card .th-v2-card-head { flex-wrap: wrap; row-gap: 2px; }
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-matrix-card .th-v2-card-note { flex: 1 1 100%; }
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-matrix-wrap { overflow-x: auto; }
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-matrix { width: 100%; min-width: 320px; border-collapse: collapse; font-size: 13.5px; }
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-matrix th {
+    padding: 8px 6px; font-family: var(--font-ui); font-weight: 500; font-size: 11.5px; letter-spacing: 1.1px; text-transform: uppercase;
+    color: var(--text-dim); text-align: center; white-space: nowrap;
+  }
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-matrix th:first-child,
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-matrix td:first-child { text-align: left; padding-left: 0; }
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-matrix td { padding: 9px 6px; border-top: 1px solid var(--th-hairline); text-align: center; color: var(--text); }
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-mark {
+    display: inline-flex; width: 26px; height: 26px; border-radius: 8px; align-items: center; justify-content: center; font-weight: 700;
+    background: var(--th-field); color: var(--text-faint);
+  }
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-mark.is-on { background: var(--tone-green-bg); color: var(--tone-green-fg); }
 </style>
 </head>
 <body data-th-page="dev-tools">
@@ -439,7 +560,7 @@
   </div>
 
   <nav class="dev-tab-bar" id="devTabBar">
-    <button type="button" class="dev-tab-btn" data-tab="health" onclick="switchDevToolsTab('health')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-flask" xlink:href="#icon-flask"></use></svg></span>Health</button>
+    <button type="button" class="dev-tab-btn" data-tab="health" onclick="switchDevToolsTab('health')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-flask" xlink:href="#icon-flask"></use></svg></span>Health<span class="th-v2-count th-dt-tab-count" id="dtHealthCount" aria-label="client errors"></span></button>
     <button type="button" class="dev-tab-btn" data-tab="data" onclick="switchDevToolsTab('data')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-folder" xlink:href="#icon-folder"></use></svg></span>Data</button>
     <button type="button" class="dev-tab-btn" data-tab="sync" onclick="switchDevToolsTab('sync')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-shuffle" xlink:href="#icon-shuffle"></use></svg></span>Sync</button>
     <button type="button" class="dev-tab-btn" data-tab="notifications" onclick="switchDevToolsTab('notifications')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-bell" xlink:href="#icon-bell"></use></svg></span>Notifications</button>
@@ -451,9 +572,20 @@
 
   <div class="dev-tab-panel" data-tab-panel="health">
 
+  <!-- v2 §8.15 question banner (2026-09-29): the tab's question, its
+       answer from what the panels below already rendered, one action. -->
+  <div class="th-dt-q" data-dt-q="health" data-th-tone="idle">
+    <span class="th-dt-q-icon" aria-hidden="true"><svg class="th-icon"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg></span>
+    <div class="th-dt-q-main">
+      <p class="th-dt-q-kicker">Is anything broken right now?</p>
+      <p class="th-dt-q-answer" data-dt-answer>Checking&hellip;</p>
+      <p class="th-dt-q-detail" data-dt-detail>Running the live checks: session, Supabase, sync and the service worker.</p>
+    </div>
+    <button class="secondary-btn th-dt-q-action" id="fullHealthCheckBtn" onclick="runFullHealthCheck()">Run full health check</button>
+  </div>
+
   <div class="dev-health-run">
     <div class="dev-health-run-row">
-      <button class="secondary-btn" id="fullHealthCheckBtn" onclick="runFullHealthCheck()">Run full health check</button>
       <span class="dev-health-run-note">Consistency check, service worker, Supabase, latest deploy, and cron health in one pass.</span>
     </div>
     <div id="fullHealthCheckResults" style="margin-top:12px;"></div>
@@ -517,6 +649,7 @@
     </div>
     <div class="dev-panel-body">
       <button class="secondary-btn" onclick="runLiveConsistencyCheck()" id="runCheckBtn">Run check</button>
+      <p class="th-dt-verdict" id="dtConsistencyVerdict" hidden></p>
       <div id="consistencyResults" style="margin-top:16px;"></div>
     </div>
   </div>
@@ -543,6 +676,18 @@
   </div>
 
   <div class="dev-tab-panel" data-tab-panel="data">
+
+  <!-- v2 §8.15 question banner (2026-09-29): the tab's question, its
+       answer from what the panels below already rendered, one action. -->
+  <div class="th-dt-q" data-dt-q="data" data-th-tone="idle">
+    <span class="th-dt-q-icon" aria-hidden="true"><svg class="th-icon"><use href="#icon-folder" xlink:href="#icon-folder"></use></svg></span>
+    <div class="th-dt-q-main">
+      <p class="th-dt-q-kicker">Is the data clean, and can it come back?</p>
+      <p class="th-dt-q-answer" data-dt-answer>Checking&hellip;</p>
+      <p class="th-dt-q-detail" data-dt-detail>Deleted things wait in the Graveyard, and a full backup is one tap.</p>
+    </div>
+    <button type="button" class="primary-btn th-dt-q-action" data-dt-action="data">Download backup</button>
+  </div>
 
   <div class="dev-section" role="group" aria-labelledby="devSecDataChecks">
   <div class="dev-section-head">
@@ -678,6 +823,18 @@
 
   <div class="dev-tab-panel" data-tab-panel="sync">
 
+  <!-- v2 §8.15 question banner (2026-09-29): the tab's question, its
+       answer from what the panels below already rendered, one action. -->
+  <div class="th-dt-q" data-dt-q="sync" data-th-tone="idle">
+    <span class="th-dt-q-icon" aria-hidden="true"><svg class="th-icon"><use href="#icon-shuffle" xlink:href="#icon-shuffle"></use></svg></span>
+    <div class="th-dt-q-main">
+      <p class="th-dt-q-kicker">Is this device in step with the cloud?</p>
+      <p class="th-dt-q-answer" data-dt-answer>Checking&hellip;</p>
+      <p class="th-dt-q-detail" data-dt-detail>Realtime sync status and this device&rsquo;s merge log.</p>
+    </div>
+    <button type="button" class="primary-btn th-dt-q-action" data-dt-action="sync">Pull now</button>
+  </div>
+
   <div class="dev-section" role="group" aria-labelledby="devSecSync">
   <div class="dev-section-head">
     <h2 class="dev-section-title" id="devSecSync">Sync</h2>
@@ -760,6 +917,18 @@
 
   <div class="dev-tab-panel" data-tab-panel="notifications">
 
+  <!-- v2 §8.15 question banner (2026-09-29): the tab's question, its
+       answer from what the panels below already rendered, one action. -->
+  <div class="th-dt-q" data-dt-q="notifications" data-th-tone="idle">
+    <span class="th-dt-q-icon" aria-hidden="true"><svg class="th-icon"><use href="#icon-bell" xlink:href="#icon-bell"></use></svg></span>
+    <div class="th-dt-q-main">
+      <p class="th-dt-q-kicker">Are the right people getting pinged?</p>
+      <p class="th-dt-q-answer" data-dt-answer>Checking&hellip;</p>
+      <p class="th-dt-q-detail" data-dt-detail>What went out lately, and a real end-to-end test when you need one.</p>
+    </div>
+    <button type="button" class="primary-btn th-dt-q-action" data-dt-action="notifications">Open push test</button>
+  </div>
+
   <div class="dev-section" role="group" aria-labelledby="devSecNotifyTest">
   <div class="dev-section-head">
     <h2 class="dev-section-title" id="devSecNotifyTest">Send a test</h2>
@@ -833,6 +1002,18 @@
   </div>
 
   <div class="dev-tab-panel" data-tab-panel="ops">
+
+  <!-- v2 §8.15 question banner (2026-09-29): the tab's question, its
+       answer from what the panels below already rendered, one action. -->
+  <div class="th-dt-q" data-dt-q="ops" data-th-tone="idle">
+    <span class="th-dt-q-icon" aria-hidden="true"><svg class="th-icon"><use href="#icon-rocket" xlink:href="#icon-rocket"></use></svg></span>
+    <div class="th-dt-q-main">
+      <p class="th-dt-q-kicker">What shipped, and what is next?</p>
+      <p class="th-dt-q-answer" data-dt-answer>Checking&hellip;</p>
+      <p class="th-dt-q-detail" data-dt-detail>Deploys, open to-dos and pages someone flagged for later.</p>
+    </div>
+    <button type="button" class="primary-btn th-dt-q-action" data-dt-action="ops">Add a to-do</button>
+  </div>
 
   <div class="dev-section" role="group" aria-labelledby="devSecOpsDeploys">
   <div class="dev-section-head">
@@ -961,6 +1142,18 @@
 
   <div class="dev-tab-panel" data-tab-panel="reports">
 
+  <!-- v2 §8.15 question banner (2026-09-29): the tab's question, its
+       answer from what the panels below already rendered, one action. -->
+  <div class="th-dt-q" data-dt-q="reports" data-th-tone="idle">
+    <span class="th-dt-q-icon" aria-hidden="true"><svg class="th-icon"><use href="#icon-trending" xlink:href="#icon-trending"></use></svg></span>
+    <div class="th-dt-q-main">
+      <p class="th-dt-q-kicker">What do the last 8 weeks say?</p>
+      <p class="th-dt-q-answer" data-dt-answer>3 reports</p>
+      <p class="th-dt-q-detail" data-dt-detail>Booking funnel, lead response time and uptime, loaded when you ask.</p>
+    </div>
+    <button type="button" class="primary-btn th-dt-q-action" data-dt-action="reports">Load all 3</button>
+  </div>
+
   <div class="dev-section" role="group" aria-labelledby="devSecReports">
   <div class="dev-section-head">
     <h2 class="dev-section-title" id="devSecReports">Last 8 weeks</h2>
@@ -1002,6 +1195,18 @@
 
   <div class="dev-tab-panel" data-tab-panel="access">
 
+  <!-- v2 §8.15 question banner (2026-09-29): the tab's question, its
+       answer from what the panels below already rendered, one action. -->
+  <div class="th-dt-q" data-dt-q="access" data-th-tone="idle">
+    <span class="th-dt-q-icon" aria-hidden="true"><svg class="th-icon"><use href="#icon-lock" xlink:href="#icon-lock"></use></svg></span>
+    <div class="th-dt-q-main">
+      <p class="th-dt-q-kicker">Who can see what?</p>
+      <p class="th-dt-q-answer" data-dt-answer>Checking&hellip;</p>
+      <p class="th-dt-q-detail" data-dt-detail>Every account and the pages it can open.</p>
+    </div>
+    <button type="button" class="primary-btn th-dt-q-action" data-dt-action="access">Add an account</button>
+  </div>
+
   <div class="dev-panels-grid">
 
   <div class="dev-panel dev-panel-wide">
@@ -1022,6 +1227,14 @@
       </label>
       <button class="secondary-btn" onclick="addAccount()">Add account</button>
     </div>
+  </div>
+
+  <!-- v2 §8.15 (2026-09-29): every account against every permission,
+       read-only, drawn from the same rows the editor above loaded
+       (_cachedAccountsData). Changing a box still happens above. -->
+  <div class="th-v2-card th-dt-matrix-card dev-panel-wide" id="dtPermMatrixCard" hidden>
+    <div class="th-v2-card-head"><p class="th-v2-card-title">Who can open what</p><span class="th-v2-card-note" id="dtPermMatrixNote"></span></div>
+    <div class="th-dt-matrix-wrap" id="dtPermMatrix"></div>
   </div>
 
   </div>
@@ -3828,5 +4041,226 @@
   </div>
 </div>
 
+<script>
+  // Workspace app redesign v2 §8.15 (2026-09-29) -- presentation only.
+  // Each tab's question banner answers from what that tab's panels have
+  // already rendered (the status chips, the logs, the lists, the cached
+  // account/role rows); nothing here fetches, and nothing writes data.
+  // Each banner's one action calls the page's existing function or
+  // clicks its existing button. The row menus click each row's own
+  // buttons, so every confirm dialog is the one already there.
+  (function () {
+    const byId = (id) => document.getElementById(id);
+    const rows = (id, sel) => { const el = byId(id); return el ? el.querySelectorAll(sel).length : 0; };
+    const txt = (id) => { const el = byId(id); return el ? (el.textContent || '').trim() : ''; };
+    const plural = (n, one, many) => n + ' ' + (n === 1 ? one : (many || one + 's'));
+    const dotState = (id) => { const el = byId(id); if (!el) return 'checking'; return ['bad', 'warn', 'ok'].find(c => el.classList.contains(c)) || 'checking'; };
+    const shown = (id) => { const el = byId(id); const p = el && el.closest('.dev-panel'); return !!(el && (!p || p.style.display !== 'none')); };
+
+    function answers() {
+      const out = {};
+      // Health
+      const summary = dotState('statusDotSummary');
+      const errs = rows('clientErrorLog', '.dev-check-row');
+      if (summary === 'checking') out.health = ['idle', 'Checking…', 'Running the live checks: session, Supabase, sync and the service worker.'];
+      else if (summary !== 'ok') out.health = ['orange', txt('statusTextSummary') || 'Something needs a look', 'Tap the status line above to see which check it is.'];
+      else if (errs) out.health = ['orange', plural(errs, 'client error'), 'Captured on this device -- they are listed under Client errors below.'];
+      else out.health = ['green', 'All clear', 'All systems normal: session, Supabase, sync and the service worker.'];
+      // Data
+      if (shown('graveyardList')) {
+        const dead = rows('graveyardList', '.dev-issue-row');
+        out.data = ['green', dead ? plural(dead, 'item') + ' in the Graveyard' : 'Nothing deleted', dead ? 'Each one can be put back with Restore -- or download a full backup first.' : 'A full backup is one tap, and never depends on the cloud being up.'];
+      } else {
+        const n = rows('clientRegistryResults', '.dev-check-row');
+        out.data = ['green', n ? plural(n, 'client') + ' on file' : 'Client registry', 'Every client, with their jobs, invoices and lifetime revenue.'];
+      }
+      // Sync
+      const sync = dotState('statusDotSync');
+      const conflicts = rows('syncConflictLog', '.dev-check-row');
+      if (sync === 'checking') out.sync = ['idle', 'Checking…', 'Reading this device’s sync state.'];
+      else if (sync !== 'ok') out.sync = ['orange', txt('statusTextSync') || 'Out of step', 'Pull now brings this device up to date with the cloud.'];
+      else if (conflicts) out.sync = ['orange', plural(conflicts, 'sync conflict'), 'The other device’s value was kept each time; the log below says which field.'];
+      else out.sync = ['green', 'In sync', (txt('statusTextSync') || 'Sync is live') + ' · every merge so far has been clean.'];
+      // Notifications
+      const hist = byId('pushHistoryList');
+      const sent = hist ? hist.querySelectorAll(':scope > div').length : 0;
+      if (hist && /Loading/.test(hist.textContent || '') && !sent) out.notifications = ['idle', 'Checking…', 'Loading the last 30 pushes sent.'];
+      else out.notifications = ['green', sent ? plural(sent, 'push', 'pushes') + ' sent lately' : 'No pushes logged yet', 'Open the push test to send a real test lead through the pipeline.'];
+      // Ops
+      const todo = rows('knownIssuesList', '.dev-issue-row:not(.is-done)');
+      const flags = rows('flaggedItemsList', '.dev-issue-row:not(.is-done)');
+      const deploy = txt('deployStatus').split('\n')[0].slice(0, 140);
+      out.ops = [todo + flags ? 'orange' : 'green', todo + flags ? plural(todo + flags, 'open to-do') : 'Nothing open',
+        (flags ? plural(flags, 'page') + ' flagged for a look · ' : '') + (deploy || 'Deploy history loads below.')];
+      // Reports
+      const loaded = ['bookingFunnelReport', 'leadResponseTimeReport', 'uptimeTrendReport'].filter(id => { const t = txt(id); return t && !/Click Refresh to load/.test(t); }).length;
+      out.reports = [loaded === 3 ? 'green' : 'idle', loaded ? loaded + ' of 3 reports loaded' : '3 reports ready', 'Booking funnel, lead response time and uptime, over the last 8 weeks.'];
+      // Access
+      const accounts = typeof _cachedAccountsData !== 'undefined' && Array.isArray(_cachedAccountsData) ? _cachedAccountsData : [];
+      const managers = accounts.filter(a => a && a.can_manage_roles).length;
+      out.access = accounts.length
+        ? ['green', plural(accounts.length, 'account'), plural(managers, 'account') + ' can change permissions · pick one below to see what it can open.']
+        : ['idle', 'Checking…', 'Loading every account and what it can open.'];
+      return { out: out, errs: errs };
+    }
+
+    function renderMatrix() {
+      const card = byId('dtPermMatrixCard');
+      const host = byId('dtPermMatrix');
+      if (!card || !host) return;
+      const roles = typeof _cachedRoleDefsForPresets !== 'undefined' && Array.isArray(_cachedRoleDefsForPresets) ? _cachedRoleDefsForPresets : [];
+      const cats = typeof PERMISSION_CATEGORIES !== 'undefined' && Array.isArray(PERMISSION_CATEGORIES) ? PERMISSION_CATEGORIES : [];
+      if (!roles.length || !cats.length) { if (!card.hidden) card.hidden = true; return; }
+      const esc = (v) => escapeHtml(String(v));
+      const fields = cats.reduce((all, c) => all.concat(c.fields || []), []);
+      const key = JSON.stringify([roles, fields.map(f => f.field)]);
+      if (host.getAttribute('data-th-key') === key) return;
+      host.setAttribute('data-th-key', key);
+      host.innerHTML = '<table class="th-dt-matrix"><thead><tr><th scope="col">Permission</th>' +
+        roles.map(r => '<th scope="col">' + esc(r.name) + '</th>').join('') + '</tr></thead><tbody>' +
+        fields.map(f => '<tr><td>' + esc(f.label) + '</td>' + roles.map(r => {
+          const on = !!r[f.field];
+          return '<td><span class="th-dt-mark' + (on ? ' is-on' : '') + '" aria-label="' + (on ? 'Yes' : 'No') + '">' + (on ? '✓' : '–') + '</span></td>';
+        }).join('') + '</tr>').join('') + '</tbody></table>';
+      const note = byId('dtPermMatrixNote');
+      if (note) note.textContent = 'By preset · each account’s own boxes are above';
+      card.hidden = false;
+    }
+
+    function renderVerdict() {
+      const el = byId('dtConsistencyVerdict');
+      const res = byId('consistencyResults');
+      if (!el || !res) return;
+      const pass = res.querySelectorAll('.dev-check-status.pass').length;
+      const fail = res.querySelectorAll('.dev-check-status.fail').length;
+      const text = !pass && !fail ? '' : fail ? plural(fail, 'problem') + ' found' : 'All clear · ' + plural(pass, 'check') + ' passed';
+      el.hidden = !text;
+      if (el.textContent !== text) el.textContent = text;
+      el.classList.toggle('is-bad', fail > 0);
+    }
+
+    var DT_Q_DEFAULT_ICON = {
+      health: '#icon-check-circle',
+      data: '#icon-folder',
+      sync: '#icon-shuffle',
+      notifications: '#icon-bell',
+      ops: '#icon-rocket',
+      reports: '#icon-trending',
+      access: '#icon-lock',
+    };
+
+    function render() {
+      const a = answers();
+      Object.keys(a.out).forEach(tab => {
+        const b = document.querySelector('.th-dt-q[data-dt-q="' + tab + '"]');
+        if (!b) return;
+        const [tone, answer, detail] = a.out[tab];
+        if (b.getAttribute('data-th-tone') !== tone) b.setAttribute('data-th-tone', tone);
+        const use = b.querySelector('.th-dt-q-icon use');
+        if (use && Object.prototype.hasOwnProperty.call(DT_Q_DEFAULT_ICON, tab)) {
+          const icon = tone === 'orange' ? '#icon-warning' : DT_Q_DEFAULT_ICON[tab];
+          if (use.getAttribute('href') !== icon) { use.setAttribute('href', icon); use.setAttribute('xlink:href', icon); }
+        }
+        const ans = b.querySelector('[data-dt-answer]');
+        const det = b.querySelector('[data-dt-detail]');
+        if (ans && ans.textContent !== answer) ans.textContent = answer;
+        if (det && det.textContent !== detail) det.textContent = detail;
+      });
+      const count = byId('dtHealthCount');
+      const c = a.errs ? String(a.errs) : '';
+      if (count && count.textContent !== c) count.textContent = c;
+      const dataBtn = document.querySelector('[data-dt-action="data"]');
+      if (dataBtn) {
+        const label = shown('graveyardList') ? 'Download backup' : 'Show registry';
+        if (dataBtn.textContent !== label) dataBtn.textContent = label;
+      }
+      const accessBtn = document.querySelector('[data-dt-action="access"]');
+      if (accessBtn) {
+        const form = byId('addAccountForm');
+        const label = form && form.style.display !== 'none' ? 'Add an account' : 'Review permissions';
+        if (accessBtn.textContent !== label) accessBtn.textContent = label;
+      }
+      renderMatrix();
+      renderVerdict();
+    }
+
+    let queued = false;
+    function schedule() {
+      if (queued) return;
+      queued = true;
+      setTimeout(() => { queued = false; try { render(); } catch (e) { /* presentation only */ } }, 80);
+    }
+
+    function reveal(el, focusEl) {
+      if (!el) return;
+      const panel = el.closest('.dev-panel');
+      if (panel && panel.classList.contains('is-collapsed') && typeof toggleDevPanel === 'function') toggleDevPanel(panel.querySelector('.dev-panel-heading'));
+      const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      (panel || el).scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+      if (focusEl) { try { focusEl.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+    }
+    const ACTIONS = {
+      data: () => {
+        if (shown('graveyardList') && typeof downloadBackup === 'function') downloadBackup();
+        else { const b = byId('clientRegistryBtn'); if (b) { b.click(); reveal(b); } }
+      },
+      sync: () => { if (typeof devPullNow === 'function') devPullNow(); },
+      notifications: () => reveal(byId('pushTestBtn'), byId('pushTestBtn')),
+      ops: () => reveal(byId('knownIssuesList'), byId('newIssueTitle')),
+      reports: () => {
+        ['renderBookingFunnelReport', 'renderLeadResponseTimeReport', 'renderUptimeTrendReport'].forEach(fn => {
+          if (typeof window[fn] === 'function') window[fn]();
+        });
+      },
+      access: () => {
+        const form = byId('addAccountForm');
+        if (form && form.style.display !== 'none') reveal(form, byId('newAccountEmail'));
+        else reveal(byId('dtPermMatrixCard').hidden ? byId('accountRolesList') : byId('dtPermMatrixCard'));
+      },
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      document.addEventListener('click', (e) => {
+        const btn = e.target.closest && e.target.closest('[data-dt-action]');
+        if (!btn) return;
+        const fn = ACTIONS[btn.getAttribute('data-dt-action')];
+        if (fn) fn();
+      });
+      const root = byId('devMainView');
+      if (root && typeof MutationObserver !== 'undefined') {
+        new MutationObserver(schedule).observe(root, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class', 'style'] });
+      }
+      schedule();
+      if (typeof attachRowMenu !== 'function') return;
+      // Every editable list: the row's own delete (and its other buttons)
+      // tucked behind one ⋯. Class strings are untouched -- the sheet
+      // clicks the same buttons (deleteKnownIssue, deleteFlaggedItem,
+      // permanentlyDeleteFromGraveyard, deleteClientFromRegistry).
+      const lists = [
+        ['knownIssuesList', '.dev-issue-row', [{ kind: 'delete', selector: '.dev-danger-btn', label: 'Delete this to-do' }]],
+        ['flaggedItemsList', '.dev-issue-row', [{ kind: 'delete', selector: '.dev-danger-btn', label: 'Delete this flag' }]],
+        ['graveyardList', '.dev-issue-row', [{ kind: 'delete', selector: '.dev-danger-btn', label: 'Delete permanently' }]],
+        ['clientRegistryResults', '.dev-check-row[data-client-id]', [
+          { kind: 'open', selector: 'a.small-btn', label: 'View in Clients' },
+          { kind: 'delete', selector: '.small-btn.danger', label: 'Delete from registry' },
+        ]],
+      ];
+      lists.forEach(([id, sel, actions]) => {
+        const el = byId(id);
+        if (!el) return;
+        attachRowMenu(el, sel, {
+          actions: actions,
+          longPress: false,
+          getMenu: (row) => {
+            const acts = typeof rowMenuActionsFromButtons === 'function' ? rowMenuActionsFromButtons(row) : [];
+            if (!acts.length) return null;
+            const t = row.querySelector('.dev-issue-title, :scope > div > div');
+            return { title: t ? (t.textContent || '').trim() : 'Actions', actions: acts };
+          },
+        });
+      });
+    });
+  })();
+</script>
 </body>
 </html>

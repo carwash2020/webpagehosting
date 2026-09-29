@@ -5825,3 +5825,15 @@ The People + field package of the v2 redesign (handoff §8.8-8.12), on top of th
 - **Appliance Wiki:** a 56px search field with an orange border, six type tiles with entry and brand counts (tap to filter), and a **common fixes** card of logged issues with part numbers. Inside an entry, each model header and each logged issue gets a ⋯ with Edit, Pin, Copy, View source and Delete.
 
 Nothing was removed: every sheet action clicks or calls the page's existing handler, so each confirm and undo still runs. All CSS lives in each page's own `<style>`, scoped to its `body.th-tool-page[data-th-page=…]`; `tools/styles-tools.css` is untouched. Full write-up in `docs/specialist-logs/visual.md`, 2026-09-29.
+
+## What changed, 2026-09-29 -- Workspace app redesign v2: back office (Settings, Website, Dev Tools, sign-in)
+
+**Settings** opens on an account card: your initials in the brand hex, your name, your email and your role. Below it, each section is a grouped card of rows with an icon, the setting and its current state. Density, dark mode and push notifications are switches. Two-factor shows a green On pill, recovery codes have a ⋯ menu, and Sign out reads red.
+
+**Website** (site content) has a banner at the top that says how many edits aren't on the website yet, with Review changes and Publish. Publish always opens the same "Review before publishing" step as before. A section list with an orange dot marks which sections have edits. Each field says where it shows on the site. Hours are still seven separate days, as one list. FAQ questions and Terms sections each have a ⋯ for Move up, Move down and Delete. Edit history sits beside the editor on a wide screen.
+
+**Dev Tools** opens every tab on a question with its answer ("Is anything broken right now? All clear"), green when fine and orange when something needs a look, with one button for the next step. Panels are rounded cards, logs read as a code block, and Access shows a table of what each role preset can open. Every editable list has a ⋯ menu.
+
+**Sign-in and reset password** are a centred card on a phone and a computer, with the brand hex, larger fields and a bigger button. The steps, their order and all sign-in, two-factor and reset logic are exactly as before. Only CSS changed, and every path was walked before and after with identical results.
+
+Nothing was removed; every action still runs the page's existing handler and confirm dialog. Full write-up in `docs/specialist-logs/visual.md`, 2026-09-29.
