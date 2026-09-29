@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=c1e56c6904"></script>
+<script src="/tools/auth.js?v=7d9fef1e42"></script>
 <!-- Relational tables Phase 2, step 3 (2026-09-10): this page never
      loaded sync.js before (it doesn't otherwise participate in the
      blob-sync architecture at all) -- added narrowly so
@@ -61,7 +61,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=667d7647f8">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=8d5b635c84">
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
@@ -311,11 +311,15 @@
 </head>
 <body data-th-page="review-request">
 
-<div id="roleBlockedOverlay" class="role-blocked-overlay">
-  <div class="tool-title" style="font-size:22px;">Not available here</div>
-  <p class="tool-sub" style="max-width:420px;">Review Requests isn't part of your role's access. Nothing's wrong with your account -- check with whoever manages roles if you think this should be different.</p>
-  <button class="primary-btn" style="margin-top:12px;" onclick="retryRoleCheck(this, canManageReviews)">Try again</button>
-  <a href="/tools/workspace.html" class="secondary-btn" style="display:inline-block; margin-top:12px; text-decoration:none;">Back to Dashboard</a>
+<div id="roleBlockedOverlay" class="role-blocked-overlay" data-rb role="alert">
+  <div class="th-rb-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+  <h1>Reviews</h1>
+  <p class="th-rb-body">This page isn’t part of your account’s access. <span class="th-rb-who"></span> If you need something from here, ask Steve.</p>
+  <div class="th-rb-actions">
+    <a href="/tools/workspace.html" class="primary-btn">Back to Home</a>
+    <button type="button" class="secondary-btn th-rb-switch" onclick="signOut()">Switch account</button>
+    <button type="button" class="secondary-btn th-rb-retry" onclick="retryRoleCheck(this, canManageReviews)">Try again</button>
+  </div>
 </div>
 <a href="#mainContent" class="skip-link">Skip to main content</a>
 

@@ -2958,3 +2958,48 @@ Source: Claude Design's reply to `claude-design-brief-2026-09-29.md` (packages A
   - Tabbing into the map key links that town's group, and its `.radius-focus` shows at opacity 1. Tab moves to the next town, and exactly one group stays linked.
   - Before the change, the key items couldn't take focus at all.
 - **Test.** `tests/design/package-a-accessibility.test.js` has 9 tests, all failing on origin/main 86a9f37. It includes a jsdom run of `service-area-map.js` on the Hurricane page: focusin/out, the ring geometry, and idempotence.
+
+## 2026-09-29 -- Claude Design next pass, Package B (loading and no-access states), applied
+
+Source: `Package B Loading States.dc.html` and `handoff/package-B.css` from the same handoff as Package A.
+
+**B7, Workspace Home from the last visit.**
+- **Early paint.** Everything Home draws from the device's synced copy (the day's jobs, follow-ups, Money owed, the week) already exists from the last visit. `renderDashboardFromLastVisit()` now paints it at DOMContentLoaded, before the role check and the sync pull, and `renderDashboard()` redraws it in place afterward.
+  - It only runs if this device has pulled before (`th_sync_history` has an ok pull). A first visit still opens on skeletons, not on "nothing today".
+  - None of the eight renderers it calls writes to storage or touches the network (checked function by function). The lanes that do (requests, leads, bookings) keep their skeletons.
+- **Freshness marker (`#homeFresh`, `.th-fresh`).** It sits after the title. A marker in the injected kicker would have meant editing the shell.
+  - It reads "Updated 5m ago", then "Refreshing" (orange; blinks where motion is allowed) while the pull runs, then "Up to date" (green) for 4 seconds, then back to "Updated just now", refreshed every minute.
+  - It's hidden when sync isn't configured.
+- **Settle.** `settleChangedFigures()` tints a changed figure for 1.2s (`.th-settle`; skipped under reduced motion). It covers the jobs-today number, the Money owed total, the four lane counts and the inbox badge. The last value is kept per selector, so figures redrawn by innerHTML still compare, and a count appearing for the first time doesn't tint. It runs after `renderDashboard()` and after each async lane count.
+- **Money waits for the role.** `body[data-home-money]` has four values:
+  - "pending": a fixed-width "Checking access" bar, the same whatever the amount;
+  - "shown";
+  - "hidden": Money owed and the Income lane are removed, not locked;
+  - "unconfirmed": the check failed.
+  
+  A `th-role-loaded` listener draws money from the device's copy as soon as the role lands, without waiting for the pull.
+- **The design assumed an Employee never saw these figures, and one did.** Money owed and the Income lane had no permission check, so an Employee saw every unpaid invoice with Mark paid. The rule is now the one Business Snapshot already used: any of the five finance-domain permissions. Details are in the security log, including the device-copy caveat.
+- **Deviation.** The package keyed the Employee case on `body[data-role="employee"]`. Roles are configurable per account, so the code keys on permissions instead.
+
+**B6, the no-access screen.**
+- **Scope.** The same markup is used on all 7 gated pages: `#roleBlockedOverlay` on Finance, Invoices, Contracts, Reviews and Runway, and the in-page blocked views on Dev Tools and Site Content (`[data-rb]`). It has the hex lock mark, the page's name, a line saying who is signed in, Back to Home, and Switch account (`signOut()`).
+- **Kept: Try again.** The package dropped it, but it exists for a real report, a dropped connection failing the role check. `fillRoleBlockedScreens()` in auth.js fills the account line on `th-role-loaded`. When no role could be confirmed it says that instead, shows Try again and hides Switch account; otherwise Try again is hidden. Each page keeps its own `retryRoleCheck(this, <check>)`.
+- **Copy.** The package said "This page is for the owner account". Access is per permission, not per owner, so it now reads "This page isn't part of your account's access."
+- **Runway.** Runway loads no shared stylesheet, so it carries its own copy of the rules. It had never styled `.secondary-btn`, so the old "Back to Dashboard" link was bare; the overlay now has one.
+
+**B6, first paint.**
+- **Only two pages were actually blank.** The brief said 7 pages were blank until the role returned. Measured with the role request held for 4 seconds, only Dev Tools and Site Content were: their whole view is `display:none` until `proceed()`. Finance, Invoices, Contracts, Reviews and Runway already paint their page at once and overlay the block only if needed.
+- **The two blank pages** now show their name and one placeholder card (`.th-page-pending`, `.th-skel`: visible after 250ms, sweeping only where motion is allowed). The page removes `body[data-page-pending]` in `proceed()`, at the moment it shows the page or the blocked view. If `data-role-state` were used, a blank gap would open between the role landing and the pull finishing.
+- **Not applied on the other five:** the package's inert tabs while pending, since those pages work from local data at once and inert tabs would only slow them down.
+
+**Verification.**
+- **Harness, Employee account.**
+  - Before: Home showed "Secret Client · $4,321.50", Money owed and the Income lane.
+  - After: no invoice data anywhere in the page, visible or in the DOM.
+  - Owner: unchanged.
+- **Harness, reload with the role request and the pull each held for 4s.**
+  - At 700ms Home shows last visit's job, "Refreshing", and "Checking access", with no invoice data in the DOM.
+  - When the role lands, the Owner gets money from the device's copy and the Employee has it removed.
+  - When the pull lands, the new job appears, 4 figures settle, and the marker goes to "Up to date", then "Updated just now".
+- **All 7 blocked screens,** at 390 and 1440, show the page's name, "You're signed in as Jake (Employee).", and two 48px actions.
+- **Role check forced to fail:** "couldn't confirm" with Try again, which reloads into the page once the connection is back.

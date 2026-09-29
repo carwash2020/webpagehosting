@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=c1e56c6904"></script>
+<script src="/tools/auth.js?v=7d9fef1e42"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -52,7 +52,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=667d7647f8">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=8d5b635c84">
 <script src="/tools/data-layer.js?v=b2586a446b" defer></script>
 <script src="/tools/dev-tools-shared.js?v=ab4eedc467" defer></script>
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
@@ -524,13 +524,27 @@
   body.th-tool-page[data-th-page="dev-tools"] .th-dt-mark.is-on { background: var(--tone-green-bg); color: var(--tone-green-fg); }
 </style>
 </head>
-<body data-th-page="dev-tools">
+<body data-th-page="dev-tools" data-page-pending>
 <a href="#devMainView" class="skip-link">Skip to main content</a>
 
-<div id="devBlockedView" class="dev-blocked" style="display:none;">
-  <div class="tool-title" style="font-size:22px;">Not available here</div>
-  <p class="tool-sub">Dev Tools is only shown on the account actively developing this site. Nothing's wrong with your account &mdash; this page just isn't meant for day-to-day use.</p>
-  <a href="/tools/workspace.html" class="primary-btn" style="display:inline-block; margin-top:12px; text-decoration:none;">Back to Dashboard</a>
+<!-- First paint while the role check runs (Package B6, 2026-09-29): the
+     page's name and one placeholder card, instead of a blank screen. Gone
+     the moment proceed() below shows the page or the blocked view. -->
+<div class="th-page-pending">
+  <p class="th-page-pending-title">Dev Tools</p>
+  <p class="sr-only" role="status">Loading Dev Tools&hellip;</p>
+  <div class="th-skel" aria-hidden="true"><div class="th-skel-bar is-title"></div><div class="th-skel-bar"></div><div class="th-skel-bar is-short"></div><div class="th-skel-bar is-row"></div><div class="th-skel-bar is-row"></div></div>
+</div>
+
+<div id="devBlockedView" class="dev-blocked" data-rb style="display:none;">
+  <div class="th-rb-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+  <h1>Dev Tools</h1>
+  <p class="th-rb-body">Dev Tools is for the account that builds and maintains this site, not for day-to-day use. <span class="th-rb-who"></span> Nothing’s wrong with your account.</p>
+  <div class="th-rb-actions">
+    <a href="/tools/workspace.html" class="primary-btn">Back to Home</a>
+    <button type="button" class="secondary-btn th-rb-switch" onclick="signOut()">Switch account</button>
+    <button type="button" class="secondary-btn th-rb-retry" onclick="retryRoleCheck(this, hasDevToolsAccess)">Try again</button>
+  </div>
 </div>
 
 <div id="devMainView" style="display:none;">
@@ -3926,6 +3940,7 @@
       const allowed = typeof hasDevToolsAccess === 'function' && hasDevToolsAccess();
       document.getElementById(allowed ? 'devMainView' : 'devBlockedView').style.display = allowed ? 'block' : 'block';
       document.getElementById(allowed ? 'devBlockedView' : 'devMainView').style.display = 'none';
+      document.body.removeAttribute('data-page-pending');
       if (!allowed) return;
       renderSessionInfo();
       renderLocalDataSnapshot();

@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=c1e56c6904"></script>
+<script src="/tools/auth.js?v=7d9fef1e42"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -68,7 +68,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=667d7647f8">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=8d5b635c84">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=0e885bb435" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -1136,9 +1136,50 @@
   body.th-tool-page[data-th-page="workspace"] .insights-card--utm .vendor-bar-row { grid-template-columns: minmax(0, 1fr) auto; margin: 0; padding: 11px 0; border-top: 1px solid var(--th-hairline); }
   body.th-tool-page[data-th-page="workspace"] .insights-card--utm .vendor-bar-track { display: none; }
   body.th-tool-page[data-th-page="workspace"] .insights-card--utm .vendor-bar-count { color: var(--tone-green-fg); }
+
+  /* Package B7 (Claude Design next pass, 2026-09-29): Home paints the last
+     visit's day at once and refreshes in place.
+     .th-fresh says how old the numbers are: "Updated 5 min ago" (idle
+     dot), "Refreshing" (orange, blinking where motion is allowed), "Up to
+     date" (green). Old numbers stay at full contrast -- they're real, just
+     old. A figure that changed when fresh data lands gets .th-settle, a
+     one-shot tint, for 1.2s. */
+  body.th-tool-page[data-th-page="workspace"] .th-fresh {
+    display: inline-flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 12px;
+    border-radius: 999px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text-dim);
+    font-family: var(--font-ui); font-size: 12.5px; letter-spacing: .9px; text-transform: uppercase; white-space: nowrap;
+  }
+  body.th-tool-page[data-th-page="workspace"] .th-fresh[hidden] { display: none; }
+  body.th-tool-page[data-th-page="workspace"] .th-fresh::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--status-idle); }
+  body.th-tool-page[data-th-page="workspace"] .th-fresh[data-state="refreshing"]::before { background: var(--orange); }
+  body.th-tool-page[data-th-page="workspace"] .th-fresh[data-state="fresh"]::before { background: var(--status-live); }
+  body.th-tool-page[data-th-page="workspace"] .th-settle { border-radius: 6px; }
+  @media (prefers-reduced-motion: no-preference) {
+    body.th-tool-page[data-th-page="workspace"] .th-fresh[data-state="refreshing"]::before { animation: th-fresh-blink 1s ease-in-out infinite; }
+    body.th-tool-page[data-th-page="workspace"] .th-settle { animation: th-settle 1.2s ease-out both; }
+  }
+  @keyframes th-fresh-blink { 50% { opacity: .3; } }
+  @keyframes th-settle { from { background: var(--orange-tint-border); } to { background: transparent; } }
+  /* Money on Home only for a confirmed role that may see it (2026-09-29).
+     body[data-home-money] is set by applyHomeMoneyState(): "pending" until
+     the role check lands (Money owed shows a fixed-width "Checking access"
+     bar, the same whatever the amount, so it leaks no digit count),
+     "shown" for a role with any finance-domain permission, "hidden" for
+     one with none (Money owed and the Income lane are removed, not
+     locked), "unconfirmed" if the check failed. The renderers also leave
+     the figures out of the page unless it's "shown"; these rules are the
+     second lock. */
+  body.th-tool-page[data-th-page="workspace"] .th-money-lock {
+    display: inline-flex; align-items: center; gap: 10px; min-height: 38px;
+    font-family: var(--font-ui); font-size: 12.5px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-dim);
+  }
+  body.th-tool-page[data-th-page="workspace"] .th-money-lock i { flex: none; width: 72px; height: 22px; border-radius: 6px; background: var(--bg-panel-3); }
+  body.th-tool-page[data-th-page="workspace"]:not([data-home-money="shown"]) #lane-money,
+  body.th-tool-page[data-th-page="workspace"]:not([data-home-money="shown"]) #section-snapshot,
+  body.th-tool-page[data-th-page="workspace"][data-home-money="hidden"] #todayMoney { display: none; }
 </style>
 </head>
-<body data-th-page="workspace">
+<body data-th-page="workspace" data-role-state="pending" data-home-money="pending">
 <a href="#todayHero" class="skip-link">Skip to main content</a>
 
 
@@ -1222,6 +1263,7 @@
   <div class="hub-header-left">
     <img id="headerLogo" src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
     <span class="hub-title">Dashboard</span>
+    <span class="th-fresh" id="homeFresh" role="status" hidden></span>
   </div>
   <div class="hub-header-right">
     <p class="hub-sub"><span class="realtime-badge" id="realtimeBadge" onclick="retryLiveSync()" title="Live sync" style="margin-left:0;"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span><span class="pending-changes-badge" id="pendingChangesBadge" title="Unsynced changes" style="display:none;">&#9679; Unsynced changes</span></p>
@@ -2475,10 +2517,19 @@
   }
 
   function renderInvoicesList() {
-    actionItemCounts.unpaid = invoicesForDisplay().filter(i => invoicePaymentStatus(i) !== 'paid').length;
-    renderReadyToInvoice();
+    // Same money rule as Money owed above: nothing from the Income lane or
+    // Ready to invoice is drawn, or counted in the badges, unless it's shown.
+    const moneyShown = applyHomeMoneyState() === 'shown';
+    actionItemCounts.unpaid = moneyShown ? invoicesForDisplay().filter(i => invoicePaymentStatus(i) !== 'paid').length : 0;
+    if (moneyShown) renderReadyToInvoice();
+    else actionItemCounts.toinvoice = 0;
     updateActionItemsBadge();
     if (dashSectionClosed('actionitems')) return;
+    if (!moneyShown) {
+      const list = document.getElementById('invoicesList');
+      if (list) list.innerHTML = '';
+      return;
+    }
     const searchTerm = (document.getElementById('invoiceSearch')?.value || '').trim().toLowerCase();
 
     // Income here now means invoices AND manual entries (cash jobs, etc.)
@@ -3331,7 +3382,9 @@
       else el.setAttribute('hidden', '');
     }
     if (lane) lane.classList.toggle('is-clear', n === 0);
+    settleChangedFigures();
   }
+
 
   function openInsuranceEdit() {
     const compliance = loadCompliance();
@@ -3897,7 +3950,9 @@
     const w = thWeekSummary(now);
     const who = typeof thShiftEmail === 'function' ? thShiftEmail() : null;
     const s = who && typeof thShiftWeekSummary === 'function' ? thShiftWeekSummary(who, now) : null;
-    const canFinance = typeof canViewFinance !== 'function' || canViewFinance() || !(typeof getCurrentUserRole === 'function' && getCurrentUserRole());
+    // A role that hasn't loaded counts as no finance access (2026-09-29);
+    // th-role-loaded redraws this card once it has.
+    const canFinance = typeof canViewFinance !== 'function' || canViewFinance();
     const range = w.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' – ' +
       w.end.toLocaleDateString('en-US', w.end.getMonth() === w.start.getMonth() ? { day: 'numeric' } : { month: 'short', day: 'numeric' });
     const h = (n) => (n % 1 ? n.toFixed(1) : String(n)) + ' h';
@@ -4001,9 +4056,39 @@
   // Shares its numbers with Business Snapshot's Outstanding/Overdue
   // cards via computeMoneyOwed() -- called from renderMetrics() each
   // time those recompute, so the two can never drift apart.
+  // Money on Home only for a confirmed role that may see it (2026-09-29).
+  // Money owed and the Income lane follow the rule Business Snapshot
+  // already used (renderBusinessFinanceTileVisibility): any of the five
+  // finance-domain permissions. Until now these two had no check at all,
+  // so an Employee account saw every unpaid invoice -- client, amount,
+  // Mark paid -- on Home while Invoices and Finance blocked it. A role
+  // that hasn't loaded yet, or couldn't be confirmed, fails closed.
+  function homeMoneyState() {
+    const role = typeof getCurrentUserRole === 'function' ? getCurrentUserRole() : null;
+    if (!role) return document.body.getAttribute('data-role-state') === 'none' ? 'unconfirmed' : 'pending';
+    try { return Object.values(TILE_PERMISSION_CHECKS).some(check => check()) ? 'shown' : 'hidden'; } catch (e) { return 'unconfirmed'; }
+  }
+  function applyHomeMoneyState() {
+    const state = homeMoneyState();
+    document.body.setAttribute('data-home-money', state);
+    return state;
+  }
+  // A fixed-width bar, the same whatever the amount, so the placeholder
+  // gives away no digit count.
+  function homeMoneyLockHtml(state) {
+    return '<div class="today-money-label">Money Owed</div><div class="th-money-lock"><i aria-hidden="true"></i><span>' +
+      (state === 'unconfirmed' ? 'Couldn\u2019t confirm access' : 'Checking access') + '</span></div>';
+  }
+
   function renderTodayMoney(owed) {
     const el = document.getElementById('todayMoney');
     if (!el) return;
+    const moneyState = applyHomeMoneyState();
+    if (moneyState !== 'shown') {
+      el.classList.remove('is-warning');
+      el.innerHTML = moneyState === 'hidden' ? '' : homeMoneyLockHtml(moneyState);
+      return;
+    }
     el.classList.toggle('is-warning', owed.overdueCount > 0);
     // 2026-09-21: every unpaid invoice, not only the overdue ones --
     // "they just paid me" is a daily event and used to mean opening
@@ -4394,6 +4479,7 @@
     if (dashSectionClosed('compliance')) renderInsuranceCard();
     else renderCompliance();
     renderTodayV2();
+    settleChangedFigures();
   }
 
   // Item #7 (2026-08-16): distinct from the live-sync connection dot
@@ -4466,6 +4552,73 @@
     return Math.round(diffSec / 86400) + 'd ago';
   }
 
+  // Home from the last visit (Claude Design Package B7, 2026-09-29).
+  // Everything Home draws from this device's synced copy -- the day's jobs,
+  // follow-ups, Money owed, the week -- is already here from the last
+  // visit, so it paints at once instead of waiting on the role check and
+  // the sync pull; renderDashboard() then redraws it in place. None of
+  // these renderers writes anything or touches the network (the lanes that
+  // do -- requests, leads, bookings -- keep their skeletons). Money waits
+  // for the role (homeMoneyState() above). Only when this device has
+  // pulled before, so a first visit still opens on skeletons, not on
+  // "nothing today".
+  function lastSuccessfulPullTime() {
+    try {
+      const history = JSON.parse(localStorage.getItem('th_sync_history') || '[]');
+      const hit = Array.isArray(history) ? history.find(s => s && s.ok && s.type === 'pull') : null;
+      return hit ? hit.time : null;
+    } catch (e) { return null; }
+  }
+  function renderDashboardFromLastVisit() {
+    if (!lastSuccessfulPullTime()) return false;
+    applyHomeMoneyState();
+    [renderGreetingBanner, renderTodayHero, renderWeekCard, renderMetrics, renderUpcoming, renderFollowups, renderInvoicesList, renderTodayV2]
+      .forEach(fn => { try { fn(); } catch (e) { /* the full render after the pull still runs */ } });
+    settleChangedFigures();
+    return true;
+  }
+
+  // The freshness marker beside the title: how old Home's numbers are.
+  let homeFreshTimer = null;
+  function setHomeFresh(state) {
+    const el = document.getElementById('homeFresh');
+    if (!el) return;
+    clearTimeout(homeFreshTimer);
+    const syncOn = typeof isSyncConfigured === 'function' && isSyncConfigured() && typeof getSyncCode === 'function' && getSyncCode();
+    const last = lastSuccessfulPullTime();
+    if (!syncOn || (state === 'stale' && !last)) { el.hidden = true; return; }
+    el.hidden = false;
+    el.setAttribute('data-state', state);
+    if (state === 'refreshing') el.textContent = 'Refreshing';
+    else if (state === 'fresh') {
+      el.textContent = 'Up to date';
+      homeFreshTimer = setTimeout(() => setHomeFresh('stale'), 4000);
+    } else {
+      el.textContent = 'Updated ' + relativeTimeFromNow(last);
+      homeFreshTimer = setTimeout(() => setHomeFresh('stale'), 60000);
+    }
+  }
+
+  // Settle: a figure that changed since it was last on screen gets a
+  // one-shot tint (.th-settle, 1.2s; skipped under reduced motion). The
+  // last value is kept per selector, so a figure redrawn by innerHTML
+  // still compares; one appearing for the first time doesn't tint.
+  const SETTLE_SELECTORS = ['#greetingBannerNumber', '#todayMoney .today-money-total', '#laneRespondCount', '#laneSoonCount', '#laneFollowCount', '#laneMoneyCount', '#actionItemsHeadingBadge'];
+  const settleLast = {};
+  function settleChangedFigures() {
+    SETTLE_SELECTORS.forEach(sel => {
+      const el = document.querySelector(sel);
+      const text = el && !el.hidden ? el.textContent.trim() : '';
+      if (el && text && settleLast[sel] && settleLast[sel] !== text) {
+        el.classList.remove('th-settle');
+        void el.offsetWidth;
+        el.classList.add('th-settle');
+        setTimeout(() => el.classList.remove('th-settle'), 1300);
+      }
+      settleLast[sel] = text;
+    });
+  }
+
   function renderSnapshotLastUpdated() {
     const el = document.getElementById('snapshotLastUpdated');
     if (!el) return;
@@ -4525,7 +4678,15 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     try {
+    const paintedFromLastVisit = renderDashboardFromLastVisit();
+    setHomeFresh(paintedFromLastVisit ? 'refreshing' : 'stale');
+    // Money can show as soon as the role is confirmed, from this device's
+    // copy, without waiting for the pull to finish.
+    window.addEventListener('th-role-loaded', () => { try { renderMetrics(); renderInvoicesList(); } catch (e) { /* renderDashboard redraws */ } });
+    const syncStartedAt = Date.now();
     initSyncOnLoad().then(renderDashboard).catch(renderDashboard).then(() => {
+      const pulled = lastSuccessfulPullTime();
+      setHomeFresh(pulled && new Date(pulled).getTime() >= syncStartedAt - 1000 ? 'fresh' : 'stale');
       // Relational tables Phase 2, invoices slice A: after the blob pull,
       // overlay the real `invoices` table and re-render the Income list.
       // Until that fetch resolves, invoicesForDisplay() already falls

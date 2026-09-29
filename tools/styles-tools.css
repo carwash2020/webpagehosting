@@ -2588,6 +2588,61 @@ body:has(.th-update-card.is-shown) .th-install-banner { transform: translateY(16
 }
 .role-blocked-overlay.is-shown { display: flex; }
 
+/* The "you don't have access" screen (Claude Design Package B6,
+   2026-09-29): a normal outcome for a restricted account, not an error.
+   A hex mark with a lock (owner area, not "something broke"), the page's
+   name, who is signed in, and a way forward. Shared by the fixed overlay
+   and the in-page blocked view on Dev Tools and Site Content ([data-rb]). */
+[data-rb] .th-rb-mark {
+  width: 72px; height: 72px; margin: 0 auto 22px; display: grid; place-items: center;
+  clip-path: polygon(25% 6%, 75% 6%, 97% 50%, 75% 94%, 25% 94%, 3% 50%);
+  background: var(--orange-tint-border); color: var(--orange-light);
+}
+[data-rb] .th-rb-mark svg { width: 28px; height: 28px; }
+[data-rb] h1 {
+  margin: 0 0 12px; font-family: var(--font-display); font-weight: 400; font-size: clamp(30px, 6vw, 44px);
+  line-height: 1.05; letter-spacing: .4px; color: var(--white);
+}
+[data-rb] .th-rb-body { max-width: 440px; margin: 0 auto 26px; font-size: 16px; line-height: 1.55; color: var(--text-dim); }
+[data-rb] .th-rb-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 340px; margin: 0 auto; }
+[data-rb] .th-rb-actions > * { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; margin: 0; text-decoration: none; box-sizing: border-box; }
+[data-rb]:not(.is-unconfirmed) .th-rb-retry { display: none; }
+[data-rb].is-unconfirmed .th-rb-switch { display: none; }
+[data-rb] .role-blocked-retry-note { flex-basis: 100%; }
+
+/* First paint on Dev Tools and Site Content (Package B6, 2026-09-29): the
+   two pages that stay hidden until the role check returns show their name
+   and one placeholder card meanwhile (body[data-page-pending], removed by
+   the page when it shows its content or the blocked view). The card only
+   appears after 250ms, so a fast connection never flashes it, and the
+   sweep runs only where motion is allowed. */
+.th-page-pending { display: none; }
+.th-page-pending .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+body[data-page-pending] .th-page-pending { display: block; max-width: 900px; margin: 0 auto; padding: 28px 16px; }
+.th-page-pending-title {
+  margin: 0 0 18px; font-family: var(--font-display); font-size: 28px; letter-spacing: .5px; text-transform: uppercase; color: var(--white);
+}
+.th-skel {
+  display: grid; gap: 14px; padding: 20px; border: 1px solid var(--border); border-radius: var(--th-radius-card, 10px);
+  background: var(--bg-panel); animation: th-skel-in .01s linear .25s both;
+}
+.th-skel-bar { height: 14px; border-radius: 7px; background: var(--bg-panel-3); }
+.th-skel-bar.is-title { height: 22px; width: 42%; }
+.th-skel-bar.is-short { width: 28%; }
+.th-skel-bar.is-row { height: 56px; border-radius: 12px; }
+@keyframes th-skel-in { from { visibility: hidden; } to { visibility: visible; } }
+@media (prefers-reduced-motion: no-preference) {
+  .th-skel-bar {
+    background: linear-gradient(90deg, var(--bg-panel-3) 0 40%, var(--bg-panel-2) 50%, var(--bg-panel-3) 60% 100%);
+    background-size: 300% 100%; animation: th-skel-sweep 1.6s ease-in-out infinite;
+  }
+}
+@keyframes th-skel-sweep { from { background-position: 100% 0; } to { background-position: 0 0; } }
+@media (min-width: 761px) {
+  [data-rb] .th-rb-actions { flex-direction: row; flex-wrap: wrap; justify-content: center; max-width: none; }
+  [data-rb] .th-rb-actions > * { min-width: 180px; }
+}
+
 /* =====================================================================
    Tools polish pass (2026-09-06) -- presentation only.
 

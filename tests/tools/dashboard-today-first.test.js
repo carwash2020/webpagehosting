@@ -109,6 +109,10 @@ test('the Money Owed rows render current invoices unhighlighted and overdue ones
     runScripts: 'dangerously', url: 'https://example.com/tools/workspace.html',
     beforeParse(w) {
       w.requireAuth = () => {};
+      // A signed-in Owner: money on Home waits for a confirmed role with a
+      // finance permission (2026-09-29), and auth.js isn't loaded here.
+      w.getCurrentUserRole = () => ({ roleName: 'Owner' });
+      w.canManageInvoices = () => true;
       w.money = (n) => '$' + (Number(n) || 0).toFixed(2);
       w.escapeHtml = (s) => String(s == null ? '' : s);
       w.escapeAttr = (s) => String(s == null ? '' : s);
