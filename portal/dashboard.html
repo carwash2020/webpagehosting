@@ -673,9 +673,17 @@
     const listEl = document.getElementById('invoiceList');
     listEl.innerHTML = portalSkeletonCards(3);
 
+    // Filtered by email explicitly (2026-09-29 fix): client_portal_invoices'
+    // RLS is "own row OR any internal account" (account_roles staff read
+    // every client's invoices from tools/clients.html by design), so an
+    // internal account signed into the portal itself -- their own real
+    // password works at /portal/login.html; nothing there checks for that
+    // -- got back every client's invoices, and Amount due/the chart below
+    // summed all of them as if they belonged to the signed-in account.
     const { data: invoices, error } = await client
       .from('client_portal_invoices')
       .select('*')
+      .eq('client_email', session.user.email.toLowerCase())
       .order('invoice_date', { ascending: false });
 
     if (error) {

@@ -88,3 +88,46 @@ test('the caret flips on hover only behind (hover:hover), and on keyboard focus 
   assert.ok(open !== -1 && before.slice(open).startsWith('@media (hover:hover){'), 'the hover flip must sit inside @media (hover:hover)');
   assert.ok(before.slice(open).split('{').length - before.slice(open).split('}').length > 0, 'and still be inside it');
 });
+
+// 2026-09-29, later: the booking flow's three focused headers (logo and
+// phone only, their own inline CSS, no styles.css) get the same two menus,
+// as <details> disclosures between the logo and the phone number. On the
+// booking form the links open in a new tab, because the form keeps
+// nothing that has been typed if the page is left.
+const SERVICE_LINKS = [
+  '/services/washer-dryer-repair.html',
+  '/services/plumbing-repairs.html',
+  '/services/drywall-painting.html',
+  '/services/handyman-repairs.html',
+  '/services/assembly-installation.html',
+];
+const BOOKING_PAGES = ['booking.html', 'manage-booking.html', 'manage-job.html'];
+
+for (const page of BOOKING_PAGES) {
+  test(`${page}: the focused header carries the Services and Areas menus, and keeps its phone link`, () => {
+    const html = fs.readFileSync(repo(page), 'utf8');
+    const start = html.indexOf('<header class="site-header">');
+    const header = html.slice(start, html.indexOf('</header>', start));
+    const menus = [...header.matchAll(/<details class="bk-menu">\s*<summary>(\w+)<\/summary>([\s\S]*?)<\/details>/g)];
+    assert.deepEqual(menus.map((m) => m[1]), ['Services', 'Areas']);
+    const hrefs = (block) => [...block.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
+    assert.deepEqual(hrefs(menus[0][2]), SERVICE_LINKS, `${page} Services menu`);
+    assert.deepEqual(hrefs(menus[1][2]), AREA_LINKS, `${page} Areas menu`);
+    assert.match(header, /<a href="\/" class="brand">/, 'the logo still links home');
+    assert.ok(header.indexOf('class="bk-menus"') < header.indexOf('class="phone-link'), 'menus sit between the logo and the phone link');
+    assert.match(header, /class="phone-link js-phone-link js-phone-text"/, 'the phone link keeps its hooks');
+    // styled on the page itself: these pages don't load styles.css
+    assert.match(html, /\.bk-menu > summary::-webkit-details-marker\{display:none;\}/);
+    assert.match(html, /\.bk-menu\[open\] > summary::after\{[^}]*rotate\(225deg\)/);
+    assert.match(html, /@media \(max-width:379px\)\{[\s\S]*?\.bk-menus\{order:3; flex-basis:100%;/, 'narrow phones put the menus on their own row');
+    assert.match(html, /<script>\n\/\/ Header menus \(2026-09-29\)[\s\S]*?e\.key !== 'Escape'/, 'Escape closes an open menu');
+    const newTab = [...header.matchAll(/<a href="\/(?:services|locations)\/[^"]+"([^>]*)>/g)].map((m) => m[1]);
+    assert.equal(newTab.length, 13);
+    if (page === 'booking.html') {
+      assert.ok(newTab.every((a) => a === ' target="_blank" rel="noopener"'), 'booking form links open in a new tab');
+      assert.match(header, /Opens in a new tab, so your booking stays here\./);
+    } else {
+      assert.ok(newTab.every((a) => a === ''), `${page} links open in place`);
+    }
+  });
+}

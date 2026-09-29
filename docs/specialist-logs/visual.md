@@ -2881,6 +2881,32 @@ The prototype's header has "Services ▾" and "Areas ▾" menus. The site alread
 - **`tests/design/header-menus.test.js` (new).** It pins that all 8 towns are in both lists on every page with the menus, the dark pin, that the bridge covers the gap, and that the caret's hover flip sits behind `(hover:hover)`. Mutation-checked: removing St. George from one page, dropping the pin, or shrinking the bridge each fails it.
 - **Screenshots:** `docs/header-menus-2026-09-29/{before,after}`, at 1440 dark and light, plus the mobile menu at 390.
 
+## 2026-09-29 -- the Services and Areas menus reach the booking flow's three focused headers (owner's call)
+
+The header-menus pass left `booking.html`, `manage-booking.html` and `manage-job.html` alone. Their header is only the logo and the phone number, so the booking form has few exits. The owner asked for the menus there too, so they're added.
+
+**What shipped.**
+- **Placement.** Services ▾ and Areas ▾ sit between the logo and the phone number, with the same look as the site's menus:
+  - the caret flips while a menu is open;
+  - dark panel, orange row hover;
+  - the Areas list marks home base and the by-request towns.
+- **Built as `<details>` disclosures, not hover menus.** These pages don't load `styles.css`, and a tap-to-open disclosure works the same with a mouse, a finger or the keyboard, and without JS. A small inline script keeps one menu open at a time and closes it on a click elsewhere or on Escape, returning focus to its summary. Each page carries the CSS in its own `<style>`, in a block marked "Header menus (2026-09-29)".
+- **On the booking form, menu links open in a new tab.** The form saves nothing that has been typed (only a confirmed booking is remembered, for the "already booked" banner). Following a menu link in place would lose a half-filled form, so the panel says "Opens in a new tab, so your booking stays here." The two manage pages open links in place.
+- **Phones.** At 380px and up everything fits on one row and each panel spans the header. Below 380px (360 and 375 phones) the logo, both menus and the number don't fit, so the menus drop to a second row as two equal buttons. The header goes from 89px to 141px there, and nothing scrolls sideways. At 390 and up the header height is unchanged.
+
+**Kept.** The logo still links home. The phone link keeps its `js-phone-link js-phone-text` hooks, which the owner's phone-number override swaps.
+
+**Verification.**
+- **Tests.** `header-menus.test.js` gains a test per page: both menus with all 5 services and 8 towns, between the logo and phone, new-tab links on the booking form only, the narrow-phone row, and Escape. Mutation-checked: removing a town, or dropping `target` from one booking link, fails it.
+- **Browser checks** at 1440, 390, 375, 360 and 320 on all three pages:
+  - no horizontal overflow;
+  - opening one menu closes the other;
+  - a click outside closes both;
+  - Enter opens a menu and Tab moves into it;
+  - Escape closes it and returns focus.
+- **Page errors** are the same 10 before and after: the manage pages' own lookups, blocked in the sandbox.
+- **Screenshots:** `docs/header-menus-2026-09-29/{before,after}/booking-flow`.
+
 ## 2026-09-29 -- Follow-up: remove the redundant second "nothing scheduled" card
 
 Direct follow-up to the Today-card fix above, requested after confirming the sizing bug was fixed: with no jobs scheduled today, the greeting card's own summary line ("Nothing left on today's schedule.") and a separate "Up next" card right below it ("Nothing on the schedule for today.") said the same thing in different words -- a real, redundant second card, not just a symptom of the earlier height bug.

@@ -5911,6 +5911,16 @@ Nothing removed: every town, note, link and the focus-town trail are still there
 
 Screenshots are in `docs/header-menus-2026-09-29/`.
 
+## What changed, 2026-09-29 -- The booking pages get the Services and Areas menus too
+
+The booking form and the manage-booking and manage-job pages now have the same Services and Areas menus as the rest of the site, between the logo and the phone number. On the booking form, menu links open in a new tab, so a half-filled booking isn't lost. On small phones the menus sit on their own row under the logo. Full write-up in `docs/specialist-logs/visual.md`.
+
+## What changed, 2026-09-29 -- Security fix: an internal account signed into the portal saw every client's invoices, jobs, quotes, contracts and requests
+
+`client_portal_invoices`, `client_portal_jobs`, `client_portal_quotes`, `client_portal_contracts` and `client_portal_work_orders` all allow either the matching client OR any internal account to read them (added 2026-09-22, so staff could look up a client's data from `tools/clients.html`). Every portal page queried these tables with no `.eq('client_email', ...)` filter, trusting RLS alone -- correct for an actual client, but not for an internal account (`steve@`/`connor@triplehenterprisesllc.biz`), for whom RLS legitimately returns every client's rows. Nothing stops an internal account from signing into `/portal/login.html` with its own real password, so doing so showed that account every client's invoices (summed into one "Amount due"), jobs, quotes, contracts and requests, all rendered as if they were its own.
+
+Fixed by adding the missing `.eq('client_email', ...)` filter to every affected query in `dashboard.html`, `home.html`, `jobs.html`, `quotes.html`, `contracts.html`, `work-orders.html`, and `settings.html`'s name-prefill fallback -- RLS itself is untouched, since the internal-account clause is legitimate and still needed for the staff tool. Full write-up, including real-world exposure scope and a recommended (not yet made) follow-up decision about blocking internal accounts from `/portal/login.html` entirely, in `docs/specialist-logs/security.md`, 2026-09-29.
+
 ## What changed, 2026-09-29 -- Follow-up: remove the redundant second Today card
 
 With no jobs scheduled today, the "Up next" card right below the greeting/rings card used to show its own "Nothing on the schedule for today." message -- redundant with the greeting card's own "Nothing left on today's schedule." line. That card is now hidden entirely when there's nothing scheduled, and reappears normally the moment a real job exists. Full write-up in `docs/specialist-logs/visual.md`, 2026-09-29.
