@@ -5824,6 +5824,18 @@ The first package of the full v2 redesign (the approved prototype's look, not ju
 
 Nothing was removed. Every action in a sheet runs the page's existing handler, confirm dialogs included. Shared pieces for the next packages: the row menu and the ring helpers in `tools/tools-dialogs.js`, and the "V2" block in `tools/styles-tools.css`. Full write-up in `docs/specialist-logs/visual.md`, 2026-09-29.
 
+## What changed, 2026-09-29 -- Workspace app redesign v2: Clients, Client detail, Reviews, Route Planner and Appliance Wiki
+
+The People + field package of the v2 redesign (handoff §8.8-8.12), on top of the shell package's shared row menu and v2 card primitives.
+
+- **Clients:** the directory is one ruled card of rows, two columns on a wide screen. Each row has a hex avatar (orange when they owe you), "Job today" in orange, the owed pill, Call, and a ⋯ that opens the same sheet a long-press does (Open, Call, Text, Email, Directions, New job, Invoice). A new **New leads** chip lists clients on file with no job yet. Clients | Portal is a segmented control, the portal panels are v2 cards, and the Email list's Remove moves into each row's ⋯.
+- **Client detail:** a hero with a 64px hex avatar, the name in the display face, phone · city, an "Owes $…" pill, and Call / Text / New job / Invoice (Email, Directions and Quote sit just under). Then a Lifetime / Jobs / Avg ticket / Client since grid, the referral link with a new Share button, a **What's next** card (the next booked job, else an open balance, else booking the next visit), a **History** timeline of the latest six records, the full record cards, and the delete block in a red-tinted card. Two columns on a computer.
+- **Reviews:** Send / Google / Yelp as a segmented control. Send opens on three stat tiles (Ready to ask, Asked in 30 days, Left a review) and a **Ready to ask** card: Due Today plus the recently finished jobs as rows with an Ask button, which reads Sent once that number got a request. The message preview is an iMessage-style bubble with Open Text Message and a new Copy link. On a computer the preview and Recently sent share a sticky right-hand column. The QR tabs are one card with the QR, Download PNG and Copy link.
+- **Route Planner:** each stop has a drag handle (drag to reorder, tap for Move up / Move down / Remove, arrow keys from the keyboard) and its number in a circle. A stop pulled from today's jobs shows the job and client over the address. The trip cost card ends on the suggested charge in the display face under an orange rule. The real map stays in its sticky right column on a computer.
+- **Appliance Wiki:** a 56px search field with an orange border, six type tiles with entry and brand counts (tap to filter), and a **common fixes** card of logged issues with part numbers. Inside an entry, each model header and each logged issue gets a ⋯ with Edit, Pin, Copy, View source and Delete.
+
+Nothing was removed: every sheet action clicks or calls the page's existing handler, so each confirm and undo still runs. All CSS lives in each page's own `<style>`, scoped to its `body.th-tool-page[data-th-page=…]`; `tools/styles-tools.css` is untouched. Full write-up in `docs/specialist-logs/visual.md`, 2026-09-29.
+
 ## What changed, 2026-09-29 -- Workspace app redesign v2: Money, Runway and Contracts
 
 The second v2 package (`design_handoff_workspace_app_v2` §8.5-8.7), built on the shell pieces from the first.
