@@ -169,6 +169,134 @@
     body.th-tool-page[data-th-page="client-detail"] #clientContent > .client-hero { grid-column: 1; grid-row: 1 / span 12; }
     body.th-tool-page[data-th-page="client-detail"] #clientContent > :not(.client-hero) { grid-column: 2; min-width: 0; }
   }
+
+  /* ==========================================================================
+     v2 (2026-09-29) -- App redesign v2 §8.9, Client detail. On top of W4
+     above and the shared V2.9 primitives. Keyed to this page; tokens only.
+     .client-hero is now a column (the person card, the stats grid, the
+     referral card), so W4's two-column grid still holds it on the left and
+     What's next, History, the record cards and the delete zone on the right.
+     ========================================================================== */
+  body.th-tool-page[data-th-page="client-detail"] #clientContent { display: flex; flex-direction: column; gap: 16px; padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px)); }
+  body.th-tool-page[data-th-page="client-detail"] .client-hero {
+    background: none; border: 0; border-radius: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 16px;
+  }
+  body.th-tool-page[data-th-page="client-detail"] .client-hero-card {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl); padding: 18px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  body.th-tool-page[data-th-page="client-detail"] .client-hero-top { gap: 14px; }
+  body.th-tool-page[data-th-page="client-detail"] .client-hero-top .th-row-avatar {
+    width: 64px; height: 64px; font-size: 20px; font-weight: 500; background: var(--th-field); color: var(--text); box-shadow: none;
+  }
+  body.th-tool-page[data-th-page="client-detail"] .client-hero-top .th-row-avatar.is-owed { background: var(--orange); color: var(--th-ink-on-orange); }
+  body.th-tool-page[data-th-page="client-detail"] .client-hero-name { font-size: 30px; color: var(--text); overflow-wrap: anywhere; }
+  body.th-tool-page[data-th-page="client-detail"] .client-hero-sub { margin-top: 3px; font-size: 14px; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="client-detail"] .client-owed-line { align-self: flex-start; margin: 0; font-size: 13px; padding: 5px 12px; font-weight: 700; }
+  body.th-tool-page[data-th-page="client-detail"] .client-hero-meta { margin: 0; font-size: 13px; overflow-wrap: anywhere; }
+  body.th-tool-page[data-th-page="client-detail"] .client-actions { margin: 0; gap: 8px; }
+  body.th-tool-page[data-th-page="client-detail"] .client-action {
+    min-height: 62px; padding: 8px 4px; gap: 5px; justify-content: center; border-radius: 14px;
+    background: var(--th-field); border-color: var(--border); color: var(--text);
+    font-size: 11.5px; font-weight: 500; letter-spacing: .6px; text-transform: uppercase; text-align: center;
+  }
+  body.th-tool-page[data-th-page="client-detail"] .client-action .th-icon { order: -1; width: 19px; height: 19px; color: var(--orange-light); }
+  body.th-tool-page[data-th-page="client-detail"] .client-action:active { transform: scale(.97); }
+  body.th-tool-page[data-th-page="client-detail"] .client-next { margin: 0; gap: 8px; }
+  body.th-tool-page[data-th-page="client-detail"] .client-next .client-action {
+    flex: 1 1 0; min-width: 0; min-height: 44px; flex-direction: row; gap: 8px; font-size: 12px; background: none;
+  }
+  body.th-tool-page[data-th-page="client-detail"] .client-next .client-action .th-icon { width: 16px; height: 16px; }
+  @media (hover: hover) {
+    body.th-tool-page[data-th-page="client-detail"] .client-action:hover { border-color: var(--orange-tint-border); }
+  }
+
+  /* Stats: a 2x2 ruled grid. */
+  body.th-tool-page[data-th-page="client-detail"] .client-stat-row {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; border-radius: var(--th-radius-xl);
+  }
+  body.th-tool-page[data-th-page="client-detail"] .client-stat { padding: 14px 16px; min-width: 0; display: flex; flex-direction: column-reverse; gap: 4px; justify-content: flex-end; }
+  body.th-tool-page[data-th-page="client-detail"] .client-stat-value { font-family: var(--font-display); font-weight: 400; font-size: 26px; line-height: 1.05; color: var(--text); overflow-wrap: anywhere; }
+  body.th-tool-page[data-th-page="client-detail"] .client-stat-label { margin: 0; font-family: var(--font-ui); font-size: 11.5px; letter-spacing: 1.2px; color: var(--text-dim); }
+
+  /* Referral link. */
+  body.th-tool-page[data-th-page="client-detail"] .client-referral-card { display: flex; flex-direction: column; gap: 8px; }
+  body.th-tool-page[data-th-page="client-detail"] .client-referral-note { font-size: 14px; line-height: 1.45; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="client-detail"] .referral-link-row { margin-top: 2px; flex-wrap: wrap; }
+  body.th-tool-page[data-th-page="client-detail"] .referral-link-code {
+    flex: 1 1 100%; min-height: 44px; display: flex; align-items: center; padding: 8px 14px; border: 0; border-radius: 12px;
+    background: var(--th-field); font-family: var(--font-ui); letter-spacing: .6px; font-size: 13.5px; color: var(--orange-light);
+  }
+  body.th-tool-page[data-th-page="client-detail"] .referral-link-row .secondary-btn,
+  body.th-tool-page[data-th-page="client-detail"] .referral-link-row .primary-btn { flex: 1 1 0; min-height: 44px; border-radius: 12px; }
+  body.th-tool-page[data-th-page="client-detail"] .referral-link-hint { font-size: 12.5px; line-height: 1.45; }
+
+  /* What's next: the orange-tint card. */
+  body.th-tool-page[data-th-page="client-detail"] .client-whats-next {
+    background: linear-gradient(135deg, var(--tone-orange-bg), var(--bg-panel) 70%); border: 1px solid var(--orange-tint-border);
+    border-radius: var(--th-radius-xl); padding: 16px 18px; display: flex; flex-direction: column; gap: 6px;
+  }
+  body.th-tool-page[data-th-page="client-detail"] .client-whats-next .th-v2-kicker { color: var(--orange-light); }
+  body.th-tool-page[data-th-page="client-detail"] .client-whats-next-text { font-size: 17px; font-weight: 600; line-height: 1.35; color: var(--text); }
+  body.th-tool-page[data-th-page="client-detail"] .client-whats-next-sub { font-size: 13px; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="client-detail"] .client-whats-next-cta { margin-left: 0; align-self: flex-start; }
+
+  /* History timeline: a dot on a rail, title over meta, amount right. */
+  body.th-tool-page[data-th-page="client-detail"] .client-timeline { display: flex; flex-direction: column; margin-top: 4px; }
+  body.th-tool-page[data-th-page="client-detail"] .client-timeline-item { display: flex; gap: 14px; text-decoration: none; color: inherit; min-height: 44px; }
+  body.th-tool-page[data-th-page="client-detail"] .client-timeline-item:active { transform: scale(.985); }
+  body.th-tool-page[data-th-page="client-detail"] .client-timeline-rail { width: 14px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; }
+  body.th-tool-page[data-th-page="client-detail"] .client-timeline-rail::after { content: ''; width: 2px; flex: 1; background: var(--border); }
+  body.th-tool-page[data-th-page="client-detail"] .client-timeline-item:last-child .client-timeline-rail::after { background: none; }
+  body.th-tool-page[data-th-page="client-detail"] .client-timeline-dot { width: 12px; height: 12px; margin-top: 4px; border-radius: 50%; background: var(--text-faint); flex-shrink: 0; }
+  body.th-tool-page[data-th-page="client-detail"] .client-timeline-item.is-green .client-timeline-dot { background: var(--tone-green-fg); }
+  body.th-tool-page[data-th-page="client-detail"] .client-timeline-item.is-orange .client-timeline-dot { background: var(--orange-light); }
+  body.th-tool-page[data-th-page="client-detail"] .client-timeline-item.is-red .client-timeline-dot { background: var(--tone-red-fg); }
+  body.th-tool-page[data-th-page="client-detail"] .client-timeline-item.is-blue .client-timeline-dot { background: var(--tone-blue-fg); }
+  body.th-tool-page[data-th-page="client-detail"] .client-timeline-item.is-purple .client-timeline-dot { background: var(--tone-purple-fg); }
+  body.th-tool-page[data-th-page="client-detail"] .client-timeline-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding-bottom: 18px; }
+  body.th-tool-page[data-th-page="client-detail"] .client-timeline-title { font-size: 15px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+  body.th-tool-page[data-th-page="client-detail"] .client-timeline-meta { font-size: 12.5px; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="client-detail"] .client-timeline-amount { font-weight: 700; white-space: nowrap; color: var(--text); }
+  body.th-tool-page[data-th-page="client-detail"] .client-timeline-empty { font-size: 13.5px; color: var(--text-dim); padding: 6px 0 4px; }
+  body.th-tool-page[data-th-page="client-detail"] .client-history-more { margin-left: auto; }
+  @media (hover: hover) {
+    body.th-tool-page[data-th-page="client-detail"] .client-timeline-item:hover .client-timeline-title { color: var(--orange-light); }
+  }
+
+  /* Record lists (Jobs, Invoices, Quotes, Contracts) as v2 cards. */
+  body.th-tool-page[data-th-page="client-detail"] #clientContent > .section-block {
+    margin: 0; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl); padding: 14px 18px 6px;
+  }
+  body.th-tool-page[data-th-page="client-detail"] #clientContent > .section-block > .section-heading {
+    font-family: var(--font-ui); font-size: 13px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text); margin-bottom: 4px;
+  }
+  body.th-tool-page[data-th-page="client-detail"] .client-record-row { border-bottom-color: var(--th-hairline); min-height: 52px; font-size: 14px; }
+  body.th-tool-page[data-th-page="client-detail"] .client-record-row:active { transform: scale(.985); }
+  body.th-tool-page[data-th-page="client-detail"] .client-record-title { color: var(--text); font-weight: 600; }
+  body.th-tool-page[data-th-page="client-detail"] .client-record-amount { color: var(--text); font-weight: 700; }
+
+  /* Delete zone: a red-tinted card, apart from everything else. */
+  body.th-tool-page[data-th-page="client-detail"] #clientContent > .section-block.client-delete-zone {
+    margin: 8px 0 0; padding: 14px 18px; border-color: color-mix(in srgb, var(--status-error) 30%, transparent);
+    background: color-mix(in srgb, var(--status-error) 5%, var(--bg-panel));
+  }
+  body.th-tool-page[data-th-page="client-detail"] .client-delete-row { flex-wrap: wrap; }
+  body.th-tool-page[data-th-page="client-detail"] .client-delete-row .client-record-title { color: var(--tone-red-fg); font-size: 15px; }
+  body.th-tool-page[data-th-page="client-detail"] .client-delete-row .small-btn.danger {
+    min-height: 44px; padding: 0 16px; border-radius: 12px; font-family: var(--font-ui); font-size: 13.5px; letter-spacing: .8px; text-transform: uppercase;
+    color: var(--tone-red-fg); border: 1px solid color-mix(in srgb, var(--status-error) 45%, transparent);
+    background: color-mix(in srgb, var(--status-error) 10%, transparent);
+  }
+  body.th-tool-page[data-th-page="client-detail"] #clientDeletedState .secondary-btn,
+  body.th-tool-page[data-th-page="client-detail"] #clientDeletedState .primary-btn { min-height: 46px; border-radius: 14px; }
+
+  @media (min-width: 1100px) {
+    /* row-gap 0: W4 spans the hero over 12 rows, and gaps between empty
+       rows would pad the bottom; the right column spaces itself instead. */
+    body.th-tool-page[data-th-page="client-detail"] #clientContent { display: grid; column-gap: 16px; row-gap: 0; grid-template-columns: minmax(360px, 1fr) minmax(0, 1.2fr); }
+    body.th-tool-page[data-th-page="client-detail"] #clientContent > :not(.client-hero) { margin-bottom: 16px; }
+  }
 </style>
 </head>
 <body data-th-page="client-detail">
@@ -321,37 +449,134 @@
     const fmt = (d) => { const x = new Date(d + 'T00:00:00'); return isNaN(x.getTime()) ? d : x.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: x.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' }); };
     const nextJob = bundle.jobs.filter(j => j.date && j.date >= todayStr && j.status !== 'done').map(j => j.date).sort()[0];
     const lastJob = bundle.jobs.filter(j => j.date && j.date <= todayStr).map(j => j.date).sort().pop();
-    const jobDateStat = nextJob
-      ? '<div class="client-stat"><div class="client-stat-value">' + escapeHtml(nextJob === todayStr ? 'Today' : fmt(nextJob)) + '</div><div class="client-stat-label">Next Job</div></div>'
-      : '<div class="client-stat"><div class="client-stat-value">' + (lastJob ? escapeHtml(fmt(lastJob)) : '—') + '</div><div class="client-stat-label">Last Job</div></div>';
+    // (The Next Job / Last Job stat moved into the What's next card below,
+    // v2 2026-09-29 -- same date, same label, now with the job it points at.)
     const canInvoice = typeof canManageInvoices !== 'function' || canManageInvoices() || !(typeof getCurrentUserRole === 'function' && getCurrentUserRole());
 
+    // v2 (2026-09-29, App redesign v2 §8.9): the hero is a column of three
+    // cards -- the person (64px hex avatar, Anton name, phone · city, the
+    // "Owes" pill, a 4-up Call / Text / New job / Invoice), the stats grid,
+    // and the referral link -- so on a computer it stays one left column
+    // beside What's next, History and the records. .client-hero keeps its
+    // place as the first child of #clientContent; every link, label and
+    // number below is the same one this page showed before, plus Avg ticket
+    // and Client since (both read from the same bundle).
+    const city = c.address ? (String(c.address).split(',')[1] || '').trim() : '';
+    const heroSub = [c.phone ? escapeHtml(c.phone) : '', city ? escapeHtml(city) : ''].filter(Boolean).join(' &middot; ');
+    const plusIcon = (name) => '<svg class="th-icon" aria-hidden="true"><use href="#icon-' + name + '" xlink:href="#icon-' + name + '"></use></svg>';
+    const avgTicket = bundle.invoices.length ? bundle.revenue / bundle.invoices.length : null;
+    const firstSeen = [String(c.createdAt || '').slice(0, 10)]
+      .concat(bundle.jobs.map(j => j.date), bundle.invoices.map(i => i.date), bundle.quotes.map(q => q.date))
+      .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d || '')).sort()[0];
+    const sinceLabel = firstSeen ? new Date(firstSeen + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—';
+
     let html = '<div class="client-hero">' +
+      '<div class="client-hero-card">' +
       '<div class="client-hero-top">' +
         '<span class="th-row-avatar' + (owed > 0 ? ' is-owed' : '') + '" aria-hidden="true">' + escapeHtml(clientInitials(c.name)) + '</span>' +
         '<div style="min-width:0;">' +
           '<div class="client-hero-name">' + escapeHtml(c.name) + '</div>' +
-          (owed > 0 ? '<div class="client-owed-line' + (overdue > 0 ? ' is-danger' : '') + '">Owes ' + money(owed) + (overdue > 0 ? ' &middot; ' + money(overdue) + ' overdue' : '') + '</div>' : '') +
+          (heroSub ? '<div class="client-hero-sub">' + heroSub + '</div>' : '') +
         '</div>' +
       '</div>' +
+      (owed > 0 ? '<div class="client-owed-line th-v2-pill ' + (overdue > 0 ? 'is-danger is-red' : 'is-orange') + '">Owes ' + money(owed) + (overdue > 0 ? ' &middot; ' + money(overdue) + ' overdue' : '') + '</div>' : '') +
       (metaLines.length ? '<div class="client-hero-meta">' + metaLines.join(' &middot; ') + '</div>' : '') +
       '<div class="client-actions">' +
         actionLink(tel, 'phone', 'Call') +
         actionLink(sms, 'message', 'Text') +
-        actionLink(c.email ? 'mailto:' + c.email : '', 'inbox', 'Email') +
-        actionLink(maps, 'navigate', 'Directions', true) +
+        '<a class="client-action" href="/tools/job-tracker.html?client=' + nameParam + '#add-job">New job<svg class="th-icon" aria-hidden="true"><use href="#icon-wrench" xlink:href="#icon-wrench"></use></svg></a>' +
+        (canInvoice
+          ? '<a class="client-action" href="/tools/invoice-generator.html?client=' + nameParam + '#invoice">Invoice<svg class="th-icon" aria-hidden="true"><use href="#icon-receipt" xlink:href="#icon-receipt"></use></svg></a>'
+          : actionLink(c.email ? 'mailto:' + c.email : '', 'inbox', 'Email')) +
       '</div>' +
       '<div class="client-next">' +
-        '<a class="primary-btn" href="/tools/job-tracker.html?client=' + nameParam + '#add-job">New job</a>' +
-        (canInvoice ? '<a class="secondary-btn" href="/tools/invoice-generator.html?client=' + nameParam + '#invoice">Invoice</a>' +
-          '<a class="secondary-btn" href="/tools/invoice-generator.html?client=' + nameParam + '#quote">Quote</a>' : '') +
+        (canInvoice ? actionLink(c.email ? 'mailto:' + c.email : '', 'inbox', 'Email') : '') +
+        actionLink(maps, 'navigate', 'Directions', true) +
+        (canInvoice ? '<a class="client-action" href="/tools/invoice-generator.html?client=' + nameParam + '#quote">' + plusIcon('note') + 'Quote</a>' : '') +
+      '</div>' +
       '</div>' +
       '<div class="client-stat-row">' +
         '<div class="client-stat"><div class="client-stat-value">' + money(bundle.revenue) + '</div><div class="client-stat-label">Lifetime Revenue</div></div>' +
         '<div class="client-stat"><div class="client-stat-value">' + bundle.jobs.length + '</div><div class="client-stat-label">Jobs' + (openJobs ? ' (' + openJobs + ' open)' : '') + '</div></div>' +
-        jobDateStat +
+        '<div class="client-stat"><div class="client-stat-value">' + (avgTicket === null ? '—' : money(avgTicket)) + '</div><div class="client-stat-label">Avg ticket</div></div>' +
+        '<div class="client-stat"><div class="client-stat-value">' + escapeHtml(sinceLabel) + '</div><div class="client-stat-label">Client since</div></div>' +
       '</div>' +
-      '<div id="referralLinkBlock"></div>' +
+      '<div class="client-referral-card th-v2-card">' +
+        '<div class="th-v2-card-title">Referral link</div>' +
+        '<div class="client-referral-note">$25 credit when someone they send has a job done and paid.</div>' +
+        '<div id="referralLinkBlock"></div>' +
+      '</div>' +
+    '</div>';
+
+    // What's next: the one thing to do for this client, from what is
+    // already on the page -- the next booked job (the old Next Job /
+    // Last Job stat), else an open balance, else booking the next visit.
+    const nextJobRec = nextJob ? bundle.jobs.filter(j => j.date === nextJob && j.status !== 'done')[0] : null;
+    let nextText, nextSub, nextHref, nextCta;
+    if (nextJobRec) {
+      nextText = escapeHtml(nextJobRec.title || 'Job') + ' &middot; ' + escapeHtml(nextJob === todayStr ? 'Today' : fmt(nextJob));
+      nextSub = 'Next Job' + (nextJobRec.status === 'in-progress' ? ' &middot; in progress' : '');
+      nextHref = '/tools/job-detail.html?id=' + encodeURIComponent(nextJobRec.id);
+      nextCta = 'Open job';
+    } else if (owed > 0 && canInvoice) {
+      nextText = (overdue > 0 ? money(overdue) + ' is overdue' : money(owed) + ' is still open') + ' &mdash; send a reminder';
+      nextSub = 'Last Job ' + (lastJob ? escapeHtml(fmt(lastJob)) : '—');
+      nextHref = '/tools/invoice-generator.html?search=' + encodeURIComponent(c.name) + '#recent';
+      nextCta = 'See invoices';
+    } else {
+      nextText = 'No job booked' + (lastJob ? ' &middot; last one ' + escapeHtml(fmt(lastJob)) : ' yet');
+      nextSub = 'Last Job ' + (lastJob ? escapeHtml(fmt(lastJob)) : '—');
+      nextHref = '/tools/job-tracker.html?client=' + nameParam + '#add-job';
+      nextCta = 'Book a job';
+    }
+    html += '<div class="client-whats-next">' +
+      '<div class="th-v2-kicker">What’s next</div>' +
+      '<div class="client-whats-next-text">' + nextText + '</div>' +
+      '<div class="client-whats-next-sub">' + nextSub + '</div>' +
+      '<a class="th-v2-link client-whats-next-cta" href="' + nextHref + '">' + nextCta + plusIcon('chevron') + '</a>' +
+    '</div>';
+
+    // History: one timeline of everything on file, newest first. The full
+    // per-type record lists (Jobs, Invoices, Quotes, Contracts) follow.
+    const events = [];
+    bundle.jobs.forEach(j => events.push({
+      date: j.date || '', t: j.title || 'Job',
+      m: (j.date ? fmt(j.date) : 'No date') + ' · ' + (j.status === 'done' ? 'Done' : j.status === 'in-progress' ? 'In progress' : 'Not started'),
+      a: '', tone: j.status === 'done' ? 'green' : 'blue', href: '/tools/job-detail.html?id=' + encodeURIComponent(j.id),
+    }));
+    bundle.invoices.forEach(i => {
+      const bal = balanceOf(i);
+      events.push({
+        date: i.date || '', t: 'Invoice ' + (i.invoiceNumber || ''),
+        m: (i.date ? fmt(i.date) : '') + (bal <= 0 ? ' · Paid' : (overdueOf(i) ? ' · Overdue' : ' · Unpaid')),
+        a: money(i.total || 0), tone: bal <= 0 ? 'green' : (overdueOf(i) ? 'red' : 'orange'),
+        href: '/tools/invoice-generator.html?search=' + encodeURIComponent(c.name) + '#recent',
+      });
+    });
+    bundle.quotes.forEach(q => events.push({
+      date: q.date || '', t: 'Quote ' + (q.quoteNumber || ''), m: q.date ? fmt(q.date) : '', a: money(q.total || 0), tone: 'purple',
+      href: '/tools/invoice-generator.html?search=' + encodeURIComponent(c.name) + '#recent',
+    }));
+    bundle.contracts.forEach(k => events.push({
+      date: String(k.dateGeneratedISO || '').slice(0, 10), t: k.type || 'Contract', m: k.dateGenerated || '', a: '', tone: 'idle',
+      href: '/tools/contract-generator.html?search=' + encodeURIComponent(c.name),
+    }));
+    // Every href here is a fixed path plus encodeURIComponent() values (no
+    // quote or angle bracket survives it) -- the same way renderRecordSection
+    // below writes its links.
+    events.sort((a, b) => b.date.localeCompare(a.date));
+    html += '<div class="client-history th-v2-card">' +
+      '<div class="th-v2-card-head"><span class="th-v2-card-title">History</span>' +
+        (events.length > 6 ? '<span class="th-v2-card-note client-history-more">Latest 6 of ' + events.length + '</span>' : '') + '</div>' +
+      (events.length
+        ? '<div class="client-timeline">' + events.slice(0, 6).map(e =>
+            '<a class="client-timeline-item is-' + e.tone + '" href="' + e.href + '">' +
+              '<span class="client-timeline-rail" aria-hidden="true"><span class="client-timeline-dot"></span></span>' +
+              '<span class="client-timeline-main"><span class="client-timeline-title">' + escapeHtml(e.t) + '</span>' +
+              '<span class="client-timeline-meta">' + escapeHtml(e.m) + '</span></span>' +
+              (e.a ? '<span class="client-timeline-amount">' + e.a + '</span>' : '') +
+            '</a>').join('') + '</div>'
+        : '<div class="client-timeline-empty">Nothing on file yet &mdash; the first job, invoice or quote shows up here.</div>') +
     '</div>';
 
     // Where each job's money is (2026-09-22, Workspace rework part 5), the
@@ -550,6 +775,7 @@
       '<div class="referral-link-row">' +
         '<div class="referral-link-code" id="referralLinkText">' + escapeHtml(link) + '</div>' +
         '<button class="secondary-btn" onclick="copyReferralLink()">Copy</button>' +
+        '<button class="primary-btn referral-share-btn" onclick="shareReferralLink()">Share</button>' +
       '</div>' +
       (smsTarget ? '<a href="sms:' + escapeAttr(smsTarget) + '?body=' + smsBody + '" class="secondary-btn" style="display:inline-block; text-decoration:none; margin-top:8px;">Text to ' + escapeHtml(client.name) + '</a>' : '') +
       '<div class="referral-link-hint">Send this to ' + escapeHtml(client.name) + ' to text or share -- anyone who books through it gets automatically credited to them.</div>' +
@@ -599,6 +825,19 @@
     navigator.clipboard.writeText(el.textContent).then(() => {
       if (typeof showToast === 'function') showToast('Referral link copied');
     }).catch(() => {});
+  }
+
+  // Share (v2, 2026-09-29): the phone's own share sheet for the same link
+  // Copy copies; where there is no share sheet (most desktops), it copies.
+  function shareReferralLink() {
+    const el = document.getElementById('referralLinkText');
+    if (!el) return;
+    const url = el.textContent;
+    if (navigator.share) {
+      navigator.share({ title: 'Triple H Enterprises referral link', url }).catch(() => { /* dismissed */ });
+      return;
+    }
+    copyReferralLink();
   }
 
   function renderRecordSection(label, rows, emptyText) {

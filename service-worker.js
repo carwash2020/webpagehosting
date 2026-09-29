@@ -682,7 +682,25 @@
 // "Getting Started" guide making the identical false claim to real
 // people using the app. Same reasoning as every prior bump in this
 // file's history.
-const CACHE_NAME = 'th-workspace-v359'; // precache-fingerprint:e6f3e06d7733
+// Bumped (v359 -> v360): workspace.html changed -- the v2 Today summary
+// card (greeting + date + three rings) rendered up to ~550px tall on a
+// phone with a lot of dead space inside each ring, instead of the
+// compact card the redesign intended. Root cause: a pre-v2 mobile rule
+// (still present, @media max-width:560px, ".greeting-banner
+// { flex-direction: column }" from the 2026-09-21 single-line design
+// this card replaced) was never removed, and the new v2 rule never
+// named flex-direction, so nothing overrode it below 560px wide. Once
+// the card's main axis flipped to vertical, .today-rings' width-basis
+// flex-basis (280px) became a HEIGHT basis instead, stretching the
+// rings container -- and each ring inside it via default flex stretch
+// -- to 280px tall apiece. Fixed by naming flex-direction: row on the
+// v2 rule itself, which now beats the old rule outright (higher
+// selector specificity) at every width; the card's own flex-wrap: wrap
+// already handles narrow screens correctly (rings wrap to their own
+// row below the text), which is what the old rule's replaced design
+// was doing this for in the first place. workspace.html is precached.
+// Same reasoning as every prior bump in this file's history.
+const CACHE_NAME = 'th-workspace-v361'; // precache-fingerprint:a1ac9a681a56
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',

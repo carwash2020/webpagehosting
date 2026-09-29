@@ -160,10 +160,153 @@
     body.th-tool-page[data-th-page="review-request"] #panel-send.is-active {
       display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 20px; align-items: start; grid-auto-flow: row dense;
     }
-    body.th-tool-page[data-th-page="review-request"] #panel-send > * { grid-column: 1; min-width: 0; }
-    body.th-tool-page[data-th-page="review-request"] #panel-send > .form-section:nth-child(3) { grid-column: 2; grid-row: 1 / span 2; position: sticky; top: 130px; }
-    body.th-tool-page[data-th-page="review-request"] #panel-send > #sentLogSection { grid-column: 2; }
+    /* v2 (2026-09-29): the panel now holds two columns -- .review-main-col
+       (stats, Ready to ask, Job Details) and .review-side-col (Message
+       Preview, Recently sent). W4 placed the preview with
+       .form-section:nth-child(3) and a row span; shared grid rows left
+       Recently sent far below the preview, so the side column is one
+       element now, sticky under the tabs and scrolling on its own. */
+    body.th-tool-page[data-th-page="review-request"] #panel-send > * { min-width: 0; }
+    body.th-tool-page[data-th-page="review-request"] #panel-send > .review-side-col {
+      position: sticky; top: 130px; max-height: calc(100vh - 150px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
+    }
   }
+
+  /* ==========================================================================
+     v2 (2026-09-29) -- App redesign v2 §8.10, Reviews. On top of W4 above
+     and the shared V2.9 primitives. Keyed to this page; tokens only.
+     ========================================================================== */
+  body.th-tool-page[data-th-page="review-request"] #panel-send { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+  body.th-tool-page[data-th-page="review-request"] .review-main-col > *,
+  body.th-tool-page[data-th-page="review-request"] .review-side-col > * { margin-bottom: 16px; }
+  body.th-tool-page[data-th-page="review-request"] .form-section {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl); padding: 16px 18px;
+  }
+  body.th-tool-page[data-th-page="review-request"] .form-section h3 {
+    font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: 1.4px; color: var(--text); margin: 0 0 12px;
+  }
+  body.th-tool-page[data-th-page="review-request"] .form-field input { min-height: 48px; border-radius: 12px; background: var(--th-field); }
+
+  /* Send | Google | Yelp: the v2 segmented control. */
+  body.th-tool-page[data-th-page="review-request"] #reviewTabs {
+    gap: 4px; padding: 4px; margin: 4px 0 16px; background: var(--bg-panel); border: 1px solid var(--border);
+    border-radius: var(--th-radius-track); box-shadow: none;
+  }
+  body.th-tool-page[data-th-page="review-request"] #reviewTabs::before { inset: -8px -12px; border-radius: 0; }
+  body.th-tool-page[data-th-page="review-request"] #reviewTabs .tab-btn {
+    flex: 1 1 0; min-height: 40px; padding: 0 12px; border: 0; border-radius: var(--th-radius-seg); background: none; box-shadow: none;
+    color: var(--text-dim); font-family: var(--font-ui); font-size: 13px; letter-spacing: .8px; text-transform: uppercase;
+  }
+  body.th-tool-page[data-th-page="review-request"] #reviewTabs .tab-btn.is-active { background: var(--text); color: var(--bg); box-shadow: none; }
+  body.th-tool-page[data-th-page="review-request"] #reviewTabs .tab-btn:active { transform: scale(.97); }
+  @media (hover: hover) { body.th-tool-page[data-th-page="review-request"] #reviewTabs .tab-btn:not(.is-active):hover { background: none; color: var(--text); } }
+  @media (pointer: coarse) { body.th-tool-page[data-th-page="review-request"] #reviewTabs .tab-btn { min-height: 44px; } }
+  @media (min-width: 1024px) { body.th-tool-page[data-th-page="review-request"] #reviewTabs { max-width: 480px; } }
+
+  /* Stat tiles. */
+  body.th-tool-page[data-th-page="review-request"] .review-stats { display: flex; gap: 12px; flex-wrap: wrap; }
+  body.th-tool-page[data-th-page="review-request"] .review-stats:empty { display: none; }
+  body.th-tool-page[data-th-page="review-request"] .review-stat {
+    flex: 1 1 100px; min-width: 0; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-tile);
+    padding: 14px 16px; display: flex; flex-direction: column; gap: 4px;
+  }
+  body.th-tool-page[data-th-page="review-request"] .review-stat-label { font-family: var(--font-ui); font-size: 11.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="review-request"] .review-stat-value { font-family: var(--font-display); font-size: 30px; line-height: 1.05; color: var(--text); font-variant-numeric: tabular-nums; }
+  body.th-tool-page[data-th-page="review-request"] .review-stat.is-orange .review-stat-value { color: var(--orange-light); }
+  body.th-tool-page[data-th-page="review-request"] .review-stat.is-green .review-stat-value { color: var(--tone-green-fg); }
+
+  /* Ready to ask: one card, Due Today and Recently Completed as ruled rows. */
+  body.th-tool-page[data-th-page="review-request"] .review-ready { padding: 6px 18px 8px; }
+  body.th-tool-page[data-th-page="review-request"] .review-ready-head { display: flex; align-items: baseline; gap: 8px; padding: 10px 0 6px; flex-wrap: wrap; }
+  body.th-tool-page[data-th-page="review-request"] .review-ready-head h3 { margin: 0; }
+  body.th-tool-page[data-th-page="review-request"] .review-ready-note { font-size: 13px; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="review-request"] .review-ready #pendingRemindersSection { background: none; border: 0; border-radius: 0; padding: 0; margin: 0; }
+  body.th-tool-page[data-th-page="review-request"] .review-ready #pendingRemindersSection h3,
+  body.th-tool-page[data-th-page="review-request"] .review-ready #recentJobsSection h3 {
+    margin: 10px 0 2px; font-size: 11.5px; letter-spacing: 1.2px; color: var(--orange-light);
+  }
+  body.th-tool-page[data-th-page="review-request"] .review-ready #pendingRemindersSection h3 span { display: none; }
+  body.th-tool-page[data-th-page="review-request"] .review-ready #recentJobsSection > p { display: none; }
+  /* The rows are the picker now; the dropdown + Use This Job stay in the
+     DOM (Ask drives them), off screen. */
+  body.th-tool-page[data-th-page="review-request"] .review-ready-picker { display: none; }
+  body.th-tool-page[data-th-page="review-request"] .review-ready .dash-list-item,
+  body.th-tool-page[data-th-page="review-request"] .review-ready-row {
+    display: flex; align-items: center; gap: 12px; padding: 12px 0; margin: 0; min-height: 64px;
+    background: none; border: 0; border-top: 1px solid var(--th-hairline); border-radius: 0;
+  }
+  body.th-tool-page[data-th-page="review-request"] .review-ready .dash-list-item > div:first-child { flex: 1; min-width: 0; }
+  body.th-tool-page[data-th-page="review-request"] .review-ready-avatar {
+    width: 42px; height: 42px; flex-shrink: 0; clip-path: var(--hex); background: var(--th-field); color: var(--text);
+    display: flex; align-items: center; justify-content: center; font-family: var(--font-ui); font-size: 13px;
+  }
+  body.th-tool-page[data-th-page="review-request"] .review-ready-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  body.th-tool-page[data-th-page="review-request"] .review-ready-name { font-size: 15px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+  body.th-tool-page[data-th-page="review-request"] .review-ready-meta { font-size: 12.5px; color: var(--text-dim); overflow-wrap: anywhere; }
+  body.th-tool-page[data-th-page="review-request"] .review-ready-ask,
+  body.th-tool-page[data-th-page="review-request"] .review-ready .dash-list-item-right .small-btn:not(.danger) {
+    min-height: 40px; min-width: 64px; padding: 0 16px; border: 0; border-radius: 999px;
+    background: var(--orange); color: var(--th-ink-on-orange); font-family: var(--font-ui); font-size: 13px; letter-spacing: .8px; text-transform: uppercase;
+  }
+  body.th-tool-page[data-th-page="review-request"] .review-ready-ask:active,
+  body.th-tool-page[data-th-page="review-request"] .review-ready .dash-list-item-right .small-btn:active { transform: scale(.96); }
+  @media (pointer: coarse) { body.th-tool-page[data-th-page="review-request"] .review-ready-ask { min-height: 44px; } }
+  @media (hover: hover) { body.th-tool-page[data-th-page="review-request"] .review-ready-ask:hover { background: var(--orange-light); } }
+  body.th-tool-page[data-th-page="review-request"] .review-ready .dash-list-item-right { display: flex; align-items: center; gap: 4px; }
+  body.th-tool-page[data-th-page="review-request"] .review-ready-sent { min-width: 64px; justify-content: center; }
+  body.th-tool-page[data-th-page="review-request"] .review-ready-empty { margin: 4px 0 10px; font-size: 13.5px; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="review-request"] .review-ready-empty[hidden] { display: none; }
+
+  /* Message preview: an iMessage-style thread. */
+  body.th-tool-page[data-th-page="review-request"] .message-preview-wrap {
+    flex-direction: column; align-items: flex-end; gap: 8px; padding: 16px; margin-bottom: 14px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 18px;
+  }
+  body.th-tool-page[data-th-page="review-request"] .message-preview-stamp { align-self: center; font-size: 11.5px; color: var(--text-faint); }
+  body.th-tool-page[data-th-page="review-request"] .message-preview {
+    background: var(--orange); background-image: none; color: var(--th-ink-on-orange); box-shadow: none;
+    border-radius: 18px 18px 4px 18px; padding: 10px 14px; font-size: 14.5px; line-height: 1.4; overflow-wrap: anywhere;
+  }
+  body.th-tool-page[data-th-page="review-request"] .review-send-row,
+  body.th-tool-page[data-th-page="review-request"] .review-more-row { gap: 8px; margin-bottom: 8px; }
+  body.th-tool-page[data-th-page="review-request"] .btn-row .primary-btn,
+  body.th-tool-page[data-th-page="review-request"] .btn-row .secondary-btn { min-width: 0; min-height: 46px; border-radius: 14px; }
+  body.th-tool-page[data-th-page="review-request"] .review-more-row .secondary-btn { background: none; font-size: 13px; }
+
+  /* Recently sent: name, when, the outcome as a pill, and the ⋯. */
+  body.th-tool-page[data-th-page="review-request"] #sentLogSection { padding: 6px 18px 8px; }
+  body.th-tool-page[data-th-page="review-request"] #sentLogSection > h3 { padding-top: 10px; margin-bottom: 2px; }
+  body.th-tool-page[data-th-page="review-request"] #sentLogSummary { margin: 0 0 6px; font-size: 13px; }
+  body.th-tool-page[data-th-page="review-request"] #sentLogList .dash-list-item {
+    display: flex; align-items: center; gap: 10px; padding: 12px 0; margin: 0; background: none; border: 0;
+    border-top: 1px solid var(--th-hairline); border-radius: 0;
+  }
+  body.th-tool-page[data-th-page="review-request"] #sentLogList .dash-list-item > div:first-child { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  body.th-tool-page[data-th-page="review-request"] #sentLogList .dash-list-item-meta[class*="review-status-"] {
+    align-self: flex-start; padding: 3px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600;
+    background: var(--tone-orange-bg); color: var(--tone-orange-fg);
+  }
+  body.th-tool-page[data-th-page="review-request"] #sentLogList .dash-list-item-meta.review-status-received { background: var(--tone-green-bg); color: var(--tone-green-fg) !important; }
+  body.th-tool-page[data-th-page="review-request"] #sentLogList .dash-list-item-meta.review-status-no_response { background: var(--th-field); color: var(--text-dim); }
+
+  /* Google / Yelp: the QR beside its words, one card. */
+  body.th-tool-page[data-th-page="review-request"] #panel-google.is-active,
+  body.th-tool-page[data-th-page="review-request"] #panel-yelp.is-active { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+  body.th-tool-page[data-th-page="review-request"] .review-qr-layout {
+    display: flex; flex-wrap: wrap; gap: 24px; align-items: center; text-align: left;
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl); padding: 22px;
+  }
+  body.th-tool-page[data-th-page="review-request"] .review-qr-layout > [id$="QrCard"] {
+    flex: 0 0 auto; width: min(240px, 100%); margin: 0 auto !important; padding: 14px !important; border-radius: 18px !important; box-shadow: none !important;
+  }
+  body.th-tool-page[data-th-page="review-request"] .review-qr-info { flex: 1 1 240px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+  body.th-tool-page[data-th-page="review-request"] .review-qr-info > div[style] { margin-bottom: 0 !important; }
+  body.th-tool-page[data-th-page="review-request"] .review-qr-site { font-family: var(--font-ui); font-size: 11.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="review-request"] .review-qr-info > div[style*="font-size:18px"] { font-family: var(--font-display) !important; font-weight: 400 !important; font-size: 28px !important; line-height: 1.05; text-transform: uppercase; color: var(--text) !important; }
+  body.th-tool-page[data-th-page="review-request"] .review-qr-note { font-size: 14px; color: var(--text-dim); line-height: 1.45; }
+  body.th-tool-page[data-th-page="review-request"] .review-qr-actions { margin-top: 6px; gap: 8px; }
+  body.th-tool-page[data-th-page="review-request"] .review-qr-actions .primary-btn,
+  body.th-tool-page[data-th-page="review-request"] .review-qr-actions .secondary-btn { flex: 0 1 auto; padding: 0 18px; }
 </style>
 </head>
 <body data-th-page="review-request">
@@ -196,24 +339,41 @@
 
 <div class="tab-panel is-active" id="panel-send">
 
+<!-- v2 (2026-09-29, App redesign v2 §8.10): stat tiles, read from the same
+     local sent log and reminder list this page already keeps. -->
+<div class="review-main-col">
+<div class="review-stats" id="reviewStats" aria-live="polite"></div>
+
+<!-- "Ready to ask" (v2): Due Today and Recently Completed in one card. Both
+     sections keep their ids, contents and show/hide logic; the recently
+     completed jobs also render as rows with an Ask button (renderRecentJobs),
+     which picks the job through the same dropdown + applyRecentJobSelection(). -->
+<div class="form-section review-ready" id="reviewReadySection">
+<div class="review-ready-head"><h3>Ready to ask</h3><span class="review-ready-note">due reminders and jobs just finished</span></div>
+
 <div class="form-section" id="pendingRemindersSection" style="display:none;">
   <h3>Due Today <span style="color:var(--text-dim); font-weight:400; text-transform:none; letter-spacing:0;">&mdash; delayed review requests ready to send</span></h3>
   <div id="pendingRemindersList"></div>
 </div>
 
-<div class="form-section">
   <div id="recentJobsSection" style="display:none;">
     <h3>Recently Completed Jobs</h3>
     <p style="color:var(--text-dim); font-size:13px; margin:-4px 0 12px;">Pick one to auto-fill the details below instead of typing them in by hand.</p>
+    <div id="recentJobsRows" class="review-ready-rows"></div>
+    <div class="review-ready-picker">
     <div class="form-field">
-      <select id="recentJobSelect" style="width:100%; box-sizing:border-box; padding:10px 12px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:15px; font-family:inherit;">
+      <select id="recentJobSelect" aria-label="Recently completed job" style="width:100%; box-sizing:border-box; padding:10px 12px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:15px; font-family:inherit;">
         <option value="">Choose a job&hellip;</option>
       </select>
     </div>
     <button class="secondary-btn" onclick="applyRecentJobSelection()" style="width:100%; margin-bottom:20px;">Use This Job</button>
     <div style="border-top:1px solid var(--border); margin-bottom:20px;"></div>
+    </div>
   </div>
+  <p class="review-ready-empty" id="reviewReadyEmpty">Nothing waiting &mdash; finished jobs and due reminders land here.</p>
+</div>
 
+<div class="form-section review-details-section">
   <h3>Job Details</h3>
   <div class="form-field">
     <label>Customer's first name (optional &mdash; leave blank for a generic greeting)</label>
@@ -229,14 +389,21 @@
   </div>
 </div>
 
-<div class="form-section">
+</div>
+<!-- v2: the preview and Recently sent share one right-hand column on a
+     computer (sticky, scrolling on its own); on a phone they simply follow. -->
+<div class="review-side-col">
+<div class="form-section review-preview-section">
   <h3>Message Preview</h3>
-  <div class="message-preview-wrap"><div class="message-preview" id="messagePreview"></div></div>
+  <div class="message-preview-wrap"><div class="message-preview-stamp" id="messagePreviewStamp" aria-hidden="true">Text Message</div><div class="message-preview" id="messagePreview"></div></div>
   <div id="duplicateWarning" style="display:none; color: var(--orange-light); font-size: 13px; margin-bottom: 12px; padding: 10px 12px; background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); border-radius: 6px;"></div>
-  <div class="btn-row">
+  <div class="btn-row review-send-row">
+    <a class="primary-btn" id="sendLink" href="#" onclick="logSentRequest('sms')">Open Text Message</a>
+    <button class="secondary-btn" onclick="copyReviewLink('google', this)"><svg class="th-icon" aria-hidden="true"><use href="#icon-link" xlink:href="#icon-link"></use></svg> Copy link</button>
+  </div>
+  <div class="btn-row review-more-row">
     <button class="secondary-btn" onclick="shuffleMessage()"><svg class="th-icon" aria-hidden="true"><use href="#icon-shuffle" xlink:href="#icon-shuffle"></use></svg> Try Another</button>
     <button class="secondary-btn" onclick="copyMessage()">Copy Message</button>
-    <a class="primary-btn" id="sendLink" href="#" onclick="logSentRequest('sms')">Open Text Message</a>
   </div>
   <div class="copy-confirm" id="copyConfirm">Copied! Paste it in if the text app doesn't fill it in automatically.</div>
   <div style="display:flex; align-items:center; gap:6px; margin-top:4px;"><button class="help-btn" onclick="openCardInfo('sendButton')" aria-label="What does Open Text Message do?" title="What does Open Text Message do?">?</button><span class="fallback-note" style="margin:0;">What "Open Text Message" does</span></div>
@@ -255,6 +422,7 @@
   <p class="tool-sub" id="sentLogSummary" style="margin-top:-8px;"></p>
   <div id="sentLogList"></div>
 </div>
+</div>
 
 </div>
 
@@ -263,12 +431,24 @@
   <div style="font-family:var(--font-ui); font-weight:700; font-size:22px; color:var(--white); margin-bottom:4px;">Triple H Enterprises</div>
   <div style="color:var(--text-dim); font-size:14px; margin-bottom:30px;">Handyman &amp; Appliance Repair</div>
 
+  <!-- v2 (2026-09-29): the QR (qrcode-lib.js, unchanged) beside its words,
+       with Download PNG and Copy link, in one card. -->
+  <div class="review-qr-layout">
   <div style="background:#ffffff; border-radius:var(--radius); padding:28px; box-shadow:0 8px 30px rgba(0,0,0,0.35); margin-bottom:24px;" id="googleQrCard">
     <div style="color:var(--text-dim); padding:60px 0;">Loading QR code&hellip;</div>
   </div>
 
+  <div class="review-qr-info">
+  <div class="review-qr-site">Google review</div>
   <div style="font-family:var(--font-ui); font-weight:600; font-size:18px; color:var(--white); margin-bottom:8px;">Scan to leave us a Google review</div>
   <div style="color:var(--text-dim); font-size:14px;">Takes about a minute &mdash; it means a lot to a small business like ours.</div>
+  <div class="review-qr-note">Hold this up for a client to scan, or save it for a leave-behind card.</div>
+  <div class="btn-row review-qr-actions">
+    <button class="primary-btn" onclick="downloadReviewQr('googleQrCard', 'triple-h-google-review-qr.png', this)"><svg class="th-icon" aria-hidden="true"><use href="#icon-download" xlink:href="#icon-download"></use></svg> Download PNG</button>
+    <button class="secondary-btn" onclick="copyReviewLink('google', this)"><svg class="th-icon" aria-hidden="true"><use href="#icon-link" xlink:href="#icon-link"></use></svg> Copy link</button>
+  </div>
+  </div>
+  </div>
 </div>
 
 <div class="tab-panel" id="panel-yelp" style="text-align:center;">
@@ -276,12 +456,24 @@
   <div style="font-family:var(--font-ui); font-weight:700; font-size:22px; color:var(--white); margin-bottom:4px;">Triple H Enterprises</div>
   <div style="color:var(--text-dim); font-size:14px; margin-bottom:30px;">Handyman &amp; Appliance Repair</div>
 
+  <!-- v2 (2026-09-29): the QR (qrcode-lib.js, unchanged) beside its words,
+       with Download PNG and Copy link, in one card. -->
+  <div class="review-qr-layout">
   <div style="background:#ffffff; border-radius:var(--radius); padding:28px; box-shadow:0 8px 30px rgba(0,0,0,0.35); margin-bottom:24px;" id="yelpQrCard">
     <div style="color:var(--text-dim); padding:60px 0;">Loading QR code&hellip;</div>
   </div>
 
+  <div class="review-qr-info">
+  <div class="review-qr-site">Yelp review</div>
   <div style="font-family:var(--font-ui); font-weight:600; font-size:18px; color:var(--white); margin-bottom:8px;">Scan to leave us a Yelp review</div>
   <div style="color:var(--text-dim); font-size:14px;">Takes about a minute &mdash; it means a lot to a small business like ours.</div>
+  <div class="review-qr-note">Hold this up for a client to scan, or save it for a leave-behind card.</div>
+  <div class="btn-row review-qr-actions">
+    <button class="primary-btn" onclick="downloadReviewQr('yelpQrCard', 'triple-h-yelp-review-qr.png', this)"><svg class="th-icon" aria-hidden="true"><use href="#icon-download" xlink:href="#icon-download"></use></svg> Download PNG</button>
+    <button class="secondary-btn" onclick="copyReviewLink('yelp', this)"><svg class="th-icon" aria-hidden="true"><use href="#icon-link" xlink:href="#icon-link"></use></svg> Copy link</button>
+  </div>
+  </div>
+  </div>
 </div>
 
 <div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
@@ -512,6 +704,117 @@
     select.innerHTML = '<option value="">Choose a job&hellip;</option>' + jobs.map((j, idx) => `
       <option value="${idx}">${escapeHtml(j.title || 'Untitled job')}${j.client ? ' \u2014 ' + escapeHtml(j.client) : ''}</option>`).join('');
   }
+
+  // ---------- v2 (2026-09-29): "Ready to ask" rows ----------
+  // The same cached list as the dropdown above, one row per job. Ask picks
+  // that job through the dropdown and applyRecentJobSelection(), so the
+  // fields fill exactly as before. A job whose phone already got a request
+  // in the last 30 days (the duplicate-warning rule) reads Sent instead.
+  function recentlyAskedDigits() {
+    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+    return new Set(loadSentLog()
+      .filter(e => e.phone && (Date.now() - new Date(e.sentAt).getTime()) < THIRTY_DAYS)
+      .map(e => digitsOnly(e.phone)));
+  }
+  function reviewInitials(name) {
+    const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '?';
+    return ((parts[0][0] || '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
+  }
+  function renderRecentJobRows() {
+    const host = document.getElementById('recentJobsRows');
+    if (!host) return;
+    const asked = recentlyAskedDigits();
+    host.innerHTML = cachedRecentDoneJobs.map((j, idx) => {
+      const digits = digitsOnly(j.phone || '');
+      const sent = digits && asked.has(digits);
+      const when = j.statusChangedAt || j.date;
+      const whenText = when && !isNaN(new Date(when).getTime()) ? ' \u00b7 done ' + new Date(String(when).length === 10 ? when + 'T00:00:00' : when).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+      return '<div class="review-ready-row">' +
+        '<span class="review-ready-avatar" aria-hidden="true">' + escapeHtml(reviewInitials(j.client)) + '</span>' +
+        '<span class="review-ready-main"><span class="review-ready-name">' + escapeHtml(j.client || '(no name)') + '</span>' +
+        '<span class="review-ready-meta">' + escapeHtml(j.title || 'Untitled job') + escapeHtml(whenText) + '</span></span>' +
+        (sent
+          ? '<span class="review-ready-sent th-v2-pill is-green">Sent</span>'
+          : '<button type="button" class="small-btn review-ready-ask" onclick="askRecentJob(' + idx + ')">Ask</button>') +
+      '</div>';
+    }).join('');
+    updateReadyEmpty();
+  }
+  function askRecentJob(idx) {
+    const select = document.getElementById('recentJobSelect');
+    if (!select) return;
+    select.value = String(idx);
+    applyRecentJobSelection();
+  }
+  function updateReadyEmpty() {
+    const empty = document.getElementById('reviewReadyEmpty');
+    if (!empty) return;
+    const anyShown = ['pendingRemindersSection', 'recentJobsSection'].some(id => {
+      const el = document.getElementById(id);
+      return el && el.style.display !== 'none';
+    });
+    empty.hidden = anyShown;
+  }
+
+  // Stat tiles: counts from the local sent log and reminder list.
+  function renderReviewStats() {
+    const el = document.getElementById('reviewStats');
+    if (!el) return;
+    const log = loadSentLog();
+    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+    const asked30 = log.filter(e => (Date.now() - new Date(e.sentAt).getTime()) < THIRTY_DAYS).length;
+    const left = log.filter(e => e.status === 'received').length;
+    const today = todayDateStrBusinessTz();
+    const asked = recentlyAskedDigits();
+    const ready = loadPending().filter(p => p.remindAt <= today).length +
+      cachedRecentDoneJobs.filter(j => !(j.phone && asked.has(digitsOnly(j.phone)))).length;
+    const tile = (label, value, tone) => '<div class="review-stat' + (tone ? ' is-' + tone : '') + '"><span class="review-stat-label">' + label + '</span><span class="review-stat-value">' + value + '</span></div>';
+    el.innerHTML = tile('Ready to ask', ready, 'orange') + tile('Asked \u00b7 30 days', asked30, '') + tile('Left a review', left, 'green');
+  }
+
+  // Copy link (v2): just the review link, for pasting anywhere. Not logged
+  // as a sent request -- nothing went to a customer.
+  function copyReviewLink(which, triggerBtn) {
+    const link = which === 'yelp' ? YELP_REVIEW_LINK : GOOGLE_REVIEW_LINK;
+    const done = () => {
+      if (typeof showToast === 'function') showToast((which === 'yelp' ? 'Yelp' : 'Google') + ' review link copied');
+      if (typeof haptic === 'function') haptic('light');
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(link).then(done).catch(() => { if (typeof showToast === 'function') showToast('Could not copy.', { type: 'error' }); });
+    } else if (typeof showToast === 'function') {
+      showToast('Clipboard not available in this browser.', { type: 'error' });
+    }
+  }
+
+  // Download PNG (v2): draws the QR the page already rendered (an inline
+  // SVG from qrcode-lib.js) onto a canvas and saves it. Nothing is fetched.
+  function downloadReviewQr(cardId, filename) {
+    const svg = document.querySelector('#' + cardId + ' svg');
+    if (!svg) { if (typeof showToast === 'function') showToast('The QR code has not loaded yet.', { type: 'error' }); return; }
+    // qrToSvg() writes its own xmlns, so the markup stands alone as a file.
+    const markup = svg.outerHTML;
+    const img = new Image();
+    img.onload = () => {
+      const size = 1024;
+      const canvas = document.createElement('canvas');
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, size, size);
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      }, 'image/png');
+    };
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(markup);
+  }
   function flashAutofilledFields(ids) {
     ids.forEach(id => {
       const el = document.getElementById(id);
@@ -592,6 +895,9 @@
   function renderSentLog() {
     const log = loadSentLog();
     const section = document.getElementById('sentLogSection');
+    // v2: the stat tiles and the Ready rows' Sent state read this same log.
+    renderReviewStats();
+    renderRecentJobRows();
     if (log.length === 0) { section.style.display = 'none'; return; }
     section.style.display = '';
 
@@ -748,8 +1054,10 @@
     const today = todayDateStrBusinessTz();
     const due = loadPending().filter(p => p.remindAt <= today);
     const section = document.getElementById('pendingRemindersSection');
-    if (due.length === 0) { section.style.display = 'none'; return; }
+    renderReviewStats();
+    if (due.length === 0) { section.style.display = 'none'; updateReadyEmpty(); return; }
     section.style.display = '';
+    updateReadyEmpty();
     document.getElementById('pendingRemindersList').innerHTML = due.map(p => `
       <div class="dash-list-item" data-reminder-id="${p.id}">
         <div>
@@ -761,6 +1069,26 @@
           <button class="small-btn danger" onclick="dismissReminder(${p.id})">Dismiss</button>
         </div>
       </div>`).join('');
+  }
+
+  // Row menus (v2, 2026-09-29): Due Today keeps Use on the row (styled as
+  // the Ready card's Ask pill) and moves Dismiss into its ⋯; Recently sent moves its two
+  // outcome buttons into the ⋯. The buttons stay in the rendered markup and
+  // the sheet clicks them, so dismissReminder()'s confirm and
+  // setRequestStatus() run exactly as before.
+  function initReviewRowMenus() {
+    if (typeof attachRowMenu !== 'function') return;
+    attachRowMenu(document.getElementById('pendingRemindersList'), '.dash-list-item', {
+      buttonHost: '.dash-list-item-right',
+      actions: [{ kind: 'delete', selector: '.small-btn.danger', label: 'Dismiss reminder' }],
+    });
+    attachRowMenu(document.getElementById('sentLogList'), '.dash-list-item', {
+      buttonHost: '.review-status-actions',
+      actions: [
+        { kind: 'extra', selector: 'button[onclick*="\'received\'"]', label: 'Mark: left a review', icon: 'star' },
+        { kind: 'extra', selector: 'button[onclick*="\'no_response\'"]', label: 'Mark: no response', icon: 'clock' },
+      ],
+    });
   }
 
   function showReminderToast(msg) {
@@ -776,6 +1104,9 @@
   function updatePreviewAndLink() {
     const message = buildMessage();
     document.getElementById('messagePreview').textContent = message;
+    // The iMessage-style stamp over the bubble (v2): purely a label.
+    const stamp = document.getElementById('messagePreviewStamp');
+    if (stamp) stamp.textContent = 'Text Message \u00b7 Today ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
     const rawPhone = document.getElementById('custPhone').value;
     const digits = digitsOnly(rawPhone);
@@ -857,6 +1188,7 @@
     await renderRecentJobs();
     renderPendingReminders();
     renderSentLog();
+    initReviewRowMenus();
     initAppTour();
     renderQR('googleQrCard', GOOGLE_REVIEW_LINK);
     renderQR('yelpQrCard', YELP_REVIEW_LINK);
