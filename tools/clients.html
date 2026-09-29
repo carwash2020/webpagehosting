@@ -171,6 +171,100 @@
     body.th-tool-page[data-th-page="clients"] #clientDirList.th-list > .th-row { border-width: 1px 1px 0; border-radius: 0; }
     body.th-tool-page[data-th-page="clients"] #clientDirList.th-list > :not(.th-row) { grid-column: 1 / -1; }
   }
+
+  /* ==========================================================================
+     v2 (2026-09-29) -- App redesign v2 §8.8, Clients. On top of W4 above and
+     the shared V2.9 primitives (styles-tools.css). Every rule is keyed to
+     this page; tokens only. The directory becomes one ruled card of rows
+     (hex avatar, orange when owed; "Job today" orange; owed pill; Call; ⋯),
+     two columns at >=1280px. The Portal tab's panels become v2 cards.
+     ========================================================================== */
+  body.th-tool-page[data-th-page="clients"] .clients-tab-panel { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+  /* Clients | Portal as the v2 segmented control (a 4px-padded track, the
+     current segment filled --text). It stays sticky; its ::before still
+     paints the page ground behind it, just wider than the track. */
+  body.th-tool-page[data-th-page="clients"] #clientsTabs {
+    gap: 4px; padding: 4px; margin: 4px 0 0; background: var(--bg-panel); border: 1px solid var(--border);
+    border-radius: var(--th-radius-track); box-shadow: none;
+  }
+  body.th-tool-page[data-th-page="clients"] #clientsTabs::before { inset: -8px -12px; border-radius: 0; }
+  body.th-tool-page[data-th-page="clients"] #clientsTabs .tab-btn {
+    flex: 1 1 0; min-height: 40px; padding: 0 16px; border: 0; border-radius: var(--th-radius-seg); background: none; box-shadow: none;
+    color: var(--text-dim); font-family: var(--font-ui); font-size: 13px; letter-spacing: .8px; text-transform: uppercase;
+  }
+  body.th-tool-page[data-th-page="clients"] #clientsTabs .tab-btn.is-active { background: var(--text); color: var(--bg); box-shadow: none; }
+  body.th-tool-page[data-th-page="clients"] #clientsTabs .tab-btn:active { transform: scale(.97); }
+  @media (hover: hover) { body.th-tool-page[data-th-page="clients"] #clientsTabs .tab-btn:not(.is-active):hover { background: none; color: var(--text); } }
+  @media (pointer: coarse) { body.th-tool-page[data-th-page="clients"] #clientsTabs .tab-btn { min-height: 44px; } }
+  @media (min-width: 1024px) { body.th-tool-page[data-th-page="clients"] #clientsTabs { max-width: 420px; } }
+
+  body.th-tool-page[data-th-page="clients"] .cd-toolbar { margin: 12px 0 12px; }
+  body.th-tool-page[data-th-page="clients"] .th-search-field input { min-height: 46px; border-radius: 14px; background: var(--bg-panel); border-color: var(--border); font-size: 16px; }
+  body.th-tool-page[data-th-page="clients"] .cd-add-btn { min-height: 46px; border-radius: 14px; }
+  body.th-tool-page[data-th-page="clients"] #clientDirFilters { margin-bottom: 4px; }
+  body.th-tool-page[data-th-page="clients"] #clientDirFilters .th-chip-count { font-weight: 700; }
+  body.th-tool-page[data-th-page="clients"] #clientDirFilters .th-chip-count:empty { display: none; }
+
+  /* One card, ruled rows. */
+  body.th-tool-page[data-th-page="clients"] #clientDirList.th-list {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl); padding: 4px 18px;
+  }
+  body.th-tool-page[data-th-page="clients"] #clientDirList.th-list:has(> .cd-empty) { background: none; border: 0; padding: 0; }
+  body.th-tool-page[data-th-page="clients"] #clientDirList.th-list > .th-row,
+  body.th-tool-page[data-th-page="clients"] #clientDirList.th-list > .th-row:first-child,
+  body.th-tool-page[data-th-page="clients"] #clientDirList.th-list > .th-row:last-child {
+    background: none; border: 0; border-bottom: 1px solid var(--th-hairline); border-radius: 0; padding: 0; gap: 8px;
+  }
+  body.th-tool-page[data-th-page="clients"] #clientDirList.th-list > .th-row:last-child { border-bottom: 0; }
+  body.th-tool-page[data-th-page="clients"] #clientDirList .th-row-link { min-height: 68px; padding: 12px 0; gap: 12px; border-radius: 0; }
+  body.th-tool-page[data-th-page="clients"] #clientDirList .th-row-link:active { background: none; transform: scale(.985); }
+  body.th-tool-page[data-th-page="clients"] #clientDirList .th-row-avatar {
+    width: 44px; height: 44px; background: var(--th-field); color: var(--text); box-shadow: none; font-weight: 500;
+  }
+  body.th-tool-page[data-th-page="clients"] #clientDirList .th-row-avatar.is-owed { background: var(--orange); color: var(--th-ink-on-orange); }
+  body.th-tool-page[data-th-page="clients"] #clientDirList .th-row-title { font-family: var(--font-app); font-size: 15.5px; }
+  body.th-tool-page[data-th-page="clients"] #clientDirList .th-row-sub { font-size: 12.5px; }
+  body.th-tool-page[data-th-page="clients"] #clientDirList .th-row-sub .is-soon { color: var(--orange-light); font-weight: 600; }
+  body.th-tool-page[data-th-page="clients"] #clientDirList .th-pill {
+    min-height: 0; padding: 4px 10px; border: 0; font-family: var(--font-app); font-size: 12px; font-weight: 700; letter-spacing: 0;
+    background: var(--tone-orange-bg); color: var(--tone-orange-fg);
+  }
+  body.th-tool-page[data-th-page="clients"] #clientDirList .th-pill.is-danger { background: var(--tone-red-bg); color: var(--tone-red-fg); }
+  body.th-tool-page[data-th-page="clients"] #clientDirList .th-icon-btn {
+    width: 40px; height: 40px; background: var(--th-field); border-color: var(--border); color: var(--orange-light);
+  }
+  @media (pointer: coarse) { body.th-tool-page[data-th-page="clients"] #clientDirList .th-icon-btn { width: 44px; height: 44px; } }
+  body.th-tool-page[data-th-page="clients"] #clientDirList .th-list-letter {
+    margin: 0; padding: 12px 0 4px; background: var(--bg-panel); color: var(--orange-light); letter-spacing: 1.4px;
+  }
+  @media (hover: hover) {
+    body.th-tool-page[data-th-page="clients"] #clientDirList.th-list > .th-row:hover { border-color: var(--th-hairline); }
+    body.th-tool-page[data-th-page="clients"] #clientDirList .th-row:hover .th-row-title { color: var(--orange-light); }
+  }
+  body.th-tool-page[data-th-page="clients"] .cd-empty { border-radius: var(--th-radius-xl); background: var(--bg-panel); }
+  @media (min-width: 1280px) {
+    body.th-tool-page[data-th-page="clients"] #tab-directory { max-width: 1160px; }
+    body.th-tool-page[data-th-page="clients"] #clientDirList.th-list { column-gap: 28px; }
+    /* Rules go on top of each row in two columns, and the first row of
+       each column has none, so both columns end clean and level. */
+    body.th-tool-page[data-th-page="clients"] #clientDirList.th-list > .th-row,
+    body.th-tool-page[data-th-page="clients"] #clientDirList.th-list > .th-row:first-child,
+    body.th-tool-page[data-th-page="clients"] #clientDirList.th-list > .th-row:last-child { border-width: 1px 0 0; border-top-color: var(--th-hairline); }
+    body.th-tool-page[data-th-page="clients"] #clientDirList.th-list > .th-row:nth-child(-n+2) { border-top-width: 0; }
+  }
+
+  /* Portal tab: the admin panels read as v2 cards. */
+  body.th-tool-page[data-th-page="clients"] #tab-portal > .tool-sub { margin: 14px 2px 16px; }
+  body.th-tool-page[data-th-page="clients"] .dev-panels-grid { gap: 16px; }
+  body.th-tool-page[data-th-page="clients"] .dev-panel { background: var(--bg-panel); border-radius: var(--th-radius-xl); padding: 16px 18px; }
+  body.th-tool-page[data-th-page="clients"] .dev-panel h2 {
+    font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text);
+  }
+  body.th-tool-page[data-th-page="clients"] .dev-panel input[type="text"],
+  body.th-tool-page[data-th-page="clients"] .dev-panel input[type="email"] { min-height: 46px; border-radius: 12px; background: var(--th-field); }
+  body.th-tool-page[data-th-page="clients"] .dev-check-row { border-bottom-color: var(--th-hairline); min-height: 52px; }
+  body.th-tool-page[data-th-page="clients"] #emailListItems .dev-check-row.th-has-row-menu { gap: 8px; }
+  body.th-tool-page[data-th-page="clients"] .dev-info-bubble { width: 30px; height: 30px; }
 </style>
 </head>
 <body data-th-page="clients">
@@ -205,10 +299,14 @@
     </div>
     <button type="button" class="primary-btn cd-add-btn" onclick="openAddClient()" aria-label="Add a client"><svg class="th-icon" aria-hidden="true"><use href="#icon-plus" xlink:href="#icon-plus"></use></svg>Add</button>
   </div>
-  <div class="th-chips" id="clientDirFilters" role="group" aria-label="Show">
-    <button type="button" class="th-chip is-active" data-filter="recent" onclick="setClientDirFilter('recent')">Recent</button>
-    <button type="button" class="th-chip" data-filter="owes" onclick="setClientDirFilter('owes')">Owes you <span class="th-chip-count" id="clientDirOwesCount"></span></button>
-    <button type="button" class="th-chip" data-filter="az" onclick="setClientDirFilter('az')">A&ndash;Z</button>
+  <div class="th-chips th-v2-chips" id="clientDirFilters" role="group" aria-label="Show">
+    <button type="button" class="th-chip th-v2-chip is-active" data-filter="recent" onclick="setClientDirFilter('recent')">Recent</button>
+    <button type="button" class="th-chip th-v2-chip" data-filter="owes" onclick="setClientDirFilter('owes')">Owes you <span class="th-chip-count" id="clientDirOwesCount"></span></button>
+    <button type="button" class="th-chip th-v2-chip" data-filter="az" onclick="setClientDirFilter('az')">A&ndash;Z</button>
+    <!-- v2 (2026-09-29): New leads -- clients on file with no job yet
+         (someone added from a text, a booking or a quote who hasn't been
+         booked). A read-only filter over the same directory rows. -->
+    <button type="button" class="th-chip th-v2-chip" data-filter="leads" onclick="setClientDirFilter('leads')">New leads <span class="th-chip-count" id="clientDirLeadsCount"></span></button>
   </div>
   <div class="cd-summary" id="clientDirSummary"></div>
   <div class="th-list" id="clientDirList"></div>
@@ -1894,7 +1992,7 @@
   const CLIENTS_TAB_KEY = 'th_clients_tab';
   const CLIENT_DIR_FILTER_KEY = 'th_clients_filter';
   let clientDirFilter = 'recent';
-  try { const f = localStorage.getItem(CLIENT_DIR_FILTER_KEY); if (f === 'recent' || f === 'owes' || f === 'az') clientDirFilter = f; } catch (e) { /* storage blocked */ }
+  try { const f = localStorage.getItem(CLIENT_DIR_FILTER_KEY); if (f === 'recent' || f === 'owes' || f === 'az' || f === 'leads') clientDirFilter = f; } catch (e) { /* storage blocked */ }
   let portalPanelsRendered = false;
   let portalTabAllowed = true; // until the role says otherwise -- RLS is the real gate either way
 
@@ -1969,6 +2067,10 @@
         owedPill +
       '</a>' +
       (r.phone ? '<a class="th-icon-btn" href="' + escapeAttr(telHref(r.phone)) + '" aria-label="Call ' + escapeAttr(r.name) + '"><svg class="th-icon" aria-hidden="true"><use href="#icon-phone" xlink:href="#icon-phone"></use></svg></a>' : '') +
+      // v2 row menu (2026-09-29): the same sheet a long-press opens
+      // (clientQuickActions), one tap away for anyone who doesn't know
+      // to hold. Outside the link, like Call, so it never opens the record.
+      (typeof rowMenuButtonHtml === 'function' ? rowMenuButtonHtml(r.name) : '') +
     '</div>';
   }
 
@@ -1998,11 +2100,17 @@
 
     document.querySelectorAll('#clientDirFilters .th-chip').forEach(c => c.classList.toggle('is-active', c.dataset.filter === clientDirFilter));
     document.getElementById('clientDirOwesCount').textContent = owing.length ? String(owing.length) : '';
+    const leads = all.filter(r => !r.jobCount);
+    const leadsCountEl = document.getElementById('clientDirLeadsCount');
+    if (leadsCountEl) leadsCountEl.textContent = leads.length ? String(leads.length) : '';
 
     let rows = all.filter(r => clientMatches(r, term, digits));
     const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
     if (clientDirFilter === 'owes') {
       rows = rows.filter(r => r.owed > 0).sort((a, b) => ((b.overdueOwed > 0) - (a.overdueOwed > 0)) || (b.owed - a.owed));
+    } else if (clientDirFilter === 'leads') {
+      // Newest first: the lead added most recently is the one to call back.
+      rows = rows.filter(r => !r.jobCount).sort((a, b) => (b.lastActivity || '').localeCompare(a.lastActivity || '') || byName(a, b));
     } else if (clientDirFilter === 'az') {
       rows.sort(byName);
     } else {
@@ -2022,6 +2130,8 @@
     if (!rows.length) {
       list.innerHTML = '<div class="cd-empty">' + (clientDirFilter === 'owes' && !term
         ? 'Nobody owes you anything right now.'
+        : clientDirFilter === 'leads' && !term
+        ? 'No new leads right now &mdash; everyone here has had a job.'
         : 'No client matches &ldquo;' + escapeHtml(rawTerm) + '&rdquo;.' +
           '<br><button type="button" class="secondary-btn" onclick="openAddClient(document.getElementById(\'clientDirSearch\').value)">Add &ldquo;' + escapeHtml(rawTerm) + '&rdquo;</button>') + '</div>';
       return;
@@ -2040,28 +2150,49 @@
 
   // Long-press a row for everything you'd do next with that client --
   // the same quick-action sheet Job Tracker's cards use.
-  function clientQuickActions(id) {
+  // v2 (2026-09-29): the same actions, now with the row menu's icons, and
+  // an opener so focus goes back to the ⋯ that opened the sheet.
+  function clientQuickActions(id, opener) {
     const r = clientDirRows.find(x => x.id === id);
     if (!r || typeof showQuickActionSheet !== 'function') return;
-    const actions = [{ label: 'Open', onClick: () => { location.href = '/tools/client-detail.html?id=' + encodeURIComponent(r.id); } }];
+    const actions = [{ label: 'Open', icon: 'external', kind: 'open', onClick: () => { location.href = '/tools/client-detail.html?id=' + encodeURIComponent(r.id); } }];
     if (r.phone) {
-      actions.push({ label: 'Call', onClick: () => { location.href = telHref(r.phone); } });
-      actions.push({ label: 'Text', onClick: () => { location.href = 'sms:' + String(r.phone).replace(/[^\d+]/g, ''); } });
+      actions.push({ label: 'Call', icon: 'phone', kind: 'extra', onClick: () => { location.href = telHref(r.phone); } });
+      actions.push({ label: 'Text', icon: 'message', kind: 'extra', onClick: () => { location.href = 'sms:' + String(r.phone).replace(/[^\d+]/g, ''); } });
     }
-    if (r.email) actions.push({ label: 'Email', onClick: () => { location.href = 'mailto:' + r.email; } });
-    if (r.address) actions.push({ label: 'Directions', onClick: () => { window.open('https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(r.address), '_blank', 'noopener'); } });
+    if (r.email) actions.push({ label: 'Email', icon: 'mail', kind: 'extra', onClick: () => { location.href = 'mailto:' + r.email; } });
+    if (r.address) actions.push({ label: 'Directions', icon: 'navigate', kind: 'extra', onClick: () => { window.open('https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(r.address), '_blank', 'noopener'); } });
     // showQuickActionSheet() renders labels as HTML -- escape the name.
-    actions.push({ label: 'New job for ' + escapeHtml(r.name), onClick: () => { location.href = '/tools/job-tracker.html?client=' + encodeURIComponent(r.name) + '#add-job'; } });
+    actions.push({ label: 'New job for ' + escapeHtml(r.name), icon: 'wrench', kind: 'extra', onClick: () => { location.href = '/tools/job-tracker.html?client=' + encodeURIComponent(r.name) + '#add-job'; } });
     if (typeof canManageInvoices !== 'function' || canManageInvoices() || !getCurrentUserRole()) {
-      actions.push({ label: 'Invoice ' + escapeHtml(r.name), onClick: () => { location.href = '/tools/invoice-generator.html?client=' + encodeURIComponent(r.name) + '#invoice'; } });
+      actions.push({ label: 'Invoice ' + escapeHtml(r.name), icon: 'receipt', kind: 'extra', onClick: () => { location.href = '/tools/invoice-generator.html?client=' + encodeURIComponent(r.name) + '#invoice'; } });
     }
-    showQuickActionSheet(escapeHtml(r.name), actions);
+    showQuickActionSheet(escapeHtml(r.name), actions, opener ? { opener } : undefined);
   }
   function initClientDirLongPress() {
     const list = document.getElementById('clientDirList');
     if (!list || list.dataset.longPressWired || typeof attachLongPress !== 'function') return;
     list.dataset.longPressWired = '1';
     attachLongPress(list, '.th-row', (row) => clientQuickActions(row.dataset.clientId));
+    // The row's ⋯ (v2): delegated once, so it survives every re-render.
+    list.addEventListener('click', (e) => {
+      const btn = e.target.closest && e.target.closest('.th-row-menu-btn');
+      const row = btn && btn.closest('.th-row');
+      if (!row || !list.contains(row)) return;
+      e.preventDefault();
+      clientQuickActions(row.dataset.clientId, btn);
+    });
+  }
+
+  // Email list rows (v2, 2026-09-29): Remove moves into the row's ⋯ sheet.
+  // The button stays in the rendered markup; the sheet clicks it, so the
+  // existing confirm in removeNotificationRecipient() still runs first.
+  function initEmailListRowMenu() {
+    const el = document.getElementById('emailListItems');
+    if (!el || typeof attachRowMenu !== 'function') return;
+    attachRowMenu(el, '.dev-check-row', {
+      actions: [{ kind: 'delete', selector: 'button[onclick^="removeNotificationRecipient"]', label: 'Remove from the list' }],
+    });
   }
 
   // Add a client: name plus whatever else is known. thEnsureClient() is
@@ -2120,6 +2251,7 @@
       if (typeof thBackfillClients === 'function') thBackfillClients();
       renderClientDirectory();
       initClientDirLongPress();
+      initEmailListRowMenu();
       window.addEventListener('hashchange', () => {
         activateClientsTab(clientsTabFromLocation());
         if (location.hash === '#new') openAddClient();

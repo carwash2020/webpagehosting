@@ -209,6 +209,112 @@
     body.th-tool-page[data-th-page="route-planner"] > .route-map-wrap { grid-column: 2; grid-row: span 3; position: sticky; top: 77px; align-self: start; }
     body.th-tool-page[data-th-page="route-planner"] > .route-map-wrap #routeMap { min-height: calc(100vh - 110px); }
   }
+
+  /* ==========================================================================
+     v2 (2026-09-29) -- App redesign v2 §8.11, Route Planner. On top of W4
+     above (its sticky map column is kept as is) and the V2.9 primitives.
+     Keyed to this page; tokens only.
+     ========================================================================== */
+  body.th-tool-page[data-th-page="route-planner"] .form-section {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl); padding: 8px 16px 14px;
+  }
+  body.th-tool-page[data-th-page="route-planner"] .route-stops-head { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+  body.th-tool-page[data-th-page="route-planner"] .route-stops-title { font-family: var(--font-ui); font-size: 13px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text); }
+  body.th-tool-page[data-th-page="route-planner"] .route-stops-count { margin-left: auto; font-size: 13px; color: var(--text-dim); }
+
+  /* A stop: handle, numbered circle, the address (and a pulled job's label), remove. */
+  body.th-tool-page[data-th-page="route-planner"] .stop-row {
+    gap: 10px; margin: 0; padding: 10px 0; border-top: 1px solid var(--th-hairline); background: var(--bg-panel);
+  }
+  body.th-tool-page[data-th-page="route-planner"] .stop-row.is-dragging {
+    position: relative; z-index: 2; border-radius: 14px; padding-left: 8px; padding-right: 8px;
+    background: var(--bg-panel-3); box-shadow: var(--shadow-panel-side);
+  }
+  body.th-tool-page[data-th-page="route-planner"] .stop-drag {
+    flex-shrink: 0; width: 28px; height: 44px; padding: 0; border: 0; background: none; border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center; cursor: grab; touch-action: none; color: var(--text-faint);
+  }
+  body.th-tool-page[data-th-page="route-planner"] .stop-row.is-dragging .stop-drag { cursor: grabbing; color: var(--orange-light); }
+  body.th-tool-page[data-th-page="route-planner"] .stop-drag-grip {
+    width: 10px; height: 16px; background-image: radial-gradient(circle, currentColor 1.6px, transparent 1.8px);
+    background-size: 5px 5.33px; background-position: 0 0;
+  }
+  body.th-tool-page[data-th-page="route-planner"] .stop-drag:focus-visible { color: var(--orange-light); }
+  body.th-tool-page[data-th-page="route-planner"] .stop-num {
+    width: 30px; height: 30px; flex-shrink: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+    background: var(--th-field); color: var(--text); font-size: 0;
+  }
+  body.th-tool-page[data-th-page="route-planner"] .stop-num::before { content: attr(data-n); font-family: var(--font-display); font-size: 15px; line-height: 1; }
+  body.th-tool-page[data-th-page="route-planner"] .stop-row:first-child .stop-num { background: var(--orange); color: var(--th-ink-on-orange); }
+  body.th-tool-page[data-th-page="route-planner"] .stop-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  body.th-tool-page[data-th-page="route-planner"] .stop-label { font-size: 14.5px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  body.th-tool-page[data-th-page="route-planner"] .stop-row input {
+    min-height: 44px; border-radius: 12px; background: var(--th-field); border-color: var(--border); color: var(--text); font-size: 16px;
+  }
+  body.th-tool-page[data-th-page="route-planner"] .stop-icon-btn {
+    width: 36px; height: 36px; border-radius: 50%; border-color: var(--border); background: none; color: var(--text-dim);
+  }
+  body.th-tool-page[data-th-page="route-planner"] .stop-icon-btn.danger { color: var(--tone-red-fg); font-size: 18px; line-height: 1; }
+  body.th-tool-page[data-th-page="route-planner"] .stop-icon-btn:active { transform: scale(.92); }
+  /* Phone: the handle is the reorder control (drag, or tap for Move up /
+     Move down); the arrow buttons stay in the row for the sheet to click. */
+  @media (max-width: 720px) {
+    body.th-tool-page[data-th-page="route-planner"] .stop-icon-btn:not(.danger) { display: none; }
+    body.th-tool-page[data-th-page="route-planner"] .stop-icon-btn.danger { width: 44px; height: 44px; }
+  }
+
+  body.th-tool-page[data-th-page="route-planner"] .route-stops-actions { margin-top: 10px; gap: 8px !important; }
+  body.th-tool-page[data-th-page="route-planner"] .add-stop-btn,
+  body.th-tool-page[data-th-page="route-planner"] .route-stops-actions .secondary-btn {
+    flex: 1 1 0; min-height: 46px; margin: 0; padding: 0 12px; border-radius: 14px;
+    background: var(--th-field); border: 1px solid var(--border); color: var(--text);
+    font-family: var(--font-ui); font-size: 14px; letter-spacing: .9px; text-transform: uppercase;
+  }
+  body.th-tool-page[data-th-page="route-planner"] .add-stop-btn { border-style: dashed; color: var(--orange-light); }
+  body.th-tool-page[data-th-page="route-planner"] .add-stop-btn:active,
+  body.th-tool-page[data-th-page="route-planner"] .route-stops-actions .secondary-btn:active { transform: scale(.97); }
+  @media (hover: hover) {
+    body.th-tool-page[data-th-page="route-planner"] .add-stop-btn:hover { border-color: var(--orange-tint-border); background: var(--orange-tint-soft); }
+    body.th-tool-page[data-th-page="route-planner"] .stop-drag:hover { color: var(--text); }
+  }
+  body.th-tool-page[data-th-page="route-planner"] #openRouteBtn { margin-top: 10px; min-height: 48px; border-radius: 14px; font-family: var(--font-ui); letter-spacing: .9px; text-transform: uppercase; }
+
+  /* The map card and the per-stop links. */
+  /* isolation keeps Leaflet's own z-index 400-1000 panes and controls
+     inside the card, so the row sheet and the shell's bars sit above them. */
+  body.th-tool-page[data-th-page="route-planner"] .route-map-wrap { border-radius: var(--th-radius-xl); background: var(--bg-panel); margin: 16px 0; isolation: isolate; }
+  body.th-tool-page[data-th-page="route-planner"] .route-map-empty { background: var(--bg-panel); font-family: var(--font-ui); font-size: 12.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-faint); }
+  body.th-tool-page[data-th-page="route-planner"] .route-marker-num { font-family: var(--font-display); font-weight: 400; font-size: 14px; color: var(--th-ink-on-orange); }
+  body.th-tool-page[data-th-page="route-planner"] .stop-list-view:not(:empty) {
+    margin: 0 0 16px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl); padding: 2px 18px;
+  }
+  body.th-tool-page[data-th-page="route-planner"] .stop-view-row { min-height: 48px; gap: 12px; border-bottom-color: var(--th-hairline); }
+  body.th-tool-page[data-th-page="route-planner"] .stop-view-row:last-child { border-bottom: 0; }
+  body.th-tool-page[data-th-page="route-planner"] .stop-view-row span { min-width: 0; overflow-wrap: anywhere; }
+  body.th-tool-page[data-th-page="route-planner"] .stop-view-row a { flex-shrink: 0; color: var(--orange-light); font-family: var(--font-ui); font-size: 12.5px; letter-spacing: .6px; text-transform: uppercase; text-decoration: none; }
+
+  /* Trip cost: three field tiles, the rows, the charge under an orange rule. */
+  body.th-tool-page[data-th-page="route-planner"] .route-cost-card { padding: 16px 18px; }
+  body.th-tool-page[data-th-page="route-planner"] .route-cost-card h3 {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 12px;
+    font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text);
+  }
+  body.th-tool-page[data-th-page="route-planner"] .route-cost-card .tool-form-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: end; }
+  body.th-tool-page[data-th-page="route-planner"] .route-cost-card .form-field { margin: 0; min-width: 0; }
+  body.th-tool-page[data-th-page="route-planner"] .route-cost-card .form-field label { font-family: var(--font-ui); font-size: 11px; letter-spacing: 1.1px; text-transform: uppercase; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="route-planner"] .route-cost-card .form-field input { min-height: 48px; border-radius: 12px; background: var(--th-field); }
+  body.th-tool-page[data-th-page="route-planner"] .results-box { margin-top: 12px; background: none; box-shadow: none; border-radius: 0; padding: 0; }
+  body.th-tool-page[data-th-page="route-planner"] .result-row { padding: 6px 0; border-bottom: 0; font-size: 14.5px; }
+  body.th-tool-page[data-th-page="route-planner"] .result-row > span:last-child { font-weight: 600; color: var(--text); }
+  body.th-tool-page[data-th-page="route-planner"] .result-row.final {
+    margin-top: 8px; padding-top: 12px; align-items: baseline; gap: 12px; border-top: var(--th-rule, 2px) solid var(--orange);
+  }
+  body.th-tool-page[data-th-page="route-planner"] .result-label.final { font-family: var(--font-ui); font-size: 13px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text); }
+  body.th-tool-page[data-th-page="route-planner"] .result-row.final > span:last-child { font-family: var(--font-display); font-weight: 400; font-size: 30px; line-height: 1; color: var(--orange-light); }
+  @media (max-width: 420px) {
+    body.th-tool-page[data-th-page="route-planner"] .route-cost-card .form-field label { font-size: 10.5px; letter-spacing: .6px; }
+  }
+  body.th-tool-page[data-th-page="route-planner"] .route-cost-card { margin-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
 </style>
 </head>
 <body data-th-page="route-planner">
@@ -226,9 +332,11 @@
 </div>
 <p class="tool-sub">Type in today's addresses, get one link that opens the whole route in Google Maps &mdash; starting from wherever you are when you tap it.</p>
 
-<div class="form-section">
+<div class="form-section route-stops-card">
+  <!-- v2 (2026-09-29): the stops card's header -- a label and the count. -->
+  <div class="route-stops-head"><span class="route-stops-title">Stops</span><span class="route-stops-count" id="routeStopsCount"></span></div>
   <div id="stopsContainer"></div>
-  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+  <div class="route-stops-actions" style="display:flex; gap:10px; flex-wrap:wrap;">
     <button class="add-stop-btn" onclick="addStop('', true)">+ Add Stop</button>
     <button class="secondary-btn" onclick="pullTodaysJobs()">Pull Today's Jobs</button>
   </div>
@@ -244,7 +352,7 @@
 
 <div class="stop-list-view" id="individualLinks"></div>
 
-<div class="form-section">
+<div class="form-section route-cost-card">
   <h3>Cost Analyzer (To &amp; From) <button class="help-btn" onclick="openCardInfo('costAnalyzer')" aria-label="What is this?" title="What is this?">?</button> <span class="realtime-badge" id="realtimeBadge" onclick="retryLiveSync()" title="Live sync"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span></h3>
   <div class="tool-form-row">
     <div class="form-field"><label>One-way distance (miles)</label><input type="number" id="tripDistance" value="0" min="0" step="0.5" oninput="calculateTripCost()"></div>
@@ -320,7 +428,9 @@
       await showAlert('Today\u2019s jobs in Job Tracker don\u2019t have an address on file yet, so there\u2019s nothing to pull in.');
       return;
     }
-    withAddress.forEach(j => addStop(j.address, true));
+    // v2 (2026-09-29): the job's title and client ride along as the stop's
+    // label (display only -- the route is still built from the address).
+    withAddress.forEach(j => addStop(j.address, true, [j.title, j.client].filter(Boolean).join(' \u00b7 ')));
     let msg = `Pulled ${withAddress.length} stop${withAddress.length === 1 ? '' : 's'} from today's jobs.`;
     if (withoutAddress.length > 0) {
       msg += ` Skipped ${withoutAddress.length} job${withoutAddress.length === 1 ? '' : 's'} with no address on file: ${withoutAddress.map(j => j.title).join(', ')}.`;
@@ -345,7 +455,12 @@
       .replace(/>/g, '&gt;');
   }
 
-  function addStop(value = '', isUserAdd = false) {
+  // v2 (2026-09-29, App redesign v2 §8.11): each stop gets a drag handle
+  // (drag to reorder; a tap or Enter opens Move up / Move down / Remove;
+  // arrow keys move it) and its number in a circle. The input, the arrows
+  // and the remove button are the same ones as before. label is optional
+  // display text (a pulled job's title and client).
+  function addStop(value = '', isUserAdd = false, label = '') {
     stopCount++;
     const id = stopCount;
     const row = document.createElement('div');
@@ -353,8 +468,11 @@
     row.id = 'stop-' + id;
     if (isUserAdd) row.classList.add('list-row-enter');
     row.innerHTML = `
+      <button type="button" class="stop-drag" aria-label="Reorder this stop: drag, or use the arrow keys" title="Drag to reorder"><span class="stop-drag-grip" aria-hidden="true"></span></button>
       <span class="stop-num">${document.querySelectorAll('.stop-row').length + 1}.</span>
-      <input type="text" class="stop-input" value="${escapeAttr(value)}" placeholder="123 Main St, St. George, UT" oninput="updateRoute()">
+      <div class="stop-main">${label ? `<span class="stop-label">${escapeHtml(label)}</span>` : ''}
+      <input type="text" class="stop-input" value="${escapeAttr(value)}" placeholder="123 Main St, St. George, UT" aria-label="Stop address" oninput="updateRoute()">
+      </div>
       <button class="stop-icon-btn" onclick="moveStop(${id}, -1)" title="Move up" aria-label="Move stop up">&uarr;</button>
       <button class="stop-icon-btn" onclick="moveStop(${id}, 1)" title="Move down" aria-label="Move stop down">&darr;</button>
       <button class="stop-icon-btn danger" onclick="removeStop(${id})" title="Remove" aria-label="Remove stop">&times;</button>`;
@@ -388,6 +506,86 @@
   function renumberStops() {
     document.querySelectorAll('.stop-row').forEach((row, i) => {
       row.querySelector('.stop-num').textContent = (i + 1) + '.';
+      // v2: the circle draws the bare number from data-n; the text
+      // (with its period) stays for screen readers.
+      row.querySelector('.stop-num').setAttribute('data-n', String(i + 1));
+    });
+  }
+
+  // ---------- v2 (2026-09-29): drag to reorder ----------
+  // Pointer events on the handle only (touch-action: none there), so the
+  // rest of the row still scrolls the page. Dragging moves the row itself
+  // in #stopsContainer -- the same DOM move moveStop() makes -- then runs
+  // the same renumberStops() + updateRoute(). A tap opens the stop's sheet.
+  function stopMenu(row, opener) {
+    if (!row || typeof openRowMenu !== 'function') return;
+    const n = row.querySelector('.stop-num').getAttribute('data-n') || '';
+    const addr = (row.querySelector('.stop-input').value || '').trim();
+    const up = row.querySelector('.stop-icon-btn[aria-label="Move stop up"]');
+    const down = row.querySelector('.stop-icon-btn[aria-label="Move stop down"]');
+    const remove = row.querySelector('.stop-icon-btn.danger');
+    openRowMenu('Stop ' + n, [
+      { kind: 'extra', label: 'Move up', disabled: !row.previousElementSibling, onClick: () => up && up.click() },
+      { kind: 'extra', label: 'Move down', disabled: !row.nextElementSibling, onClick: () => down && down.click() },
+      { kind: 'delete', label: 'Remove stop', onClick: () => remove && remove.click() },
+    ], { subtitle: addr || 'No address yet', opener });
+  }
+  function initStopDrag() {
+    const container = document.getElementById('stopsContainer');
+    if (!container || container.dataset.dragWired) return;
+    container.dataset.dragWired = '1';
+    let drag = null;
+    container.addEventListener('pointerdown', (e) => {
+      const handle = e.target.closest && e.target.closest('.stop-drag');
+      if (!handle || (e.pointerType === 'mouse' && e.button !== 0)) return;
+      drag = { row: handle.closest('.stop-row'), handle, startY: e.clientY, moved: false, reordered: false };
+      try { handle.setPointerCapture(e.pointerId); } catch (err) { /* older browsers */ }
+    });
+    container.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      if (!drag.moved && Math.abs(e.clientY - drag.startY) < 6) return;
+      if (!drag.moved) { drag.moved = true; drag.row.classList.add('is-dragging'); }
+      e.preventDefault();
+      const target = [...container.querySelectorAll('.stop-row')].find(r => {
+        if (r === drag.row) return false;
+        const b = r.getBoundingClientRect();
+        return e.clientY >= b.top && e.clientY <= b.bottom;
+      });
+      if (!target) return;
+      const b = target.getBoundingClientRect();
+      const ref = e.clientY < b.top + b.height / 2 ? target : target.nextElementSibling;
+      if (ref === drag.row || ref === drag.row.nextElementSibling) return;
+      container.insertBefore(drag.row, ref);
+      drag.reordered = true;
+      renumberStops();
+    });
+    const finish = (e, cancelled) => {
+      if (!drag) return;
+      const d = drag;
+      drag = null;
+      d.row.classList.remove('is-dragging');
+      if (d.moved) {
+        if (d.reordered) { updateRoute(); if (typeof haptic === 'function') haptic('light'); }
+        return;
+      }
+      if (!cancelled) stopMenu(d.row, d.handle);
+    };
+    container.addEventListener('pointerup', (e) => finish(e, false));
+    container.addEventListener('pointercancel', (e) => finish(e, true));
+    // Keyboard: Enter/Space fire a click (the sheet); the arrows move the stop.
+    container.addEventListener('click', (e) => {
+      const handle = e.target.closest && e.target.closest('.stop-drag');
+      if (handle && e.detail === 0) stopMenu(handle.closest('.stop-row'), handle);
+    });
+    container.addEventListener('keydown', (e) => {
+      const handle = e.target.closest && e.target.closest('.stop-drag');
+      if (!handle || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+      e.preventDefault();
+      const row = handle.closest('.stop-row');
+      const btn = row.querySelector('.stop-icon-btn[aria-label="' + (e.key === 'ArrowUp' ? 'Move stop up' : 'Move stop down') + '"]');
+      if (btn) btn.click();
+      const again = row.querySelector('.stop-drag');
+      if (again) again.focus();
     });
   }
 
@@ -409,6 +607,8 @@
   function updateRoute() {
     const stops = getStopValues();
     const btn = document.getElementById('openRouteBtn');
+    const countEl = document.getElementById('routeStopsCount');
+    if (countEl) countEl.textContent = stops.length ? stops.length + ' stop' + (stops.length === 1 ? '' : 's') : 'No addresses yet';
     const warning = document.getElementById('tooManyWarning');
 
     if (stops.length > 10) {
@@ -668,6 +868,7 @@
     // bug class just found and fixed on invoice-generator.html.
     loadSharedMileageRate();
     calculateTripCost();
+    initStopDrag();
     addStop();
     addStop();
     initAppTour();

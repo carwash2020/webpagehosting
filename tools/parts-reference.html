@@ -274,6 +274,114 @@
     font-family: var(--font-ui); text-transform: uppercase; letter-spacing: 1.2px; font-size: 12px;
   }
   body.th-tool-page[data-th-page="parts-reference"] .tool-title { font-family: var(--font-display); text-transform: uppercase; font-size: 30px; line-height: 1.05; }
+
+  /* ==========================================================================
+     v2 (2026-09-29) -- App redesign v2 §8.12, Appliance Wiki. On top of W4
+     above (the sticky search/filter row is kept) and the V2.9 primitives.
+     Keyed to this page; tokens only.
+     ========================================================================== */
+  /* The 56px search field with an orange border. */
+  body.th-tool-page[data-th-page="parts-reference"] .pr-search-filter-row { align-items: flex-end; }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-search-filter-row label {
+    font-family: var(--font-ui); font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-dim);
+  }
+  body.th-tool-page[data-th-page="parts-reference"] #prSearchInput {
+    min-height: 56px; padding: 0 16px; border-radius: 18px; font-size: 16px;
+    background: var(--bg-panel); border: 1px solid var(--orange-tint-border); color: var(--text);
+  }
+  body.th-tool-page[data-th-page="parts-reference"] #prSearchInput:focus { border-color: var(--orange); outline: none; box-shadow: 0 0 0 3px var(--orange-tint-soft); }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-filter-select { min-height: 56px; border-radius: 18px; background-color: var(--bg-panel); }
+
+  /* Six type tiles. */
+  body.th-tool-page[data-th-page="parts-reference"] .pr-type-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 6px 0 16px; }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-type-tiles:empty { display: none; }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-type-tile {
+    min-height: 84px; padding: 14px 16px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 6px;
+    text-align: left; cursor: pointer; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-tile); color: var(--text);
+    transition: transform var(--th-dur-quick, .12s) ease, border-color .15s ease;
+  }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-type-tile.is-active { background: var(--tone-orange-bg); border-color: var(--orange-tint-border); color: var(--orange-light); }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-type-tile:active { transform: scale(.97); }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-type-tile-label { font-family: var(--font-display); font-size: 22px; line-height: 1; text-transform: uppercase; overflow-wrap: anywhere; }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-type-tile-meta { font-size: 12.5px; color: var(--text-dim); }
+  @media (hover: hover) { body.th-tool-page[data-th-page="parts-reference"] .pr-type-tile:not(.is-active):hover { border-color: var(--orange-tint-border); } }
+  @media (max-width: 420px) { body.th-tool-page[data-th-page="parts-reference"] .pr-type-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+  /* Common fixes: one card of ruled rows. */
+  body.th-tool-page[data-th-page="parts-reference"] .pr-common-fixes:not(:empty) {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl); padding: 6px 18px; margin-bottom: 16px;
+  }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-fixes-head { display: flex; align-items: center; gap: 10px; padding: 10px 0 4px; }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-fixes-title { font-family: var(--font-ui); font-size: 13px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text); min-width: 0; }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-fixes-add {
+    margin-left: auto; flex-shrink: 0; min-height: 36px; padding: 0 4px; border: 0; background: none; cursor: pointer;
+    font-family: var(--font-ui); font-size: 12.5px; letter-spacing: .8px; text-transform: uppercase; color: var(--orange-light);
+  }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-fix-row { display: flex; align-items: center; gap: 4px; border-top: 1px solid var(--th-hairline); }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-fix-open {
+    flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 0;
+    background: none; border: 0; text-align: left; cursor: pointer; color: inherit; font: inherit;
+  }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-fix-open:active { transform: scale(.985); }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-fix-brand {
+    width: 40px; height: 40px; flex-shrink: 0; border-radius: 11px; background: var(--th-field); display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-ui); font-size: 11.5px; letter-spacing: .4px; text-transform: uppercase; color: var(--orange-light);
+  }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-fix-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-fix-title { font-size: 15px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-fix-meta { font-size: 12.5px; color: var(--text-dim); overflow-wrap: anywhere; }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-fix-part { flex-shrink: 0; max-width: 38%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-ui); font-size: 12.5px; letter-spacing: .4px; color: var(--text); }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-fixes-empty { padding: 12px 0 14px; border-top: 1px solid var(--th-hairline); font-size: 13.5px; color: var(--text-dim); }
+  @media (hover: hover) { body.th-tool-page[data-th-page="parts-reference"] .pr-fix-open:hover .pr-fix-title { color: var(--orange-light); } }
+
+  /* Quick-access strip and the display-name row. */
+  body.th-tool-page[data-th-page="parts-reference"] .pr-quick-label { font-family: var(--font-ui); font-size: 11.5px; letter-spacing: 1.2px; }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-quick-chip { min-height: 52px; border-radius: 14px; background: var(--bg-panel); }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-quick-chip:active { transform: scale(.97); }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-quick-model { color: var(--text); }
+
+  /* Appliances (brand cards) and the add form, as a v2 card. */
+  body.th-tool-page[data-th-page="parts-reference"] #prListView > .form-section {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl); padding: 16px 18px;
+  }
+  body.th-tool-page[data-th-page="parts-reference"] #prListView > .form-section h3 {
+    font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text);
+  }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-unit-card { background: var(--th-field); border-radius: var(--th-radius-tile); margin-bottom: 10px; }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-unit-card:active { transform: scale(.985); }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-unit-type { font-size: 11.5px; letter-spacing: 1.2px; }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-unit-name { font-family: var(--font-display); font-weight: 400; font-size: 20px; letter-spacing: .3px; text-transform: uppercase; color: var(--text); }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-unit-badge { border-radius: 999px; padding: 3px 9px; background: var(--tone-orange-bg); color: var(--tone-orange-fg); border: 0; font-size: 11px; }
+  @media (min-width: 1024px) {
+    body.th-tool-page[data-th-page="parts-reference"] #prUnitsList,
+    body.th-tool-page[data-th-page="parts-reference"] #prBrandTypeList { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+    body.th-tool-page[data-th-page="parts-reference"] #prUnitsList > .pr-unit-card,
+    body.th-tool-page[data-th-page="parts-reference"] #prBrandTypeList > .pr-unit-card { margin: 0; }
+    body.th-tool-page[data-th-page="parts-reference"] #prUnitsList > :not(.pr-unit-card) { grid-column: 1 / -1; }
+  }
+
+  /* Level 2 / 3: breadcrumbs, models as cards, issues as ruled rows with a ⋯. */
+  body.th-tool-page[data-th-page="parts-reference"] .pr-breadcrumb a { min-height: 32px; display: inline-flex; align-items: center; }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-back-link { min-height: 40px; font-family: var(--font-ui); font-size: 13px; letter-spacing: .8px; text-transform: uppercase; color: var(--orange-light); }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-type-section { background: var(--bg-panel); border-radius: var(--th-radius-xl); margin-bottom: 12px; }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-type-section-header { min-height: 60px; padding: 10px 12px 10px 18px; gap: 10px; }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-type-section-name { font-size: 15.5px; overflow-wrap: anywhere; min-width: 0; }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-type-section-body { padding: 14px 18px 16px; border-top-color: var(--th-hairline); }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-type-section-body h3 { font-family: var(--font-ui); font-size: 13px !important; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text); }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-link-box { border-radius: 14px; min-height: 52px; }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-issue {
+    background: none; border: 0; border-top: 1px solid var(--th-hairline); border-radius: 0; margin: 0; padding: 14px 0;
+  }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-issue.th-has-row-menu .pr-issue-top { align-items: center; }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-issue.th-has-row-menu .pr-issue-top > div:first-child { flex: 1; min-width: 0; }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-issue.th-has-row-menu .pr-issue-actions:not(:has(> :not([data-row-action]))) { display: none; }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-issue-price { font-family: var(--font-display); font-size: 20px; }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-issue-partnum { font-family: var(--font-ui); letter-spacing: .4px; color: var(--text); }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-verified-badge { border-radius: 999px; padding: 3px 9px; }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-verified-badge.verified { color: var(--tone-green-fg); background: var(--tone-green-bg); border-color: transparent; }
+  body.th-tool-page[data-th-page="parts-reference"] #prUnitDetail,
+  body.th-tool-page[data-th-page="parts-reference"] #prTypeView,
+  body.th-tool-page[data-th-page="parts-reference"] #prListView { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
 </style>
 </head>
 <body data-th-page="parts-reference">
@@ -308,7 +416,13 @@
     </div>
   </div>
 
+  <!-- v2 (2026-09-29, App redesign v2 §8.12): six type tiles with counts
+       (tap one to filter, the same setPrType() the Filter select calls) and
+       a "common fixes" card of logged issues with part numbers. Both render
+       from loadPrUnits() in renderUnits(); nothing new is stored. -->
+  <div id="prTypeTiles" class="pr-type-tiles"></div>
   <div id="prQuickAccessStrip"></div>
+  <div id="prCommonFixes" class="pr-common-fixes"></div>
   <div id="prDisplayNameRow" style="margin-bottom:14px;"></div>
 
   <div class="form-section">
@@ -2812,8 +2926,158 @@
     });
   }
 
+  // ---------- v2 (2026-09-29): type tiles, common fixes, row menus ----------
+  // Six type tiles: the types with the most entries, each with its entry
+  // and brand count. A tap filters to that type (a second tap clears it),
+  // through setPrType() -- the same call the Filter select makes.
+  function renderPrTypeTiles() {
+    const host = document.getElementById('prTypeTiles');
+    if (!host) return;
+    const searching = !!document.getElementById('prSearchInput').value.trim();
+    const units = loadPrUnits();
+    const byType = {};
+    units.forEach(u => {
+      if (!byType[u.type]) byType[u.type] = { n: 0, brands: new Set() };
+      byType[u.type].n++;
+      byType[u.type].brands.add(u.brand);
+    });
+    const top = Object.keys(byType).sort((a, b) => (byType[b].n - byType[a].n) || a.localeCompare(b)).slice(0, 6);
+    if (searching || !top.length) { host.innerHTML = ''; return; }
+    host.innerHTML = top.map(t => {
+      const on = activePrType === t;
+      const brands = byType[t].brands.size;
+      return '<button type="button" class="pr-type-tile' + (on ? ' is-active' : '') + '" data-pr-tile-type="' + escapeAttr(t) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' +
+        '<span class="pr-type-tile-label">' + escapeHtml(t) + '</span>' +
+        '<span class="pr-type-tile-meta">' + byType[t].n + ' entr' + (byType[t].n === 1 ? 'y' : 'ies') + ' &middot; ' + brands + ' brand' + (brands === 1 ? '' : 's') + '</span>' +
+        '</button>';
+    }).join('');
+  }
+
+  // Common fixes: logged issues for the filtered type (or every type),
+  // part-numbered ones first, newest confirmation next -- up to eight.
+  // A row opens its entry (openUnitDirectly); its ⋯ offers Open, Copy,
+  // Edit and Delete, and Edit/Delete open the entry first so the page's own
+  // toggleEditIssue() / deletePrIssue() run where they always have.
+  function prCommonFixItems() {
+    const items = [];
+    loadPrUnits().forEach(u => {
+      if (activePrType !== 'all' && u.type !== activePrType) return;
+      (u.issues || []).forEach(iss => items.push({ u, iss }));
+    });
+    items.sort((a, b) => (!!b.iss.partNumber - !!a.iss.partNumber) || String(b.iss.confirmedAt || '').localeCompare(String(a.iss.confirmedAt || '')) || (b.iss.id - a.iss.id));
+    return items.slice(0, 8);
+  }
+  function renderPrCommonFixes() {
+    const host = document.getElementById('prCommonFixes');
+    if (!host) return;
+    if (document.getElementById('prSearchInput').value.trim()) { host.innerHTML = ''; return; }
+    const items = prCommonFixItems();
+    const label = activePrType === 'all' ? 'All types' : activePrType;
+    host.innerHTML = '<div class="pr-fixes-head"><span class="pr-fixes-title">' + escapeHtml(label) + ' &middot; common fixes</span>' +
+      '<button type="button" class="pr-fixes-add" onclick="togglePrAddUnitForm(); document.getElementById(\'prAddUnitForm\').scrollIntoView({ behavior: \'smooth\', block: \'center\' });">+ Add entry</button></div>' +
+      (items.length ? items.map(({ u, iss }) =>
+        '<div class="pr-fix-row" data-pr-fix-unit="' + u.id + '" data-pr-fix-issue="' + iss.id + '">' +
+          '<button type="button" class="pr-fix-open" aria-label="Open ' + escapeAttr(u.brand + ' ' + (u.model || u.type)) + '">' +
+            '<span class="pr-fix-brand" aria-hidden="true">' + escapeHtml(String(u.brand || '?').slice(0, 4)) + '</span>' +
+            '<span class="pr-fix-main"><span class="pr-fix-title">' + escapeHtml(iss.symptom) + '</span>' +
+            '<span class="pr-fix-meta">' + escapeHtml(u.brand + (u.model ? ' ' + u.model.split(' — ')[0] : ' ' + u.type)) + ' &middot; ' + escapeHtml(iss.partName || '') + '</span></span>' +
+            (iss.partNumber ? '<span class="pr-fix-part">' + escapeHtml(iss.partNumber) + '</span>' : '') +
+          '</button>' +
+          (typeof rowMenuButtonHtml === 'function' ? rowMenuButtonHtml(iss.symptom) : '') +
+        '</div>').join('')
+        : '<div class="pr-fixes-empty">No issues logged' + (activePrType === 'all' ? '' : ' for ' + escapeHtml(activePrType)) + ' yet &mdash; open an entry and use + Add Issue.</div>');
+  }
+  function openPrFixMenu(unitId, issueId, opener) {
+    const unit = loadPrUnits().find(u => u.id === unitId);
+    const iss = unit && unit.issues.find(i => i.id === issueId);
+    if (!iss || typeof openRowMenu !== 'function') return;
+    openRowMenu(iss.symptom, [
+      { kind: 'open', label: 'Open ' + unit.brand + ' ' + (unit.model ? unit.model.split(' — ')[0] : unit.type), onClick: () => openUnitDirectly(unitId) },
+      { kind: 'edit', label: 'Edit issue', onClick: () => { openUnitDirectly(unitId); toggleEditIssue(unitId, issueId); } },
+      { kind: 'extra', label: 'Copy issue text', icon: 'clipboard', onClick: () => copyPrIssueText(unitId, issueId) },
+      { kind: 'delete', label: 'Delete issue', onClick: () => { openUnitDirectly(unitId); deletePrIssue(unitId, issueId); } },
+    ], { subtitle: (iss.partName || '') + (iss.partNumber ? ' · #' + iss.partNumber : ''), opener });
+  }
+  function initPrV2Lists() {
+    const tiles = document.getElementById('prTypeTiles');
+    if (tiles && !tiles.dataset.wired) {
+      tiles.dataset.wired = '1';
+      tiles.addEventListener('click', (e) => {
+        const tile = e.target.closest && e.target.closest('.pr-type-tile');
+        if (!tile) return;
+        const t = tile.dataset.prTileType;
+        setPrType(activePrType === t ? 'all' : t);
+      });
+    }
+    const fixes = document.getElementById('prCommonFixes');
+    if (fixes && !fixes.dataset.wired) {
+      fixes.dataset.wired = '1';
+      fixes.addEventListener('click', (e) => {
+        const row = e.target.closest && e.target.closest('.pr-fix-row');
+        if (!row) return;
+        const unitId = parseInt(row.dataset.prFixUnit, 10);
+        const issueId = parseInt(row.dataset.prFixIssue, 10);
+        const menuBtn = e.target.closest('.th-row-menu-btn');
+        if (menuBtn) { openPrFixMenu(unitId, issueId, menuBtn); return; }
+        if (e.target.closest('.pr-fix-open')) openUnitDirectly(unitId);
+      });
+      if (typeof attachLongPress === 'function') {
+        attachLongPress(fixes, '.pr-fix-row', (row) => openPrFixMenu(parseInt(row.dataset.prFixUnit, 10), parseInt(row.dataset.prFixIssue, 10)));
+      }
+    }
+    // Level 3 (one brand + type): each model's header and each logged
+    // issue get a ⋯. The icon buttons render exactly as before and are
+    // only tucked away (data-row-action); the sheet clicks them, so
+    // toggleEditUnit / togglePinUnit / deletePrUnitType and toggleEditIssue /
+    // copyPrIssueText / deletePrIssue run with their own confirms.
+    const sections = document.getElementById('prTypeSectionsList');
+    if (!sections || typeof attachRowMenu !== 'function' || sections.dataset.v2Menus) return;
+    sections.dataset.v2Menus = '1';
+    // A header's own onclick toggles the section, and it would see a ⋯ tap
+    // first while bubbling -- so the header ⋯ is caught on the way down.
+    sections.addEventListener('click', (e) => {
+      const btn = e.target.closest && e.target.closest('.pr-type-section-header .th-row-menu-btn');
+      if (!btn) return;
+      e.stopPropagation();
+      e.preventDefault();
+      const header = btn.closest('.pr-type-section-header');
+      const name = header.querySelector('.pr-type-section-name');
+      openRowMenu(name ? name.textContent.trim() : 'Model', rowMenuActionsFromButtons(header), { opener: btn });
+    }, true);
+    // One attachRowMenu per container, so model headers and issue cards
+    // share it: every selector is scoped to its own row type's markup.
+    attachRowMenu(sections, '.pr-type-section-header, .pr-issue', {
+      buttonHost: '.pr-type-section-meta, .pr-issue-top',
+      longPress: false, // a hold on a header would also toggle it; issues get their own below
+      getMenu: (row) => {
+        const name = row.querySelector('.pr-type-section-name, .pr-issue-symptom');
+        const actions = rowMenuActionsFromButtons(row);
+        return actions.length ? { title: name ? name.textContent.trim() : 'Entry', actions } : null;
+      },
+      actions: [
+        { kind: 'edit', selector: '.pr-type-section-meta > .pr-row-icon-btn[title="Edit"]', label: 'Edit model and links' },
+        { kind: 'extra', selector: '.pr-type-section-meta > .pr-row-icon-btn[title="Pin for quick access"]', label: 'Pin for quick access', icon: 'star' },
+        { kind: 'extra', selector: '.pr-type-section-meta > .pr-row-icon-btn[title="Unpin"]', label: 'Unpin', icon: 'star-filled' },
+        { kind: 'delete', selector: '.pr-type-section-meta > .pr-row-icon-btn.danger', label: 'Delete model' },
+        { kind: 'edit', selector: '.pr-issue-actions > .pr-row-icon-btn[title="Edit"]', label: 'Edit issue' },
+        { kind: 'extra', selector: '.pr-issue-actions > .pr-row-icon-btn[title="Copy"]', label: 'Copy issue text', icon: 'clipboard' },
+        { kind: 'open', selector: '.pr-issue-actions > a.pr-row-icon-btn', label: 'View source' },
+        { kind: 'delete', selector: '.pr-issue-actions > .pr-row-icon-btn.danger', label: 'Delete issue' },
+      ],
+    });
+    if (typeof attachLongPress === 'function') {
+      attachLongPress(sections, '.pr-issue', (row) => {
+        const actions = rowMenuActionsFromButtons(row);
+        const sym = row.querySelector('.pr-issue-symptom');
+        if (actions.length) openRowMenu(sym ? sym.textContent.trim() : 'Issue', actions);
+      });
+    }
+  }
+
   function renderUnits() {
     renderPrQuickAccessStrip();
+    renderPrTypeTiles();
+    renderPrCommonFixes();
 
     const searchRaw = document.getElementById('prSearchInput').value.trim();
     const search = searchRaw.toLowerCase();
@@ -2967,6 +3231,7 @@
     if (!presetSearch && !localStorage.getItem('th_app_tour_step')) {
       try { document.getElementById('prSearchInput').focus({ preventScroll: true }); } catch (e) { /* older browsers */ }
     }
+    initPrV2Lists();
     renderUnits();
     populatePrDatalists();
     renderPrDisplayNameRow();

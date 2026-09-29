@@ -2585,3 +2585,37 @@ The first of the four v2 packages (`design_handoff_workspace_app_v2/README.md` �
   - The Paid ring and "Invoiced this month" show only to accounts with a finance permission, like Your week's Billed.
 - **Not changed:** every data, sync, Stripe, PDF and auth path; `jobTrackHtml` markup (pinned); the table on desktop; the portal. The portal pages get new `?v=` stamps for the shared sheet, which tests require.
 - Rendered at 390 and 1440, dark and light, with seeded jobs, invoices and inbox items and a stubbed Supabase: Home, Insights, Jobs (list, board, calendar, contacts, notes, the row sheet, the Add a Job sheet), and Job detail (running clock, done-to-invoice, not started). Screenshots are in `docs/workspace-redesign-v2-shell-daily/`. As W2 logged, light-mode full-page captures show a dark band below the first viewport; that's a capture artifact.
+
+## 2026-09-29 -- Workspace app redesign v2, package 4: People + field (Clients, Client detail, Reviews, Route Planner, Appliance Wiki)
+- Handoff §8.8-8.12 (`design_handoff_workspace_app_v2`), on top of the shell package (#459): its `openRowMenu` / `rowMenuButtonHtml` / `attachRowMenu` and the V2.9 primitives (`.th-v2-card`, `.th-v2-chip`, `.th-v2-pill`, `.th-v2-kicker`, `.th-v2-link`) are reused, never forked. Touches only the five pages; `tools/styles-tools.css` is untouched.
+- **Where the CSS lives:** same call as W4. Each page's own `<style>` gets a "v2" block after W4's, every rule under `body.th-tool-page[data-th-page="<page>"]`, tokens only (checked: no bare hex in any added line, no unscoped selector, every `:hover` inside `@media (hover: hover)`). This also keeps the sibling packages, which append to the shared sheet, free of merge conflicts with this one.
+- **Row menus without markup churn:** wherever a render function already draws the buttons (the Email list's Remove, Reviews' Dismiss / Left a Review / No Response, the Wiki's model and issue icon buttons), `attachRowMenu` selector specs mark them at runtime and the sheet clicks them. Tests that click `.pr-row-icon-btn[title="Edit"]` directly and pin `onclick="removeNotificationRecipient(' + r.id + ')"` still pass. Two traps found on the way:
+  - `attachRowMenu` returns early on a second call for the same container, so the Wiki's model headers and issue cards share one call, with each selector scoped to its own row type.
+  - A model header has its own `onclick` (toggle the section), which sees a tap on the ⋯ first while bubbling. The header ⋯ is therefore caught in the capture phase. Long-press stays off for headers (the release would toggle them) and on for issues.
+- **Clients:** the rows keep the pinned `.th-row` markup. The ⋯ is appended after Call, outside the link, and opens the existing `clientQuickActions` sheet (now with icons and an opener for focus return). **New leads** = directory rows with `jobCount === 0`, the prototype's definition. It's a read-only filter; the saved-filter check accepts `'leads'`. Two columns at >=1280px put the rule on top of each row and skip the first row per column, so both columns end clean.
+- **Client detail:** `#clientContent > .section-block` order is pinned (Contracts, then the delete zone, last), so the structure stays flat. The stats grid and referral card moved *inside* `.client-hero`, which is now a transparent column of three cards and still W4's left grid item. What's next, History and the records sit on the right. W4 spans the hero over 12 rows, so the grid's row-gap is 0 and the right column spaces itself (empty-row gaps would pad the bottom).
+  - The Next Job / Last Job stat became the What's next card, with the same date and label plus the job it points at.
+  - Avg ticket is lifetime revenue / invoice count, from the same bundle. Client since is the earliest of the record's `createdAt` and any job, invoice or quote date.
+  - The New job / Invoice links keep the test-pinned `#add-job">New job<` text: the icon follows the label in source and CSS `order: -1` puts it on top.
+  - Hrefs are written raw like `renderRecordSection`'s (fixed paths plus `encodeURIComponent` values). The realtime test harness has no `escapeAttr`, and nothing needed escaping.
+- **Reviews:** W4 placed the preview with `#panel-send > .form-section:nth-child(3)` and a row span. New blocks shift that index, and shared grid rows left Recently sent far below the preview. The panel is now `.review-main-col` + `.review-side-col` (ids unchanged, phone order unchanged), and the side column is sticky with its own scroll at >=1200px.
+  - The Ask rows drive the existing dropdown plus `applyRecentJobSelection()`. The dropdown and Use This Job stay in the DOM but are hidden on screen: the rows list the same eight jobs, so showing both would duplicate the list.
+  - "Sent" uses the page's existing 30-day duplicate rule.
+  - Copy link copies only the review URL and isn't logged as a sent request.
+  - Download PNG rasterises the already-rendered `qrcode-lib.js` SVG on a canvas, with no fetch.
+  - **No star rating on the QR card.** The real value lives in `site_content` (`googleRating`), and reading it would add a data path to this page, which the brief rules out. The QR card says "Google review" instead of a number.
+- **Route Planner:** reordering happens on the handle only (`touch-action: none` there), so the rest of the row still scrolls the page. A drag moves the row in `#stopsContainer` (the same DOM move `moveStop()` makes), then runs the same `renumberStops()` + `updateRoute()`. A tap or Enter opens Move up / Move down / Remove, which click the existing buttons; arrow keys on the handle click them too.
+  - On a phone the ↑/↓ buttons are hidden (the handle covers them). They stay in the row for the sheet and show at >=721px.
+  - The circle draws `data-n`; the "1." text stays for screen readers.
+  - A pulled job's title and client show as a label; the route is still built from the address.
+  - `.route-map-wrap` gets `isolation: isolate`. Leaflet's zoom control (z-index 1000) was drawing over the row sheet.
+  - W4's sticky map column is unchanged. Re-measured with real Leaflet 1.9.4 and stubbed tiles/geocoder: 517x790 at 1440x900, as W4 logged.
+- **Appliance Wiki:** the six tiles call the same `setPrType()` as the Filter select (a second tap clears it). The common-fixes ⋯ opens the entry first (`openUnitDirectly`), then runs `toggleEditIssue` / `deletePrIssue` where they have always run, since `renderBrandDetail()` assumes an open brand and type. `#prUnitsList .pr-unit-card` still counts brands (pinned). Tiles and fixes live outside it and use their own classes.
+- **Checked in headless Chromium** at 390 and 1440, dark and light, with seeded clients, jobs, invoices, quotes, a sent log and reminders: no page errors, no horizontal scroll. Walked flows:
+  - drag reorder, keyboard reorder, and remove from the sheet (the Maps link and numbering follow);
+  - the Wiki header ⋯ doesn't toggle, and Edit opens the edit form;
+  - issue Edit from the sheet, and fixes-list Delete reaching the existing confirm;
+  - Ask filling the fields;
+  - focus returning to the ⋯ after Esc;
+  - Remove tucked away on the Email list.
+- Screenshots are in `docs/workspace-redesign-v2-people-field/` (before = the branch base with #459 merged). The full-page captures' dark band below the first viewport in light mode and the mid-page shell bars are capture artifacts, as W2 logged.
