@@ -5928,3 +5928,27 @@ With no jobs scheduled today, the "Up next" card right below the greeting/rings 
 ## What changed, 2026-09-29 -- Security follow-up: client-portal RLS is now database-enforced, not just app-layer filtered
 
 The security fix above added the missing `.eq('client_email', ...)` filter to every portal query, but deliberately left the RLS policy's `OR current_user_has_any_role()` clause in place -- meaning only every developer remembering that filter, forever, stood between a future page and the same leak. That clause is now removed from all nine affected tables' own SELECT policies (`client_portal_invoices`, `jobs`, `quotes`, `contracts`, `work_orders`, `job_messages`, `work_order_messages`, plus `client_profiles` and `client_notification_preferences`), so direct SELECT is client-only at the database layer, unconditionally. The four internal tool pages that legitimately read across clients (`tools/clients.html`, `contract-generator.html`, `invoice-generator.html`, `workspace.html`) now go through new `internal_read_<table>()` staff-gated database functions instead of the base tables directly. Full write-up in `docs/specialist-logs/security.md`, 2026-09-29.
+
+## What changed, 2026-09-29 -- Work requests save their status again; no console error when a form opens from a link; one refresh per pull on Jobs
+
+Workspace. Found by the bug lane's second end-to-end pass over the redesigns and the day's fixes (#445-#469 and the portal leak fixes).
+
+- **Work requests save again.** Since the portal security follow-up (#469), Approve & Schedule said "Scheduled -- the client has been emailed." and Mark reviewing, Mark quoted and Close said "Request updated.", but nothing was saved and no email went out. The database now hides portal rows from staff sessions unless they go through a staff-only function, and these buttons still wrote to the table directly, so their updates matched nothing. A new staff-only function, `internal_update_client_portal_work_order()`, does the update, and the Workspace calls it. If a request can't be updated, the Workspace now says so instead of claiming success. The function is already live in the database (`sql/security/internal_update_client_portal_work_order.sql`, applied 2026-09-29), so the buttons work as soon as this Workspace change deploys.
+- **Opening a form from a link no longer logs a console error.** The new form sheets give a small buzz as they open. When one opens straight from a link (+ Job, a client's New job, Workspace's New job, the command palette), nobody has tapped the new page yet. Chrome refuses the buzz there and logged "Blocked call to navigator.vibrate..." as an error each time. The buzz now waits for the first tap, which is the only time it could work anyway. Every buzz after a tap is unchanged.
+- **Pull-to-refresh on Jobs runs once per pull.** It was being set up twice on every load, so each pull refreshed twice and buzzed twice. That dates from an 08-27 fix that moved the setup and left the old one in place.
+
+Checked, not changed: every other flow behaves the same after the redesigns. That covers:
+- portal payment (short/over/exact through the real webhook) and Quick Charge;
+- sign-in with 2FA and Face ID, and every Dev Tools tab;
+- the job, invoice, quote and client flows;
+- portal requests, estimates, messages and contracts;
+- booking and manage-by-link, and both service workers.
+
+Also checked, new this pass:
+- Every Edit/Delete behind the new ⋯ row menus, on 30 lists across 12 tool pages.
+- The portal update banner fix.
+- That no portal page shows another client's records (the leak fix holds).
+
+Details are in `docs/specialist-logs/bugfix.md`. Two questions are in `docs/ACTION-ITEMS.md`.
+
+Tests: `tests/tools/work-request-staff-writes.test.js` (7; 6 fail on the previous code) and `tests/tools/haptic-user-activation.test.js` (8; 3 fail on the previous code).

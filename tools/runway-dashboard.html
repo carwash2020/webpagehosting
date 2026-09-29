@@ -40,7 +40,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=0e885bb435" defer></script>
-<script src="/tools/tools-dialogs.js?v=33e55c2858" defer></script>
+<script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <!-- F18 fix (2026-09-07): this page never loaded the shared mobile
      bottom nav / desktop sidebar / flag button script every other tool
      page loads -- it had no phone layout at all and was a dead end,
@@ -1909,6 +1909,14 @@ function escapeAttr(str) {
 // those files, but this one needs its own copy.
 function haptic(type) {
   if (!navigator.vibrate) return;
+  // Chrome refuses vibrate() until the person has tapped the page, and logs
+  // a console error each time ("Blocked call to navigator.vibrate..."). A
+  // form sheet opened from a link (job-tracker.html#add-job from the + Job
+  // button, a client's New job, the command palette) buzzes as the sheet
+  // opens, before any tap, so it hit that on every open; it couldn't buzz
+  // there anyway, so skip it. Browsers without userActivation carry on as
+  // before.
+  if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
   switch (type) {
     case 'light': navigator.vibrate(12); break;
     case 'success': navigator.vibrate([10, 40, 10]); break;

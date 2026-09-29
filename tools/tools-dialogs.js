@@ -19,6 +19,14 @@
 // shipping it).
 function haptic(type) {
   if (!navigator.vibrate) return;
+  // Chrome refuses vibrate() until the person has tapped the page, and logs
+  // a console error each time ("Blocked call to navigator.vibrate..."). A
+  // form sheet opened from a link (job-tracker.html#add-job from the + Job
+  // button, a client's New job, the command palette) buzzes as the sheet
+  // opens, before any tap, so it hit that on every open; it couldn't buzz
+  // there anyway, so skip it. Browsers without userActivation carry on as
+  // before.
+  if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
   switch (type) {
     case 'light': navigator.vibrate(12); break;
     case 'success': navigator.vibrate([10, 40, 10]); break;

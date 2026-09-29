@@ -1153,4 +1153,34 @@ a restyle slip, so neither was changed.
   reword it ("fix the email and download again"), or store the email on the
   quote and add a Resend like invoices have (a feature, features lane).
 
+From the second pass (2026-09-29, #445-#469 and the portal leak fixes):
+
+- ~~**Apply `sql/security/internal_update_client_portal_work_order.sql`
+  to the live project.**~~ **Done (2026-09-29).** Since #469 was applied,
+  Workspace's Approve & Schedule and every work-request status button
+  reported success and saved nothing (details in bugfix.md, 2026-09-29).
+  The Workspace side ships in the same PR.
+
+- **Some v2 phone buttons are under 44px.** Settings (#460) rows now use
+  38px buttons on a phone (Send reset link, the two-factor button, Sign
+  out; all were 44px or more before). The homepage's new before/after
+  toggles and Control Panel/Board chips are 40px. All tap fine; nothing is
+  covered. Precedent:
+  the portal's 38px phone buttons were raised to 44px as a bug (PO2 above).
+  Options: accept these as intended; or give tools/settings.html's
+  `.secondary-btn` rows and the homepage chips the same 44px floor at
+  <=760px.
+- **Settings' two-factor card waits on the service worker.** Settings'
+  startup awaits `refreshSettingsPushState()` before `renderMfaSettingsCard()`,
+  and the push check awaits `navigator.serviceWorker.ready`
+  (`tools/push-notifications.js:33`). That promise never settles when no
+  worker ever registers (a registration that fails, or a browser that has
+  service workers switched off), so the two-factor button stays "Loading..."
+  and the recovery-codes row never appears. It works everywhere the worker
+  installs; seen only because the test harness blocks workers. Predates
+  the redesigns. Options: leave it; or render the two-factor card first
+  (it doesn't need the push state), or give the push check a
+  `getRegistration()` fallback so it can say "Off for this device"
+  without waiting.
+
 <!-- Add new bug-lane questions above this line -->

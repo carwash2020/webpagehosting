@@ -200,11 +200,14 @@ test('work requests count toward the Action Items badge, like every other item i
     'the badge total must include work requests');
 });
 
-test('advancing a request is a real PATCH, and the status set matches the database CHECK constraint', () => {
+test('advancing a request is a real write (the staff RPC, since #469), and the status set matches the database CHECK constraint', () => {
   const fnMatch = WORKSPACE.match(/async function advanceWorkRequest\(id, newStatus\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate advanceWorkRequest()');
-  assert.match(fnMatch[0], /method: 'PATCH'/);
-  assert.match(fnMatch[0], /client_portal_work_orders\?id=eq\./);
+  assert.match(fnMatch[0], /await updateWorkRequest\(id, newStatus\)/);
+  const helper = WORKSPACE.match(/async function updateWorkRequest\(id, status, scheduledAtIso\)[\s\S]*?\n  \}\n/);
+  assert.ok(helper, 'expected to isolate updateWorkRequest()');
+  assert.match(helper[0], /rest\/v1\/rpc\/internal_update_client_portal_work_order/);
+  assert.match(helper[0], /method: 'POST'/);
   // Every status this UI can write must be one the table's own CHECK
   // constraint actually permits, or the PATCH fails at the database.
   const allowed = ['submitted', 'reviewing', 'quoted', 'scheduled', 'completed', 'declined'];
