@@ -66,16 +66,25 @@ test('the shared .eyebrow/.accent CSS is fully retired from styles.css', () => {
   assert.doesNotMatch(INDEX, /class="accent"/);
 });
 
-test('the hero headline is no longer split into two colors -- one clean sentence, no single-word accent', () => {
+test('the hero headline is one sentence with no accent span; only its last line takes the brand orange', () => {
   // P1 redesign (2026-09-28): each line of the h1 sits in its own span for the
   // line-by-line entry reveal, so this reads the headline's text (parsed, not
-  // regex-stripped) rather than its exact markup. What it protects is
-  // unchanged: one sentence, one colour.
+  // regex-stripped) rather than its exact markup.
+  //
+  // 2026-09-29: the owner asked for the first design prototype's orange
+  // "DONE RIGHT." back, reversing the one-colour rule this test used to pin.
+  // What stays protected: one sentence, no single-word accent span in the
+  // markup, and exactly one coloured line -- the last -- in the brand orange.
   const { JSDOM } = require('jsdom');
   const h1 = new JSDOM(INDEX).window.document.querySelector('.hero h1');
   assert.equal(h1.textContent.replace(/\s+/g, ' ').trim(), 'HANDYMAN AND APPLIANCE REPAIR, DONE RIGHT.');
   assert.equal(h1.querySelector('[class*="accent"]'), null, 'no accent span inside the hero headline');
-  assert.doesNotMatch(STYLES, /\.hero-h1-line[^{]*\{[^}]*color:/, 'no per-line colour on the headline');
+  const lineColours = [...STYLES.matchAll(/([^{}]*\.hero-h1-line[^{]*)\{(?:[^}]*[;\s])?color:([^;}]*)/g)];
+  assert.equal(lineColours.length, 1, `expected exactly one per-line colour on the headline, found ${lineColours.length}`);
+  assert.match(lineColours[0][1], /\.hero-h1-line:last-child/, 'the coloured line is the last one');
+  assert.match(lineColours[0][2], /var\(--orange\)/, 'in the brand orange token');
+  const lines = h1.querySelectorAll('.hero-h1-line');
+  assert.equal(lines[lines.length - 1].textContent.trim(), 'DONE RIGHT.');
 });
 
 test('the hero location is real prose now, not a floating label -- no information was dropped', () => {

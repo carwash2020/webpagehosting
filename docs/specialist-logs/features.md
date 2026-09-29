@@ -3362,4 +3362,8 @@ Not a fit for drywall, handyman or assembly: those are scope-of-work jobs, not d
 
 The B1 pass turned booking.html's "Your Appointment" sidebar into a ticket that stamps each choice as it's made (see `visual.md`, same date). Claude Design suggested the ticket also show the service address and how long the slot is held. That needs a new sidebar row and the flow to fill it (markup and JS), so it was out of scope for a presentation-only pass and is logged here instead.
 
+## 2026-09-28 -- hand-off from the P2 homepage redesign (not built): a big live rating in #reviews
+
+The P2 brief allowed a large, wired "5.0" rating in the homepage reviews chapter. Claude Design left it out to keep the review-stats hook counts provably unchanged. If it's wanted, reuse the `js-review-rating-stat` hook. Before adding a second instance, check `js/review-stats.js`'s selector counts and the tests that count the hooks. The brief also allowed a teardown SVG redraw, left out for the same reason with the `tdScrub` state machine.
+
 <!-- Add new entries above this line -->

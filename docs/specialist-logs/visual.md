@@ -2655,3 +2655,98 @@ The fourth v2 package from `design_handoff_workspace_app_v2/README.md`, on top o
   - Local data snapshot keeps its own trash button: its row has an inline `onclick` (open the raw value), so a ⋯ inside it would also toggle the row.
   - Graveyard's Restore stays a visible pill (it's the point of the panel); only Delete permanently moves into the ⋯.
 - **Light mode:** full-page captures show a dark band below the first viewport, the same capture artifact #459 logged (`html` keeps the dark FOUC background, `body` is transparent). Computed colours on the page itself are the light ones.
+
+## 2026-09-28 -- P2 homepage story as chapters (body.page-home, below the hero), applied from a Claude Design package
+
+Seventh and last package from the public-site sweep. The package was built on P1's package file (`html.page-home`, a plain h1), while main has P1 as merged (`body.page-home`, h1 line spans, `hero-open-status`). So its `index.html` wasn't copied over, and in the end **no markup changed at all**: `index.html` differs from main only in its stylesheet `?v=` stamp (see the chapter marks below). No JS changed. `#recentWork` stays hidden and the FAQ stays a modal.
+
+**What shipped.**
+- **Chapter marks.** The nine sections from `#honest` to `#schedule` each get a numbered pill, 01 to 09 (CSS content with empty alt text, so screen readers skip it). The rule between chapters is gone.
+- **Varied widths:**
+  - an 880px editorial column for Honest;
+  - a 980px Process column on its own tinted band, whose steps rise in on a scroll-linked `view()` timeline (inside `@supports` and `no-preference`, on top of the existing line draw);
+  - a full-bleed before/after frame (21:9 desktop, 4:5 phones) with the real `#revealScrub` centred under it;
+  - a full-bleed teardown band with a wider grid and a bigger figure;
+  - a showcase first review spanning the wall;
+  - the service-area map as an elevated panel;
+  - `#schedule` as an elevated conversion panel on an orange-tint band that hands straight into `#closing`.
+
+**Changed at apply time, and why:**
+- **The chapter marks are CSS-only, drawn on `::after`.** The package added `data-chapter` attributes and drew the marks on `::before`, which caused two problems:
+  - About came out broken. `#about::before` is the section's warm glow (`content:""`, `inset:0`), and the package's pill selector outranks it (its `:not(#teardownStage)` counts as an id). So the pill took over the glow: a huge rounded outline from the left edge, with "07" in its corner. Main shows a soft warm wash.
+  - About ten tests failed (blog internal linking, social proof, booking path, conversion pop and visuals, schedule/contact consolidation, U01) because they read those section tags exactly, and the attributes changed them.
+
+  Now `main` resets a `home-chapter` counter, the nine sections are listed by id inside `:where()`, and the pill is `counter(home-chapter, decimal-leading-zero)` on `::after`, which none of these sections used. About's glow is untouched, the markup is byte-identical, and those tests pass unchanged. `:where()` keeps the specificity below `#reviews{border-top}`, as in the package, so the reviews band keeps its tinted top rule. The teardown now carries its "04" too; the package left it bare only because its lighting lives on the pinned `::before`.
+- **Re-scoped from `html.page-home` to `body.page-home`.** That's the hook P1 merged with, and one hook is simpler than two. The specificity is the same. The one compound selector, `html.page-home.reveal-ready`, becomes `html.reveal-ready body.page-home`, because `site-motion.js` puts `reveal-ready` on `<html>`.
+- **The block comment had three unbalanced braces.** It quoted the teardown, reveal-after and process::before rule openers, braces included. That's the same trap as P3, P4 and P6, so it's reworded without braces.
+- **The full-bleed frame made the homepage scroll sideways on desktop.** `100vw` includes a classic scrollbar (Windows, most Linux), so the frame ran 5px past the page. Playwright hides scrollbars by default, which is why the renders didn't show it. Measured with real scrollbars, the page overflowed 5px after the change and 0 on main. `#revealJob` now gets `overflow-x:clip`, which unlike `hidden` creates no scroll container, and the overflow is back to 0 at 1440 and 1024.
+- **The featured review had an empty band under its quote.** The base `.review-quote` is a fixed 110px so paired cards line up. The featured card spans the row alone, so its quote is `height:auto`, and the 4-line clamp still caps long quotes. The first-match test on `.review-quote{` still reads the base rule.
+
+**Checked, not changed:**
+- **Two service-area map lines stop short of their dots** (Santa Clara, La Verkin). They're identical on main, a pre-existing geometry detail outside this pass.
+
+**Verification.**
+- **Suite and checks.** Full suite 4253/4254; the one failure is the known `check-links.py` sandbox-proxy failure. `check-consistency`, `check-undefined-vars`, lint and the visual snapshot are clean. Every one of the block's 33 selectors starts with `body.page-home`, so it can't reach the landing pages that share `<main id="home">`.
+- **Interactions, before and after, 1440 and 390:**
+  - `#revealScrub` still drives `--p` on `#revealJob` (0.15, then 0.85), and sits below the frame.
+  - `#tdScrub` still drives the teardown's `--p`.
+  - The FAQ modal opens.
+  - All nine chapters carry their counter marks, About's glow keeps `content:""` and `inset:0`, and `#recentWork` is still hidden.
+  - Zero page errors on either side.
+- **Reduced motion** shows the process steps static and fully visible.
+- **Screenshots** are in `docs/homepage-story-2026-09-28/`.
+
+## 2026-09-29 -- homepage pieces from Claude Design's first prototype, ported by hand (washer teardown, triage, before/after, service cards)
+
+The first homepage package was a prototype file (`Homepage.dc.html`). It was sent back, and the hero-only package that replaced it is what shipped as P1. That prototype also redrew several sections below the hero, and those never reached the site. They're ported here by hand, inside the same PR as P2, and scoped to `body.page-home` in one `/* === Prototype port === */` block (96 selectors, all homepage-scoped). `rule1-audit` finds nothing missing.
+
+**What shipped.**
+- **Washer teardown ("Most of it still works").**
+  - The line-art washer becomes the prototype's shaded machine: cabinet, fascia with the lit "1:04" display and chrome knob, chrome door over glass, perforated drum, and nine named parts that fly apart.
+  - It keeps the teardown's own animation contract: each part is a `.td-part` with its own `--dx/--dy`, driven by the same `--p`. `.td-inside` marks the parts inside the cabinet, which only show once it's opened up.
+  - New "Tap a part" chips spotlight one part (the rest dim to .22) and open the machine up. The four parts behind a common washer symptom (door and latch, door seal, drive belt, drain pump) also show what that symptom usually means, straight from `window.TRIAGE_DATA`. A "Read it in the triage" link drives the triage tool's own buttons, so the answer, its scroll and the booking hand-off behave exactly as a tap there would.
+  - The slider gains tick marks and a Take it apart / Put it back together control. `#tdScrub`, `#tdState`, the once-only demo sweep and keyboard control are unchanged. Any real use stops the demo from running on top of the visitor.
+- **Is it worth fixing?** The prototype's two-panel tool:
+  - appliance tabs in a header strip;
+  - symptom cards ("What it usually means", "Showing") on the left;
+  - the answer on the right, with a "Pick the symptom." placeholder until there is one.
+
+  `triage.js` and its markup are unchanged. `.triage-step` dissolves into the shell's grid, and the symptom group becomes a subgrid, so the tabs span the full width. A browser without subgrid keeps the stacked layout.
+- **Before/after:**
+  - Before / Split / After buttons beside the heading.
+  - A round handle on the divider.
+  - A "Drag the handle" hint that retires after first use.
+  - Tags that fade as their side closes.
+  - The photo itself is draggable.
+
+  The range input stays the real control; everything else just moves it.
+- **What we fix.** The prototype's two-up cards: a 56px framed icon, Anton titles, and one orange "See what's included".
+- **Hero and first scroll** (from the prototype's screenshots in the revised export):
+  - "DONE RIGHT." is back in the brand orange, at the owner's request (2026-09-29). This reverses the earlier audit's one-colour rule, and `frontend-design-tells-removed.test.js` now pins exactly one coloured line, the last, with still no accent span.
+  - The estimate form gets its "Free estimate" label.
+  - The open card adds "owner on the call" while open, and today's hours from `formatHoursLabel()`.
+  - A quiet "Scroll" cue sits under the hero and fades once the page moves.
+  - The trust points are open columns under a short coloured rule instead of boxed cards.
+- **The revised export's P1/P2 packages** are Claude Design's own versions of the triage tabs, the washer and a looping map trail. This port covers all three: the looping trail comes with the service-area map PR.
+
+**Changed at port time, and why:**
+- **Reduced motion pins the machine whole** (the tested `.teardown{--p:1 !important;}`), so the play control is hidden there. The chips still spotlight and explain.
+- **No preselected appliance.** The prototype opened on Washer, but `triage-symptom-grid.test.js` pins "no symptom pills until an appliance is selected" (an existing decision). The empty side says what to do instead.
+- **The triage split is pinned at 57.5 / 42.5.** With fr columns, and against P1's more specific `:has()` rule, it shifted by 56px when an answer arrived.
+- **The service card icon spans `1 / 4`.** The base `1 / -1` only spans the first row when a grid has no explicit rows, which pushed each description down by the icon's height. It shows on main too.
+- **Handle shadow uses tokens.** F27 allows only the divider's own `rgba(0,0,0)` shadow.
+- **The photo drag blocks native image drag.** A mouse drag on an `<img>` starts the browser's drag-and-drop, which cancels the pointer mid-drag.
+- **The reveal controls sit after the demo block in the script.** `homepage-hero-reveal.test.js` looks for the reduced-motion guard within 3,200 characters of `const revealStage`.
+
+**Verification.**
+- **Suite:** full suite 4253/4254, with the known `check-links.py` sandbox failure.
+- **Teardown walk, 1440/390, dark and light:**
+  - The demo plays once, and play takes the machine apart and puts it back.
+  - The pump chip spotlights the pump and shows "Won't drain".
+  - The seal chip's triage link opens Washer, then Leaking water, with the booking hand-off filled.
+  - The keyboard still drives the slider, and reduced motion hides play while the chips still work.
+- **Triage:** the answer, placeholder and booking hand-off behave at both widths, with no sideways scroll.
+- **Before/after:** the divider and the photo edge match to the pixel in every state (demo end, Before, Split, After, drag, keyboard) at both widths.
+- **Zero page errors** throughout.
+- **Screenshots:** `docs/homepage-story-2026-09-28/prototype-port/`.
+- **Still to come, in their own PRs:** the prototype's service-area map (all 17 pages that carry the diagram) and the Services/Areas header menus (site-wide).
