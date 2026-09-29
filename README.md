@@ -5902,3 +5902,11 @@ Ported from Claude Design's first homepage prototype.
 - **On city pages**, hovering a town in the list lights it on the map.
 
 Nothing removed: every town, note, link and the focus-town trail are still there. Screenshots are in `docs/service-area-map-2026-09-29/`.
+
+## What changed, 2026-09-29 -- The header's Services and Areas menus get the prototype's look, and three fixes
+
+- **The look.** Both menus show a caret. Rows line up under their link with an orange hover. The Areas menu marks each town like the service-area map does: St. George is home base, and Cedar City and Mesquite are by request.
+- **St. George is back in the Areas menu** on every page. It was missing everywhere but the homepage.
+- **The menu is readable in light mode**, and no longer closes when the pointer moves down to it slowly.
+
+Screenshots are in `docs/header-menus-2026-09-29/`.

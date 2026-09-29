@@ -2853,3 +2853,30 @@ The spoke draw-in, the focus dimming and the key/links reveal are unchanged.
 - **Rendered inventory** (`visible-inv`): nothing lost on the 17 pages.
 - **Suite and checks:** see the PR.
 - **Screenshots:** `docs/service-area-map-2026-09-29/{before,after}`.
+
+## 2026-09-29 -- the header's Services and Areas menus, after Claude Design's first homepage prototype (39 pages)
+
+The prototype's header has "Services ▾" and "Areas ▾" menus. The site already had both, on every public page with a nav (39 pages), added 09-10 and 09-11. So this is a restyle and three fixes, not a new menu. The markup is untouched apart from one missing link (below).
+
+**What shipped.**
+- **A caret on both links.** It flips while the menu is open (on hover behind `@media (hover:hover)`, and on keyboard focus through `:focus-within`), so the menus can be found without hovering at random.
+- **The prototype's panel.** Rows are uppercase and letter-spaced like the nav, and line up with the link above. The hovered or focused row takes the brand-orange tint.
+- **Area markers, matching the service-area map's key:**
+  - a blue ring for standard coverage;
+  - a dashed orange ring for Cedar City and Mesquite, with a "By request" tag;
+  - St. George filled orange, with "Home base".
+
+  The mobile menu's Areas sublist gets the same markers.
+
+**Fixed along the way:**
+- **St. George was missing from both Areas lists on 38 pages.** Every page but the homepage listed 7 towns: the desktop menu and the mobile sublist both skipped St. George, so its page was unreachable from the nav everywhere else. `mobile-nav-collapsible`'s own header already says "Areas (8 links)". Now all 8, St. George first, as on the homepage.
+- **The menu was unreadable in light mode.** It used the page's panel tokens (white in light mode) with rows hardcoded to `#d8d8d8`, so it drew near-white rows on a white panel. The header and the mobile menu stay dark in both themes (the 09-23 note on `.mobile-menu`), so the menu now pins the dark theme's token values the same way, rather than flipping.
+- **A slow pointer closed the menu on the way to it.** The menu opens a gap below its link, and nothing bridged that gap, so moving down at a normal reading pace left the hover and the menu closed. The 0.15s visibility transition hid this for fast moves only. In a check stepping 1px every 45ms, main's menu closed and the new one stays open. `.nav-dropdown::after` is now an invisible bridge covering the gap.
+
+**Checked, not changed:**
+- **The booking pages keep their focused header.** `booking.html`, `manage-booking.html` and `manage-job.html` have a logo-and-phone header with no nav at all. That is the booking flow's own focused layout, and adding the menus there would add exits from the form. Left as is. It's a one-line decision if menus are wanted there.
+- **Keyboard behaviour.** Tabbing from the Areas link lands on St. George, with the menu open, before and after.
+
+**Verification.**
+- **`tests/design/header-menus.test.js` (new).** It pins that all 8 towns are in both lists on every page with the menus, the dark pin, that the bridge covers the gap, and that the caret's hover flip sits behind `(hover:hover)`. Mutation-checked: removing St. George from one page, dropping the pin, or shrinking the bridge each fails it.
+- **Screenshots:** `docs/header-menus-2026-09-29/{before,after}`, at 1440 dark and light, plus the mobile menu at 390.

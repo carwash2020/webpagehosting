@@ -5932,3 +5932,81 @@ body:has(.cookie-banner) .back-to-top{
     .radius-compass{top:8px; right:8px; padding:4px 6px;}
   }
   /* === end Service-area map === */
+
+  /* === Header menus (2026-09-29) ===
+     The Services and Areas menus as Claude Design's first homepage
+     prototype drew them, on the 39 pages that carry them. CSS only, apart
+     from St. George joining the Areas lists on the 38 pages that had
+     left it out.
+     - Both links carry a caret that flips while the menu is open, so
+       the menus can be found without hovering at random.
+     - The menu stays dark in both themes, like the header it hangs from
+       and the mobile menu (see the note there). It used the page's panel
+       tokens with hardcoded #d8d8d8 rows, so the light theme drew
+       near-white rows on a white panel.
+     - Rows line up with the link above, and the hovered row takes the
+       brand-orange tint.
+     - An invisible bridge under each link spans the gap to its menu, so
+       a slow pointer moving down no longer closes it on the way.
+     - The Areas lists mark each town the way the service-area map's key
+       does: a blue ring for standard coverage, a dashed orange ring for
+       the towns by request, and St. George filled as home base. */
+  .nav-dropdown > a{display:inline-flex; align-items:center; gap:7px;}
+  .nav-dropdown > a::after{
+    content:""; flex:none;
+    width:6px; height:6px; margin-top:-4px;
+    border-right:1.6px solid currentColor; border-bottom:1.6px solid currentColor;
+    transform:rotate(45deg); opacity:.65;
+    transition:transform .18s ease, opacity .18s ease;
+  }
+  .nav-dropdown:focus-within > a::after{transform:translateY(4px) rotate(225deg); opacity:1;}
+  .nav-dropdown::after{content:""; position:absolute; left:-12px; right:-12px; top:100%; height:16px;}
+  .nav-links .nav-dropdown-menu{
+    --bg-panel:#141414;
+    --border:#2a2a2a;
+    --text:#e8e8e8;
+    --text-dim:#9a9a9a;
+    --orange-text-vivid:var(--orange);
+    --orange-tint-soft:rgba(255,128,0,0.1);
+    display:grid; gap:1px;
+    left:-20px; margin-top:14px; padding:6px; min-width:250px;
+  }
+  .nav-links .nav-dropdown-menu a{
+    display:flex; align-items:center; gap:10px;
+    padding:9px 14px;
+    font-size:13px; letter-spacing:1px; text-transform:uppercase;
+    color:var(--text);
+    transition:background-color .15s ease, color .15s ease;
+  }
+  .nav-links .nav-dropdown-menu a:focus-visible{background:var(--orange-tint-soft); color:var(--orange-text-vivid); outline:2px solid var(--orange); outline-offset:-2px;}
+  @media (hover:hover){
+    .nav-dropdown:hover > a::after{transform:translateY(4px) rotate(225deg); opacity:1;}
+    .nav-links .nav-dropdown-menu a:hover{background:var(--orange-tint-soft); color:var(--orange-text-vivid);}
+  }
+  .mobile-menu .mobile-areas-sublist a{display:flex; align-items:center; gap:10px;}
+  .nav-dropdown-menu a[href^="/locations/"]::before,
+  .mobile-areas-sublist a[href^="/locations/"]::before{
+    content:""; flex:none;
+    width:9px; height:9px; box-sizing:border-box; border-radius:50%;
+    border:1.6px solid var(--blue);
+  }
+  .nav-dropdown-menu a[href="/locations/handyman-st-george-ut.html"]::before,
+  .mobile-areas-sublist a[href="/locations/handyman-st-george-ut.html"]::before{background:var(--orange); border-color:var(--orange);}
+  .nav-dropdown-menu a[href="/locations/handyman-cedar-city-ut.html"]::before,
+  .nav-dropdown-menu a[href="/locations/handyman-mesquite-nv.html"]::before,
+  .mobile-areas-sublist a[href="/locations/handyman-cedar-city-ut.html"]::before,
+  .mobile-areas-sublist a[href="/locations/handyman-mesquite-nv.html"]::before{border-color:var(--orange); border-style:dashed;}
+  .nav-dropdown-menu a[href="/locations/handyman-cedar-city-ut.html"]::after,
+  .nav-dropdown-menu a[href="/locations/handyman-mesquite-nv.html"]::after{
+    content:"By request"; margin-left:auto; padding-left:16px;
+    font-size:10.5px; letter-spacing:1.2px; color:var(--orange-text-vivid);
+  }
+  .nav-dropdown-menu a[href="/locations/handyman-st-george-ut.html"]::after{
+    content:"Home base"; margin-left:auto; padding-left:16px;
+    font-size:10.5px; letter-spacing:1.2px; color:var(--text-dim);
+  }
+  @media (prefers-reduced-motion:reduce){
+    .nav-dropdown > a::after,
+    .nav-links .nav-dropdown-menu a{transition:none;}
+  }
+  /* === end Header menus === */

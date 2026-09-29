@@ -1367,3 +1367,10 @@ Tests: `tests/design/service-card-landing-pages.test.js` (19; 17 fail on e4e70d6
 - 2026-09-28 (from the visual lane, P5): blog posts' lead `img.blog-diagram` now sits in the above-the-fold `.post-hero` but still has `loading="lazy"`, which may delay LCP on all 16 posts. Consider `loading="eager"` + `fetchpriority="high"` on that one image. Not changed in the redesign PR.
 
 - 2026-09-29 (from the visual lane, prototype port): the homepage before/after divider and its photo edge disagreed. The divider sat at `--p` while `.reveal-after` clipped at `1 - --p`, so they only met at 50%. After the demo sweep (p = .82), the divider was at 82% and the photo edge at 18%. It arrived on 2026-09-23 with #393's stylesheet sync. Fixed with `inset(0 0 0 calc(var(--p, .5) * 100%))`, since the divider and the slider's track fill both already read `--p`. Verified pixel-exact at every state and width.
+
+- 2026-09-29 (from the visual lane, header menus): three header-menu bugs on the 39 pages with the Services and Areas menus.
+  - **Missing link.** Every page but the homepage listed 7 towns in the Areas menu and the mobile Areas sublist, skipping St. George, so the St. George page (added after the other seven) was reachable from the nav only on the homepage.
+  - **Unreadable in light mode.** `.nav-dropdown-menu` took `--bg-panel` (white in light mode) with rows hardcoded to `#d8d8d8`. It now pins the dark values like `.mobile-menu`, because the header it hangs from is dark in both themes.
+  - **Closing on the way to it.** A slow pointer closed the menu, because nothing bridged the gap under its link; `.nav-dropdown::after` now does.
+
+  Pinned by `tests/design/header-menus.test.js`.
