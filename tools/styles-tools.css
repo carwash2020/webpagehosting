@@ -407,21 +407,20 @@ body.th-has-bottomnav .onboarding-card { bottom: calc(85px + env(safe-area-inset
 .onboarding-skip, .onboarding-back { background: none; border: none; color: var(--text-dim); font-size: 13px; cursor: pointer; padding: 8px 4px; }
 .onboarding-skip:hover, .onboarding-back:hover { color: var(--white); }
 .onboarding-actions-left { display: flex; gap: 4px; align-items: center; }
-/* Tour highlight (2026-08-20): applied to whatever real element a step
-   is actually talking about, per direct feedback that the tour
-   described things without ever visually pointing at them. A pulsing
-   glow rather than a static border, so it's noticeable even if the
-   element is partway down a busy page. */
+/* Tour spotlight (First Impressions handoff, 2026-09-29; replaces the
+   2026-08-20 pulsing-outline treatment): applied to whatever real
+   element a step is actually talking about. The huge box-shadow spread
+   dims the rest of the screen directly, with no separate overlay div
+   needed -- an orange 2px ring plus a 2000px rgba(0,0,0,.66) spread,
+   exactly the handoff's spec. Transitions between steps over .3s
+   var(--th-ease); pointer-events stay on (a spotlighted control is
+   still usable, matching the tour's own step targets, e.g. the + button). */
 .th-tour-highlight {
-  outline: 2px solid var(--orange); outline-offset: 3px; border-radius: 8px;
-  animation: tourHighlightPulse 1.6s ease-in-out infinite;
-  position: relative; z-index: 700;
+  position: relative; z-index: 700; outline: none;
+  box-shadow: 0 0 0 2px var(--orange), 0 0 0 2000px rgba(0,0,0,.66);
+  transition: box-shadow .3s var(--th-ease, cubic-bezier(.2,.8,.2,1));
 }
-@keyframes tourHighlightPulse {
-  0%, 100% { box-shadow: 0 0 0 0 var(--orange-tint-glow); }
-  50% { box-shadow: 0 0 0 8px var(--orange-tint-glow); }
-}
-@media (prefers-reduced-motion: reduce) { .th-tour-highlight { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .th-tour-highlight { transition: none; } }
 
 .tabs.tabs-sticky {
   /* 65px, not 61px (2026-09-24, reported directly with a screenshot of
@@ -4044,3 +4043,21 @@ body.th-tool-page .th-v2-rule-head {
   font-family: var(--font-display); font-weight: 400; font-size: 22px; letter-spacing: .4px; text-transform: uppercase; color: var(--text);
 }
 body.th-tool-page .th-v2-rule-head::after { content: ''; flex: 1; height: var(--th-rule); background: var(--orange-tint-border); }
+
+/* First Impressions handoff (2026-09-29): one-time page tips -- an
+   inline dismissible card at the top of a main page's content,
+   localStorage th_tip_<page> per page (see thPageTip() on each page).
+   Never shown while the first-run tour (tools-tour.js) is running. */
+.th-page-tip {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: rgba(255,128,0,.1); border: 1px solid rgba(255,128,0,.3); border-radius: 18px;
+  padding: 14px 8px 14px 16px; margin: 0 0 16px;
+}
+.th-page-tip-text { flex: 1; min-width: 0; }
+.th-page-tip-kicker { font-family: var(--font-ui); font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--orange-light); margin: 0 0 3px; }
+.th-page-tip-body { font-size: 14.5px; line-height: 1.45; color: var(--text); margin: 0; }
+.th-page-tip-close {
+  flex-shrink: 0; width: 44px; height: 44px; margin: -10px -6px -10px 0; background: none; border: none;
+  color: var(--text-dim); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+@media (hover: hover) { .th-page-tip-close:hover { color: var(--text); } }

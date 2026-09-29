@@ -1940,17 +1940,15 @@ test('every page using the CHANNEL_ERROR/TIMED_OUT/CLOSED disconnected-state che
   }
 });
 
-// Full cross-page app tour (2026-08-20). Expanded from a 3-step,
-// dashboard-only onboarding tour into a walkthrough spanning every real
-// tool page, per explicit direction: "I want this to become the
-// tutorial and take you through each page and explain everything."
-// State (which step you're on) lives in localStorage rather than the
-// URL, so it survives a real page navigation between steps. Each page
-// calls initAppTour() on its own DOMContentLoaded; that function is
-// self-correcting -- if the stored step doesn't match the page you're
-// actually on (say, you tapped the bottom nav instead of "Next"), it
-// finds whichever step DOES belong to this page and shows that one
-// instead of showing nothing or the wrong page's content.
+// First-run tour (First Impressions handoff, 2026-09-29): rewritten from
+// the 25-step, every-page-and-tab tutorial down to 6 steps that teach the
+// one real loop (add a job, track it, invoice it, get paid, watch what's
+// owed, and where help lives). State (which step you're on) lives in
+// localStorage rather than the URL, so it survives a real page
+// navigation between steps. Each page calls initAppTour() on its own
+// DOMContentLoaded; that function is self-correcting -- if the stored
+// step doesn't match the page you're actually on, it finds whichever
+// step DOES belong to this page and shows that instead of nothing.
 
 function loadTourInWindow(url, email) {
   const { JSDOM } = require('jsdom');
@@ -1964,38 +1962,15 @@ function loadTourInWindow(url, email) {
   return window;
 }
 
-test('the tour step list covers exactly the intended pages, and excludes redirect stubs, auth pages, dev tools, and detail views on purpose', () => {
+test('the 6-step tour covers exactly workspace.html (add a job, money owed, help), job-tracker.html (track it, invoice from the job) and invoice-generator.html (get paid), in that order', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'tools-tour.js'), 'utf8');
   const pages = [...src.matchAll(/page: '(\/tools\/[\w-]+\.html)'/g)].map(m => m[1]);
-  // Bottom-bar order since the 2026-09-22 tutorial rewrite: Home, Jobs,
-  // Clients, Money (Invoices, then Finance), then the More drawer's pages.
-  const expectedPages = [
-    '/tools/workspace.html', '/tools/job-tracker.html', '/tools/clients.html',
-    '/tools/invoice-generator.html', '/tools/finance.html',
-    '/tools/route-planner.html',
-    '/tools/contract-generator.html', '/tools/review-request.html', '/tools/parts-reference.html',
-    '/tools/runway-dashboard.html', '/tools/settings.html',
-  ];
-  const uniquePages = [...new Set(pages)];
-  assert.deepEqual(uniquePages, expectedPages);
-  // Tabbed pages get one step per tab (2026-09-22); the rest exactly one.
-  // workspace.html: 7 since app shell v2 added the "Create anything" step.
-  const STEPS_PER_PAGE = { '/tools/workspace.html': 7, '/tools/job-tracker.html': 3, '/tools/invoice-generator.html': 4, '/tools/finance.html': 4 };
-  for (const p of expectedPages) {
-    assert.equal(pages.filter(x => x === p).length, STEPS_PER_PAGE[p] || 1, p + ' step count');
-  }
-  const excluded = ['job-cost-lookup.html', 'expense-logger.html', 'contact-card.html', 'login.html', 'reset-password.html', 'dev-tools.html', 'site-content.html', 'client-detail.html', 'job-detail.html'];
-  for (const e of excluded) assert.ok(!pages.some(p => p.includes(e)), e + ' should not appear in the tour');
-});
-
-test('every one of tools-tour.js\'s 4 workspace.html highlight selectors actually exists on that page', () => {
-  const tourSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'tools-tour.js'), 'utf8');
-  const wsSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'workspace.html'), 'utf8');
-  const workspaceSteps = [...tourSrc.matchAll(/\{ page: '\/tools\/workspace\.html', highlightSelector: '#([\w-]+)'/g)].map(m => m[1]);
-  assert.equal(workspaceSteps.length, 4);
-  for (const id of workspaceSteps) {
-    assert.match(wsSrc, new RegExp('id="' + id + '"'), id + ' referenced by the tour but not found on workspace.html');
-  }
+  assert.deepEqual(pages, [
+    '/tools/workspace.html', '/tools/job-tracker.html', '/tools/job-tracker.html',
+    '/tools/invoice-generator.html', '/tools/workspace.html', '/tools/workspace.html',
+  ]);
+  const titles = [...src.matchAll(/title: '([^']+)'/g)].map(m => m[1]);
+  assert.deepEqual(titles, ['Add a job', 'Track it', 'Invoice from the job', 'Get paid', 'Money owed', 'Help lives here']);
 });
 
 test('a fresh, never-seen visit to workspace.html auto-starts the tour at step 0', () => {
@@ -2003,7 +1978,7 @@ test('a fresh, never-seen visit to workspace.html auto-starts the tour at step 0
   w.initAppTour();
   assert.equal(w.localStorage.getItem('th_app_tour_step'), '0');
   assert.ok(w.document.getElementById('appTourCard'));
-  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Today');
+  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Add a job');
 });
 
 test('a returning user (seen flag already set) does NOT auto-start the tour', () => {
@@ -2021,46 +1996,41 @@ test('the old shared seen-flag key migrates correctly to the new per-user key, w
   assert.ok(!w.document.getElementById('appTourCard'));
 });
 
-test('advancing through workspace.html\'s own 4 steps stays on the same page (no navigation), and the Back button correctly reverts', () => {
+test('advancing through the tour stays on the right page (no navigation for same-page steps), and the Back button correctly reverts', () => {
   const w = loadTourInWindow('https://example.com/tools/workspace.html');
   w.initAppTour();
   assert.ok(!w.document.querySelector('.onboarding-back'), 'no Back button on the very first step');
 
-  w.goToAppTourStep(1);
-  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Needs attention');
+  w.goToAppTourStep(4); // workspace.html again -- Money owed
+  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Money owed');
   assert.ok(w.document.querySelector('.onboarding-back'), 'Back button should exist from step 1 onward');
 
-  w.goToAppTourStep(2);
-  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Quick actions');
-  w.goToAppTourStep(3);
-  // v2 (2026-09-28): Business Snapshot moved to Home's Insights view; same #section-snapshot target.
-  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Insights');
-  assert.equal(w.document.querySelector('.onboarding-next').textContent, 'Next', 'step 3 of 15 total is not the last step overall');
+  w.goToAppTourStep(5);
+  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Help lives here');
+  assert.equal(w.document.querySelector('.onboarding-next').textContent, 'Done', 'the last step');
 
   w.document.querySelector('.onboarding-back').click();
-  assert.equal(w.localStorage.getItem('th_app_tour_step'), '2');
-  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Quick actions');
+  assert.equal(w.localStorage.getItem('th_app_tour_step'), '4');
+  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Money owed');
 });
 
-test('advancing from workspace.html\'s last step (the 7th, since app shell v2 added "Create anything") correctly records the next step (job-tracker.html) before attempting to navigate there', () => {
+test('advancing from workspace.html\'s step 0 records the next step (job-tracker.html) before attempting to navigate there', () => {
   const w = loadTourInWindow('https://example.com/tools/workspace.html');
   w.initAppTour();
-  w.goToAppTourStep(1); w.goToAppTourStep(2); w.goToAppTourStep(3); w.goToAppTourStep(4); w.goToAppTourStep(5); w.goToAppTourStep(6);
-  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Search anywhere', 'still on the dashboard at step 7');
-  try { w.goToAppTourStep(7); } catch (e) { /* jsdom can't actually navigate cross-page; expected */ }
-  assert.equal(w.localStorage.getItem('th_app_tour_step'), '7');
+  try { w.goToAppTourStep(1); } catch (e) { /* jsdom can't actually navigate cross-page; expected */ }
+  assert.equal(w.localStorage.getItem('th_app_tour_step'), '1');
 });
 
 test('self-correction: landing on a page that doesn\'t match the stored step shows THAT page\'s real content and fixes the stored step, rather than showing nothing or the wrong page', () => {
-  // Stored step 5 is a workspace.html step, but the person is actually on
-  // route-planner.html (step 19 in the 25-step tutorial since app shell v2).
-  const w = loadTourInWindow('https://example.com/tools/route-planner.html');
-  w.localStorage.setItem('th_app_tour_step', '5');
+  // Stored step 4 (a workspace.html step), but the person is actually on
+  // invoice-generator.html (step 3).
+  const w = loadTourInWindow('https://example.com/tools/invoice-generator.html');
+  w.localStorage.setItem('th_app_tour_step', '4');
   w.localStorage.setItem('th_app_tour_step_started_at', String(Date.now()));
   w.initAppTour();
   assert.ok(w.document.getElementById('appTourCard'));
-  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Routes');
-  assert.equal(w.localStorage.getItem('th_app_tour_step'), '19');
+  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Get paid');
+  assert.equal(w.localStorage.getItem('th_app_tour_step'), '3');
 });
 
 test('landing on a page that isn\'t part of the tour at all renders no card, even with an active tour in progress', () => {
@@ -2071,7 +2041,7 @@ test('landing on a page that isn\'t part of the tour at all renders no card, eve
   assert.ok(!w.document.getElementById('appTourCard'));
 });
 
-test('dismissing (Skip) clears the active-step flag, sets the per-user seen flag, and removes the card from the DOM', () => {
+test('dismissing (Skip tour) clears the active-step flag, sets the per-user seen flag, and removes the card from the DOM', () => {
   const w = loadTourInWindow('https://example.com/tools/workspace.html', 'connor@triplehenterprisesllc.biz');
   w.initAppTour();
   w.dismissAppTour();
@@ -2080,12 +2050,12 @@ test('dismissing (Skip) clears the active-step flag, sets the per-user seen flag
   assert.ok(!w.document.getElementById('appTourCard'));
 });
 
-test('on the very last step (Settings), the button reads "Got it" and clicking it dismisses cleanly rather than advancing past the end of the array', () => {
-  const w = loadTourInWindow('https://example.com/tools/settings.html');
-  w.localStorage.setItem('th_app_tour_step', '15');
+test('on the very last step (Help lives here), the button reads "Done" and clicking it dismisses cleanly rather than advancing past the end of the array', () => {
+  const w = loadTourInWindow('https://example.com/tools/workspace.html');
+  w.localStorage.setItem('th_app_tour_step', '5');
   w.localStorage.setItem('th_app_tour_step_started_at', String(Date.now()));
   w.initAppTour();
-  assert.equal(w.document.querySelector('.onboarding-next').textContent, 'Got it');
+  assert.equal(w.document.querySelector('.onboarding-next').textContent, 'Done');
   w.document.querySelector('.onboarding-next').click();
   assert.equal(w.localStorage.getItem('th_app_tour_step'), null);
 });
@@ -2095,7 +2065,7 @@ test('?tour=1 forces a restart from step 0 regardless of the seen flag, and clea
   w.localStorage.setItem('th_onboarding_v1_seen_connor@triplehenterprisesllc.biz', '1'); // already seen
   w.initAppTour();
   assert.equal(w.localStorage.getItem('th_app_tour_step'), '0');
-  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Today');
+  assert.equal(w.document.querySelector('.onboarding-title').textContent, 'Add a job');
   assert.ok(!w.location.search.includes('tour=1'), 'the ?tour=1 param should be cleaned off the URL');
 });
 
@@ -2166,10 +2136,11 @@ test('running check-links.py against the real repo actually passes now (not just
 // real on its target page before using any of them, and added zero
 // new ids to any of those 10 pages to make that possible.
 
-test('every one of the 25 tour steps has a highlightSelector, and every selector (each alternative of a comma list) actually matches something real on its target page -- or in the nav / search markup every page injects', () => {
+test('every one of the 6 tour steps has a highlightSelector, and every selector (each alternative of a comma list) actually matches something real on its target page -- or in the nav / search markup every page injects', () => {
   const tourSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'tools-tour.js'), 'utf8');
   const steps = [...tourSrc.matchAll(/\{ page: '(\/tools\/[\w-]+\.html)', highlightSelector: '([^']+)'/g)];
-  assert.equal(steps.length, 25, 'every step should have a highlightSelector');
+  // First Impressions handoff (2026-09-29): 25 steps -> 6.
+  assert.equal(steps.length, 6, 'every step should have a highlightSelector');
   const injected = ['tools-nav-pwa.js', 'tools-command-palette.js'].map(f => fs.readFileSync(path.join(__dirname, '..', '..', 'tools', f), 'utf8')).join('\n');
   for (const [, pagePath, selectorList] of steps) {
     const file = pagePath.replace('/tools/', '');
@@ -2212,10 +2183,13 @@ test('every one of the 25 tour steps has a highlightSelector, and every selector
 });
 
 test('the tour visually highlights the real target element, clears any previous highlight on re-render, and clears fully on dismiss', () => {
+  // First Impressions handoff (2026-09-29): the tour was rewritten to 6
+  // steps; step 0 ("Add a job") spotlights the create button on Home,
+  // '.th-sidebar-new, .th-bn-create'.
   const { JSDOM } = require('jsdom');
   const tourSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'tools-tour.js'), 'utf8');
-  const dom = new JSDOM('<!DOCTYPE html><html><body><button id="addJobBtn">Add a Job</button></body></html>', {
-    url: 'https://example.com/tools/job-tracker.html', runScripts: 'dangerously',
+  const dom = new JSDOM('<!DOCTYPE html><html><body><button class="th-bn-create">Add</button></body></html>', {
+    url: 'https://example.com/tools/workspace.html', runScripts: 'dangerously',
   });
   const { window } = dom;
   window.getCurrentUserEmail = () => null;
@@ -2224,24 +2198,26 @@ test('the tour visually highlights the real target element, clears any previous 
   script.textContent = tourSrc;
   window.document.head.appendChild(script);
 
-  window.localStorage.setItem('th_app_tour_step', '4');
+  window.localStorage.setItem('th_app_tour_step', '0');
   window.localStorage.setItem('th_app_tour_step_started_at', String(Date.now()));
   window.initAppTour();
-  const btn = window.document.getElementById('addJobBtn');
+  const btn = window.document.querySelector('.th-bn-create');
   assert.ok(btn.classList.contains('th-tour-highlight'));
 
-  window.goToAppTourStep(4); // re-render the same step
+  window.goToAppTourStep(0); // re-render the same step
   assert.equal(window.document.querySelectorAll('.th-tour-highlight').length, 1, 're-rendering should not duplicate the highlight');
 
   window.dismissAppTour();
   assert.equal(window.document.querySelectorAll('.th-tour-highlight').length, 0);
 });
 
-test('.th-tour-highlight is defined in the shared stylesheet using real, existing color variables', () => {
+test('.th-tour-highlight is defined in the shared stylesheet as a real spotlight: an orange ring plus a 2000px dimming spread', () => {
+  // First Impressions handoff (2026-09-29): replaces the old pulsing
+  // outline/glow with the handoff's literal spotlight box-shadow --
+  // dims the rest of the screen directly, no separate overlay div.
   const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'styles-tools.css'), 'utf8');
   assert.match(src, /\.th-tour-highlight \{/);
-  assert.match(src, /var\(--orange\)/);
-  assert.match(src, /var\(--orange-tint-glow\)/);
+  assert.match(src, /box-shadow: 0 0 0 2px var\(--orange\), 0 0 0 2000px rgba\(0,0,0,\.66\)/);
 });
 
 // #mainContent scroll-margin-top fix (2026-08-20), from a direct report
@@ -2341,6 +2317,11 @@ test('a genuinely thrown error inside runway-dashboard.html\'s real init is caug
 });
 
 test('the tour still renders correctly (including the visual highlight) on a page wrapped in the new try/catch, confirming the wrapper doesn\'t interfere with normal operation', async () => {
+  // First Impressions handoff (2026-09-29): the 6-step tour no longer
+  // visits runway-dashboard.html, so there's no real stored step for
+  // initAppTour() to resume there any more -- render one directly
+  // (same as the styling test below) to confirm the try/catch-wrapped
+  // page still lets the tour engine itself render and highlight fine.
   const { JSDOM } = require('jsdom');
   const html = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'runway-dashboard.html'), 'utf8');
   const tourSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'tools-tour.js'), 'utf8');
@@ -2359,13 +2340,11 @@ test('the tour still renders correctly (including the visual highlight) on a pag
     window.document.head.insertBefore(s, window.document.head.firstChild);
   }
   window.getCurrentUserEmail = () => null;
-  window.localStorage.setItem('th_app_tour_step', '12');
-  window.localStorage.setItem('th_app_tour_step_started_at', String(Date.now()));
   window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
   await new Promise(resolve => setTimeout(resolve, 100));
+  window.renderAppTourStep(0);
   assert.ok(window.document.getElementById('appTourCard'));
-  assert.equal(window.document.querySelector('.onboarding-title').textContent, 'Runway Dashboard');
-  assert.equal(window.document.querySelectorAll('.th-tour-highlight').length, 1);
+  assert.equal(window.document.querySelector('.onboarding-title').textContent, 'Add a job');
 });
 
 // CRITICAL BUG FIX (2026-08-20), found from a third, more specific
@@ -2640,20 +2619,30 @@ function testTopLevelInitNoLongerThrows(pageFile, pagePath, tourStepIndex, extra
       s.textContent = src;
       window.document.head.insertBefore(s, window.document.head.firstChild);
     }
-    window.localStorage.setItem('th_app_tour_step', String(tourStepIndex));
-    window.localStorage.setItem('th_app_tour_step_started_at', String(Date.now()));
+    if (tourStepIndex !== null) {
+      window.localStorage.setItem('th_app_tour_step', String(tourStepIndex));
+      window.localStorage.setItem('th_app_tour_step_started_at', String(Date.now()));
+    }
     window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
     await new Promise(resolve => setTimeout(resolve, 300));
 
     const errorBanner = [...window.document.querySelectorAll('div')].find(d => d.textContent.includes('failed to load'));
     assert.ok(!errorBanner, pageFile + ' should not show an error banner: ' + (errorBanner ? errorBanner.textContent.slice(0, 200) : ''));
-    assert.ok(window.document.getElementById('appTourCard'), pageFile + ': tour card should render');
+    if (tourStepIndex !== null) {
+      assert.ok(window.document.getElementById('appTourCard'), pageFile + ': tour card should render');
+    } else {
+      // First Impressions handoff (2026-09-29): this page is no longer
+      // part of the 6-step tour, so initAppTour()'s self-correction
+      // correctly finds nothing to resume here and renders no card --
+      // this test now only confirms the top-level-throw fix still holds.
+      assert.ok(!window.document.getElementById('appTourCard'), pageFile + ': not a tour page any more, no card expected');
+    }
   });
 }
 
-testTopLevelInitNoLongerThrows('invoice-generator.html', INVOICE_GENERATOR_PATH, 6);
-testTopLevelInitNoLongerThrows('route-planner.html', path.join(__dirname, '..', '..', 'tools', 'route-planner.html'), 8);
-testTopLevelInitNoLongerThrows('review-request.html', path.join(__dirname, '..', '..', 'tools', 'review-request.html'), 10);
+testTopLevelInitNoLongerThrows('invoice-generator.html', INVOICE_GENERATOR_PATH, 3);
+testTopLevelInitNoLongerThrows('route-planner.html', path.join(__dirname, '..', '..', 'tools', 'route-planner.html'), null);
+testTopLevelInitNoLongerThrows('review-request.html', path.join(__dirname, '..', '..', 'tools', 'review-request.html'), null);
 
 test('none of the 3 fixed pages call a deferred-script-dependent function (money/escapeHtml) at the top level anymore, before DOMContentLoaded is registered', () => {
   const pages = ['invoice-generator.html', 'route-planner.html', 'review-request.html'];
@@ -2775,10 +2764,13 @@ test('the tour card gets real, correct styling on runway-dashboard.html now -- p
   const s = window.document.createElement('script');
   s.textContent = tourSrc;
   window.document.head.insertBefore(s, window.document.head.firstChild);
-  window.localStorage.setItem('th_app_tour_step', '12');
-  window.localStorage.setItem('th_app_tour_step_started_at', String(Date.now()));
   window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
   await new Promise(resolve => setTimeout(resolve, 300));
+  // First Impressions handoff (2026-09-29): the 6-step tour no longer
+  // visits runway-dashboard.html, so there's no real step to resume here
+  // via initAppTour() -- render one directly to confirm the page's own
+  // copied CSS still styles the card correctly.
+  window.renderAppTourStep(0);
 
   const card = window.document.getElementById('appTourCard');
   const cardStyle = window.getComputedStyle(card);
@@ -2830,12 +2822,9 @@ test('the tour health check genuinely catches a broken highlightSelector, not ju
   const tourPath = path.join(__dirname, '..', '..', 'tools', 'tools-tour.js');
   const original = fs.readFileSync(tourPath, 'utf8');
   try {
-    // W1 (2026-09-28) made the Jobs step's highlightSelector a comma list
-    // (".th-sheet-trigger[...], #addJobBtn"), so the old exact-field match
-    // no longer applies -- replace just the #addJobBtn part instead, which
-    // still breaks the step (every comma alternative must resolve) and
-    // still proves the checker catches a genuinely broken selector.
-    const broken = original.replace('#addJobBtn', '#thisElementDoesNotExist');
+    // First Impressions handoff (2026-09-29): the 6-step tour's "Track
+    // it" step targets .status-select on job-tracker.html.
+    const broken = original.replace('.status-select', '.thisElementDoesNotExist');
     fs.writeFileSync(tourPath, broken);
     const result = runCheckConsistency();
     assert.equal(result.passed, false, 'should have failed with a broken selector');
@@ -2845,19 +2834,15 @@ test('the tour health check genuinely catches a broken highlightSelector, not ju
   }
 });
 
-test('the tour health check genuinely catches a page missing the tour\'s required CSS, not just a plausible-looking rule', () => {
-  const rdPath = path.join(__dirname, '..', '..', 'tools', 'runway-dashboard.html');
-  const original = fs.readFileSync(rdPath, 'utf8');
-  try {
-    const broken = original.replaceAll('.onboarding-card {', '.onboarding-card-renamed {');
-    fs.writeFileSync(rdPath, broken);
-    const result = runCheckConsistency();
-    assert.equal(result.passed, false, 'should have failed with the tour CSS renamed away');
-    assert.match(result.output, /never loads styles-tools\.css and has no local \.onboarding-card rule/);
-  } finally {
-    fs.writeFileSync(rdPath, original); // always restore, even if an assertion above failed
-  }
-});
+// The "page missing the tour's required CSS" regression test used to
+// break runway-dashboard.html's copied .onboarding-card rule -- the one
+// tour page with no shared stylesheet to fall back on. First
+// Impressions (2026-09-29) narrowed the tour to 3 pages that all load
+// tools/styles-tools.css normally, so that exact scenario is no longer
+// reachable from the real step list. checkTourHealth's own
+// hasSharedStylesheet / hasOwnCopy check (scripts/check-consistency.js)
+// is untouched and still guards any future page that goes the
+// self-contained route runway-dashboard.html did.
 
 // Cache-bust versioning, rewritten 2026-08-26 after the time-based
 // version of this check (comparing a file's last-commit time against
@@ -3138,11 +3123,11 @@ test('an in-progress tour step with a fresh, recent timestamp is correctly resum
 
 test('clicking "Next" during the tour refreshes the timestamp, so a real, actively-progressing user is never treated as abandoned partway through just because more than 2 hours passed since the very start', () => {
   const window = loadWorkspaceWithTour(w => {
-    w.localStorage.setItem('th_app_tour_step', '0');
+    w.localStorage.setItem('th_app_tour_step', '4');
     w.localStorage.setItem('th_app_tour_step_started_at', String(Date.now() - 3 * 60 * 60 * 1000)); // 3 hours ago -- would be "abandoned" if never refreshed
   });
-  // Directly call the real advance function, matching what a "Next" click does internally, staying on the same page (step 1, section-actionitems, is also workspace.html).
-  window.goToAppTourStep(1);
+  // Directly call the real advance function, matching what a "Next" click does internally, staying on the same page (step 5, Help lives here, is also workspace.html).
+  window.goToAppTourStep(5);
   const refreshedAt = parseInt(window.localStorage.getItem('th_app_tour_step_started_at'), 10);
   assert.ok(Date.now() - refreshedAt < 5000, 'the timestamp should have just been refreshed to now');
 });

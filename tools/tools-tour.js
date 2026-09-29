@@ -1,67 +1,30 @@
-// Full app tour (2026-08-20) -- expanded from a 3-step, dashboard-only
-// onboarding tour into a walkthrough spanning every real tool page.
-// Replay it any time from Settings.
+// First-run tour (First Impressions handoff, 2026-09-29) -- REWRITTEN
+// from the 25-step, every-page-and-tab tutorial (2026-08-20 to
+// 2026-09-22) down to 6 steps that teach the one real loop: add a job,
+// track it, invoice it, get paid, watch what's owed, and where help
+// lives. Shown once, automatically, after the first sign-in on Home
+// (th_tour_v2_done gates it -- see initAppTour() below); replay it any
+// time from Settings ("Replay tour") or Dev Tools ("Onboarding tour").
 //
-// Excluded on purpose, and why:
-//   - job-cost-lookup.html, expense-logger.html, contact-card.html,
-//     calendar.html (retired 2026-09-21, now the Calendar view inside
-//     job-tracker.html), pos.html (retired 2026-09-21, now the Quick
-//     charge tab inside invoice-generator.html) -- these are redirect
-//     stubs with no real content of their own.
-//   - login.html, reset-password.html -- auth flow, not tools.
-//   - dev-tools.html, site-content.html -- password-gated developer
-//     tools, not appropriate for a general "how to use this app" tour.
-//   - client-detail.html, job-detail.html -- detail views reached by
-//     drilling into a specific existing record, not independent
-//     destinations someone navigates to directly; a tour stop there
-//     wouldn't make sense without a real record already existing.
-//
-// MECHANISM: one flat, ordered list of steps, grouped by page in the
-// bottom bar's order (Home, Jobs, Clients, Money -- Invoices then
-// Finance -- then the More drawer). Rewritten 2026-09-22 as a real
-// tutorial: the Dashboard gets 7 steps (hero, inbox, actions, Insights --
-// Business until v2, 2026-09-28 -- getting around, Create, search), tabbed pages get one step per tab,
-// the rest one each -- 25 in all.
-// Each step names the page it belongs to, a highlightSelector (any real
-// CSS selector; a comma-separated list means "the first one that is
-// visible at this width", which is how one step points at the phone
-// bar OR the desktop sidebar), a title, body copy written around what
-// you actually do there, and an optional onShow -- a page function to
-// call first (activateTab('expenses'), activateGenTab('pos')...) so the
-// tab being described is the one on screen. State (which step you're on) is stored in
+// MECHANISM (unchanged from the 25-step tour, so Settings/Dev Tools/
+// the ?tour=1 deep link all keep working exactly as before): a flat,
+// ordered list of steps. Each names the page it belongs to, a
+// highlightSelector (any real CSS selector; a comma-separated list
+// means "the first one visible at this width"), a title, body copy,
+// and an optional onShow -- a page function to call first so the
+// right tab/view is on screen. State (which step you're on) lives in
 // localStorage, not the URL, so it survives a real page navigation.
-// Every page in the list calls initAppTour() on its own DOMContentLoaded;
-// that function is self-correcting -- if the stored step doesn't match
-// the page you're actually on (say, you tapped the bottom nav instead
-// of "Next"), it finds whichever step DOES belong to this page and
-// shows that one instead of showing nothing or showing the wrong info.
+// Every page calls initAppTour() on its own DOMContentLoaded; that
+// function is self-correcting -- if the stored step doesn't match the
+// page you're actually on, it finds whichever step DOES belong here.
 
 const APP_TOUR_STEPS = [
-  { page: '/tools/workspace.html', highlightSelector: '#todayHero', title: 'Today', body: 'Welcome! This two-minute tour walks through every page and tab. Skip any time; replay it from Settings. The Dashboard opens on the day: your <strong>next job</strong> (tap the address for directions, the number to call, or <strong>Route today</strong> for every stop in Google Maps), <strong>Money Owed</strong> with a one-tap <strong>Mark paid</strong>, and the rest of today\u2019s schedule.', onShow: { fn: 'showDashView', args: ['today'] } },
-  { page: '/tools/workspace.html', highlightSelector: '#section-actionitems', title: 'Needs attention', body: 'Your inbox, open by default: new leads, online bookings, and work requests waiting on a reply, jobs due this week, clients overdue for a follow-up, unpaid invoices, and <strong>Ready to invoice</strong>: finished jobs nobody has billed yet. Each row has its own action (Reply, Add as job, Mark paid, Invoice). A group with nothing in it hides itself \u2014 a short list here means you are caught up.', onShow: { fn: 'showDashView', args: ['today'] } },
-  { page: '/tools/workspace.html', highlightSelector: '#dashPrimaryStrip', title: 'Quick actions', body: '<strong>New job</strong> opens Jobs with the form ready. <strong>Create invoice</strong> and <strong>Quick charge</strong> (take a card on the spot, no invoice) open Invoices. <strong>Find client</strong> searches everything. <strong>Calendar</strong> is the month view of your jobs. <strong>Log expense</strong> opens Finance with the receipt form ready.', onShow: { fn: 'showDashView', args: ['today'] } },
-  { page: '/tools/workspace.html', highlightSelector: '#section-snapshot', title: 'Insights', body: '<strong>Insights</strong> (the switch at the top of Home, or Analytics in the sidebar) is the business at a glance: <strong>Business Snapshot</strong> (revenue, expenses, net, tax set-aside, outstanding, overdue and mileage for any period), revenue by week, job status, top clients and vendors, lead sources and campaigns. The occasional checks stay on Today under <strong>Business</strong>: <strong>Compliance &amp; Documents</strong> (insurance and license dates, secure files) and the website <strong>Gallery Queue</strong>.', onShow: { fn: 'showDashView', args: ['insights'] } },
-  { page: '/tools/workspace.html', highlightSelector: '.th-desktop-sidebar, .th-bottom-nav', title: 'Getting around', body: 'On a phone or tablet this bar is how you get anywhere: <strong>Home, Jobs, Clients</strong>, and <strong>Money</strong> \u2014 Invoices and Finance under one tab, with a switch at the top to hop between them. The grid button at the top right of every page opens <strong>More</strong>: Route Planner, Runway, Contracts, Reviews, the Appliance Wiki, and Settings. On a computer the same list is the sidebar on the left. Stuck on a page? <strong>More \u2192 How this page works</strong> explains it (on a computer, the <strong>?</strong> in its header).' },
-  { page: '/tools/workspace.html', highlightSelector: '.th-sidebar-new, .th-bn-create', title: 'Create anything', body: 'The orange <strong>+</strong> starts anything, from any page: a job, an invoice, a quote, a quick charge, an expense (snap the receipt), income, a contact, a contract, or a review request. Faster still, type or say it at the top \u2014 \u201csink leak for Sarah tomorrow 2pm\u201d or \u201cinvoice Tom $85\u201d \u2014 and the right form opens filled in. <strong>Paste</strong> a client\u2019s whole text message and it pulls out who, what, and when. On a computer it is the <strong>New</strong> button at the top of the sidebar, or just press <strong>N</strong> and start typing.' },
-  { page: '/tools/workspace.html', highlightSelector: '.th-sidebar-search-trigger, .th-hdr-search', title: 'Search anywhere', body: 'The magnifier (or <strong>Ctrl+K</strong> / <strong>\u2318K</strong> on a computer) opens search from any page. Type a client\u2019s name to jump to their jobs, invoices, quotes, or contracts \u2014 or type what you want to do, like \u201cexpense\u201d, \u201cquote\u201d, or \u201croute\u201d, and it takes you straight there. You never have to remember which page something lives on.' },
-  { page: '/tools/job-tracker.html', highlightSelector: '.th-sheet-trigger[aria-controls="jobFormSection"], #addJobBtn', title: 'Jobs: add one the moment you book it', body: 'Tap <strong>Add a Job</strong> (or the orange <strong>+</strong> from anywhere): title, client, phone, address, date, priority, notes (the microphone dictates). The list is grouped Today, Tomorrow, Next 7 days. Each card has <strong>Done</strong>, <strong>Call</strong>, <strong>Directions</strong>, and <strong>&middot;&middot;&middot;</strong> for everything else (start it, photos, invoice, edit) \u2014 or long-press the card. Marking a job done offers to <strong>invoice it</strong> on the spot, then a pre-filled review request; a finished job nobody billed wears an orange <strong>To invoice</strong> pill until someone does.' },
-  { page: '/tools/job-tracker.html', highlightSelector: '#jobViewSwitch', title: 'One list, three views', body: 'Switch between List, Board, and Calendar with the buttons above the list \u2014 the choice is remembered on this device. <strong>List</strong> is a sortable table on a computer. <strong>Board</strong> puts Not Started, In Progress, and Done side by side. <strong>Calendar</strong> is a month view of every dated job (online bookings you have not added yet show in purple); tap a day for its detail and <strong>Add to Phone</strong> to export it.' },
-  { page: '/tools/job-tracker.html', highlightSelector: '[data-tab="contacts"]', title: 'Contacts and Notes', body: '<strong>Contacts</strong> is your address book for clients, suppliers, and vendors \u2014 tap <strong>History</strong> on anyone to see their past jobs and lifetime spend. <strong>Notes</strong> holds as many named notes as you want; they save as you type and sync to your other devices.', onShow: { fn: 'activateTab', args: ['contacts'] } },
-  { page: '/tools/clients.html', highlightSelector: '#clientDirSearch', title: 'Clients', body: 'Everyone you have worked for, found by name, phone, email, or street. Each row shows what they owe (red once it is overdue) and their next or last job; the phone button calls them. Tap a client for their whole history and one-tap New job or Invoice; long-press for Text, Email, or Directions. <strong>Owes you</strong> lists just the people with a balance. The <strong>Portal</strong> tab is the client-portal admin: accounts, invites, referral credit, work requests.', onShow: { fn: 'activateClientsTab', args: ['directory'] } },
-  { page: '/tools/invoice-generator.html', highlightSelector: '#invoiceSummary, #invoiceFilters', title: 'Invoices: who owes you', body: 'Money opens here. The numbers at the top are what you are owed, what is overdue (tap either to show just those invoices), and what you billed this month. Every invoice is a row, newest first \u2014 tap one to <strong>Mark Paid</strong> when a client pays cash or check (their portal hears about it too), resend it, or open the client or the job. Your quotes are underneath, with whether the client approved. Delete an entry you made by mistake and it is gone from every device.', onShow: { fn: 'activateGenTab', args: ['recent'] } },
-  { page: '/tools/invoice-generator.html', highlightSelector: 'button[onclick="generatePDF({ send: true })"]', title: 'New invoice', body: '<strong>New invoice</strong> (or the orange <strong>+</strong> from anywhere) is the form. Started from a job, <strong>From this job</strong> offers its logged hours, receipts, and mileage as lines (or the job\u2019s quote) \u2014 one tap. Fill in the job and its line items (Labor, Mileage, Part, or Other \u2014 the Qty column changes unit to match), untick Tax on anything exempt, then <strong>Download PDF</strong> for a branded copy or <strong>Send to Client</strong> to email it and post it to their portal, where they can pay by card. Either way it is saved to your log and flows into Finance.', onShow: { fn: 'activateGenTab', args: ['invoice'] } },
-  { page: '/tools/invoice-generator.html', highlightSelector: '[data-tab="quote"]', title: 'New quote', body: 'The same form, before the work starts. Download an estimate PDF (clearly labelled as an estimate, not a bill) or send it to the client. Once the job is done, <strong>Convert to Invoice</strong> copies everything across so nothing is typed twice.', onShow: { fn: 'activateGenTab', args: ['quote'] } },
-  { page: '/tools/invoice-generator.html', highlightSelector: '#posClientEmail', title: 'Quick charge', body: 'For a small job that needs no invoice. Type the client\u2019s email and an amount. If they have paid you before, their card is already on file and it is one tap; otherwise a card form appears (they type their name and sign on the screen to authorize it, and that card is saved for next time). Every charge lands in Finance as income, tagged so you can tell it apart from an invoice.', onShow: { fn: 'activateGenTab', args: ['pos'] } },
-  { page: '/tools/finance.html', highlightSelector: '[data-tab="expenses"]', title: 'Finance: Expenses', body: 'Log every receipt here (a photo of it is required) and tie it to a job so it counts against that job\u2019s profit. Mileage uses the rate Route Planner shares. This page reopens on whichever tab you used last.', onShow: { fn: 'activateTab', args: ['expenses'] } },
-  { page: '/tools/finance.html', highlightSelector: '[data-tab="income"]', title: 'Income', body: 'Every payment: invoices flow in automatically when they are paid, Quick charges arrive tagged, and anything else can be added by hand. Filter by period to see what actually came in.', onShow: { fn: 'activateTab', args: ['income'] } },
-  { page: '/tools/finance.html', highlightSelector: '[data-tab="profitability"]', title: 'Profitability', body: 'What each finished job actually made after its expenses and mileage \u2014 the honest answer to whether a kind of job is worth taking again. Tap a job to open its full detail page.', onShow: { fn: 'activateTab', args: ['profitability'] } },
-  { page: '/tools/finance.html', highlightSelector: '[data-tab="cost"]', title: 'Cost Lookup and Inventory', body: 'Quoting a job? Run the parts, labor, mileage, and sales tax here first \u2014 the tax rate is shared with the Invoice Generator, so change it in either place. <strong>Inventory</strong> tracks the parts you keep on the truck.', onShow: { fn: 'activateTab', args: ['cost'] } },
-  { page: '/tools/route-planner.html', highlightSelector: '.add-stop-btn', title: 'Routes', body: 'Three or four stops lined up? Add them (or <strong>Pull Today\u2019s Jobs</strong>), get the fastest order, and open the whole run in Google Maps. The cost analyzer estimates fuel for the trip. From the Dashboard, <strong>Route today</strong> does the common case in one tap.' },
-  { page: '/tools/contract-generator.html', highlightSelector: '.contract-tab', title: 'Contracts', body: 'Three kinds: a <strong>Per-Job Work Order</strong> for a one-off, a <strong>Short-Term Project</strong> agreement, and a <strong>Long-Term Service</strong> agreement for recurring work. Fill it in, both parties sign on screen, and a branded PDF is ready to send.' },
-  { page: '/tools/review-request.html', highlightSelector: '#sendLink', title: 'Review requests', body: 'Right after a job wraps up, send the client a text with a direct link to leave a Google or Yelp review; the tabs also hold QR codes you can show in person. The list underneath tracks who actually left one.' },
-  { page: '/tools/parts-reference.html', highlightSelector: '#prSearchInput', title: 'Appliance Wiki', body: 'Opens ready to type: a brand, an appliance type, or a model number. Each appliance card has its manual and parts-catalog links and the issues you have logged on real jobs. Pinned and recent ones sit right under the search box.' },
-  { page: '/tools/runway-dashboard.html', highlightSelector: '.tabs', title: 'Runway Dashboard', body: 'Your personal budget and the business\u2019s numbers side by side: <strong>Personal Budget</strong>, <strong>Business Dashboard</strong> (pull a month straight from Finance), <strong>Net Worth</strong>, and <strong>Runway Summary</strong> \u2014 whether the business covers your bills yet, and a safe-draw calculator. It reopens on the tab you used last.' },
-  { page: '/tools/settings.html', highlightSelector: 'a[href*="tour=1"]', title: 'Settings', body: 'Account, display density, light or dark theme, push notifications, password, and two-factor sign-in. Forget something from this tour? This button replays it. That is the whole app \u2014 tap Got it and get to work.' },
+  { page: '/tools/workspace.html', highlightSelector: '.th-sidebar-new, .th-bn-create', title: 'Add a job', body: 'Tap + to add a job. A client, an address and what\u2019s wrong is all it needs.' },
+  { page: '/tools/job-tracker.html', highlightSelector: '.status-select', title: 'Track it', body: 'Start the clock when you arrive. Jobs move from Booked to Working to Done.' },
+  { page: '/tools/job-tracker.html', highlightSelector: 'a[href*="invoice-generator.html?jobRef="]', title: 'Invoice from the job', body: 'When a job is done, tap Invoice. The client and work carry over.' },
+  { page: '/tools/invoice-generator.html', highlightSelector: 'button[onclick*="toggleInvoicePaid"]', title: 'Get paid', body: 'Charge a card on the spot, or mark cash, check or Venmo as paid.', onShow: { fn: 'activateGenTab', args: ['recent'] } },
+  { page: '/tools/workspace.html', highlightSelector: '#todayMoney', title: 'Money owed', body: 'Everything unpaid and overdue in one card. Tap Remind to nudge a client.' },
+  { page: '/tools/workspace.html', highlightSelector: '[onclick="openHelpModal()"]', title: 'Help lives here', body: 'Tap ? on any page. Each page also shows one short tip the first time you open it.' },
 ];
 
 const APP_TOUR_STEP_KEY = 'th_app_tour_step';
@@ -292,15 +255,15 @@ function renderAppTourStep(stepIndex) {
   const isLast = stepIndex === APP_TOUR_STEPS.length - 1;
   card.innerHTML =
     '<div class="onboarding-dots">' + APP_TOUR_STEPS.map((_, i) => '<span class="' + (i === stepIndex ? 'is-active' : '') + '"></span>').join('') + '</div>' +
-    '<div class="onboarding-count">' + (stepIndex + 1) + ' / ' + APP_TOUR_STEPS.length + '</div>' +
+    '<div class="onboarding-count">' + (stepIndex + 1) + ' OF ' + APP_TOUR_STEPS.length + '</div>' +
     '<div class="onboarding-title">' + step.title + '</div>' +
     '<div class="onboarding-body">' + step.body + '</div>' +
     '<div class="onboarding-actions">' +
       '<div class="onboarding-actions-left">' +
         (isFirst ? '' : '<button class="onboarding-back">Back</button>') +
-        '<button class="onboarding-skip">Skip</button>' +
+        '<button class="onboarding-skip">Skip tour</button>' +
       '</div>' +
-      '<button class="onboarding-next primary-btn">' + (isLast ? 'Got it' : 'Next') + '</button>' +
+      '<button class="onboarding-next primary-btn">' + (isLast ? 'Done' : 'Next') + '</button>' +
     '</div>';
   card.querySelector('.onboarding-skip').onclick = dismissAppTour;
   const backBtn = card.querySelector('.onboarding-back');

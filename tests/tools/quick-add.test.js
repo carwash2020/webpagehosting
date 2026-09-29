@@ -243,9 +243,10 @@ test('Finance: an expense from quick add opens the form filled in, at the receip
   assert.match(FIN, /if \(initialHash === 'expenses' && \['amount', 'vendor', 'desc', 'date'\]\.some\(k => qaParams\.get\(k\)\)\) \{[\s\S]*?fillIfBlank\('entryAmount', String\(amount\)\);[\s\S]*?fillIfBlank\('entryVendor', qaParams\.get\('vendor'\)\);[\s\S]*?fillIfBlank\('entryDesc', qaParams\.get\('desc'\)\);[\s\S]*?toggleFormSection\('expenseFormSection', true\)[\s\S]*?getElementById\('entryReceipt'\)/);
 });
 
-test('the tour and the help say it', () => {
-  const TOUR = read('tools-tour.js');
+test('the help says it', () => {
+  // First Impressions handoff (2026-09-29): the tour's "Add a job" step
+  // is now one short sentence about the + button, not a full rundown of
+  // quick-add's type/say/paste shortcuts -- that detail lives in help.
   const WS = read('workspace.html');
-  assert.match(TOUR, /Faster still, type or say it at the top/);
   assert.match(WS, /Or type \(or say, with the microphone\) what you need at the top of it/);
 });

@@ -257,10 +257,13 @@ test('a row that is one button can opt in to the long-press too (attachLongPress
   w.close();
 });
 
-test('the tour teaches the list first, then the three forms; help and search say the same', () => {
+test('the tour\'s one invoice-generator.html step ("Get paid") targets a real element; help and search cover the rest', () => {
+  // First Impressions handoff (2026-09-29): the 6-step tour dropped
+  // from 4 invoice-generator.html steps to 1 ("Get paid") -- the fuller
+  // walkthrough now lives only in the in-page help modal and search.
   const steps = [...TOUR.matchAll(/page: '\/tools\/invoice-generator\.html', highlightSelector: '([^']+)', title: '([^']+)'/g)].map(m => [m[1], m[2]]);
-  assert.deepEqual(steps.map(s => s[1]), ['Invoices: who owes you', 'New invoice', 'New quote', 'Quick charge']);
-  assert.equal(steps[0][0], '#invoiceSummary, #invoiceFilters');
+  assert.deepEqual(steps.map(s => s[1]), ['Get paid']);
+  assert.match(steps[0][0], /toggleInvoicePaid/);
   assert.match(INV, /<h3>How to Use: Invoices<\/h3>/);
   assert.match(INV, /<li><strong>Invoices tab<\/strong> &mdash; every invoice, newest first/);
   assert.match(read('tools-command-palette.js'), /\{ title: 'Invoices', meta: 'Who owes you, what is overdue, every invoice and quote', href: '\/tools\/invoice-generator\.html#recent'/);

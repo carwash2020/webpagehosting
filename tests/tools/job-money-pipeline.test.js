@@ -297,9 +297,12 @@ test('Client Detail and Finance: the client page lists each job with its money p
   assert.match(FIN, /if \(initialHash === 'income'\) \{[\s\S]*?incomeJobRefEl\.value = presetJobId;[\s\S]*?fillIfBlank\('incomeSource', presetJob\.client\);[\s\S]*?fillIfBlank\('incomeDesc', presetJob\.title\);[\s\S]*?toggleFormSection\('incomeFormSection', true\)/);
 });
 
-test('the tour and the help say it', () => {
-  assert.match(TOUR, /<strong>Ready to invoice<\/strong>: finished jobs nobody has billed yet/);
-  assert.match(TOUR, /Marking a job done offers to <strong>invoice it<\/strong> on the spot/);
+test('the help says it', () => {
+  // First Impressions handoff (2026-09-29): the tour's "Invoice from the
+  // job" step is now one short sentence ("When a job is done, tap
+  // Invoice. The client and work carry over.") -- the fuller
+  // Ready-to-invoice explanation lives in the help modals below.
+  assert.match(TOUR, /Invoice from the job/);
   assert.match(WS, /<strong>Ready to invoice<\/strong> &mdash; jobs finished in the last 60 days with no invoice and no payment logged/);
   assert.match(JT, /the <strong>To invoice<\/strong> filter lists them all/);
 });

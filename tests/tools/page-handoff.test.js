@@ -214,55 +214,17 @@ test('the loading line: fixed under the status bar, click-through, a still line 
   }
 });
 
-// ---- 3. the welcome card -------------------------------------------------
-
-function welcome({ email = 'steve@example.com', storage } = {}) {
-  const src = ['const WELCOME_SHOWN_KEY', 'let _welcomeFadeTimeouts', 'function showWelcomeOverlay', 'function renderWelcomeGreeting'].map((head) => {
-    const i = WORKSPACE.indexOf(head);
-    assert.ok(i > -1, head);
-    if (head.startsWith('function')) {
-      let depth = 0, j = WORKSPACE.indexOf('{', i);
-      for (; j < WORKSPACE.length; j++) { if (WORKSPACE[j] === '{') depth++; else if (WORKSPACE[j] === '}' && --depth === 0) break; }
-      return WORKSPACE.slice(i, j + 1);
-    }
-    return WORKSPACE.slice(i, WORKSPACE.indexOf(';', i) + 1);
-  }).join('\n');
-  const shown = [];
-  const overlay = { style: {}, classList: { add() {}, remove() {} } };
-  const ctx = {
-    sessionStorage: storage,
-    setTimeout: () => 0, clearTimeout: () => {},
-    getCurrentUserFirstName: () => 'Steve',
-    getCurrentUserEmail: () => ctx.__email,
-    getCurrentUserRole: () => null,
-    document: { getElementById: (id) => (id === 'welcomeOverlay' ? overlay : { set textContent(t) { shown.push(t); } }) },
-    __email: email,
-  };
-  vm.createContext(ctx);
-  vm.runInContext(src + '\nthis.run = renderWelcomeGreeting;', ctx);
-  return { ctx, shown };
-}
-function memoryStorage() {
-  const m = new Map();
-  return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)) };
-}
-
-test('"Welcome back" shows once per person per session, not on every return to Home', () => {
-  const storage = memoryStorage();
-  const { ctx, shown } = welcome({ storage });
-  ctx.run(); ctx.run(); ctx.run();
-  assert.deepEqual(shown, ['Welcome back, Steve']);
-  ctx.__email = 'connor@example.com';
-  ctx.run();
-  assert.equal(shown.length, 2, 'someone else signing in on the same tab is greeted');
-});
-
-test('with storage blocked it greets every time, as it did before', () => {
-  const blocked = { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } };
-  const { ctx, shown } = welcome({ storage: blocked });
-  ctx.run(); ctx.run();
-  assert.equal(shown.length, 2);
-});
+// ---- 3. the welcome card ---------------------------------------------------
+//
+// Removed by the First Impressions handoff (2026-09-29): #welcomeOverlay,
+// showWelcomeOverlay() and renderWelcomeGreeting()'s "Welcome back" card
+// blocked every tap on cold launch for up to ~1.7s (see the handoff's own
+// note on this in HANDOFF section 1) and duplicated Home's own greeting
+// card underneath. Replaced by the cold-launch logo-to-Home transition
+// (runColdLaunchTransition() in workspace.html), covered in
+// tests/tools/cold-launch-transition.test.js. Nothing here to pin any
+// more -- the two tests that used to live in this section asserted
+// exactly the overlay/greeting behavior that was deliberately removed.
 
 // ---- 4. skeletons on Home ------------------------------------------------
 
