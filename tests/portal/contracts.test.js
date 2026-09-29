@@ -119,7 +119,12 @@ test('portal contract status is read live, never written back into the local con
   const fnMatch = generatorHtml.match(/async function refreshPortalContractStatuses\(\) \{[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate refreshPortalContractStatuses()');
   assert.doesNotMatch(fnMatch[0], /saveContractLog/);
-  assert.match(fnMatch[0], /rest\/v1\/client_portal_contracts/);
+  // Goes through the internal_read_client_portal_contracts RPC, not the
+  // base table directly (2026-09-29 RLS hardening,
+  // docs/specialist-logs/security.md): the table's own SELECT policy is
+  // now client-only, and staff cross-client reads are gated inside this
+  // SECURITY DEFINER function instead.
+  assert.match(fnMatch[0], /rest\/v1\/rpc\/internal_read_client_portal_contracts/);
 });
 
 // ---- edge functions: permission and ownership boundaries ----

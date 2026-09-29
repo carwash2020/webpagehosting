@@ -60,7 +60,10 @@ const ALLOWED_DIRECT_INSERTS = {
 
 function walk(dir, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (['node_modules', '.git', 'tests', 'backups'].includes(entry.name)) continue;
+    // .claude holds harness-managed scratch worktrees/agent state, not
+    // repo source -- excluded so a session with background agents running
+    // doesn't produce phantom duplicate matches from their scratch copies.
+    if (['node_modules', '.git', '.claude', 'tests', 'backups'].includes(entry.name)) continue;
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) walk(full, out);
     else if (/\.(html|js|ts)$/.test(entry.name)) out.push(full);
