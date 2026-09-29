@@ -68,7 +68,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=be48268cda">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=5ee5e06e3e">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=95071838d9">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=0e885bb435" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -81,9 +81,9 @@
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=240c40d38d" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=7e8fb6ef3d" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
-<script src="/tools/tools-tour.js?v=5728732237" defer></script>
+<script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -683,14 +683,36 @@
     .today-hero { gap: 10px; margin-bottom: 14px; }
   }
 
-  .welcome-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999;
-    background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 16px; opacity: 1; transition: opacity .5s ease;
+  /* First Impressions handoff (2026-09-29): the welcome overlay (blocked
+     taps on cold launch until it finished fading) is replaced by the
+     cold-launch logo transition below -- see #thLaunchLogo and
+     runColdLaunchTransition(). Nothing here blocks a tap any more. */
+
+  /* Cold-launch logo-to-Home transition (README "1. Start-up"). A fixed
+     layer shows the brand logo at 128px, centred, then animates to the
+     Home header's 36px logo slot and fades Home in underneath. Runs
+     only once per cold launch (see runColdLaunchTransition()); any tap,
+     keypress or prefers-reduced-motion skips straight to the end state. */
+  #thLaunchLogo {
+    position: fixed; z-index: 9999; top: 360px; left: 50%; width: 128px; height: auto;
+    transform: translate(-50%, -50%); transition: none; pointer-events: none;
   }
-  .welcome-overlay.is-fading { opacity: 0; }
-  .welcome-overlay img { width: 72px; height: 72px; object-fit: contain; }
-  .welcome-overlay-text { font-family:var(--font-ui); font-size: 22px; color: var(--white); letter-spacing: .02em; }
+  #thLaunchLogo.is-animating {
+    transition: top .5s var(--th-ease, cubic-bezier(.2,.8,.2,1)), left .5s var(--th-ease, cubic-bezier(.2,.8,.2,1)),
+      width .5s var(--th-ease, cubic-bezier(.2,.8,.2,1)), transform .5s var(--th-ease, cubic-bezier(.2,.8,.2,1));
+  }
+  body.th-cold-launch .hub-header,
+  body.th-cold-launch #dashViewSwitch,
+  body.th-cold-launch .global-search-block,
+  body.th-cold-launch #greetingBanner,
+  body.th-cold-launch #todayCols { opacity: 0; }
+  body.th-cold-launch.th-launch-home-in .hub-header,
+  body.th-cold-launch.th-launch-home-in #dashViewSwitch,
+  body.th-cold-launch.th-launch-home-in .global-search-block,
+  body.th-cold-launch.th-launch-home-in #greetingBanner,
+  body.th-cold-launch.th-launch-home-in #todayCols {
+    opacity: 1; transition: opacity .4s var(--th-ease, cubic-bezier(.2,.8,.2,1));
+  }
 
   /* ==========================================================================
      Workspace app redesign v2 -- TODAY + INSIGHTS (2026-09-28)
@@ -744,10 +766,13 @@
     border-radius: var(--th-radius-xl); box-shadow: none;
   }
   body.th-tool-page[data-th-page="workspace"] .greeting-banner-text { flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
-  body.th-tool-page[data-th-page="workspace"] .greeting-banner-date {
-    order: -1; width: auto; margin: 0; font-family: var(--font-ui); font-size: 12px; font-weight: 500;
-    letter-spacing: 1.4px; text-transform: uppercase; color: var(--orange-light);
-  }
+  /* First Impressions handoff (2026-09-29): the header kicker
+     (thSetHeaderKicker(), above "Dashboard") already shows today's date
+     -- this second one on the hero card was a duplicate. Hidden rather
+     than removed from the DOM: renderTodayHero() still sets its text
+     (harmless), and the id/element stay for tests and any future
+     no-JS fallback. */
+  body.th-tool-page[data-th-page="workspace"] .greeting-banner-date { display: none; }
   body.th-tool-page[data-th-page="workspace"] .greeting-banner-greeting { margin: 0; font-family: var(--font-display); font-size: 34px; line-height: 1.02; letter-spacing: .4px; text-transform: uppercase; color: var(--text); }
   body.th-tool-page[data-th-page="workspace"] .today-summary-line { margin: 2px 0 0; font-size: 14.5px; line-height: 1.45; color: var(--text-dim); }
   body.th-tool-page[data-th-page="workspace"] .today-summary-line .skeleton-line { width: 240px; max-width: 70vw; }
@@ -1095,10 +1120,79 @@
 <a href="#todayHero" class="skip-link">Skip to main content</a>
 
 
-<div id="welcomeOverlay" class="welcome-overlay" style="display:none;">
-  <img src="/images/logo-signature-orange.webp?v=202608142300" alt="">
-  <div id="welcomeOverlayText" class="welcome-overlay-text"></div>
-</div>
+<!-- Cold-launch logo transition (First Impressions handoff, 2026-09-29):
+     a fixed layer, never blocking taps -- see runColdLaunchTransition(). -->
+<img id="thLaunchLogo" src="/images/logo-signature-orange.webp?v=202608142300" alt="" style="display:none;">
+<script>
+  // Cold-launch logo-to-Home transition (First Impressions handoff,
+  // 2026-09-29). Runs only when the app process is actually cold-started
+  // -- sessionStorage empty (nothing from this browsing session yet) and
+  // the Navigation Timing API says this load is a real "navigate", not a
+  // reload or a same-app view-transition hop from another tools page
+  // (which already has its own cross-document view-transition handling
+  // the "still the same app" feel -- this is only for the very first
+  // paint of a cold process). Any tap/keypress or prefers-reduced-motion
+  // skips straight to the end state, and it never blocks input: the
+  // layer is `pointer-events:none` throughout.
+  (function () {
+    // sessionStorage empty is the actual cold-launch signal (README): a
+    // page reached via an in-app view-transition hop, a reload, or a
+    // sign-in redirect that itself touched sessionStorage all leave a
+    // non-empty session behind, so this only ever fires once per real
+    // session -- and this same script marks the session as "opened"
+    // below the moment it runs, so a later return trip to Home in the
+    // same tab never re-triggers it either.
+    function isColdLaunch() {
+      try {
+        if (sessionStorage.length > 0) return false;
+      } catch (e) { return false; }
+      try {
+        const nav = performance.getEntriesByType('navigation')[0];
+        if (!nav || nav.type !== 'navigate') return false;
+      } catch (e) { return false; }
+      return true;
+    }
+    const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const coldLaunch = isColdLaunch();
+    try { sessionStorage.setItem('th_ws_opened', '1'); } catch (e) { /* private mode etc: harmless, just no cold-launch replay guard */ }
+    if (!coldLaunch) return;
+
+    document.body.classList.add('th-cold-launch');
+    const layer = document.getElementById('thLaunchLogo');
+    const headerLogo = document.getElementById('headerLogo');
+    layer.style.display = '';
+
+    let done = false;
+    function finish() {
+      if (done) return;
+      done = true;
+      layer.style.display = 'none';
+      document.body.classList.add('th-launch-home-in');
+      document.body.classList.remove('th-cold-launch');
+      window.removeEventListener('pointerdown', finish);
+      window.removeEventListener('keydown', finish);
+    }
+    // Any tap or keypress skips straight to the end state.
+    window.addEventListener('pointerdown', finish, { once: true });
+    window.addEventListener('keydown', finish, { once: true });
+
+    if (reducedMotion || !headerLogo) { finish(); return; }
+
+    requestAnimationFrame(() => {
+      if (done) return;
+      const rect = headerLogo.getBoundingClientRect();
+      setTimeout(() => {
+        if (done) return;
+        layer.classList.add('is-animating');
+        layer.style.top = (rect.top + rect.height / 2) + 'px';
+        layer.style.left = (rect.left + rect.width / 2) + 'px';
+        layer.style.width = rect.width + 'px';
+        document.body.classList.add('th-launch-home-in');
+      }, 280);
+      setTimeout(finish, 860);
+    });
+  })();
+</script>
 
 
 <div class="hub-header">
@@ -4148,47 +4242,11 @@
     on('businessInfoCard', '.compliance-card', '.compliance-card-top', [{ kind: 'edit', selector: 'button[onclick^="openBusinessEdit"]', label: 'Edit LLC & tax info' }]);
   }
 
-  let _welcomeFadeTimeouts = []; // tracked so the role-tag enhancement below can restart the hold/fade cycle cleanly
-
-  function showWelcomeOverlay(text) {
-    _welcomeFadeTimeouts.forEach(clearTimeout);
-    _welcomeFadeTimeouts = [];
-    const overlay = document.getElementById('welcomeOverlay');
-    overlay.classList.remove('is-fading');
-    document.getElementById('welcomeOverlayText').textContent = text;
-    overlay.style.display = 'flex';
-    // Shows immediately, holds briefly, then fades -- the CSS
-    // transition handles the actual fade; this just removes the
-    // overlay from layout afterward so it can't block clicks once
-    // it's invisible.
-    _welcomeFadeTimeouts.push(setTimeout(() => {
-      overlay.classList.add('is-fading');
-      _welcomeFadeTimeouts.push(setTimeout(() => { overlay.style.display = 'none'; }, 550));
-    }, 1200));
-  }
-
-  // Once per person per session, not on every return to the dashboard
-  // (2026-09-23).
-  // This card fills the screen and takes every tap for 1.7s, and it ran
-  // each time Home was tapped, after the page had already appeared, so
-  // going back to the dashboard looked like the app starting up again.
-  // sessionStorage lasts until the app or tab is closed: the first open
-  // of the day still gets it, and so does someone else signing in here.
-  const WELCOME_SHOWN_KEY = 'th_welcome_shown';
-
-  function renderWelcomeGreeting() {
-    if (typeof getCurrentUserFirstName !== 'function') return;
-    const name = getCurrentUserFirstName();
-    if (!name) return;
-    const who = (typeof getCurrentUserEmail === 'function' && getCurrentUserEmail()) || name;
-    try {
-      if (sessionStorage.getItem(WELCOME_SHOWN_KEY) === who) return;
-      sessionStorage.setItem(WELCOME_SHOWN_KEY, who);
-    } catch (e) { /* storage blocked: greet every time, as before */ }
-    const role = (typeof getCurrentUserRole === 'function') ? getCurrentUserRole() : null;
-    const text = (role && role.roleName) ? ('Welcome back, ' + name + ' \u2014 ' + role.roleName) : ('Welcome back, ' + name);
-    showWelcomeOverlay(text);
-  }
+  // First Impressions handoff (2026-09-29): the "Welcome back" overlay
+  // (showWelcomeOverlay/renderWelcomeGreeting, gated by
+  // sessionStorage.th_welcome_shown) is removed -- it blocked every tap
+  // for up to ~1.7s on cold launch and duplicated Home's own greeting
+  // card. See runColdLaunchTransition() for what replaced it.
 
   // Added 2026-08-27, alongside the new Employee role and the 5 pages
   // now gated behind canManageBusinessFinances() (Finance, Runway
@@ -4420,7 +4478,6 @@
         refreshRelationalInvoicesCache().then(renderDashboard).catch(renderDashboard);
       }
       renderBusinessFinanceTileVisibility();
-      renderWelcomeGreeting();
       renderSnapshotLastUpdated();
       renderMfaNagBanner();
       window.addEventListener('th-clock-change', () => { renderTodayHero(); renderWeekCard(); });

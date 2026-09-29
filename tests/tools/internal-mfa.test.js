@@ -134,7 +134,11 @@ test('login.html never persists a session before checking MFA -- signIn is calle
 test('login.html challenges for an already-enrolled factor before ever redirecting', () => {
   assert.match(LOGIN, /const factor = await mfaListVerifiedTotpFactor\(pendingSession\.access_token\);/);
   const factorCheckIdx = LOGIN.indexOf('const factor = await mfaListVerifiedTotpFactor(');
-  const redirectIdx = LOGIN.indexOf('persistSession(pendingSession, pendingRememberMe);\n    redirectAfterLogin();');
+  // First Impressions handoff (2026-09-29): the literal redirect was
+  // replaced by finishSignInFlow(), which offers Face ID once per
+  // device/account and then calls the same redirectAfterLogin() --
+  // still gated on the factor check exactly as before.
+  const redirectIdx = LOGIN.indexOf('persistSession(pendingSession, pendingRememberMe);\n    finishSignInFlow();');
   assert.ok(redirectIdx > factorCheckIdx, 'the unconditional success redirect must come after the factor check, not before it');
 });
 
@@ -149,7 +153,10 @@ test('login.html shows a real challenge view and verifies via Supabase before pe
   const submitStart = LOGIN.indexOf("document.getElementById('mfaChallengeSubmitBtn').addEventListener");
   const cancelStart = LOGIN.indexOf("document.getElementById('mfaChallengeCancelLink').addEventListener");
   const body = LOGIN.slice(submitStart, cancelStart);
-  assert.match(body, /if \(!result\.ok\) \{ errorEl\.textContent = result\.error; return; \}/);
+  // First Impressions handoff (2026-09-29): a wrong code also shakes the
+  // new 6-box grid (shakeCodeBoxes()) -- purely visual, added alongside
+  // the same error-then-return the test already pinned.
+  assert.match(body, /if \(!result\.ok\) \{ errorEl\.textContent = result\.error; shakeCodeBoxes\(\); return; \}/);
   assert.match(body, /persistSession\(\{/);
 });
 

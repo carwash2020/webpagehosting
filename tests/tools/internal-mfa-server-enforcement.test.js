@@ -315,5 +315,8 @@ test('login.html: arriving from a refused session explains why, and a normal vis
   const sent = loadLogin(fakeSupabase(), 'https://www.triplehenterprisesllc.biz/tools/login.html?reason=mfa&return=%2Ftools%2Fjobs.html');
   assert.equal(sent.document.querySelector('.login-sub').textContent, 'For your security, sign in again with your authenticator code.');
   const normal = loadLogin(fakeSupabase());
-  assert.equal(normal.document.querySelector('.login-sub').textContent, 'Sign in to continue.');
+  // First Impressions handoff (2026-09-29): step-1 subtitle copy changed
+  // from "Sign in to continue." to the app's one-line pitch -- a
+  // deliberate copy change (README "Step 1 - Sign in"), not a regression.
+  assert.equal(normal.document.querySelector('.login-sub').textContent, 'Jobs, invoices and money, all in one place.');
 });

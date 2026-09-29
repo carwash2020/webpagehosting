@@ -215,7 +215,9 @@ test('line rows escape their values and take decimal quantities (hours, miles)',
   assert.match(q, /step="any"/);
 });
 
-test('the tour and help mention it', () => {
-  assert.match(TOUR, /<strong>From this job<\/strong>/);
+test('help mentions it', () => {
+  // First Impressions handoff (2026-09-29): the 6-step tour is now
+  // terse (one short sentence per step) and no longer mirrors every
+  // detail the in-page help modal covers -- see tools/tools-tour.js.
   assert.match(INV, /<strong>From this job<\/strong>/);
 });

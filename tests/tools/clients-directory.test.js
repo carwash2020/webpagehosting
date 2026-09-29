@@ -245,8 +245,8 @@ test('everyone sees Clients in the nav now; the palette and Create sheet point a
   assert.match(palette, /href: '\/tools\/client-detail\.html\?id=' \+ encodeURIComponent\(c\.id\)/);
   assert.match(palette, /href: '\/tools\/job-detail\.html\?id=' \+ encodeURIComponent\(j\.id\)/, 'job results open the job itself');
   assert.match(palette, /href: '\/tools\/clients\.html#portal', [^\n]*perm: 'canManageInvoices'/);
-  const tour = read('tools-tour.js');
-  assert.match(tour, /\{ page: '\/tools\/clients\.html', highlightSelector: '#clientDirSearch', title: 'Clients'/);
+  // First Impressions handoff (2026-09-29): the 6-step tour no longer
+  // visits every page (clients.html included) -- see tools/tools-tour.js.
   assert.match(CLIENTS, /id="clientDirSearch"/);
 });
 
