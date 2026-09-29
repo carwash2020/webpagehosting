@@ -81,7 +81,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="styles.css?v=09af5fd852">
+<link rel="stylesheet" href="styles.css?v=3f425f2175">
 <!-- Improvement roadmap (2026-09-09), tier 1: the hero background is a
      CSS background-image (see .hero in styles.css), so the browser
      doesn't discover it until CSS is parsed -- likely this page's LCP
@@ -451,7 +451,7 @@
       <div class="hero-copy">
         <h1><span class="hero-h1-line"><span>HANDYMAN AND</span></span> <span class="hero-h1-line"><span>APPLIANCE REPAIR,</span></span> <span class="hero-h1-line"><span>DONE RIGHT.</span></span></h1>
         <p class="lede">Serving St. George and Southern Utah, Triple H Enterprises fixes what's broken &mdash; washers, dryers, plumbing, and the jobs that keep getting put off. Owner on the call. Honest price before we start.</p>
-        <p class="open-status hero-open-status" id="openStatus" hidden><span class="dot"></span><span id="openStatusText" class="open-status-text"></span></p>
+        <p class="open-status hero-open-status" id="openStatus" hidden><span class="dot"></span><span id="openStatusText" class="open-status-text"></span><span class="hero-open-owner"> &middot; owner on the call</span><span class="hero-open-today" id="openStatusToday"></span></p>
         <div class="hero-ctas">
           <a href="/booking.html" class="btn orange">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -470,6 +470,7 @@
       </div>
       <div class="hero-aside">
         <form class="hero-lead-form" id="heroLeadForm" method="POST" aria-label="Send job details">
+          <p class="hero-lead-label">Free estimate</p>
           <p class="hero-lead-kicker">Or send the details &mdash; <strong>we'll call you back.</strong></p>
           <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off">
           <input type="hidden" id="heroSource" name="source" value="Homepage estimate form">
@@ -555,6 +556,9 @@
         <img class="logo-img" src="/images/logo-signature.webp?v=202608010300" srcset="/images/logo-signature-176.webp?v=202609251200 176w, /images/logo-signature-288.webp?v=202609251200 288w, /images/logo-signature.webp?v=202608010300 550w" sizes="(max-width: 860px) 96px, 440px" alt="Triple H Enterprises badge" width="550" height="506">
       </div>
     </div>
+      <!-- Prototype port (2026-09-29): a quiet scroll cue under the hero,
+         gone as soon as the page moves. Decorative only. -->
+    <div class="hero-scroll-cue" aria-hidden="true">Scroll<span></span></div>
   </section>
 
   <nav class="page-jump" aria-label="On this page">
@@ -735,6 +739,14 @@
             </a>
           </div>
         </div>
+        <!-- Prototype port (2026-09-29): the answer side of the two-panel
+             layout says what to do before anything is picked, and steps
+             aside the moment triage.js shows a real answer. -->
+        <div class="triage-placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 1 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.8 2.8-2.1-2.1z"/></svg>
+          <p class="triage-placeholder-title">Pick the symptom.</p>
+          <p>You'll get what it usually means, in plain language.</p>
+        </div>
       </div>
     </div>
   </section>
@@ -865,6 +877,14 @@
         <h2 id="revealHeading">Worn floor out. Real finished work in.</h2>
         <p>Drag to compare. Real photos from real jobs, not a stock photo.</p>
       </div>
+      <!-- Prototype port (2026-09-29): one-tap views of the comparison.
+           They move the same range input a drag would, so the frame, the
+           divider and the slider below never disagree. -->
+      <div class="reveal-views" role="group" aria-label="Show the comparison as">
+        <button type="button" class="reveal-view" data-view="1">Before</button>
+        <button type="button" class="reveal-view" data-view="0.5">Split</button>
+        <button type="button" class="reveal-view" data-view="0">After</button>
+      </div>
 
       <div class="reveal-frame" id="revealFrame">
         <div class="reveal-img reveal-before">
@@ -873,9 +893,12 @@
         <div class="reveal-img reveal-after">
           <img src="/images/gallery/flooring-finished-detail.webp" alt="After: real finished plank flooring from the same job" width="640" height="853" loading="lazy">
         </div>
-        <div class="reveal-divider" aria-hidden="true"></div>
+        <div class="reveal-divider" aria-hidden="true">
+          <span class="reveal-handle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l-6 6 6 6"/><path d="M15 6l6 6-6 6"/></svg></span>
+        </div>
         <span class="reveal-tag reveal-tag-before">Before</span>
         <span class="reveal-tag reveal-tag-after">After</span>
+        <span class="reveal-hint" aria-hidden="true">Drag the handle</span>
       </div>
 
       <input type="range" id="revealScrub" class="reveal-scrub" min="0" max="100" value="50" step="1" aria-label="Drag to compare a worn floor against real finished flooring work">
@@ -894,89 +917,177 @@
             <h2 id="teardownHeading">Most of it still works</h2>
             <p>When an appliance quits, it is usually one part, not the whole machine. Knowing which part is the job. Replacing the whole unit is what happens when nobody looks.</p>
             <p class="td-hint">Drag the slider to take it apart and put it back together. <b>That is the job.</b></p>
+
+            <!-- Tap a part (prototype port, 2026-09-29): each chip spotlights
+                 one part in the drawing and opens the machine up to show
+                 it. The four parts behind a common washer symptom also show
+                 what that symptom usually means, straight from triage.js's
+                 own data, with a link that opens it in the triage tool. -->
+            <p class="td-parts-label" id="tdPartsLabel">Tap a part</p>
+            <div class="td-chips" role="group" aria-labelledby="tdPartsLabel">
+              <button type="button" class="td-chip" data-part="panel" aria-pressed="false">Control panel</button>
+              <button type="button" class="td-chip" data-part="board" aria-pressed="false">Control board</button>
+              <button type="button" class="td-chip" data-part="door" data-sym="3" aria-pressed="false">Door &amp; latch</button>
+              <button type="button" class="td-chip" data-part="seal" data-sym="2" aria-pressed="false">Door seal</button>
+              <button type="button" class="td-chip" data-part="drum" aria-pressed="false">Drum</button>
+              <button type="button" class="td-chip" data-part="belt" data-sym="1" aria-pressed="false">Drive belt</button>
+              <button type="button" class="td-chip" data-part="motor" aria-pressed="false">Motor</button>
+              <button type="button" class="td-chip" data-part="element" aria-pressed="false">Heating element</button>
+              <button type="button" class="td-chip" data-part="pump" data-sym="0" aria-pressed="false">Drain pump</button>
+            </div>
+            <div class="td-sym" id="tdSym" hidden>
+              <p class="td-sym-q">Washer &middot; &ldquo;<span id="tdSymQ"></span>&rdquo;</p>
+              <p class="td-sym-v" id="tdSymV"></p>
+              <button type="button" class="td-sym-link" id="tdSymLink">Read it in the triage &rarr;</button>
+            </div>
           </div>
 
           <div class="teardown-figure">
-            <svg viewBox="0 0 760 620" role="img" aria-label="Exploded diagram of a washing machine assembling itself">
+            <!-- The machine (prototype port, 2026-09-29): a shaded front-load
+                 washer, cabinet, fascia with its display and knob, chrome
+                 door over the glass. Each part is a .td-part with its own
+                 --dx/--dy, so the same --p that always drove this drawing
+                 still does: 1 is whole, 0 is fully apart. .td-inside marks
+                 the parts that live inside the cabinet; they only show once
+                 the machine is opened up. Gradients read the palette tokens,
+                 so the drawing follows the theme like the rest of the page. -->
+            <svg viewBox="0 0 760 660" role="img" aria-label="Exploded diagram of a washing machine assembling itself">
+              <defs>
+                <linearGradient id="thCab" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--bg-panel-3);"/><stop offset="1" style="stop-color:var(--bg-panel);"/></linearGradient>
+                <linearGradient id="thSheen" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffffff" stop-opacity=".07"/><stop offset=".35" stop-color="#ffffff" stop-opacity="0"/><stop offset=".8" stop-color="#ffffff" stop-opacity=".03"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></linearGradient>
+                <linearGradient id="thSide" x1="0" y1="0" x2="1" y2="0"><stop offset="0" style="stop-color:var(--bg-panel-2);"/><stop offset="1" style="stop-color:var(--bg);"/></linearGradient>
+                <linearGradient id="thPanel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--bg-panel-3);"/><stop offset="1" style="stop-color:var(--bg-panel-2);"/></linearGradient>
+                <linearGradient id="thChrome" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--steel);"/><stop offset=".45" style="stop-color:var(--text-dim);"/><stop offset=".6" style="stop-color:var(--steel);"/><stop offset="1" style="stop-color:var(--bg-panel-3);"/></linearGradient>
+                <radialGradient id="thGlass" cx=".42" cy=".38" r=".7"><stop offset="0" style="stop-color:var(--blue); stop-opacity:.16;"/><stop offset=".7" stop-color="#0a0a0a" stop-opacity=".9"/><stop offset="1" stop-color="#050505" stop-opacity=".96"/></radialGradient>
+                <radialGradient id="thSteel" cx=".4" cy=".35" r=".75"><stop offset="0" style="stop-color:var(--steel);"/><stop offset=".55" style="stop-color:var(--text-dim);"/><stop offset="1" style="stop-color:var(--bg-panel-3);"/></radialGradient>
+                <linearGradient id="thMotor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--text-dim);"/><stop offset=".5" style="stop-color:var(--bg-panel-3);"/><stop offset="1" style="stop-color:var(--text-dim);"/></linearGradient>
+                <radialGradient id="thShadow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#000" stop-opacity=".6"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+                <pattern id="thPerf" width="9" height="9" patternUnits="userSpaceOnUse"><circle cx="4.5" cy="4.5" r="1.5" fill="#000" fill-opacity=".45"/></pattern>
+              </defs>
+
+              <ellipse cx="392" cy="560" rx="190" ry="16" fill="url(#thShadow)"/>
 
               <!-- cabinet: the anchor everything returns into -->
-              <g class="td-part">
-                <rect class="td-fill td-line" x="250" y="140" width="260" height="400" rx="14"/>
-                <rect class="td-line-soft" x="268" y="228" width="224" height="292" rx="10"/>
-                <rect class="td-fill-2 td-line-soft" x="268" y="540" width="28" height="16" rx="3"/>
-                <rect class="td-fill-2 td-line-soft" x="464" y="540" width="28" height="16" rx="3"/>
+              <g class="td-part td-cabinet">
+                <path d="M510 150 L530 164 L530 548 L510 540 Z" fill="url(#thSide)"/>
+                <rect x="250" y="140" width="260" height="400" rx="14" fill="url(#thCab)" stroke="rgba(255,255,255,.14)" stroke-width="1.2"/>
+                <rect x="250" y="140" width="260" height="400" rx="14" fill="url(#thSheen)"/>
+                <line x1="258" y1="210" x2="502" y2="210" stroke="rgba(0,0,0,.35)" stroke-width="1.2"/>
+                <rect x="262" y="506" width="236" height="26" rx="5" fill="rgba(0,0,0,.22)"/>
+                <rect x="272" y="511" width="40" height="16" rx="4" fill="none" stroke="rgba(255,255,255,.16)"/>
+                <line x1="282" y1="519" x2="302" y2="519" stroke="rgba(255,255,255,.2)" stroke-width="2" stroke-linecap="round"/>
+                <rect x="266" y="540" width="26" height="14" rx="3" style="fill:var(--bg-panel-3);"/>
+                <rect x="468" y="540" width="26" height="14" rx="3" style="fill:var(--bg-panel-3);"/>
               </g>
 
-              <!-- drive belt: rides with the drum, so it reads as a band
-                   around a pulley rather than a shape floating on its own -->
-              <g class="td-part td-inner" style="--dx:-250; --dy:-10; --rot:-16;">
-                <circle class="td-belt" cx="380" cy="360" r="78"/>
+              <!-- control board, hidden behind the fascia when whole -->
+              <g class="td-part" data-part="board" style="--dx:-250; --dy:-150;">
+                <g class="td-inside">
+                  <rect x="320" y="188" width="120" height="46" rx="4" style="fill:var(--bg-panel-2);" stroke="rgba(255,128,0,.45)" stroke-width="1.2"/>
+                  <path d="M330 200 h26 v14 h18 M330 224 h44 v-8 h22 M400 198 h28 M404 226 h26" fill="none" stroke="rgba(255,128,0,.55)" stroke-width="1.2"/>
+                  <rect x="382" y="200" width="18" height="18" rx="2" fill="#0a0a0a"/>
+                  <rect x="410" y="206" width="12" height="10" rx="1.5" fill="#0a0a0a"/>
+                  <circle cx="344" cy="212" r="4" fill="none" style="stroke:var(--steel);" stroke-width="1"/>
+                </g>
+              <g class="td-callout"><text x="380" y="254" text-anchor="middle">Control board</text></g>
               </g>
 
-              <!-- heating element, with terminal posts so it reads as a
-                   real part instead of a loose squiggle when it is apart -->
-              <g class="td-part td-inner" style="--dx:70; --dy:150;">
-                <path class="td-accent" d="M330 452 q 12 -20 24 0 q 12 20 24 0 q 12 -20 24 0 q 12 20 24 0"/>
-                <line class="td-line-soft" x1="330" y1="452" x2="316" y2="452"/>
-                <line class="td-line-soft" x1="426" y1="452" x2="440" y2="452"/>
-                <circle class="td-fill-2 td-line-soft" cx="312" cy="452" r="5"/>
-                <circle class="td-fill-2 td-line-soft" cx="444" cy="452" r="5"/>
+              <!-- drive belt -->
+              <g class="td-part" data-part="belt" style="--dx:-250; --dy:60;">
+                <g class="td-inside td-spin" style="--rot:-90;">
+                  <path d="M340 360 A40 40 0 0 1 420 360 L390 490 A10 10 0 0 1 370 490 Z" fill="none" stroke="#0d0d0d" stroke-width="7" stroke-linejoin="round"/>
+                  <path d="M340 360 A40 40 0 0 1 420 360 L390 490 A10 10 0 0 1 370 490 Z" fill="none" style="stroke:var(--steel);" stroke-opacity=".35" stroke-width="1.2" stroke-dasharray="2 4"/>
+                </g>
+              <g class="td-callout"><text x="380" y="470" text-anchor="middle">Drive belt</text></g>
               </g>
 
               <!-- motor -->
-              <g class="td-part td-inner" style="--dx:-230; --dy:40; --rot:14;">
-                <circle class="td-fill-2 td-line" cx="380" cy="490" r="30"/>
-                <circle class="td-line-soft" cx="380" cy="490" r="13"/>
-                <line class="td-line-soft" x1="380" y1="460" x2="380" y2="446"/>
+              <g class="td-part" data-part="motor" style="--dx:-250; --dy:90;">
+                <g class="td-inside td-spin" style="--rot:10;">
+                  <rect x="336" y="472" width="88" height="38" rx="8" fill="url(#thMotor)" stroke="rgba(255,255,255,.18)"/>
+                  <path d="M350 476 v30 M360 476 v30 M370 476 v30 M380 476 v30 M390 476 v30 M400 476 v30 M410 476 v30" stroke="rgba(0,0,0,.35)" stroke-width="1.4"/>
+                  <rect x="424" y="480" width="8" height="22" rx="2" style="fill:var(--bg-panel-3);"/>
+                  <line x1="432" y1="491" x2="446" y2="491" style="stroke:var(--steel);" stroke-width="3" stroke-linecap="round"/>
+                </g>
+              <g class="td-callout"><text x="380" y="534" text-anchor="middle">Motor</text></g>
               </g>
 
               <!-- drum -->
-              <g class="td-part td-inner" style="--dx:-250; --dy:-10; --rot:-16;">
-                <circle class="td-fill-2 td-line" cx="380" cy="360" r="70"/>
-                <circle class="td-line-soft" cx="380" cy="360" r="52"/>
-                <path class="td-line-soft" d="M380 308 v18 M380 394 v18 M328 360 h18 M414 360 h18"/>
-                <path class="td-line-soft" d="M343 323 l13 13 M417 397 l13 13 M417 323 l-13 13 M343 397 l-13 13"/>
+              <g class="td-part" data-part="drum" style="--dx:-250; --dy:-50;">
+                <g class="td-inside td-spin" style="--rot:-40;">
+                  <circle cx="380" cy="360" r="72" fill="url(#thSteel)" stroke="rgba(255,255,255,.25)"/>
+                  <circle cx="380" cy="360" r="63" fill="url(#thPerf)"/>
+                  <circle cx="380" cy="360" r="63" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="1.5"/>
+                  <rect x="374" y="298" width="12" height="26" rx="5" style="fill:var(--steel);" stroke="rgba(0,0,0,.3)"/>
+                  <rect x="374" y="298" width="12" height="26" rx="5" style="fill:var(--steel);" stroke="rgba(0,0,0,.3)" transform="rotate(120 380 360)"/>
+                  <rect x="374" y="298" width="12" height="26" rx="5" style="fill:var(--steel);" stroke="rgba(0,0,0,.3)" transform="rotate(240 380 360)"/>
+                  <circle cx="380" cy="360" r="10" style="fill:var(--bg-panel-3);" stroke="rgba(255,255,255,.3)"/>
+                </g>
+              <g class="td-callout"><text x="380" y="452" text-anchor="middle">Drum</text></g>
               </g>
 
-              <!-- door -->
-              <g class="td-part" style="--dx:230; --dy:-30; --rot:10;">
-                <circle class="td-fill td-line" cx="380" cy="360" r="104"/>
-                <circle class="td-accent" cx="380" cy="360" r="92"/>
-                <circle class="td-line-soft" cx="380" cy="360" r="80"/>
-                <path class="td-line" d="M484 344 h16 a8 8 0 0 1 8 8 v16 a8 8 0 0 1 -8 8 h-16"/>
+              <!-- heating element -->
+              <g class="td-part" data-part="element" style="--dx:0; --dy:150;">
+                <g class="td-inside">
+                  <path d="M330 452 q 12 -20 24 0 q 12 20 24 0 q 12 -20 24 0 q 12 20 24 0" fill="none" stroke="#ff8000" stroke-width="4" stroke-linecap="round"/>
+                  <path d="M330 452 q 12 -20 24 0 q 12 20 24 0 q 12 -20 24 0 q 12 20 24 0" fill="none" stroke="#ffb347" stroke-opacity=".6" stroke-width="1.2"/>
+                  <rect x="300" y="444" width="22" height="16" rx="3" style="fill:var(--bg-panel-3);" stroke="rgba(255,255,255,.2)"/>
+                  <rect x="434" y="444" width="22" height="16" rx="3" style="fill:var(--bg-panel-3);" stroke="rgba(255,255,255,.2)"/>
+                  <circle cx="311" cy="452" r="3" style="fill:var(--steel);"/>
+                  <circle cx="445" cy="452" r="3" style="fill:var(--steel);"/>
+                </g>
+              <g class="td-callout"><text x="380" y="492" text-anchor="middle">Heating element</text></g>
               </g>
 
-              <!-- control panel -->
-              <g class="td-part" style="--dx:0; --dy:-112;">
-                <rect class="td-fill td-line" x="250" y="140" width="260" height="64" rx="12"/>
-                <circle class="td-accent" cx="290" cy="172" r="13"/>
-                <circle class="td-line-soft" cx="330" cy="172" r="9"/>
-                <rect class="td-line-soft" x="420" y="162" width="72" height="20" rx="4"/>
+              <!-- drain pump and filter -->
+              <g class="td-part" data-part="pump" style="--dx:-70; --dy:90;">
+                <g class="td-inside">
+                  <path d="M312 504 h18 v-14" fill="none" style="stroke:var(--text-dim);" stroke-width="6" stroke-linecap="round"/>
+                  <circle cx="296" cy="512" r="17" fill="url(#thSteel)" stroke="rgba(255,255,255,.25)"/>
+                  <circle cx="296" cy="512" r="9" style="fill:var(--bg-panel-3);" stroke="rgba(255,255,255,.3)"/>
+                  <line x1="290" y1="512" x2="302" y2="512" style="stroke:var(--steel);" stroke-width="2" stroke-linecap="round"/>
+                </g>
+              <g class="td-callout"><text x="296" y="552" text-anchor="middle">Drain pump</text></g>
               </g>
 
-              <!-- callouts: they belong to the apart state and fade as it closes -->
-              <g class="td-callout">
-                <circle cx="500" cy="60" r="3"/>
-                <line x1="504" y1="60" x2="536" y2="60"/>
-                <text x="542" y="65">Control board</text>
-
-                <circle cx="610" cy="228" r="3"/>
-                <line x1="610" y1="225" x2="610" y2="198"/>
-                <text x="610" y="190" text-anchor="middle">Door seal</text>
-
-                <circle cx="130" cy="420" r="3"/>
-                <line x1="130" y1="423" x2="130" y2="450"/>
-                <text x="130" y="470" text-anchor="middle">Drum</text>
-
-                <circle cx="150" cy="560" r="3"/>
-                <line x1="150" y1="563" x2="150" y2="580"/>
-                <text x="150" y="600" text-anchor="middle">Motor</text>
-
-                <circle cx="514" cy="602" r="3"/>
-                <line x1="518" y1="602" x2="546" y2="602"/>
-                <text x="552" y="607">Heating element</text>
+              <!-- fascia: the control panel, with its display and knob -->
+              <g class="td-part" data-part="panel" style="--dx:0; --dy:-112;">
+                <rect x="250" y="140" width="260" height="68" rx="14" fill="url(#thPanel)" stroke="rgba(255,255,255,.16)" stroke-width="1.2"/>
+                <rect x="264" y="152" width="80" height="42" rx="6" fill="rgba(0,0,0,.25)" stroke="rgba(255,255,255,.1)"/>
+                <rect x="279" y="180" width="50" height="6" rx="3" fill="rgba(0,0,0,.5)"/>
+                <rect x="354" y="156" width="66" height="32" rx="5" fill="#140900" stroke="rgba(255,128,0,.3)"/>
+                <text class="td-display" x="387" y="179" text-anchor="middle">1:04</text>
+                <circle cx="436" cy="164" r="4" style="fill:var(--text-dim);"/>
+                <circle cx="436" cy="180" r="4" fill="#ff8000"/>
+                <circle cx="476" cy="172" r="24" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="1" stroke-dasharray="1.5 5.3"/>
+                <circle cx="476" cy="172" r="18" fill="url(#thChrome)" stroke="rgba(0,0,0,.4)"/>
+                <line x1="476" y1="172" x2="476" y2="158" stroke="#161005" stroke-width="3" stroke-linecap="round"/>
+              <g class="td-callout"><text x="520" y="178" text-anchor="start">Control panel</text></g>
               </g>
 
+              <!-- door seal -->
+              <g class="td-part" data-part="seal" style="--dx:240; --dy:170;">
+                <circle cx="380" cy="360" r="88" fill="none" stroke="#141414" stroke-width="16"/>
+                <circle cx="380" cy="360" r="82" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="1.2"/>
+                <circle cx="380" cy="360" r="94" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="1.2"/>
+              <g class="td-callout"><text x="380" y="476" text-anchor="middle">Door seal</text></g>
+              </g>
+
+              <!-- door and latch -->
+              <g class="td-part" data-part="door" style="--dx:240; --dy:-30;">
+                <g class="td-spin" style="--rot:10;">
+                  <circle cx="380" cy="360" r="104" fill="none" stroke="url(#thChrome)" stroke-width="14"/>
+                  <circle cx="380" cy="360" r="96" fill="url(#thGlass)"/>
+                  <circle cx="380" cy="360" r="70" fill="url(#thPerf)" opacity=".5"/>
+                  <circle cx="380" cy="360" r="70" fill="none" stroke="rgba(255,255,255,.07)"/>
+                  <circle cx="380" cy="360" r="96" fill="none" stroke="#ff8000" stroke-opacity=".55" stroke-width="1.4"/>
+                  <path d="M314 322 A 78 78 0 0 1 392 284" fill="none" stroke="#ffffff" stroke-opacity=".32" stroke-width="5" stroke-linecap="round"/>
+                  <path d="M436 420 A 78 78 0 0 1 410 434" fill="none" stroke="#ffffff" stroke-opacity=".14" stroke-width="3" stroke-linecap="round"/>
+                  <rect x="478" y="336" width="18" height="48" rx="7" fill="url(#thChrome)" stroke="rgba(0,0,0,.4)"/>
+                  <rect x="466" y="355" width="14" height="10" rx="2" style="fill:var(--text-dim);"/>
+                </g>
+              <g class="td-callout"><text x="380" y="236" text-anchor="middle">Door &amp; latch</text></g>
+              </g>
             </svg>
 
             <div class="td-scrub">
@@ -987,6 +1098,10 @@
               </div>
               <input type="range" id="tdScrub" min="0" max="100" value="100" step="1"
                      aria-label="Take the machine apart and put it back together">
+              <div class="td-ticks" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+              <div class="td-actions">
+                <button type="button" class="td-play" id="tdPlay">Take it apart</button>
+              </div>
             </div>
           </div>
 
@@ -3014,11 +3129,35 @@
 
     if (stage && scrub) {
       const label = (p) => p < 0.08 ? 'Apart' : (p > 0.92 ? 'Whole' : 'Rebuilding');
+      const play = document.getElementById('tdPlay');
+      // Set by any real use of the machine (a drag, a part chip, the play
+      // control), so the once-only demo below never starts, or keeps
+      // running, underneath someone who is already using it.
+      let touched = false;
 
       function apply(p) {
         stage.style.setProperty('--p', p.toFixed(4));
         if (state) state.textContent = label(p);
         scrub.setAttribute('aria-valuetext', label(p));
+        if (play) play.textContent = p > 0.5 ? 'Take it apart' : 'Put it back together';
+      }
+
+      // Eases the machine to a target state for the play control and the
+      // part chips. Reduced motion jumps straight there (the stylesheet
+      // also pins the drawing whole in that mode).
+      let tween = 0;
+      function tweenTo(target, ms) {
+        window.cancelAnimationFrame(tween);
+        const from = scrub.value / 100;
+        if (reduced) { apply(target); scrub.value = Math.round(target * 100); return; }
+        const start = performance.now();
+        (function step(now) {
+          const t = Math.min(1, (now - start) / ms);
+          const p = from + (target - from) * (1 - Math.pow(1 - t, 3));
+          apply(p);
+          scrub.value = Math.round(p * 100);
+          if (t < 1) tween = window.requestAnimationFrame(step);
+        })(start);
       }
 
       // "Try me" hint (item 10, visual improvements pass): a pulsing glow
@@ -3028,9 +3167,64 @@
       // instant the visitor actually drags it themselves -- once used
       // this session, it never pulses again on this page view.
       scrub.addEventListener('input', () => {
+        touched = true;
+        window.cancelAnimationFrame(tween);
         apply(scrub.value / 100);
         stage.classList.remove('is-hinting');
       });
+
+      if (play) {
+        play.addEventListener('click', () => {
+          touched = true;
+          stage.classList.remove('is-hinting');
+          tweenTo(scrub.value / 100 > 0.5 ? 0 : 1, 1400);
+        });
+      }
+
+      // Tap a part: spotlight it in the drawing, open the machine up so it
+      // can be seen, and for the four parts behind a common washer
+      // symptom, say what that symptom usually means (triage.js's own
+      // washer data), with a link into the triage tool itself.
+      const chips = Array.prototype.slice.call(stage.querySelectorAll('.td-chip'));
+      const parts = Array.prototype.slice.call(stage.querySelectorAll('.td-part[data-part]'));
+      const sym = document.getElementById('tdSym');
+      const symQ = document.getElementById('tdSymQ');
+      const symV = document.getElementById('tdSymV');
+      const symLink = document.getElementById('tdSymLink');
+      let symIndex = null;
+      chips.forEach((chip) => {
+        chip.addEventListener('click', () => {
+          touched = true;
+          stage.classList.remove('is-hinting');
+          const next = chip.getAttribute('aria-pressed') === 'true' ? null : chip.dataset.part;
+          chips.forEach((c) => c.setAttribute('aria-pressed', next && c === chip ? 'true' : 'false'));
+          parts.forEach((g) => g.classList.toggle('is-focused', g.dataset.part === next));
+          stage.classList.toggle('has-focus', !!next);
+          const washer = window.TRIAGE_DATA && window.TRIAGE_DATA.washer;
+          const s = next && chip.dataset.sym != null && washer ? washer.symptoms[+chip.dataset.sym] : null;
+          symIndex = s ? +chip.dataset.sym : null;
+          if (sym) {
+            sym.hidden = !s;
+            if (s) { symQ.textContent = s.q; symV.textContent = s.v; }
+          }
+          if (next && scrub.value / 100 > 0.2) tweenTo(0, 1100);
+        });
+      });
+      if (symLink) {
+        symLink.addEventListener('click', () => {
+          // Drive the triage tool's own buttons, so its result, its
+          // booking hand-off and its scroll all behave exactly as a tap
+          // there would.
+          const washerPill = Array.prototype.find.call(document.querySelectorAll('.triage-appliance-pill'), (b) => /washer/i.test(b.textContent));
+          if (washerPill) washerPill.click();
+          const symptomPill = symIndex != null ? document.querySelectorAll('.triage-symptom-pill')[symIndex] : null;
+          if (symptomPill) symptomPill.click();
+          else {
+            const triage = document.getElementById('triage');
+            if (triage) triage.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+          }
+        });
+      }
 
       // Show it working once, unprompted, so a visitor who never touches
       // the slider still sees the point. Runs only when it first comes
@@ -3042,11 +3236,13 @@
             if (!entry.isIntersecting || played) return;
             played = true;
             demo.disconnect();
+            if (touched) return;
             const DURATION = 1700;
             const start = performance.now();
             apply(0);
             scrub.value = 0;
             (function step(now) {
+              if (touched) return;
               const t = Math.min(1, (now - start) / DURATION);
               const eased = 1 - Math.pow(1 - t, 3);
               apply(eased);
@@ -3075,9 +3271,18 @@
       // Same "try me" hint pattern as the teardown control above:
       // pulses once the auto-demo finishes, stops for good the instant
       // the visitor actually drags it themselves.
+      // Any real use (a drag on the slider or the photo, a view button)
+      // retires the "drag the handle" hint and stops the demo sweep below
+      // from running on top of it.
+      let revealTouched = false;
+      function markRevealTouched() {
+        revealTouched = true;
+        revealStage.classList.add('is-touched');
+        revealStage.classList.remove('is-hinting');
+      }
       revealScrub.addEventListener('input', () => {
         applyReveal(revealScrub.value / 100);
-        revealStage.classList.remove('is-hinting');
+        markRevealTouched();
       });
 
       if (!reduced && 'IntersectionObserver' in window) {
@@ -3087,10 +3292,12 @@
             if (!entry.isIntersecting || revealPlayed) return;
             revealPlayed = true;
             revealDemo.disconnect();
+            if (revealTouched) return;
             const DURATION = 1500;
             const FROM = 0.12, TO = 0.82;
             const start = performance.now();
             (function step(now) {
+              if (revealTouched) return;
               const t = Math.min(1, (now - start) / DURATION);
               const eased = 0.5 - Math.cos(t * Math.PI) / 2;
               const p = FROM + (TO - FROM) * eased;
@@ -3102,6 +3309,57 @@
           });
         }, { threshold: 0.4 });
         revealDemo.observe(revealStage);
+      }
+
+      // Before / Split / After: ease the same input there.
+      let revealTween = 0;
+      function revealTo(target) {
+        window.cancelAnimationFrame(revealTween);
+        markRevealTouched();
+        const from = revealScrub.value / 100;
+        if (reduced) { applyReveal(target); revealScrub.value = Math.round(target * 100); return; }
+        const start = performance.now();
+        (function step(now) {
+          const t = Math.min(1, (now - start) / 600);
+          const p = from + (target - from) * (1 - Math.pow(1 - t, 3));
+          applyReveal(p);
+          revealScrub.value = Math.round(p * 100);
+          if (t < 1) revealTween = window.requestAnimationFrame(step);
+        })(start);
+      }
+      Array.prototype.forEach.call(revealStage.querySelectorAll('.reveal-view'), (btn) => {
+        btn.addEventListener('click', () => revealTo(parseFloat(btn.dataset.view)));
+      });
+
+      // Drag anywhere on the photo, not only on the slider under it. The
+      // range input stays the real, keyboard-operable control; this just
+      // moves it. touch-action:pan-y in the stylesheet keeps a vertical
+      // swipe scrolling the page.
+      const revealFrame = document.getElementById('revealFrame');
+      if (revealFrame && window.PointerEvent) {
+        let dragging = false;
+        const setFromX = (x) => {
+          const r = revealFrame.getBoundingClientRect();
+          const p = Math.max(0, Math.min(1, (x - r.left) / r.width));
+          window.cancelAnimationFrame(revealTween);
+          revealScrub.value = Math.round(p * 100);
+          applyReveal(p);
+          markRevealTouched();
+        };
+        // The photos are <img>s, and a mouse drag on an image starts the
+        // browser's own drag-and-drop, which cancels the pointer mid-drag.
+        revealFrame.addEventListener('dragstart', (e) => e.preventDefault());
+        revealFrame.addEventListener('pointerdown', (e) => {
+          if (e.button !== 0) return;
+          if (e.pointerType === 'mouse') e.preventDefault();
+          dragging = true;
+          if (revealFrame.setPointerCapture) revealFrame.setPointerCapture(e.pointerId);
+          setFromX(e.clientX);
+        });
+        revealFrame.addEventListener('pointermove', (e) => { if (dragging) setFromX(e.clientX); });
+        const stop = () => { dragging = false; };
+        revealFrame.addEventListener('pointerup', stop);
+        revealFrame.addEventListener('pointercancel', stop);
       }
     }
 
@@ -3448,6 +3706,24 @@
 
 <script src="/js/review-stats.js?v=226747706e" defer></script>
 <script src="/js/triage.js?v=7fe7dd717f" defer></script>
+<script>
+  // Prototype port (2026-09-29): the hero's open card also says today's
+  // hours, from the same business-hours.js table triage.js reads for the
+  // open/closed line itself, and the scroll cue fades once the page moves.
+  document.addEventListener('DOMContentLoaded', function () {
+    const today = document.getElementById('openStatusToday');
+    if (today && typeof formatHoursLabel === 'function' && typeof businessWeekday === 'function' && typeof todayDateStrInBusinessTz === 'function') {
+      const hours = formatHoursLabel(businessWeekday(todayDateStrInBusinessTz()));
+      if (hours) today.textContent = 'Today ' + hours;
+    }
+    const cue = document.querySelector('.hero-scroll-cue');
+    if (cue) {
+      const update = function () { cue.classList.toggle('is-gone', window.scrollY > 40); };
+      window.addEventListener('scroll', update, { passive: true });
+      update();
+    }
+  });
+</script>
 <script src="/js/analytics-events.js?v=4a6fd9aa19" defer></script>
 <script src="/js/mobile-nav-collapsible.js?v=cda30dbcff" defer></script>
 </body>

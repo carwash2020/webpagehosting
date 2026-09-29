@@ -5865,3 +5865,30 @@ Nothing was removed; every action still runs the page's existing handler and con
 ## What changed, 2026-09-29 -- Fix: Today card oversized on a phone
 
 The v2 Today summary card (greeting, date, "Nothing left on today's schedule" / stop count, and the three rings) could render up to ~550px tall on a phone with each ring stretched to 280px, instead of the compact ~250px card the redesign intended -- a leftover pre-v2 mobile CSS rule (`flex-direction: column`) still applied under 560px wide because the new rule never named that property to override it. Fixed by setting `flex-direction: row` explicitly on the v2 rule. CSS only; no markup, ids, or JS changed. Full write-up in `docs/specialist-logs/visual.md`, 2026-09-29.
+
+## What changed, 2026-09-28 -- The homepage reads as numbered chapters below the hero (P2 redesign)
+
+Designed in Claude Design from the P2 brief, then applied and checked here.
+
+- **Below the hero, the homepage reads as numbered chapters:**
+  - a tight "Sometimes we'll tell you not to fix it" column;
+  - the process timeline on its own band;
+  - a full-width before/after and teardown;
+  - a featured review;
+  - the service-area map as a panel;
+  - a schedule panel that leads straight into the closing promise.
+- **Unchanged:** no content, links or controls. The before/after and teardown sliders work exactly as before.
+
+Styles are scoped to `body.page-home`, and the page's markup is unchanged. Verified with the full suite, `check-consistency`, `check-undefined-vars`, lint and the visual snapshot, plus a check that the page no longer scrolls sideways on desktop browsers with classic scrollbars. `check-links.py` has only the known sandbox-proxy Unsplash failures, same as main. Screenshots are in `docs/homepage-story-2026-09-28/`.
+
+## What changed, 2026-09-29 -- The homepage gets the missing pieces from its first design: a real washer teardown, a two-panel triage, and before/after controls
+
+Claude Design's first homepage prototype redrew more than the hero, but only the hero reached the site. The rest is ported here:
+
+- **"Most of it still works"** shows a detailed washing machine that comes apart. You can tap a part (Drain pump, Door seal and so on) to spotlight it and see what usually goes wrong with it, with a link straight into the triage tool. A Take it apart button sits under the slider.
+- **"Is it worth fixing?"** is a two-panel tool: appliance tabs across the top, symptom cards on the left, the answer on the right.
+- **The before/after photo** gets Before / Split / After buttons and a real drag handle. You can drag the photo itself. It also fixes a bug on the live page: the divider and the photo edge didn't line up except at the halfway point.
+- **"What we fix"** cards are larger, two across.
+- **The hero** gets its orange "DONE RIGHT." back, a "Free estimate" label on the form, today's hours and "owner on the call" on the open card, and a scroll cue. The trust points under it are open columns.
+
+All homepage-only; no content or links changed. The service-area map and the header menus from the same prototype follow in their own updates.

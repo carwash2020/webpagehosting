@@ -3913,7 +3913,7 @@
   .reveal-before{z-index:1;}
   .reveal-after{
     z-index:2;
-    clip-path:inset(0 0 0 calc((1 - var(--p, .5)) * 100%));
+    clip-path:inset(0 0 0 calc(var(--p, .5) * 100%));
   }
   .reveal-divider{
     position:absolute;
@@ -4018,6 +4018,499 @@
     .reveal-job{padding:64px 0;}
     .reveal-tag{font-size:10.5px; padding:5px 10px;}
   }
+
+  /* === Redesign P2 (2026-09-28): Homepage story sections below the fold -- scoped to body.page-home === */
+  /* Eleven sections shared one rhythm. They are now chapters: a numbered
+     chapter mark (a CSS counter, hidden from screen readers), no border
+     between chapters, and deliberately different widths -- tight columns
+     for "Sometimes we'll tell you not to fix it" and the process timeline,
+     full-bleed bands for the before/after and the teardown, a showcase
+     wall for reviews, a feature block for the service area and a strong
+     conversion panel for #schedule that hands off into #closing.
+     Selectors use ids under the P1 hook (body.page-home) and never repeat
+     the bare teardown, reveal-after or process::before rule openers that
+     tests read by first match. The range inputs stay the primary
+     controls; nothing here touches the revealScrub / tdScrub JS. */
+
+  /* Chapter marks come from a counter over the nine sections by id, not
+     from markup: tests read these section tags exactly, and the page
+     stays byte-identical. They're drawn on ::after because #about's warm
+     glow and the teardown's lighting (pinned by teardown-lighting) both
+     live on ::before. :where() keeps the specificity low, so #reviews
+     keeps its own tinted top rule. */
+  body.page-home main{counter-reset:home-chapter;}
+  body.page-home main > :where(#honest, #process, #revealJob, #teardownStage, #reviews, #blog-teaser, #about, #areas, #schedule){border-top:0; position:relative; counter-increment:home-chapter;}
+  body.page-home main > :where(#honest, #process, #revealJob, #teardownStage, #reviews, #blog-teaser, #about, #areas, #schedule)::after{
+    content:counter(home-chapter, decimal-leading-zero);
+    content:counter(home-chapter, decimal-leading-zero) / "";
+    position:absolute;
+    top:56px;
+    right:max(24px, calc(50% - 590px + 24px));
+    font-family:var(--font-display);
+    font-size:15px;
+    letter-spacing:3px;
+    color:var(--orange-text-vivid);
+    padding:4px 10px;
+    border:1px solid var(--orange-tint-border);
+    border-radius:999px;
+    z-index:2;
+    pointer-events:none;
+  }
+
+  /* chapter 01: a tight, editorial column */
+  body.page-home #honest > .wrap{max-width:880px;}
+  body.page-home #honest .section-head h2{font-size:clamp(34px, 4.8vw, 58px);}
+
+  /* chapter 02: the process as a timeline in a tight column */
+  body.page-home #process > .wrap{max-width:980px;}
+  body.page-home #process{background:linear-gradient(180deg, transparent, var(--bg-panel) 40%, transparent);}
+  @supports (animation-timeline: view()){
+    @media (prefers-reduced-motion:no-preference){
+      html.reveal-ready body.page-home #process .process{animation:homeProcessIn linear both; animation-timeline:view(); animation-range:entry 10% cover 45%;}
+    }
+  }
+  @keyframes homeProcessIn{from{opacity:.35; transform:translateY(28px);} to{opacity:1; transform:none;}}
+
+  /* chapter 03: full-bleed before/after */
+  /* 100vw counts a classic desktop scrollbar (Windows, Linux), so the
+     full-bleed frame ran 5px past the page and the homepage scrolled
+     sideways. Clip only this section's horizontal overflow: clip, unlike
+     hidden, makes no scroll container, so nothing else about it changes. */
+  body.page-home #revealJob{padding-bottom:0; overflow-x:clip;}
+  body.page-home #revealJob #revealFrame{width:100vw; max-width:none; margin-left:calc(50% - 50vw); border-radius:0; border-left:0; border-right:0; aspect-ratio:21 / 9; max-height:78vh;}
+  body.page-home #revealJob #revealScrub{display:block; width:min(100%, 760px); margin:22px auto 0;}
+
+  /* chapter 04: full-bleed teardown band */
+  body.page-home #teardownStage{background:linear-gradient(180deg, var(--bg-panel), var(--bg) 85%); border-top:1px solid var(--border); border-bottom:1px solid var(--border);}
+  body.page-home #teardownStage .teardown-grid{max-width:1320px;}
+  body.page-home #teardownStage .teardown-figure svg{max-width:720px;}
+  body.page-home #teardownStage .teardown-copy h2{font-size:clamp(36px, 5vw, 64px);}
+
+  /* chapter 05: reviews as a showcase (the tinted band idea kept) */
+  body.page-home #reviews .reviews-wall{max-width:1080px;}
+  body.page-home #reviews .reviews-wall > .review-card:first-child{grid-column:1 / -1; padding:36px 40px;}
+  /* The base quote box is a fixed 110px so paired cards line up; the
+     featured card spans the row alone, so it sizes to its quote (the
+     4-line clamp still caps it). */
+  body.page-home #reviews .reviews-wall > .review-card:first-child .review-quote{font-size:clamp(22px, 2.6vw, 30px); line-height:1.35; height:auto;}
+
+  /* chapter 07 + 08: About and the service area as feature blocks */
+  body.page-home #areas > .wrap{max-width:1180px;}
+  body.page-home #areas .radius-figure{padding:18px; border:1px solid var(--border); border-radius:18px; background:var(--bg-panel); box-shadow:var(--shadow-hover);}
+
+  /* chapter 09: the schedule panel hands straight into #closing */
+  body.page-home #schedule{background:linear-gradient(180deg, transparent, var(--orange-tint-soft) 70%, transparent);}
+  body.page-home #schedule .booking-grid{max-width:1000px; padding:28px; border:1px solid var(--orange-tint-border); border-radius:20px; background:linear-gradient(135deg, var(--bg-panel-2), var(--bg-panel)); box-shadow:var(--shadow-hover);}
+  body.page-home #schedule .section-head h2{font-size:clamp(34px, 4.6vw, 58px);}
+  body.page-home #closing{border-top:0;}
+
+  @media (max-width:860px){
+    body.page-home main > :where(#honest, #process, #revealJob, #teardownStage, #reviews, #blog-teaser, #about, #areas, #schedule)::after{top:32px; font-size:13px;}
+    body.page-home #revealJob #revealFrame{aspect-ratio:4 / 5; max-height:none;}
+    body.page-home #reviews .reviews-wall > .review-card:first-child{padding:26px 22px;}
+    body.page-home #schedule .booking-grid{padding:16px;}
+  }
+  /* === end Redesign P2 === */
+
+  /* === Prototype port (2026-09-29): the homepage pieces from Claude Design's first prototype -- scoped to body.page-home === */
+  /* The first homepage package (a prototype file, sent back and replaced by
+     a hero-only package) also redrew the washer teardown. That drawing
+     never reached the site, so it is ported here by hand. The drawing
+     keeps the teardown's own animation contract: every part is a .td-part
+     whose --dx/--dy resolve to zero at --p:1, and the base rules above
+     still drive them. Nothing here repeats the bare teardown rule openers
+     that tests read by first match. */
+
+  /* parts inside the cabinet only show once the machine is opened up */
+  body.page-home #teardownStage .td-inside{opacity:calc((1 - var(--p, 1)) * 3);}
+  /* a part's own spin while it travels, about its own centre */
+  body.page-home #teardownStage .td-spin{
+    transform-box:fill-box;
+    transform-origin:center;
+    transform:rotate(calc(var(--rot, 0) * (1 - var(--p, 1)) * 1deg));
+  }
+  /* each part carries its own name, so the label rides out with it and
+     is gone before the machine closes up */
+  body.page-home #teardownStage .td-part .td-callout{opacity:calc(1.4 - var(--p, 1) * 2);}
+  body.page-home #teardownStage .td-display{font-family:var(--font-ui); font-size:18px; letter-spacing:2px; fill:#ff8000;}
+
+  /* Tap a part: the chosen part glows, the rest step back */
+  body.page-home #teardownStage .td-part[data-part]{transition:opacity .3s ease, filter .3s ease;}
+  body.page-home #teardownStage.has-focus .td-part[data-part]:not(.is-focused){opacity:.22;}
+  body.page-home #teardownStage .td-part.is-focused{filter:drop-shadow(0 0 10px rgba(255,128,0,.7));}
+  body.page-home #teardownStage .td-part.is-focused .td-callout text{fill:var(--orange-text-vivid);}
+
+  body.page-home #teardownStage .td-parts-label{
+    margin:28px 0 10px;
+    font-family:var(--font-ui);
+    font-size:12px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    color:var(--text-dim);
+  }
+  body.page-home #teardownStage .td-chips{display:flex; flex-wrap:wrap; gap:8px; max-width:520px;}
+  body.page-home #teardownStage .td-chip{
+    min-height:40px;
+    padding:8px 14px;
+    border-radius:999px;
+    border:1px solid var(--border);
+    background:transparent;
+    color:var(--text);
+    font-family:var(--font-ui);
+    font-size:13px;
+    letter-spacing:1.2px;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition:border-color .18s ease, background-color .18s ease, color .18s ease;
+  }
+  body.page-home #teardownStage .td-chip[aria-pressed="true"]{border-color:var(--orange); background:var(--orange-tint-soft); color:var(--orange-text-vivid);}
+  @media (hover:hover){
+    body.page-home #teardownStage .td-chip:hover{border-color:var(--orange-tint-border);}
+    body.page-home #teardownStage .td-play:hover{background:var(--orange-tint-soft); border-color:var(--orange);}
+  }
+  body.page-home #teardownStage .td-chip:focus-visible,
+  body.page-home #teardownStage .td-play:focus-visible,
+  body.page-home #teardownStage .td-sym-link:focus-visible{outline:2px solid var(--orange); outline-offset:2px;}
+
+  /* what the chosen part usually means, from triage.js's own washer data */
+  body.page-home #teardownStage .td-sym{
+    margin-top:16px;
+    padding:16px 18px;
+    max-width:520px;
+    border:1px solid var(--border);
+    border-radius:12px;
+    background:var(--bg-panel);
+    text-align:left;
+  }
+  body.page-home #teardownStage .td-sym[hidden]{display:none;}
+  body.page-home #teardownStage .td-sym .td-sym-q{
+    margin:0;
+    max-width:none;
+    font-family:var(--font-ui);
+    font-size:12px;
+    letter-spacing:1.8px;
+    text-transform:uppercase;
+    color:var(--orange-text-vivid);
+  }
+  body.page-home #teardownStage .td-sym .td-sym-v{
+    margin:6px 0 0;
+    max-width:none;
+    font-family:var(--font-display);
+    font-size:22px;
+    line-height:1.15;
+    color:var(--text);
+  }
+  body.page-home #teardownStage .td-sym-link{
+    display:inline-flex;
+    align-items:center;
+    min-height:44px;
+    margin-top:4px;
+    padding:0;
+    background:none;
+    border:0;
+    font-family:var(--font-ui);
+    font-size:13px;
+    letter-spacing:1.4px;
+    text-transform:uppercase;
+    color:var(--orange-text-vivid);
+    cursor:pointer;
+  }
+
+  /* the slider's tick marks and the play control */
+  body.page-home #teardownStage .td-ticks{display:flex; justify-content:space-between; padding:0 2px; margin-top:-6px; pointer-events:none;}
+  body.page-home #teardownStage .td-ticks span{width:1px; height:8px; background:var(--border);}
+  body.page-home #teardownStage .td-actions{display:flex; justify-content:center; margin-top:4px;}
+  body.page-home #teardownStage .td-play{
+    min-height:44px;
+    padding:10px 18px;
+    border-radius:6px;
+    border:1.5px solid var(--orange-tint-border);
+    background:transparent;
+    color:var(--orange-text-vivid);
+    font-family:var(--font-ui);
+    font-weight:600;
+    font-size:13px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition:background-color .18s ease, border-color .18s ease;
+  }
+  @media (max-width:760px){
+    body.page-home #teardownStage .td-chips,
+    body.page-home #teardownStage .td-sym{margin-left:auto; margin-right:auto;}
+    body.page-home #teardownStage .td-chips{justify-content:center;}
+  }
+  /* Reduced motion pins the machine whole (the --p:1 rule above), so the
+     play control would do nothing; the chips still spotlight and explain. */
+  @media (prefers-reduced-motion: reduce){
+    body.page-home #teardownStage .td-play{display:none;}
+  }
+
+  /* Is it worth fixing, as the prototype's two-panel tool: appliance tabs
+     in a header strip, symptom cards on the left, the answer on the right.
+     Markup and triage.js are unchanged; this only re-lays their output.
+     .triage-step dissolves into the shell's grid and the symptom group
+     becomes a subgrid, so the tabs can span the full width while the
+     symptom cards and the answer share the row under them. A browser
+     without subgrid keeps the stacked layout, which still works. */
+  body.page-home #triage .triage-shell{
+    max-width:none;
+    padding:0;
+    overflow:hidden;
+    border-radius:16px;
+    box-shadow:var(--shadow-hover);
+    display:grid;
+    /* fixed shares, so the split doesn't shift when a long answer arrives */
+    grid-template-columns:57.5% 42.5%;
+    grid-template-rows:auto auto 1fr;
+  }
+  body.page-home #triage .triage-step{display:contents;}
+  /* P1's split for the answer-showing state is more specific than the rule
+     above; hold the same shares there too */
+  @media (min-width:861px){
+    body.page-home #triage .triage-shell:has(> .triage-result:not([hidden])){grid-template-columns:57.5% 42.5%;}
+  }
+  body.page-home #triage .triage-label{
+    grid-column:1 / -1;
+    grid-row:1;
+    margin:0;
+    padding:16px 20px 0;
+    background:var(--bg-panel-2);
+  }
+  body.page-home #triage #triageSymptomGrid{
+    grid-column:1 / -1;
+    grid-row:2 / 4;
+    display:grid;
+    grid-template-columns:subgrid;
+    grid-template-rows:subgrid;
+  }
+  body.page-home #triage .triage-appliance-pills{
+    grid-column:1 / -1;
+    grid-row:1;
+    padding:10px 20px 16px;
+    background:var(--bg-panel-2);
+    border-bottom:1px solid var(--border);
+  }
+  body.page-home #triage .triage-symptom-pills{
+    grid-column:1;
+    grid-row:2;
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:10px;
+    margin:0;
+    padding:18px;
+    align-content:start;
+  }
+  body.page-home #triage .triage-symptom-pills:empty::before{
+    content:"Choose an appliance above, then what it's doing." / "";
+    grid-column:1 / -1;
+    align-self:center;
+    padding:26px 4px;
+    font-family:var(--font-ui);
+    font-size:13px;
+    letter-spacing:1.4px;
+    text-transform:uppercase;
+    color:var(--text-dim);
+  }
+  body.page-home #triage .triage-symptom-pill{
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    gap:18px;
+    min-height:104px;
+    padding:16px;
+    border-radius:10px;
+    background:var(--bg-panel-2);
+    font-family:var(--font-display);
+    font-size:20px;
+    font-weight:400;
+    letter-spacing:.4px;
+    line-height:1.1;
+  }
+  body.page-home #triage .triage-symptom-pill::after{
+    content:"What it usually means \203A" / "";
+    font-family:var(--font-ui);
+    font-size:11.5px;
+    letter-spacing:1.6px;
+    text-transform:uppercase;
+    color:var(--text-dim);
+  }
+  body.page-home #triage .triage-symptom-pill[aria-pressed="true"]{
+    background:var(--orange-tint-soft);
+    border-color:var(--orange);
+    color:var(--text);
+    font-weight:400;
+  }
+  body.page-home #triage .triage-symptom-pill[aria-pressed="true"]::after{content:"Showing \203A" / ""; color:var(--orange-text-vivid);}
+  body.page-home #triage .triage-result,
+  body.page-home #triage .triage-placeholder{
+    grid-column:2;
+    grid-row:3;
+    position:relative;
+    margin:0;
+    padding:26px 26px 24px;
+    border-top:0;
+    border-left:1px solid var(--border);
+    background:linear-gradient(180deg, var(--orange-tint-soft), transparent 55%);
+    min-height:280px;
+  }
+  body.page-home #triage .triage-result::before,
+  body.page-home #triage .triage-placeholder::before{
+    content:"";
+    position:absolute;
+    top:0; left:0;
+    width:160px;
+    height:2px;
+    background:linear-gradient(90deg, var(--orange), rgba(255,128,0,0));
+  }
+  body.page-home #triage .triage-verdict{font-size:clamp(24px, 2.8vw, 34px); line-height:1.05;}
+  body.page-home #triage .triage-placeholder{display:flex; flex-direction:column; justify-content:center; gap:12px;}
+  body.page-home #triage .triage-result:not([hidden]) ~ .triage-placeholder{display:none;}
+  body.page-home #triage .triage-placeholder svg{width:34px; height:34px; color:var(--orange);}
+  body.page-home #triage .triage-placeholder p{margin:0; max-width:34ch; color:var(--text-dim); font-size:16px; line-height:1.5;}
+  body.page-home #triage .triage-placeholder .triage-placeholder-title{font-family:var(--font-display); font-size:26px; line-height:1.1; color:var(--text);}
+  @media (max-width:860px){
+    body.page-home #triage .triage-shell{grid-template-columns:minmax(0, 1fr); grid-template-rows:auto auto auto auto;}
+    body.page-home #triage .triage-appliance-pills{flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none;}
+    body.page-home #triage .triage-appliance-pill{flex-shrink:0;}
+    body.page-home #triage .triage-result{grid-column:1; grid-row:4; border-left:0; border-top:1px solid var(--border); min-height:0;}
+    body.page-home #triage .triage-placeholder{display:none;}
+  }
+  @media (max-width:480px){
+    body.page-home #triage .triage-symptom-pills{grid-template-columns:minmax(0, 1fr);}
+    body.page-home #triage .triage-symptom-pill{min-height:0;}
+  }
+
+  /* Before / after, with the prototype's controls: one-tap views beside
+     the heading, a real handle on the divider, and a hint that retires
+     after the first use. The photo itself is draggable (page script);
+     the tags fade out as their side closes. */
+  body.page-home #revealJob > .wrap{display:grid; grid-template-columns:minmax(0, 1fr) auto; column-gap:32px; align-items:end;}
+  body.page-home #revealJob > .wrap > *{grid-column:1 / -1;}
+  body.page-home #revealJob > .wrap > .section-head{grid-column:1;}
+  body.page-home #revealJob > .wrap > .reveal-views{grid-column:2; display:flex; gap:8px; margin-bottom:28px;}
+  body.page-home #revealJob .reveal-view{
+    min-height:40px;
+    padding:8px 14px;
+    border-radius:999px;
+    border:1px solid var(--border);
+    background:transparent;
+    color:var(--text);
+    font-family:var(--font-ui);
+    font-size:12.5px;
+    letter-spacing:1.4px;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition:border-color .18s ease, color .18s ease;
+  }
+  @media (hover:hover){
+    body.page-home #revealJob .reveal-view:hover{border-color:var(--orange-tint-border); color:var(--orange-text-vivid);}
+  }
+  body.page-home #revealJob .reveal-view:focus-visible{outline:2px solid var(--orange); outline-offset:2px;}
+  body.page-home #revealJob #revealFrame{cursor:ew-resize; touch-action:pan-y; -webkit-user-select:none; user-select:none;}
+  body.page-home #revealJob .reveal-handle{
+    position:absolute;
+    top:50%; left:50%;
+    width:56px; height:56px;
+    margin:-28px 0 0 -28px;
+    border-radius:50%;
+    background:#ff8000;
+    border:3px solid #1a1208;
+    box-shadow:0 0 0 4px var(--orange-tint-border), var(--shadow-hover);
+    display:grid;
+    place-items:center;
+    color:#161005;
+  }
+  body.page-home #revealJob .reveal-handle svg{width:26px; height:26px;}
+  body.page-home #revealJob .reveal-hint{
+    position:absolute;
+    left:50%;
+    bottom:22px;
+    transform:translateX(-50%);
+    z-index:4;
+    padding:8px 14px;
+    border-radius:999px;
+    background:rgba(10,10,10,.8);
+    color:#e8e8e8;
+    font-family:var(--font-ui);
+    font-size:12px;
+    letter-spacing:1.8px;
+    text-transform:uppercase;
+    white-space:nowrap;
+    pointer-events:none;
+    transition:opacity .3s ease;
+  }
+  body.page-home #revealJob.is-touched .reveal-hint{opacity:0;}
+  body.page-home #revealJob .reveal-tag-before{opacity:clamp(0, calc((var(--p, .5) - .1) * 20), 1);}
+  body.page-home #revealJob .reveal-tag-after{opacity:clamp(0, calc((.9 - var(--p, .5)) * 20), 1); background:#ff8000; color:#161005; border-color:transparent;}
+  @media (max-width:760px){
+    body.page-home #revealJob > .wrap{grid-template-columns:minmax(0, 1fr);}
+    body.page-home #revealJob > .wrap > .reveal-views{grid-column:1; margin:-8px 0 18px;}
+    body.page-home #revealJob .reveal-handle{width:46px; height:46px; margin:-23px 0 0 -23px;}
+  }
+
+  /* What we fix, as the prototype's larger two-up cards: a bigger framed
+     icon, Anton titles, and one orange call to open each card. Scoped to
+     the homepage: the 16 landing pages use the same card classes. */
+  body.page-home #services .services-grid{grid-template-columns:repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap:14px;}
+  body.page-home #services .service-card{border-top:1px solid var(--border); border-radius:12px;}
+  body.page-home #services .service-card.is-urgent{border-top:2px solid var(--orange-text-vivid);}
+  body.page-home #services .service-card:has(> .service-icon){grid-template-columns:56px 1fr; column-gap:18px; row-gap:6px; padding:22px;}
+  /* 1 / -1 spans only the first row when the card has no explicit rows, so
+     the 56px icon pushed the description down; span the three real rows */
+  body.page-home #services .service-card .service-icon{grid-row:1 / 4; width:56px; height:56px; border-radius:12px; border:1px solid var(--orange-tint-border);}
+  body.page-home #services .service-card[data-service="plumbing"] .service-icon,
+  body.page-home #services .service-card[data-service="assembly"] .service-icon{border-color:rgba(58,160,255,.32);}
+  body.page-home #services .service-card.is-urgent .service-icon{border-color:transparent;}
+  body.page-home #services .service-icon svg{width:26px; height:26px;}
+  body.page-home #services .service-card h3{font-family:var(--font-display); font-weight:400; font-size:22px; letter-spacing:.6px; text-transform:uppercase;}
+  body.page-home #services .service-card p{font-size:15.5px; line-height:1.5;}
+  body.page-home #services .service-tag{margin-top:4px; font-size:12.5px; letter-spacing:1.6px; color:var(--orange-text-vivid);}
+
+  /* Hero: what the first prototype had that P1 didn't ship. The last line
+     takes the brand orange again, at the owner's request (2026-09-29),
+     reversing the earlier one-colour audit rule; still no accent span in
+     the markup. The estimate form gets its label back, and the open card
+     says who answers and today's hours. */
+  body.page-home .hero h1 .hero-h1-line:last-child > span{color:var(--orange);}
+  body.page-home .hero .hero-lead-label{margin:0 0 4px; font-family:var(--font-ui); font-size:11.5px; letter-spacing:2.2px; text-transform:uppercase; color:#ffb347;}
+  body.page-home .hero .hero-open-status:not(.is-open) .hero-open-owner{display:none;}
+  body.page-home .hero .hero-open-owner{color:#c9c5bc; font-size:13px; letter-spacing:1px;}
+  body.page-home .hero .hero-open-today{margin-left:auto; font-family:var(--font-ui); font-size:11.5px; letter-spacing:1.6px; text-transform:uppercase; color:#9a9a9a; white-space:nowrap;}
+  body.page-home .hero .hero-open-today:empty{display:none;}
+  body.page-home .hero-scroll-cue{
+    position:absolute;
+    left:50%;
+    bottom:28px;
+    z-index:3;
+    transform:translateX(-50%);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+    font-family:var(--font-ui);
+    font-size:11px;
+    letter-spacing:2.4px;
+    text-transform:uppercase;
+    color:#9a9a9a;
+    pointer-events:none;
+    transition:opacity .4s ease;
+  }
+  body.page-home .hero-scroll-cue span{width:1px; height:34px; background:linear-gradient(#ff8000, rgba(255,128,0,0));}
+  body.page-home .hero-scroll-cue.is-gone{opacity:0;}
+  @media (max-width:860px){
+    body.page-home .hero-scroll-cue{display:none;}
+  }
+
+  /* the trust points as open columns under a short coloured rule, as in
+     the prototype, instead of boxed cards */
+  body.page-home .trust .trust-grid{background:transparent; box-shadow:none; border:0; border-radius:0; gap:28px;}
+  body.page-home .trust .trust-item{position:relative; background:transparent; box-shadow:none; border:0; border-radius:0; padding:26px 22px 0 0;}
+  body.page-home .trust .trust-item::before{content:""; position:absolute; top:0; left:0; width:44px; height:2px; background:var(--orange);}
+  body.page-home .trust .trust-item:nth-child(even)::before{background:var(--blue);}
+  body.page-home .trust .trust-item h3{font-family:var(--font-display); font-weight:400; font-size:20px; letter-spacing:.6px; text-transform:uppercase;}
+  body.page-home .trust .trust-item p{font-size:15.5px; line-height:1.5;}
+  /* === end Prototype port === */
 
   /* Improvement roadmap (2026-09-09): homepage "Recent Work" strip.
      Reuses .gallery-tile/.gallery-tile.has-photo (defined above for the
