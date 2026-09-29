@@ -4111,7 +4111,7 @@
       const roles = typeof _cachedRoleDefsForPresets !== 'undefined' && Array.isArray(_cachedRoleDefsForPresets) ? _cachedRoleDefsForPresets : [];
       const cats = typeof PERMISSION_CATEGORIES !== 'undefined' && Array.isArray(PERMISSION_CATEGORIES) ? PERMISSION_CATEGORIES : [];
       if (!roles.length || !cats.length) { if (!card.hidden) card.hidden = true; return; }
-      const esc = (v) => (typeof escapeHtml === 'function' ? escapeHtml(String(v)) : String(v).replace(/[&<>"']/g, ''));
+      const esc = (v) => escapeHtml(String(v));
       const fields = cats.reduce((all, c) => all.concat(c.fields || []), []);
       const key = JSON.stringify([roles, fields.map(f => f.field)]);
       if (host.getAttribute('data-th-key') === key) return;
