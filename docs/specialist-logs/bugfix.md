@@ -1375,7 +1375,7 @@ Tests: `tests/design/service-card-landing-pages.test.js` (19; 17 fail on e4e70d6
 
   Pinned by `tests/design/header-menus.test.js`.
 
-## 2026-09-29 -- Second redesign regression pass (#445-#468 and the portal leak fix), driven end to end in Chromium
+## 2026-09-29 -- Second redesign regression pass (#445-#469 and the portal leak fixes), driven end to end in Chromium
 
 Asked, once the rest of the redesigns and the day's glitch fixes had landed, to make sure everything still works: #445 (portal update banner), #446 and #463 (homepage P1/P2), P3-P6 (landing pages, About/Our Work, blog, Careers/legal/404), #451 and #454-#457 (Workspace W1-W5), #453 and #458 (portal v2), #459-#462 (Workspace app v2 packages 1-4), #464 and #468 (Today card), #465 (service-area map), #466 and #467 (header menus) and e3c4dd4 (the portal cross-account leak fix). Everything ran on b6c5374 (main) against the same local harness as the 2026-09-25 entry, and was diffed against that pass's final run. The harness (still not committed) grew from 28 to 33 flows, and the layout audit now skips content inside a closed `<details>`.
 
@@ -1390,6 +1390,37 @@ Asked, once the rest of the redesigns and the day's glitch fixes had landed, to 
 - Portal nav on all 7 pages, the homepage and a booking, manage-booking and manage-job, and Workspace Compliance.
 
 `edge-functions/` is untouched since #444; `stripe-webhook-index.ts` is still 18bed26 (#421).
+
+**Found live and fixed here, but it needs one step from you: #469 broke every Workspace work-request status change.** #469 (eed78c2, the RLS follow-up to the leak fix) landed while this pass was running, so it was merged in and checked too.
+- **Symptom:** this has been happening in production since #469 was applied on 2026-09-29.
+  - Approve & Schedule says "Scheduled -- the client has been emailed."
+  - Mark reviewing, Mark quoted and Close say "Request updated."
+  - Nothing is saved and no scheduled email goes out; on the next load the request is where it was.
+- **Root cause:**
+  - #469 made the table's SELECT policy client-only (`(select auth.email()) = client_email`).
+  - Postgres applies a table's SELECT policies to an UPDATE whose WHERE reads the table. So the Workspace's `PATCH /rest/v1/client_portal_work_orders?id=eq.X` from a staff session matches 0 rows.
+  - The staff UPDATE policy is still there, nothing raises, and PostgREST answers 204, which the page treats as success.
+  - #469 moved every staff *read* to `internal_read_*()` but left these two *writes* (`confirmWorkOrderApproval`, `advanceWorkRequest`) on the base table.
+- **Confirmed** two ways:
+  - In real Postgres (PGlite) with the repo's policy text, the staff UPDATE hits 1 row before #469 and 0 after, with no error.
+  - Read-only against the live project, `pg_policies` for `client_portal_work_orders` shows exactly those policies: a client-only SELECT, a staff UPDATE, and no staff SELECT path.
+- **Fix:**
+  - `sql/security/internal_update_client_portal_work_order.sql` adds the write-side twin of #469's readers. It is `SECURITY DEFINER`, re-checks `current_user_has_any_role()`, updates `status` (and `scheduled_at` when given) and returns the row. It is closed to anon.
+  - `tools/workspace.html` calls it through `updateWorkRequest()` for Schedule and every status move. An empty result is an error toast, not a success.
+  - In real Postgres, with the migration file run against the live table shape (CHECK constraint, `on_work_order_scheduled` trigger, the real log-mode gate):
+    - staff schedule and advance work, and the scheduled-email trigger fires once;
+    - a bad status hits the CHECK constraint, and a missing id returns nothing;
+    - a client gets 42501, and anon has no EXECUTE;
+    - the old direct PATCH is still a no-op.
+- **Proof in the browser:** a new flow runs the three actions while the harness database models #469's policies.
+  - On main, both success toasts appear and the stored statuses don't change (41 still submitted, 42 still quoted, 43 still submitted).
+  - On this branch, all 5 steps pass, including an error toast for a request removed before the tap.
+- **Not done: the migration is not applied to the live project.** Until it is, those Workspace buttons show an error (the function doesn't exist yet) instead of a false success. Applying it is one `apply_migration` of that file.
+- **Rest of #469 checked:**
+  - Every other staff access to the nine client-only tables is a read through `internal_read_*()` (GET with filters on a `STABLE`, `returns setof` function, which PostgREST supports).
+  - The only other staff writes are the two message INSERTs. Their staff branch doesn't read a scoped table.
+  - Every edge function reads these tables with the service role.
+- **Tests:** `tests/tools/work-request-staff-writes.test.js` (7; 6 fail on main). It includes a guard that no tool page PATCHes, PUTs or DELETEs one of #469's client-only tables directly. `tests/portal/work-orders.test.js` now expects the RPC instead of the PATCH.
 
 Five flows needed adapting, and each was checked to be the redesign's intent, not a slip:
 - **Portal pay:** Continue is disabled until the signature step is complete (sign enables it, Clear disables it again, an empty name gets a message), and Pay All's label is now "Pay all outstanding ($425.50)".
@@ -1417,7 +1448,7 @@ New flows, all passing on main:
   - the pre-#445 `portal-update.js` fails the update-banner flow on the stamp-only deploy;
   - 2078ead fails the isolation flow on 6 pages (above).
 
-**Fixed in this branch (two, both small):**
+**Also fixed in this branch (two small ones):**
 - **Blocked-vibrate console error on every linked form sheet (#451).**
   - **Symptom:** the v2 form sheets buzz (`haptic('light')`) as they open. A sheet opened from a link -- `job-tracker.html#add-job` from + Job, a client's New job, Workspace's New job, the command palette -- opens before the person has tapped the new page. Chrome refuses `navigator.vibrate()` there and logs "Blocked call to navigator.vibrate because user hasn't tapped on the frame..." as a console error every time.
   - **Fix:** `haptic()` returns early while `navigator.userActivation.hasBeenActive` is false. It couldn't buzz there anyway. Browsers without `userActivation` behave as before, and after a tap it buzzes as before. The same guard is in runway-dashboard.html's copy, which says to keep the copies in step.
@@ -1442,7 +1473,7 @@ Tests: `tests/tools/haptic-user-activation.test.js` (8). Both copies are run in 
 - **Settings two-factor "Loading...".** In the harness, Settings' two-factor button stayed "Loading...". The harness blocks service workers, and the push check ahead of the two-factor card awaits `navigator.serviceWorker.ready`. With workers allowed it reads "Turn off" in 0.5s. The underlying ordering predates the redesigns and is in ACTION-ITEMS as a question.
 - **Link check.** `check-links.py` reports 10 problems, all Unsplash photo URLs refused by this sandbox's proxy (403 at the tunnel), identically on main. Every internal link resolves.
 
-Two questions went to ACTION-ITEMS.md: v2 phone buttons under 44px (Settings 38px, homepage chips 40px), and the Settings two-factor card waiting on the service worker.
+Two questions went to ACTION-ITEMS.md: v2 phone buttons under 44px (Settings 38px, homepage chips 40px), and the Settings two-factor card waiting on the service worker. Applying the work-order migration is listed there first.
 
 **Gotchas worth keeping:**
 - **A hash-only `page.goto()` keeps the old document.** Going from `job-tracker.html` to `job-tracker.html#contacts` doesn't reload, so a sheet opened in the previous step still covers the page. Go to `about:blank` first.

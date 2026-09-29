@@ -1153,7 +1153,14 @@ a restyle slip, so neither was changed.
   reword it ("fix the email and download again"), or store the email on the
   quote and add a Resend like invoices have (a feature, features lane).
 
-From the second pass (2026-09-29, #445-#468 and the portal leak fix):
+From the second pass (2026-09-29, #445-#469 and the portal leak fixes):
+
+- **Apply `sql/security/internal_update_client_portal_work_order.sql` to
+  the live project** (one `apply_migration`). Since #469 was applied,
+  Workspace's Approve & Schedule and every work-request status button
+  report success and save nothing (details in bugfix.md, 2026-09-29).
+  The Workspace side of the fix is in the same PR; until the function
+  exists, those buttons show an error instead of a false success.
 
 - **Some v2 phone buttons are under 44px.** Settings (#460) rows now use
   38px buttons on a phone (Send reset link, the two-factor button, Sign
