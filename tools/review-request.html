@@ -698,13 +698,11 @@
     const jobs = await loadRecentDoneJobs();
     cachedRecentDoneJobs = jobs;
     const section = document.getElementById('recentJobsSection');
-    if (jobs.length === 0) { section.style.display = 'none'; updateReadyEmpty(); renderReviewStats(); return; }
+    if (jobs.length === 0) { section.style.display = 'none'; return; }
     section.style.display = '';
     const select = document.getElementById('recentJobSelect');
     select.innerHTML = '<option value="">Choose a job&hellip;</option>' + jobs.map((j, idx) => `
       <option value="${idx}">${escapeHtml(j.title || 'Untitled job')}${j.client ? ' \u2014 ' + escapeHtml(j.client) : ''}</option>`).join('');
-    renderRecentJobRows();
-    renderReviewStats();
   }
 
   // ---------- v2 (2026-09-29): "Ready to ask" rows ----------
@@ -795,7 +793,8 @@
   function downloadReviewQr(cardId, filename) {
     const svg = document.querySelector('#' + cardId + ' svg');
     if (!svg) { if (typeof showToast === 'function') showToast('The QR code has not loaded yet.', { type: 'error' }); return; }
-    const markup = new XMLSerializer().serializeToString(svg);
+    // qrToSvg() writes its own xmlns, so the markup stands alone as a file.
+    const markup = svg.outerHTML;
     const img = new Image();
     img.onload = () => {
       const size = 1024;
