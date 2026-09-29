@@ -724,8 +724,20 @@
   }
 
   /* ---- Summary card: the day, one line, three rings ---- */
+  /* flex-direction: row is set explicitly here (2026-09-29 fix) to beat
+     the pre-v2 ".greeting-banner" mobile rule above (still present,
+     @media max-width:560px, "flex-direction: column" from the 2026-09-21
+     single-line design this card replaced). That old rule was never
+     removed and this new rule never named flex-direction, so nothing
+     stopped it from still applying under 560px -- it silently turned
+     .today-rings' width-basis flex-basis (280px) into a HEIGHT basis
+     once the main axis flipped to vertical, stretching the whole card
+     to ~550px tall with three ~280px-tall rings on a phone, while a
+     wider screen (this rule's own flex-wrap: wrap already handles
+     narrow widths correctly) never showed it. Row keeps the wrap-based
+     mobile layout this rule was actually designed for. */
   body.th-tool-page[data-th-page="workspace"] .greeting-banner {
-    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px 24px;
+    display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px 24px;
     margin: 0 0 var(--ws-gap); padding: 18px;
     background: linear-gradient(135deg, color-mix(in srgb, var(--orange) 11%, var(--bg-panel)) 0%, var(--bg-panel) 62%);
     border: 1px solid color-mix(in srgb, var(--orange) 28%, transparent); border-left-width: 1px;
