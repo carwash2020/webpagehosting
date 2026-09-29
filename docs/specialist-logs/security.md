@@ -1457,4 +1457,29 @@ Bumped `portal/service-worker.js`'s `CACHE_NAME` (the 7 changed HTML pages are a
 - Live RLS policies on all `client_portal_*` tables read directly via SQL (not assumed from the SQL source tree, which could have drifted from what's actually deployed).
 - Full test suite (`npm test`), `check-consistency.js`, `check-undefined-vars.js`, `check-links.py` (only the known sandbox Unsplash 403s), `npm run fix-versions`.
 
+## 2026-09-29 (follow-up): Client-portal RLS itself now scopes to the client, not just the app-layer filter
+
+Follow-up to the entry above. That fix added `.eq('client_email', ...)` to every portal-side query, but deliberately left the underlying RLS policy's `OR current_user_has_any_role()` clause in place, since `tools/clients.html` (and, it turned out, `contract-generator.html`, `invoice-generator.html` and `workspace.html`) genuinely need to read across clients. That meant the *only* thing stopping a future page from repeating the exact same leak was every developer remembering to add the filter -- not something the database itself enforced.
+
+### The change
+
+For the nine tables carrying that pattern (`client_portal_invoices`, `client_portal_jobs`, `client_portal_quotes`, `client_portal_contracts`, `client_portal_work_orders`, `client_portal_job_messages`, `client_portal_work_order_messages`, `client_profiles`, `client_notification_preferences`):
+
+- The base table's own SELECT policy is now **strictly** `client_email = auth.email()` (or, for the two message tables, the existing ownership-EXISTS-subquery) -- no internal-account clause anywhere. Direct SELECT on these tables is client-only, full stop, regardless of which app or future page queries it.
+- Staff cross-client reads move to eight new `internal_read_<table>()` SQL functions (`SECURITY DEFINER`, owned by `postgres`, which owns these tables and isn't subject to their RLS since none of them have `FORCE ROW LEVEL SECURITY` set). Each function's body re-checks `current_user_has_any_role()` -- the same staff+MFA gate already used everywhere else -- and returns zero rows if that's false, rather than raising. `EXECUTE` is revoked from `anon`/`PUBLIC` and granted only to `authenticated` (get_advisors flagged that this project's schema-level default privileges auto-grant new functions to `anon`; revoked that explicitly too).
+- The four internal tool pages that read these tables directly (`tools/clients.html`, `tools/contract-generator.html`, `tools/invoice-generator.html`, `tools/workspace.html`) now call `/rest/v1/rpc/internal_read_<table>` instead of `/rest/v1/<table>` for every SELECT. PostgREST applies the same `select=`/`order=`/`or=`/`eq=` query-string filtering to a `STABLE` function's result set as it does to a table, so every existing filter/column-shape/search pattern carried over unchanged -- this was a URL-path swap at each call site, not a rewrite of the query logic. The two message tables' INSERT paths, and `workspace.html`'s two `PATCH` calls to `client_portal_work_orders`, were untouched -- their own policies were already correctly scoped (by sender identity, or by the separate staff UPDATE policy) and never had the blanket-SELECT problem.
+
+Net effect: an internal account signed into `/portal/login.html` with its own credentials now gets genuinely nothing back from any of these tables -- not "nothing because the app happened to filter it," but because the row-level security itself has no clause that would ever return another client's row to that session. The staff tools keep working exactly as before, since they now go through the explicit, audited RPC path instead of an implicit RLS bypass.
+
+### Still open (same item the prior entry flagged, unchanged)
+
+`portal/login.html` still lets an internal account sign in as itself and reach the portal UI -- it will just render empty/zero everywhere now instead of leaking data. Whether staff should be blocked from the portal login page entirely (vs. legitimately needing to preview the client view) is still a product decision left for the owner, not something to change quietly.
+
+### Verified
+
+- `get_advisors(type: security)` on the live project: the `anon`/`authenticated` SECURITY DEFINER warnings for these functions are resolved for `anon`; `authenticated` execute is intentional (that's the staff-gated path).
+- Read every affected table's actual deployed SELECT policy back via `pg_policies` after the migration -- confirmed no `current_user_has_any_role()` (or any OR-clause) remains on any of them.
+- Confirmed via `pg_class`/`information_schema.role_routine_grants` that the tables have no `FORCE ROW LEVEL SECURITY`, so the `postgres`-owned functions do bypass RLS as intended, and that `anon` has zero grants on the new functions after the follow-up revoke.
+- Full test suite, `check-consistency.js`, `check-undefined-vars.js`, `npm run fix-versions` (service worker cache bump for the 4 changed tool pages).
+
 <!-- Add new entries above this line -->

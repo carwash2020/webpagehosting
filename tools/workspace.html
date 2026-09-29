@@ -2489,7 +2489,7 @@
       if (typeof ensureFreshToken === 'function') await ensureFreshToken();
       const statusList = WORK_REQUEST_OPEN_STATUSES.join(',');
       const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/client_portal_work_orders?status=in.(${statusList})&select=*&order=created_at.desc`,
+        `${SUPABASE_URL}/rest/v1/rpc/internal_read_client_portal_work_orders?status=in.(${statusList})&select=*&order=created_at.desc`,
         { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
       );
       if (!res.ok) throw new Error('HTTP ' + res.status);

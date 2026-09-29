@@ -826,10 +826,14 @@
   async function findMatchingClientEmails(term) {
     const pattern = encodeURIComponent(ilikePattern(term));
     const queries = [
-      SUPABASE_URL + '/rest/v1/client_profiles?or=(client_email.ilike.' + pattern + ',display_name.ilike.' + pattern + ',phone.ilike.' + pattern + ')&select=client_email',
-      SUPABASE_URL + '/rest/v1/client_portal_invoices?or=(client_email.ilike.' + pattern + ',client_name.ilike.' + pattern + ')&select=client_email',
-      SUPABASE_URL + '/rest/v1/client_portal_quotes?or=(client_email.ilike.' + pattern + ',client_name.ilike.' + pattern + ')&select=client_email',
-      SUPABASE_URL + '/rest/v1/client_portal_work_orders?or=(client_email.ilike.' + pattern + ',client_name.ilike.' + pattern + ',phone.ilike.' + pattern + ')&select=client_email',
+      // Reads go through internal_read_* RPCs (not the base tables
+      // directly): their RLS is client-only now, with staff cross-client
+      // access gated inside these SECURITY DEFINER functions instead. See
+      // docs/specialist-logs/security.md, 2026-09-29.
+      SUPABASE_URL + '/rest/v1/rpc/internal_read_client_profiles?or=(client_email.ilike.' + pattern + ',display_name.ilike.' + pattern + ',phone.ilike.' + pattern + ')&select=client_email',
+      SUPABASE_URL + '/rest/v1/rpc/internal_read_client_portal_invoices?or=(client_email.ilike.' + pattern + ',client_name.ilike.' + pattern + ')&select=client_email',
+      SUPABASE_URL + '/rest/v1/rpc/internal_read_client_portal_quotes?or=(client_email.ilike.' + pattern + ',client_name.ilike.' + pattern + ')&select=client_email',
+      SUPABASE_URL + '/rest/v1/rpc/internal_read_client_portal_work_orders?or=(client_email.ilike.' + pattern + ',client_name.ilike.' + pattern + ',phone.ilike.' + pattern + ')&select=client_email',
     ];
     const emailSet = new Set();
     for (const url of queries) {
@@ -849,10 +853,10 @@
     const enc = encodeURIComponent(email);
     const headers = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() };
     const [profileRes, invoicesRes, quotesRes, workOrdersRes, authsRes] = await Promise.all([
-      fetchWithTimeout(SUPABASE_URL + '/rest/v1/client_profiles?client_email=eq.' + enc + '&select=display_name,phone&limit=1', 8000, { headers }),
-      fetchWithTimeout(SUPABASE_URL + '/rest/v1/client_portal_invoices?client_email=eq.' + enc + '&select=invoice_number,invoice_date,total,paid,description,line_items&order=invoice_date.desc', 8000, { headers }),
-      fetchWithTimeout(SUPABASE_URL + '/rest/v1/client_portal_quotes?client_email=eq.' + enc + '&select=quote_number,quote_date,total,status,description,line_items&order=quote_date.desc', 8000, { headers }),
-      fetchWithTimeout(SUPABASE_URL + '/rest/v1/client_portal_work_orders?client_email=eq.' + enc + '&select=title,status,created_at,description&order=created_at.desc', 8000, { headers }),
+      fetchWithTimeout(SUPABASE_URL + '/rest/v1/rpc/internal_read_client_profiles?client_email=eq.' + enc + '&select=display_name,phone&limit=1', 8000, { headers }),
+      fetchWithTimeout(SUPABASE_URL + '/rest/v1/rpc/internal_read_client_portal_invoices?client_email=eq.' + enc + '&select=invoice_number,invoice_date,total,paid,description,line_items&order=invoice_date.desc', 8000, { headers }),
+      fetchWithTimeout(SUPABASE_URL + '/rest/v1/rpc/internal_read_client_portal_quotes?client_email=eq.' + enc + '&select=quote_number,quote_date,total,status,description,line_items&order=quote_date.desc', 8000, { headers }),
+      fetchWithTimeout(SUPABASE_URL + '/rest/v1/rpc/internal_read_client_portal_work_orders?client_email=eq.' + enc + '&select=title,status,created_at,description&order=created_at.desc', 8000, { headers }),
       fetchWithTimeout(SUPABASE_URL + '/rest/v1/card_authorizations?client_email=eq.' + enc + '&select=signer_name,authorization_text,amount,context,description,created_at&order=created_at.desc', 8000, { headers }),
     ]);
     const profile = profileRes.ok ? (await profileRes.json())[0] : null;
@@ -1178,7 +1182,7 @@
       try {
         if (typeof ensureFreshToken === 'function') await ensureFreshToken();
         const res = await fetchWithTimeout(
-          SUPABASE_URL + '/rest/v1/client_portal_invoices?select=id,source_invoice_id,client_email,client_name,invoice_number,invoice_date,total,paid,paid_at,stripe_payment_intent_id&order=invoice_date.desc,id.desc&limit=100',
+          SUPABASE_URL + '/rest/v1/rpc/internal_read_client_portal_invoices?select=id,source_invoice_id,client_email,client_name,invoice_number,invoice_date,total,paid,paid_at,stripe_payment_intent_id&order=invoice_date.desc,id.desc&limit=100',
           8000,
           { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
         );
@@ -1238,7 +1242,7 @@
       try {
         if (typeof ensureFreshToken === 'function') await ensureFreshToken();
         const res = await fetchWithTimeout(
-          SUPABASE_URL + '/rest/v1/client_portal_quotes?select=id,source_quote_id,client_email,client_name,quote_number,quote_date,total,status&order=quote_date.desc,id.desc&limit=100',
+          SUPABASE_URL + '/rest/v1/rpc/internal_read_client_portal_quotes?select=id,source_quote_id,client_email,client_name,quote_number,quote_date,total,status&order=quote_date.desc,id.desc&limit=100',
           8000,
           { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
         );
@@ -1411,7 +1415,7 @@
       try {
         if (typeof ensureFreshToken === 'function') await ensureFreshToken();
         const res = await fetchWithTimeout(
-          SUPABASE_URL + '/rest/v1/client_portal_work_orders?select=id,client_email,client_name,title,description,urgency,preferred_timing,status,photo_storage_paths,created_at&order=created_at.desc&limit=100',
+          SUPABASE_URL + '/rest/v1/rpc/internal_read_client_portal_work_orders?select=id,client_email,client_name,title,description,urgency,preferred_timing,status,photo_storage_paths,created_at&order=created_at.desc&limit=100',
           8000,
           { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
         );
@@ -1728,7 +1732,7 @@
     try {
       if (typeof ensureFreshToken === 'function') await ensureFreshToken();
       const res = await fetchWithTimeout(
-        SUPABASE_URL + '/rest/v1/client_portal_work_order_messages?work_order_id=eq.' + workOrderId + '&select=sender_type,message,created_at&order=created_at.asc',
+        SUPABASE_URL + '/rest/v1/rpc/internal_read_client_portal_work_order_messages?work_order_id=eq.' + workOrderId + '&select=sender_type,message,created_at&order=created_at.asc',
         8000,
         { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
       );
@@ -1797,7 +1801,7 @@
       try {
         if (typeof ensureFreshToken === 'function') await ensureFreshToken();
         const res = await fetchWithTimeout(
-          SUPABASE_URL + '/rest/v1/client_portal_jobs?select=id,client_email,client_name,title,job_date&order=job_date.desc,id.desc&limit=100',
+          SUPABASE_URL + '/rest/v1/rpc/internal_read_client_portal_jobs?select=id,client_email,client_name,title,job_date&order=job_date.desc,id.desc&limit=100',
           8000,
           { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
         );
@@ -1853,7 +1857,7 @@
     try {
       if (typeof ensureFreshToken === 'function') await ensureFreshToken();
       const res = await fetchWithTimeout(
-        SUPABASE_URL + '/rest/v1/client_portal_job_messages?job_id=eq.' + jobId + '&select=sender_type,message,created_at&order=created_at.asc',
+        SUPABASE_URL + '/rest/v1/rpc/internal_read_client_portal_job_messages?job_id=eq.' + jobId + '&select=sender_type,message,created_at&order=created_at.asc',
         8000,
         { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
       );

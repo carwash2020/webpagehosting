@@ -5925,6 +5925,10 @@ Fixed by adding the missing `.eq('client_email', ...)` filter to every affected 
 
 With no jobs scheduled today, the "Up next" card right below the greeting/rings card used to show its own "Nothing on the schedule for today." message -- redundant with the greeting card's own "Nothing left on today's schedule." line. That card is now hidden entirely when there's nothing scheduled, and reappears normally the moment a real job exists. Full write-up in `docs/specialist-logs/visual.md`, 2026-09-29.
 
+## What changed, 2026-09-29 -- Security follow-up: client-portal RLS is now database-enforced, not just app-layer filtered
+
+The security fix above added the missing `.eq('client_email', ...)` filter to every portal query, but deliberately left the RLS policy's `OR current_user_has_any_role()` clause in place -- meaning only every developer remembering that filter, forever, stood between a future page and the same leak. That clause is now removed from all nine affected tables' own SELECT policies (`client_portal_invoices`, `jobs`, `quotes`, `contracts`, `work_orders`, `job_messages`, `work_order_messages`, plus `client_profiles` and `client_notification_preferences`), so direct SELECT is client-only at the database layer, unconditionally. The four internal tool pages that legitimately read across clients (`tools/clients.html`, `contract-generator.html`, `invoice-generator.html`, `workspace.html`) now go through new `internal_read_<table>()` staff-gated database functions instead of the base tables directly. Full write-up in `docs/specialist-logs/security.md`, 2026-09-29.
+
 ## What changed, 2026-09-29 -- No console error when a form opens from a link; one refresh per pull on Jobs
 
 Workspace. Found by the bug lane's second end-to-end pass over the redesigns and the day's fixes (#445-#468 and the portal leak fix).
@@ -5940,7 +5944,7 @@ Checked, not changed: every other flow behaves the same after the redesigns. Tha
 - booking and manage-by-link, and both service workers.
 
 Also checked, new this pass:
-- Every Edit/Delete behind the new ⋯ row menus, on 29 lists across 12 tool pages.
+- Every Edit/Delete behind the new ⋯ row menus, on 30 lists across 12 tool pages.
 - The portal update banner fix.
 - That no portal page shows another client's records (the leak fix holds).
 

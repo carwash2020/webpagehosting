@@ -54,8 +54,12 @@ test('the search requires at least 3 characters before firing, avoiding an overl
 test('findMatchingClientEmails searches all four tables a client\u2019s info could actually live in, and is best-effort per table', () => {
   const fnMatch = HTML.match(/async function findMatchingClientEmails\(term\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate findMatchingClientEmails()');
+  // Reads go through the internal_read_* RPCs (2026-09-29 RLS hardening,
+  // docs/specialist-logs/security.md), not the base tables directly --
+  // their SELECT policies are now client-only, and staff cross-client
+  // access is gated inside these SECURITY DEFINER functions instead.
   for (const table of ['client_profiles', 'client_portal_invoices', 'client_portal_quotes', 'client_portal_work_orders']) {
-    assert.match(fnMatch[0], new RegExp(`/rest/v1/${table}\\?`));
+    assert.match(fnMatch[0], new RegExp(`/rest/v1/rpc/internal_read_${table}\\?`));
   }
   assert.match(fnMatch[0], /try \{[\s\S]*?catch \(e\) \{ \/\* continue to the next table \*\/ \}/);
 });

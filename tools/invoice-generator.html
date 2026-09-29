@@ -2905,7 +2905,7 @@
     if (typeof getAuthToken !== 'function') return;
     try {
       const [quotesRes, questionsRes] = await Promise.all([
-        fetch(`${SUPABASE_URL}/rest/v1/client_portal_quotes?select=id,source_quote_id,status,responded_at,decline_reason`, {
+        fetch(`${SUPABASE_URL}/rest/v1/rpc/internal_read_client_portal_quotes?select=id,source_quote_id,status,responded_at,decline_reason`, {
           headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}` },
         }),
         fetch(`${SUPABASE_URL}/rest/v1/quote_questions?select=*&order=created_at.desc`, {
