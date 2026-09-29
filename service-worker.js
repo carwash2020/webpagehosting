@@ -700,7 +700,20 @@
 // row below the text), which is what the old rule's replaced design
 // was doing this for in the first place. workspace.html is precached.
 // Same reasoning as every prior bump in this file's history.
-const CACHE_NAME = 'th-workspace-v363'; // precache-fingerprint:8536c2e5cade
+// Bumped (v363 -> v364): workspace.html changed -- follow-up to the
+// Today card fix above. With no jobs scheduled today, the greeting
+// card's own summary line ("Nothing left on today's schedule.") and a
+// second, separate "Up next" card right below it ("Nothing on the
+// schedule for today.") both said the same thing in different words --
+// a genuine redundant second card, not just a rendering artifact of the
+// earlier height bug. renderTodayHero() now hides #todayHero entirely
+// (via inline style.display, since the page's own v2 rule sets
+// #todayHero { display: block }, which as an author rule beats the
+// [hidden] attribute's UA-stylesheet display:none regardless of
+// specificity) when there's nothing scheduled, and unhides it the
+// moment a real job exists again. workspace.html is precached. Same
+// reasoning as every prior bump in this file's history.
+const CACHE_NAME = 'th-workspace-v364'; // precache-fingerprint:1f7ece2cc7e9
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
