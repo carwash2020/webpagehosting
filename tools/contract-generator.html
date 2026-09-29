@@ -134,6 +134,111 @@
     body.th-tool-page[data-th-page="contract-generator"] .contract-panel.is-active > * { min-width: 0; }
     body.th-tool-page[data-th-page="contract-generator"] .contract-panel.is-active > .form-section:first-child { grid-row: span 2; }
   }
+
+  /* ==========================================================================
+     Workspace app redesign v2 -- MONEY: Contracts (2026-09-29)
+     design_handoff_workspace_app_v2 §8.7, on top of W3 above (its sticky
+     type strip and two-column panel are kept). Keyed to this page's
+     body[data-th-page]; the row ⋯ sheet is styles-tools.css "V2.4".
+     #signatureFormSection stays inline (data-th-inline, W3's fix): its
+     canvases size themselves to the reading column. Tokens only.
+     ========================================================================== */
+  body.th-tool-page[data-th-page="contract-generator"] { counter-reset: ct-sec; }
+  /* ---- Three type cards; the open one orange-tinted ---- */
+  body.th-tool-page[data-th-page="contract-generator"] .contract-tabs {
+    flex-wrap: nowrap; gap: 8px; padding: 6px 0; border-radius: 0; overflow-x: auto; scrollbar-width: none; margin-bottom: 16px;
+  }
+  body.th-tool-page[data-th-page="contract-generator"] .contract-tabs::-webkit-scrollbar { display: none; }
+  body.th-tool-page[data-th-page="contract-generator"] .contract-tab {
+    flex: 1 0 170px; min-height: 64px; padding: 10px 16px; border-radius: 16px; text-align: left; white-space: normal;
+    display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 3px;
+    background: var(--bg-panel); border: 1px solid var(--border); color: var(--text); box-shadow: none; font-weight: 400;
+  }
+  body.th-tool-page[data-th-page="contract-generator"] .contract-tab.is-active {
+    background: var(--tone-orange-bg); border-color: var(--orange); color: var(--tone-orange-fg); box-shadow: none; font-weight: 400;
+  }
+  body.th-tool-page[data-th-page="contract-generator"] .ct-type-label { font-family: var(--font-ui); font-size: 14px; letter-spacing: .8px; text-transform: uppercase; }
+  body.th-tool-page[data-th-page="contract-generator"] .ct-type-hint { font-family: var(--font-app); font-size: 12px; letter-spacing: 0; text-transform: none; opacity: .75; }
+  body.th-tool-page[data-th-page="contract-generator"] .contract-tab:active { transform: scale(.98); }
+  @media (hover: hover) { body.th-tool-page[data-th-page="contract-generator"] .contract-tab:not(.is-active):hover { border-color: var(--orange-tint-border); } }
+
+  /* ---- Numbered section cards, each with a done / waiting state ---- */
+  body.th-tool-page[data-th-page="contract-generator"] .contract-panel > .form-section,
+  body.th-tool-page[data-th-page="contract-generator"] #signatureFormSection,
+  body.th-tool-page[data-th-page="contract-generator"] #contractLogSection {
+    position: relative; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl); padding: 14px 18px; box-shadow: none;
+  }
+  body.th-tool-page[data-th-page="contract-generator"] .contract-panel.is-active > .form-section,
+  body.th-tool-page[data-th-page="contract-generator"] #signatureFormSection { counter-increment: ct-sec; }
+  body.th-tool-page[data-th-page="contract-generator"] .contract-panel > .form-section > h3,
+  body.th-tool-page[data-th-page="contract-generator"] #signatureFormSection h3,
+  body.th-tool-page[data-th-page="contract-generator"] #contractLogSection > h3 {
+    display: flex; align-items: center; gap: 10px; min-height: 28px; padding-right: 76px;
+    font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text);
+  }
+  body.th-tool-page[data-th-page="contract-generator"] .contract-panel > .form-section > h3::before,
+  body.th-tool-page[data-th-page="contract-generator"] #signatureFormSection h3::before {
+    content: counter(ct-sec); flex-shrink: 0; width: 26px; height: 26px; border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-ui); font-size: 13px; letter-spacing: 0;
+    background: var(--tone-orange-bg); color: var(--tone-orange-fg);
+  }
+  body.th-tool-page[data-th-page="contract-generator"] [data-ct-state="done"] > h3::before,
+  body.th-tool-page[data-th-page="contract-generator"] #signatureFormSection[data-ct-state="done"] h3::before { background: var(--tone-green-bg); color: var(--tone-green-fg); }
+  body.th-tool-page[data-th-page="contract-generator"] .ct-state {
+    position: absolute; top: 16px; right: 18px; font-family: var(--font-app); font-size: 12.5px; font-weight: 600; color: var(--tone-orange-fg);
+  }
+  body.th-tool-page[data-th-page="contract-generator"] #signatureFormSection > .ct-state { right: 52px; top: 18px; }
+  body.th-tool-page[data-th-page="contract-generator"] [data-ct-state="done"] > .ct-state { color: var(--tone-green-fg); }
+  body.th-tool-page[data-th-page="contract-generator"] .ct-state:empty { display: none; }
+  body.th-tool-page[data-th-page="contract-generator"] .contract-panel .form-field label {
+    font-family: var(--font-ui); font-size: 11.5px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-dim);
+  }
+  body.th-tool-page[data-th-page="contract-generator"] .contract-panel .form-field input,
+  body.th-tool-page[data-th-page="contract-generator"] .contract-panel .form-field select,
+  body.th-tool-page[data-th-page="contract-generator"] .contract-panel textarea { min-height: 46px; border-radius: 12px; background: var(--th-field); }
+  body.th-tool-page[data-th-page="contract-generator"] .contract-panel > .primary-btn.wide {
+    min-height: 52px; border-radius: 14px; font-size: 15px; letter-spacing: .9px; box-shadow: 3px 3px 0 var(--orange-dark);
+  }
+  body.th-tool-page[data-th-page="contract-generator"] .contract-panel > .primary-btn.wide:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--orange-dark); }
+
+  /* ---- Authorization + signatures: the words signed under, two dashed pads ---- */
+  body.th-tool-page[data-th-page="contract-generator"] #signatureFormSection .form-section-header { min-height: 44px; }
+  body.th-tool-page[data-th-page="contract-generator"] .ct-auth-preview { display: flex; flex-direction: column; gap: 4px; margin: 10px 0 2px 36px; font-family: var(--font-app); }
+  body.th-tool-page[data-th-page="contract-generator"] .ct-auth-preview:empty { display: none; }
+  body.th-tool-page[data-th-page="contract-generator"] .ct-auth-kicker { font-family: var(--font-ui); font-size: 11.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="contract-generator"] .ct-auth-text { font-size: 14.5px; line-height: 1.5; color: var(--text); }
+  body.th-tool-page[data-th-page="contract-generator"] .ct-auth-who { font-size: 13px; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="contract-generator"] .ct-auth-who b { color: var(--text); font-weight: 600; }
+  body.th-tool-page[data-th-page="contract-generator"] #signatureFormSection canvas {
+    border: 1.5px dashed var(--border) !important; border-radius: 14px !important; max-width: none !important;
+  }
+  body.th-tool-page[data-th-page="contract-generator"] #signatureFormSection .inline-note { font-family: var(--font-ui); font-size: 11.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="contract-generator"] #signatureFormSection .secondary-btn { min-height: 40px; border-radius: 999px; }
+  @media (min-width: 900px) {
+    body.th-tool-page[data-th-page="contract-generator"] #signatureFormSection:not(.is-collapsed) .form-section-body {
+      display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto auto auto; grid-auto-flow: column; column-gap: 16px;
+    }
+    body.th-tool-page[data-th-page="contract-generator"] #signatureFormSection .form-section-body > * { min-width: 0; }
+    body.th-tool-page[data-th-page="contract-generator"] #signatureFormSection .form-section-body > p.inline-note { margin-top: 0 !important; }
+    body.th-tool-page[data-th-page="contract-generator"] #signatureFormSection .form-section-body > div { margin-bottom: 0 !important; }
+  }
+
+  /* ---- Recent contracts: ruled rows with a ⋯ ---- */
+  body.th-tool-page[data-th-page="contract-generator"] #contractLogSection > h3 { padding-right: 0; }
+  body.th-tool-page[data-th-page="contract-generator"] #contractLogList .contract-log-item {
+    display: flex; align-items: center; gap: 12px; padding: 13px 0; margin: 0;
+    background: none; border: 0; border-top: 1px solid var(--th-hairline); border-radius: 0; box-shadow: none;
+  }
+  body.th-tool-page[data-th-page="contract-generator"] #contractLogList .contract-log-item:first-child { border-top: 0; }
+  body.th-tool-page[data-th-page="contract-generator"] #contractLogList .contract-log-item > div:first-child { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  body.th-tool-page[data-th-page="contract-generator"] .contract-log-title { font-family: var(--font-app); font-size: 14.5px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+  body.th-tool-page[data-th-page="contract-generator"] .contract-log-meta { font-family: var(--font-app); font-size: 12.5px; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="contract-generator"] .badge-pending-signature {
+    display: inline-flex; margin-left: 6px; padding: 3px 9px; border-radius: 999px; border: 0; vertical-align: 1px;
+    font-family: var(--font-app); font-size: 11.5px; font-weight: 600; letter-spacing: 0; text-transform: none;
+    background: var(--tone-orange-bg); color: var(--tone-orange-fg);
+  }
+  body.th-tool-page[data-th-page="contract-generator"] #contractLogList .contract-log-item.th-has-row-menu > div:last-child { flex-wrap: nowrap !important; align-items: center; }
 </style>
 </head>
 <body data-th-page="contract-generator">
@@ -161,9 +266,9 @@
 </p>
 
 <div class="contract-tabs" role="tablist">
-  <div class="contract-tab is-active" data-tab="pwo" role="tab" aria-selected="true" tabindex="0" onclick="switchContractTab('pwo')" onkeydown="handleContractTabKeydown(event, 'pwo')">Per-Job Work Order</div>
-  <div class="contract-tab" data-tab="stpa" role="tab" aria-selected="false" tabindex="-1" onclick="switchContractTab('stpa')" onkeydown="handleContractTabKeydown(event, 'stpa')">Short-Term Project</div>
-  <div class="contract-tab" data-tab="ltsa" role="tab" aria-selected="false" tabindex="-1" onclick="switchContractTab('ltsa')" onkeydown="handleContractTabKeydown(event, 'ltsa')">Long-Term Service</div>
+  <div class="contract-tab is-active" data-tab="pwo" role="tab" aria-selected="true" tabindex="0" onclick="switchContractTab('pwo')" onkeydown="handleContractTabKeydown(event, 'pwo')"><span class="ct-type-label">Per-Job Work Order</span><span class="ct-type-hint">One job</span></div>
+  <div class="contract-tab" data-tab="stpa" role="tab" aria-selected="false" tabindex="-1" onclick="switchContractTab('stpa')" onkeydown="handleContractTabKeydown(event, 'stpa')"><span class="ct-type-label">Short-Term Project</span><span class="ct-type-hint">A few weeks</span></div>
+  <div class="contract-tab" data-tab="ltsa" role="tab" aria-selected="false" tabindex="-1" onclick="switchContractTab('ltsa')" onkeydown="handleContractTabKeydown(event, 'ltsa')"><span class="ct-type-label">Long-Term Service</span><span class="ct-type-hint">Recurring</span></div>
 </div>
 
 <!-- ===================== PER-JOB WORK ORDER ===================== -->
@@ -314,6 +419,11 @@
     <h3>Signatures <span style="color:var(--text-dim); font-weight:400; text-transform:none; letter-spacing:0;">(optional)</span> <button class="help-btn" onclick="event.stopPropagation(); openCardInfo('signature')" aria-label="What is this?" title="What is this?">?</button></h3>
     <span class="collapse-chevron">&#9660;</span>
   </div>
+  <!-- Authorization preview (2026-09-29, app redesign v2 §8.7): the words the
+       client signs under, read live from the open contract's own PDF
+       template (CONTRACT_TEMPLATES) and client name by
+       updateContractAuthPreview(). Visible with the pads folded away. -->
+  <div class="ct-auth-preview" id="contractAuthPreview" aria-live="polite"></div>
   <div class="form-section-body">
     <p class="inline-note" style="margin-top:-4px;">Client Signature</p>
     <canvas id="signatureCanvas" width="600" height="180" style="width:100%; max-width:600px; height:180px; background:#ffffff; border:1px solid var(--border); border-radius:8px; touch-action:none; cursor:crosshair; display:block;"></canvas>
@@ -382,6 +492,7 @@
       t.tabIndex = active ? 0 : -1;
     });
     document.querySelectorAll('.contract-panel').forEach(p => p.classList.toggle('is-active', p.id === 'panel-' + tab));
+    if (typeof updateContractAuthPreview === 'function') updateContractAuthPreview();
   }
 
   // Arrow-key navigation between tabs, matching the standard ARIA
@@ -432,6 +543,7 @@
     document.getElementById(prefix + '_clientName').value = contact.name || '';
     document.getElementById(prefix + '_phone').value = contact.phone || '';
     document.getElementById(prefix + '_email').value = contact.email || '';
+    if (typeof updateContractSectionStates === 'function') updateContractSectionStates();
   }
 
   // ---------- Contract log (th_contracts, synced like everything else) ----------
@@ -562,6 +674,98 @@
         { label: 'Re-download', onClick: () => redownloadContract(id) },
         { label: 'Delete', isDanger: true, onClick: () => deleteContractLogEntry(id) },
       ]);
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Workspace app redesign v2 (2026-09-29), §8.7. Presentation only.
+  // ---------------------------------------------------------------------------
+  // Each numbered section card says whether it is filled in: "Done" once
+  // every field in it has something typed (the optional contact picker
+  // aside), "To fill" before that. The signatures card says "Signed" once
+  // the client pad has ink. Nothing is required by this -- Generate PDF
+  // still works on a half-filled form, exactly as before.
+  function contractSectionState(section) {
+    const fields = [...section.querySelectorAll('input, textarea, select')].filter(el => !/_contactPicker$/.test(el.id));
+    if (!fields.length) return null;
+    return fields.every(el => (el.value || '').trim() !== '') ? 'done' : 'waiting';
+  }
+  function setContractStatePill(section, state, doneLabel) {
+    let pill = section.querySelector(':scope > .ct-state');
+    if (!pill) {
+      pill = document.createElement('span');
+      pill.className = 'ct-state';
+      const head = section.querySelector(':scope > h3, :scope > .form-section-header');
+      if (head) head.insertAdjacentElement('afterend', pill); else section.prepend(pill);
+    }
+    section.dataset.ctState = state || '';
+    pill.textContent = state === 'done' ? (doneLabel || 'Done') : state === 'waiting' ? (doneLabel ? 'Waiting' : 'To fill') : '';
+  }
+  function updateContractSectionStates() {
+    document.querySelectorAll('.contract-panel > .form-section').forEach(section => setContractStatePill(section, contractSectionState(section)));
+    const sig = document.getElementById('signatureFormSection');
+    if (sig) setContractStatePill(sig, (signaturePads.signatureCanvas && signaturePads.signatureCanvas.hasDrawing) ? 'done' : 'waiting', 'Signed');
+    updateContractAuthPreview();
+  }
+  function activeContractType() {
+    const tab = document.querySelector('.contract-tab.is-active');
+    return tab ? tab.dataset.tab : 'pwo';
+  }
+  // The sentence the client signs under, from the open contract's own PDF
+  // template: the Authorization paragraph where the template has one (the
+  // work order), otherwise its opening "This Agreement is made between..."
+  // line. Read, never rewritten.
+  function updateContractAuthPreview() {
+    const el = document.getElementById('contractAuthPreview');
+    if (!el || typeof CONTRACT_TEMPLATES === 'undefined') return;
+    const type = activeContractType();
+    const tpl = CONTRACT_TEMPLATES[type];
+    if (!tpl) { el.innerHTML = ''; return; }
+    const fields = collectFields(type);
+    const blocks = tpl.blocks(fields);
+    const authIdx = blocks.findIndex(b => b.type === 'sectionLabel' && /authoriz/i.test(b.text || ''));
+    const para = (authIdx > -1 ? blocks.slice(authIdx + 1) : blocks).find(b => b.type === 'paragraph');
+    el.innerHTML = '<span class="ct-auth-kicker">Authorization &middot; ' + escapeHtml(CONTRACT_TYPE_LABELS[type] || type) + '</span>' +
+      '<span class="ct-auth-text">' + escapeHtml(para ? para.text : '') + '</span>' +
+      '<span class="ct-auth-who">Signing: <b>' + escapeHtml(fields.clientName || 'the client') + '</b> and Triple H Enterprises LLC</span>';
+  }
+  function initContractV2() {
+    document.querySelectorAll('.contract-panel').forEach(panel => {
+      panel.addEventListener('input', updateContractSectionStates);
+      panel.addEventListener('change', updateContractSectionStates);
+    });
+    ['signatureStatus', 'businessSignatureStatus'].forEach(id => {
+      const status = document.getElementById(id);
+      if (status && typeof MutationObserver !== 'undefined') new MutationObserver(updateContractSectionStates).observe(status, { childList: true, characterData: true, subtree: true });
+    });
+    updateContractSectionStates();
+  }
+
+  // Recent contracts: a ⋯ on each row holding its own Re-download (as
+  // Download PDF) and Delete buttons -- clicked through, so
+  // redownloadContract / deleteContractLogEntry (confirm + undo) run as
+  // they always have. No Edit or Duplicate exists for a logged contract,
+  // so the menu has none. The row keeps its own long-press sheet.
+  function initContractRowMenu() {
+    if (typeof attachRowMenu !== 'function' || typeof rowMenuActionsFromButtons !== 'function') return;
+    attachRowMenu(document.getElementById('contractLogList'), '.contract-log-item', {
+      actions: [
+        { kind: 'extra', selector: 'button[onclick^="redownloadContract"]', label: 'Download PDF', icon: 'download' },
+        { kind: 'delete', selector: 'button[onclick^="deleteContractLogEntry"]', label: 'Delete' },
+      ],
+      getMenu: (row) => {
+        const actions = rowMenuActionsFromButtons(row);
+        if (!actions.length) return null;
+        const title = row.querySelector('.contract-log-title');
+        const meta = row.querySelector('.contract-log-meta');
+        return {
+          title: title && title.childNodes[0] ? title.childNodes[0].textContent.trim() : 'Contract',
+          subtitle: meta ? meta.textContent.replace(/\s+/g, ' ').trim() : '',
+          actions,
+        };
+      },
+      buttonHost: ':scope > div:last-child',
+      longPress: false,
     });
   }
 
@@ -950,6 +1154,7 @@
     clearSignature('signatureCanvas', 'signatureStatus');
     clearSignature('businessSignatureCanvas', 'businessSignatureStatus');
     document.getElementById('signatureFormSection').classList.add('is-collapsed');
+    if (typeof updateContractSectionStates === 'function') updateContractSectionStates();
   }
 
   // ---------- signature pad(s) ----------
@@ -1048,6 +1253,7 @@
     wireSearchClear('contractSearch', renderContractLog);
     initSignaturePad('signatureCanvas', 'signatureStatus');
     initSignaturePad('businessSignatureCanvas', 'businessSignatureStatus');
+    if (typeof initContractV2 === 'function') initContractV2();
     // Bug fix (2026-08-16): same missed-initial-pull bug as calendar.html --
     // realtime was wired up but nothing pulled on load, so contracts and
     // contacts saved from another device stayed invisible here until a live
@@ -1064,6 +1270,7 @@
       }
       populateContactPickers(); renderContractLog();
       initContractLogLongPress();
+      if (typeof initContractRowMenu === 'function') initContractRowMenu();
       // Mic dictation (2026-09-22) -- already fully built and proven on
       // job-tracker.html's Notes field, just unused everywhere else.
       // These 3 long-form scope-description textareas are the textbook

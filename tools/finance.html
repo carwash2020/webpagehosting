@@ -180,6 +180,130 @@
     body.th-tool-page[data-th-page="finance"] #tab-expenses > .th-sheet-trigger,
     body.th-tool-page[data-th-page="finance"] #tab-inventory > .th-sheet-trigger { grid-column: 1; }
   }
+
+  /* ==========================================================================
+     Workspace app redesign v2 -- MONEY: Finance (2026-09-29)
+     design_handoff_workspace_app_v2 §8.5, on top of W3 above (its grids are
+     kept). Keyed to this page's body[data-th-page]; the shared pieces
+     (.th-v2-seg, the row ⋯ sheet) live in styles-tools.css "V2". Tokens only.
+     ========================================================================== */
+  /* ---- Invoices | Finance | Quick charge (the header switch is superseded) ---- */
+  body.th-tool-page[data-th-page="finance"] .mn-seg { display: flex; width: max-content; margin: 2px 0 14px; }
+  body.th-tool-page[data-th-page="finance"]:not(.th-money-switch-on) .mn-seg-cross { display: none; }
+  body.th-tool-page[data-th-page="finance"] .hub-header-left .th-money-switch { display: none !important; }
+  @media (max-width: 1023px) { body.th-tool-page.th-money-switch-on.th-money-page[data-th-page="finance"] .hub-header-left .hub-title { display: block; } }
+
+  /* ---- Spent this month: Anton 44, a stacked bar, the legend, two actions ---- */
+  body.th-tool-page[data-th-page="finance"] .fin-spent {
+    display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 0 0 16px; padding: 16px 18px;
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl);
+  }
+  body.th-tool-page[data-th-page="finance"] .fin-spent-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  body.th-tool-page[data-th-page="finance"] .fin-spent-title { font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text); }
+  body.th-tool-page[data-th-page="finance"] .fin-spent-month { margin-left: auto; font-size: 12.5px; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="finance"] .fin-spent-total { font-family: var(--font-display); font-weight: 400; font-size: 44px; line-height: 1; letter-spacing: .3px; color: var(--text); font-variant-numeric: tabular-nums; }
+  body.th-tool-page[data-th-page="finance"] .fin-spent-bar { display: flex; gap: 2px; height: 12px; border-radius: 6px; overflow: hidden; background: var(--th-hairline); }
+  body.th-tool-page[data-th-page="finance"] .fin-spent-seg { flex-basis: 0; min-width: 4px; }
+  body.th-tool-page[data-th-page="finance"] .fin-spent-seg.is-orange, body.th-tool-page[data-th-page="finance"] .fin-spent-dot.is-orange { background: var(--orange); }
+  body.th-tool-page[data-th-page="finance"] .fin-spent-seg.is-blue, body.th-tool-page[data-th-page="finance"] .fin-spent-dot.is-blue { background: var(--tone-blue-fg); }
+  body.th-tool-page[data-th-page="finance"] .fin-spent-seg.is-purple, body.th-tool-page[data-th-page="finance"] .fin-spent-dot.is-purple { background: var(--tone-purple-fg); }
+  body.th-tool-page[data-th-page="finance"] .fin-spent-seg.is-green, body.th-tool-page[data-th-page="finance"] .fin-spent-dot.is-green { background: var(--tone-green-fg); }
+  body.th-tool-page[data-th-page="finance"] .fin-spent-seg.is-idle, body.th-tool-page[data-th-page="finance"] .fin-spent-dot.is-idle { background: var(--text-faint); }
+  body.th-tool-page[data-th-page="finance"] .fin-spent-legend { display: flex; flex-direction: column; gap: 8px; }
+  body.th-tool-page[data-th-page="finance"] .fin-spent-key { display: flex; align-items: center; gap: 10px; font-size: 14px; min-width: 0; }
+  body.th-tool-page[data-th-page="finance"] .fin-spent-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  body.th-tool-page[data-th-page="finance"] .fin-spent-key-label { flex: 1; min-width: 0; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  body.th-tool-page[data-th-page="finance"] .fin-spent-key-value { font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+  body.th-tool-page[data-th-page="finance"] .fin-spent-empty { font-size: 13.5px; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="finance"] .fin-spent-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  body.th-tool-page[data-th-page="finance"] .fin-spent-actions > button { flex: 1 1 140px; min-height: 46px; border-radius: 14px; font-size: 14px; letter-spacing: .8px; margin: 0; }
+  body.th-tool-page[data-th-page="finance"] .fin-spent-actions > .secondary-btn { background: var(--th-field); }
+  @media (min-width: 900px) {
+    body.th-tool-page[data-th-page="finance"] .fin-spent { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); column-gap: 28px; align-items: start; }
+    body.th-tool-page[data-th-page="finance"] .fin-spent-head, body.th-tool-page[data-th-page="finance"] .fin-spent-total, body.th-tool-page[data-th-page="finance"] .fin-spent-bar { grid-column: 1; }
+    body.th-tool-page[data-th-page="finance"] .fin-spent-legend { grid-column: 2; grid-row: 1 / span 3; }
+    body.th-tool-page[data-th-page="finance"] .fin-spent-actions { grid-column: 1 / -1; }
+  }
+
+  /* ---- The five tabs as one segmented track ---- */
+  body.th-tool-page[data-th-page="finance"] .tabs, body.th-tool-page[data-th-page="finance"] .tabs.tabs-sticky {
+    display: inline-flex; width: auto; max-width: 100%; gap: 4px; padding: 4px; margin: 0 0 16px; overflow-x: auto; scrollbar-width: none;
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-track); box-shadow: none;
+  }
+  body.th-tool-page[data-th-page="finance"] .tabs::-webkit-scrollbar { display: none; }
+  body.th-tool-page[data-th-page="finance"] .tabs.tabs-sticky::before { border-radius: inherit; background: var(--bg-panel); }
+  body.th-tool-page[data-th-page="finance"] .tab-btn {
+    flex: 0 0 auto; min-height: 38px; padding: 0 14px; border-radius: var(--th-radius-seg); box-shadow: none; background: none; white-space: nowrap;
+    font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: .8px; color: var(--text-dim);
+  }
+  body.th-tool-page[data-th-page="finance"] .tab-btn.is-active { background: var(--text); color: var(--bg); box-shadow: none; }
+  body.th-tool-page[data-th-page="finance"] .tab-btn:active { transform: scale(.97); }
+  @media (hover: hover) { body.th-tool-page[data-th-page="finance"] .tab-btn:not(.is-active):hover { background: none; color: var(--text); } }
+  @media (pointer: coarse) { body.th-tool-page[data-th-page="finance"] .tab-btn { min-height: 44px; } }
+  @media (max-width: 720px) { body.th-tool-page[data-th-page="finance"] .tabs.tabs-sticky { margin-left: 0; margin-right: 0; padding: 4px; } }
+
+  /* ---- Cards (radius 22) with Oswald heads ---- */
+  body.th-tool-page[data-th-page="finance"] .tab-panel > .form-section:not(.th-sheetable) {
+    position: relative; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl); padding: 14px 18px; box-shadow: none;
+  }
+  body.th-tool-page[data-th-page="finance"] .tab-panel > .form-section:not(.th-sheetable) > h3 {
+    font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text);
+  }
+  body.th-tool-page[data-th-page="finance"] .result-row { border-bottom-color: var(--th-hairline); }
+  body.th-tool-page[data-th-page="finance"] .result-row.final > span:not(.result-label) {
+    font-family: var(--font-display); font-weight: 400; font-size: 30px; letter-spacing: .3px;
+    background: none; -webkit-text-fill-color: currentColor; color: var(--tone-orange-fg);
+  }
+  body.th-tool-page[data-th-page="finance"] .results-box { border-radius: var(--th-radius-tile); padding: 4px 14px; box-shadow: none; border-top: 2px solid var(--orange); background: none; }
+
+  /* ---- Each Log: a ⋯ for Export CSV / Clear all, then the entries ---- */
+  body.th-tool-page[data-th-page="finance"] .fin-log > h3 { min-height: 38px; display: flex; align-items: center; padding-right: 48px; }
+  body.th-tool-page[data-th-page="finance"] .fin-log > .fin-log-menu { position: absolute; top: 10px; right: 10px; }
+  body.th-tool-page[data-th-page="finance"] .fin-log > .btn-row { display: none; }
+  body.th-tool-page[data-th-page="finance"] .fin-log .totals-row-money { border-top: 1px solid var(--th-hairline); margin-top: 6px; padding-top: 10px; display: flex; flex-wrap: wrap; gap: 6px 18px; }
+  body.th-tool-page[data-th-page="finance"] .totals-row-money strong { background: none; -webkit-text-fill-color: currentColor; color: var(--text); font-size: 15px; }
+  body.th-tool-page[data-th-page="finance"] .fin-log .table-scroll { border: 0; background: none; }
+  body.th-tool-page[data-th-page="finance"] #entriesTable th, body.th-tool-page[data-th-page="finance"] #incomeTable th, body.th-tool-page[data-th-page="finance"] #inventoryTable th {
+    font-family: var(--font-ui); font-weight: 500; font-size: 11.5px; letter-spacing: 1.2px; color: var(--text-dim);
+  }
+  body.th-tool-page[data-th-page="finance"] #entriesTable td, body.th-tool-page[data-th-page="finance"] #incomeTable td { border-bottom-color: var(--th-hairline); }
+  body.th-tool-page[data-th-page="finance"] #entriesTable .col-amount, body.th-tool-page[data-th-page="finance"] #incomeTable .col-amount { font-weight: 700; font-variant-numeric: tabular-nums; }
+  body.th-tool-page[data-th-page="finance"] tr.th-has-row-menu > td:last-child { text-align: right; white-space: nowrap; }
+  /* Phone + tablet: each entry becomes a ruled row -- title and amount on
+     top with the ⋯, the description under it, then the small labelled facts. */
+  @media (max-width: 1023px) {
+    body.th-tool-page[data-th-page="finance"] #entriesTable tr,
+    body.th-tool-page[data-th-page="finance"] #incomeTable tr {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 3px 12px;
+      background: none; border: 0; border-top: 1px solid var(--th-hairline); border-radius: 0; margin: 0; padding: 12px 0;
+    }
+    body.th-tool-page[data-th-page="finance"] #entriesTable tr:first-child,
+    body.th-tool-page[data-th-page="finance"] #incomeTable tr:first-child { border-top: 0; }
+    body.th-tool-page[data-th-page="finance"] #entriesTable td,
+    body.th-tool-page[data-th-page="finance"] #incomeTable td {
+      display: inline-flex; align-items: baseline; gap: 5px; padding: 0; border: 0; text-align: left; justify-content: flex-start;
+      order: 5; font-size: 12.5px; color: var(--text-dim); min-width: 0;
+    }
+    body.th-tool-page[data-th-page="finance"] #entriesTable td[data-label]::before,
+    body.th-tool-page[data-th-page="finance"] #incomeTable td[data-label]::before { font-family: var(--font-ui); font-size: 10.5px; letter-spacing: .9px; color: var(--text-faint); }
+    /* Expenses: 3 vendor, 8 amount, 10 actions, 5 description */
+    body.th-tool-page[data-th-page="finance"] #entriesTable td:nth-child(3),
+    body.th-tool-page[data-th-page="finance"] #incomeTable td:nth-child(2) { order: 1; flex: 1 1 0; font-size: 14.5px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+    body.th-tool-page[data-th-page="finance"] #entriesTable td:nth-child(8),
+    body.th-tool-page[data-th-page="finance"] #incomeTable td:nth-child(7) { order: 2; font-size: 15px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+    body.th-tool-page[data-th-page="finance"] #entriesTable td:last-child,
+    body.th-tool-page[data-th-page="finance"] #incomeTable td:last-child { order: 3; padding: 0; }
+    body.th-tool-page[data-th-page="finance"] #entriesTable td:nth-child(5),
+    body.th-tool-page[data-th-page="finance"] #incomeTable td:nth-child(4) { order: 4; flex-basis: 100%; display: block; font-size: 13px; color: var(--text-dim); margin-top: -2px; }
+    body.th-tool-page[data-th-page="finance"] #entriesTable td:nth-child(3)::before,
+    body.th-tool-page[data-th-page="finance"] #entriesTable td:nth-child(8)::before,
+    body.th-tool-page[data-th-page="finance"] #entriesTable td:nth-child(5)::before,
+    body.th-tool-page[data-th-page="finance"] #incomeTable td:nth-child(2)::before,
+    body.th-tool-page[data-th-page="finance"] #incomeTable td:nth-child(7)::before,
+    body.th-tool-page[data-th-page="finance"] #incomeTable td:nth-child(4)::before { display: none; }
+    body.th-tool-page[data-th-page="finance"] #inventoryTable tr { background: var(--th-field); border-radius: 14px; }
+    body.th-tool-page[data-th-page="finance"] #inventoryTable td { border-bottom-color: var(--th-hairline); }
+  }
 </style>
 </head>
 <body data-th-page="finance">
@@ -203,6 +327,30 @@
 </div>
 
 <p class="tool-sub">Quote a job, track what it actually cost, and log income and expenses.</p>
+
+<!-- Money switch v2 (2026-09-29, app redesign v2 §8.5): the same three
+     segments as the Invoices page. Invoices and Quick charge only show when
+     the account can open both Money pages (th-money-switch-on). -->
+<nav class="th-v2-seg mn-seg" id="moneySeg" aria-label="Money">
+  <a href="/tools/invoice-generator.html" class="mn-seg-cross" data-money-seg="invoices">Invoices</a>
+  <a href="/tools/finance.html" class="is-active" data-money-seg="finance" aria-current="page">Finance</a>
+  <a href="/tools/invoice-generator.html#pos" class="mn-seg-cross" data-money-seg="pos">Quick charge</a>
+</nav>
+
+<!-- Spent this month (2026-09-29, app redesign v2 §8.5): a read of the same
+     Expenses log the Expenses tab lists, drawn by renderFinanceSpent() every
+     time renderExpenses() runs. Log expense / Log income open the tabs' own
+     add forms (the W1 sheets). -->
+<div class="fin-spent" id="finSpentCard">
+  <div class="fin-spent-head"><span class="fin-spent-title">Spent this month</span><span class="fin-spent-month" id="finSpentMonth"></span></div>
+  <div class="fin-spent-total" id="finSpentTotal">$0</div>
+  <div class="fin-spent-bar" id="finSpentBar" aria-hidden="true"></div>
+  <div class="fin-spent-legend" id="finSpentLegend"></div>
+  <div class="fin-spent-actions">
+    <button type="button" class="primary-btn" onclick="openFinanceLog('expenses')">Log expense</button>
+    <button type="button" class="secondary-btn" onclick="openFinanceLog('income')">Log income</button>
+  </div>
+</div>
 
 <div class="tabs tabs-sticky">
   <button class="tab-btn is-active" data-tab="cost">Cost Lookup</button>
@@ -315,8 +463,9 @@
     </div>
   </div>
 
-  <div class="form-section">
+  <div class="form-section fin-log">
     <h3>Log</h3>
+    <button type="button" class="th-row-menu-btn fin-log-menu" aria-label="More actions for the income log" aria-haspopup="dialog" onclick="openFinanceLogMenu('income', this)"><svg class="th-icon" aria-hidden="true"><use href="#icon-more" xlink:href="#icon-more"></use></svg></button>
     <div class="table-scroll">
       <div id="incomeTable"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div><div class="skeleton-line w-40"></div></div>
     </div>
@@ -385,8 +534,9 @@
     </div>
   </div>
 
-  <div class="form-section">
+  <div class="form-section fin-log">
     <h3>Log</h3>
+    <button type="button" class="th-row-menu-btn fin-log-menu" aria-label="More actions for the expense log" aria-haspopup="dialog" onclick="openFinanceLogMenu('expenses', this)"><svg class="th-icon" aria-hidden="true"><use href="#icon-more" xlink:href="#icon-more"></use></svg></button>
     <div class="table-scroll">
       <div id="entriesTable"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div><div class="skeleton-line w-40"></div></div>
     </div>
@@ -1439,6 +1589,8 @@
     // -- this one call always fires whenever expenses do, so the
     // search results can never go stale relative to the log itself.
     renderPartCostTrend();
+    // Same reasoning for the v2 "Spent this month" card (2026-09-29).
+    if (typeof renderFinanceSpent === 'function') renderFinanceSpent();
 
     let entries = [...loadExpenses()].sort((a, b) => new Date(b.date) - new Date(a.date));
     if (pendingDeleteExpenseIds.size > 0) entries = entries.filter(e => !pendingDeleteExpenseIds.has(e.id));
@@ -1498,6 +1650,125 @@
         { label: 'Edit', onClick: () => editExpense(id) },
         { label: 'Delete', isDanger: true, onClick: () => deleteExpense(id) },
       ]);
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Workspace app redesign v2 (2026-09-29), §8.5 Finance. Presentation only:
+  // everything below reads the same logs the tabs already render and calls
+  // their existing handlers.
+  // ---------------------------------------------------------------------------
+  // "Spent this month": this month's Expenses-log entries (expenses and
+  // mileage, the same two the Expenses tab totals), split by vendor with
+  // mileage as its own slice. Entries waiting out an undo are left out,
+  // exactly as the log itself leaves them out.
+  const FIN_SPENT_TONES = ['orange', 'blue', 'purple', 'green', 'idle'];
+  function renderFinanceSpent() {
+    const totalEl = document.getElementById('finSpentTotal');
+    if (!totalEl) return;
+    const today = (typeof todayDateStrBusinessTz === 'function') ? todayDateStrBusinessTz() : new Date().toISOString().slice(0, 10);
+    const monthKey = today.slice(0, 7);
+    let entries = loadExpenses().filter(e => (e.date || '').slice(0, 7) === monthKey);
+    if (pendingDeleteExpenseIds.size > 0) entries = entries.filter(e => !pendingDeleteExpenseIds.has(e.id));
+    const amt = (e) => Number(e.amount) || 0;
+    const total = entries.reduce((s, e) => s + amt(e), 0);
+    const byVendor = new Map();
+    entries.filter(e => e.type !== 'mileage').forEach(e => {
+      const key = (e.vendor || '').trim() || 'No vendor';
+      byVendor.set(key, (byVendor.get(key) || 0) + amt(e));
+    });
+    const vendors = [...byVendor].sort((a, b) => b[1] - a[1]);
+    const segs = vendors.slice(0, 3).map(([label, value]) => ({ label, value }));
+    const rest = vendors.slice(3).reduce((s, [, v]) => s + v, 0);
+    if (rest > 0) segs.push({ label: 'Everything else', value: rest });
+    const mileage = entries.filter(e => e.type === 'mileage').reduce((s, e) => s + amt(e), 0);
+    if (mileage > 0) segs.push({ label: 'Mileage', value: mileage });
+    const shown = segs.filter(s => s.value > 0);
+    shown.forEach((s, i) => { s.tone = FIN_SPENT_TONES[Math.min(i, FIN_SPENT_TONES.length - 1)]; });
+    const monthName = new Date(monthKey + '-15T12:00:00').toLocaleDateString('en-US', { month: 'long' });
+    totalEl.textContent = '$' + Math.round(total).toLocaleString('en-US');
+    const monthEl = document.getElementById('finSpentMonth');
+    if (monthEl) monthEl.textContent = monthName + ' · ' + entries.length + ' entr' + (entries.length === 1 ? 'y' : 'ies');
+    const bar = document.getElementById('finSpentBar');
+    if (bar) bar.innerHTML = shown.map(s => '<span class="fin-spent-seg is-' + s.tone + '" style="flex-grow:' + s.value.toFixed(2) + '"></span>').join('');
+    const legend = document.getElementById('finSpentLegend');
+    if (legend) {
+      legend.innerHTML = shown.length
+        ? shown.map(s => '<div class="fin-spent-key"><span class="fin-spent-dot is-' + s.tone + '" aria-hidden="true"></span><span class="fin-spent-key-label">' + escapeHtml(s.label) + '</span><span class="fin-spent-key-value">$' + s.value.toFixed(2) + '</span></div>').join('')
+        : '<div class="fin-spent-empty">Nothing logged in ' + escapeHtml(monthName) + ' yet.</div>';
+    }
+  }
+
+  // Log expense / Log income: the tab, then its own add form (the W1 sheet).
+  function openFinanceLog(tab) {
+    activateTab(tab);
+    toggleFormSection(tab === 'income' ? 'incomeFormSection' : 'expenseFormSection', true);
+  }
+
+  // The ⋯ on each Log: Export CSV and Clear all, the same two buttons the
+  // log's own button row has (clearAllExpenses / clearAllIncome keep their
+  // confirm dialogs).
+  function openFinanceLogMenu(kind, opener) {
+    if (typeof openRowMenu !== 'function') return;
+    const income = kind === 'income';
+    openRowMenu(income ? 'Income log' : 'Expense log', [
+      { kind: 'extra', icon: 'download', label: 'Export CSV', onClick: () => (income ? exportIncomeCSV() : exportCSV()) },
+      { kind: 'delete', label: 'Clear all', onClick: () => (income ? clearAllIncome() : clearAllExpenses()) },
+    ], { opener });
+  }
+
+  // Row ⋯ on every entry. Edit and Delete are the row's own buttons (clicked
+  // through, so editExpense / deleteExpense / editIncomeEntry /
+  // deleteIncomeEntry and their confirms and undo toasts run unchanged);
+  // Attach receipt opens the same edit form at its receipt field, and a
+  // replaced receipt is cleaned up by addExpense()'s existing deleteReceipt
+  // call. The rows keep their own long-press (initExpenseRowLongPress).
+  function expenseRowMenu(row) {
+    const id = Number(row.dataset.expenseId);
+    const entry = loadExpenses().find(e => e.id === id);
+    if (!entry) return null;
+    const edit = row.querySelector('button[onclick^="editExpense"]');
+    const del = row.querySelector('button[onclick^="deleteExpense"]');
+    const view = row.querySelector('a[onclick^="openSignedReceipt"]');
+    const actions = [];
+    if (edit) actions.push({ kind: 'edit', label: 'Edit', onClick: () => edit.click() });
+    if (entry.type !== 'mileage' && !entry.receiptPath) {
+      actions.push({ kind: 'extra', icon: 'camera', label: 'Attach receipt', onClick: () => {
+        editExpense(id);
+        const input = document.getElementById('entryReceipt');
+        if (input) setTimeout(() => { try { input.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 120);
+      } });
+    }
+    if (view) actions.push({ kind: 'open', icon: 'receipt', label: 'View receipt', onClick: () => view.click() });
+    if (del) actions.push({ kind: 'delete', label: 'Delete', onClick: () => del.click() });
+    return { title: entry.vendor || entry.desc || 'Expense entry', subtitle: '$' + (Number(entry.amount) || 0).toFixed(2) + ' · ' + (entry.date || ''), actions };
+  }
+  function incomeRowMenu(row) {
+    const id = Number(row.dataset.incomeId);
+    const entry = loadIncomeEntries().find(e => e.id === id);
+    if (!entry) return null;
+    const edit = row.querySelector('button[onclick^="editIncomeEntry"]');
+    const del = row.querySelector('button[onclick^="deleteIncomeEntry"]');
+    const actions = [];
+    if (edit) actions.push({ kind: 'edit', label: 'Edit', onClick: () => edit.click() });
+    if (del) actions.push({ kind: 'delete', label: 'Delete', onClick: () => del.click() });
+    return { title: entry.source || entry.desc || 'Income entry', subtitle: '$' + (Number(entry.amount) || 0).toFixed(2) + ' · ' + (entry.date || '') + (entry.origin === 'invoice' ? ' · from an invoice' : ''), actions };
+  }
+  function initFinanceRowMenus() {
+    if (typeof attachRowMenu !== 'function') return; // tools-dialogs.js not loaded (some minimal test sandboxes)
+    attachRowMenu(document.getElementById('entriesTable'), 'tr[data-expense-id]', {
+      getMenu: expenseRowMenu, buttonHost: 'td:last-child', longPress: false,
+      actions: [
+        { kind: 'edit', selector: 'button[onclick^="editExpense"]', label: 'Edit' },
+        { kind: 'delete', selector: 'button[onclick^="deleteExpense"]', label: 'Delete' },
+      ],
+    });
+    attachRowMenu(document.getElementById('incomeTable'), 'tr[data-income-id]', {
+      getMenu: incomeRowMenu, buttonHost: 'td:last-child', longPress: false,
+      actions: [
+        { kind: 'edit', selector: 'button[onclick^="editIncomeEntry"]', label: 'Edit' },
+        { kind: 'delete', selector: 'button[onclick^="deleteIncomeEntry"]', label: 'Delete' },
+      ],
     });
   }
 
@@ -1594,6 +1865,7 @@
       renderPriceReferences();
       initExpenseRowLongPress();
       initIncomeRowLongPress();
+      if (typeof initFinanceRowMenus === 'function') initFinanceRowMenus();
 
       // Initial tab (2026-09-22): an explicit #hash wins (the command
       // palette, the dashboard, and the tour link straight to a tab), then

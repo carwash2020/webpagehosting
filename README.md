@@ -5813,3 +5813,17 @@ The first package of the full v2 redesign (the approved prototype's look, not ju
 - **Everywhere:** every row's ⋯ and every long-press open one action sheet (a bottom sheet on a phone, a side panel on a computer), and Esc or a swipe down closes it. Create, More, the bottom bar, the sidebar (plus an account chip), toasts and the header (a kicker over the title) all take the v2 look.
 
 Nothing was removed. Every action in a sheet runs the page's existing handler, confirm dialogs included. Shared pieces for the next packages: the row menu and the ring helpers in `tools/tools-dialogs.js`, and the "V2" block in `tools/styles-tools.css`. Full write-up in `docs/specialist-logs/visual.md`, 2026-09-29.
+
+## What changed, 2026-09-29 -- Workspace app redesign v2: Money, Runway and Contracts
+
+The second v2 package (`design_handoff_workspace_app_v2` §8.5-8.7), built on the shell pieces from the first.
+
+- **Money** has one Invoices / Finance / Quick charge switch at the top of both pages (Finance shows only to accounts that can open both, like the header switch it replaces).
+  - Invoices: Owed / Overdue / this month as big-number tiles, then invoices and quotes as ruled rows with a hex avatar, the amount in Anton over its status pill, and a ⋯ (Mark paid, Send a reminder, Resend, Open client/job, Delete). "+ New invoice" and "+ New quote" open the builders.
+  - The builder: field groups as cards, a tinted job-fill banner, round remove × on each line, dashed "+ Add" buttons, and the total in Anton under an orange rule.
+  - Quick charge: a 460px card with the amount in Anton 64 and a 3×4 keypad that types into the same amount field. The Stripe charge is untouched.
+  - Finance opens on "Spent this month": the month's expenses and mileage in Anton, a bar split by vendor, a legend, and Log expense / Log income. The five tabs are one segmented track; each Log has a ⋯ (Export CSV, Clear all) and every entry a ⋯ (Edit, Attach receipt, View receipt, Delete).
+- **Runway**: the four tabs are one segmented track. Safe to Spend leads with a green ring (the share of income that goes to bills) and the amount in Anton 52. The Runway Summary opens on a gauge toward six months of bills saved, then four tiles: tax set-aside, month over month, year over year and monthly burn. Monthly History gets paired in/out bars, Net Worth reads as a list with Update balances, and every income, bill, debt and month row has a ⋯ and a long-press sheet. The "+ Add" buttons are dashed.
+- **Contracts**: the three types are cards (the open one orange-tinted, with a one-line hint). Each section is a numbered card that says Done or To fill. The signatures card shows the exact authorization sentence from the contract's own PDF template and who is signing, and the two pads are dashed, side by side on a computer. Recent contracts are ruled rows with a ⋯ (Download PDF, Delete).
+
+Nothing was removed; every ⋯ runs the row's existing handler, confirm and undo included, and every number comes from the page's own render math. Runway still loads neither shared stylesheet: its copy of the v2 shell CSS (bottom bar, rings, action sheet, toasts) lives in its own `<style>`. Full write-up in `docs/specialist-logs/visual.md`, 2026-09-29.

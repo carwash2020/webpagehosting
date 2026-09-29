@@ -364,6 +364,235 @@
     body.th-tool-page[data-th-page="invoice-generator"] #tab-recent > * { min-width: 0; }
     body.th-tool-page[data-th-page="invoice-generator"] #tab-recent > #invoiceSummary { grid-column: 1 / -1; }
   }
+
+  /* ==========================================================================
+     Workspace app redesign v2 -- MONEY: Invoices / Quotes / Quick charge (2026-09-29)
+     design_handoff_workspace_app_v2 §8.5, on top of W3 above (its builder
+     and list grids are kept; this is the v2 look). Keyed to this page's
+     body[data-th-page]; the shared pieces (.th-v2-seg, the row ⋯ sheet)
+     live in styles-tools.css "V2". Tokens only.
+     ========================================================================== */
+  /* ---- Invoices | Finance | Quick charge ---- */
+  body.th-tool-page[data-th-page="invoice-generator"] .mn-seg { display: flex; width: max-content; margin: 2px 0 14px; }
+  body.th-tool-page[data-th-page="invoice-generator"]:not(.th-money-switch-on) .mn-seg-cross { display: none; }
+  /* The header's two-segment switch is superseded by the three-segment one
+     above (same links plus Quick charge); it stays in the DOM, hidden, and
+     the page title comes back in its place. */
+  body.th-tool-page[data-th-page="invoice-generator"] .hub-header-left .th-money-switch { display: none !important; }
+  @media (max-width: 1023px) { body.th-tool-page.th-money-switch-on.th-money-page[data-th-page="invoice-generator"] .hub-header-left .hub-title { display: block; } }
+  /* The tab strip: its Invoices and Quick charge buttons are the switch's
+     own segments now, so it shows only the two builders -- and only while
+     one of them is open. */
+  body.th-tool-page[data-th-page="invoice-generator"] .tabs .tab-btn[data-tab="recent"],
+  body.th-tool-page[data-th-page="invoice-generator"] .tabs .tab-btn[data-tab="pos"] { display: none; }
+  body.th-tool-page[data-th-page="invoice-generator"]:has(#tab-recent.is-active) .tabs,
+  body.th-tool-page[data-th-page="invoice-generator"]:has(#tab-pos.is-active) .tabs { display: none; }
+  body.th-tool-page[data-th-page="invoice-generator"] .tabs,
+  body.th-tool-page[data-th-page="invoice-generator"] .tabs.tabs-sticky {
+    display: inline-flex; width: auto; max-width: 100%; gap: 4px; padding: 4px; margin: 0 0 14px;
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-track); box-shadow: none;
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] .tabs.tabs-sticky::before { border-radius: inherit; background: var(--bg-panel); }
+  body.th-tool-page[data-th-page="invoice-generator"] .tab-btn {
+    min-height: 38px; padding: 0 14px; border-radius: var(--th-radius-seg); box-shadow: none; background: none;
+    font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: .8px; color: var(--text-dim);
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] .tab-btn.is-active { background: var(--text); color: var(--bg); box-shadow: none; }
+  body.th-tool-page[data-th-page="invoice-generator"] .tab-btn:active { transform: scale(.97); }
+  @media (hover: hover) { body.th-tool-page[data-th-page="invoice-generator"] .tab-btn:not(.is-active):hover { background: none; color: var(--text); } }
+  @media (pointer: coarse) { body.th-tool-page[data-th-page="invoice-generator"] .tab-btn { min-height: 44px; } }
+
+  /* ---- Balance tiles: Owed (orange), Overdue (red), this month ---- */
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-summary,
+  body.th-tool-page[data-th-page="invoice-generator"] #invoiceSummary {
+    display: flex; flex-wrap: wrap; gap: 12px; background: none; border: 0; border-radius: 0; overflow: visible; margin: 0 0 16px;
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-summary > .inv-stat {
+    flex: 1 1 150px; gap: 4px; padding: 14px 16px; margin: 0;
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-tile); box-shadow: none;
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-stat-label { font-family: var(--font-ui); font-size: 11.5px; font-weight: 500; letter-spacing: 1.2px; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-stat-value { font-family: var(--font-display); font-weight: 400; font-size: 34px; line-height: 1.05; letter-spacing: .3px; color: var(--text); }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-stat-sub { font-size: 12.5px; }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-stat.is-owed .inv-stat-value { color: var(--tone-orange-fg); }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-stat.is-danger .inv-stat-value { color: var(--tone-red-fg); }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-stat:not(.is-owed):not(.is-danger):last-child .inv-stat-value { color: var(--tone-green-fg); }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-summary > .inv-stat.is-active { border-color: var(--orange); box-shadow: inset 0 0 0 1px var(--orange); }
+  body.th-tool-page[data-th-page="invoice-generator"] button.inv-stat:active { transform: scale(.98); }
+  @media (hover: hover) { body.th-tool-page[data-th-page="invoice-generator"] button.inv-stat:hover { border-color: var(--orange-tint-border); } }
+  @media (max-width: 400px) { body.th-tool-page[data-th-page="invoice-generator"] .inv-stat-value { font-size: 26px; } }
+
+  /* ---- Invoices + quotes: one ruled card each ---- */
+  body.th-tool-page[data-th-page="invoice-generator"] #tab-recent > .form-section {
+    position: relative; background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl);
+    padding: 12px 18px 10px; box-shadow: none;
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] #tab-recent > .form-section > h3,
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-log-head h3 {
+    font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text); margin: 0;
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-log-head { justify-content: flex-start; flex-wrap: wrap; gap: 8px; min-height: 40px; margin-bottom: 8px; }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-log-head [data-density-toggle] { margin-left: auto; min-height: 36px; border-radius: 999px; }
+  body.th-tool-page[data-th-page="invoice-generator"] .mn-new-btn {
+    min-height: 36px; padding: 0 14px; border: 0; border-radius: 999px; cursor: pointer; white-space: nowrap;
+    background: var(--orange); color: var(--th-ink-on-orange);
+    font-family: var(--font-ui); font-size: 12.5px; letter-spacing: .7px; text-transform: uppercase;
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] .mn-new-btn.is-secondary { background: var(--th-field); color: var(--text); border: 1px solid var(--border); }
+  body.th-tool-page[data-th-page="invoice-generator"] .mn-quotes > .mn-new-btn { position: absolute; top: 12px; right: 18px; }
+  body.th-tool-page[data-th-page="invoice-generator"] .mn-new-btn:active { transform: scale(.97); }
+  @media (hover: hover) { body.th-tool-page[data-th-page="invoice-generator"] .mn-new-btn:hover { background: var(--orange-light); } body.th-tool-page[data-th-page="invoice-generator"] .mn-new-btn.is-secondary:hover { background: var(--th-field); border-color: var(--orange-tint-border); } }
+  @media (pointer: coarse) { body.th-tool-page[data-th-page="invoice-generator"] .mn-new-btn { min-height: 44px; } }
+  body.th-tool-page[data-th-page="invoice-generator"] .mn-quotes > h3 { min-height: 36px; display: flex; align-items: center; margin-bottom: 8px !important; }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-log-tools .th-search-field { border-radius: var(--th-radius-track); background: var(--th-field); }
+  /* Rows: hex avatar (orange when owed), client, number · date, the amount
+     in Anton over its status pill, then the ⋯. Hairlines between rows. */
+  body.th-tool-page[data-th-page="invoice-generator"] #invoiceLogList,
+  body.th-tool-page[data-th-page="invoice-generator"] #quoteLogList { gap: 0; }
+  body.th-tool-page[data-th-page="invoice-generator"] .th-list > .inv-item { border-top: 1px solid var(--th-hairline); }
+  body.th-tool-page[data-th-page="invoice-generator"] .th-list > .inv-item:first-child { border-top: 0; }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-row { background: none; border: 0; border-radius: 0; padding: 4px 0; gap: 4px; }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-row .th-row-link { min-height: 64px; padding: 8px 0; }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-row .th-row-avatar { background: var(--th-field); color: var(--text-dim); box-shadow: none; font-size: 13px; font-weight: 500; }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-row .th-row-avatar.is-owed { background: var(--tone-orange-bg); color: var(--tone-orange-fg); }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-row .th-row-title { font-size: 15px; color: var(--text); }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-row .th-row-sub { font-size: 12.5px; }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-row .th-row-sub .is-late { color: var(--tone-red-fg); }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-row-amt { font-family: var(--font-display); font-weight: 400; font-size: 20px; letter-spacing: .3px; color: var(--text); }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-row .th-pill {
+    min-height: 0; padding: 3px 9px; border: 0; font-family: var(--font-app); font-size: 11.5px; font-weight: 600; letter-spacing: 0;
+    background: var(--tone-orange-bg); color: var(--tone-orange-fg);
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-row .th-pill.is-paid { background: var(--tone-green-bg); color: var(--tone-green-fg); }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-row .th-pill.is-danger { background: var(--tone-red-bg); color: var(--tone-red-fg); }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-row .th-pill.is-muted { background: var(--tone-blue-bg); color: var(--tone-blue-fg); }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-row-actions .small-btn { min-height: 36px; border-radius: 999px; }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-row-extra { margin: 0 0 10px 54px; }
+  body.th-tool-page[data-th-page="invoice-generator"] .inv-row .th-row-link:active { background: none; transform: scale(.985); }
+
+  /* ---- Builder: job-fill banner, field groups as cards, totals under an orange rule ---- */
+  body.th-tool-page[data-th-page="invoice-generator"] #tab-invoice > .form-section,
+  body.th-tool-page[data-th-page="invoice-generator"] #tab-quote > .form-section {
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl); padding: 14px 16px; box-shadow: none;
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] #tab-invoice > .form-section > h3,
+  body.th-tool-page[data-th-page="invoice-generator"] #tab-quote > .form-section > h3 {
+    font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text);
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] #tab-invoice .form-field label,
+  body.th-tool-page[data-th-page="invoice-generator"] #tab-quote .form-field label {
+    font-family: var(--font-ui); font-size: 11.5px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-dim);
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] #tab-invoice .form-field input,
+  body.th-tool-page[data-th-page="invoice-generator"] #tab-invoice .form-field select,
+  body.th-tool-page[data-th-page="invoice-generator"] #tab-invoice textarea,
+  body.th-tool-page[data-th-page="invoice-generator"] #tab-quote .form-field input,
+  body.th-tool-page[data-th-page="invoice-generator"] #tab-quote .form-field select {
+    min-height: 46px; border-radius: 12px; background: var(--th-field); border-color: var(--border);
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] #tab-invoice textarea#paymentText { width: 100%; min-height: 96px; font-family: var(--font-app); font-size: 16px; line-height: 1.45; }
+  body.th-tool-page[data-th-page="invoice-generator"] .job-fill {
+    border-radius: var(--th-radius-xl); padding: 14px 18px;
+    background: linear-gradient(135deg, var(--tone-orange-bg), var(--bg-panel) 70%); border: 1px solid var(--orange-tint-border);
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] .job-fill.is-done {
+    background: linear-gradient(135deg, var(--tone-green-bg), var(--bg-panel) 70%);
+    border-color: color-mix(in srgb, var(--tone-green-fg) 35%, transparent);
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] .job-fill.is-done .th-icon { color: var(--tone-green-fg); }
+  body.th-tool-page[data-th-page="invoice-generator"] .job-fill.is-done .small-btn { min-height: 38px; border-radius: 999px; background: var(--th-field); }
+  body.th-tool-page[data-th-page="invoice-generator"] .job-fill-head { color: var(--text); }
+  body.th-tool-page[data-th-page="invoice-generator"] .job-fill-line,
+  body.th-tool-page[data-th-page="invoice-generator"] .job-fill-quote { border-radius: 14px; background: var(--bg-panel); }
+  body.th-tool-page[data-th-page="invoice-generator"] .quote-banner {
+    border-radius: var(--th-radius-xl); background: linear-gradient(135deg, var(--tone-blue-bg), var(--bg-panel) 70%);
+    border: 1px solid color-mix(in srgb, var(--tone-blue-fg) 30%, transparent); color: var(--tone-blue-fg); font-size: 14px;
+  }
+  /* Line items: the remove × kept (removeLineItem / removeQuoteLineItem),
+     now a round red-outline target; "+ Add ..." as dashed pills. */
+  body.th-tool-page[data-th-page="invoice-generator"] .remove-row-btn {
+    width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border); background: none; color: var(--tone-red-fg); font-size: 18px;
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] .remove-row-btn:active { transform: scale(.94); }
+  @media (hover: hover) { body.th-tool-page[data-th-page="invoice-generator"] .remove-row-btn:hover { border-color: var(--status-error); color: var(--tone-red-fg); } }
+  @media (pointer: coarse) { body.th-tool-page[data-th-page="invoice-generator"] .remove-row-btn { width: 44px; height: 44px; } }
+  body.th-tool-page[data-th-page="invoice-generator"] .add-row-btn,
+  body.th-tool-page[data-th-page="invoice-generator"] .add-contact-btn {
+    min-height: 44px; padding: 0 14px; border: 1px dashed var(--border); border-radius: 12px; background: none;
+    color: var(--tone-orange-fg); font-family: var(--font-ui); font-size: 13px; letter-spacing: .8px; text-transform: uppercase;
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] .add-row-btn:active,
+  body.th-tool-page[data-th-page="invoice-generator"] .add-contact-btn:active { transform: scale(.985); }
+  @media (hover: hover) {
+    body.th-tool-page[data-th-page="invoice-generator"] .add-row-btn:hover,
+    body.th-tool-page[data-th-page="invoice-generator"] .add-contact-btn:hover { border-color: var(--orange-tint-border); background: var(--orange-tint-soft); }
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] .line-items-table th { font-family: var(--font-ui); font-weight: 500; letter-spacing: 1.2px; font-size: 11.5px; }
+  body.th-tool-page[data-th-page="invoice-generator"] .line-items-table input,
+  body.th-tool-page[data-th-page="invoice-generator"] .line-items-table select { min-height: 40px; border-radius: 10px; background: var(--th-field); }
+  @media (max-width: 760px) {
+    body.th-tool-page[data-th-page="invoice-generator"] .line-items-table tr { background: var(--th-field); border-radius: 14px; }
+    body.th-tool-page[data-th-page="invoice-generator"] .line-items-table td { border-bottom-color: var(--th-hairline); }
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] .contact-block { border-radius: 14px; background: var(--th-field); }
+  body.th-tool-page[data-th-page="invoice-generator"] .totals-box {
+    margin-top: 16px; padding: 12px 14px; background: none; border-radius: 0; border-top: 2px solid var(--orange); box-shadow: none;
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] .totals-row { font-size: 14.5px; }
+  body.th-tool-page[data-th-page="invoice-generator"] .totals-row > span:first-child { color: var(--text-dim); }
+  body.th-tool-page[data-th-page="invoice-generator"] .totals-row.total { align-items: baseline; border-top: 0; margin-top: 6px; padding-top: 4px; color: var(--text); }
+  body.th-tool-page[data-th-page="invoice-generator"] .totals-row.total > span:first-child {
+    font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text);
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] .totals-row.total > span:last-child {
+    font-family: var(--font-display); font-weight: 400; font-size: 34px; letter-spacing: .3px; color: var(--tone-orange-fg);
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] #tab-invoice > div > .primary-btn,
+  body.th-tool-page[data-th-page="invoice-generator"] #tab-invoice > div > .secondary-btn,
+  body.th-tool-page[data-th-page="invoice-generator"] #tab-quote > .primary-btn,
+  body.th-tool-page[data-th-page="invoice-generator"] #tab-quote > .secondary-btn { min-height: 52px; border-radius: 14px; font-size: 15px; letter-spacing: .9px; }
+
+  /* ---- Quick charge: a 460px card, the amount in Anton 64, a 3x4 keypad ---- */
+  body.th-tool-page[data-th-page="invoice-generator"] .pos-card {
+    max-width: 460px; display: flex; flex-direction: column; gap: 14px; padding: 20px;
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl); box-shadow: none;
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] .pos-card > * { margin-bottom: 0; }
+  body.th-tool-page[data-th-page="invoice-generator"] .pos-kicker { order: 0; font-family: var(--font-ui); font-size: 11.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="invoice-generator"] .pos-amount-field { order: 1; }
+  body.th-tool-page[data-th-page="invoice-generator"] .pos-card > .pos-field:not(.pos-amount-field) { order: 2; }
+  body.th-tool-page[data-th-page="invoice-generator"] .pos-keypad { order: 3; }
+  body.th-tool-page[data-th-page="invoice-generator"] #posChargeArea { order: 4; }
+  body.th-tool-page[data-th-page="invoice-generator"] #posError { order: 5; }
+  body.th-tool-page[data-th-page="invoice-generator"] .pos-amount-field label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  body.th-tool-page[data-th-page="invoice-generator"] .pos-amount-field { position: relative; }
+  body.th-tool-page[data-th-page="invoice-generator"] .pos-amount-field::before {
+    content: '$'; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+    font-family: var(--font-display); font-size: 64px; line-height: 1; color: var(--tone-orange-fg); pointer-events: none;
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] .pos-amount-field input {
+    min-height: 76px; padding: 0 0 0 40px; border: 0; background: none; box-shadow: none;
+    font-family: var(--font-display); font-weight: 400; font-size: 64px; line-height: 1; letter-spacing: .5px; color: var(--tone-orange-fg);
+    -moz-appearance: textfield; appearance: textfield;
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] .pos-amount-field input::-webkit-outer-spin-button,
+  body.th-tool-page[data-th-page="invoice-generator"] .pos-amount-field input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  body.th-tool-page[data-th-page="invoice-generator"] .pos-amount-field input::placeholder { color: var(--text-faint); }
+  body.th-tool-page[data-th-page="invoice-generator"] .pos-field label { font-family: var(--font-ui); font-size: 11.5px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="invoice-generator"] .pos-field input[type="email"],
+  body.th-tool-page[data-th-page="invoice-generator"] .pos-field input[type="text"] { min-height: 48px; border-radius: 12px; background: var(--th-field); }
+  body.th-tool-page[data-th-page="invoice-generator"] .pos-keypad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  body.th-tool-page[data-th-page="invoice-generator"] .pos-keypad button {
+    min-height: 56px; border-radius: 14px; border: 1px solid var(--border); background: var(--th-field); color: var(--text); cursor: pointer;
+    font-family: var(--font-display); font-weight: 400; font-size: 22px; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] .pos-keypad button:active { transform: scale(.96); background: var(--bg-panel-2); }
+  @media (hover: hover) { body.th-tool-page[data-th-page="invoice-generator"] .pos-keypad button:hover { border-color: var(--orange-tint-border); } }
+  body.th-tool-page[data-th-page="invoice-generator"] #posChargeArea .primary-btn { min-height: 56px; border-radius: 14px; font-size: 16px; letter-spacing: .9px; }
+  body.th-tool-page[data-th-page="invoice-generator"] .pos-intro { max-width: 460px; margin-left: 0; text-align: left; }
+  body.th-tool-page[data-th-page="invoice-generator"] .pos-saved-card-box,
+  body.th-tool-page[data-th-page="invoice-generator"] .pos-auth-box { border-radius: 14px; }
+  @media (min-width: 1024px) { body.th-tool-page[data-th-page="invoice-generator"] .pos-card, body.th-tool-page[data-th-page="invoice-generator"] .pos-intro { margin-left: 0; } }
 </style>
 </head>
 <body data-th-page="invoice-generator">
@@ -394,6 +623,16 @@
      invoice list -- who owes you, what is overdue -- not on a blank form.
      The three forms keep their tabs (and #invoice / #quote / #pos deep
      links); the + button and New job's Create invoice go straight to them. -->
+<!-- Money switch v2 (2026-09-29, app redesign v2 §8.5): Invoices | Finance |
+     Quick charge, one segmented control over both Money pages. Invoices and
+     Quick charge are this page's own tabs (activateGenTab); Finance is the
+     other page, shown only when the account can open both (the same
+     th-money-switch-on check the header switch uses). -->
+<nav class="th-v2-seg mn-seg" id="moneySeg" aria-label="Money">
+  <button type="button" class="is-active" data-money-seg="invoices" aria-pressed="true" onclick="activateGenTab('recent')">Invoices</button>
+  <a href="/tools/finance.html" class="mn-seg-cross" data-money-seg="finance">Finance</a>
+  <button type="button" data-money-seg="pos" aria-pressed="false" onclick="activateGenTab('pos')">Quick charge</button>
+</nav>
 <div class="tabs tabs-sticky">
   <button class="tab-btn is-active" data-tab="recent" onclick="activateGenTab('recent')">Invoices</button>
   <button class="tab-btn" data-tab="invoice" onclick="activateGenTab('invoice')">New invoice</button>
@@ -681,6 +920,7 @@
     <div class="inv-log-head">
       <h3>Invoices</h3>
       <button class="small-btn" data-density-toggle onclick="toggleDensityPreference()" aria-pressed="false">Compact view</button>
+      <button type="button" class="mn-new-btn" onclick="activateGenTab('invoice')">+ New invoice</button>
     </div>
     <div class="inv-log-tools">
       <div class="th-search-field">
@@ -696,8 +936,9 @@
     </div>
     <div class="th-list" id="invoiceLogList"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div><div class="skeleton-line w-40"></div></div>
   </div>
-  <div class="form-section">
+  <div class="form-section mn-quotes">
     <h3>Quotes</h3>
+    <button type="button" class="mn-new-btn is-secondary" onclick="activateGenTab('quote')">+ New quote</button>
     <!-- Conversion rate metric (audit item #17): quotes already track
          their own status ('converted' once turned into an invoice, via
          the exact same field renderQuoteLog()'s status badge already
@@ -726,6 +967,7 @@
 <div class="tab-panel" id="tab-pos">
   <p class="pos-intro">Charge a client's card directly for a quick job &mdash; no invoice, no line items, just an amount and a charge. If they've paid an invoice before, their card is already on file and it's one tap.</p>
   <div class="pos-card">
+    <div class="pos-kicker" aria-hidden="true">Charge a card now</div>
     <div class="pos-field">
       <label for="posClientEmail">Client email</label>
       <input type="email" id="posClientEmail" placeholder="client@example.com" autocomplete="off">
@@ -737,6 +979,15 @@
     <div class="pos-field">
       <label for="posDescription">What's this for? <span class="label-hint">(optional)</span></label>
       <input type="text" id="posDescription" placeholder="e.g. Furnace filter swap">
+    </div>
+    <!-- Keypad (2026-09-29, app redesign v2 §8.5): types into #posAmount
+         (and fires its input event, so the authorization preview follows)
+         without raising the phone keyboard. The field stays typeable. -->
+    <div class="pos-keypad" id="posKeypad" role="group" aria-label="Amount keypad">
+      <button type="button" onclick="posKeypadPress('1')">1</button><button type="button" onclick="posKeypadPress('2')">2</button><button type="button" onclick="posKeypadPress('3')">3</button>
+      <button type="button" onclick="posKeypadPress('4')">4</button><button type="button" onclick="posKeypadPress('5')">5</button><button type="button" onclick="posKeypadPress('6')">6</button>
+      <button type="button" onclick="posKeypadPress('7')">7</button><button type="button" onclick="posKeypadPress('8')">8</button><button type="button" onclick="posKeypadPress('9')">9</button>
+      <button type="button" onclick="posKeypadPress('.')" aria-label="Decimal point">.</button><button type="button" onclick="posKeypadPress('0')">0</button><button type="button" onclick="posKeypadPress('back')" aria-label="Delete last digit">&#9003;</button>
     </div>
 
     <div id="posChargeArea"></div>
@@ -985,6 +1236,66 @@
     });
   }
 
+  // Row ⋯ (2026-09-29, app redesign v2 §7/§8.5): the same actions the row's
+  // own sheet (openInvoiceActions / openQuoteActions) and its desktop
+  // buttons already offer, through the shared openRowMenu sheet. Every
+  // onClick is an existing handler -- toggleInvoicePaid, thOpenReminderSheet,
+  // resendInvoiceToClient, deleteInvoiceLogEntry (which also calls
+  // removePortalInvoice for a portal invoice), deleteQuoteLogEntry -- so each
+  // confirm and undo toast still runs. There is no Edit or Duplicate for a
+  // logged invoice or quote on this page, so the menu has none.
+  function invoiceRowMenu(id) {
+    const inv = invoicesForDisplay().find(i => i.id === id);
+    if (!inv) return null;
+    const st = invoiceState(inv);
+    const actions = [{ kind: 'extra', icon: 'check', label: st.status === 'paid' ? 'Mark Unpaid' : 'Mark Paid', onClick: () => toggleInvoicePaid(id) }];
+    if (st.status !== 'paid' && st.balance > 0 && typeof thOpenReminderSheet === 'function') {
+      const last = typeof thInvoiceRemindedLabel === 'function' ? thInvoiceRemindedLabel(inv) : '';
+      actions.push({ kind: 'extra', icon: 'bell', label: 'Send a reminder' + (last ? ' (' + last.toLowerCase() + ')' : ''), onClick: () => thOpenReminderSheet(id) });
+    }
+    if (inv.clientEmail) actions.push({ kind: 'extra', icon: 'mail', label: 'Resend', onClick: () => resendInvoiceToClient(id) });
+    const clientHref = invoiceClientHref(inv);
+    if (clientHref) actions.push({ kind: 'open', icon: 'user-plus', label: 'Open client', onClick: () => { window.location.href = clientHref; } });
+    if (inv.jobRefId) actions.push({ kind: 'open', icon: 'wrench', label: 'Open job', onClick: () => { window.location.href = '/tools/job-detail.html?id=' + encodeURIComponent(inv.jobRefId); } });
+    actions.push({ kind: 'delete', label: 'Delete', onClick: () => deleteInvoiceLogEntry(id) });
+    return {
+      title: (inv.clientName || 'Invoice') + ' · #' + (inv.invoiceNumber || '—'),
+      subtitle: money(st.status === 'paid' ? inv.total : st.balance) + ' · ' + ({ paid: 'Paid', partial: 'Part paid', unpaid: 'Unpaid', overdue: 'Overdue' })[st.status],
+      actions,
+    };
+  }
+  function quoteRowMenu(id) {
+    const q = loadQuoteLog().find(x => x.id === id);
+    if (!q) return null;
+    const actions = [];
+    const clientHref = invoiceClientHref(q);
+    if (clientHref) actions.push({ kind: 'open', icon: 'user-plus', label: 'Open client', onClick: () => { window.location.href = clientHref; } });
+    if (q.jobRefId) actions.push({ kind: 'open', icon: 'wrench', label: 'Open job', onClick: () => { window.location.href = '/tools/job-detail.html?id=' + encodeURIComponent(q.jobRefId); } });
+    actions.push({ kind: 'delete', label: 'Delete', onClick: () => deleteQuoteLogEntry(id) });
+    return { title: (q.clientName || 'Quote') + ' · #' + (q.quoteNumber || '—'), subtitle: money(q.total), actions };
+  }
+  function initInvoiceRowMenus() {
+    if (typeof attachRowMenu !== 'function') return; // tools-dialogs.js not loaded (some minimal test sandboxes)
+    // The row already has its own long-press (initInvoiceLogLongPress), so
+    // this adds only the ⋯. Resend and Delete move into it; Mark Paid stays
+    // as the row's one-click action on a computer.
+    attachRowMenu(document.getElementById('invoiceLogList'), '.inv-item[data-invoice-id]', {
+      getMenu: (row) => invoiceRowMenu(Number(row.dataset.invoiceId)),
+      buttonHost: '.inv-row',
+      longPress: false,
+      actions: [
+        { kind: 'extra', selector: '.inv-row-actions button[onclick^="resendInvoiceToClient"]', label: 'Resend' },
+        { kind: 'delete', selector: '.inv-row-actions button[onclick^="deleteInvoiceLogEntry"]', label: 'Delete' },
+      ],
+    });
+    attachRowMenu(document.getElementById('quoteLogList'), '.inv-item[data-quote-id]', {
+      getMenu: (row) => quoteRowMenu(Number(row.dataset.quoteId)),
+      buttonHost: '.inv-row',
+      longPress: false,
+      actions: [{ kind: 'delete', selector: '.inv-row-actions button[onclick^="deleteQuoteLogEntry"]', label: 'Delete' }],
+    });
+  }
+
 
   // Re-sends an already-logged invoice to its client (2026-09-02),
   // requested directly: "we need a Recent Invoices area so in the
@@ -1114,6 +1425,18 @@
     if (tab === 'recent' && typeof renderInvoiceLog === 'function') renderInvoiceLog();
     if (tab === 'recent' && typeof renderQuoteLog === 'function') renderQuoteLog();
     if (tab === 'recent' && typeof refreshPortalQuoteStatuses === 'function') refreshPortalQuoteStatuses();
+    if (typeof syncMoneySeg === 'function') syncMoneySeg(tab);
+  }
+
+  // The v2 Money switch above the tabs (2026-09-29): Invoices is lit for the
+  // list and both builders, Quick charge for the POS tab. Presentation only.
+  function syncMoneySeg(tab) {
+    const current = tab === 'pos' ? 'pos' : 'invoices';
+    document.querySelectorAll('#moneySeg [data-money-seg]').forEach(el => {
+      const on = el.dataset.moneySeg === current;
+      el.classList.toggle('is-active', on);
+      if (el.tagName === 'BUTTON') el.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
   }
 
   // Same order as the tab strip, which the swipe follows. The list comes
@@ -3049,6 +3372,7 @@
       if (typeof renderInvoiceLog === 'function') renderInvoiceLog();
       if (typeof renderQuoteLog === 'function') renderQuoteLog();
       if (typeof initInvoiceLogLongPress === 'function') initInvoiceLogLongPress();
+      if (typeof initInvoiceRowMenus === 'function') initInvoiceRowMenus();
       window.addEventListener('th-invoice-reminded', () => renderInvoiceLog());
       // The list is the default tab now, so it opens without a tab click --
       // fetch the portal's quote answers for it here instead.
@@ -3449,6 +3773,31 @@
     showError('');
     savedCardInfo = null;
     lastCheckedEmail = null;
+  }
+
+  // Quick-charge keypad (2026-09-29, app redesign v2 §8.5). Writes into the
+  // same #posAmount field the charge reads, then fires its input event so
+  // updateAuthPreview() runs exactly as it does for typing. A number input
+  // drops a trailing ".", so the digits being built live in posKeypadDraft
+  // and the field gets the valid part; typing in the field directly (or
+  // resetPosForm clearing it) resets the draft on the next key.
+  let posKeypadDraft = '';
+  function posKeypadPress(key) {
+    const input = document.getElementById('posAmount');
+    if (!input) return;
+    const draftValue = posKeypadDraft.endsWith('.') ? posKeypadDraft.slice(0, -1) : posKeypadDraft;
+    if (input.value !== draftValue) posKeypadDraft = input.value || '';
+    let next = posKeypadDraft;
+    if (key === 'back') next = next.slice(0, -1);
+    else if (key === '.') { if (!next.includes('.')) next = (next || '0') + '.'; }
+    else if (/^\d$/.test(key)) {
+      if (/\.\d{2}$/.test(next) || next.replace('.', '').length >= 7) return;
+      next = (next === '0' ? '' : next) + key;
+    } else return;
+    posKeypadDraft = next;
+    input.value = next.endsWith('.') ? next.slice(0, -1) : next;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    if (typeof haptic === 'function') haptic('light');
   }
 </script>
 
