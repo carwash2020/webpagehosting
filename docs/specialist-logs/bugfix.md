@@ -1374,3 +1374,79 @@ Tests: `tests/design/service-card-landing-pages.test.js` (19; 17 fail on e4e70d6
   - **Closing on the way to it.** A slow pointer closed the menu, because nothing bridged the gap under its link; `.nav-dropdown::after` now does.
 
   Pinned by `tests/design/header-menus.test.js`.
+
+## 2026-09-29 -- Second redesign regression pass (#445-#468 and the portal leak fix), driven end to end in Chromium
+
+Asked, once the rest of the redesigns and the day's glitch fixes had landed, to make sure everything still works: #445 (portal update banner), #446 and #463 (homepage P1/P2), P3-P6 (landing pages, About/Our Work, blog, Careers/legal/404), #451 and #454-#457 (Workspace W1-W5), #453 and #458 (portal v2), #459-#462 (Workspace app v2 packages 1-4), #464 and #468 (Today card), #465 (service-area map), #466 and #467 (header menus) and e3c4dd4 (the portal cross-account leak fix). Everything ran on b6c5374 (main) against the same local harness as the 2026-09-25 entry, and was diffed against that pass's final run. The harness (still not committed) grew from 28 to 33 flows, and the layout audit now skips content inside a closed `<details>`.
+
+**Result.** 27 of the 28 existing flows pass on main, either unchanged or with a test adapted to an intended UI change. The 28th is the known first-key sync flow from 2026-09-25, which fails until that latent bug is fixed, as designed. Covered:
+- Portal pay: signature, decline, success, and short/over/exact through the real webhook; also Pay All.
+- Quick Charge with a new card and with a saved card.
+- Tools sign-in: the 2FA code, recovery code and forced enrollment. Log-mode aal1 was left alone; the mode wasn't flipped.
+- Portal sign-in: with and without 2FA, and Face ID.
+- Dev Tools: all 7 tabs, every panel, and "Run full health check" (ALL CLEAR).
+- CRUD: jobs, invoice and quote send, add client, portal work order, estimate approve/schedule/decline, both threads, and contract signing.
+- Both service workers: install, no loop, and one Update card per deploy.
+- Portal nav on all 7 pages, the homepage and a booking, manage-booking and manage-job, and Workspace Compliance.
+
+`edge-functions/` is untouched since #444; `stripe-webhook-index.ts` is still 18bed26 (#421).
+
+Five flows needed adapting, and each was checked to be the redesign's intent, not a slip:
+- **Portal pay:** Continue is disabled until the signature step is complete (sign enables it, Clear disables it again, an empty name gets a message), and Pay All's label is now "Pay all outstanding ($425.50)".
+- **Invoices:** the list lives under the Money segmented control.
+- **Clients:** the client hero is uppercased by CSS, so it's read from `textContent`.
+- **Portal work order:** the page's insert has always left `client_email` to the table default (`auth.email()`, `sql/portal/create_client_portal_work_orders.sql`). Once e3c4dd4 filtered the list on `client_email`, the harness's stand-in database had to apply that default too, or the new request didn't show.
+- **Compliance:** Edit sits behind the row ⋯ menu. The same edit/save/reopen passes through it.
+
+New flows, all passing on main:
+- **Cross-account isolation (e3c4dd4).** A second client's invoice, estimate, visit, contract and request are seeded under a marker. The harness database has no RLS, so it answers like the real one does for an internal account and returns every row. None of the seven portal pages shows the marker, and the dashboard total is this client's own $425.50. The same flow on 2078ead (just before the fix) fails on 6 of the 7 pages, so it would catch the leak coming back.
+- **The row ⋯ menu, on every list that uses it.** #451 on moved row Edit/Delete buttons behind `attachRowMenu()`, which hides them. A list wired wrong would lose them silently. So every `attachRowMenu()` call on 12 tool pages was hooked, and each of the 30 lists got a real row seeded. At 390px and 1440px:
+  - every row with hidden actions has a visible, uncovered ⋯ (44px on a phone);
+  - the sheet lists the row's own actions;
+  - each action, picked from the sheet on a fresh load, reaches its handler: a confirm (cancelled), a form, a sheet, a download, a navigation or a change.
+
+  All 30 lists on the 12 pages pass at both widths. The actions reached include:
+  - confirms: every Delete that confirms still does;
+  - forms: Edit insurance, contact, expense, income and template;
+  - the invoice reminder sheet, a contract PDF download, and navigations to the client page.
+
+  Dev Tools' to-do and flag deletes don't confirm. They go straight to the Graveyard, as their handlers have since before the redesigns.
+- **Portal update banner (#445).** A deploy that only re-stamps the portal worker leaves an open page alone. A deploy that changes the page shows one banner, and Update reloads once.
+- **Mutation check for the new flows.** On scratch copies:
+  - a CSS rule hiding the Contacts list's ⋯ fails the row-menu audit ("⋯ present but not visible");
+  - the pre-#445 `portal-update.js` fails the update-banner flow on the stamp-only deploy;
+  - 2078ead fails the isolation flow on 6 pages (above).
+
+**Fixed in this branch (two, both small):**
+- **Blocked-vibrate console error on every linked form sheet (#451).**
+  - **Symptom:** the v2 form sheets buzz (`haptic('light')`) as they open. A sheet opened from a link -- `job-tracker.html#add-job` from + Job, a client's New job, Workspace's New job, the command palette -- opens before the person has tapped the new page. Chrome refuses `navigator.vibrate()` there and logs "Blocked call to navigator.vibrate because user hasn't tapped on the frame..." as a console error every time.
+  - **Fix:** `haptic()` returns early while `navigator.userActivation.hasBeenActive` is false. It couldn't buzz there anyway. Browsers without `userActivation` behave as before, and after a tap it buzzes as before. The same guard is in runway-dashboard.html's copy, which says to keep the copies in step.
+  - **Proof:** before the fix, one blocked `vibrate(12)` from the sheet's MutationObserver on 4 of 5 runs (the fifth lost a timing race). After it, none on 5 of 5, and Add Job's success buzz still fires after the tap.
+- **Pull-to-refresh wired twice on job-tracker (predates the redesigns).**
+  - **Cause:** the 2026-08-27 fix moved `setupPullToRefresh()` above `await initSyncOnLoad()` and left the original call below it. On every normal load both ran, so each pull stacked two sets of touch listeners, re-rendered twice and buzzed twice.
+  - **Fix:** the second call was removed.
+  - **Proof:** one pull gave 2 "release" and 2 "done" haptics on 5 of 5 runs before, and 1 and 1 after.
+
+Tests: `tests/tools/haptic-user-activation.test.js` (8). Both copies are run in a vm; before a tap they call nothing, after it they buzz, and without `userActivation` they keep the old behaviour. The two copies must match, and job-tracker must wire pull-to-refresh once, above the await. 3 fail on main: the two before-a-tap tests and the pull-to-refresh one.
+
+**Checked, not bugs:**
+- **Closed header menus.** The layout audit flagged every Services/Areas link on booking.html (#467) as off-screen or covered. They're inside a closed `<details>`, which Chrome doesn't render: `checkVisibility()` is false, `focus()` fails and Tab skips them. Opened, the panel is on top with working links. The audit now skips closed `<details>` content.
+- **Landing-page service cards.** They changed again (2px rule, 22px padding, 22px heading), this time on purpose. P3 scopes it to `html.page-landing` and keeps text-only cards `display:block`, as `service-card-landing-pages.test.js` requires.
+- **New styles.css tokens.** #451 and #459 added 26 custom properties there (`--th-*`, `--status-*`, `--shadow-sheet`, `--text-faint`, ...). Only tools/ and portal/portal-polish.css read them, so nothing on the public site changes.
+- **The stray `GET /tools/' + url + '` 404 on clients.html.** This was seen once on 09-25 and not reproduced then. This time a CDP initiator trace caught it (1 in 25 loads).
+  - **What the trace shows:** an `Image` request started by the parser, reported at line 526, column 241. Column 241 is where the `<img …>` inside a JS string on line 1681 ends (`imgs.push('<a href="' + url + '" …><img src="' + url + '" …>')`). Line 526 is exactly 1155 lines short of it. So a tokenizer restarted partway through the page's 91 KB inline script and read that string as markup.
+  - **Why it's the browser:** that fits Chrome's speculative preload scanner, not the page's code. The script has no `<!--`, `<script` or `</script` that could change how it tokenizes, and nothing injects page source.
+  - **Seen on a second page too:** the final row-menu run caught `GET /images/dev-help/' + info.image + '` on site-content.html. That's the same shape, from `'<img src="/images/dev-help/' + info.image + '"'` in its inline script (line 1523). So it applies to any image-tag string in a large inline script, not to one page.
+  - **Impact:** a speculative 404 with no effect. Not changed. Splitting the tag inside those strings (`'<im' + 'g src="'`) would silence it if that's ever worth doing.
+- **Portal Update, rarely stuck in the harness.** 2 of 7 early runs, one on main and one on 2078ead, timed out after Update. It was Playwright waiting on its own post-click navigation tracking while the worker swapped. The page itself reloaded every time (8 of 8 instrumented runs, one navigation, no second reload path in `portal-update.js`).
+- **Settings two-factor "Loading...".** In the harness, Settings' two-factor button stayed "Loading...". The harness blocks service workers, and the push check ahead of the two-factor card awaits `navigator.serviceWorker.ready`. With workers allowed it reads "Turn off" in 0.5s. The underlying ordering predates the redesigns and is in ACTION-ITEMS as a question.
+- **Link check.** `check-links.py` reports 10 problems, all Unsplash photo URLs refused by this sandbox's proxy (403 at the tunnel), identically on main. Every internal link resolves.
+
+Two questions went to ACTION-ITEMS.md: v2 phone buttons under 44px (Settings 38px, homepage chips 40px), and the Settings two-factor card waiting on the service worker.
+
+**Gotchas worth keeping:**
+- **A hash-only `page.goto()` keeps the old document.** Going from `job-tracker.html` to `job-tracker.html#contacts` doesn't reload, so a sheet opened in the previous step still covers the page. Go to `about:blank` first.
+- **The row menu hides the buttons flows used to click.** `[data-row-action] { display:none }` under `.th-has-row-menu`. Tap `.th-row-menu-btn`, then the `.quick-actions-btn` with the action's label. Invoices build their own menu, and "Send a reminder" opens a second quick-actions sheet.
+- **Header centers can be help buttons.** Playwright clicks an element's center. On job-tracker's Recurring Templates header at 390px, that's the "?" (which stops propagation), so the section doesn't open. Click near the title.
+- **Hit-test a control where a person would have it.** `scrollIntoViewIfNeeded()` can leave a row flush with the top edge, under a sticky `.hub-header`. And `styles.css` sets `html{scroll-behavior:smooth}`, so a scripted scroll is still moving when you measure. Scroll it to `block: 'center'` with `behavior: 'instant'` and wait for the box to settle, then call `elementFromPoint`.
+- **Harness state leaks through localStorage.** review-request.html never pulls the blob, so a "Mark received" persists across reloads in the harness. Re-seed its keys per load.

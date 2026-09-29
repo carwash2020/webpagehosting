@@ -5924,3 +5924,26 @@ Fixed by adding the missing `.eq('client_email', ...)` filter to every affected 
 ## What changed, 2026-09-29 -- Follow-up: remove the redundant second Today card
 
 With no jobs scheduled today, the "Up next" card right below the greeting/rings card used to show its own "Nothing on the schedule for today." message -- redundant with the greeting card's own "Nothing left on today's schedule." line. That card is now hidden entirely when there's nothing scheduled, and reappears normally the moment a real job exists. Full write-up in `docs/specialist-logs/visual.md`, 2026-09-29.
+
+## What changed, 2026-09-29 -- No console error when a form opens from a link; one refresh per pull on Jobs
+
+Workspace. Found by the bug lane's second end-to-end pass over the redesigns and the day's fixes (#445-#468 and the portal leak fix).
+
+- **Opening a form from a link no longer logs a console error.** The new form sheets give a small buzz as they open. When one opens straight from a link (+ Job, a client's New job, Workspace's New job, the command palette), nobody has tapped the new page yet. Chrome refuses the buzz there and logged "Blocked call to navigator.vibrate..." as an error each time. The buzz now waits for the first tap, which is the only time it could work anyway. Every buzz after a tap is unchanged.
+- **Pull-to-refresh on Jobs runs once per pull.** It was being set up twice on every load, so each pull refreshed twice and buzzed twice. That dates from an 08-27 fix that moved the setup and left the old one in place.
+
+Checked, not changed: every other flow behaves the same after the redesigns. That covers:
+- portal payment (short/over/exact through the real webhook) and Quick Charge;
+- sign-in with 2FA and Face ID, and every Dev Tools tab;
+- the job, invoice, quote and client flows;
+- portal requests, estimates, messages and contracts;
+- booking and manage-by-link, and both service workers.
+
+Also checked, new this pass:
+- Every Edit/Delete behind the new ⋯ row menus, on 29 lists across 12 tool pages.
+- The portal update banner fix.
+- That no portal page shows another client's records (the leak fix holds).
+
+Details are in `docs/specialist-logs/bugfix.md`. Two questions are in `docs/ACTION-ITEMS.md`.
+
+Tests: `tests/tools/haptic-user-activation.test.js` (8). 3 fail on the previous code.
