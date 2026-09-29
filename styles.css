@@ -272,6 +272,22 @@
     --status-live: #3ad66b;
     --status-error: #ff6a5c;
     --status-idle: #6b6e76;
+    /* Workspace v2 (2026-09-28, app redesign v2 package 1+2): the
+       prototype's radii, hairline, faint text and the inks that sit on
+       a filled orange/green control. Only tools/ reads these. */
+    --th-radius-xl: 22px;
+    --th-radius-tile: 18px;
+    --th-radius-track: 14px;
+    --th-radius-seg: 10px;
+    --th-hairline: #1f2126;
+    --text-faint: #6b6e76;
+    --th-ink-on-orange: #1a0d02;
+    --th-ink-on-green: #06210f;
+    --th-ink-on-red: #1a0605;
+    --th-field: #1b1c20;
+    --th-rail: #0e0f12;
+    /* Set per ring inline by thRingSvg() (tools-dialogs.js); 86px default. */
+    --th-ring-size: 86px;
   }
 
   /* Light theme (2026-08-20): the JS toggle has always correctly set
@@ -317,6 +333,15 @@
     --status-live: #1c8f45;
     --status-error: #c4372b;
     --status-idle: #9a958c;
+    /* Workspace v2 (2026-09-28): light-ground hairline, faint text, and
+       the inks on filled green/red (white reads on the darker light-mode
+       tone fills; orange keeps its dark ink). */
+    --th-hairline: #ebe7e0;
+    --text-faint: #7d776e;
+    --th-ink-on-green: #ffffff;
+    --th-ink-on-red: #ffffff;
+    --th-field: #f2f0ec;
+    --th-rail: #fbfaf7;
   }
 
   *{box-sizing:border-box;}
