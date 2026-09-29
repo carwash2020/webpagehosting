@@ -5910,3 +5910,9 @@ Nothing removed: every town, note, link and the focus-town trail are still there
 - **The menu is readable in light mode**, and no longer closes when the pointer moves down to it slowly.
 
 Screenshots are in `docs/header-menus-2026-09-29/`.
+
+## What changed, 2026-09-29 -- Security fix: an internal account signed into the portal saw every client's invoices, jobs, quotes, contracts and requests
+
+`client_portal_invoices`, `client_portal_jobs`, `client_portal_quotes`, `client_portal_contracts` and `client_portal_work_orders` all allow either the matching client OR any internal account to read them (added 2026-09-22, so staff could look up a client's data from `tools/clients.html`). Every portal page queried these tables with no `.eq('client_email', ...)` filter, trusting RLS alone -- correct for an actual client, but not for an internal account (`steve@`/`connor@triplehenterprisesllc.biz`), for whom RLS legitimately returns every client's rows. Nothing stops an internal account from signing into `/portal/login.html` with its own real password, so doing so showed that account every client's invoices (summed into one "Amount due"), jobs, quotes, contracts and requests, all rendered as if they were its own.
+
+Fixed by adding the missing `.eq('client_email', ...)` filter to every affected query in `dashboard.html`, `home.html`, `jobs.html`, `quotes.html`, `contracts.html`, `work-orders.html`, and `settings.html`'s name-prefill fallback -- RLS itself is untouched, since the internal-account clause is legitimate and still needed for the staff tool. Full write-up, including real-world exposure scope and a recommended (not yet made) follow-up decision about blocking internal accounts from `/portal/login.html` entirely, in `docs/specialist-logs/security.md`, 2026-09-29.

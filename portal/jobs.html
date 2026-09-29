@@ -1302,10 +1302,16 @@
     const listEl = document.getElementById('jobList');
     listEl.innerHTML = portalSkeletonCards(4);
 
+    // Filtered by email explicitly (2026-09-29 fix): client_portal_jobs'
+    // RLS is "own row OR any internal account", so an internal account
+    // signed into the portal itself would otherwise see every client's
+    // jobs here -- see dashboard.html's identical fix for the full
+    // reasoning.
     const [{ data: jobs, error }, unread] = await Promise.all([
       client
         .from('client_portal_jobs')
         .select('*')
+        .eq('client_email', session.user.email.toLowerCase())
         .order('job_date', { ascending: false }),
       portalLoadUnreadCounts(client),
     ]);

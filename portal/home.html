@@ -624,16 +624,22 @@
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(n) || 0);
   }
 
-  // Every count comes from the client's own rows -- RLS on each portal
-  // table restricts a signed-in client to their own email, so these
-  // are inherently scoped without any client-side filtering.
+  // Filtered by email explicitly on every query below (2026-09-29 fix):
+  // these tables' RLS is "own row OR any internal account" (account_roles
+  // staff read every client's data from tools/clients.html by design), so
+  // an internal account signed into the portal itself -- nothing stops
+  // them from using their own real password at /portal/login.html -- got
+  // back every client's invoices/quotes/jobs/requests/contracts here, and
+  // this page's own summing/rendering had no way to tell that apart from
+  // "these are mine." client_profiles just below already had this exact
+  // fix; it just hadn't been applied to the rest of this Promise.all yet.
   async function loadSummary(email) {
     const [invoices, quotes, jobs, requests, contracts, visitResult, unread, profile] = await Promise.all([
-      client.from('client_portal_invoices').select('id,total,paid,paid_at,invoice_number,invoice_date,client_name'),
-      client.from('client_portal_quotes').select('id,status,total,quote_number,quote_date,responded_at,client_name'),
-      client.from('client_portal_jobs').select('id,title,job_date'),
-      client.from('client_portal_work_orders').select('id,title,status,scheduled_at,address,created_at'),
-      client.from('client_portal_contracts').select('id,status,contract_title'),
+      client.from('client_portal_invoices').select('id,total,paid,paid_at,invoice_number,invoice_date,client_name').eq('client_email', email),
+      client.from('client_portal_quotes').select('id,status,total,quote_number,quote_date,responded_at,client_name').eq('client_email', email),
+      client.from('client_portal_jobs').select('id,title,job_date').eq('client_email', email),
+      client.from('client_portal_work_orders').select('id,title,status,scheduled_at,address,created_at').eq('client_email', email),
+      client.from('client_portal_contracts').select('id,status,contract_title').eq('client_email', email),
       // Booked visits (quote/check-up/booking.html) -- see
       // portalFetchMyVisits() in portal-app.js. Never throws; a failed
       // lookup just means the hero falls back to work-order visits.

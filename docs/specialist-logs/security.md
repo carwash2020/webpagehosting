@@ -1426,4 +1426,35 @@ The action item offered both. Cancelling in `create-payment-intent` / `create-bu
 
 - **Duplicate alerts.** A redelivered event for a held invoice sends the push again. Stripe only redelivers on non-2xx or its rare duplicates, and reconcile nags daily anyway, so there's no dedup table for it.
 
+## 2026-09-29: An internal account signed into the portal saw every client's invoices, jobs, quotes, contracts and requests -- not just its own
+
+Reported directly, with screenshots: an invoice for "San Diego building supply" (`crisandk05@gmail.com`) showed up on a different signed-in account's dashboard, and that account's "Amount due" ($337.66) turned out to be the sum of every unpaid invoice in the whole system, not one client's balance.
+
+### The risk
+
+`client_portal_invoices`, `client_portal_jobs`, `client_portal_quotes`, `client_portal_contracts` and `client_portal_work_orders` all carry the same RLS policy: `(auth.email() = client_email) OR current_user_has_any_role()`. The internal-account clause was added 2026-09-22 (`sql/portal/let_internal_accounts_read_portal_jobs_and_invoices.sql` and its siblings) on purpose, so staff could look up a client's invoices/jobs/quotes from `tools/clients.html`. That part of the policy is correct and was left alone.
+
+The bug is that `portal/login.html` has no check at all keeping an internal account (`account_roles`) from signing into the client-facing portal with its own real password -- both surfaces share one Supabase Auth user pool, and nothing stops `connor@triplehenterprisesllc.biz` from typing his own credentials into `/portal/login.html` instead of `/tools/login.html`. Every portal page's query against those five tables was `.select('*')` with no `.eq('client_email', ...)` filter, trusting RLS alone to scope the result -- a correct assumption for an actual client (never in `account_roles`, so the OR clause is always false for them), but wrong for an internal account, where RLS legitimately returns *every* row. The portal's own rendering then summed and displayed all of it as if it belonged to the signed-in account: Amount due, the invoice list, the invoice-history chart, Jobs, Quotes, Contracts, and the Home dashboard's account cards and "Needs your attention" inbox.
+
+`home.html`'s `client_profiles` query on the same page already had the correct `.eq('client_email', email)` filter, added for exactly this reason ("an internal account signed into the portal can read every profile") -- the fix just hadn't been carried to the five queries sitting right above it in the same `Promise.all`, or to the equivalent queries on `dashboard.html`, `jobs.html`, `quotes.html`, `contracts.html`, `work-orders.html` and `settings.html`'s name-prefill fallback.
+
+### Real-world exposure
+
+Only two accounts are in `account_roles` (`steve@` and `connor@triplehenterprisesllc.biz`), so the accounts that could have hit this are limited to those two -- not an arbitrary outside attacker, and not another actual client. Live data at the time of the fix: 3 rows in `client_portal_invoices`, all correctly `client_email`-tagged; `portal_bug_reports` and `portal_client_errors` have no client-submitted report matching this symptom. So the exposure that actually happened, as far as the data shows, was an internal account seeing other clients' invoice amounts, names, emails, and job/quote/contract details on its own portal session -- not client-to-client. Worth the owner's own judgment call on whether any affected client needs to be told, since "another client's invoice total and description" is still real financial data, even if the only account that saw it was internal.
+
+### The fix
+
+Added an explicit `.eq('client_email', <signed-in session email>)` to every portal-side query against these five tables (`portal/dashboard.html`, `home.html`, `jobs.html`, `quotes.html`, `contracts.html`, `work-orders.html`, and the two fallback lookups in `settings.html`), rather than touching RLS -- the internal-account clause is legitimate and still needed for `tools/clients.html`. `work-orders.html`'s `renderMyRequests()` didn't have the session in scope at all (it's called from `init()`, a cancel handler and a submit handler, none of which passed it through), so it now fetches its own session, matching every other portal page's render function.
+
+Bumped `portal/service-worker.js`'s `CACHE_NAME` (the 7 changed HTML pages are all precached).
+
+### Not done here, left for the owner
+
+- **`portal/login.html` still lets an internal account sign in as itself.** The architecture doc already says "internal tool accounts are NOT portal clients" and `send-invite` enforces that server-side for new invites, but nothing blocks an existing internal account from using its own password at `/portal/login.html`. A clean fix exists (check `current_user_has_any_role()` right after sign-in, sign out and redirect to `/tools/login.html` if true) but touches the same login flow as MFA/biometric lock/Face ID, and blocking staff from ever opening the portal as themselves is a product decision (do they ever legitimately need to test the client view?), not just a data-scoping bug -- left for Steve/Connor to decide rather than changed quietly.
+
+### Verified
+
+- Live RLS policies on all `client_portal_*` tables read directly via SQL (not assumed from the SQL source tree, which could have drifted from what's actually deployed).
+- Full test suite (`npm test`), `check-consistency.js`, `check-undefined-vars.js`, `check-links.py` (only the known sandbox Unsplash 403s), `npm run fix-versions`.
+
 <!-- Add new entries above this line -->
