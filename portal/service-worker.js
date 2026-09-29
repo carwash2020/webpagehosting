@@ -264,7 +264,14 @@
 // window.alert() on the error/validation paths across dashboard.html,
 // quotes.html and settings.html, item 8; plus the line-item disclosure's
 // animated open/close CSS). All six are in PRECACHE_URLS.
-const CACHE_NAME = 'th-portal-v172'; // precache-fingerprint:0ea6e3987c7b
+// Bumped 2026-09-29: dashboard.html, home.html, jobs.html, quotes.html,
+// contracts.html, work-orders.html and settings.html all changed -- a real
+// cross-account data leak fix (an internal account signed into the portal
+// itself, with its own real password, was seeing every client's
+// invoices/jobs/quotes/contracts/requests, not just its own; see
+// docs/specialist-logs/security.md, 2026-09-29). All seven are in
+// PRECACHE_URLS.
+const CACHE_NAME = 'th-portal-v173'; // precache-fingerprint:3336420f980c
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',

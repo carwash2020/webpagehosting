@@ -1657,15 +1657,23 @@
 
     if (!hasProfile) {
       try {
+        // Filtered by email explicitly (2026-09-29 fix): both tables' RLS
+        // is "own row OR any internal account", so an internal account
+        // signed into the portal itself would otherwise have been
+        // prefilled here with an arbitrary OTHER client's name (whichever
+        // row .limit(1) happened to return first) -- see dashboard.html's
+        // identical fix for the full reasoning.
         const { data } = await client
           .from('client_portal_invoices')
           .select('client_name')
+          .eq('client_email', email)
           .limit(1);
         if (data && data.length) name = data[0].client_name || '';
         if (!name) {
           const { data: q } = await client
             .from('client_portal_quotes')
             .select('client_name')
+            .eq('client_email', email)
             .limit(1);
           if (q && q.length) name = q[0].client_name || '';
         }

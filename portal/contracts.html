@@ -349,9 +349,15 @@
     const listEl = document.getElementById('contractList');
     listEl.innerHTML = portalSkeletonCards(3);
 
+    // Filtered by email explicitly (2026-09-29 fix): client_portal_contracts'
+    // RLS is "own row OR any internal account", so an internal account
+    // signed into the portal itself would otherwise see every client's
+    // contracts here -- see dashboard.html's identical fix for the full
+    // reasoning.
     const { data: contracts, error } = await client
       .from('client_portal_contracts')
       .select('*')
+      .eq('client_email', session.user.email.toLowerCase())
       .order('created_at', { ascending: false });
 
     if (error) {

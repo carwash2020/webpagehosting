@@ -1160,6 +1160,8 @@
   }
 
   async function renderMyRequests() {
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) { window.location.replace('/portal/login.html'); return; }
     const listEl = document.getElementById('myRequests');
     // Shown immediately, before the fetch (2026-09-03) -- same
     // reasoning as the identical fix on quotes.html/jobs.html, found
@@ -1170,6 +1172,10 @@
     // internal_notes must never reach a client, and Postgres RLS is
     // row-level, not column-level, so the query itself is what keeps
     // it out. See this page's head comment.
+    // Filtered by email explicitly too (2026-09-29 fix): this table's RLS
+    // is "own row OR any internal account", so an internal account signed
+    // into the portal itself would otherwise see every client's requests
+    // here -- see dashboard.html's identical fix for the full reasoning.
     // Unread counts ride along in the same Promise.all (2026-09-22) --
     // two parallel requests, no added wait. portalLoadUnreadCounts()
     // never throws; a failed lookup just means no badges.
@@ -1177,6 +1183,7 @@
       client
         .from('client_portal_work_orders')
         .select('id,title,description,urgency,status,scheduled_at,created_at')
+        .eq('client_email', session.user.email.toLowerCase())
         .order('created_at', { ascending: false }),
       portalLoadUnreadCounts(client),
     ]);
