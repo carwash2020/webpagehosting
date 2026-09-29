@@ -3622,16 +3622,28 @@
   }
 
   function renderTodayHero() {
+    const heroEl = document.getElementById('todayHero');
     const nextEl = document.getElementById('todayNextJob');
     const restEl = document.getElementById('todayRestOfDay');
     if (!nextEl || !restEl) return;
     const todaysJobs = getTodaysJobs();
 
+    // Empty schedule (2026-09-29): the greeting card's own summary line
+    // ("Nothing left on today's schedule.") already says this -- a second
+    // "Up next" card repeating the same fact in different words, right
+    // below it, read as a leftover duplicate rather than a second real
+    // thing. Hide the whole card rather than filling it with an empty
+    // state; unhidden the moment a real job exists again.
     if (todaysJobs.length === 0) {
-      nextEl.innerHTML = '<div class="empty-state-small is-good"><svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg>Nothing on the schedule for today.</div>';
+      // Inline style, not the hidden attribute: #todayHero's own v2 rule
+      // sets display: block (an author rule, which beats the UA
+      // stylesheet's [hidden] { display: none } regardless of
+      // specificity), so .hidden alone would silently no-op here.
+      if (heroEl) heroEl.style.display = 'none';
       restEl.innerHTML = '';
       return;
     }
+    if (heroEl) heroEl.style.display = '';
 
     const job = todaysJobs[0];
     const routeStops = todayRouteAddresses(todaysJobs).length;

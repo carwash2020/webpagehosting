@@ -2880,3 +2880,11 @@ The prototype's header has "Services ▾" and "Areas ▾" menus. The site alread
 **Verification.**
 - **`tests/design/header-menus.test.js` (new).** It pins that all 8 towns are in both lists on every page with the menus, the dark pin, that the bridge covers the gap, and that the caret's hover flip sits behind `(hover:hover)`. Mutation-checked: removing St. George from one page, dropping the pin, or shrinking the bridge each fails it.
 - **Screenshots:** `docs/header-menus-2026-09-29/{before,after}`, at 1440 dark and light, plus the mobile menu at 390.
+
+## 2026-09-29 -- Follow-up: remove the redundant second "nothing scheduled" card
+
+Direct follow-up to the Today-card fix above, requested after confirming the sizing bug was fixed: with no jobs scheduled today, the greeting card's own summary line ("Nothing left on today's schedule.") and a separate "Up next" card right below it ("Nothing on the schedule for today.") said the same thing in different words -- a real, redundant second card, not just a symptom of the earlier height bug.
+
+`renderTodayHero()` now hides `#todayHero` entirely when `getTodaysJobs()` is empty, and unhides it the moment a real job exists again -- verified with Playwright (mocked auth/Supabase): the card is `display: none` / 0 height with an empty schedule, and renders normally (Next Job label, title, actions) the instant a job is added and the dashboard re-renders. Uses `heroEl.style.display`, not the `hidden` attribute/property: `#todayHero`'s own v2 rule sets `display: block`, and since author CSS always wins over the UA stylesheet's `[hidden] { display: none }` regardless of selector specificity, `.hidden = true` alone would have silently no-op'd here.
+
+The Today's route card's own, separate empty state ("Nothing on the schedule for today. Add a job") was left as-is -- it carries a distinct, still-useful action (a direct link to add a job), unlike the Up Next card's empty state, which added nothing the greeting line didn't already say.

@@ -5910,3 +5910,7 @@ Nothing removed: every town, note, link and the focus-town trail are still there
 - **The menu is readable in light mode**, and no longer closes when the pointer moves down to it slowly.
 
 Screenshots are in `docs/header-menus-2026-09-29/`.
+
+## What changed, 2026-09-29 -- Follow-up: remove the redundant second Today card
+
+With no jobs scheduled today, the "Up next" card right below the greeting/rings card used to show its own "Nothing on the schedule for today." message -- redundant with the greeting card's own "Nothing left on today's schedule." line. That card is now hidden entirely when there's nothing scheduled, and reappears normally the moment a real job exists. Full write-up in `docs/specialist-logs/visual.md`, 2026-09-29.
