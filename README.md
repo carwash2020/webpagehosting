@@ -5910,3 +5910,7 @@ Nothing removed: every town, note, link and the focus-town trail are still there
 - **The menu is readable in light mode**, and no longer closes when the pointer moves down to it slowly.
 
 Screenshots are in `docs/header-menus-2026-09-29/`.
+
+## What changed, 2026-09-29 -- The booking pages get the Services and Areas menus too
+
+The booking form and the manage-booking and manage-job pages now have the same Services and Areas menus as the rest of the site, between the logo and the phone number. On the booking form, menu links open in a new tab, so a half-filled booking isn't lost. On small phones the menus sit on their own row under the logo. Full write-up in `docs/specialist-logs/visual.md`.
