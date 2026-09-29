@@ -128,7 +128,9 @@ test('no finance permission, no Billed; no clock time yet, a hint instead; nothi
 
 test('the Dashboard renders it with the rest, re-renders on a clock change, and styles it as one card that stacks on a phone', () => {
   assert.match(WS, /<div class="week-card" id="weekCard" aria-labelledby="weekCardLabel"><\/div>/);
-  assert.ok(WS.indexOf('id="dashPrimaryStrip"') < WS.indexOf('id="weekCard"') && WS.indexOf('id="weekCard"') < WS.indexOf('id="section-actionitems"'), 'between the daily actions and Needs attention');
+  // v2 (2026-09-28): Home's second column is Needs attention, Money Owed,
+  // then Your week (the handoff's order), after the day's own column.
+  assert.ok(WS.indexOf('id="dashPrimaryStrip"') < WS.indexOf('id="section-actionitems"') && WS.indexOf('id="section-actionitems"') < WS.indexOf('id="todayMoney"') && WS.indexOf('id="todayMoney"') < WS.indexOf('id="weekCard"'), 'the side column: Needs attention, Money Owed, Your week');
   assert.match(extractFn(WS, 'renderDashboard'), /renderTodayHero\(\);\s*renderWeekCard\(\);/);
   assert.match(WS, /window\.addEventListener\('th-clock-change', \(\) => \{ renderTodayHero\(\); renderWeekCard\(\); \}\);/);
   assert.match(WS, /@media \(max-width: 720px\) \{\s*\.week-card \{ padding: 14px 16px; \}\s*\.week-body \{ flex-direction: column;/);

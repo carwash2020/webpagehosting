@@ -67,8 +67,8 @@
     document.documentElement.style.colorScheme = saved === 'light' ? 'light' : 'dark';
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=0bda75dc09">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=24fa54915c">
+<link rel="stylesheet" href="/styles.css?v=09af5fd852">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=5ee5e06e3e">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=0e885bb435" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -79,11 +79,11 @@
 <script src="/tools/push-notifications.js?v=180abd2a84" defer></script>
 <script src="/tools/data-layer.js?v=b2586a446b" defer></script>
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
-<script src="/tools/tools-dialogs.js?v=310315eb44" defer></script>
+<script src="/tools/tools-dialogs.js?v=33e55c2858" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=f6e4a00a43" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=a1d4851522" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
-<script src="/tools/tools-tour.js?v=2c49f16637" defer></script>
+<script src="/tools/tools-tour.js?v=5728732237" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -693,119 +693,390 @@
   .welcome-overlay-text { font-family:var(--font-ui); font-size: 22px; color: var(--white); letter-spacing: .02em; }
 
   /* ==========================================================================
-     Workspace redesign W2 -- DAILY (2026-09-28): Home -- the day as a headline, then a cockpit
-     Package W2 of the v2 Workspace redesign, built on W1 (the append-only
-     body.th-tool-page block at the end of styles-tools.css). Kept in this
-     page's own <style> (which loads after styles-tools.css, so it wins at
-     equal specificity) rather than appended to the shared sheet: every rule
-     is keyed to this page's body[data-th-page], so it has no business in a
-     file the nine portal pages also load. Source order is untouched; the
-     desktop arrangement is CSS grid placement only.
-     The ink colour on the filled orange tile is the repo's existing #1a0d02
-     glyph colour (styles-tools.css uses it literally); declared once here as a
-     page-local token so no rule below carries a bare hex.
+     Workspace app redesign v2 -- TODAY + INSIGHTS (2026-09-28)
+     design_handoff_workspace_app_v2 §8.1-8.2, replacing W2's Home look (its
+     mechanics -- page key, grid-free source order -- stay). Every rule is
+     keyed to this page's body[data-th-page]; the shell pieces it leans on
+     (rings, the row ⋯ sheet, .th-v2-* cards / pills / segmented control)
+     are in styles-tools.css "V2". Tokens only; the prototype's hexes were
+     mapped with the handoff's §6. Source order is untouched: the two
+     columns are the .today-cols wrappers, one column on a phone.
      ========================================================================== */
-  body.th-tool-page[data-th-page="workspace"] { --th-ink-on-orange: #1a0d02; }
-  /* ---- Home: the day as a headline, then a cockpit ---- */
+  body.th-tool-page[data-th-page="workspace"] { --ws-gap: 16px; }
+  @media (min-width: 1024px) { body.th-tool-page[data-th-page="workspace"] { max-width: 1280px; margin-left: calc(240px + max(0px, (100vw - 240px - 1280px) / 2)); padding-left: 28px; padding-right: 28px; } }
+
+  /* ---- the two views: Today (default) and Insights (#insights) ---- */
+  body.th-tool-page[data-th-page="workspace"]:not([data-dash-view="insights"]) #section-snapshot,
+  body.th-tool-page[data-th-page="workspace"]:not([data-dash-view="insights"]) #section-analytics { display: none; }
+  body.th-tool-page[data-th-page="workspace"][data-dash-view="insights"] .global-search-block,
+  body.th-tool-page[data-th-page="workspace"][data-dash-view="insights"] .greeting-banner,
+  body.th-tool-page[data-th-page="workspace"][data-dash-view="insights"] .today-cols,
+  body.th-tool-page[data-th-page="workspace"][data-dash-view="insights"] .dash-group-label,
+  body.th-tool-page[data-th-page="workspace"][data-dash-view="insights"] .today-business,
+  body.th-tool-page[data-th-page="workspace"][data-dash-view="insights"] #globalSearchResults { display: none; }
+  body.th-tool-page[data-th-page="workspace"] .dash-view-switch { margin: 2px 0 16px; }
+
+  /* ---- Find a client: one 46px field ---- */
+  body.th-tool-page[data-th-page="workspace"] .global-search-block { margin-bottom: var(--ws-gap); }
+  body.th-tool-page[data-th-page="workspace"] #globalSearchWrap.is-expanded .icon-search-input {
+    min-height: 46px; padding: 11px 36px 11px 14px; border-radius: var(--th-radius-track);
+    background: var(--bg-panel); border: 1px solid var(--border);
+  }
+
+  /* ---- Summary card: the day, one line, three rings ---- */
   body.th-tool-page[data-th-page="workspace"] .greeting-banner {
-    background: none; border: 0; border-radius: 0; box-shadow: inset 0 calc(-1 * var(--th-rule)) 0 var(--border);
-    padding: 6px 0 16px; margin-bottom: 18px; align-items: flex-end;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px 24px;
+    margin: 0 0 var(--ws-gap); padding: 18px;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--orange) 11%, var(--bg-panel)) 0%, var(--bg-panel) 62%);
+    border: 1px solid color-mix(in srgb, var(--orange) 28%, transparent); border-left-width: 1px;
+    border-radius: var(--th-radius-xl); box-shadow: none;
   }
-  body.th-tool-page[data-th-page="workspace"] .greeting-banner-greeting {
-    font-size: 34px; line-height: 1.02; text-transform: uppercase; letter-spacing: .4px; color: var(--text);
-  }
+  body.th-tool-page[data-th-page="workspace"] .greeting-banner-text { flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
   body.th-tool-page[data-th-page="workspace"] .greeting-banner-date {
-    font-family: var(--font-ui); text-transform: uppercase; letter-spacing: 1.2px; font-size: 12.5px; width: 100%;
+    order: -1; width: auto; margin: 0; font-family: var(--font-ui); font-size: 12px; font-weight: 500;
+    letter-spacing: 1.4px; text-transform: uppercase; color: var(--orange-light);
   }
-  body.th-tool-page[data-th-page="workspace"] .greeting-banner-number { font-size: 48px; color: var(--orange); }
-  body.th-tool-page[data-th-page="workspace"] .greeting-banner-label { font-family: var(--font-ui); letter-spacing: 1.2px; }
-  @media (max-width: 720px) {
-    body.th-tool-page[data-th-page="workspace"] .greeting-banner { padding: 2px 0 12px; margin-bottom: 14px; }
-    body.th-tool-page[data-th-page="workspace"] .greeting-banner-greeting { font-size: 26px; }
-    body.th-tool-page[data-th-page="workspace"] .greeting-banner-number { font-size: 34px; }
+  body.th-tool-page[data-th-page="workspace"] .greeting-banner-greeting { margin: 0; font-family: var(--font-display); font-size: 34px; line-height: 1.02; letter-spacing: .4px; text-transform: uppercase; color: var(--text); }
+  body.th-tool-page[data-th-page="workspace"] .today-summary-line { margin: 2px 0 0; font-size: 14.5px; line-height: 1.45; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="workspace"] .today-summary-line .skeleton-line { width: 240px; max-width: 70vw; }
+  /* The job count moved into the Jobs ring; kept for screen readers. */
+  body.th-tool-page[data-th-page="workspace"] .greeting-banner-stat { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+  body.th-tool-page[data-th-page="workspace"] .today-rings { flex: 1 1 280px; max-width: 340px; display: flex; justify-content: space-between; gap: 10px; }
+  body.th-tool-page[data-th-page="workspace"] .today-ring { width: 92px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  body.th-tool-page[data-th-page="workspace"] .today-ring .th-ring-center b { font-size: 19px; }
+  body.th-tool-page[data-th-page="workspace"] .today-ring-label { font-family: var(--font-ui); font-size: 11.5px; letter-spacing: 1.1px; text-transform: uppercase; color: var(--text); text-align: center; }
+  body.th-tool-page[data-th-page="workspace"] .today-ring-skel { width: 86px; height: 86px; border-radius: 50%; border: 9px solid var(--th-hairline); }
+  @media (max-width: 420px) {
+    body.th-tool-page[data-th-page="workspace"] .greeting-banner-greeting { font-size: 30px; }
+    body.th-tool-page[data-th-page="workspace"] .today-rings { max-width: none; }
+    body.th-tool-page[data-th-page="workspace"] .today-ring { width: auto; flex: 1 1 0; }
   }
+
+  /* ---- Two columns: the day's work, and what needs you ---- */
+  body.th-tool-page[data-th-page="workspace"] .today-cols { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--ws-gap); margin-bottom: var(--ws-gap); }
+  body.th-tool-page[data-th-page="workspace"] .today-col { display: flex; flex-direction: column; gap: var(--ws-gap); min-width: 0; }
+  body.th-tool-page[data-th-page="workspace"] .today-col-main { flex: 1.6 1 440px; }
+  body.th-tool-page[data-th-page="workspace"] .today-col-side { flex: 1 1 300px; }
+  body.th-tool-page[data-th-page="workspace"] .today-col > * { margin: 0; }
+  body.th-tool-page[data-th-page="workspace"] #todayHero { display: block; margin: 0; }
+  /* Rest of Today is carried by Today's route (the whole day, this job
+     included); its list still renders underneath. */
+  body.th-tool-page[data-th-page="workspace"] #todayHero .today-side { display: none; }
+
+  /* ---- Up next ---- */
   body.th-tool-page[data-th-page="workspace"] .today-next-job {
-    background: linear-gradient(var(--orange-tint-soft), var(--orange-tint-soft)), var(--bg-panel);
-    border: 1px solid var(--orange-tint-border); border-radius: var(--th-radius-card); box-shadow: none;
+    padding: 0; overflow: hidden; background: var(--bg-panel); border: 1px solid var(--border);
+    border-left-width: 1px; border-radius: var(--th-radius-xl); box-shadow: none;
   }
-  body.th-tool-page[data-th-page="workspace"] .today-next-job-label,
-  body.th-tool-page[data-th-page="workspace"] .today-money-label,
-  body.th-tool-page[data-th-page="workspace"] .today-restofday-label {
-    font-family: var(--font-ui); font-weight: 600; font-size: 12px; letter-spacing: 1.4px; color: var(--text);
-    display: flex; align-items: center; gap: 10px;
+  body.th-tool-page[data-th-page="workspace"] .today-next-job > .empty-state-small, body.th-tool-page[data-th-page="workspace"] .today-next-job > .skeleton-line { margin: 16px 18px; }
+  body.th-tool-page[data-th-page="workspace"] .today-next-job-label {
+    display: flex; align-items: center; gap: 4px; margin: 0; padding: 16px 18px 0;
+    font-family: var(--font-ui); font-size: 12px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--orange);
   }
-  body.th-tool-page[data-th-page="workspace"] .today-next-job-label::after,
-  body.th-tool-page[data-th-page="workspace"] .today-money-label::after,
-  body.th-tool-page[data-th-page="workspace"] .today-restofday-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-  body.th-tool-page[data-th-page="workspace"] .today-next-job-title { font-size: 28px; line-height: 1.05; text-transform: uppercase; }
-  body.th-tool-page[data-th-page="workspace"] .today-money,
-  body.th-tool-page[data-th-page="workspace"] .today-restofday {
-    background: var(--bg-panel); background-image: none; border: 1px solid var(--border); border-radius: var(--th-radius-card); box-shadow: none;
+  body.th-tool-page[data-th-page="workspace"] .today-next-job-label::after { display: none; }
+  body.th-tool-page[data-th-page="workspace"] .today-next-of { color: var(--orange-light); }
+  body.th-tool-page[data-th-page="workspace"] .today-next-status { margin-left: auto; }
+  body.th-tool-page[data-th-page="workspace"] .today-next-job-title {
+    margin: 0; padding: 8px 18px 0; display: block;
+    font-family: var(--font-display); font-size: 30px; line-height: 1.02; letter-spacing: .3px; text-transform: uppercase; color: var(--text);
   }
-  body.th-tool-page[data-th-page="workspace"] .today-money.is-warning { border-color: var(--status-error); }
-  body.th-tool-page[data-th-page="workspace"] .today-money-row-value { font-family: var(--font-display); font-weight: 400; font-size: 22px; letter-spacing: .3px; }
-  /* Quick actions: tiles, not a row of links. */
-  body.th-tool-page[data-th-page="workspace"] .dash-primary-strip { gap: 8px; }
+  body.th-tool-page[data-th-page="workspace"] .today-next-job-title .badge {
+    vertical-align: .45em; margin-right: 4px; font-family: var(--font-app); font-size: 11px; letter-spacing: .3px; border-radius: 999px; padding: 3px 9px;
+  }
+  body.th-tool-page[data-th-page="workspace"] .today-next-job-title .badge-high { background: var(--tone-red-bg); color: var(--tone-red-fg); }
+  body.th-tool-page[data-th-page="workspace"] .today-next-job-meta { padding: 6px 18px 14px; font-size: 14px; line-height: 1.55; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="workspace"] .today-next-client { display: block; font-size: 15px; color: var(--text); }
+  body.th-tool-page[data-th-page="workspace"] .today-next-job-meta a { color: var(--text-dim); text-decoration: none; }
+  body.th-tool-page[data-th-page="workspace"] .today-next-job-actions { display: block; margin: 0; }
+  body.th-tool-page[data-th-page="workspace"] .today-next-grid {
+    display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 1px;
+    background: var(--border); border-top: 1px solid var(--border);
+  }
+  body.th-tool-page[data-th-page="workspace"] .today-next-grid > * {
+    min-height: 64px; margin: 0; padding: 8px 4px; width: auto; border: 0; border-radius: 0; box-shadow: none;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+    background: var(--bg-panel); color: var(--orange-light); text-decoration: none; cursor: pointer;
+    font-family: var(--font-ui); font-size: 12px; font-weight: 500; letter-spacing: .7px; text-transform: uppercase; text-align: center;
+  }
+  body.th-tool-page[data-th-page="workspace"] .today-next-grid > * .th-icon { width: 20px; height: 20px; margin: 0; color: currentColor; }
+  body.th-tool-page[data-th-page="workspace"] .today-next-grid > *:active { background: var(--bg-panel-2); }
+  body.th-tool-page[data-th-page="workspace"] .today-next-grid > [data-clock-action="stop"] { color: var(--tone-red-fg); }
+  body.th-tool-page[data-th-page="workspace"] .today-next-links { display: flex; gap: 8px; padding: 12px 18px 14px; border-top: 1px solid var(--border); }
+  body.th-tool-page[data-th-page="workspace"] .today-next-links > * { flex: 1 1 0; min-height: 44px; margin: 0; width: auto; display: inline-flex; align-items: center; justify-content: center; text-align: center; font-size: 13px; }
+
+  /* ---- Today's route: a timeline ---- */
+  body.th-tool-page[data-th-page="workspace"] .today-route .th-v2-card-head { margin-bottom: 4px; }
+  body.th-tool-page[data-th-page="workspace"] .today-route-row {
+    display: grid; grid-template-columns: 44px 14px minmax(0, 1fr) auto; column-gap: 12px; align-items: stretch;
+    color: inherit; text-decoration: none; border-radius: 12px; -webkit-tap-highlight-color: transparent;
+  }
+  body.th-tool-page[data-th-page="workspace"] .today-route-row:active { background: var(--bg-panel-2); }
+  body.th-tool-page[data-th-page="workspace"] .today-route-when { display: flex; flex-direction: column; align-items: flex-end; padding-top: 11px; line-height: 1; }
+  body.th-tool-page[data-th-page="workspace"] .today-route-when b { font-family: var(--font-display); font-weight: 400; font-size: 18px; color: var(--text); }
+  body.th-tool-page[data-th-page="workspace"] .today-route-when span { margin-top: 3px; font-size: 11px; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="workspace"] .today-route-rail { position: relative; display: flex; justify-content: center; }
+  body.th-tool-page[data-th-page="workspace"] .today-route-rail::before { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; margin-left: -1px; background: var(--border); }
+  body.th-tool-page[data-th-page="workspace"] .today-route-row:first-child .today-route-rail::before { top: 14px; }
+  body.th-tool-page[data-th-page="workspace"] .today-route-row:last-child .today-route-rail::before { bottom: auto; height: 14px; }
+  body.th-tool-page[data-th-page="workspace"] .today-route-row:only-child .today-route-rail::before { display: none; }
+  body.th-tool-page[data-th-page="workspace"] .today-route-rail i { position: relative; z-index: 1; width: 12px; height: 12px; margin-top: 14px; border-radius: 50%; background: var(--border); }
+  body.th-tool-page[data-th-page="workspace"] .today-route-row.is-done .today-route-rail i { background: var(--tone-green-fg); }
+  body.th-tool-page[data-th-page="workspace"] .today-route-row.is-next .today-route-rail i, body.th-tool-page[data-th-page="workspace"] .today-route-row.is-working .today-route-rail i { background: var(--orange); box-shadow: 0 0 0 3px var(--tone-orange-bg); }
+  body.th-tool-page[data-th-page="workspace"] .today-route-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 10px 0 16px; }
+  body.th-tool-page[data-th-page="workspace"] .today-route-title { font-size: 15.5px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+  body.th-tool-page[data-th-page="workspace"] .today-route-row.is-done .today-route-title { text-decoration: line-through; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="workspace"] .today-route-meta { font-size: 13px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  body.th-tool-page[data-th-page="workspace"] .today-route-row .th-v2-pill { align-self: center; }
+  body.th-tool-page[data-th-page="workspace"] .today-route .empty-state-small a { color: var(--orange-light); }
+
+  /* ---- The daily actions: six compact tiles ---- */
+  body.th-tool-page[data-th-page="workspace"] .dash-primary-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
   body.th-tool-page[data-th-page="workspace"] .dash-primary-action {
-    min-height: 56px; border-radius: var(--th-radius-control); box-shadow: none;
+    min-height: 52px; padding: 8px 10px; border-radius: var(--th-radius-control); box-shadow: none;
     background: var(--bg-panel); border: 1px solid var(--border); color: var(--text);
-    font-family: var(--font-ui); text-transform: uppercase; letter-spacing: .9px; font-weight: 600;
-    justify-content: flex-start; text-align: left; padding: 10px 12px;
+    font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: .8px; text-transform: uppercase;
   }
   body.th-tool-page[data-th-page="workspace"] .dash-primary-action:first-child { background: var(--orange); border-color: var(--orange); color: var(--th-ink-on-orange); }
-  body.th-tool-page[data-th-page="workspace"] .dash-primary-action:active { transform: scale(.98); }
+  body.th-tool-page[data-th-page="workspace"] .dash-primary-action:active { transform: scale(.97); }
   @media (hover: hover) {
     body.th-tool-page[data-th-page="workspace"] .dash-primary-action:hover { background: var(--bg-panel-2); border-color: var(--orange-tint-border); color: var(--text); }
     body.th-tool-page[data-th-page="workspace"] .dash-primary-action:first-child:hover { background: var(--orange-light); border-color: var(--orange-light); color: var(--th-ink-on-orange); }
   }
-  /* Needs-attention lanes: the tone lives in a dot beside the lane name,
-     not a coloured left edge. Urgent lanes keep full weight; a clear lane
-     compresses. */
-  body.th-tool-page[data-th-page="workspace"] .ops-lane {
-    border: 1px solid var(--border); border-radius: var(--th-radius-card); background: var(--bg-panel); box-shadow: none;
+
+  /* ---- Needs you: every lane as one list ---- */
+  body.th-tool-page[data-th-page="workspace"] #section-actionitems {
+    margin: 0; padding: 4px 18px 10px; background: var(--bg-panel); background-image: none;
+    border: 1px solid var(--border); border-radius: var(--th-radius-xl); box-shadow: none;
   }
-  body.th-tool-page[data-th-page="workspace"] .ops-lane[data-priority] { border-left: 1px solid var(--border); }
-  body.th-tool-page[data-th-page="workspace"] .ops-lane[data-priority="now"]:not(.is-clear) { border-color: color-mix(in srgb, var(--status-error) 45%, var(--border)); }
-  body.th-tool-page[data-th-page="workspace"] .ops-lane-label {
-    display: inline-flex; align-items: center; gap: 8px;
-    font-family: var(--font-ui); text-transform: uppercase; letter-spacing: 1.3px; font-weight: 600;
+  body.th-tool-page[data-th-page="workspace"] #section-actionitems > .section-heading { padding: 12px 0 8px; border: 0; }
+  body.th-tool-page[data-th-page="workspace"] #section-actionitems > .section-heading::after { display: none; }
+  body.th-tool-page[data-th-page="workspace"] #section-actionitems .section-heading-icon { display: none; }
+  body.th-tool-page[data-th-page="workspace"] #section-actionitems .section-heading-title { display: inline-flex; align-items: center; gap: 8px; }
+  body.th-tool-page[data-th-page="workspace"] #actionItemsHeadingBadge .ai-badge-detail { display: none; }
+  body.th-tool-page[data-th-page="workspace"] #actionItemsHeadingBadge .ai-badge-total {
+    display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 7px !important;
+    border-radius: 11px; background: var(--status-error); color: var(--th-ink-on-red);
+    font-family: var(--font-app); font-size: 12px !important; font-weight: 700; letter-spacing: 0;
   }
-  body.th-tool-page[data-th-page="workspace"] .ops-lane-label::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
-  body.th-tool-page[data-th-page="workspace"] .ops-lane[data-priority="now"] .ops-lane-label::before { background: var(--status-error); }
-  body.th-tool-page[data-th-page="workspace"] .ops-lane[data-priority="soon"] .ops-lane-label::before { background: var(--orange); }
-  body.th-tool-page[data-th-page="workspace"] .ops-lane[data-priority="later"] .ops-lane-label::before { background: var(--blue); }
-  body.th-tool-page[data-th-page="workspace"] .ops-lane[data-priority="money"] .ops-lane-label::before { background: var(--orange-light); }
-  body.th-tool-page[data-th-page="workspace"] .ops-lane.is-clear { opacity: 1; background: transparent; border-style: dashed; }
-  body.th-tool-page[data-th-page="workspace"] .ops-lane.is-clear .ops-lane-label { color: var(--text-dim); }
-  body.th-tool-page[data-th-page="workspace"] .ops-lane-count {
-    font-family: var(--font-display); font-size: 18px; background: none; border: 0; padding: 0; color: var(--text);
+  body.th-tool-page[data-th-page="workspace"] #section-actionitems .section-body { padding-top: 0; }
+  body.th-tool-page[data-th-page="workspace"] .ops-inbox { gap: 0; }
+  body.th-tool-page[data-th-page="workspace"] .ops-lanes { display: flex; flex-direction: column; gap: 0; }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane, body.th-tool-page[data-th-page="workspace"] .ops-lane[data-priority] { background: none; border: 0; border-radius: 0; padding: 0; margin: 0; }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane.is-clear[data-lane="soon"], body.th-tool-page[data-th-page="workspace"] .ops-lane.is-clear[data-lane="follow"] { display: none; }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane-header { margin: 10px 0 0; padding: 8px 0 6px; border-top: 1px solid var(--th-hairline); }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane:first-child .ops-lane-header { border-top: 0; padding-top: 0; }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane-label { font-size: 11.5px; letter-spacing: 1.2px; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane-count { font-family: var(--font-app); font-size: 12px; font-weight: 700; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane .analytics-subheading { display: none; }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane .rti-group .analytics-subheading { display: flex; margin: 6px 0 2px; }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane .dash-list-item, body.th-tool-page[data-th-page="workspace"] .ops-lane .lead-card {
+    position: relative; margin: 0; padding: 11px 0 11px 48px; min-height: 58px;
+    background: none; border: 0; border-top: 1px solid var(--th-hairline); border-radius: 0; box-shadow: none;
   }
-  body.th-tool-page[data-th-page="workspace"] .week-card { border-radius: var(--th-radius-card); box-shadow: none; background: var(--bg-panel); border: 1px solid var(--border); }
-  /* Desktop: two columns -- what needs you on the left, the quick actions
-     and your week beside it -- then the Business drawers full width. */
-  @media (min-width: 1200px) {
-    body.th-tool-page[data-th-page="workspace"] {
-      display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(300px, 1fr);
-      column-gap: 20px; grid-auto-flow: row dense; align-content: start;
-    }
-    body.th-tool-page[data-th-page="workspace"] > * { grid-column: 1 / -1; min-width: 0; }
-    body.th-tool-page[data-th-page="workspace"] > #todayHero,
-    body.th-tool-page[data-th-page="workspace"] > #section-actionitems { grid-column: 1; }
-    body.th-tool-page[data-th-page="workspace"] > #dashPrimaryStrip,
-    body.th-tool-page[data-th-page="workspace"] > #weekCard { grid-column: 2; align-self: start; }
-    body.th-tool-page[data-th-page="workspace"] > #dashPrimaryStrip { grid-template-columns: 1fr 1fr; margin-bottom: 14px; }
-    body.th-tool-page[data-th-page="workspace"] > #weekCard { margin-top: 0; }
-    /* Apply-time fix: in the ~430px cockpit column the week card's
-       side-by-side chart + stat row (built for a full-width card)
-       overflowed the viewport by ~40px and the bars ran under the
-       stats. Use the same stacked arrangement the card already uses
-       on a phone (the max-width: 720px block above). */
-    body.th-tool-page[data-th-page="workspace"] > #weekCard .week-body { flex-direction: column; align-items: stretch; gap: 14px; }
-    body.th-tool-page[data-th-page="workspace"] > #weekCard .week-chart { max-width: none; }
-    body.th-tool-page[data-th-page="workspace"] > #weekCard .week-bars { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
-    body.th-tool-page[data-th-page="workspace"] > #weekCard .week-stats { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-    body.th-tool-page[data-th-page="workspace"] > #weekCard .week-stats.is-four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane .lead-card.is-unread, body.th-tool-page[data-th-page="workspace"] .ops-lane .dash-list-item.is-unread { padding-left: 48px; border-left: 0; background: none; border-radius: 0; }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane .lead-card-top { margin: 0; align-items: center; }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane .lead-card-name, body.th-tool-page[data-th-page="workspace"] .ops-lane .dash-list-item-title { font-family: var(--font-app); font-size: 14.5px; font-weight: 600; color: var(--text); }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane .lead-card-meta, body.th-tool-page[data-th-page="workspace"] .ops-lane .dash-list-item-meta { font-size: 12.5px; }
+  /* The tinted icon tile: a tile (::before) and its glyph (::after, a mask). */
+  body.th-tool-page[data-th-page="workspace"] .ops-lane .dash-list-item::before, body.th-tool-page[data-th-page="workspace"] .ops-lane .lead-card::before {
+    content: ''; position: absolute; left: 0; top: 11px; width: 36px; height: 36px; border-radius: 11px;
+    background: var(--tone-orange-bg);
   }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane .dash-list-item::after, body.th-tool-page[data-th-page="workspace"] .ops-lane .lead-card::after {
+    content: ''; position: absolute; left: 9px; top: 20px; width: 18px; height: 18px; background: var(--tone-orange-fg);
+    -webkit-mask: var(--ws-glyph) center / contain no-repeat; mask: var(--ws-glyph) center / contain no-repeat;
+  }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane { --ws-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 12.5L6.5 5h11L20 12.5'/%3E%3Cpath d='M4 12.5v6c0 .8.7 1.5 1.5 1.5h13c.8 0 1.5-.7 1.5-1.5v-6h-4.8a2.7 2.7 0 0 1-5.4 0z'/%3E%3C/svg%3E"); }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane[data-lane="soon"] { --ws-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5.2' y='6.6' width='13.6' height='12.4' rx='1.2'/%3E%3Cline x1='5.2' y1='10.2' x2='18.8' y2='10.2'/%3E%3Cline x1='8.8' y1='5' x2='8.8' y2='8.2'/%3E%3Cline x1='15.2' y1='5' x2='15.2' y2='8.2'/%3E%3C/svg%3E"); }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane[data-lane="follow"] { --ws-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 5.5h15a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H10l-4.5 3.5V16.5h-1a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1z'/%3E%3C/svg%3E"); }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane[data-lane="money"] { --ws-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 3.5h12v17l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z'/%3E%3Cline x1='9' y1='8.5' x2='15' y2='8.5'/%3E%3Cline x1='9' y1='12' x2='15' y2='12'/%3E%3C/svg%3E"); }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane[data-lane="respond"] .dash-list-item::before, body.th-tool-page[data-th-page="workspace"] .ops-lane[data-lane="respond"] .lead-card::before,
+  body.th-tool-page[data-th-page="workspace"] .ops-lane .is-unread::before { background: var(--tone-red-bg); }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane[data-lane="respond"] .dash-list-item::after, body.th-tool-page[data-th-page="workspace"] .ops-lane[data-lane="respond"] .lead-card::after,
+  body.th-tool-page[data-th-page="workspace"] .ops-lane .is-unread::after { background: var(--tone-red-fg); }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane[data-lane="follow"] .dash-list-item::before { background: var(--tone-blue-bg); }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane[data-lane="follow"] .dash-list-item::after { background: var(--tone-blue-fg); }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane .income-settled .dash-list-item::before { background: var(--tone-green-bg); }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane .income-settled .dash-list-item::after { background: var(--tone-green-fg); }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane .empty-state-small { padding: 10px 0 12px; }
+  /* The lane's own action: a 34px pill; everything else is in the ⋯. */
+  body.th-tool-page[data-th-page="workspace"] .ops-lane .dash-list-item-right { gap: 6px; align-items: center; }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane .lead-toggle-btn, body.th-tool-page[data-th-page="workspace"] .ops-lane .small-btn, body.th-tool-page[data-th-page="workspace"] .ops-lane .paid-toggle-btn:not(.is-remind), body.th-tool-page[data-th-page="workspace"] .today-money .paid-toggle-btn:not(.is-remind) {
+    min-height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--th-field); color: var(--text);
+    font-family: var(--font-ui); font-size: 12.5px; font-weight: 500; letter-spacing: .6px; text-transform: uppercase; white-space: nowrap;
+  }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane .paid-toggle-btn.is-overdue, body.th-tool-page[data-th-page="workspace"] .today-money .paid-toggle-btn.is-overdue { color: var(--tone-red-fg); border-color: color-mix(in srgb, var(--status-error) 40%, transparent); }
+  body.th-tool-page[data-th-page="workspace"] .ops-lane .paid-toggle-btn.is-paid { color: var(--tone-green-fg); background: var(--tone-green-bg); border-color: transparent; }
+  body.th-tool-page[data-th-page="workspace"] .paid-toggle-btn.is-remind {
+    min-height: 34px; padding: 0 12px; border-radius: 999px; border: 0; background: var(--orange); color: var(--th-ink-on-orange);
+    font-family: var(--font-ui); font-size: 12.5px; font-weight: 500; letter-spacing: .6px;
+  }
+  body.th-tool-page[data-th-page="workspace"] .rti-more-btn { width: 38px; height: 38px; border: 0; background: none; color: var(--text-dim); }
+  @media (pointer: coarse) { body.th-tool-page[data-th-page="workspace"] .ops-lane .lead-toggle-btn, body.th-tool-page[data-th-page="workspace"] .ops-lane .small-btn, body.th-tool-page[data-th-page="workspace"] .ops-lane .paid-toggle-btn, body.th-tool-page[data-th-page="workspace"] .today-money .paid-toggle-btn, body.th-tool-page[data-th-page="workspace"] .rti-more-btn { min-height: 44px; } body.th-tool-page[data-th-page="workspace"] .rti-more-btn { width: 44px; } }
+  @media (hover: hover) { body.th-tool-page[data-th-page="workspace"] .rti-more-btn:hover { color: var(--text); background: var(--bg-panel-2); } }
+  body.th-tool-page[data-th-page="workspace"] #invoiceSearchWrap { margin: 8px 0 4px; }
+
+  /* ---- Money owed: the number, the pills, the line ---- */
+  body.th-tool-page[data-th-page="workspace"] .today-money {
+    margin: 0; padding: 16px 18px; background: var(--bg-panel); background-image: none;
+    border: 1px solid var(--border); border-radius: var(--th-radius-xl); box-shadow: none;
+  }
+  body.th-tool-page[data-th-page="workspace"] .today-money.is-warning { border-color: color-mix(in srgb, var(--status-error) 40%, var(--border)); }
+  body.th-tool-page[data-th-page="workspace"] .today-money-label { margin: 0 0 2px; font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: 1.4px; color: var(--text); }
+  body.th-tool-page[data-th-page="workspace"] .today-money-label::after { display: none; }
+  body.th-tool-page[data-th-page="workspace"] .today-money-total { font-family: var(--font-display); font-size: 44px; line-height: 1.05; color: var(--orange-light); font-variant-numeric: tabular-nums; }
+  body.th-tool-page[data-th-page="workspace"] .today-money-row, body.th-tool-page[data-th-page="workspace"] a.today-money-row.today-money-todo {
+    display: inline-flex; align-items: baseline; gap: 6px; margin: 6px 6px 0 0; padding: 4px 10px; border: 0; border-radius: 999px;
+    background: var(--tone-orange-bg); color: var(--tone-orange-fg); font-size: 12.5px; font-weight: 600;
+  }
+  body.th-tool-page[data-th-page="workspace"] .today-money-row + .today-money-row { border-top: 0; }
+  body.th-tool-page[data-th-page="workspace"] .today-money-row-label { color: currentColor; font-size: 12.5px; }
+  body.th-tool-page[data-th-page="workspace"] .today-money-row-value, body.th-tool-page[data-th-page="workspace"] .today-money-todo .today-money-row-value { font-family: var(--font-app); font-size: 12.5px; font-weight: 700; letter-spacing: 0; color: currentColor; }
+  body.th-tool-page[data-th-page="workspace"] .today-money-row:has(.is-overdue) { background: var(--tone-red-bg); color: var(--tone-red-fg); }
+  body.th-tool-page[data-th-page="workspace"] .today-money-spark { display: block; width: 100%; height: 64px; margin-top: 12px; }
+  body.th-tool-page[data-th-page="workspace"] .today-money-spark-area { fill: var(--tone-orange-bg); }
+  body.th-tool-page[data-th-page="workspace"] .today-money-spark-line { fill: none; stroke: var(--orange); stroke-width: 2.5; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+  body.th-tool-page[data-th-page="workspace"] .today-money-month { display: flex; justify-content: space-between; gap: 10px; margin-top: 4px; font-size: 12.5px; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="workspace"] .today-money-month span:last-child { color: var(--text); font-weight: 600; }
+  body.th-tool-page[data-th-page="workspace"] .today-overdue-list { margin-top: 12px; border-top: 0; }
+  body.th-tool-page[data-th-page="workspace"] .today-overdue-list .dash-list-item { padding: 11px 0; border-top: 1px solid var(--th-hairline); border-bottom: 0; background: none; border-left: 0; border-radius: 0; }
+
+  /* ---- Your week: a 7-bar chart, today in orange ---- */
+  body.th-tool-page[data-th-page="workspace"] .week-card { margin: 0; padding: 16px 18px; border-radius: var(--th-radius-xl); background: var(--bg-panel); border: 1px solid var(--border); box-shadow: none; }
+  body.th-tool-page[data-th-page="workspace"] .week-head { align-items: center; margin-bottom: 12px; }
+  body.th-tool-page[data-th-page="workspace"] .week-label { font-family: var(--font-ui); font-size: 13px; letter-spacing: 1.4px; color: var(--text); }
+  body.th-tool-page[data-th-page="workspace"] .week-range { margin-left: 8px; margin-right: auto; }
+  body.th-tool-page[data-th-page="workspace"] .week-insights-link { margin-left: 0; }
+  body.th-tool-page[data-th-page="workspace"] .week-body { flex-direction: column; align-items: stretch; gap: 14px; }
+  body.th-tool-page[data-th-page="workspace"] .week-chart { max-width: none; }
+  body.th-tool-page[data-th-page="workspace"] .week-bars { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+  body.th-tool-page[data-th-page="workspace"] .week-bar-track { height: 72px; background: none; border-radius: 8px; }
+  body.th-tool-page[data-th-page="workspace"] .week-bar-fill { border-radius: 8px; min-height: 6px; }
+  body.th-tool-page[data-th-page="workspace"] .week-card:not(.has-worked) .week-bar:not(.is-today) .week-bar-fill { background: var(--border); }
+  body.th-tool-page[data-th-page="workspace"] .week-card:not(.has-worked) .week-bar.is-today .week-bar-fill { background: var(--orange); }
+  body.th-tool-page[data-th-page="workspace"] .week-bar.is-future .week-bar-track { border: 0; background: none; }
+  body.th-tool-page[data-th-page="workspace"] .week-bar-day { font-family: var(--font-ui); letter-spacing: .8px; font-weight: 500; }
+  body.th-tool-page[data-th-page="workspace"] .week-stats { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  body.th-tool-page[data-th-page="workspace"] .week-stats.is-four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.th-tool-page[data-th-page="workspace"] .week-stat-value { font-size: 22px; font-weight: 400; }
+
+  /* ---- Business: an Anton header with an orange rule, two cards ---- */
+  body.th-tool-page[data-th-page="workspace"] .dash-group-label { margin: 8px 0 var(--ws-gap); font-size: 22px; }
+  body.th-tool-page[data-th-page="workspace"] .dash-group-label::after { background: var(--orange-tint-border); opacity: 1; }
+  body.th-tool-page[data-th-page="workspace"] .today-business { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--ws-gap); }
+  body.th-tool-page[data-th-page="workspace"] .today-business > .section-block { margin: 0; padding: 4px 18px 10px; border-radius: var(--th-radius-xl); min-width: 0; }
+  body.th-tool-page[data-th-page="workspace"] .today-business > #section-compliance { flex: 1.4 1 380px; }
+  body.th-tool-page[data-th-page="workspace"] .today-business > #section-gallery { flex: 1 1 300px; }
+  body.th-tool-page[data-th-page="workspace"] .today-business .section-heading { padding: 12px 0 8px; }
+  body.th-tool-page[data-th-page="workspace"] #body-compliance .analytics-subheading { margin: 14px 0 2px !important; font-size: 11.5px; letter-spacing: 1.2px; }
+  body.th-tool-page[data-th-page="workspace"] #body-compliance .analytics-subheading.is-first { margin-top: 4px !important; }
+  body.th-tool-page[data-th-page="workspace"] .compliance-card, body.th-tool-page[data-th-page="workspace"] .compliance-card.is-expiring, body.th-tool-page[data-th-page="workspace"] .compliance-card.is-expired {
+    margin: 0; padding: 11px 0; background: none; border: 0; border-top: 1px solid var(--th-hairline); border-radius: 0;
+  }
+  body.th-tool-page[data-th-page="workspace"] .compliance-card-top { align-items: center; margin-bottom: 4px; }
+  body.th-tool-page[data-th-page="workspace"] .compliance-card-title { font-family: var(--font-app); font-size: 14.5px; font-weight: 600; color: var(--text); }
+  body.th-tool-page[data-th-page="workspace"] .compliance-detail-row { font-size: 12.5px; gap: 4px 16px; }
+  body.th-tool-page[data-th-page="workspace"] .compliance-status-badge { border-radius: 999px; font-family: var(--font-app); letter-spacing: 0; text-transform: none; font-size: 12px; }
+  body.th-tool-page[data-th-page="workspace"] .license-item, body.th-tool-page[data-th-page="workspace"] #secureDocsList .dash-list-item { padding: 11px 0; margin: 0; border: 0; border-top: 1px solid var(--th-hairline); border-radius: 0; background: none; }
+  body.th-tool-page[data-th-page="workspace"] #body-compliance > .secondary-btn[onclick="addLicensePrompt()"] {
+    display: flex; align-items: center; justify-content: center; width: 100%; min-height: 44px; margin: 6px 0 14px !important;
+    border: 1px dashed var(--border); border-radius: 12px; background: none; box-shadow: none;
+    color: var(--orange-light); font-family: var(--font-ui); font-size: 13px; letter-spacing: .8px; text-transform: uppercase;
+  }
+  body.th-tool-page[data-th-page="workspace"] #secureDocsUploadWrap { width: 100%; }
+  body.th-tool-page[data-th-page="workspace"] #secureDocsUploadWrap .icon-search-toggle {
+    width: 100%; min-height: 44px; height: auto; border: 1px dashed var(--border); border-radius: 12px; background: none; gap: 6px;
+    color: var(--orange-light); font-family: var(--font-ui); font-size: 13px; letter-spacing: .8px; text-transform: uppercase;
+  }
+  body.th-tool-page[data-th-page="workspace"] #secureDocsUploadWrap .icon-search-toggle::after { content: 'Upload document'; }
+  @media (hover: hover) {
+    body.th-tool-page[data-th-page="workspace"] #body-compliance > .secondary-btn[onclick="addLicensePrompt()"]:hover,
+    body.th-tool-page[data-th-page="workspace"] #secureDocsUploadWrap .icon-search-toggle:hover { border-color: var(--orange-tint-border); background: var(--orange-tint-soft); }
+  }
+  body.th-tool-page[data-th-page="workspace"] .gallery-queue-item img { border-radius: 12px; }
+
+  /* ==================== Insights (#insights) ==================== */
+  body.th-tool-page[data-th-page="workspace"][data-dash-view="insights"] #section-snapshot,
+  body.th-tool-page[data-th-page="workspace"][data-dash-view="insights"] #section-analytics { background: none; border: 0; padding: 0; margin: 0 0 var(--ws-gap); box-shadow: none; }
+  body.th-tool-page[data-th-page="workspace"][data-dash-view="insights"] #section-snapshot > .section-heading,
+  body.th-tool-page[data-th-page="workspace"][data-dash-view="insights"] #section-analytics > .section-heading { pointer-events: none; padding: 4px 0 12px; border: 0; }
+  body.th-tool-page[data-th-page="workspace"][data-dash-view="insights"] .section-heading .collapse-arrow { display: none; }
+  body.th-tool-page[data-th-page="workspace"][data-dash-view="insights"] .section-body { padding-top: 0; overflow: visible; }
+  /* The period: a segmented control. */
+  body.th-tool-page[data-th-page="workspace"] .period-toggle {
+    display: inline-flex; gap: 4px; padding: 4px; max-width: 100%; overflow-x: auto; margin-bottom: var(--ws-gap);
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-track);
+  }
+  body.th-tool-page[data-th-page="workspace"] .period-btn {
+    min-height: 38px; padding: 0 14px; border: 0; border-radius: var(--th-radius-seg); background: none; color: var(--text-dim);
+    font-family: var(--font-ui); font-size: 13px; letter-spacing: .8px; text-transform: uppercase; white-space: nowrap;
+  }
+  body.th-tool-page[data-th-page="workspace"] .period-btn.is-active { background: var(--text); color: var(--bg); border-color: transparent; }
+  @media (pointer: coarse) { body.th-tool-page[data-th-page="workspace"] .period-btn { min-height: 44px; } }
+  /* KPI tiles: wrap, 130px minimum, Revenue first. */
+  body.th-tool-page[data-th-page="workspace"] .metrics-grid { display: flex; flex-wrap: wrap; gap: 12px; background: none; border: 0; border-radius: 0; overflow: visible; margin-bottom: var(--ws-gap); }
+  body.th-tool-page[data-th-page="workspace"] .metrics-grid > .metric-card, body.th-tool-page[data-th-page="workspace"] .metrics-grid > .metric-card-hero {
+    flex: 1 1 130px; min-width: 0; margin: 0; padding: 14px 16px;
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-tile);
+  }
+  body.th-tool-page[data-th-page="workspace"] .metrics-grid > .metric-card:has(#metricRevenue) { order: -3; }
+  body.th-tool-page[data-th-page="workspace"] .metrics-grid > .metric-card:has(#metricExpenses) { order: -2; }
+  body.th-tool-page[data-th-page="workspace"] .metrics-grid > .metric-card-hero { order: -1; }
+  body.th-tool-page[data-th-page="workspace"] .metrics-grid > .metric-card:has(#metricMileage) { order: 1; }
+  body.th-tool-page[data-th-page="workspace"] .metric-card .metric-label { font-size: 11.5px; letter-spacing: 1.2px; margin-bottom: 4px; }
+  body.th-tool-page[data-th-page="workspace"] .metric-card .metric-value, body.th-tool-page[data-th-page="workspace"] .metric-card-hero .metric-value { font-family: var(--font-display); font-weight: 400; font-size: 30px; line-height: 1.05; }
+  body.th-tool-page[data-th-page="workspace"] .metric-card .metric-value.is-orange { color: var(--orange-light); }
+  body.th-tool-page[data-th-page="workspace"] #overdueCard.is-warning { border-color: color-mix(in srgb, var(--status-error) 40%, var(--border)); }
+  body.th-tool-page[data-th-page="workspace"] #overdueCard.is-warning .metric-value { color: var(--tone-red-fg); }
+  body.th-tool-page[data-th-page="workspace"] .metric-card .metric-sub { font-size: 12.5px; font-weight: 600; }
+  body.th-tool-page[data-th-page="workspace"] .metric-sparkline { height: 26px; }
+  /* Charts and bar cards. */
+  body.th-tool-page[data-th-page="workspace"] .insights-grid { display: flex; flex-wrap: wrap; gap: var(--ws-gap); align-items: stretch; }
+  body.th-tool-page[data-th-page="workspace"] .insights-card {
+    flex: 1 1 280px; min-width: 0; padding: 16px 18px;
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl);
+  }
+  body.th-tool-page[data-th-page="workspace"] .insights-card[hidden] { display: none; }
+  body.th-tool-page[data-th-page="workspace"] .insights-card--rev { flex: 2 1 420px; }
+  body.th-tool-page[data-th-page="workspace"] .insights-card--utm { flex-basis: 100%; }
+  body.th-tool-page[data-th-page="workspace"] .insights-card .analytics-subheading {
+    margin: 0 0 12px !important; display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px;
+    font-family: var(--font-ui); font-size: 13px; letter-spacing: 1.4px; color: var(--text);
+  }
+  body.th-tool-page[data-th-page="workspace"] .insights-card .analytics-subheading span { font-family: var(--font-app); font-size: 12.5px; color: var(--text-dim); text-transform: none; letter-spacing: 0; }
+  body.th-tool-page[data-th-page="workspace"] .insights-card-note { margin-left: auto; }
+  body.th-tool-page[data-th-page="workspace"] .insights-rev-bars { display: flex; align-items: flex-end; gap: 6px; height: 170px; }
+  body.th-tool-page[data-th-page="workspace"] .insights-rev-bar { flex: 1 1 0; min-width: 0; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px; }
+  body.th-tool-page[data-th-page="workspace"] .insights-rev-fill { display: block; width: 100%; max-height: calc(100% - 20px); border-radius: 7px 7px 3px 3px; background: color-mix(in srgb, var(--orange) 35%, transparent); }
+  body.th-tool-page[data-th-page="workspace"] .insights-rev-bar.is-now .insights-rev-fill { background: var(--orange); }
+  body.th-tool-page[data-th-page="workspace"] .insights-rev-label { font-size: 10.5px; color: var(--text-faint); white-space: nowrap; }
+  @media (max-width: 480px) { body.th-tool-page[data-th-page="workspace"] .insights-rev-label { font-size: 9.5px; } body.th-tool-page[data-th-page="workspace"] .insights-rev-bar:nth-child(odd):not(.is-now) .insights-rev-label { visibility: hidden; } }
+  body.th-tool-page[data-th-page="workspace"] .insights-status { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  body.th-tool-page[data-th-page="workspace"] .insights-status-donut .th-ring-center b { font-size: 30px; }
+  body.th-tool-page[data-th-page="workspace"] .insights-status-donut .th-ring-center span { font-size: 11px; }
+  body.th-tool-page[data-th-page="workspace"] #statusBars { flex: 1 1 120px; display: flex; flex-direction: column; gap: 10px; }
+  body.th-tool-page[data-th-page="workspace"] #statusBars .status-bar-row { margin: 0; gap: 8px; font-size: 14px; }
+  body.th-tool-page[data-th-page="workspace"] #statusBars .status-bar-track { order: -1; flex: 0 0 10px; width: 10px; height: 10px; border-radius: 3px; background: none; }
+  body.th-tool-page[data-th-page="workspace"] #statusBars .status-bar-fill { width: 100% !important; border-radius: 3px; }
+  body.th-tool-page[data-th-page="workspace"] #statusBars .status-bar-row:nth-child(1) .status-bar-fill { background: var(--tone-blue-fg); }
+  body.th-tool-page[data-th-page="workspace"] #statusBars .status-bar-row:nth-child(2) .status-bar-fill { background: var(--orange); }
+  body.th-tool-page[data-th-page="workspace"] #statusBars .status-bar-row:nth-child(3) .status-bar-fill { background: var(--tone-green-fg); }
+  body.th-tool-page[data-th-page="workspace"] #statusBars .status-bar-label { flex: 1; width: auto; color: var(--text); }
+  body.th-tool-page[data-th-page="workspace"] #statusBars .status-bar-count { width: auto; font-size: 14px; font-weight: 700; color: var(--text); }
+  body.th-tool-page[data-th-page="workspace"] .insights-card .vendor-bar-row {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 12px; align-items: baseline; margin: 0 0 12px; font-size: 14px;
+  }
+  body.th-tool-page[data-th-page="workspace"] .insights-card .vendor-bar-label { width: auto; color: var(--text); }
+  body.th-tool-page[data-th-page="workspace"] .insights-card .vendor-bar-count { width: auto; font-size: 14px; font-weight: 700; color: var(--text); }
+  body.th-tool-page[data-th-page="workspace"] .insights-card .vendor-bar-track { grid-column: 1 / -1; grid-row: 2; height: 8px; background: var(--th-hairline); }
+  body.th-tool-page[data-th-page="workspace"] .insights-card .vendor-bar-fill { border-radius: 4px; }
+  body.th-tool-page[data-th-page="workspace"] .insights-card--clients .vendor-bar-fill { background: var(--orange); }
+  body.th-tool-page[data-th-page="workspace"] .insights-card--vendors .vendor-bar-fill { background: var(--tone-blue-fg); }
+  body.th-tool-page[data-th-page="workspace"] .insights-card--sources .vendor-bar-fill { background: var(--tone-green-fg); }
+  /* Campaigns: a ruled table of source and leads. */
+  body.th-tool-page[data-th-page="workspace"] .insights-card--utm .vendor-bar-row { grid-template-columns: minmax(0, 1fr) auto; margin: 0; padding: 11px 0; border-top: 1px solid var(--th-hairline); }
+  body.th-tool-page[data-th-page="workspace"] .insights-card--utm .vendor-bar-track { display: none; }
+  body.th-tool-page[data-th-page="workspace"] .insights-card--utm .vendor-bar-count { color: var(--tone-green-fg); }
 </style>
 </head>
 <body data-th-page="workspace">
@@ -832,6 +1103,13 @@
   </div>
   </div>
 </div>
+<!-- Home's two views (v2, 2026-09-28): Today and Insights, one page, hash-
+     routed like Job Tracker's #calendar. Insights is Business Snapshot +
+     Analytics as their own screen (showDashView()). -->
+<nav class="th-v2-seg dash-view-switch" id="dashViewSwitch" aria-label="Home views">
+  <a href="#today" class="is-active" data-dash-view="today" aria-current="page">Today</a>
+  <a href="#insights" data-dash-view="insights">Insights</a>
+</nav>
 <div class="global-search-block">
     <div class="icon-search is-expanded" id="globalSearchWrap">
     <button class="icon-search-toggle" onclick="toggleIconSearch('globalSearchWrap')" aria-label="Find a client" title="Find a client"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg></button>
@@ -844,11 +1122,16 @@
   <div class="greeting-banner-text">
     <p class="greeting-banner-greeting" id="greetingBannerGreeting"><span class="skeleton-line"></span></p>
     <p class="greeting-banner-date" id="greetingBannerDate"></p>
+    <p class="today-summary-line" id="todaySummaryLine"><span class="skeleton-line"></span></p>
   </div>
   <div class="greeting-banner-stat">
     <p class="greeting-banner-number" id="greetingBannerNumber"><span class="skeleton-line"></span></p>
     <p class="greeting-banner-label" id="greetingBannerLabel">jobs today</p>
   </div>
+  <!-- The day's three rings (v2): jobs done of today's, hours on the clock
+       of 8, paid of invoiced today -- renderTodayRings(), from the same jobs,
+       clock and invoices this page already reads. -->
+  <div class="today-rings" id="todayRings" aria-label="Today at a glance"><span class="today-ring-skel"></span><span class="today-ring-skel"></span><span class="today-ring-skel"></span></div>
 </div>
 
 <!-- W10 fix (Master Audit, Flagship 02, 2026-09-08): "The dashboard
@@ -869,15 +1152,29 @@
      lists open on. They used to open empty and then jump to full height,
      on every return to Home. renderDashboard() runs on a failed sync too,
      so none of these can be left behind. -->
+<!-- v2 (2026-09-28): Home is two columns on a computer -- the day's work
+     (Up next, Today's route, the daily actions) and what needs you (the
+     inbox, Money owed, Your week) -- and one column in that same order on
+     a phone. The wrappers are layout only; every id below is unchanged. -->
+<div class="today-cols" id="todayCols">
+<div class="today-col today-col-main">
 <div class="today-hero" id="todayHero">
   <div class="today-next-job" id="todayNextJob"><div class="skeleton-line w-40"></div><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div></div>
   <div class="today-side">
-    <div class="today-money" id="todayMoney"><div class="today-money-label">Money Owed</div><div class="skeleton-line w-100"></div><div class="skeleton-line w-100"></div></div>
     <div class="today-restofday">
       <div class="today-restofday-label">Rest of Today</div>
       <div id="todayRestOfDay"><div class="skeleton-line w-60"></div></div>
     </div>
   </div>
+</div>
+
+<!-- Today's route (v2): every job on today's schedule as a timeline -- done
+     ones ticked, the one you're on lit -- with Route all (the same
+     buildTodayRouteUrl() link as the hero's Route today). renderTodayRoute();
+     it carries the Rest of Today list above, which it replaces on screen. -->
+<div class="th-v2-card today-route" id="todayRouteCard">
+  <div class="th-v2-card-head"><span class="th-v2-card-title">Today&rsquo;s route</span><span class="th-v2-card-note" id="todayRouteCount"></span><a class="th-v2-link" id="todayRouteAll" href="/tools/route-planner.html" target="_blank" rel="noopener" hidden><svg class="th-icon" aria-hidden="true"><use href="#icon-navigate" xlink:href="#icon-navigate"></use></svg>Route all</a></div>
+  <div class="today-route-list" id="todayRoute"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div></div>
 </div>
 
 <nav class="dash-primary-strip" id="dashPrimaryStrip" aria-label="Daily actions">
@@ -889,12 +1186,8 @@
   <a class="dash-primary-action" href="/tools/finance.html#expenses" data-tile-perm="can_view_finance">Log expense</a>
 </nav>
 
-<!-- Your week (2026-09-23, Workspace rework part 11, with the shift
-     clock folded in): the scoreboard -- Start my day / End my day, hours
-     worked and hours on the clock each day, jobs done, and billed, beside
-     last week. Filled by renderWeekCard() from thWeekSummary() and
-     thShiftWeekSummary() in data-layer.js. -->
-<div class="week-card" id="weekCard" aria-labelledby="weekCardLabel"></div>
+</div>
+<div class="today-col today-col-side">
 
 <!-- Needs attention (2026-09-21): the ops inbox, open by default and
      directly under the hero -- leads, bookings, work requests, jobs
@@ -976,6 +1269,17 @@
   </div>
 </div>
 
+<div class="today-money" id="todayMoney"><div class="today-money-label">Money Owed</div><div class="skeleton-line w-100"></div><div class="skeleton-line w-100"></div></div>
+
+<!-- Your week (2026-09-23, Workspace rework part 11, with the shift
+     clock folded in): the scoreboard -- Start my day / End my day, hours
+     worked and hours on the clock each day, jobs done, and billed, beside
+     last week. Filled by renderWeekCard() from thWeekSummary() and
+     thShiftWeekSummary() in data-layer.js. -->
+<div class="week-card" id="weekCard" aria-labelledby="weekCardLabel"></div>
+</div>
+</div>
+
 <div class="dash-group-label">Business</div>
 
 <div class="section-block" id="section-snapshot">
@@ -1049,12 +1353,31 @@
     <span class="collapse-arrow">&#9660;</span>
   </div>
   <div class="section-body" id="body-analytics">
+    <!-- Insights cards (v2, 2026-09-28): each subheading + list pair is one
+         card on the Insights view; Revenue by week and the job-status donut
+         are presentational renders of the same invoices and job counts
+         (renderInsightsCharts()). -->
+    <div class="insights-grid">
+      <div class="insights-card insights-card--rev" id="insightsRevenueCard">
+        <div class="analytics-subheading is-first">Revenue by week <span class="insights-card-note">last 12 weeks, by invoice date</span></div>
+        <div class="insights-rev-bars" id="insightsRevenueWeeks"></div>
+      </div>
+      <div class="insights-card insights-card--status">
       <div class="analytics-subheading is-first">Job Status</div>
+      <div class="insights-status">
+      <div class="insights-status-donut" id="insightsStatusDonut"></div>
       <div id="statusBars"></div>
+      </div>
+      </div>
+      <div class="insights-card insights-card--vendors">
       <div class="analytics-subheading">Top Vendors <span style="text-transform:none; letter-spacing:0;">(for the period selected in Business Snapshot)</span></div>
       <div id="topVendors"></div>
+      </div>
+      <div class="insights-card insights-card--clients">
       <div class="analytics-subheading">Top Clients <span style="text-transform:none; letter-spacing:0;">(lifetime revenue, not limited to the period above)</span></div>
       <div id="topClients"></div>
+      </div>
+      <div class="insights-card insights-card--sources">
       <!-- Marketing-source-of-lead tracking (closes a real audit gap):
            the referral program already tracks ONE specific source with
            its own reward ledger, but there was no way to see how
@@ -1064,6 +1387,8 @@
            the most recent leads rather than a full historical count. -->
       <div class="analytics-subheading">Lead Sources <span style="text-transform:none; letter-spacing:0;">(most recent 50 leads)</span></div>
       <div id="leadSources"></div>
+      </div>
+      <div class="insights-card insights-card--utm">
       <!-- UTM campaign-attribution breakdown (2026-09-15) -- the
            automatic, URL-driven counterpart above's own manual "How did
            you hear about us?" dropdown can't capture: which ad
@@ -1075,9 +1400,12 @@
            window as Lead Sources just above, no second query. -->
       <div class="analytics-subheading">Campaign Sources <span style="text-transform:none; letter-spacing:0;">(UTM-tagged, most recent 50 leads)</span></div>
       <div id="utmSources"></div>
+      </div>
+    </div>
   </div>
 </div>
 
+<div class="today-business">
 <div class="section-block" id="section-compliance">
   <div class="section-heading" onclick="toggleSection('compliance')">
     <span class="section-heading-title"><svg class="th-icon section-heading-icon" aria-hidden="true"><use href="#icon-shield" xlink:href="#icon-shield"></use></svg>Compliance &amp; Documents <span id="complianceHeadingBadge"></span></span>
@@ -1170,6 +1498,7 @@
   <div class="section-body" id="body-gallery">
       <div id="galleryQueueList"></div>
   </div>
+</div>
 </div>
 
 <div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
@@ -2803,6 +3132,7 @@
     setOpsLaneCount('laneMoneyCount', 'lane-money', actionItemCounts.unpaid + actionItemCounts.toinvoice);
     const wrBadge = document.getElementById('workRequestsBadge');
     if (wrBadge) wrBadge.textContent = actionItemCounts.workrequests > 0 ? String(actionItemCounts.workrequests) : '';
+    renderTodaySummaryLine();
   }
 
   // Needs attention (2026-09-21): a respond-lane sub-group whose list
@@ -3314,18 +3644,35 @@
     const onMyWayBtn = (job.phone && !clockOn && typeof thOpenTextSheet === 'function')
       ? '<a class="secondary-btn today-clock-btn" href="sms:' + escapeAttr(String(job.phone).replace(/[^\d+]/g, '')) + '" data-text-job="' + escapeAttr(job.id) + '" data-text-kind="onmyway"><svg class="th-icon" aria-hidden="true"><use href="#icon-message" xlink:href="#icon-message"></use></svg>On my way</a>'
       : '';
+    // v2 (2026-09-28): the Up next card -- status pill, which stop of the
+    // day this is, the job as an Anton headline over the client and the
+    // address, and a 4-up grid of what you do next (On my way, Navigate,
+    // Call, the clock). Open Job and Route today sit under it.
+    const heroStatus = job.status === 'in-progress' ? ['Working', 'is-orange'] : ['Booked', 'is-blue'];
+    const heroOf = todaysJobs.length > 1 ? ' \u00b7 1 of ' + todaysJobs.length : '';
+    const heroIcon = (n) => '<svg class="th-icon" aria-hidden="true"><use href="#icon-' + n + '" xlink:href="#icon-' + n + '"></use></svg>';
+    const heroPhone = job.phone ? String(job.phone).replace(/[^\d+]/g, '') : '';
+    const heroNav = job.address ? '<a class="today-next-cell" href="' + escapeAttr('https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(job.address)) + '" target="_blank" rel="noopener">' + heroIcon('navigate') + 'Navigate</a>' : '';
+    const heroCall = heroPhone ? '<a class="today-next-cell" href="tel:' + escapeAttr(heroPhone) + '">' + heroIcon('phone') + 'Call</a>' : '';
     nextEl.innerHTML = `
-      <div class="today-next-job-label">${clockOn ? 'On the clock' : 'Next Job'}</div>
-      <p class="today-next-job-title"><span class="badge badge-${job.priority}">${job.priority}</span> ${escapeHtml(job.title)}${job.client ? ' &mdash; ' + escapeHtml(job.client) : ''}</p>
+      <div class="today-next-job-label">${clockOn ? 'On the clock' : 'Next Job'}<span class="today-next-of">${heroOf}</span><span class="th-v2-pill ${heroStatus[1]} today-next-status">${heroStatus[0]}</span></div>
+      <p class="today-next-job-title"><span class="badge badge-${job.priority}">${job.priority}</span> ${escapeHtml(job.title)}</p>
       <div class="today-next-job-meta">
+        ${job.client ? '<span class="today-next-client">' + escapeHtml(job.client) + '</span>' : ''}
         ${job.address ? '<a href="https://maps.google.com/?q=' + encodeURIComponent(job.address) + '" target="_blank" rel="noopener">' + escapeHtml(job.address) + '</a>' : 'No address on file'}<br>
         ${job.phone ? '<a href="tel:' + escapeAttr(job.phone) + '">' + escapeHtml(job.phone) + '</a>' : 'No phone on file'}
       </div>
       <div class="today-next-job-actions">
-        <a href="/tools/job-detail.html?id=${encodeURIComponent(job.id)}" class="primary-btn">Open Job</a>
+        <div class="today-next-grid">
         ${onMyWayBtn}
+        ${heroNav}
+        ${heroCall}
         ${clockBtn}
+        </div>
+        <div class="today-next-links">
+        <a href="/tools/job-detail.html?id=${encodeURIComponent(job.id)}" class="primary-btn">Open Job</a>
         ${routeUrl ? `<a href="${escapeAttr(routeUrl)}" class="secondary-btn" target="_blank" rel="noopener" id="todayRouteLink">${routeStops === 1 ? 'Directions' : 'Route today \u00b7 ' + routeStops + ' stops'}</a>` : '<a href="/tools/job-tracker.html" class="secondary-btn">View in Job Tracker</a>'}
+        </div>
       </div>`;
 
     const rest = todaysJobs.slice(1);
@@ -3452,7 +3799,7 @@
     const teamOpen = !!el.querySelector && !!el.querySelector('.shift-team-wrap[open]');
     el.classList.toggle('has-worked', both);
     el.innerHTML =
-      '<div class="week-head"><span class="week-label" id="weekCardLabel">Your week</span><span class="week-range">' + range + '</span></div>' +
+      '<div class="week-head"><span class="week-label" id="weekCardLabel">Your week</span><span class="week-range">' + range + '</span><a class="th-v2-link week-insights-link" href="#insights">Insights &rsaquo;</a></div>' +
       status +
       '<div class="week-body">' +
         '<div class="week-chart">' +
@@ -3524,8 +3871,14 @@
     const toInvoiceRowHtml = (toInvoiceCount && canInvoice)
       ? `<a class="today-money-row today-money-todo" href="#readyToInvoiceGroup"><span class="today-money-row-label">To invoice</span><span class="today-money-row-value">${toInvoiceCount} job${toInvoiceCount === 1 ? '' : 's'} &rsaquo;</span></a>`
       : '';
+    // v2 (2026-09-28): what's owed as the headline number, the six-month
+    // revenue line and this month's invoicing under the Current / Overdue
+    // pills -- the same invoices, the same sums Business Snapshot shows.
+    const v2Month = (typeof anyFinanceAccessV2 === 'function' && anyFinanceAccessV2() && typeof monthRevenueV2 === 'function') ? monthRevenueV2() : null;
+    const v2Spark = (v2Month && typeof sparkPathV2 === 'function') ? sparkPathV2(monthlyRevenueSeriesV2(6)) : '';
     el.innerHTML = `
       <div class="today-money-label">Money Owed</div>
+      <div class="today-money-total">${money(owed.outstandingTotal)}</div>
       <div class="today-money-row">
         <span class="today-money-row-label">Current</span>
         <span class="today-money-row-value">${money(owed.currentTotal)}</span>
@@ -3535,7 +3888,238 @@
         <span class="today-money-row-value${owed.overdueCount > 0 ? ' is-overdue' : ''}">${money(owed.overdueTotal)}</span>
       </div>
       ${toInvoiceRowHtml}
+      ${v2Spark ? `<svg class="today-money-spark" viewBox="0 0 300 64" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path class="today-money-spark-area" d="${v2Spark} L300 64 L0 64 Z"></path><path class="today-money-spark-line" d="${v2Spark}"></path></svg>` : ''}
+      ${v2Month ? `<div class="today-money-month"><span>Invoiced this month</span><span>${money(v2Month.revenue)}${v2Month.pct !== null ? ' \u00b7 ' + (v2Month.pct >= 0 ? 'up ' : 'down ') + Math.abs(v2Month.pct) + '%' : ''}</span></div>` : ''}
       ${overdueRows ? `<div class="today-overdue-list" id="todayOverdueList">${overdueRows}${moreUnpaid}</div>` : ''}`;
+  }
+
+  // =====================================================================
+  // v2 (2026-09-28, Workspace app redesign v2 §8.1-8.2): Today's summary
+  // rings and line, Today's route, Insights' charts, the Today / Insights
+  // view switch, and the row ⋯ menus. Presentation only: every number is
+  // read from the same jobs / clock / invoices the cards above already
+  // use, and every menu action clicks an existing button.
+  // =====================================================================
+  function todayKeyV2() {
+    const t = new Date();
+    return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+  }
+  // Every job on today's schedule: the finished ones first (they're behind
+  // you), then the rest in getTodaysJobs()'s own order -- the Up next card's.
+  function todayScheduleV2() {
+    const key = todayKeyV2();
+    const done = loadJobs().filter(j => j.date === key && j.status === 'done');
+    return done.concat(getTodaysJobs());
+  }
+  function anyFinanceAccessV2() {
+    try { return Object.values(TILE_PERMISSION_CHECKS).some(check => check()); } catch (e) { return true; }
+  }
+  // This month's invoiced total and its change on last month -- the same
+  // sums renderMetrics() shows for "This Month".
+  function monthRevenueV2() {
+    const now = new Date();
+    const sum = (start, end) => loadInvoices().filter(i => inRange(i.date, { start, end })).reduce((s, i) => s + (i.total || 0), 0);
+    const revenue = sum(new Date(now.getFullYear(), now.getMonth(), 1), new Date(now.getFullYear(), now.getMonth() + 1, 0));
+    const prev = sum(new Date(now.getFullYear(), now.getMonth() - 1, 1), new Date(now.getFullYear(), now.getMonth(), 0));
+    return { revenue, prev, pct: prev > 0 ? Math.round((revenue - prev) / prev * 100) : null };
+  }
+  // The same six calendar months renderMetrics()'s sparkline draws.
+  function monthlyRevenueSeriesV2(months) {
+    const all = loadInvoices();
+    const now = new Date();
+    const out = [];
+    for (let i = months - 1; i >= 0; i--) {
+      const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+      out.push(all.filter(inv => inRange(inv.date, { start, end })).reduce((s, inv) => s + (inv.total || 0), 0));
+    }
+    return out;
+  }
+  function sparkPathV2(values) {
+    if (!values || values.length < 2 || !values.some(v => v > 0)) return '';
+    const max = Math.max(...values, 1);
+    return 'M' + values.map((v, i) => ((i / (values.length - 1)) * 300).toFixed(1) + ' ' + (60 - (v / max) * 54).toFixed(1)).join(' L');
+  }
+  // Weekly invoiced totals, oldest first: the last `weeks` Monday-to-Sunday
+  // weeks up to this one, by invoice date.
+  function weeklyRevenueV2(weeks) {
+    const all = loadInvoices();
+    const now = new Date();
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+    const out = [];
+    for (let i = weeks - 1; i >= 0; i--) {
+      const start = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() - 7 * i);
+      const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+      out.push({ start, total: all.filter(inv => inRange(inv.date, { start, end })).reduce((s, inv) => s + (inv.total || 0), 0) });
+    }
+    return out;
+  }
+  function wholeMoneyV2(n) { return '$' + Math.round(Number(n) || 0).toLocaleString('en-US'); }
+
+  // Three rings: jobs done of today's, hours on the clock of 8, and paid of
+  // invoiced today (finance accounts only, like Your week's Billed).
+  function renderTodayRings() {
+    const el = document.getElementById('todayRings');
+    if (!el || typeof thRingSvg !== 'function') return;
+    const all = todayScheduleV2();
+    const done = all.filter(j => j.status === 'done').length;
+    let hours = 0;
+    if (typeof thWeekSummary === 'function') {
+      const today = thWeekSummary(Date.now()).days.find(d => d.isToday);
+      hours = today ? today.hours : 0;
+    }
+    const key = todayKeyV2();
+    const todays = loadInvoices().filter(i => i.date === key);
+    const invoiced = todays.reduce((s, i) => s + (Number(i.total) || 0), 0);
+    const paid = todays.reduce((s, i) => s + getPaidAmount(i), 0);
+    const ring = (value, tone, center, of, label, name) =>
+      '<div class="today-ring">' + thRingSvg({ value, tone, size: 86, stroke: 9, key: 'today-' + name, label,
+        center: '<b>' + center + '</b><span>' + of + '</span>' }) + '<span class="today-ring-label">' + name + '</span></div>';
+    const rings = [
+      ring(all.length ? done / all.length : 0, 'orange', done + '/' + all.length, 'jobs', done + ' of ' + all.length + ' jobs done today', 'Jobs'),
+      ring(hours / 8, 'green', (hours % 1 ? hours.toFixed(1) : String(hours)), 'of 8 h', hours + ' hours on the clock today, of 8', 'On the clock'),
+    ];
+    if (anyFinanceAccessV2()) {
+      rings.push(ring(invoiced > 0 ? paid / invoiced : 0, 'blue', wholeMoneyV2(paid), 'of ' + wholeMoneyV2(invoiced), money(paid) + ' paid of ' + money(invoiced) + ' invoiced today', 'Paid'));
+    }
+    el.innerHTML = rings.join('');
+    if (typeof thAnimateRings === 'function') thAnimateRings(el);
+  }
+
+  // "3 stops left today, first: Dishwasher (Sarah Miller). 2 people are
+  // waiting on a reply." -- the same counts the rings and the inbox show.
+  function renderTodaySummaryLine() {
+    const el = document.getElementById('todaySummaryLine');
+    if (!el) return;
+    const left = getTodaysJobs();
+    const waiting = (actionItemCounts.workrequests || 0) + (actionItemCounts.leads || 0) + (actionItemCounts.applicants || 0) + (actionItemCounts.bookings || 0);
+    let text = left.length === 0 ? 'Nothing left on today’s schedule.'
+      : left.length + ' stop' + (left.length === 1 ? '' : 's') + ' left today, first: ' + (left[0].title || 'a job') + (left[0].client ? ' (' + left[0].client + ')' : '') + '.';
+    if (waiting > 0) text += ' ' + waiting + (waiting === 1 ? ' person is' : ' people are') + ' waiting on a reply.';
+    el.textContent = text;
+  }
+
+  // Today's route: a timeline of every job on today's schedule.
+  function renderTodayRoute() {
+    const list = document.getElementById('todayRoute');
+    if (!list) return;
+    const all = todayScheduleV2();
+    const count = document.getElementById('todayRouteCount');
+    if (count) count.textContent = all.length ? all.length + ' stop' + (all.length === 1 ? '' : 's') : '';
+    const routeAll = document.getElementById('todayRouteAll');
+    const routeUrl = buildTodayRouteUrl(getTodaysJobs());
+    if (routeAll) {
+      if (routeUrl) { routeAll.href = routeUrl; routeAll.hidden = false; } else routeAll.hidden = true;
+    }
+    if (!all.length) {
+      list.innerHTML = '<div class="empty-state-small is-good"><svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg>Nothing on the schedule for today. <a href="/tools/job-tracker.html#add-job">Add a job</a></div>';
+      return;
+    }
+    const firstOpen = all.findIndex(j => j.status !== 'done');
+    const TONE = { done: ['Done', 'is-green'], 'in-progress': ['Working', 'is-orange'], 'not-started': ['Booked', 'is-blue'] };
+    list.innerHTML = all.map((j, i) => {
+      const tone = TONE[j.status] || TONE['not-started'];
+      const street = String(j.address || '').split(',')[0].trim();
+      const cls = (j.status === 'done' ? ' is-done' : '') + (i === firstOpen ? ' is-next' : '') + (j.status === 'in-progress' ? ' is-working' : '');
+      return '<a class="today-route-row' + cls + '" href="/tools/job-detail.html?id=' + encodeURIComponent(j.id) + '">' +
+        '<span class="today-route-when"><b>' + (i + 1) + '</b><span>' + (j.status === 'done' ? 'done' : 'stop') + '</span></span>' +
+        '<span class="today-route-rail" aria-hidden="true"><i></i></span>' +
+        '<span class="today-route-main"><span class="today-route-title">' + escapeHtml(j.title || 'Job') + '</span>' +
+          '<span class="today-route-meta">' + escapeHtml([j.client, street].filter(Boolean).join(' · ') || 'No address on file') + '</span></span>' +
+        '<span class="th-v2-pill ' + tone[1] + '">' + tone[0] + '</span>' +
+      '</a>';
+    }).join('');
+  }
+
+  // Insights: revenue by week (12 bars, this week orange) and the job-status
+  // donut beside #statusBars -- the same counts renderStatusBars() uses.
+  function renderInsightsCharts() {
+    const revCard = document.getElementById('insightsRevenueCard');
+    const revEl = document.getElementById('insightsRevenueWeeks');
+    if (revCard && revEl) {
+      const allowed = anyFinanceAccessV2();
+      revCard.hidden = !allowed;
+      if (allowed) {
+        const weeks = weeklyRevenueV2(12);
+        const max = Math.max(1, ...weeks.map(w => w.total));
+        const said = weeks.map(w => w.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ': ' + money(w.total)).join('; ');
+        revEl.setAttribute('role', 'img');
+        revEl.setAttribute('aria-label', 'Revenue invoiced by week, week of ' + said);
+        revEl.innerHTML = weeks.map((w, i) =>
+          '<span class="insights-rev-bar' + (i === weeks.length - 1 ? ' is-now' : '') + '" title="' + escapeAttr('Week of ' + w.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ': ' + money(w.total)) + '">' +
+            '<span class="insights-rev-fill" style="height:' + Math.max(w.total > 0 ? 4 : 2, Math.round(w.total / max * 100)) + '%"></span>' +
+            '<span class="insights-rev-label">' + (w.start.getMonth() + 1) + '/' + w.start.getDate() + '</span></span>'
+        ).join('');
+      }
+    }
+    const donutEl = document.getElementById('insightsStatusDonut');
+    if (donutEl && typeof thDonutSvg === 'function') {
+      const counts = { 'not-started': 0, 'in-progress': 0, 'done': 0 };
+      loadJobs().forEach(j => { if (counts[j.status] !== undefined) counts[j.status]++; });
+      const total = counts['not-started'] + counts['in-progress'] + counts['done'];
+      donutEl.innerHTML = thDonutSvg([
+        { value: counts['not-started'], tone: 'blue', label: 'Not Started' },
+        { value: counts['in-progress'], tone: 'orange', label: 'In Progress' },
+        { value: counts['done'], tone: 'green', label: 'Done' },
+      ], { size: 132, stroke: 16, key: 'insights-status', label: counts['not-started'] + ' not started, ' + counts['in-progress'] + ' in progress, ' + counts['done'] + ' done',
+        center: '<b>' + total + '</b><span>jobs</span>' });
+      if (typeof thAnimateRings === 'function') thAnimateRings(donutEl);
+    }
+  }
+
+  function renderTodayV2() {
+    renderTodayRings();
+    renderTodaySummaryLine();
+    renderTodayRoute();
+    if (currentDashView === 'insights') renderInsightsCharts();
+  }
+
+  // Today / Insights (v2): one page, two views, the hash decides -- the same
+  // pattern as Job Tracker's #calendar. Insights opens Business Snapshot and
+  // Analytics (expandSection(), which renders them) and titles the page.
+  let currentDashView = 'today';
+  function showDashView(view) {
+    currentDashView = view === 'insights' ? 'insights' : 'today';
+    document.body.setAttribute('data-dash-view', currentDashView);
+    document.querySelectorAll('#dashViewSwitch [data-dash-view]').forEach(a => {
+      const on = a.getAttribute('data-dash-view') === currentDashView;
+      a.classList.toggle('is-active', on);
+      if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    });
+    const title = document.querySelector('.hub-header .hub-title');
+    if (title) {
+      if (!title.dataset.baseTitle) title.dataset.baseTitle = title.textContent;
+      title.textContent = currentDashView === 'insights' ? 'Insights' : title.dataset.baseTitle;
+    }
+    if (typeof window.thSetHeaderKicker === 'function') {
+      window.thSetHeaderKicker(currentDashView === 'insights' ? 'Business' : new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }));
+    }
+    if (currentDashView === 'insights') {
+      expandSection('snapshot');
+      expandSection('analytics');
+      renderInsightsCharts();
+    }
+  }
+  function initDashViews() {
+    const apply = () => showDashView(window.location.hash === '#insights' ? 'insights' : 'today');
+    window.addEventListener('hashchange', () => { apply(); window.scrollTo(0, 0); });
+    apply();
+  }
+
+  // The ⋯ on each editable row (v2 §7), mapped onto the buttons each render
+  // function already draws -- attachRowMenu() marks them at runtime, so the
+  // render functions' markup is unchanged and every Delete still asks first.
+  function initTodayRowMenus() {
+    if (typeof attachRowMenu !== 'function') return;
+    const on = (id, rowSel, host, actions) => { const el = document.getElementById(id); if (el) attachRowMenu(el, rowSel, { buttonHost: host, actions }); };
+    on('leadsList', '.lead-card', '.dash-list-item-right', [{ kind: 'delete', selector: '.small-btn.danger', label: 'Delete lead' }]);
+    on('applicantsList', '.lead-card', '.dash-list-item-right', [{ kind: 'delete', selector: '.small-btn.danger', label: 'Delete application' }]);
+    on('bookingsList', '.lead-card', '.dash-list-item-right', [{ kind: 'delete', selector: '.small-btn.danger', label: 'Delete booking' }]);
+    on('workRequestsList', '.dash-list-item', '.dash-list-item-right', [{ kind: 'extra', selector: 'button[onclick*="\'declined\'"]', label: 'Close request', icon: 'check-circle' }]);
+    on('licensesList', '.license-item', null, [{ kind: 'delete', selector: '.small-btn.danger', label: 'Remove license' }]);
+    on('secureDocsList', '.dash-list-item', '.dash-list-item-right', [{ kind: 'delete', selector: '.small-btn.danger', label: 'Delete document' }]);
+    on('insuranceCard', '.compliance-card', '.compliance-card-top', [{ kind: 'edit', selector: 'button[onclick^="openInsuranceEdit"]', label: 'Edit insurance' }]);
+    on('businessInfoCard', '.compliance-card', '.compliance-card-top', [{ kind: 'edit', selector: 'button[onclick^="openBusinessEdit"]', label: 'Edit LLC & tax info' }]);
   }
 
   let _welcomeFadeTimeouts = []; // tracked so the role-tag enhancement below can restart the hold/fade cycle cleanly
@@ -3669,6 +4253,7 @@
     else loadAndRenderGalleryQueue();
     if (dashSectionClosed('compliance')) renderInsuranceCard();
     else renderCompliance();
+    renderTodayV2();
   }
 
   // Item #7 (2026-08-16): distinct from the live-sync connection dot
@@ -3817,6 +4402,8 @@
       window.addEventListener('th-role-loaded', renderWeekCard);
       window.addEventListener('th-invoice-reminded', renderMetrics);
       window.addEventListener('th-job-texted', renderTodayHero);
+      window.addEventListener('th-clock-change', renderTodayV2);
+      window.addEventListener('th-role-loaded', renderTodayV2);
       if (typeof startRealtimeSync === 'function') {
         // One status callback shared by both channels -- last status wins,
         // which is fine here since they're on the same underlying connection.
@@ -3863,6 +4450,9 @@
     if (window.location.hash === '#today') {
       document.getElementById('todayHero')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+    // Insights (v2): #insights is its own view of this page.
+    initDashViews();
+    initTodayRowMenus();
     // Backup & Restore moved to Settings (2026-09-21), then to Dev Tools
     // (2026-09-22, an admin/dev-oriented capability, not a regular Settings
     // item). Old #backup links (this dashboard's own former drawer,

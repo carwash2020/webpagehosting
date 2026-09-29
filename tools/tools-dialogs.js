@@ -518,22 +518,67 @@ function swallowNextClick(el) {
 // actions: [{ label, onClick, isDanger }]
 // options.cancelLabel (2026-09-23): when closing the sheet means something
 // ("Not done yet" after stopping a job's clock), say so instead of Cancel.
+//
+// v2 (2026-09-28, Workspace app redesign v2 §7 "Row action menu"): the same
+// sheet is now also the row action menu, so every existing caller gets the
+// v2 look for free (a bottom sheet on a phone, a 440px side panel on a
+// computer -- styles-tools.css "V2.4"). Everything it did before is
+// unchanged: same classes, same title-as-HTML contract, same button text,
+// same order. Additions, all optional and backward compatible:
+//   action.icon     sprite name (#icon-<name>) drawn before the label
+//   action.kind     'edit' | 'extra' | 'duplicate' | 'delete' | 'open' -- a
+//                   data-kind hook for styling; openRowMenu() below also
+//                   sorts by it and picks a default icon
+//   options.subtitle plain text under the title (escaped here)
+//   options.opener  element focus returns to on close (default: whatever
+//                   had focus when the sheet opened)
+// It also gained what a dialog needs: Esc closes it, focus moves into it
+// and is held there (Tab trap), focus goes back on close, and on touch a
+// downward swipe dismisses it (attachSwipeToDismiss, when loaded).
 function showQuickActionSheet(title, actions, options) {
-  const cancelLabel = (options && options.cancelLabel) || 'Cancel';
+  options = options || {};
+  const cancelLabel = options.cancelLabel || 'Cancel';
+  const returnFocus = options.opener || document.activeElement;
   const overlay = document.createElement('div');
   overlay.className = 'quick-actions-overlay';
   const sheet = document.createElement('div');
   sheet.className = 'quick-actions-sheet';
+  sheet.setAttribute('role', 'dialog');
+  sheet.setAttribute('aria-modal', 'true');
+  const iconHtml = (name) => name ? '<svg class="th-icon" aria-hidden="true"><use href="#icon-' + name + '" xlink:href="#icon-' + name + '"></use></svg>' : '';
   sheet.innerHTML =
+    '<div class="quick-actions-handle" aria-hidden="true"></div>' +
     '<div class="quick-actions-title">' + title + '</div>' +
+    (options.subtitle ? '<div class="quick-actions-sub">' + escapeHtml(options.subtitle) + '</div>' : '') +
     actions.map((a, i) =>
-      '<button class="quick-actions-btn' + (a.isDanger ? ' is-danger' : '') + '" data-action-index="' + i + '">' + a.label + '</button>'
+      '<button class="quick-actions-btn' + (a.isDanger ? ' is-danger' : '') + (a.icon ? ' has-icon' : '') + '" data-action-index="' + i + '"' +
+        (a.kind ? ' data-kind="' + escapeAttr(a.kind) + '"' : '') + (a.disabled ? ' disabled' : '') + '>' + iconHtml(a.icon) + a.label + '</button>'
     ).join('') +
     '<button class="quick-actions-btn quick-actions-cancel">' + cancelLabel + '</button>';
+  const titleEl = sheet.querySelector('.quick-actions-title');
+  if (titleEl && titleEl.textContent) sheet.setAttribute('aria-label', titleEl.textContent);
 
+  let closed = false;
   function close() {
+    if (closed) return;
+    closed = true;
     overlay.classList.remove('is-shown');
-    setTimeout(() => overlay.remove(), 200);
+    document.removeEventListener('keydown', onKey, true);
+    document.body.classList.remove('th-actionsheet-open');
+    setTimeout(() => overlay.remove(), 220);
+    if (returnFocus && typeof returnFocus.focus === 'function' && document.body.contains(returnFocus)) {
+      try { returnFocus.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+    }
+  }
+  function onKey(e) {
+    if (!overlay.isConnected) { document.removeEventListener('keydown', onKey, true); return; }
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); return; }
+    if (e.key !== 'Tab') return;
+    const focusable = Array.from(sheet.querySelectorAll('button:not([disabled])'));
+    if (!focusable.length) return;
+    const first = focusable[0], last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   }
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   sheet.querySelector('.quick-actions-cancel').addEventListener('click', close);
@@ -546,6 +591,311 @@ function showQuickActionSheet(title, actions, options) {
 
   overlay.appendChild(sheet);
   document.body.appendChild(overlay);
+  document.body.classList.add('th-actionsheet-open');
+  document.addEventListener('keydown', onKey, true);
+  if (typeof attachSwipeToDismiss === 'function') attachSwipeToDismiss(sheet, close);
   requestAnimationFrame(() => overlay.classList.add('is-shown'));
+  const firstBtn = sheet.querySelector('.quick-actions-btn:not([disabled])');
+  if (firstBtn) setTimeout(() => { try { firstBtn.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 30);
 }
 
+// ---------------------------------------------------------------------------
+// ROW ACTION MENU (v2, 2026-09-28) -- the shared "⋯" on every editable row.
+//
+// Workspace app redesign v2 §7: every editable row gets a 38px ⋯ button that
+// opens an action sheet (bottom sheet on a phone, 440px right side panel on
+// a computer) listing Edit, the row's extra action (Resend, Convert to
+// invoice, Download PDF, Attach receipt, Approve...), Duplicate where the
+// page already has one, and a red Delete, with Cancel at the bottom.
+// Long-press on the row opens the same sheet. It only ever calls the
+// page's EXISTING handlers -- nothing new is written to data, and a
+// Delete keeps whatever confirm dialog / undo toast that handler already
+// shows. Built on showQuickActionSheet() above, so tests and pages that
+// stub or call that keep working.
+//
+// CALLING CONVENTION (for every page -- Money, Runway, Clients, Reviews...)
+//
+// 1) Lowest level: open the sheet yourself.
+//      openRowMenu('INV-1042 · Joe Patel', [
+//        { kind: 'edit',      label: 'Edit',              onClick: () => editInvoice(id) },
+//        { kind: 'extra',     label: 'Resend',            onClick: () => resendInvoice(id), icon: 'mail' },
+//        { kind: 'duplicate', label: 'Duplicate',         onClick: () => duplicateInvoice(id) },
+//        { kind: 'delete',    label: 'Delete',            onClick: () => deleteInvoiceLogEntry(id) },
+//      ], { subtitle: '$385 · overdue 15 days', opener: buttonEl });
+//    - title is PLAIN TEXT (escaped here), unlike showQuickActionSheet's.
+//    - actions are sorted edit -> extra/open/other -> duplicate -> delete
+//      (stable within a kind); delete is always red. Leave out any kind the
+//      page has no handler for -- never invent one.
+//    - icon defaults by kind (edit: 'edit', duplicate: 'copy', delete:
+//      'trash', open: 'external'); pass icon: 'name' for any sprite icon.
+//
+// 2) The ⋯ button markup, for rows you render yourself:
+//      rowMenuButtonHtml('INV-1042')  ->
+//      <button type="button" class="th-row-menu-btn" aria-label="More actions for INV-1042"
+//              aria-haspopup="dialog"><svg class="th-icon">…#icon-more…</svg></button>
+//    38px round, text-dim, orange on focus; styles-tools.css "V2.4".
+//
+// 3) Wire a whole list once (delegated; survives innerHTML re-renders):
+//      attachRowMenu(listEl, '.inv-item', {
+//        getMenu: (row) => ({ title: row.dataset.title, subtitle: '…', actions: [...] }),
+//        decorate: true,           // append a ⋯ to every row that lacks one (default true)
+//        buttonHost: '.inv-right', // where inside the row the ⋯ goes (default: the row)
+//        longPress: true,          // hold the row -> same sheet (default true; pass false
+//                                  // where the list already calls attachLongPress itself)
+//      });
+//    getMenu may return null to skip a row. Without getMenu, the menu is
+//    built from the row's own controls (4), titled from the row's
+//    data-row-title attribute (or its first .th-row-title / heading text).
+//    To point at controls a render function already emits WITHOUT touching
+//    its markup, pass selector specs; each render is re-marked at runtime:
+//      attachRowMenu(listEl, '.lead-card', { buttonHost: '.dash-list-item-right',
+//        actions: [{ kind: 'delete', selector: '.small-btn.danger', label: 'Delete lead' }] });
+//
+// 4) Zero-JS-change rows: mark the row's EXISTING buttons/links with
+//    data-row-action="edit|extra|duplicate|delete|open" (and optionally
+//    data-row-action-label="Delete lead"). rowMenuActionsFromButtons(row)
+//    turns them into menu actions whose onClick is that element's own
+//    .click() -- the exact existing handler, confirm dialog included. On a
+//    row that has a ⋯ (class th-has-row-menu), CSS tucks those marked
+//    controls away so the row shows only its primary action and the ⋯;
+//    they stay in the DOM, reachable through the sheet.
+// ---------------------------------------------------------------------------
+const TH_ROW_MENU_ORDER = { edit: 0, open: 1, extra: 1, other: 1, duplicate: 2, delete: 3 };
+const TH_ROW_MENU_ICON = { edit: 'edit', duplicate: 'copy', delete: 'trash', open: 'external' };
+
+function openRowMenu(title, actions, options) {
+  options = options || {};
+  const list = (actions || []).filter(Boolean).map((a, i) => ({ a, i }))
+    .sort((x, y) => ((TH_ROW_MENU_ORDER[x.a.kind || 'other'] ?? 1) - (TH_ROW_MENU_ORDER[y.a.kind || 'other'] ?? 1)) || (x.i - y.i))
+    .map(({ a }) => ({
+      label: escapeHtml(a.label),
+      onClick: a.onClick,
+      kind: a.kind || 'other',
+      icon: a.icon || TH_ROW_MENU_ICON[a.kind] || '',
+      isDanger: a.kind === 'delete' || !!a.isDanger,
+      disabled: !!a.disabled,
+    }));
+  if (!list.length) return;
+  showQuickActionSheet(escapeHtml(title || 'Actions'), list, {
+    subtitle: options.subtitle || '',
+    opener: options.opener,
+    cancelLabel: options.cancelLabel,
+  });
+}
+
+function rowMenuButtonHtml(label) {
+  return '<button type="button" class="th-row-menu-btn" aria-label="' + escapeAttr('More actions' + (label ? ' for ' + label : '')) + '" aria-haspopup="dialog">' +
+    '<svg class="th-icon" aria-hidden="true"><use href="#icon-more" xlink:href="#icon-more"></use></svg></button>';
+}
+
+function rowMenuActionsFromButtons(rowEl) {
+  if (!rowEl) return [];
+  return Array.from(rowEl.querySelectorAll('[data-row-action]'))
+    .filter(el => !el.disabled && el.closest('.th-row-menu-btn') === null)
+    .map(el => ({
+      kind: el.getAttribute('data-row-action') || 'other',
+      label: (el.getAttribute('data-row-action-label') || el.textContent || '').trim() || 'Action',
+      icon: el.getAttribute('data-row-action-icon') || '',
+      onClick: () => el.click(),
+    }));
+}
+
+function rowMenuTitle(rowEl) {
+  if (!rowEl) return '';
+  const own = rowEl.getAttribute('data-row-title');
+  if (own) return own;
+  const t = rowEl.querySelector('[data-row-title], .th-row-title, .dash-list-item-title, .lead-card-name, h4, h3');
+  return t ? (t.getAttribute('data-row-title') || t.textContent || '').trim() : '';
+}
+
+function attachRowMenu(containerEl, rowSelector, options) {
+  if (!containerEl || containerEl._thRowMenu) return;
+  options = options || {};
+  containerEl._thRowMenu = true;
+  const mark = (row) => {
+    (options.actions || []).forEach(spec => {
+      if (!spec || !spec.selector) return;
+      row.querySelectorAll(spec.selector).forEach(el => {
+        if (el.hasAttribute('data-row-action') || el.closest('.th-row-menu-btn')) return;
+        el.setAttribute('data-row-action', spec.kind || 'other');
+        if (spec.label) el.setAttribute('data-row-action-label', spec.label);
+        if (spec.icon) el.setAttribute('data-row-action-icon', spec.icon);
+      });
+    });
+  };
+  const menuFor = (row) => {
+    if (typeof options.getMenu === 'function') return options.getMenu(row);
+    mark(row);
+    const actions = rowMenuActionsFromButtons(row);
+    return actions.length ? { title: rowMenuTitle(row), actions } : null;
+  };
+  const open = (row, opener) => {
+    const m = menuFor(row);
+    if (!m || !m.actions || !m.actions.length) return;
+    openRowMenu(m.title, m.actions, { subtitle: m.subtitle, opener: opener || row.querySelector('.th-row-menu-btn') });
+  };
+  containerEl.addEventListener('click', (e) => {
+    const btn = e.target && e.target.closest && e.target.closest('.th-row-menu-btn');
+    if (!btn || !containerEl.contains(btn)) return;
+    const row = btn.closest(rowSelector);
+    if (!row || !containerEl.contains(row)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    open(row, btn);
+  });
+  if (options.longPress !== false && typeof attachLongPress === 'function') {
+    attachLongPress(containerEl, rowSelector, (row) => open(row));
+  }
+  if (options.decorate === false) return;
+  const decorate = () => {
+    containerEl.querySelectorAll(rowSelector).forEach(row => {
+      mark(row);
+      if (row.querySelector('.th-row-menu-btn')) { row.classList.add('th-has-row-menu'); return; }
+      const m = menuFor(row);
+      if (!m || !m.actions || !m.actions.length) return;
+      const host = (options.buttonHost && row.querySelector(options.buttonHost)) || row;
+      host.insertAdjacentHTML('beforeend', rowMenuButtonHtml(m.title));
+      row.classList.add('th-has-row-menu');
+    });
+  };
+  decorate();
+  if (typeof MutationObserver !== 'undefined') {
+    let queued = false;
+    new MutationObserver(() => {
+      if (queued) return;
+      queued = true;
+      (window.queueMicrotask || setTimeout)(() => { queued = false; decorate(); });
+    }).observe(containerEl, { childList: true, subtree: true });
+  }
+}
+
+
+// ---------------------------------------------------------------------------
+// RINGS, DONUTS AND GAUGES (v2, 2026-09-28) -- one SVG helper for every
+// "iOS Health" ring in the Workspace (Today's three rings, the job clock,
+// Insights' job-status donut, and Money/Runway's safe-to-spend ring and
+// runway gauge). Lives here, not in tools-effects.js, because
+// runway-dashboard.html loads this file but not that one.
+//
+// Drawn with stroke-dasharray on an SVG circle, coloured by CSS tokens
+// (styles-tools.css "V2.3": .th-ring--<tone>), so light mode and dark mode
+// both come for free. On first paint the fill grows from 0 (<=600ms), but
+// only under prefers-reduced-motion: no-preference; a re-render of the same
+// ring (same `key`) never replays it.
+//
+//   thRingSvg({
+//     value: 0.42,            // fraction filled, clamped to 0..1 (required)
+//     size: 86,               // px, outer box (default 86)
+//     stroke: 9,              // px, ring thickness (default 9)
+//     tone: 'orange',         // orange | green | blue | red | purple | idle (default orange)
+//     sweep: 1,               // fraction of the circle used; <1 draws a gauge with the
+//                             // gap at the bottom (e.g. 0.75) (default 1)
+//     center: '<b>3/5</b>',   // HTML placed in the middle (caller escapes it)
+//     label: '3 of 5 jobs done', // aria-label; the ring is role="img" when given
+//     key: 'today-jobs',      // animate this ring only the first time it paints
+//     className: 'my-extra'   // extra class on the wrapper
+//   }) -> '<div class="th-ring th-ring--orange" style="--th-ring-size:86px">…</div>'
+//
+//   thDonutSvg([{ value: 8, tone: 'blue', label: 'Not started' }, …],
+//              { size: 132, stroke: 16, center: '<b>32</b><span>jobs</span>', label, key, gap: 2 })
+//     -> the same wrapper with one arc per segment (a 2px gap between arcs);
+//        an all-zero list draws just the track.
+//
+//   thAnimateRings(rootEl)      -- call after inserting ring markup into the DOM
+//                                 (grows each not-yet-seen fill from 0).
+//   thSetRingValue(ringEl, v)   -- move an existing ring to a new fraction with
+//                                 no replay (e.g. a ticking clock).
+// ---------------------------------------------------------------------------
+var _thRingsSeen = {};
+function _thRingGeom(size, stroke, sweep) {
+  var r = (size - stroke) / 2;
+  var c = 2 * Math.PI * r;
+  var rot = sweep >= 1 ? -90 : 90 + (360 * (1 - sweep)) / 2;
+  return { r: r, c: c, rot: rot, cx: size / 2 };
+}
+function thRingSvg(opts) {
+  opts = opts || {};
+  var size = Number(opts.size) || 86;
+  var stroke = Number(opts.stroke) || 9;
+  var sweep = Math.max(0.05, Math.min(1, Number(opts.sweep) || 1));
+  var v = Math.max(0, Math.min(1, Number(opts.value) || 0));
+  var g = _thRingGeom(size, stroke, sweep);
+  var arc = g.c * sweep;
+  var fill = arc * v;
+  var tone = /^(orange|green|blue|red|purple|idle)$/.test(opts.tone || '') ? opts.tone : 'orange';
+  var aria = opts.label ? ' role="img" aria-label="' + escapeAttr(opts.label) + '"' : ' aria-hidden="true"';
+  var key = opts.key ? ' data-ring-key="' + escapeAttr(opts.key) + '"' : '';
+  return '<div class="th-ring th-ring--' + tone + (sweep < 1 ? ' is-gauge' : '') + (opts.className ? ' ' + escapeAttr(opts.className) : '') + '"' +
+      ' style="--th-ring-size:' + size + 'px"' + aria + key + '>' +
+    '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '" style="transform:rotate(' + g.rot + 'deg)" focusable="false" aria-hidden="true">' +
+      '<circle class="th-ring-track" cx="' + g.cx + '" cy="' + g.cx + '" r="' + g.r.toFixed(2) + '" fill="none" stroke-width="' + stroke + '"' +
+        (sweep < 1 ? ' stroke-dasharray="' + arc.toFixed(2) + ' ' + g.c.toFixed(2) + '" stroke-linecap="round"' : '') + '></circle>' +
+      '<circle class="th-ring-fill" cx="' + g.cx + '" cy="' + g.cx + '" r="' + g.r.toFixed(2) + '" fill="none" stroke-width="' + stroke + '" stroke-linecap="round"' +
+        ' stroke-dasharray="' + fill.toFixed(2) + ' ' + g.c.toFixed(2) + '" data-ring-c="' + g.c.toFixed(2) + '" data-ring-arc="' + arc.toFixed(2) + '"' +
+        (v === 0 ? ' style="opacity:0"' : '') + '></circle>' +
+    '</svg>' +
+    (opts.center ? '<div class="th-ring-center">' + opts.center + '</div>' : '') +
+  '</div>';
+}
+function thDonutSvg(segments, opts) {
+  opts = opts || {};
+  var size = Number(opts.size) || 132;
+  var stroke = Number(opts.stroke) || 16;
+  var gap = opts.gap === undefined ? 2 : Number(opts.gap) || 0;
+  var g = _thRingGeom(size, stroke, 1);
+  var total = (segments || []).reduce(function (s, x) { return s + Math.max(0, Number(x.value) || 0); }, 0);
+  var acc = 0;
+  var arcs = total > 0 ? segments.map(function (s) {
+    var val = Math.max(0, Number(s.value) || 0);
+    var len = g.c * val / total;
+    var tone = /^(orange|green|blue|red|purple|idle)$/.test(s.tone || '') ? s.tone : 'orange';
+    var out = val > 0
+      ? '<circle class="th-ring-fill th-ring-seg th-ring-seg--' + tone + '" cx="' + g.cx + '" cy="' + g.cx + '" r="' + g.r.toFixed(2) + '" fill="none" stroke-width="' + stroke + '"' +
+        ' stroke-dasharray="' + Math.max(0, len - (segments.length > 1 ? gap : 0)).toFixed(2) + ' ' + g.c.toFixed(2) + '" stroke-dashoffset="' + (-acc).toFixed(2) + '"' +
+        ' data-ring-c="' + g.c.toFixed(2) + '"></circle>'
+      : '';
+    acc += len;
+    return out;
+  }).join('') : '';
+  var aria = opts.label ? ' role="img" aria-label="' + escapeAttr(opts.label) + '"' : ' aria-hidden="true"';
+  var key = opts.key ? ' data-ring-key="' + escapeAttr(opts.key) + '"' : '';
+  return '<div class="th-ring th-ring--donut' + (opts.className ? ' ' + escapeAttr(opts.className) : '') + '" style="--th-ring-size:' + size + 'px"' + aria + key + '>' +
+    '<svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '" style="transform:rotate(-90deg)" focusable="false" aria-hidden="true">' +
+      '<circle class="th-ring-track" cx="' + g.cx + '" cy="' + g.cx + '" r="' + g.r.toFixed(2) + '" fill="none" stroke-width="' + stroke + '"></circle>' +
+      arcs +
+    '</svg>' +
+    (opts.center ? '<div class="th-ring-center">' + opts.center + '</div>' : '') +
+  '</div>';
+}
+function thAnimateRings(root) {
+  root = root || document;
+  var motionOk = !window.matchMedia || window.matchMedia('(prefers-reduced-motion: no-preference)').matches;
+  (root.querySelectorAll ? root.querySelectorAll('.th-ring') : []).forEach(function (ring) {
+    var key = ring.getAttribute('data-ring-key');
+    if (ring.dataset.ringDrawn) return;
+    ring.dataset.ringDrawn = '1';
+    if (key) { if (_thRingsSeen[key]) return; _thRingsSeen[key] = true; }
+    if (!motionOk) return;
+    ring.querySelectorAll('.th-ring-fill').forEach(function (fill) {
+      var target = fill.getAttribute('stroke-dasharray');
+      var c = fill.getAttribute('data-ring-c');
+      if (!target || !c) return;
+      fill.style.transition = 'none';
+      fill.style.strokeDasharray = '0 ' + c;
+      void fill.getBoundingClientRect(); // commit the 0 before transitioning away from it
+      fill.style.transition = 'stroke-dasharray .6s var(--th-ease, cubic-bezier(.2,.8,.2,1))';
+      requestAnimationFrame(function () { fill.style.strokeDasharray = ''; });
+      setTimeout(function () { fill.style.transition = ''; }, 700);
+    });
+  });
+}
+function thSetRingValue(ringEl, value) {
+  if (!ringEl) return;
+  var fill = ringEl.querySelector('.th-ring-fill');
+  if (!fill) return;
+  var c = Number(fill.getAttribute('data-ring-c')) || 0;
+  var arc = Number(fill.getAttribute('data-ring-arc')) || c;
+  var v = Math.max(0, Math.min(1, Number(value) || 0));
+  fill.setAttribute('stroke-dasharray', (arc * v).toFixed(2) + ' ' + c.toFixed(2));
+  fill.style.opacity = v === 0 ? '0' : '';
+}

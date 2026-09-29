@@ -5805,3 +5805,21 @@ One test changed, because the design changed on purpose: `portal-visits` expects
 ## What changed, 2026-09-28 -- Workspace redesign W5: back office and sign-in
 
 Settings, Dev Tools, Site Content, sign-in and reset password join the same app system as the rest of the Workspace. Settings has ruled section labels, 56px rows, the account name in the display face, a red-edged Session card, and two columns on a wide screen. Dev Tools and Site Content panel headings carry the same rule. Sign-in and reset password are a flush-left card under an orange top rule, with larger fields and button; on a phone the card rises from the bottom as a sheet. Sign-in, two-factor and reset keep exactly the same steps, order, fields and logic (only CSS and a page key on `<body>` changed; the flows were walked before and after with stubbed auth and matched). All styles live in each page's own `<style>`, scoped to `body.th-tool-page[data-th-page=…]`; `tools/styles-tools.css` (shared with the portal) is untouched. Full write-up in `docs/specialist-logs/visual.md`, 2026-09-28.
+
+## What changed, 2026-09-29 -- Workspace app redesign v2: the shell, Today, Insights, Jobs and Job detail
+
+The first package of the full v2 redesign (the approved prototype's look, not just W1-W5's foundation).
+
+- **Today** opens on a summary card with three rings: jobs done of today's, hours on the clock of 8, and paid of invoiced today. Below it:
+  - Up next: the job as a headline, with On my way, Navigate, Call and the clock one tap each.
+  - Today's route, as a timeline of every stop.
+  - Needs you: every inbox lane as one list, with a count badge and a ⋯ on each row.
+  - Money owed, as one big number with pills and a revenue line.
+  - Your week, with today's bar in orange.
+  - Compliance and the Gallery queue under Business.
+- **Insights** (Home's new second view, `workspace.html#insights`, and "Analytics" in the sidebar) is Business Snapshot and Analytics as their own screen: a period switch, KPI tiles, revenue by week, a job-status donut, top clients, vendors and lead sources, and campaigns.
+- **Jobs** has a Jobs / Contacts / Notes switch, a search field, the List / Board / Calendar switch, filter chips with counts, and new job cards (date block, pills, a Done / Call / Directions / ⋯ strip). The board has three columns, the calendar is a grid of tiles, and templates and contacts rows get a ⋯. The desktop list is still the sortable table.
+- **Job detail** is a hero with the progress track, a next-step card, the clock as a ring filling over three hours, the Revenue / Cost / Margin strip and record cards, in two columns on a computer. The thumb bar stays above the bottom bar on a phone.
+- **Everywhere:** every row's ⋯ and every long-press open one action sheet (a bottom sheet on a phone, a side panel on a computer), and Esc or a swipe down closes it. Create, More, the bottom bar, the sidebar (plus an account chip), toasts and the header (a kicker over the title) all take the v2 look.
+
+Nothing was removed. Every action in a sheet runs the page's existing handler, confirm dialogs included. Shared pieces for the next packages: the row menu and the ring helpers in `tools/tools-dialogs.js`, and the "V2" block in `tools/styles-tools.css`. Full write-up in `docs/specialist-logs/visual.md`, 2026-09-29.

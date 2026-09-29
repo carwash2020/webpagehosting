@@ -51,15 +51,15 @@
     document.documentElement.style.colorScheme = saved === 'light' ? 'light' : 'dark';
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=0bda75dc09">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=24fa54915c">
+<link rel="stylesheet" href="/styles.css?v=09af5fd852">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=5ee5e06e3e">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=0e885bb435" defer></script>
 <script src="/tools/data-layer.js?v=b2586a446b" defer></script>
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
-<script src="/tools/tools-dialogs.js?v=310315eb44" defer></script>
+<script src="/tools/tools-dialogs.js?v=33e55c2858" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=f6e4a00a43" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=a1d4851522" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <!-- U16 fix (High-Impact Upgrades, 2026-09-07): jsPDF for the new
      "Generate Job Sheet" button, same version/CDN as invoice-generator.html
@@ -218,52 +218,140 @@
   @media (prefers-reduced-motion: reduce) { .job-clock-dot { animation: none; } }
 
   /* ==========================================================================
-     Workspace redesign W2 -- DAILY (2026-09-28): Job detail -- the job is the headline, a thumb bar on phones
-     Package W2 of the v2 Workspace redesign, built on W1 (the append-only
-     body.th-tool-page block at the end of styles-tools.css). Kept in this
-     page's own <style> (which loads after styles-tools.css, so it wins at
-     equal specificity) rather than appended to the shared sheet: every rule
-     is keyed to this page's body[data-th-page], so it has no business in a
-     file the nine portal pages also load. Source order is untouched; the
-     desktop arrangement is CSS grid placement only.
+     Workspace app redesign v2 -- JOB DETAIL (2026-09-28)
+     design_handoff_workspace_app_v2 §8.4, replacing W2's look (its thumb bar
+     mechanics stay). Keyed to this page's body[data-th-page]; rings and the
+     .th-v2-* pieces are in styles-tools.css "V2". Tokens only.
      ========================================================================== */
-  /* ---- Job detail: the job is the headline; the next step is the spine ---- */
-  body.th-tool-page[data-th-page="job-detail"] .job-hero {
-    background: var(--bg-panel); background-image: none; border: 1px solid var(--border);
-    border-radius: var(--th-radius-card); box-shadow: none;
+  @media (min-width: 1024px) { body.th-tool-page[data-th-page="job-detail"] { max-width: 1280px; margin-left: calc(240px + max(0px, (100vw - 240px - 1280px) / 2)); padding-left: 28px; padding-right: 28px; } }
+  body.th-tool-page[data-th-page="job-detail"] #jobContent { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; }
+  body.th-tool-page[data-th-page="job-detail"] .job-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  body.th-tool-page[data-th-page="job-detail"] .job-col-main { flex: 1 1 400px; }
+  body.th-tool-page[data-th-page="job-detail"] .job-col-side { flex: 1 1 340px; }
+  body.th-tool-page[data-th-page="job-detail"] .job-col > * { margin: 0; }
+  body.th-tool-page[data-th-page="job-detail"] .job-col-side > .section-block { margin: 0; }
+
+  /* ---- The hero: pills, an Anton headline, who and where, the track ---- */
+  body.th-tool-page[data-th-page="job-detail"] .job-hero { display: flex; flex-direction: column; gap: 16px; padding: 0; margin: 0; background: none; border: 0; box-shadow: none; }
+  body.th-tool-page[data-th-page="job-detail"] .job-hero > .job-hero-title, body.th-tool-page[data-th-page="job-detail"] .job-hero > .job-hero-who, body.th-tool-page[data-th-page="job-detail"] .job-hero > .job-hero-badges, body.th-tool-page[data-th-page="job-detail"] .job-hero > .job-track { order: 0; }
+  body.th-tool-page[data-th-page="job-detail"] .job-hero-badges { order: -4 !important; margin: 0; padding: 18px 18px 0; gap: 6px; }
+  body.th-tool-page[data-th-page="job-detail"] .job-hero-title { order: -3 !important; padding: 0 18px; font-size: 34px; line-height: 1.02; text-transform: uppercase; color: var(--text); letter-spacing: .3px; }
+  /* The date, place, client and phone line is carried by the pill and the two lines under the title. */
+  body.th-tool-page[data-th-page="job-detail"] .job-hero-meta { display: none; }
+  body.th-tool-page[data-th-page="job-detail"] .job-hero-who { order: -2 !important; padding: 0 18px; font-size: 15.5px; color: var(--text); display: flex; flex-direction: column; gap: 4px; }
+  body.th-tool-page[data-th-page="job-detail"] .job-hero-who a { color: var(--orange-light); text-decoration: none; }
+  body.th-tool-page[data-th-page="job-detail"] .job-hero-where { font-size: 14px; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="job-detail"] .job-track { order: -1 !important; margin: 0; padding: 4px 18px 18px; }
+  /* One card behind the four rows above: the flex container's own background
+     would take the next-step and clock cards with it, so it is drawn by the
+     rows themselves -- top, sides and bottom. */
+  body.th-tool-page[data-th-page="job-detail"] .job-hero-badges, body.th-tool-page[data-th-page="job-detail"] .job-hero-title, body.th-tool-page[data-th-page="job-detail"] .job-hero-who, body.th-tool-page[data-th-page="job-detail"] .job-track {
+    background: var(--bg-panel); border-left: 1px solid var(--border); border-right: 1px solid var(--border); margin-top: -16px;
   }
-  body.th-tool-page[data-th-page="job-detail"] .job-hero-title { font-size: 32px; line-height: 1.02; text-transform: uppercase; color: var(--text); }
+  body.th-tool-page[data-th-page="job-detail"] .job-hero-badges { margin-top: 0; border-top: 1px solid var(--border); border-radius: var(--th-radius-xl) var(--th-radius-xl) 0 0; padding-bottom: 10px; }
+  body.th-tool-page[data-th-page="job-detail"] .job-hero-title { padding-bottom: 8px; }
+  body.th-tool-page[data-th-page="job-detail"] .job-hero-who { padding-bottom: 12px; }
+  body.th-tool-page[data-th-page="job-detail"] .job-track { border-bottom: 1px solid var(--border); border-radius: 0 0 var(--th-radius-xl) var(--th-radius-xl); padding-top: 8px; }
+  body.th-tool-page[data-th-page="job-detail"] .job-hero .badge {
+    border-radius: 999px; font-family: var(--font-app); font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; padding: 4px 10px;
+  }
+  body.th-tool-page[data-th-page="job-detail"] .badge-status.status-not-started { background: var(--tone-blue-bg); color: var(--tone-blue-fg); }
+  body.th-tool-page[data-th-page="job-detail"] .badge-status.status-in-progress { background: var(--tone-orange-bg); color: var(--tone-orange-fg); }
+  body.th-tool-page[data-th-page="job-detail"] .badge-status.status-done, body.th-tool-page[data-th-page="job-detail"] .badge-warranty.is-active { background: var(--tone-green-bg); color: var(--tone-green-fg); }
+  body.th-tool-page[data-th-page="job-detail"] .badge-high { background: var(--tone-red-bg); color: var(--tone-red-fg); }
+  body.th-tool-page[data-th-page="job-detail"] .badge-medium { background: var(--tone-orange-bg); color: var(--tone-orange-fg); }
+  body.th-tool-page[data-th-page="job-detail"] .badge-low { background: var(--tone-blue-bg); color: var(--tone-blue-fg); }
+  body.th-tool-page[data-th-page="job-detail"] .badge-when { background: var(--th-field); color: var(--text); }
+  /* Progress track: dots on a line, orange up to where the job is, the next step ringed. */
+  body.th-tool-page[data-th-page="job-detail"] .job-track-step + .job-track-step::before { top: 7px; height: 3px; background: var(--border); }
+  body.th-tool-page[data-th-page="job-detail"] .job-track-step.is-reached + .job-track-step.is-reached::before,
+  body.th-tool-page[data-th-page="job-detail"] .job-track-step.is-reached + .job-track-step.is-current::before { background: var(--orange); }
+  body.th-tool-page[data-th-page="job-detail"] .job-track-dot { width: 16px; height: 16px; clip-path: none; border-radius: 50%; background: var(--border); box-shadow: none; }
+  body.th-tool-page[data-th-page="job-detail"] .job-track-step.is-reached .job-track-dot { background: var(--orange); }
+  body.th-tool-page[data-th-page="job-detail"] .job-track-step.is-current .job-track-dot { background: var(--orange-light); box-shadow: 0 0 0 4px var(--tone-orange-bg); }
+  body.th-tool-page[data-th-page="job-detail"] .job-track-label { font-family: var(--font-ui); font-size: 11px; font-weight: 500; letter-spacing: .8px; text-transform: uppercase; color: var(--text-faint); }
+  body.th-tool-page[data-th-page="job-detail"] .job-track-step.is-reached .job-track-label, body.th-tool-page[data-th-page="job-detail"] .job-track-step.is-current .job-track-label { color: var(--text); }
+  body.th-tool-page[data-th-page="job-detail"] .job-track.is-complete .job-track-step .job-track-dot { background: var(--tone-green-fg); }
+  body.th-tool-page[data-th-page="job-detail"] .job-track.is-complete .job-track-step + .job-track-step::before { background: var(--tone-green-fg); }
+
+  /* ---- Next step: an orange-tint card, a kicker, one 48px action ---- */
   body.th-tool-page[data-th-page="job-detail"] .job-next {
-    border-width: 1px; border-radius: var(--th-radius-card); padding: 14px 16px;
+    order: 1; flex-direction: column; align-items: flex-start; gap: 10px; margin: 0; padding: 16px 18px;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--orange) 11%, var(--bg-panel)), var(--bg-panel) 70%);
+    border: 1px solid color-mix(in srgb, var(--orange) 30%, transparent); border-radius: var(--th-radius-xl);
   }
-  body.th-tool-page[data-th-page="job-detail"] .job-next-text { font-size: 15px; }
-  body.th-tool-page[data-th-page="job-detail"] .job-next-text strong { font-family: var(--font-ui); text-transform: uppercase; letter-spacing: .6px; }
-  body.th-tool-page[data-th-page="job-detail"] .job-next-btn { min-height: 48px; }
-  body.th-tool-page[data-th-page="job-detail"] .job-stat-row { gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--th-radius-card); overflow: hidden; }
-  body.th-tool-page[data-th-page="job-detail"] .job-stat { background: var(--bg-panel); border: 0; border-radius: 0; }
-  body.th-tool-page[data-th-page="job-detail"] .job-stat-value { font-size: 24px; }
+  body.th-tool-page[data-th-page="job-detail"] .job-next::before { content: 'Next step'; font-family: var(--font-ui); font-size: 12px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--orange); }
+  body.th-tool-page[data-th-page="job-detail"] .job-next.is-late { border-color: color-mix(in srgb, var(--status-error) 40%, transparent); background: linear-gradient(135deg, var(--tone-red-bg), var(--bg-panel) 70%); }
+  body.th-tool-page[data-th-page="job-detail"] .job-next.is-late::before { color: var(--tone-red-fg); }
+  body.th-tool-page[data-th-page="job-detail"] .job-next.is-paid { border-color: color-mix(in srgb, var(--status-live) 35%, transparent); background: linear-gradient(135deg, var(--tone-green-bg), var(--bg-panel) 70%); }
+  body.th-tool-page[data-th-page="job-detail"] .job-next.is-paid::before { color: var(--tone-green-fg); }
+  body.th-tool-page[data-th-page="job-detail"] .job-next-text { font-size: 17px; font-weight: 600; color: var(--text); line-height: 1.4; }
+  body.th-tool-page[data-th-page="job-detail"] .job-next-text strong { font-family: inherit; text-transform: none; letter-spacing: 0; }
+  body.th-tool-page[data-th-page="job-detail"] .job-next-btn { min-height: 48px; padding: 0 20px; border-radius: 14px; font-family: var(--font-ui); font-size: 15px; letter-spacing: .9px; text-transform: uppercase; }
+
+  /* ---- The clock: a ring over three hours, HH:MM:SS, Start / Stop ---- */
+  body.th-tool-page[data-th-page="job-detail"] .job-clock {
+    order: 2; margin: 0; padding: 16px; gap: 14px; justify-content: flex-start;
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl);
+  }
+  body.th-tool-page[data-th-page="job-detail"] .job-clock.is-running { background: var(--bg-panel); border-color: var(--border); }
+  body.th-tool-page[data-th-page="job-detail"] .job-clock-ring .th-ring-center .th-icon { width: 26px; height: 26px; margin: 0; color: var(--text-faint); }
+  body.th-tool-page[data-th-page="job-detail"] .job-clock.is-running .job-clock-ring .th-ring-center .th-icon { color: var(--tone-green-fg); }
+  body.th-tool-page[data-th-page="job-detail"] .job-clock-info { flex: 1 1 150px; }
+  body.th-tool-page[data-th-page="job-detail"] .job-clock-info::before { content: 'Clock stopped'; display: block; margin-bottom: 4px; font-family: var(--font-ui); font-size: 12px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="job-detail"] .job-clock.is-running .job-clock-info::before { content: 'On the clock'; color: var(--tone-green-fg); }
+  body.th-tool-page[data-th-page="job-detail"] .job-clock-dot { display: none; }
+  body.th-tool-page[data-th-page="job-detail"] .job-clock-time { font-family: var(--font-display); font-weight: 400; font-size: 36px; line-height: 1; letter-spacing: .3px; white-space: nowrap; color: var(--text); }
+  body.th-tool-page[data-th-page="job-detail"] .job-clock-sub { font-size: 13px; }
+  body.th-tool-page[data-th-page="job-detail"] .job-clock.is-running .job-clock-sub::after { content: '. Saved to the job as labor when you stop.'; }
+  body.th-tool-page[data-th-page="job-detail"] .job-clock-btn { flex: 1 1 100%; justify-content: center; min-height: 48px; border-radius: 14px; font-family: var(--font-ui); font-size: 15px; letter-spacing: .9px; text-transform: uppercase; }
+  body.th-tool-page[data-th-page="job-detail"] .job-clock:not(.is-running) .job-clock-btn { background: var(--tone-green-fg); color: var(--th-ink-on-green); border: 0; }
+  body.th-tool-page[data-th-page="job-detail"] .job-clock.is-running .job-clock-btn { background: var(--th-field); color: var(--tone-red-fg); border: 1px solid color-mix(in srgb, var(--status-error) 45%, transparent); box-shadow: none; }
+  body.th-tool-page[data-th-page="job-detail"] .job-hero-actions { order: 4; margin: 0; }
+
+  /* ---- Money strip: Revenue / Cost / Margin in a ruled grid ---- */
+  body.th-tool-page[data-th-page="job-detail"] .job-stat-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; margin: 0; background: var(--border); border: 1px solid var(--border); border-radius: var(--th-radius-xl); overflow: hidden; }
+  body.th-tool-page[data-th-page="job-detail"] .job-stat { background: var(--bg-panel); border: 0; border-radius: 0; padding: 14px 16px; min-width: 0; }
+  body.th-tool-page[data-th-page="job-detail"] .job-stat-value { font-family: var(--font-display); font-weight: 400; font-size: 26px; }
+  body.th-tool-page[data-th-page="job-detail"] .job-stat:last-child .job-stat-value { color: var(--tone-green-fg); }
+  body.th-tool-page[data-th-page="job-detail"] .job-stat-label { font-family: var(--font-ui); font-size: 11px; letter-spacing: 1.2px; margin: 2px 0 0; order: -1; }
+  body.th-tool-page[data-th-page="job-detail"] .job-stat { display: flex; flex-direction: column; }
+
+  /* ---- Record cards: Time, Invoices, Quotes, Expenses, Notes, Photos ---- */
+  body.th-tool-page[data-th-page="job-detail"] .job-col-side .section-block { padding: 14px 18px; border-radius: var(--th-radius-xl); background: var(--bg-panel); border: 1px solid var(--border); }
+  body.th-tool-page[data-th-page="job-detail"] .job-col-side .section-heading { padding: 0 0 6px; border: 0; font-family: var(--font-ui); font-size: 13px; letter-spacing: 1.4px; text-transform: uppercase; }
+  body.th-tool-page[data-th-page="job-detail"] .job-col-side .section-heading::after { display: none; }
+  body.th-tool-page[data-th-page="job-detail"] .job-col-side .section-heading .help-btn {
+    width: auto; height: auto; min-height: 36px; margin-left: auto; padding: 0 2px; border: 0; background: none; border-radius: 0;
+    font-size: 0; color: var(--orange-light);
+  }
+  body.th-tool-page[data-th-page="job-detail"] .job-col-side .section-heading .help-btn::after { content: '+ Add'; font-family: var(--font-ui); font-size: 12.5px; letter-spacing: .8px; text-transform: uppercase; }
+  body.th-tool-page[data-th-page="job-detail"] .job-record-row { padding: 10px 0; border-bottom: 0; border-top: 1px solid var(--th-hairline); }
+  body.th-tool-page[data-th-page="job-detail"] .job-record-title { font-size: 14.5px; font-weight: 600; color: var(--text); }
+  body.th-tool-page[data-th-page="job-detail"] .job-record-meta { font-size: 12.5px; }
+  body.th-tool-page[data-th-page="job-detail"] .job-record-amount { color: var(--text); font-weight: 700; }
+  body.th-tool-page[data-th-page="job-detail"] a.job-record-row:active { background: var(--bg-panel-2); }
+  body.th-tool-page[data-th-page="job-detail"] .job-col-side .empty-state-small { padding: 10px 0 4px; border-top: 1px solid var(--th-hairline); color: var(--text-faint); }
+  body.th-tool-page[data-th-page="job-detail"] .job-photo-thumb { border-radius: 12px; }
+
+  /* ---- Phone thumb bar: Call, Text, Directions, Invoice, Expense (+ Review once done) ---- */
+  body.th-tool-page[data-th-page="job-detail"] .job-quick-actions { order: 3; margin: 0; gap: 6px; }
   body.th-tool-page[data-th-page="job-detail"] .job-quick-action {
-    border-radius: var(--th-radius-control); font-family: var(--font-ui); text-transform: uppercase; letter-spacing: .8px; font-size: 12px;
+    min-height: 52px; border-radius: 14px; gap: 3px; justify-content: center; background: var(--bg-panel); border: 1px solid var(--border);
+    font-family: var(--font-ui); font-size: 11px; font-weight: 500; letter-spacing: .6px; text-transform: uppercase; color: var(--text);
   }
-  /* Phone/tablet: Call / Text / Directions / On my way ride in a thumb bar
-     above the bottom nav, so the daily loop never needs a scroll back up. */
+  body.th-tool-page[data-th-page="job-detail"] .job-quick-action .th-icon { width: 19px; height: 19px; color: var(--orange-light); }
+  @media (hover: hover) { body.th-tool-page[data-th-page="job-detail"] .job-quick-action:hover { border-color: var(--orange-tint-border); } }
   @media (max-width: 1023px) {
     body.th-tool-page[data-th-page="job-detail"] .job-quick-actions {
       position: fixed; z-index: 880; left: 0; right: 0; margin: 0;
       bottom: calc(85px + env(safe-area-inset-bottom, 0px));
       padding: 8px max(12px, env(safe-area-inset-left)) 8px max(12px, env(safe-area-inset-right));
-      background: var(--bg-panel); box-shadow: inset 0 1px 0 var(--border);
+      background: var(--th-rail); box-shadow: inset 0 1px 0 var(--border);
     }
-    body.th-tool-page[data-th-page="job-detail"] .job-quick-action { min-height: 52px; }
     body.th-tool-page[data-th-page="job-detail"].th-has-bottomnav { padding-bottom: calc(85px + 72px + env(safe-area-inset-bottom, 0px)); }
   }
-  @media (min-width: 1100px) {
-    body.th-tool-page[data-th-page="job-detail"] #jobContent {
-      display: grid; grid-template-columns: minmax(360px, .95fr) minmax(0, 1.05fr); column-gap: 20px; align-items: start;
-    }
-    body.th-tool-page[data-th-page="job-detail"] #jobContent > .job-hero { grid-column: 1; grid-row: 1 / span 12; }
-    body.th-tool-page[data-th-page="job-detail"] #jobContent > :not(.job-hero) { grid-column: 2; min-width: 0; }
-  }
+  @media (max-width: 420px) { body.th-tool-page[data-th-page="job-detail"] .job-hero-title { font-size: 30px; } body.th-tool-page[data-th-page="job-detail"] .job-clock-time { font-size: 32px; } }
 </style>
 </head>
 <body data-th-page="job-detail">
@@ -449,22 +537,27 @@
         ).join('') + '</div>'
       : '';
 
-    let html = '<div class="job-hero">' +
+    // v2 (2026-09-28, app redesign v2 §8.4): two columns -- the job (hero,
+    // next step, clock) and its records (the money strip, time, invoices,
+    // quotes, expenses, notes, photos) -- one column on a phone. The date
+    // rides as a pill beside the status; the client and phone share a line.
+    const whenPill = j.date
+      ? new Date(j.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+      : 'No date set';
+    let html = '<div class="job-col job-col-main"><div class="job-hero">' +
       '<div class="job-hero-title">' + escapeHtml(j.title) + '</div>' +
       '<div class="job-hero-meta">' + metaParts.join(' &middot; ') + '</div>' +
+      '<div class="job-hero-who"><span class="job-hero-contact">' + [clientLine, j.phone ? '<a href="tel:' + escapeAttr(j.phone) + '">' + escapeHtml(j.phone) + '</a>' : ''].filter(Boolean).join(' &middot; ') + '</span>' +
+        (j.address ? '<span class="job-hero-where">' + escapeHtml(j.address) + '</span>' : '') + '</div>' +
       '<div class="job-hero-badges">' +
         '<span class="badge badge-' + escapeHtml(j.priority || 'medium') + '">' + escapeHtml(j.priority || 'medium') + '</span>' +
         '<span class="badge badge-status status-' + escapeHtml(j.status || 'not-started') + '">' + (STATUS_LABEL[j.status] || j.status || 'Not Started') + '</span>' +
+        '<span class="badge badge-when">' + escapeHtml(whenPill) + '</span>' +
         warrantyBadgeHtml(j) +
       '</div>' +
       jobTrackHtml(bundle, allowed) +
       jobClockHtml(j) +
       quickHtml +
-      '<div class="job-stat-row">' +
-        '<div class="job-stat"><div class="job-stat-value">' + money(bundle.margin.revenue) + '</div><div class="job-stat-label">Revenue</div></div>' +
-        '<div class="job-stat"><div class="job-stat-value">' + money(bundle.margin.cost) + '</div><div class="job-stat-label">Cost</div></div>' +
-        '<div class="job-stat"><div class="job-stat-value">' + marginHtml + '</div><div class="job-stat-label">Margin</div></div>' +
-      '</div>' +
       // U16 fix (High-Impact Upgrades, 2026-09-07): "a leave-behind job
       // sheet... essentially nobody in this trade does this." Only
       // offered once a job is Done -- a sheet summarizing work not yet
@@ -473,7 +566,12 @@
       (j.status === 'done'
         ? '<div class="job-hero-actions"><button type="button" class="primary-btn" id="generateJobSheetBtn" onclick="generateJobSheet()">Generate Job Sheet</button></div>'
         : '') +
-    '</div>';
+    '</div></div><div class="job-col job-col-side">' +
+      '<div class="job-stat-row">' +
+        '<div class="job-stat"><div class="job-stat-value">' + money(bundle.margin.revenue) + '</div><div class="job-stat-label">Revenue</div></div>' +
+        '<div class="job-stat"><div class="job-stat-value">' + money(bundle.margin.cost) + '</div><div class="job-stat-label">Cost</div></div>' +
+        '<div class="job-stat"><div class="job-stat-value">' + marginHtml + '</div><div class="job-stat-label">Margin</div></div>' +
+      '</div>';
 
     if (j.notes) {
       html += '<div class="section-block"><div class="section-heading is-static"><span>Notes</span></div><div style="color:var(--text);font-size:13.5px;line-height:1.6;">' + escapeHtml(j.notes) + '</div></div>';
@@ -500,6 +598,7 @@
     })), 'No expenses logged against this job yet.', '/tools/finance.html?job=' + j.id + '#expenses');
 
     html += '<div class="section-block"><div class="section-heading is-static"><span>Photos</span></div><div class="job-photo-grid" id="jobPhotosGrid"><div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg>Loading...</div></div></div>';
+    html += '</div>';
 
     // Real bug (2026-09-23): a re-render (live sync, or now the clock's
     // Start / Stop) rebuilt the Photos grid as "Loading..." and nothing
@@ -513,6 +612,7 @@
       grid.dataset.loaded = '1';
     }
     syncJobClockTick();
+    if (typeof thAnimateRings === 'function') thAnimateRings(document.getElementById('jobContent'));
   }
 
   // Paid / Part paid / Unpaid from paidAmount first, the same rule as every
@@ -535,9 +635,14 @@
     const since = thJobClockSince(j);
     const logged = Number(j.hoursWorked) || 0;
     const icon = (name) => '<svg class="th-icon" aria-hidden="true"><use href="#icon-' + name + '" xlink:href="#icon-' + name + '"></use></svg>';
+    // v2 (2026-09-28): a 108px ring that fills over three hours on the clock.
+    const ring = (value, tone) => typeof thRingSvg === 'function'
+      ? thRingSvg({ value, tone, size: 108, stroke: 10, className: 'job-clock-ring', center: icon('clock') })
+      : '';
     if (since !== null) {
       const started = new Date(since).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
       return '<div class="job-clock is-running" data-since="' + escapeHtml(j.clockSince) + '">' +
+        ring(thJobClockElapsedMs(j) / 10800000, 'green') +
         '<div class="job-clock-info">' +
           '<div class="job-clock-face"><span class="job-clock-dot" aria-hidden="true"></span><span class="job-clock-time">' + thFormatClock(thJobClockElapsedMs(j)) + '</span></div>' +
           '<div class="job-clock-sub">On the clock since ' + started + (logged ? ' &middot; ' + thClockHoursLabel(logged) + ' before this' : '') + '</div>' +
@@ -547,6 +652,7 @@
     }
     if (j.status === 'done') return '';
     return '<div class="job-clock">' +
+      ring(0, 'idle') +
       '<div class="job-clock-info"><div class="job-clock-sub">' +
         (logged ? '<strong>' + thClockHoursLabel(logged) + '</strong> logged so far.' : 'Time it as you work, and the invoice&rsquo;s labor line fills itself in.') +
       '</div></div>' +
@@ -563,6 +669,7 @@
         if (!face) { syncJobClockTick(); return; }
         if (document.visibilityState === 'hidden') return;
         face.querySelector('.job-clock-time').textContent = thFormatClock(Date.now() - new Date(face.dataset.since).getTime());
+        if (typeof thSetRingValue === 'function') thSetRingValue(face.querySelector('.job-clock-ring'), (Date.now() - new Date(face.dataset.since).getTime()) / 10800000);
       }, 1000);
     } else if (!running && jobClockTick) {
       clearInterval(jobClockTick);
