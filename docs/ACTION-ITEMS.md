@@ -1155,12 +1155,11 @@ a restyle slip, so neither was changed.
 
 From the second pass (2026-09-29, #445-#469 and the portal leak fixes):
 
-- **Apply `sql/security/internal_update_client_portal_work_order.sql` to
-  the live project** (one `apply_migration`). Since #469 was applied,
+- ~~**Apply `sql/security/internal_update_client_portal_work_order.sql`
+  to the live project.**~~ **Done (2026-09-29).** Since #469 was applied,
   Workspace's Approve & Schedule and every work-request status button
-  report success and save nothing (details in bugfix.md, 2026-09-29).
-  The Workspace side of the fix is in the same PR; until the function
-  exists, those buttons show an error instead of a false success.
+  reported success and saved nothing (details in bugfix.md, 2026-09-29).
+  The Workspace side ships in the same PR.
 
 - **Some v2 phone buttons are under 44px.** Settings (#460) rows now use
   38px buttons on a phone (Send reset link, the two-factor button, Sign

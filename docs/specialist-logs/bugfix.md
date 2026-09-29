@@ -1391,7 +1391,7 @@ Asked, once the rest of the redesigns and the day's glitch fixes had landed, to 
 
 `edge-functions/` is untouched since #444; `stripe-webhook-index.ts` is still 18bed26 (#421).
 
-**Found live and fixed here, but it needs one step from you: #469 broke every Workspace work-request status change.** #469 (eed78c2, the RLS follow-up to the leak fix) landed while this pass was running, so it was merged in and checked too.
+**Found live and fixed here (database side applied): #469 broke every Workspace work-request status change.** #469 (eed78c2, the RLS follow-up to the leak fix) landed while this pass was running, so it was merged in and checked too.
 - **Symptom:** this has been happening in production since #469 was applied on 2026-09-29.
   - Approve & Schedule says "Scheduled -- the client has been emailed."
   - Mark reviewing, Mark quoted and Close say "Request updated."
@@ -1415,7 +1415,12 @@ Asked, once the rest of the redesigns and the day's glitch fixes had landed, to 
 - **Proof in the browser:** a new flow runs the three actions while the harness database models #469's policies.
   - On main, both success toasts appear and the stored statuses don't change (41 still submitted, 42 still quoted, 43 still submitted).
   - On this branch, all 5 steps pass, including an error toast for a request removed before the tap.
-- **Not done: the migration is not applied to the live project.** Until it is, those Workspace buttons show an error (the function doesn't exist yet) instead of a false success. Applying it is one `apply_migration` of that file.
+- **Applied to the live project** (2026-09-29, `apply_migration` of that exact file, on the owner's go-ahead), then checked there without touching data:
+  - It is `SECURITY DEFINER`, owned by `postgres`, with `search_path=public`. `anon` can't execute it; `authenticated` can.
+  - Inside a block that always rolls back, called on a nonexistent id (-1), a staff session passes the gate (0 rows) and a non-staff signed-in session gets 42501 "Only internal accounts can update work orders."
+  - `get_advisors(security)` lists it only under "signed-in users can execute a SECURITY DEFINER function". That's intentional, and the same holds for #469's eight readers.
+
+  Until this branch's `tools/workspace.html` deploys, the live page still sends the old PATCH, so the buttons stay broken until the PR merges.
 - **Rest of #469 checked:**
   - Every other staff access to the nine client-only tables is a read through `internal_read_*()` (GET with filters on a `STABLE`, `returns setof` function, which PostgREST supports).
   - The only other staff writes are the two message INSERTs. Their staff branch doesn't read a scoped table.
@@ -1473,7 +1478,7 @@ Tests: `tests/tools/haptic-user-activation.test.js` (8). Both copies are run in 
 - **Settings two-factor "Loading...".** In the harness, Settings' two-factor button stayed "Loading...". The harness blocks service workers, and the push check ahead of the two-factor card awaits `navigator.serviceWorker.ready`. With workers allowed it reads "Turn off" in 0.5s. The underlying ordering predates the redesigns and is in ACTION-ITEMS as a question.
 - **Link check.** `check-links.py` reports 10 problems, all Unsplash photo URLs refused by this sandbox's proxy (403 at the tunnel), identically on main. Every internal link resolves.
 
-Two questions went to ACTION-ITEMS.md: v2 phone buttons under 44px (Settings 38px, homepage chips 40px), and the Settings two-factor card waiting on the service worker. Applying the work-order migration is listed there first.
+Two questions went to ACTION-ITEMS.md: v2 phone buttons under 44px (Settings 38px, homepage chips 40px), and the Settings two-factor card waiting on the service worker.
 
 **Gotchas worth keeping:**
 - **A hash-only `page.goto()` keeps the old document.** Going from `job-tracker.html` to `job-tracker.html#contacts` doesn't reload, so a sheet opened in the previous step still covers the page. Go to `about:blank` first.

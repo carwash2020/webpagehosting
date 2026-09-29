@@ -1,5 +1,7 @@
 -- Staff status changes on portal work orders, after #469 (2026-09-29).
 -- See docs/specialist-logs/bugfix.md, 2026-09-29 (second redesign pass).
+-- Applied live via Supabase MCP apply_migration on 2026-09-29; kept here
+-- so the schema change is tracked in source control.
 --
 -- #469 (scope_client_portal_rls_to_client_only_plus_internal_rpcs.sql)
 -- made client_portal_work_orders' SELECT policy client-only and moved

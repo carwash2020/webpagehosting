@@ -5933,7 +5933,7 @@ The security fix above added the missing `.eq('client_email', ...)` filter to ev
 
 Workspace. Found by the bug lane's second end-to-end pass over the redesigns and the day's fixes (#445-#469 and the portal leak fixes).
 
-- **Work requests save again (needs one database step).** Since the portal security follow-up (#469), Approve & Schedule said "Scheduled -- the client has been emailed." and Mark reviewing, Mark quoted and Close said "Request updated.", but nothing was saved and no email went out. The database now hides portal rows from staff sessions unless they go through a staff-only function, and these buttons still wrote to the table directly, so their updates matched nothing. A new staff-only function, `internal_update_client_portal_work_order()`, does the update, and the Workspace calls it. If a request can't be updated, the Workspace now says so instead of claiming success. **The function has to be added to the live database** (`sql/security/internal_update_client_portal_work_order.sql`); until then these buttons show an error.
+- **Work requests save again.** Since the portal security follow-up (#469), Approve & Schedule said "Scheduled -- the client has been emailed." and Mark reviewing, Mark quoted and Close said "Request updated.", but nothing was saved and no email went out. The database now hides portal rows from staff sessions unless they go through a staff-only function, and these buttons still wrote to the table directly, so their updates matched nothing. A new staff-only function, `internal_update_client_portal_work_order()`, does the update, and the Workspace calls it. If a request can't be updated, the Workspace now says so instead of claiming success. The function is already live in the database (`sql/security/internal_update_client_portal_work_order.sql`, applied 2026-09-29), so the buttons work as soon as this Workspace change deploys.
 - **Opening a form from a link no longer logs a console error.** The new form sheets give a small buzz as they open. When one opens straight from a link (+ Job, a client's New job, Workspace's New job, the command palette), nobody has tapped the new page yet. Chrome refuses the buzz there and logged "Blocked call to navigator.vibrate..." as an error each time. The buzz now waits for the first tap, which is the only time it could work anyway. Every buzz after a tap is unchanged.
 - **Pull-to-refresh on Jobs runs once per pull.** It was being set up twice on every load, so each pull refreshed twice and buzzed twice. That dates from an 08-27 fix that moved the setup and left the old one in place.
 
@@ -5949,6 +5949,6 @@ Also checked, new this pass:
 - The portal update banner fix.
 - That no portal page shows another client's records (the leak fix holds).
 
-Details are in `docs/specialist-logs/bugfix.md`. The database step and two questions are in `docs/ACTION-ITEMS.md`.
+Details are in `docs/specialist-logs/bugfix.md`. Two questions are in `docs/ACTION-ITEMS.md`.
 
 Tests: `tests/tools/work-request-staff-writes.test.js` (7; 6 fail on the previous code) and `tests/tools/haptic-user-activation.test.js` (8; 3 fail on the previous code).
