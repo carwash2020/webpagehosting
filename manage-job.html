@@ -170,6 +170,34 @@
   .skel-line.w-60{width:60%;} .skel-line.w-40{width:40%;}
   @keyframes skelPulse{0%,100%{opacity:.45;} 50%{opacity:1;}}
   .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;}
+
+  /* === Redesign B1 (2026-09-28): booking flow as a ticket -- scoped to this page's own <style> === */
+  /* One ticket language across booking, manage-booking and manage-job:
+     an orange-edged card with punched notches and a perforated rule.
+     Colours are this page's own copied tokens (see the :root block). No
+     layout, validation or JS behaviour changes; every hover is behind
+     (hover:hover) and every motion behind prefers-reduced-motion. */
+  @keyframes b1Stamp{0%{transform:scale(1.6) rotate(-12deg); opacity:0;} 60%{transform:scale(.92) rotate(-12deg); opacity:1;} 100%{transform:scale(1) rotate(-12deg); opacity:1;}}
+  @keyframes b1In{from{opacity:0; transform:translateY(10px);}}
+
+  /* the page opens on the same ticket; the notches sit at mid-height
+     because these cards are short (about 95-155px) */
+  #content .job-card{
+    position:relative;
+    border:1px solid var(--orange-tint-border);
+    border-radius:18px;
+    background:linear-gradient(160deg, var(--bg-panel-2), var(--bg-panel) 65%);
+    box-shadow:0 1px 0 rgba(255,255,255,.05) inset, 0 30px 60px -30px rgba(0,0,0,.8);
+    -webkit-mask:radial-gradient(circle 11px at 0 50%, transparent 98%, #000) , radial-gradient(circle 11px at 100% 50%, transparent 98%, #000);
+    -webkit-mask-composite:source-in;
+    mask:radial-gradient(circle 11px at 0 50%, transparent 98%, #000), radial-gradient(circle 11px at 100% 50%, transparent 98%, #000);
+    mask-composite:intersect;
+  }
+  #content .job-card{padding-top:26px;}
+  @media (prefers-reduced-motion: no-preference){
+    #content .job-card{animation:b1In .35s ease both;}
+  }
+  /* === end Redesign B1 === */
 </style>
 </head>
 <body>

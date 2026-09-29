@@ -716,6 +716,102 @@
   /* A tap on a full day explains itself and gives a small shake. */
   @keyframes dayNudge{0%,100%{transform:none;} 25%{transform:translateX(-3px);} 75%{transform:translateX(3px);}}
   .date-btn.is-nudged{animation:dayNudge .32s ease;}
+
+  /* === Redesign B1 (2026-09-28): booking flow as a ticket -- scoped to this page's own <style> === */
+  /* One ticket language across booking, manage-booking and manage-job:
+     an orange-edged card with punched notches and a perforated rule.
+     Colours are this page's own copied tokens (see the :root block). No
+     layout, validation or JS behaviour changes; every hover is behind
+     (hover:hover) and every motion behind prefers-reduced-motion. */
+  @keyframes b1Stamp{0%{transform:scale(1.6) rotate(-12deg); opacity:0;} 60%{transform:scale(.92) rotate(-12deg); opacity:1;} 100%{transform:scale(1) rotate(-12deg); opacity:1;}}
+  @keyframes b1In{from{opacity:0; transform:translateY(10px);}}
+
+  /* step rail: bigger nodes on a connected line that fills as you go */
+  .step-indicator .step-node .dot{width:38px; height:38px; font-size:15px; box-shadow:0 0 0 4px var(--bg);}
+  .step-indicator .step-node.is-active .dot{box-shadow:0 0 0 4px var(--bg), 0 0 0 7px var(--orange-tint-border);}
+  .step-indicator .step-connector{height:3px; border-radius:3px; background:linear-gradient(90deg, var(--orange) 0 var(--fill, 0%), var(--border) var(--fill, 0%));}
+  .step-indicator .step-connector.is-done,
+  .step-indicator .step-node.is-done + .step-connector{--fill:100%;}
+  .step-indicator .step-node .label{letter-spacing:1.4px;}
+
+  /* service choice: bigger, more tactile cards */
+  .service-grid .service-option{padding:22px 22px 20px; border-radius:14px;}
+  .service-grid .service-option .svc-name{font-size:19px;}
+  .service-grid .service-option.is-selected{border-color:var(--orange); box-shadow:0 0 0 3px var(--orange-tint-soft);}
+
+  /* the sidebar is the ticket, and each field stamps as it is chosen */
+  .booking-sidebar{
+    border:1px solid var(--orange-tint-border);
+    border-radius:18px;
+    background:linear-gradient(160deg, var(--bg-panel-2), var(--bg-panel) 65%);
+    box-shadow:0 1px 0 rgba(255,255,255,.05) inset, 0 30px 60px -30px rgba(0,0,0,.8);
+    -webkit-mask:radial-gradient(circle 11px at 0 58px, transparent 98%, #000) , radial-gradient(circle 11px at 100% 58px, transparent 98%, #000);
+    -webkit-mask-composite:source-in;
+    mask:radial-gradient(circle 11px at 0 58px, transparent 98%, #000), radial-gradient(circle 11px at 100% 58px, transparent 98%, #000);
+    mask-composite:intersect;
+  }
+  .booking-sidebar{padding:22px 22px 18px;}
+  .booking-sidebar .eyebrow{margin:0 0 30px; padding-bottom:16px; border-bottom:2px dashed var(--border); color:var(--orange-text-vivid);}
+  .booking-sidebar .sidebar-item{position:relative; padding:14px 0; border-bottom:1px dashed var(--border);}
+  .booking-sidebar .sidebar-item.is-pending .si-value{color:var(--text-dim); font-style:italic;}
+  .booking-sidebar .sidebar-item:not(.is-pending){padding-right:44px;}
+  .booking-sidebar .sidebar-item:not(.is-pending) .si-value{color:var(--text); font-family:var(--font-display); font-size:20px; letter-spacing:.3px;}
+  .booking-sidebar .sidebar-item:not(.is-pending)::after{
+    content:"\2713";
+    position:absolute; right:2px; top:50%; margin-top:-17px;
+    width:34px; height:34px; border-radius:50%;
+    display:grid; place-items:center;
+    border:2px solid var(--orange); color:var(--orange);
+    font-family:var(--font-ui); font-weight:600; font-size:16px;
+    transform:rotate(-12deg);
+  }
+  .booking-mobile-summary{border:1px solid var(--orange-tint-border); border-radius:12px; background:linear-gradient(160deg, var(--bg-panel-2), var(--bg-panel));}
+  /* Inset from the screen edge so the rounded ticket corners show; the
+     base bar ran full-bleed with only a bottom border. */
+  .booking-mobile-summary{top:8px; margin:8px 16px 0;}
+  @media (max-width:600px){
+    /* Three 38px nodes plus labels leave no room for the connectors at
+       320px wide, and the connector is the progress line. */
+    .step-indicator .step-node .dot{width:30px; height:30px; font-size:13px;}
+    .step-indicator .step-node .label{letter-spacing:.4px;}
+  }
+
+  /* the confirmation IS the ticket, completed */
+  .confirmation .conf-detail{position:relative; margin:18px 0 0; padding:22px 24px; text-align:left;}
+  .confirmation .conf-detail strong{padding-right:80px;}
+  .confirmation .conf-detail{
+    position:relative;
+    border:1px solid var(--orange-tint-border);
+    border-radius:18px;
+    background:linear-gradient(160deg, var(--bg-panel-2), var(--bg-panel) 65%);
+    box-shadow:0 1px 0 rgba(255,255,255,.05) inset, 0 30px 60px -30px rgba(0,0,0,.8);
+    -webkit-mask:radial-gradient(circle 11px at 0 88px, transparent 98%, #000) , radial-gradient(circle 11px at 100% 88px, transparent 98%, #000);
+    -webkit-mask-composite:source-in;
+    mask:radial-gradient(circle 11px at 0 88px, transparent 98%, #000), radial-gradient(circle 11px at 100% 88px, transparent 98%, #000);
+    mask-composite:intersect;
+  }
+  .confirmation .conf-detail::after{
+    content:"Booked"; content:"Booked" / "";
+    position:absolute; right:16px; top:14px;
+    padding:4px 10px; border:2px solid var(--orange); border-radius:6px;
+    color:var(--orange); font-family:var(--font-ui); font-weight:600; font-size:12px; letter-spacing:2px; text-transform:uppercase;
+    transform:rotate(-12deg);
+  }
+  .confirmation .conf-actions{margin-top:22px; gap:12px;}
+  .confirmation .next-steps,
+  .confirmation .conf-emergency,
+  .confirmation .conf-referral{max-width:520px; margin-left:auto; margin-right:auto;}
+  .confirmation .next-steps{margin-top:36px; padding-top:24px; border-top:1px dashed var(--border);}
+
+  @media (prefers-reduced-motion: no-preference){
+    .booking-sidebar .sidebar-item:not(.is-pending)::after{animation:b1Stamp .45s cubic-bezier(.2,.8,.2,1) both;}
+    .confirmation .conf-detail::after{animation:b1Stamp .5s cubic-bezier(.2,.8,.2,1) .35s both;}
+    .step-panel.is-active{animation:b1In .35s ease both;}
+  }
+  @media (hover:hover){
+    .service-grid .service-option:hover{border-color:var(--orange-tint-border);}
+  }
+  /* === end Redesign B1 === */
 </style>
 <!-- Shared business-hours data + timezone helpers (2026-09-03),
      extracted here from what used to be this page's own private copy

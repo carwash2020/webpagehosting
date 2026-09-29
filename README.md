@@ -5729,6 +5729,16 @@ Designed in Claude Design from the P6 brief, then applied and checked here.
 
 Styles are scoped to `html.page-careers` / `html.page-legal`, and the 404 keeps its own inline styles. The homepage, About, Our Work, the blog and the landing pages are unchanged. Verified with the full suite, `check-consistency`, `check-undefined-vars`, lint and the visual snapshot; `check-links.py` has only the known sandbox-proxy Unsplash failures, same as main. Screenshots are in `docs/careers-legal-404-2026-09-28/`.
 
+## What changed, 2026-09-28 -- Booking builds a ticket as you go (B1 redesign)
+
+Designed in Claude Design from the B1 brief, then applied and checked here.
+
+- **Booking** now builds a ticket as you go. The "Your Appointment" card has an orange edge and punched notches, and each choice stamps onto it as you make it. The step rail fills in orange as you move through the steps.
+- **The confirmation** is the finished ticket, stamped "Booked", with Add to calendar right under it.
+- **Manage-booking and manage-job** open on the same ticket.
+
+Nothing about availability, holds, validation or submission changed: the pages' markup and scripts are exactly as before, and each page only gains CSS in its own `<style>`. Verified with the full suite (the booking tests pass 145/145), `check-consistency`, `check-undefined-vars`, and a before/after booking walk at desktop and phone widths; `check-links.py` has only the known sandbox-proxy Unsplash failures, same as main. Screenshots are in `docs/booking-ticket-2026-09-28/`.
+
 ## What changed, 2026-09-28 -- Workspace redesign W2: Home, Jobs, Job detail
 
 Package 2 of the Workspace redesign, on top of W1.
@@ -5825,6 +5835,20 @@ The People + field package of the v2 redesign (handoff §8.8-8.12), on top of th
 - **Appliance Wiki:** a 56px search field with an orange border, six type tiles with entry and brand counts (tap to filter), and a **common fixes** card of logged issues with part numbers. Inside an entry, each model header and each logged issue gets a ⋯ with Edit, Pin, Copy, View source and Delete.
 
 Nothing was removed: every sheet action clicks or calls the page's existing handler, so each confirm and undo still runs. All CSS lives in each page's own `<style>`, scoped to its `body.th-tool-page[data-th-page=…]`; `tools/styles-tools.css` is untouched. Full write-up in `docs/specialist-logs/visual.md`, 2026-09-29.
+
+## What changed, 2026-09-29 -- Workspace app redesign v2: Money, Runway and Contracts
+
+The second v2 package (`design_handoff_workspace_app_v2` §8.5-8.7), built on the shell pieces from the first.
+
+- **Money** has one Invoices / Finance / Quick charge switch at the top of both pages (Finance shows only to accounts that can open both, like the header switch it replaces).
+  - Invoices: Owed / Overdue / this month as big-number tiles, then invoices and quotes as ruled rows with a hex avatar, the amount in Anton over its status pill, and a ⋯ (Mark paid, Send a reminder, Resend, Open client/job, Delete). "+ New invoice" and "+ New quote" open the builders.
+  - The builder: field groups as cards, a tinted job-fill banner, round remove × on each line, dashed "+ Add" buttons, and the total in Anton under an orange rule.
+  - Quick charge: a 460px card with the amount in Anton 64 and a 3×4 keypad that types into the same amount field. The Stripe charge is untouched.
+  - Finance opens on "Spent this month": the month's expenses and mileage in Anton, a bar split by vendor, a legend, and Log expense / Log income. The five tabs are one segmented track; each Log has a ⋯ (Export CSV, Clear all) and every entry a ⋯ (Edit, Attach receipt, View receipt, Delete).
+- **Runway**: the four tabs are one segmented track. Safe to Spend leads with a green ring (the share of income that goes to bills) and the amount in Anton 52. The Runway Summary opens on a gauge toward six months of bills saved, then four tiles: tax set-aside, month over month, year over year and monthly burn. Monthly History gets paired in/out bars, Net Worth reads as a list with Update balances, and every income, bill, debt and month row has a ⋯ and a long-press sheet. The "+ Add" buttons are dashed.
+- **Contracts**: the three types are cards (the open one orange-tinted, with a one-line hint). Each section is a numbered card that says Done or To fill. The signatures card shows the exact authorization sentence from the contract's own PDF template and who is signing, and the two pads are dashed, side by side on a computer. Recent contracts are ruled rows with a ⋯ (Download PDF, Delete).
+
+Nothing was removed; every ⋯ runs the row's existing handler, confirm and undo included, and every number comes from the page's own render math. Runway still loads neither shared stylesheet: its copy of the v2 shell CSS (bottom bar, rings, action sheet, toasts) lives in its own `<style>`. Full write-up in `docs/specialist-logs/visual.md`, 2026-09-29.
 
 ## What changed, 2026-09-29 -- Workspace app redesign v2: back office (Settings, Website, Dev Tools, sign-in)
 
