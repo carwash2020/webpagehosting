@@ -2,7 +2,9 @@
 -- tenant check rejected every staff insert/upsert (fixed by
 -- sql/multi-tenant/06_tenant_id_from_session_top_level_tables.sql).
 --
--- REVIEW BEFORE RUNNING. Run once, in the SQL editor, as postgres.
+-- ALREADY RUN on 2026-09-30, after owner approval (as postgres). The
+-- reconciliation returned zero rows afterwards. Kept as the record; re-running
+-- is harmless (the upsert is idempotent), but there's nothing left to do.
 --
 -- Scope is exactly what sql/infra/reconcile_blob_vs_relational.sql reported
 -- on 2026-09-30 after 06 was live:
