@@ -6011,3 +6011,11 @@ Tests: `tests/tools/package-b-loading-access.test.js` (11; all 11 fail on the pr
 Also in this update: if something breaks while Workspace Home paints from the last visit, it's now logged in Dev Tools' client errors instead of silently ignored.
 
 Tests: `tests/portal/package-c-portal.test.js` (4) and the updated `tests/portal/work-order-progress-track.test.js` (8); all fail on the previous code except the service-worker check.
+
+## What changed, 2026-09-30 -- Multi-tenant Tier 0: real tenant isolation, live in production
+
+Added the database foundation for eventually selling this software to other businesses: a `tenants` table, `tenant_id` on every business table, and every staff-facing RLS policy extended with a real tenant check (`current_tenant_id()`, the tenant-resolution twin of `current_user_has_any_role()`). Triple H is tenant #1 (`slug: triple-h`) -- an ordinary row, not a hardcoded special case. Fully additive: nullable columns backfilled to Triple H, existing policies ANDed with a tenant check rather than replaced, zero behavior change for the real business today.
+
+Applied live in 5 staged batches (`sql/multi-tenant/01`-`05`), each verified against real production data before the next one ran. Proven first in a fully disposable local Postgres (Supabase's branch/project-creation API was down all session), replaying the exact real policies pulled from the live project. Caught and fixed two real bugs this way before they ever touched production -- see `docs/specialist-logs/features.md`'s 2026-09-30 entry for the full detail, including a same-class regression to the #469 incident (an RLS change silently breaking a write path) caught this time by testing rather than by a customer.
+
+This is Tier 0 only: no second-tenant signup flow, no per-tenant branding, no billing yet. Edge functions (service-role, bypass RLS) aren't tenant-scoped -- harmless with one real tenant today, a real gap once a second one exists.
