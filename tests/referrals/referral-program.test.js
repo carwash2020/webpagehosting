@@ -112,6 +112,8 @@ test('clients.html: Referral Credits panel exists with a summary, a list, and a 
 // tests/sync/relational-mirror.test.js uses for the other mirror
 // functions.
 function loadReferralMirrorFunctions() {
+  // Failure log + auth helpers the mirror functions call (Item 1 Phase 0d).
+  const failureLogSrc = SYNC_JS.match(/const MIRROR_FAILURES_KEY[\s\S]*?\nfunction mirrorToken\(\) \{[\s\S]*?\n\}/)[0];
   const upsertSrc = SYNC_JS.match(/async function mirrorUpsert[\s\S]*?\n\}/)[0];
   const createdSrc = SYNC_JS.match(/function mirrorReferralCreated[\s\S]*?\n\}/)[0];
   const earnedSrc = SYNC_JS.match(/async function mirrorReferralEarnedForJob[\s\S]*?\n\}/)[0];
@@ -119,13 +121,20 @@ function loadReferralMirrorFunctions() {
 
   const fetchWithRetryStub = 'async function fetchWithRetry(url, opts) { return fetch(url, opts); }\n';
   const sandbox = { isSyncConfigured: () => true, getAuthToken: () => 'fake-token', fetch: (...args) => global.fetch(...args) };
-  const src = fetchWithRetryStub + upsertSrc + '\n' + createdSrc + '\n' + earnedSrc +
+  const src = fetchWithRetryStub + failureLogSrc + '\n' + upsertSrc + '\n' + createdSrc + '\n' + earnedSrc +
     '\nsandbox.mirrorUpsert = mirrorUpsert; sandbox.mirrorReferralCreated = mirrorReferralCreated; sandbox.mirrorReferralEarnedForJob = mirrorReferralEarnedForJob;' +
     '\nsandbox.fetchWithRetry = fetchWithRetry; sandbox.fetch = fetch;';
+  const store = new Map();
+  const localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) };
+  const window = { dispatchEvent: () => {} };
+  const CustomEvent = class { constructor(type, init) { this.type = type; this.detail = init && init.detail; } };
+  const console = { warn: () => {} };
   // eslint-disable-next-line no-new-func
   new Function('sandbox', 'SUPABASE_URL', 'SUPABASE_ANON_KEY', 'isSyncConfigured', 'getAuthToken', 'fetch',
+    'localStorage', 'window', 'CustomEvent', 'console',
     src
-  )(sandbox, 'https://example-project.supabase.co', 'fake-anon-key', sandbox.isSyncConfigured, sandbox.getAuthToken, sandbox.fetch);
+  )(sandbox, 'https://example-project.supabase.co', 'fake-anon-key', sandbox.isSyncConfigured, sandbox.getAuthToken, sandbox.fetch,
+    localStorage, window, CustomEvent, console);
   return sandbox;
 }
 
