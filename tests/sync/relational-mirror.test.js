@@ -118,7 +118,10 @@ test('mirrorJobsToRelational() POSTs a real upsert to /rest/v1/jobs with the rig
   assert.equal(body.length, 1);
   assert.equal(body[0].id, 42);
   assert.equal(body[0].title, 'Fix dryer');
-  assert.equal(body[0].client_id, 'c_1');
+  // Item 1 Phase 1: the old local id goes to legacy_client_id; client_id
+  // becomes the uuid FK to clients (sql/item1/01), so it must not be sent.
+  assert.equal(body[0].legacy_client_id, 'c_1');
+  assert.equal('client_id' in body[0], false);
   assert.equal(body[0].show_on_calendar, true);
 });
 

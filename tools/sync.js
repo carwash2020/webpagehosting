@@ -1241,7 +1241,7 @@ async function mirrorReplaceLineItems(table, fkColumn, parentId, items) {
 
 function mirrorJobsToRelational(jobs) {
   return mirrorUpsert('jobs', (jobs || []).map(j => ({
-    id: j.id, title: j.title || '', client: j.client || null, client_id: j.clientId || null,
+    id: j.id, title: j.title || '', client: j.client || null, legacy_client_id: j.clientId || null,
     phone: j.phone || null, address: j.address || null, client_email: j.clientEmail || null,
     priority: j.priority || null, job_date: j.date || null, status: j.status || null,
     notes: j.notes || null, show_on_calendar: !!j.showOnCalendar,
@@ -1347,7 +1347,7 @@ function mirrorInvoiceToRelational(entry) {
   if (!entry) return;
   mirrorUpsert('invoices', [{
     id: entry.id, invoice_number: entry.invoiceNumber || null, client_name: entry.clientName || null,
-    client_id: entry.clientId || null, client_email: entry.clientEmail || null, invoice_date: entry.date || null,
+    legacy_client_id: entry.clientId || null, client_email: entry.clientEmail || null, invoice_date: entry.date || null,
     terms: entry.terms || null, invoice_type: entry.invoiceType || null, subtotal: entry.subtotal ?? null,
     tax: entry.tax ?? null, discount: entry.discount ?? null, total: entry.total ?? null,
     paid: deriveInvoicePaid(entry), paid_amount: entry.paidAmount ?? null,
@@ -1361,7 +1361,7 @@ function mirrorQuoteToRelational(entry) {
   if (!entry) return;
   mirrorUpsert('quotes', [{
     id: entry.id, quote_number: entry.quoteNumber || null, client_name: entry.clientName || null,
-    client_id: entry.clientId || null, client_email: entry.clientEmail || null, quote_date: entry.date || null,
+    legacy_client_id: entry.clientId || null, client_email: entry.clientEmail || null, quote_date: entry.date || null,
     subtotal: entry.subtotal ?? null, tax: entry.tax ?? null, discount: entry.discount ?? null, total: entry.total ?? null,
     status: entry.status || null, job_id: entry.jobRefId ? Number(entry.jobRefId) : null,
     job_ref_title: entry.jobRefTitle || null, generated_by: entry.generatedBy || null,
@@ -1375,6 +1375,7 @@ function mirrorContractToRelational(entry) {
   mirrorUpsert('contracts', [{
     id: entry.id, contract_type: entry.type || null, fields: entry.fields || null,
     date_generated: entry.dateGenerated || null, generated_by: entry.generatedBy || null,
+    legacy_client_id: entry.clientId || null,
   }]);
 }
 
@@ -1702,7 +1703,7 @@ async function fetchJobsFromRelational() {
     // callers shouldn't need to know or care whether a job came from
     // the relational table or the blob.
     const jobs = rows.map(r => ({
-      id: r.id, title: r.title, client: r.client, clientId: r.client_id,
+      id: r.id, title: r.title, client: r.client, clientId: r.legacy_client_id ?? r.client_id,
       phone: r.phone, address: r.address, clientEmail: r.client_email,
       priority: r.priority, date: r.job_date, status: r.status,
       notes: r.notes, showOnCalendar: !!r.show_on_calendar,
@@ -1735,7 +1736,7 @@ async function fetchInvoicesFromRelational() {
     // from th_invoices -- same reasoning as fetchJobsFromRelational().
     const invoices = rows.map(r => ({
       id: r.id, invoiceNumber: r.invoice_number, clientName: r.client_name,
-      clientId: r.client_id, clientEmail: r.client_email, date: r.invoice_date,
+      clientId: r.legacy_client_id ?? r.client_id, clientEmail: r.client_email, date: r.invoice_date,
       terms: r.terms, invoiceType: r.invoice_type, subtotal: r.subtotal,
       tax: r.tax, discount: r.discount, total: r.total, paid: !!r.paid,
       paidAmount: r.paid_amount, jobRefId: r.job_id, jobRefTitle: r.job_ref_title,
