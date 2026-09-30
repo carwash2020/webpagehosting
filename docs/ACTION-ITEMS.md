@@ -1158,6 +1158,15 @@ belongs with whichever phase touches each page's header next).
 
 ## Edge-function drift check -- needs one secret (2026-09-30)
 
+**Done 2026-09-30:** the owner added `SUPABASE_ACCESS_TOKEN`. The check
+runs: 39 of 41 functions match. Two are left for the owner to decide
+(details in `docs/specialist-logs/automation.md`, 2026-09-30):
+- `uptime-alert`: deploy the repo copy to add its missing service-role
+  check, then confirm the GitHub key still gets through.
+- `respond-to-contract`: redeploy (comments only), so the check goes green.
+
+Original item, for the record:
+
 `.github/workflows/edge-function-drift.yml` compares the live Supabase
 functions with `edge-functions/` after every merge that touches them and
 every Monday, and fails with a list of what to deploy. It needs a
