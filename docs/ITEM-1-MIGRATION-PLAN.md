@@ -10,8 +10,8 @@ This is the plan for the real project in the roadmap. Items 2–6 (SQL aggregate
 ## Scope
 
 **In scope**
-- Jobs, invoices, quotes, contracts: relational tables become the source of truth.
-- A single unified `clients` entity with a real primary key, referenced by FK from all four.
+- Jobs, invoices, quotes, contracts, expenses, and income: relational tables become the source of truth (expenses and income added by decision 1, 2026-09-30).
+- A single unified `clients` entity with a real primary key, referenced by FK from jobs, invoices, quotes, and contracts. Job Tracker's Contacts list (`th_tracker_contacts`) is mostly clients and merges into it (decision 1).
 - An offline outbox so field writes survive no-signal job sites.
 - Backfill, reconciliation, per-entity read cutover, and a freeze of the old blob path.
 
@@ -40,7 +40,7 @@ This is the plan for the real project in the roadmap. Items 2–6 (SQL aggregate
 
 ## Principles
 
-1. **One entity at a time.** Every phase that touches reads or writes goes jobs → invoices/quotes → contracts. Never all at once.
+1. **One entity at a time.** Every phase that touches reads or writes goes jobs → invoices/quotes → contracts → expenses/income. Never all at once.
 2. **Nothing fails silently.** Every write path added or touched in this migration must surface failure somewhere a human will see it. This is the single biggest lesson from the current mirror and from the two prior upsert bugs.
 3. **Preserve existing IDs.** Blob record IDs become relational primary keys, or they are carried in a unique `legacy_id` column. `th_job_photos.job_id`, invoice→job links, referral records, and `manage-job.html` tokens all reference them.
 4. **Explicit conflict targets.** Every upsert names its constraint (`?on_conflict=...`). No relying on PostgREST's default.
@@ -56,12 +56,12 @@ The goal is to know exactly what exists and how far the relational tables have a
 
 | Class | Meaning | Likely members (verify) |
 |---|---|---|
-| Migrate | Growing row data, becomes relational | `th_tracker_jobs`, `th_invoices`, `th_quotes`, contracts key, possibly `th_expense_log`, `th_tracker_contacts` |
+| Migrate | Growing row data, becomes relational | `th_tracker_jobs`, `th_invoices`, `th_quotes`, contracts key, `th_expense_log`, `th_income_log`; `th_tracker_contacts` merges into `clients` |
 | Stays as settings | Small config, blob is fine | `th_tax_rate`, `th_tax_labor`, `th_tax_parts`, `th_mileage_rate` |
-| Separate decision | Row-ish but not core to item 1 | `th_tracker_notes`, `th_job_templates`, `th_compliance`, `th_known_issues` |
+| Stays in the blob | Row-ish but small, no queries or joins (decision 6) | `th_tracker_notes_v2`, `th_job_templates`, `th_compliance`, `th_known_issues` |
 | Retire | Dead or UI-only | `th_dash_collapsed`, `th_sync_code`, `th_sync_last` |
 
-Expenses and contacts need an explicit in/out decision here. Contacts overlaps heavily with the clients work in Phase 1.
+Decided 2026-09-30: expenses and income migrate (they are money records linked to jobs, and Job Profitability shouldn't mix relational revenue with blob costs). Contacts are mostly clients, so they merge into `clients` in Phase 1 instead of getting their own table. Notes, job templates, compliance, and known issues stay in the blob; a template that names a client stores its `client_id` from Phase 3.5 on.
 
 **0b. Reader/writer census.** Grep every `localStorage.getItem('th_…')` / `setItem` for migrated keys and list each call site with page and function. This list is the checklist for Phase 4. Any call site missing from it is a page that silently keeps reading stale local data after cutover.
 
@@ -92,13 +92,14 @@ Run it now to get a baseline, then after each later phase. It is the same tool P
 This is real new schema, not a column added to an existing table.
 
 **1a. Schema.**
-- New `clients` table: `id uuid pk`, `tenant_id`, `display_name`, primary email/phone, normalized match columns (lowercased/trimmed name, digits-only phone, lowercased email), `created_at`, `updated_at`, `merged_into_id` (nullable, for tracing merges).
+- New `clients` table: `id uuid pk` (this is the `client_id` every other table references), `tenant_id`, `display_name`, one email and one phone (decision 2), normalized match columns (lowercased/trimmed name, digits-only phone, lowercased email), `created_at`, `updated_at`, `merged_into_id` (nullable, for tracing merges).
 - `client_profiles` stays the portal *account* table and gains `client_id` FK → `clients`. A portal login is not the same thing as a client record; one client may have zero or several portal accounts.
 - Jobs, invoices, quotes, contracts gain a nullable `client_id` FK. It becomes `NOT NULL` only after backfill and dedup are complete.
-- Decide in review whether multiple emails/phones per client are needed now (a `client_contact_points` child table) or later.
+- One email and one phone per client (decision 2, 2026-09-30). No contact-points child table.
 
 **1b. Seeding and dedup.**
-- Seed candidates from all three sources: `client_profiles` rows, local `thEnsureClient` records (collected via the Phase 4 device checklist or the blob), and distinct free-text client names on existing rows.
+- Seed candidates from four sources: `client_profiles` rows, local `thEnsureClient` records (collected via the Phase 4 device checklist or the blob), Job Tracker contacts (`th_tracker_contacts`), and distinct free-text client names on existing rows.
+- A contact that turns out not to be a client (a supplier or another trade) is marked "not a client" in the review queue and stays in the blob contact list.
 - Generate **candidate** duplicate groups by normalized email, phone, and name. Do not auto-merge.
 - Build a small review queue in `tools/clients.html`: merge / keep separate / edit. A merge repoints every FK and sets `merged_into_id`.
 - Backfill `client_id` on existing rows from the reviewed mapping. Rows that can't be confidently matched stay null and go on a review list.
@@ -225,7 +226,7 @@ Every device that has ever been used must appear in the table, including old lap
 
 ## Phase 5 — Read cutover, per entity
 
-- Per-entity flag in the seam: `jobs`, then `invoices`+`quotes` together (Convert-to-Invoice links them), then `contracts`.
+- Per-entity flag in the seam: `jobs`, then `invoices`+`quotes` together (Convert-to-Invoice links them), then `contracts`, then `expenses`+`income` together (both are ledger entries with the same job link).
 - Jobs goes first. Calendar and route planner already read it, so the relational path is already exercised in production.
 - Once flipped, that entity's writes go through the outbox to the relational tables. Its mirror call and blob key are removed for that entity.
 - Monitor after each flip: outbox drain failures, conflict records, freeze-trigger rejections, and a daily run of the reconciliation script (now relational vs the frozen snapshot plus expected new rows).
@@ -261,12 +262,12 @@ So:
 
 ## Open decisions (resolve in review)
 
-1. Expenses and contacts: in item 1 scope, or a follow-on?
-2. Clients: single email/phone per client now, or a contact-points child table from the start?
+1. ~~Expenses and contacts: in item 1 scope, or a follow-on?~~ **Resolved (2026-09-30):** expenses and income are in scope and migrate last; contacts are mostly clients and merge into `clients`.
+2. ~~Clients: single email/phone per client now, or a contact-points child table from the start?~~ **Resolved (2026-09-30):** one email and one phone per client, plus the new `client_id`.
 3. Offline invoice/quote numbering: option (a), (b), or (c) in 3f. Needs Steve's input on on-site invoicing frequency.
 4. Cutover monitoring window length per entity.
 5. Soft deletes: permanent, or purge after N days?
-6. Notes, job templates, compliance, known issues: stay in the blob, or migrate in a later pass?
+6. ~~Notes, job templates, compliance, known issues: stay in the blob, or migrate in a later pass?~~ **Resolved (2026-09-30):** they stay in the blob.
 7. ~~Client lookup cutover sequenced before the outbox leaves no offline path for new clients.~~ **Resolved:** moved from Phase 1c to Phase 3.5, after the outbox; offline new-client creates are flagged `needs_match` and routed to the review queue on drain.
 
 ## How this unblocks the rest of the roadmap
