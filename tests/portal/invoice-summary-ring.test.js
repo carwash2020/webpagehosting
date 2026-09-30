@@ -95,7 +95,9 @@ test('the summary hides again when the invoice list reload finds zero invoices',
 });
 
 test('the summary is (re)computed every time invoices are rendered, from the same array the list uses', () => {
-  const bodyMatch = DASHBOARD.match(/currentInvoices = invoices;[\s\S]{0,800}?renderInvoiceSummary\(invoices\);/);
+  // The window only bounds "in the same render"; it was 800 until the owed
+  // dot's call between them got a few characters longer (2026-09-29).
+  const bodyMatch = DASHBOARD.match(/currentInvoices = invoices;[\s\S]{0,1000}?renderInvoiceSummary\(invoices\);/);
   assert.ok(bodyMatch, 'expected renderInvoiceSummary(invoices) to be called with the same invoices array used elsewhere in this render');
 });
 
