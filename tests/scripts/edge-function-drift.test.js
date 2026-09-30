@@ -43,6 +43,8 @@ test('same, differs, live-only, repo-only and not-downloaded are each told apart
   assert.match(text, /supabase functions deploy <slug>/);
   assert.match(text, /1 function\(s\) match\./);
   assert.equal(normalize('a\r\nb  \n\n'), 'a\nb\n');
+  assert.equal(normalize('join(" \\u00b7 ")'), normalize('join(" · ")'), 'an escape and its character are the same');
+  assert.notEqual(normalize('join(" \\u00b7 ")'), normalize('join(" - ")'));
 });
 
 test('the CLI entry point fails on drift and on an empty list, and passes when all match', () => {

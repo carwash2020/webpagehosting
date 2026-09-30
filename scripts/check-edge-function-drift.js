@@ -15,8 +15,9 @@
 //                       <dir>/<slug>/index.ts
 //
 // Repo layout: edge-functions/<slug>-index.ts, slug lower-cased (the live
-// Send-Push is edge-functions/send-push-index.ts). Line endings and
-// trailing whitespace at the end of the file are ignored.
+// Send-Push is edge-functions/send-push-index.ts). Line endings, trailing
+// whitespace at the end of the file and \uXXXX escapes vs the character
+// itself are ignored.
 
 const fs = require('fs');
 const path = require('path');
@@ -29,7 +30,11 @@ function args(argv) {
   return out;
 }
 
-const normalize = (s) => s.replace(/\r\n/g, '\n').replace(/\s+$/, '') + '\n';
+// \u2013 and a literal – are the same string to the runtime; the repo
+// writes some characters as escapes and the deployed copies have them
+// literally (send-booking-email, Send-Push).
+const normalize = (s) => s.replace(/\r\n/g, '\n').replace(/\s+$/, '')
+  .replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16))) + '\n';
 
 // Shape of a difference, never its content: the Actions log of this public
 // repo is public, and a live function could hold something the repo doesn't.
