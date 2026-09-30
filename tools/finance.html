@@ -369,7 +369,7 @@
   <div class="form-section">
     <h3>Job Inputs</h3>
     <div class="tool-form-row">
-      <div class="form-field"><label>Client Name (optional &mdash; checks your job history)</label><input type="text" id="costClientName" placeholder="Sarah Miller" oninput="checkClientHistory()"></div>
+      <div class="form-field"><label for="costClientName">Client Name (optional &mdash; checks your job history)</label><input type="text" id="costClientName" placeholder="Sarah Miller" oninput="checkClientHistory()"></div>
     </div>
     <p class="inline-note" id="clientHistoryNote"></p>
     <div class="tool-form-row">
@@ -384,7 +384,7 @@
       <label for="firstTimeClient">First-time client &mdash; apply discount</label>
     </div>
     <div class="tool-form-row" id="discountRow">
-      <div class="form-field" style="max-width:220px;"><label>First-time discount ($)</label><input type="number" id="discount" value="15" min="0" step="1" oninput="calculateCost()"></div>
+      <div class="form-field" style="max-width:220px;"><label for="discount">First-time discount ($)</label><input type="number" id="discount" value="15" min="0" step="1" oninput="calculateCost()"></div>
     </div>
   </div>
 
@@ -441,14 +441,14 @@
     </div>
     <div class="form-section-body">
     <div class="tool-form-row">
-      <div class="form-field"><label>Date</label><input type="date" id="incomeDate"></div>
-      <div class="form-field"><label>Client / Source</label><input type="text" id="incomeSource" placeholder="Jane Smith, or 'Cash job'"></div>
-      <div class="form-field"><label>Job (optional)</label>
+      <div class="form-field"><label for="incomeDate">Date</label><input type="date" id="incomeDate"></div>
+      <div class="form-field"><label for="incomeSource">Client / Source</label><input type="text" id="incomeSource" placeholder="Jane Smith, or 'Cash job'"></div>
+      <div class="form-field"><label for="incomeJobRef">Job (optional)</label>
         <select id="incomeJobRef"><option value="">&mdash; None &mdash;</option></select>
       </div>
     </div>
     <div class="tool-form-row">
-      <div class="form-field"><label>Payment Method</label>
+      <div class="form-field"><label for="incomePayment">Payment Method</label>
         <select id="incomePayment">
           <option value="cash">Cash</option>
           <option value="card">Card</option>
@@ -458,8 +458,8 @@
           <option value="other">Other</option>
         </select>
       </div>
-      <div class="form-field"><label>Description</label><input type="text" id="incomeDesc" placeholder="Deck repair, final payment"></div>
-      <div class="form-field"><label>Amount ($)</label><input type="number" id="incomeAmount" step="0.01" min="0"></div>
+      <div class="form-field"><label for="incomeDesc">Description</label><input type="text" id="incomeDesc" placeholder="Deck repair, final payment"></div>
+      <div class="form-field"><label for="incomeAmount">Amount ($)</label><input type="number" id="incomeAmount" step="0.01" min="0"></div>
     </div>
     <div class="edit-mode-note" id="incomeEditNote" style="display:none;"></div>
     <button class="primary-btn" id="addIncomeEntryBtn" onclick="addIncomeEntry()" style="margin-top:10px;">Add Entry</button>
@@ -490,17 +490,17 @@
     </div>
     <div class="form-section-body">
     <div class="tool-form-row">
-      <div class="form-field"><label>Date</label><input type="date" id="entryDate"></div>
-      <div class="form-field"><label>Type</label>
+      <div class="form-field"><label for="entryDate">Date</label><input type="date" id="entryDate"></div>
+      <div class="form-field"><label for="entryType">Type</label>
         <select id="entryType"><option value="expense">Expense</option><option value="mileage">Mileage</option></select>
       </div>
-      <div class="form-field"><label>Vendor / Store</label><input type="text" id="entryVendor" placeholder="Home Depot"></div>
+      <div class="form-field"><label for="entryVendor">Vendor / Store</label><input type="text" id="entryVendor" placeholder="Home Depot"></div>
     </div>
     <div class="tool-form-row">
-      <div class="form-field"><label>Job (optional)</label>
+      <div class="form-field"><label for="entryJobRef">Job (optional)</label>
         <select id="entryJobRef"><option value="">&mdash; None &mdash;</option></select>
       </div>
-      <div class="form-field"><label>Payment Method</label>
+      <div class="form-field"><label for="entryPayment">Payment Method</label>
         <select id="entryPayment">
           <option value="cash">Cash</option>
           <option value="card">Card</option>
@@ -510,13 +510,13 @@
           <option value="other">Other</option>
         </select>
       </div>
-      <div class="form-field"><label>Description</label><input type="text" id="entryDesc" placeholder="Parts for the job"></div>
-      <div class="form-field" id="partNumberField"><label>Part Number (if applicable)</label><input type="text" id="entryPartNumber" placeholder="e.g. WPW10321304"></div>
+      <div class="form-field"><label for="entryDesc">Description</label><input type="text" id="entryDesc" placeholder="Parts for the job"></div>
+      <div class="form-field" id="partNumberField"><label for="entryPartNumber">Part Number (if applicable)</label><input type="text" id="entryPartNumber" placeholder="e.g. WPW10321304"></div>
     </div>
     <div class="tool-form-row">
-      <div class="form-field" id="amountField"><label>Amount ($)</label><input type="number" id="entryAmount" step="0.01" min="0"></div>
+      <div class="form-field" id="amountField"><label for="entryAmount">Amount ($)</label><input type="number" id="entryAmount" step="0.01" min="0"></div>
       <div class="form-field" id="milesField" style="display:none;">
-        <label>Miles <button class="help-btn" onclick="openCardInfo('mileageRate')" aria-label="What is this?" title="What is this?">?</button></label>
+        <label for="entryMiles">Miles <button class="help-btn" onclick="openCardInfo('mileageRate')" aria-label="What is this?" title="What is this?">?</button></label>
         <div class="mileage-rate-inline">
           <input type="number" id="entryMiles" step="0.1" min="0" style="flex:1;">
           <label for="mileageRate">at $</label>
@@ -527,7 +527,7 @@
     </div>
     <div class="tool-form-row" id="receiptField">
       <div class="form-field">
-        <label>Receipt Photo (required for expenses)</label>
+        <label for="entryReceipt">Receipt Photo (required for expenses)</label>
         <input type="file" id="entryReceipt" accept="image/*">
         <div id="receiptPreviewName" class="inline-note"></div>
       </div>
@@ -562,7 +562,7 @@
   <div class="form-section">
     <h3>Part Cost Trend <button class="help-btn" onclick="openCardInfo('partCostTrend')" aria-label="What is this?" title="What is this?">?</button></h3>
     <div class="tool-form-row">
-      <div class="form-field"><label>Part Number or Description</label><input type="text" id="partTrendSearch" placeholder="e.g. WPW10321304 or dishwasher pump" oninput="renderPartCostTrend()"></div>
+      <div class="form-field"><label for="partTrendSearch">Part Number or Description</label><input type="text" id="partTrendSearch" placeholder="e.g. WPW10321304 or dishwasher pump" oninput="renderPartCostTrend()"></div>
     </div>
     <div id="partTrendResults"></div>
   </div>
@@ -584,16 +584,16 @@
     </div>
     <div class="form-section-body">
     <div class="tool-form-row">
-      <div class="form-field"><label>Part Name</label><input type="text" id="invPartName" placeholder="Dishwasher door latch"></div>
-      <div class="form-field"><label>Part Number</label><input type="text" id="invPartNumber" placeholder="e.g. WPW10321304"></div>
+      <div class="form-field"><label for="invPartName">Part Name</label><input type="text" id="invPartName" placeholder="Dishwasher door latch"></div>
+      <div class="form-field"><label for="invPartNumber">Part Number</label><input type="text" id="invPartNumber" placeholder="e.g. WPW10321304"></div>
     </div>
     <div class="tool-form-row">
-      <div class="form-field"><label>Qty on Hand</label><input type="number" id="invQty" step="1" min="0" value="0"></div>
-      <div class="form-field"><label>Reorder At <span class="tool-sub" style="font-weight:normal;">(low-stock warning threshold)</span></label><input type="number" id="invReorderAt" step="1" min="0" value="1"></div>
-      <div class="form-field"><label>Unit Cost ($)</label><input type="number" id="invUnitCost" step="0.01" min="0"></div>
+      <div class="form-field"><label for="invQty">Qty on Hand</label><input type="number" id="invQty" step="1" min="0" value="0"></div>
+      <div class="form-field"><label for="invReorderAt">Reorder At <span class="tool-sub" style="font-weight:normal;">(low-stock warning threshold)</span></label><input type="number" id="invReorderAt" step="1" min="0" value="1"></div>
+      <div class="form-field"><label for="invUnitCost">Unit Cost ($)</label><input type="number" id="invUnitCost" step="0.01" min="0"></div>
     </div>
     <div class="tool-form-row">
-      <div class="form-field"><label>Supplier</label><input type="text" id="invSupplier" placeholder="e.g. Home Depot, PartSelect"></div>
+      <div class="form-field"><label for="invSupplier">Supplier</label><input type="text" id="invSupplier" placeholder="e.g. Home Depot, PartSelect"></div>
     </div>
     <div class="edit-mode-note" id="inventoryEditNote" style="display:none;"></div>
     <button class="primary-btn" id="addInventoryBtn" onclick="addInventoryItem()" style="margin-top:10px;">Add Part</button>
@@ -604,7 +604,7 @@
   <div class="form-section">
     <h3>On Hand</h3>
     <div class="tool-form-row">
-      <div class="form-field"><input type="text" id="inventorySearch" placeholder="Search parts..." oninput="renderInventory()"></div>
+      <div class="form-field"><input type="text" id="inventorySearch" aria-label="Search parts on hand" placeholder="Search parts..." oninput="renderInventory()"></div>
     </div>
     <div class="table-scroll">
       <div id="inventoryTable"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div><div class="skeleton-line w-40"></div></div>

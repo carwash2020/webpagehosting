@@ -107,11 +107,9 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=8d5b635c84">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/portal/portal-app.js?v=202609300100"></script>
-<!-- jsPDF for the service history download (2026-09-22) -- the same
-     pinned version and integrity hash Invoices and Quotes load for
-     their PDFs. async: it's only needed when the button is tapped. -->
-<script src="/js/pdf-layout.js?v=6a1ecc363f" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
+<!-- jsPDF for the service history download loads on the first tap
+     (pdfLoadJsPdf() in pdf-layout.js, 2026-09-30), not with the page. -->
+<script src="/js/pdf-layout.js?v=1be6d8cd44" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- see business-hours.js's
      own header comment. This page used to keep its own FIFTH
      independent hand-typed copy of these exact constants. -->
@@ -960,7 +958,7 @@
 
   async function downloadServiceHistory() {
     const btn = document.getElementById('historyDownloadBtn');
-    if (!window.jspdf) { showToast('Still finishing loading. Give it a second and try again.', { type: 'error' }); return; }
+    try { await pdfLoadJsPdf(); } catch (e) { showToast('Couldn\'t load the PDF maker. Check your connection and try again.', { type: 'error' }); return; }
     const { data: { session } } = await client.auth.getSession();
     if (!session) { window.location.replace('/portal/login.html'); return; }
     const email = session.user.email;

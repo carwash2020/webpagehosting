@@ -6038,3 +6038,13 @@ Tests: `tests/design/package-d-public-site.test.js` (8).
 - **The portal's Update button** no longer clears the Workspace's offline copy on a shared device.
 
 Tests: `tests/scripts/backup-scripts.test.js` (7), `tests/scripts/edge-function-drift.test.js` (3), `tests/tools/batch1-reliability.test.js` (5).
+
+## What changed, 2026-09-30 -- Screen readers can name every form field; lighter portal pages
+
+- **Every field has a name.** 159 fields across the Workspace and portal (job, invoice, contract, finance, Runway and Wiki forms, and the sign-in code boxes) now tell a screen reader what they are. Most already had a label on screen that just wasn't connected; clicking those labels now also puts the cursor in the field.
+- **Faster portal pages.** Invoices, Visits and Estimates no longer download the PDF maker (~360 KB) on every visit, only when someone taps Download.
+- **Faster blog posts.** Each post's top photo starts loading straight away instead of waiting.
+- **Offline copy fix.** The Workspace and portal apps now keep the logo copy they actually use, instead of downloading an unused one.
+
+Tests: `tests/design/batch2-labels-and-loading.test.js` (6), plus the updated portal PDF tests.
+

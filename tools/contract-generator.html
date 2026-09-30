@@ -65,7 +65,7 @@
 <!-- U15/W18 fix (High-Impact Upgrades, Master Audit, 2026-09-08): the
      shared masthead/footer/totals-block renderer, also used by
      invoice-generator.html and job-detail.html's job sheet. -->
-<script src="/js/pdf-layout.js?v=6a1ecc363f" defer></script>
+<script src="/js/pdf-layout.js?v=1be6d8cd44" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -311,9 +311,9 @@
   <div class="form-section">
     <h3>Price</h3>
     <div class="tool-form-row">
-      <div class="form-field"><label>Estimated Labor</label><input type="text" id="pwo_laborPrice" placeholder="$0.00"></div>
-      <div class="form-field"><label>Estimated Parts/Materials</label><input type="text" id="pwo_partsPrice" placeholder="$0.00"></div>
-      <div class="form-field"><label>Total Estimated Price</label><input type="text" id="pwo_totalPrice" placeholder="$0.00"></div>
+      <div class="form-field"><label for="pwo_laborPrice">Estimated Labor</label><input type="text" id="pwo_laborPrice" placeholder="$0.00"></div>
+      <div class="form-field"><label for="pwo_partsPrice">Estimated Parts/Materials</label><input type="text" id="pwo_partsPrice" placeholder="$0.00"></div>
+      <div class="form-field"><label for="pwo_totalPrice">Total Estimated Price</label><input type="text" id="pwo_totalPrice" placeholder="$0.00"></div>
     </div>
   </div>
   <button class="primary-btn wide" onclick="generateAndLog('pwo')">Generate PDF &amp; Save</button>
@@ -325,25 +325,25 @@
     <h3>Client &amp; Project Information</h3>
     <div class="tool-form-row">
       <div class="form-field">
-        <label>Use an existing contact (optional)</label>
+        <label for="stpa_contactPicker">Use an existing contact (optional)</label>
         <select id="stpa_contactPicker" onchange="applyContactPicker('stpa', this.value)"><option value="">&mdash; type manually below &mdash;</option></select>
       </div>
     </div>
     <div class="tool-form-row">
-      <div class="form-field"><label>Client Name</label><input type="text" id="stpa_clientName"></div>
-      <div class="form-field"><label>Phone</label><input type="tel" id="stpa_phone"></div>
+      <div class="form-field"><label for="stpa_clientName">Client Name</label><input type="text" id="stpa_clientName"></div>
+      <div class="form-field"><label for="stpa_phone">Phone</label><input type="tel" id="stpa_phone"></div>
     </div>
     <div class="tool-form-row">
-      <div class="form-field"><label>Service Address</label><input type="text" id="stpa_serviceAddress"></div>
-      <div class="form-field"><label>Email</label><input type="email" id="stpa_email"></div>
+      <div class="form-field"><label for="stpa_serviceAddress">Service Address</label><input type="text" id="stpa_serviceAddress"></div>
+      <div class="form-field"><label for="stpa_email">Email</label><input type="email" id="stpa_email"></div>
     </div>
     <div class="tool-form-row">
-      <div class="form-field" style="max-width:220px;"><label>Agreement Date</label><input type="date" id="stpa_agreementDate"></div>
+      <div class="form-field" style="max-width:220px;"><label for="stpa_agreementDate">Agreement Date</label><input type="date" id="stpa_agreementDate"></div>
     </div>
   </div>
   <div class="form-section">
     <h3>Project Description &amp; Scope of Work</h3>
-    <div class="form-field"><label>Describe the full scope, including all tasks to be completed</label>
+    <div class="form-field"><label for="stpa_description">Describe the full scope, including all tasks to be completed</label>
       <div style="position:relative;">
         <textarea id="stpa_description"></textarea>
         <button type="button" id="stpaDescriptionMicBtn" class="voice-dictation-btn" style="display:none;" aria-label="Dictate description" title="Dictate description">
@@ -355,16 +355,16 @@
   <div class="form-section">
     <h3>Timeline</h3>
     <div class="tool-form-row">
-      <div class="form-field"><label>Estimated Start Date</label><input type="date" id="stpa_startDate"></div>
-      <div class="form-field"><label>Estimated Completion Date</label><input type="date" id="stpa_completionDate"></div>
+      <div class="form-field"><label for="stpa_startDate">Estimated Start Date</label><input type="date" id="stpa_startDate"></div>
+      <div class="form-field"><label for="stpa_completionDate">Estimated Completion Date</label><input type="date" id="stpa_completionDate"></div>
     </div>
   </div>
   <div class="form-section">
     <h3>Price &amp; Payment Schedule</h3>
     <div class="tool-form-row">
-      <div class="form-field"><label>Total Project Price</label><input type="text" id="stpa_totalPrice" placeholder="$0.00"></div>
-      <div class="form-field"><label>Deposit (due at signing)</label><input type="text" id="stpa_deposit" placeholder="$0.00"></div>
-      <div class="form-field"><label>Balance (due upon completion)</label><input type="text" id="stpa_balance" placeholder="$0.00"></div>
+      <div class="form-field"><label for="stpa_totalPrice">Total Project Price</label><input type="text" id="stpa_totalPrice" placeholder="$0.00"></div>
+      <div class="form-field"><label for="stpa_deposit">Deposit (due at signing)</label><input type="text" id="stpa_deposit" placeholder="$0.00"></div>
+      <div class="form-field"><label for="stpa_balance">Balance (due upon completion)</label><input type="text" id="stpa_balance" placeholder="$0.00"></div>
     </div>
   </div>
   <button class="primary-btn wide" onclick="generateAndLog('stpa')">Generate PDF &amp; Save</button>
@@ -376,26 +376,26 @@
     <h3>Client Information</h3>
     <div class="tool-form-row">
       <div class="form-field">
-        <label>Use an existing contact (optional)</label>
+        <label for="ltsa_contactPicker">Use an existing contact (optional)</label>
         <select id="ltsa_contactPicker" onchange="applyContactPicker('ltsa', this.value)"><option value="">&mdash; type manually below &mdash;</option></select>
       </div>
     </div>
     <div class="tool-form-row">
-      <div class="form-field"><label>Client Name</label><input type="text" id="ltsa_clientName"></div>
-      <div class="form-field"><label>Phone</label><input type="tel" id="ltsa_phone"></div>
+      <div class="form-field"><label for="ltsa_clientName">Client Name</label><input type="text" id="ltsa_clientName"></div>
+      <div class="form-field"><label for="ltsa_phone">Phone</label><input type="tel" id="ltsa_phone"></div>
     </div>
     <div class="tool-form-row">
-      <div class="form-field"><label>Service Address</label><input type="text" id="ltsa_serviceAddress"></div>
-      <div class="form-field"><label>Email</label><input type="email" id="ltsa_email"></div>
+      <div class="form-field"><label for="ltsa_serviceAddress">Service Address</label><input type="text" id="ltsa_serviceAddress"></div>
+      <div class="form-field"><label for="ltsa_email">Email</label><input type="email" id="ltsa_email"></div>
     </div>
     <div class="tool-form-row">
-      <div class="form-field" style="max-width:220px;"><label>Agreement Start Date</label><input type="date" id="ltsa_startDate"></div>
-      <div class="form-field" style="max-width:220px;"><label>Initial Term (e.g. 12 months)</label><input type="text" id="ltsa_term"></div>
+      <div class="form-field" style="max-width:220px;"><label for="ltsa_startDate">Agreement Start Date</label><input type="date" id="ltsa_startDate"></div>
+      <div class="form-field" style="max-width:220px;"><label for="ltsa_term">Initial Term (e.g. 12 months)</label><input type="text" id="ltsa_term"></div>
     </div>
   </div>
   <div class="form-section">
     <h3>Scope of Recurring Services</h3>
-    <div class="form-field"><label>Describe the recurring services to be provided</label>
+    <div class="form-field"><label for="ltsa_description">Describe the recurring services to be provided</label>
       <div style="position:relative;">
         <textarea id="ltsa_description"></textarea>
         <button type="button" id="ltsaDescriptionMicBtn" class="voice-dictation-btn" style="display:none;" aria-label="Dictate description" title="Dictate description">
@@ -407,12 +407,12 @@
   <div class="form-section">
     <h3>Service Schedule &amp; Pricing</h3>
     <div class="tool-form-row">
-      <div class="form-field"><label>Frequency (e.g. monthly, quarterly)</label><input type="text" id="ltsa_frequency"></div>
-      <div class="form-field"><label>Preferred Day/Window</label><input type="text" id="ltsa_preferredWindow"></div>
+      <div class="form-field"><label for="ltsa_frequency">Frequency (e.g. monthly, quarterly)</label><input type="text" id="ltsa_frequency"></div>
+      <div class="form-field"><label for="ltsa_preferredWindow">Preferred Day/Window</label><input type="text" id="ltsa_preferredWindow"></div>
     </div>
     <div class="tool-form-row">
-      <div class="form-field"><label>Rate per Service Visit</label><input type="text" id="ltsa_rate" placeholder="$0.00"></div>
-      <div class="form-field"><label>Billing Frequency</label><input type="text" id="ltsa_billingFrequency"></div>
+      <div class="form-field"><label for="ltsa_rate">Rate per Service Visit</label><input type="text" id="ltsa_rate" placeholder="$0.00"></div>
+      <div class="form-field"><label for="ltsa_billingFrequency">Billing Frequency</label><input type="text" id="ltsa_billingFrequency"></div>
     </div>
   </div>
   <button class="primary-btn wide" onclick="generateAndLog('ltsa')">Generate PDF &amp; Save</button>

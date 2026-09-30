@@ -67,7 +67,7 @@
      masthead/footer/totals-block drawing code below moved into this
      shared file, now also used by job-detail.html's job sheet and
      contract-generator.html. -->
-<script src="/js/pdf-layout.js?v=6a1ecc363f" defer></script>
+<script src="/js/pdf-layout.js?v=1be6d8cd44" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -650,16 +650,16 @@
   <h3>Invoice Details</h3>
   <div class="tool-form-row">
     <div class="form-field">
-      <label>Invoice Number</label>
+      <label for="invoiceNumber">Invoice Number</label>
       <input type="text" id="invoiceNumber" value="" oninput="checkDuplicateInvoiceNumber()">
       <div id="duplicateInvoiceWarning" style="display:none; color: var(--orange-light); font-size: 13px; margin-top: 6px; padding: 8px 10px; background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); border-radius: 6px;"></div>
     </div>
     <div class="form-field">
-      <label>Date</label>
+      <label for="invoiceDate">Date</label>
       <input type="date" id="invoiceDate">
     </div>
     <div class="form-field">
-      <label>Terms</label>
+      <label for="invoiceTerms">Terms</label>
       <select id="invoiceTerms">
         <option>Due Upon Receipt</option>
         <option selected>Net 15</option>
@@ -683,7 +683,7 @@
       that amount represents.
     -->
     <div class="form-field">
-      <label>Invoice type</label>
+      <label for="invoiceType">Invoice type</label>
       <select id="invoiceType">
         <option value="standard" selected>Standard</option>
         <option value="deposit">Deposit (before work)</option>
@@ -698,20 +698,20 @@
   <h3>Bill To</h3>
   <div class="tool-form-row">
     <div class="form-field">
-      <label>Client / Company Name</label>
+      <label for="clientName">Client / Company Name</label>
       <input type="text" id="clientName" list="knownContactsList" placeholder="Preferred Property Management" onchange="autofillFromContact('clientName', 'contact-1')">
       <datalist id="knownContactsList"></datalist>
     </div>
   </div>
   <div class="tool-form-row">
     <div class="form-field">
-      <label>Address</label>
+      <label for="clientAddress">Address</label>
       <input type="text" id="clientAddress" placeholder="237 N Bluff St #C, St. George, UT 84770">
     </div>
   </div>
   <div class="tool-form-row">
     <div class="form-field">
-      <label>Client Email <span class="tool-sub" style="font-weight:normal;">(optional -- lets this client view and pay this invoice online)</span></label>
+      <label for="clientEmail">Client Email <span class="tool-sub" style="font-weight:normal;">(optional -- lets this client view and pay this invoice online)</span></label>
       <input type="email" id="clientEmail" placeholder="client@example.com">
     </div>
   </div>
@@ -723,11 +723,11 @@
   <h3>Job</h3>
   <div class="tool-form-row">
     <div class="form-field">
-      <label>Job Description</label>
+      <label for="jobDescription">Job Description</label>
       <input type="text" id="jobDescription" placeholder="GE Range/Stove Repair — Model JB256D M3WW">
     </div>
     <div class="form-field">
-      <label>Link to Job (optional, enables Job Profitability tracking)</label>
+      <label for="invoiceJobRef">Link to Job (optional, enables Job Profitability tracking)</label>
       <select id="invoiceJobRef" onchange="autofillFromJobRef('invoiceJobRef', 'jobDescription', 'clientName', 'clientAddress')"><option value="">&mdash; None &mdash;</option></select>
     </div>
   </div>
@@ -747,7 +747,7 @@
   </div>
   <div class="tool-form-row" id="invoicePriceRefRow" style="display:none; margin-top:12px;">
     <div class="form-field">
-      <label>Add From Saved Job Types <button class="help-btn" onclick="openCardInfo('priceRefPicker')" aria-label="What is this?" title="What is this?">?</button></label>
+      <label for="invoicePriceRefSelect">Add From Saved Job Types <button class="help-btn" onclick="openCardInfo('priceRefPicker')" aria-label="What is this?" title="What is this?">?</button></label>
       <select id="invoicePriceRefSelect" style="width:100%; box-sizing:border-box; padding:10px 12px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:16px; font-family:inherit;">
         <option value="">Choose a saved job type&hellip;</option>
       </select>
@@ -763,7 +763,7 @@
     <div style="margin:0 0 10px; display:flex; align-items:center; gap:6px;"><button class="help-btn" onclick="openCardInfo('salesTax')" aria-label="About sales tax on this invoice" title="About sales tax on this invoice">?</button><span class="inline-note" style="margin:0;">Sales tax on repair labor</span></div>
     <div class="tool-form-row">
       <div class="form-field" style="max-width:180px;">
-        <label>Sales tax rate (%)</label>
+        <label for="invoiceTaxRate">Sales tax rate (%)</label>
         <input type="number" id="invoiceTaxRate" value="6.75" min="0" step="0.01" oninput="recalc()" onchange="saveInvoiceTaxRate()">
       </div>
     </div>
@@ -771,11 +771,11 @@
     <div class="totals-row"><span>Sales Tax</span><span id="taxDisplay">$0.00</span></div>
     <div class="tool-form-row" style="margin-top:10px;">
       <div class="form-field">
-        <label>Discount label (leave blank for no discount)</label>
+        <label for="discountLabel">Discount label (leave blank for no discount)</label>
         <input type="text" id="discountLabel" placeholder="First-Time Client Discount">
       </div>
       <div class="form-field">
-        <label>Discount amount ($)</label>
+        <label for="discountAmount">Discount amount ($)</label>
         <input type="number" id="discountAmount" value="0" step="0.01">
       </div>
     </div>
@@ -785,7 +785,7 @@
 
 <div class="form-section">
   <h3>Payment Text (shown at the bottom of the invoice)</h3>
-  <textarea id="paymentText">We accept cash, check, and credit/debit cards via a secure Stripe invoice.</textarea>
+  <textarea id="paymentText" aria-label="Payment text shown at the bottom of the invoice">We accept cash, check, and credit/debit cards via a secure Stripe invoice.</textarea>
 </div>
 
 <!--
@@ -819,11 +819,11 @@
   <h3>Estimate Details</h3>
   <div class="tool-form-row">
     <div class="form-field">
-      <label>Estimate Number</label>
+      <label for="quoteNumber">Estimate Number</label>
       <input type="text" id="quoteNumber" value="">
     </div>
     <div class="form-field">
-      <label>Date</label>
+      <label for="quoteDate">Date</label>
       <input type="date" id="quoteDate">
     </div>
   </div>
@@ -833,19 +833,19 @@
   <h3>For</h3>
   <div class="tool-form-row">
     <div class="form-field">
-      <label>Client / Company Name</label>
+      <label for="quoteClientName">Client / Company Name</label>
       <input type="text" id="quoteClientName" list="knownContactsList" placeholder="Sarah Miller" onchange="autofillQuoteClient()">
     </div>
   </div>
   <div class="tool-form-row">
     <div class="form-field">
-      <label>Client Email <span class="tool-sub" style="font-weight:normal;">(optional -- lets this client review and approve this quote online)</span></label>
+      <label for="quoteClientEmail">Client Email <span class="tool-sub" style="font-weight:normal;">(optional -- lets this client review and approve this quote online)</span></label>
       <input type="email" id="quoteClientEmail" placeholder="client@example.com">
     </div>
   </div>
   <div class="tool-form-row">
     <div class="form-field">
-      <label>Address</label>
+      <label for="quoteClientAddress">Address</label>
       <input type="text" id="quoteClientAddress" placeholder="123 Main St, St. George, UT">
     </div>
   </div>
@@ -855,11 +855,11 @@
   <h3>Job</h3>
   <div class="tool-form-row">
     <div class="form-field">
-      <label>Job Description</label>
+      <label for="quoteJobDescription">Job Description</label>
       <input type="text" id="quoteJobDescription" placeholder="GE Range/Stove Repair — Model JB256D M3WW">
     </div>
     <div class="form-field">
-      <label>Link to Job (optional, carries over if converted to an invoice)</label>
+      <label for="quoteJobRef">Link to Job (optional, carries over if converted to an invoice)</label>
       <select id="quoteJobRef" onchange="autofillFromJobRef('quoteJobRef', 'quoteJobDescription', 'quoteClientName', 'quoteClientAddress')"><option value="">&mdash; None &mdash;</option></select>
     </div>
   </div>
@@ -877,7 +877,7 @@
   </div>
   <div class="tool-form-row" id="quotePriceRefRow" style="display:none; margin-top:12px;">
     <div class="form-field">
-      <label>Add From Saved Job Types <button class="help-btn" onclick="openCardInfo('priceRefPicker')" aria-label="What is this?" title="What is this?">?</button></label>
+      <label for="quotePriceRefSelect">Add From Saved Job Types <button class="help-btn" onclick="openCardInfo('priceRefPicker')" aria-label="What is this?" title="What is this?">?</button></label>
       <select id="quotePriceRefSelect" style="width:100%; box-sizing:border-box; padding:10px 12px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:6px; color:var(--white); font-size:16px; font-family:inherit;">
         <option value="">Choose a saved job type&hellip;</option>
       </select>
@@ -893,7 +893,7 @@
     <div style="margin:0 0 10px; display:flex; align-items:center; gap:6px;"><button class="help-btn" onclick="openCardInfo('salesTax')" aria-label="About sales tax on this estimate" title="About sales tax on this estimate">?</button><span class="inline-note" style="margin:0;">Sales tax on repair labor</span></div>
     <div class="tool-form-row">
       <div class="form-field" style="max-width:180px;">
-        <label>Sales tax rate (%)</label>
+        <label for="quoteTaxRate">Sales tax rate (%)</label>
         <input type="number" id="quoteTaxRate" value="6.75" min="0" step="0.01" oninput="recalcQuote()" onchange="saveInvoiceTaxRate()">
       </div>
     </div>
@@ -901,11 +901,11 @@
     <div class="totals-row"><span>Sales Tax</span><span id="quoteTaxDisplay">$0.00</span></div>
     <div class="tool-form-row" style="margin-top:10px;">
       <div class="form-field">
-        <label>Discount label (leave blank for no discount)</label>
+        <label for="quoteDiscountLabel">Discount label (leave blank for no discount)</label>
         <input type="text" id="quoteDiscountLabel" placeholder="First-Time Client Discount">
       </div>
       <div class="form-field">
-        <label>Discount amount ($)</label>
+        <label for="quoteDiscountAmount">Discount amount ($)</label>
         <input type="number" id="quoteDiscountAmount" value="0" step="0.01">
       </div>
     </div>

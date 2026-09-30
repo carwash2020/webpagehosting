@@ -271,7 +271,7 @@
 // invoices/jobs/quotes/contracts/requests, not just its own; see
 // docs/specialist-logs/security.md, 2026-09-29). All seven are in
 // PRECACHE_URLS.
-const CACHE_NAME = 'th-portal-v183'; // precache-fingerprint:9267f3bc809e
+const CACHE_NAME = 'th-portal-v184'; // precache-fingerprint:a46d53da84bf
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
@@ -290,7 +290,9 @@ const PRECACHE_URLS = [
   '/fonts/pdf/Anton-Regular.ttf', '/fonts/pdf/Oswald-Medium.ttf',
   '/fonts/pdf/Archivo-Regular.ttf', '/fonts/pdf/Archivo-SemiBold.ttf',
   '/images/logo-signature-orange.png',
-  '/images/logo-signature-orange.webp', '/images/icon-192.png', '/images/icon-512.png', '/images/apple-touch-icon.png',
+  // With the ?v= every page uses (2026-09-30): precached bare, the copy
+  // was never matched, ~57 KB fetched per install for nothing.
+  '/images/logo-signature-orange.webp?v=202608142300', '/images/icon-192.png', '/images/icon-512.png', '/images/apple-touch-icon.png',
 ];
 
 self.addEventListener('install', (event) => {

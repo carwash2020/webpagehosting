@@ -75,7 +75,7 @@
 <!-- Client Lookup dispute-evidence export (2026-09-05), requested
      directly -- same jsPDF version/SRI hash/async loading pattern
      already proven on invoice-generator.html. -->
-<script src="/js/pdf-layout.js?v=6a1ecc363f" defer></script>
+<script src="/js/pdf-layout.js?v=1be6d8cd44" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -332,7 +332,7 @@
       <h2>Client Lookup</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('clientlookup')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
-    <input type="text" id="clientLookupSearch" placeholder="Search by email, name, or phone..." style="width:100%; box-sizing:border-box; margin-bottom:12px;" oninput="scheduleClientLookupSearch()">
+    <input type="text" id="clientLookupSearch" aria-label="Search clients by email, name or phone" placeholder="Search by email, name, or phone..." style="width:100%; box-sizing:border-box; margin-bottom:12px;" oninput="scheduleClientLookupSearch()">
     <div id="clientLookupResults"></div>
   </div>
 
@@ -385,7 +385,7 @@
       <button class="secondary-btn" id="inviteAnyBtn" onclick="sendInviteToAnyEmail()">Send invite</button>
     </div>
     <div id="inviteAnyResult" style="margin-bottom:12px;"></div>
-    <input type="text" id="portalAccountSearch" placeholder="Search by name or email..." style="width:100%; box-sizing:border-box; margin-bottom:12px;" oninput="renderPortalAccounts()">
+    <input type="text" id="portalAccountSearch" aria-label="Search portal accounts" placeholder="Search by name or email..." style="width:100%; box-sizing:border-box; margin-bottom:12px;" oninput="renderPortalAccounts()">
     <div id="portalAccounts"></div>
   </div>
 
@@ -406,7 +406,7 @@
       the internal log but not here, it was never sent to the client,
       which is exactly the kind of gap this panel makes visible.
     -->
-    <input type="text" id="portalInvoiceSearch" placeholder="Search by client, email, or invoice #..." style="width:100%; box-sizing:border-box; margin-bottom:12px;" oninput="renderPortalInvoices()">
+    <input type="text" id="portalInvoiceSearch" aria-label="Search portal invoices" placeholder="Search by client, email, or invoice #..." style="width:100%; box-sizing:border-box; margin-bottom:12px;" oninput="renderPortalInvoices()">
     <div id="portalInvoices"></div>
   </div>
 
@@ -421,7 +421,7 @@
       no way to resend a quote notification a client said they never
       got without recreating the quote in the Invoice Generator.
     -->
-    <input type="text" id="portalQuoteSearch" placeholder="Search by client, email, or quote #..." style="width:100%; box-sizing:border-box; margin-bottom:12px;" oninput="renderPortalQuotes()">
+    <input type="text" id="portalQuoteSearch" aria-label="Search portal estimates" placeholder="Search by client, email, or quote #..." style="width:100%; box-sizing:border-box; margin-bottom:12px;" oninput="renderPortalQuotes()">
     <div id="portalQuotes"></div>
   </div>
 
@@ -464,7 +464,7 @@
       day-to-day need without destroying anything.
     -->
     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px;">
-      <input type="text" id="portalWorkOrderSearch" placeholder="Search by client, email, or title..." style="flex:1; min-width:180px; box-sizing:border-box;" oninput="renderPortalWorkOrders()">
+      <input type="text" id="portalWorkOrderSearch" aria-label="Search portal requests" placeholder="Search by client, email, or title..." style="flex:1; min-width:180px; box-sizing:border-box;" oninput="renderPortalWorkOrders()">
       <label style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-dim); white-space:nowrap; cursor:pointer;">
         <input type="checkbox" id="portalWorkOrderShowClosed" onchange="renderPortalWorkOrders()"> Show closed <span id="portalWorkOrderClosedCount"></span>
       </label>
@@ -492,7 +492,7 @@
       existing messages -- a client could always be the first to send
       one, so there's no "has messages" filter to hide jobs behind.
     -->
-    <input type="text" id="portalJobMessageSearch" placeholder="Search by client, email, or job title..." style="width:100%; box-sizing:border-box; margin-bottom:12px;" oninput="renderPortalJobsForMessages()">
+    <input type="text" id="portalJobMessageSearch" aria-label="Search portal job messages" placeholder="Search by client, email, or job title..." style="width:100%; box-sizing:border-box; margin-bottom:12px;" oninput="renderPortalJobsForMessages()">
     <div id="portalJobMessages"></div>
   </div>
 
@@ -581,7 +581,7 @@
     <h3>Confirm dev password</h3>
     <div class="help-modal-body">
       <p style="margin-bottom:14px;">This is a soft confirmation to catch an accidental save, not real protection against someone technically determined -- anyone who's already logged into Connor's account and views this page's source could bypass it. It exists to stop a stray tap or someone else picking up an unlocked phone. Only asked once per browser session -- closing the tab resets it.</p>
-      <input type="password" id="devPasswordInput" placeholder="Dev password" style="width:100%; margin-bottom:12px;" onkeydown="if(event.key==='Enter') devPasswordSubmit();">
+      <input type="password" id="devPasswordInput" aria-label="Dev password" placeholder="Dev password" style="width:100%; margin-bottom:12px;" onkeydown="if(event.key==='Enter') devPasswordSubmit();">
       <div class="form-footer">
         <button class="primary-btn" onclick="devPasswordSubmit()">Confirm</button>
         <button class="secondary-btn" onclick="devPasswordCancel()">Cancel</button>

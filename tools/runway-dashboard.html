@@ -1620,8 +1620,8 @@
     <div class="card form-card" id="incomeFormCard">
       <div class="card-header"><h3 id="incomeFormTitle">Add Income</h3></div>
       <div class="form-grid">
-        <div class="full"><label>Source</label><input type="text" id="inc-name" placeholder="e.g. Day Job, Spouse's Salary"></div>
-        <div><label>Frequency</label>
+        <div class="full"><label for="inc-name">Source</label><input type="text" id="inc-name" placeholder="e.g. Day Job, Spouse's Salary"></div>
+        <div><label for="inc-frequency">Frequency</label>
           <select id="inc-frequency">
             <option value="weekly">Weekly</option>
             <option value="biweekly">Biweekly (every 2 weeks, 26/yr)</option>
@@ -1631,7 +1631,7 @@
             <option value="annually">Annually</option>
           </select>
         </div>
-        <div><label>Amount (after tax)</label><input type="number" inputmode="decimal" id="inc-amount" placeholder="0"></div>
+        <div><label for="inc-amount">Amount (after tax)</label><input type="number" inputmode="decimal" id="inc-amount" placeholder="0"></div>
       </div>
       <div class="form-actions">
         <button class="action-btn" id="saveIncomeBtn" style="width:auto;flex:1;">Save Income</button>
@@ -1647,22 +1647,22 @@
       <div class="card-header"><h3 id="expenseFormTitle">Add Expense</h3></div>
       <div class="form-grid">
         <div class="full">
-          <label>Category</label>
+          <label for="exp-category">Category</label>
           <select id="exp-category"></select>
         </div>
         <div class="full">
-          <label>Name</label>
+          <label for="exp-name">Name</label>
           <input type="text" id="exp-name" placeholder="e.g. Mortgage, Netflix, Fuel">
           <div class="chip-row" id="exp-suggestions"></div>
         </div>
         <div class="full">
-          <label>Type</label>
+          <label for="exp-type">Type</label>
           <select id="exp-type">
             <option value="fixed" selected>Fixed &mdash; same amount every time</option>
             <option value="variable">Variable &mdash; changes month to month (utilities, etc.)</option>
           </select>
         </div>
-        <div id="fixedFieldsRow1"><label>Frequency</label>
+        <div id="fixedFieldsRow1"><label for="exp-frequency">Frequency</label>
           <select id="exp-frequency">
             <option value="weekly">Weekly</option>
             <option value="biweekly">Biweekly (every 2 weeks, 26/yr)</option>
@@ -1674,7 +1674,7 @@
         </div>
         <div id="fixedFieldsRow1b"></div>
         <div class="full" id="fixedFieldsRow2">
-          <label id="exp-min-label">Amount</label>
+          <label for="exp-min" id="exp-min-label">Amount</label>
           <input type="number" inputmode="decimal" id="exp-min" placeholder="0">
         </div>
       </div>
@@ -1695,20 +1695,20 @@
     <div class="card card-hero">
       <div class="card-header"><h3>Add / Update a Month <button class="help-btn" onclick="openCardInfo('businessMonth')" aria-label="What is this?" title="What is this?">?</button></h3></div>
       <div class="form-grid">
-        <div><label>Month</label><select id="biz-month-select"></select></div>
-        <div><label>Year</label><select id="biz-year-select"></select></div>
+        <div><label for="biz-month-select">Month</label><select id="biz-month-select"></select></div>
+        <div><label for="biz-year-select">Year</label><select id="biz-year-select"></select></div>
       </div>
       <div class="form-grid">
         <div class="full"><button class="action-btn" id="pullMonthBtn">Pull from Finance</button></div>
       </div>
       <div class="note" id="pullDiagnosticNote" style="margin-top:-4px;"></div>
       <div class="form-grid">
-        <div><label>Revenue <span class="col-hint" id="revSourceHint"></span></label><input type="number" inputmode="decimal" id="biz-revenue" placeholder="0"></div>
-        <div><label>Business Expenses <span class="col-hint" id="expSourceHint"></span></label><input type="number" inputmode="decimal" id="biz-expenses" placeholder="0"></div>
-        <div><label>Fuel / Mileage <span class="col-hint" id="fuelSourceHint"></span></label><input type="number" inputmode="decimal" id="biz-fuel" placeholder="0"></div>
-        <div><label>Other Expenses</label><input type="number" inputmode="decimal" id="biz-other" placeholder="0"></div>
-        <div><label>Owner Draws</label><input type="number" inputmode="decimal" id="biz-draws" placeholder="0"></div>
-        <div class="full"><label>Cash in Business Account</label><input type="number" inputmode="decimal" id="biz-cash" placeholder="0"></div>
+        <div><label for="biz-revenue">Revenue <span class="col-hint" id="revSourceHint"></span></label><input type="number" inputmode="decimal" id="biz-revenue" placeholder="0"></div>
+        <div><label for="biz-expenses">Business Expenses <span class="col-hint" id="expSourceHint"></span></label><input type="number" inputmode="decimal" id="biz-expenses" placeholder="0"></div>
+        <div><label for="biz-fuel">Fuel / Mileage <span class="col-hint" id="fuelSourceHint"></span></label><input type="number" inputmode="decimal" id="biz-fuel" placeholder="0"></div>
+        <div><label for="biz-other">Other Expenses</label><input type="number" inputmode="decimal" id="biz-other" placeholder="0"></div>
+        <div><label for="biz-draws">Owner Draws</label><input type="number" inputmode="decimal" id="biz-draws" placeholder="0"></div>
+        <div class="full"><label for="biz-cash">Cash in Business Account</label><input type="number" inputmode="decimal" id="biz-cash" placeholder="0"></div>
       </div>
       <button class="action-btn" id="addMonthBtn">Save Month</button>
       <div class="note" id="bizFormNote"></div>
@@ -1729,7 +1729,7 @@
     <div class="card">
       <div class="card-header"><h3>Tax Set-Aside <button class="help-btn" onclick="openCardInfo('taxSetAside')" aria-label="What is this?" title="What is this?">?</button></h3></div>
       <div class="form-grid">
-        <div class="full"><label>Set-Aside Rate (%)</label><input type="number" id="taxSetAsideRate" min="0" max="60" step="1" inputmode="decimal"></div>
+        <div class="full"><label for="taxSetAsideRate">Set-Aside Rate (%)</label><input type="number" id="taxSetAsideRate" min="0" max="60" step="1" inputmode="decimal"></div>
       </div>
       <div class="note" id="taxDueDateNote" style="border-top:1px solid var(--border-soft); padding-top:10px; margin-bottom:12px;"></div>
       <div class="grand-totals" id="taxSetAsideStats"></div>
@@ -1766,7 +1766,7 @@
     <div class="card">
       <div class="card-header"><h3>Emergency Fund <button class="help-btn" onclick="openCardInfo('emergencyFund')" aria-label="What is this?" title="What is this?">?</button></h3></div>
       <div class="form-grid">
-        <div class="full"><label>Current Balance</label><input type="number" id="ef-balance" placeholder="0" inputmode="decimal"></div>
+        <div class="full"><label for="ef-balance">Current Balance</label><input type="number" id="ef-balance" placeholder="0" inputmode="decimal"></div>
       </div>
       <div class="progress-track"><div class="progress-fill" id="efProgress" style="width:0%;"></div></div>
       <div class="progress-labels"><span>0</span><span id="efTargetLabel">6mo target</span><span id="ef12Label">12mo</span></div>
@@ -1784,9 +1784,9 @@
     <div class="card form-card" id="debtFormCard">
       <div class="card-header"><h3 id="debtFormTitle">Add Debt</h3></div>
       <div class="form-grid">
-        <div class="full"><label>Name</label><input type="text" id="debt-name" placeholder="e.g. Truck loan, Credit card"></div>
-        <div><label>Current Balance</label><input type="number" inputmode="decimal" id="debt-balance" placeholder="0"></div>
-        <div><label>Minimum Payment (optional)</label><input type="number" inputmode="decimal" id="debt-minpayment" placeholder="0"></div>
+        <div class="full"><label for="debt-name">Name</label><input type="text" id="debt-name" placeholder="e.g. Truck loan, Credit card"></div>
+        <div><label for="debt-balance">Current Balance</label><input type="number" inputmode="decimal" id="debt-balance" placeholder="0"></div>
+        <div><label for="debt-minpayment">Minimum Payment (optional)</label><input type="number" inputmode="decimal" id="debt-minpayment" placeholder="0"></div>
       </div>
       <div class="form-actions">
         <button class="action-btn" id="saveDebtBtn" style="width:auto;flex:1;">Save Debt</button>
@@ -1855,7 +1855,7 @@
     <div class="card">
       <div class="card-header"><h3>Safe Draw Calculator <button class="help-btn" onclick="openCardInfo('safeDraw')" aria-label="What is this?" title="What is this?">?</button></h3></div>
       <div class="form-grid">
-        <div><label>Months of buffer to keep in the account</label><input type="number" inputmode="decimal" id="drawBufferMonths" value="3" min="0" step="0.5"></div>
+        <div><label for="drawBufferMonths">Months of buffer to keep in the account</label><input type="number" inputmode="decimal" id="drawBufferMonths" value="3" min="0" step="0.5"></div>
       </div>
       <div class="grand-totals" id="safeDrawOutput"></div>
     </div>
@@ -1872,7 +1872,7 @@
         <button class="ghost-btn" id="exportBackupBtn">Download Backup File</button>
         <button class="ghost-btn" id="restoreBackupBtn">Restore from File</button>
       </div>
-      <input type="file" id="restoreFileInput" accept="application/json" style="display:none;">
+      <input type="file" id="restoreFileInput" aria-label="Backup file to restore" accept="application/json" style="display:none;">
       <div class="note" id="backupNote"></div>
       <div class="top-actions" style="margin-top:10px;">
         <button class="ghost-btn" id="resetAllBtn">Reset all data</button>

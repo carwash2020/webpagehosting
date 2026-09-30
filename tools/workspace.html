@@ -1467,9 +1467,9 @@
     </div>
 
     <div class="custom-range-row" id="customRangeRow">
-      <input type="date" id="customStart" onchange="renderMetrics()">
+      <input type="date" id="customStart" aria-label="Start date" onchange="renderMetrics()">
       <span>to</span>
-      <input type="date" id="customEnd" onchange="renderMetrics()">
+      <input type="date" id="customEnd" aria-label="End date" onchange="renderMetrics()">
       <span style="color:var(--text-dim);">&mdash; useful for pulling numbers for a specific tax period.</span>
     </div>
 
@@ -1500,7 +1500,7 @@
         <div class="metric-label">Est. Tax Set-Aside</div>
         <div class="metric-value" id="metricSetAside">$0.00</div>
         <div class="metric-sub">
-          <input type="number" id="setAsideRate" value="25" min="0" max="100" step="1" onchange="saveSetAsideRate(); renderMetrics();" style="width:38px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:4px; color:var(--white); font-size:12px; padding:2px 4px;">% of Net &mdash; not tax advice, just a rough set-aside based on a rate you set
+          <input type="number" id="setAsideRate" aria-label="Tax set-aside rate (%)" value="25" min="0" max="100" step="1" onchange="saveSetAsideRate(); renderMetrics();" style="width:38px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:4px; color:var(--white); font-size:12px; padding:2px 4px;">% of Net &mdash; not tax advice, just a rough set-aside based on a rate you set
         </div>
       </div>
       <div class="metric-card">
@@ -1648,7 +1648,7 @@
                 <option value="other">Other</option>
               </select>
             </div>
-            <div class="form-field"><label>Label</label><input type="text" id="secureDocLabel" placeholder="e.g. General Liability Policy 2026"></div>
+            <div class="form-field"><label for="secureDocLabel">Label</label><input type="text" id="secureDocLabel" placeholder="e.g. General Liability Policy 2026"></div>
           </div>
           <div class="tool-form-row">
             <div class="form-field"><label for="secureDocFile">File</label><input type="file" id="secureDocFile" accept=".pdf,.png,.jpg,.jpeg"></div>

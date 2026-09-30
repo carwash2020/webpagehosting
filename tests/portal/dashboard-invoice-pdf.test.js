@@ -16,18 +16,18 @@ const path = require('path');
 const PAGE_PATH = path.join(__dirname, '..', '..', 'portal', 'dashboard.html');
 const html = fs.readFileSync(PAGE_PATH, 'utf8');
 
-test('jsPDF is loaded from the same CDN version/integrity as tools/invoice-generator.html', () => {
+test('jsPDF comes from the same CDN build/integrity as tools/invoice-generator.html, fetched on first download', () => {
   const generatorHtml = fs.readFileSync(
     path.join(__dirname, '..', '..', 'tools', 'invoice-generator.html'),
     'utf8'
   );
   const generatorMatch = generatorHtml.match(/<script src="(https:\/\/cdn\.jsdelivr\.net\/npm\/jspdf@[^"]+)" integrity="([^"]+)"/);
   assert.ok(generatorMatch, 'expected to find the jsPDF script tag in tools/invoice-generator.html to compare against');
-
-  const dashboardMatch = html.match(/<script src="(https:\/\/cdn\.jsdelivr\.net\/npm\/jspdf@[^"]+)" integrity="([^"]+)"/);
-  assert.ok(dashboardMatch, 'expected portal/dashboard.html to load jsPDF via the same CDN pattern');
-  assert.equal(dashboardMatch[1], generatorMatch[1], 'jsPDF CDN URL/version should match the internal tool exactly');
-  assert.equal(dashboardMatch[2], generatorMatch[2], 'jsPDF integrity hash should match the internal tool exactly');
+  const layout = fs.readFileSync(path.join(__dirname, '..', '..', 'js', 'pdf-layout.js'), 'utf8');
+  assert.equal(layout.match(/const PDF_JSPDF_SRC = '([^']+)';/)[1], generatorMatch[1], 'jsPDF CDN URL/version should match the internal tool exactly');
+  assert.equal(layout.match(/const PDF_JSPDF_INTEGRITY = '([^']+)';/)[1], generatorMatch[2], 'jsPDF integrity hash should match the internal tool exactly');
+  assert.doesNotMatch(html, /<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/jspdf@/, 'not loaded with the page any more');
+  assert.match(html, /async function downloadInvoicePDF\(invoiceId\) \{[\s\S]*?try \{ await pdfLoadJsPdf\(\); \} catch \(e\)/);
 });
 
 test('downloadInvoicePDF is defined and wired to a real button in every invoice card', () => {

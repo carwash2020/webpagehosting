@@ -1530,3 +1530,16 @@ Test: `tests/design/visual-fixes-2026-09-29.test.js` (5). The first four cover t
 
 Test: `tests/tools/batch1-reliability.test.js` (5); all five fail on the previous code.
 
+## 2026-09-30 -- three loading fixes (portal jsPDF, logo precache, blog lead images)
+
+- **Portal jsPDF on demand.**
+  - **Cause:** Invoices, Visits and Estimates loaded jsPDF (~360 KB) on every visit, for a download most visits never make.
+  - **Fix:** they now call `pdfLoadJsPdf()` (in `js/pdf-layout.js`) on the first download. It adds one script with the same pinned build and integrity hash as the Workspace's tag, shares it across clicks, and removes a failed tag so the next click retries. If it can't load, the toast says so ("Couldn't load the PDF maker…") instead of "Still finishing loading".
+  - **Proof, in Chromium:** each page made 0 jsPDF requests on load and 1 on the first click (the SRI check passed), and downloaded `Invoice-INV-1009.pdf`, `Quote-EST-2021.pdf` and `Triple-H-service-history-2026-09-30.pdf`. A second click made no new request.
+- **Logo precache.**
+  - **Cause:** both service workers precached `/images/logo-signature-orange.webp` bare, but every Workspace and portal page requests it with `?v=202608142300`, so that ~57 KB copy was never used (noted here 2026-09-25).
+  - **Fix:** both now precache the exact URL. The test fails if pages and precache ever disagree.
+- **Blog lead images.**
+  - **Cause:** each of the 16 posts' lead image sits in the first screen but was `loading="lazy"`, which delays the largest paint.
+  - **Fix:** they're now `fetchpriority="high"`. No width/height was added: the Unsplash photos can't be viewed from here to pick safe proportions.
+

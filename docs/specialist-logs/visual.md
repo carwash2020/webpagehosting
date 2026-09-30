@@ -3054,3 +3054,20 @@ The owner's brief for this one: "don't change anything that would make the site 
 
 Tests: `tests/design/package-d-public-site.test.js` (8); the portal step colour is pinned in `tests/portal/package-c-portal.test.js`.
 
+## 2026-09-30 -- every Workspace and portal field has a name screen readers announce
+
+- **What axe missed.** axe (WCAG A/AA) was clean on all 32 pages it can load, but it only checks what's rendered. A markup scan of every `tools/` and `portal/` page found 159 fields in closed dialogs, collapsed sections and later steps with no programmatic name:
+  - job, invoice/quote, contract, finance, Runway, Appliance Wiki and review-request forms;
+  - the two-factor code boxes on both sign-in pages.
+- **133 fields had a visible `<label>` right beside them** that wasn't tied to them. Each now has `for=` (no visual change; clicking the label now focuses the field). The edit was made only where the label sat directly before its field with no other control in between, and its text matched what the scan read.
+- **26 fields had no label element** and got an `aria-label`:
+  - the search boxes;
+  - the dev password box;
+  - the note title and body;
+  - the date-range pickers;
+  - the tax set-aside rate;
+  - the 6-digit code and recovery-code fields.
+  - "Miles" in Finance had a visible label one level up, so it's tied with `for=` instead.
+- **Left alone on purpose:** the portal's hidden photo input. The visible "Add Photo" button is the control, and a `for=` there would have made clicking the heading open the file picker.
+- Test: `tests/design/batch2-labels-and-loading.test.js` re-runs the scan on every page, so a new unnamed field fails CI.
+
