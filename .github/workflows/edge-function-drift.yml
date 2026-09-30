@@ -50,19 +50,21 @@ jobs:
             exit 1
           fi
 
-      # The CLI's download unpacks each deployed bundle back to source
-      # (with Docker, which ubuntu-latest has) into
-      # live/supabase/functions/<slug>/index.ts.
+      # --use-api: Supabase unpacks each deployed bundle on its side and
+      # returns the original files, into live/supabase/functions/<slug>/.
+      # (The default Docker unpack returns re-emitted code -- a different
+      # line count for every function -- so nothing ever matched.)
       - name: Download every live function's source
         shell: bash
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           mkdir -p live
+          npx --yes supabase@2 --version
           npx --yes supabase@2 functions list --project-ref "$PROJECT_REF" -o json > live/functions.json
           cd live
           node -e "for (const f of require('./functions.json')) console.log(f.slug)" | while read -r slug; do
-            npx --yes supabase@2 functions download "$slug" --project-ref "$PROJECT_REF" || echo "::warning::Could not download $slug"
+            npx --yes supabase@2 functions download "$slug" --project-ref "$PROJECT_REF" --use-api || echo "::warning::Could not download $slug"
           done
 
       - name: Compare with edge-functions/

@@ -15,8 +15,9 @@
 //                       <dir>/<slug>/index.ts
 //
 // Repo layout: edge-functions/<slug>-index.ts, slug lower-cased (the live
-// Send-Push is edge-functions/send-push-index.ts). Line endings and
-// trailing whitespace at the end of the file are ignored.
+// Send-Push is edge-functions/send-push-index.ts). Line endings, trailing
+// whitespace at the end of the file and \uXXXX escapes vs the character
+// itself are ignored.
 
 const fs = require('fs');
 const path = require('path');
@@ -29,12 +30,31 @@ function args(argv) {
   return out;
 }
 
-const normalize = (s) => s.replace(/\r\n/g, '\n').replace(/\s+$/, '') + '\n';
+// \u2013 and a literal – are the same string to the runtime; the repo
+// writes some characters as escapes and the deployed copies have them
+// literally (send-booking-email, Send-Push).
+const normalize = (s) => s.replace(/\r\n/g, '\n').replace(/\s+$/, '')
+  .replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16))) + '\n';
+
+// Shape of a difference, never its content: the Actions log of this public
+// repo is public, and a live function could hold something the repo doesn't.
+function describeDifference(live, mine, liveFnDir) {
+  const a = live.split('\n'), b = mine.split('\n');
+  let first = 0;
+  while (first < a.length && first < b.length && a[first] === b[first]) first++;
+  const files = [];
+  const walk = (d, rel) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+    const r = rel ? rel + '/' + e.name : e.name;
+    if (e.isDirectory()) walk(path.join(d, e.name), r); else files.push(r);
+  } };
+  try { walk(liveFnDir, ''); } catch (e) { /* listing is best-effort */ }
+  return { liveLines: a.length - 1, repoLines: b.length - 1, firstDiffLine: first + 1, files };
+}
 
 function compare({ liveSlugs, liveDir, repoDir = REPO_DIR }) {
   const repo = new Map(fs.readdirSync(repoDir).filter((f) => f.endsWith('-index.ts'))
     .map((f) => [f.slice(0, -'-index.ts'.length), path.join(repoDir, f)]));
-  const result = { same: [], differs: [], onlyLive: [], onlyRepo: [], notDownloaded: [] };
+  const result = { same: [], differs: [], onlyLive: [], onlyRepo: [], notDownloaded: [], details: {} };
   const seen = new Set();
   for (const slug of liveSlugs) {
     const key = slug.toLowerCase();
@@ -43,8 +63,11 @@ function compare({ liveSlugs, liveDir, repoDir = REPO_DIR }) {
     if (!repoFile) { result.onlyLive.push(slug); continue; }
     const liveFile = path.join(liveDir, slug, 'index.ts');
     if (!fs.existsSync(liveFile)) { result.notDownloaded.push(slug); continue; }
-    if (normalize(fs.readFileSync(liveFile, 'utf8')) === normalize(fs.readFileSync(repoFile, 'utf8'))) result.same.push(slug);
-    else result.differs.push(slug);
+    const live = normalize(fs.readFileSync(liveFile, 'utf8'));
+    const mine = normalize(fs.readFileSync(repoFile, 'utf8'));
+    if (live === mine) { result.same.push(slug); continue; }
+    result.differs.push(slug);
+    result.details[slug] = describeDifference(live, mine, path.join(liveDir, slug));
   }
   for (const key of repo.keys()) if (!seen.has(key)) result.onlyRepo.push(key);
   return result;
@@ -52,13 +75,17 @@ function compare({ liveSlugs, liveDir, repoDir = REPO_DIR }) {
 
 function report(r) {
   const lines = ['## Edge functions: live vs edge-functions/', ''];
-  const list = (title, items, hint) => {
+  const list = (title, items, hint, extra = () => '') => {
     if (!items.length) return;
     lines.push(`**${title} (${items.length})**${hint ? ' ' + hint : ''}`, '');
-    for (const s of items) lines.push(`- \`${s}\``);
+    for (const s of items) lines.push(`- \`${s}\`${extra(s)}`);
     lines.push('');
   };
-  list('Live differs from the repo', r.differs, '-- deploy from main (`supabase functions deploy <slug>`), or bring the repo in line if the live copy is the right one.');
+  const shape = (s) => {
+    const d = (r.details || {})[s];
+    return d ? ` -- live ${d.liveLines} lines, repo ${d.repoLines}; first difference at line ${d.firstDiffLine}; downloaded: ${d.files.join(', ')}` : '';
+  };
+  list('Live differs from the repo', r.differs, '-- deploy from main (`supabase functions deploy <slug>`), or bring the repo in line if the live copy is the right one.', shape);
   list('Live only, not in edge-functions/', r.onlyLive, '-- add its source to the repo.');
   list('In edge-functions/, not deployed', r.onlyRepo, '-- deploy it, or remove the file.');
   list('Could not download', r.notDownloaded, '-- the download step failed for these; the check could not compare them.');

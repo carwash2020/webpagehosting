@@ -386,6 +386,12 @@ around.
 - **Needs one secret before its first run:** `SUPABASE_ACCESS_TOKEN`, a Supabase personal access token (the service-role key can't read function source). Setup steps are at the top of the workflow; until then its first step fails and says so. Logged in ACTION-ITEMS.
 - Not verifiable from the sandbox (no token, supabase.com blocked): the CLI download step. The compare script is tested (`tests/scripts/edge-function-drift.test.js`, 3), including a run against copies of all 41 repo functions.
 - Checked by hand today instead: the live list has the same 41 functions as `edge-functions/`. Since the folder was created (a9f8d44, 2026-09-23) only the 2026-09-25 changes touched functions, and every one of those was redeployed after (18:20-18:32). `get-job-photo-urls` (live since 09-16) matches the repo line for line. The full content diff waits for the workflow.
+- **First real runs (same day, after the owner added the secret):**
+  - Run 1: all 41 "differ". The CLI's default download unpacks the bundle with Docker, which returns re-emitted code (a different line count for every function). The workflow now passes `--use-api`, which returns the original files. The report now also gives each difference's shape (line counts, first differing line, files downloaded). It never shows content, because this repo's Actions logs are public.
+  - Run 3: 37 match. send-booking-email and Send-Push differed only because the repo writes an en dash and a middle dot as `\u2013` / `\u00b7` and the deployed copies have the characters themselves. The compare now treats an escape and its character as the same.
+  - Run 4: 39 match, 2 differ, and both are real:
+    - `uptime-alert`: live v11 still has no service-role check (security log, 2026-09-17 entry, item 2). Deploying it needs the owner's go-ahead and one caveat. The check is a strict `token !== SUPABASE_SERVICE_ROLE_KEY`. The live env key moved to the `sb_secret_` format (`sql/infra/resync_cron_service_role_key.sql`). If the GitHub `SUPABASE_SERVICE_ROLE_KEY` secret is still the old JWT, every uptime alert would get 401. So after a deploy, probe once with that secret and a malformed body: 500 means the key matched (the JSON parse fails and nothing is sent), 401 means roll back to v11.
+    - `respond-to-contract`: comment lines only (the repo copy has extra comments). Logic is the same. It needs a redeploy to go green; that is harmless, but it's still a production deploy.
 
 ## 2026-09-30 -- the 2026-09-25 automation notes, done
 
