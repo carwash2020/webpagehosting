@@ -545,7 +545,19 @@ function thCollectClientNamesFromExistingData() {
 function thBackfillClients() {
   const existing = thLoadClients();
   const byKey = {};
-  existing.forEach(c => { byKey[thNormalizeClientName(c.name)] = c; });
+  // The same email or phone is the same client (2026-09-30), so a name
+  // found on a record doesn't become a second client for someone already
+  // on file under another spelling.
+  const byEmail = {};
+  const byPhone = {};
+  const remember = (c) => {
+    byKey[thNormalizeClientName(c.name)] = c;
+    const e = thClientEmailKey(c.email);
+    if (e && !byEmail[e]) byEmail[e] = c;
+    const p = thClientPhoneKey(c.phone);
+    if (p && !byPhone[p]) byPhone[p] = c;
+  };
+  existing.forEach(remember);
 
   // Only tombstones that still count block recreating a client by name --
   // same rule as applySyncData (sync.js): lifted by Restore (restoredAt at
@@ -560,6 +572,7 @@ function thBackfillClients() {
   Object.entries(discovered).forEach(([key, info]) => {
     if (byKey[key]) return; // already registered
     if (tombstonedNames.has(key)) return; // deliberately deleted -- do not recreate
+    if (byEmail[thClientEmailKey(info.email)] || byPhone[thClientPhoneKey(info.phone)]) return; // already on file
     const record = {
       // Date.now() alone would collide when creating several in the same
       // millisecond, which is exactly what a bulk backfill does.
@@ -572,7 +585,7 @@ function thBackfillClients() {
       source: 'backfill',
     };
     existing.push(record);
-    byKey[key] = record;
+    remember(record);
     created++;
   });
 
@@ -587,6 +600,68 @@ function thFindClientByName(name) {
   const key = thNormalizeClientName(name);
   if (!key) return null;
   return thLoadClients().find(c => thNormalizeClientName(c.name) === key) || null;
+}
+
+// One client per person (Connor, 2026-09-30: "make sure we can't have
+// duplicates in the future"). Before a new client is created, look for the
+// person by what identifies them, in this order:
+//   1. email: the same email is always the same client, whatever the name
+//      says. The server enforces this too (sql/item1/04).
+//   2. name: the old rule, normalized the same way as before.
+//   3. phone: the same number is taken to be the same client. A couple or
+//      family sharing one number can still be two clients: Add on the
+//      Clients page asks, and the server's review queue flags the pair.
+// Returns { record, matchedBy } with matchedBy one of 'email', 'name',
+// 'phone', or { record: null, matchedBy: null }.
+function thClientEmailKey(email) {
+  return String(email || '').trim().toLowerCase();
+}
+function thClientPhoneKey(phone) {
+  const digits = String(phone || '').replace(/\D/g, '');
+  return digits.length >= 7 ? digits.slice(-10) : '';
+}
+function thFindClientByEmail(email) {
+  const key = thClientEmailKey(email);
+  if (!key) return null;
+  return thLoadClients().find(c => thClientEmailKey(c.email) === key) || null;
+}
+function thFindClientByPhone(phone) {
+  const key = thClientPhoneKey(phone);
+  if (!key) return null;
+  return thLoadClients().find(c => thClientPhoneKey(c.phone) === key) || null;
+}
+function thFindExistingClient(name, extras) {
+  const e = extras || {};
+  let record = thFindClientByEmail(e.email);
+  if (record) return { record, matchedBy: 'email' };
+  record = thFindClientByName(name);
+  if (record) return { record, matchedBy: 'name' };
+  record = thFindClientByPhone(e.phone);
+  if (record) return { record, matchedBy: 'phone' };
+  return { record: null, matchedBy: null };
+}
+
+// Always creates a new client. Only for a person Add on the Clients page
+// was told is different from the existing client with the same phone;
+// everything else goes through thEnsureClient(). The same email is never
+// allowed twice, so this refuses one that's already on file.
+function thCreateClient(name, extras) {
+  const trimmed = String(name || '').trim();
+  if (!trimmed) return null;
+  if (extras && thFindClientByEmail(extras.email)) return null;
+  const list = thLoadClients();
+  const record = {
+    id: 'c_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
+    name: trimmed,
+    phone: (extras && extras.phone) || '',
+    address: (extras && extras.address) || '',
+    email: (extras && extras.email) || '',
+    createdAt: new Date().toISOString(),
+    source: 'created',
+  };
+  list.push(record);
+  thSaveClients(list);
+  return record;
 }
 
 function thFindClientById(id) {
@@ -617,12 +692,18 @@ function thFindClientById(id) {
 // happened to save last. Same "first non-empty value wins" rule
 // thCollectClientNamesFromExistingData() above already uses for the backfill.
 function thEnsureClient(name, extras) {
-  const existingRecord = thFindClientByName(name);
+  const existingRecord = thFindExistingClient(name, extras).record;
   if (existingRecord) {
     if (extras) {
       let changed = false;
       ['phone', 'address', 'email'].forEach(field => {
         const incoming = extras[field] ? String(extras[field]).trim() : '';
+        // An email already on another client is that client's, not this
+        // one's: one email, one client (2026-09-30).
+        if (field === 'email' && incoming) {
+          const owner = thFindClientByEmail(incoming);
+          if (owner && owner.id !== existingRecord.id) return;
+        }
         if (incoming && !existingRecord[field]) {
           existingRecord[field] = incoming;
           changed = true;
@@ -639,22 +720,7 @@ function thEnsureClient(name, extras) {
     }
     return existingRecord;
   }
-  const trimmed = String(name || '').trim();
-  if (!trimmed) return null;
-
-  const list = thLoadClients();
-  const record = {
-    id: 'c_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8),
-    name: trimmed,
-    phone: (extras && extras.phone) || '',
-    address: (extras && extras.address) || '',
-    email: (extras && extras.email) || '',
-    createdAt: new Date().toISOString(),
-    source: 'created',
-  };
-  list.push(record);
-  thSaveClients(list);
-  return record;
+  return thCreateClient(name, extras);
 }
 
 // Fills blank client contact fields on any form from the shared client

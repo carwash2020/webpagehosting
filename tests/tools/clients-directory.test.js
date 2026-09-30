@@ -220,8 +220,44 @@ test('Add a client saves through thEnsureClient (so an existing name opens that 
   const list = JSON.parse(w.localStorage.getItem('th_clients'));
   assert.equal(list.length, before + 1);
   assert.equal(list.find(c => c.name === 'Karen White').phone, '435-555-0199');
-  assert.match(CLIENTS, /const record = thEnsureClient\(values\.name, \{ phone: values\.phone, email: values\.email, address: values\.address \}\);/);
+  assert.match(CLIENTS, /const extras = \{ phone: values\.phone, email: values\.email, address: values\.address \};/);
+  assert.match(CLIENTS, /record = thEnsureClient\(values\.name, extras\);/);
   assert.match(CLIENTS, /location\.href = '\/tools\/client-detail\.html\?id=' \+ encodeURIComponent\(record\.id\);/);
+});
+
+test('Add a client: the same phone under another name asks, and can add a separate person (2026-09-30)', async () => {
+  const { w } = loadClientsPage();
+  const list0 = JSON.parse(w.localStorage.getItem('th_clients'));
+  const withPhone = list0.find(c => c.phone);
+  assert.ok(withPhone, 'fixture has a client with a phone');
+  const before = list0.length;
+  const p = w.openAddClient();
+  w.document.getElementById('customDialogField0').value = 'Different Person';
+  w.document.getElementById('customDialogField1').value = withPhone.phone;
+  w.document.querySelector('#customDialogButtons .dialog-btn-primary').click();
+  await new Promise(r => setTimeout(r, 0));
+  assert.match(w.document.getElementById('customDialogMessage').textContent, /already has the phone number/);
+  w.document.getElementById('customDialogCancelAction').click(); // "No", not the same person
+  await new Promise(r => setTimeout(r, 0));
+  assert.match(w.document.getElementById('customDialogMessage').textContent, /as a separate client with the same phone number/);
+  w.document.querySelector('#customDialogButtons .dialog-btn-primary').click(); // "Add separately"
+  await p.catch(() => {});
+  const list = JSON.parse(w.localStorage.getItem('th_clients'));
+  assert.equal(list.length, before + 1);
+  assert.ok(list.find(c => c.name === 'Different Person'));
+});
+
+test('Add a client: the same email under another name opens the existing client instead of adding one (2026-09-30)', async () => {
+  const { w } = loadClientsPage();
+  const list0 = JSON.parse(w.localStorage.getItem('th_clients'));
+  const withEmail = list0.find(c => c.email);
+  assert.ok(withEmail, 'fixture has a client with an email');
+  const p = w.openAddClient();
+  w.document.getElementById('customDialogField0').value = 'Someone Else';
+  w.document.getElementById('customDialogField2').value = withEmail.email.toUpperCase();
+  w.document.querySelector('#customDialogButtons .dialog-btn-primary').click();
+  await p.catch(() => {});
+  assert.equal(JSON.parse(w.localStorage.getItem('th_clients')).length, list0.length);
 });
 
 test('the Portal tab hides on a definite "no" from the role (an account that cannot manage invoices), and stays when the role simply failed to load', () => {
