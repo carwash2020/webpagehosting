@@ -52,7 +52,7 @@
 <!-- data-layer.js (2026-09-22): the client registry and the directory
      query (thGetClientDirectory) the Clients tab now lists from. Loaded
      before the shared files below, same order as every other page. -->
-<script src="/tools/data-layer.js?v=114109db2f" defer></script>
+<script src="/tools/data-layer.js?v=1677d8d4c2" defer></script>
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
@@ -2234,9 +2234,11 @@
   }
 
   // Add a client: name plus whatever else is known. thEnsureClient() is
-  // the same call every save path uses, so a name that already exists
-  // opens that client (and fills any blank details) instead of making a
-  // second record for the same person.
+  // the same call every save path uses, so someone already on file opens
+  // that client (and fills any blank details) instead of making a second
+  // record for the same person. One client per person (2026-09-30): the
+  // same email is always the existing client; the same phone under a
+  // different name asks, since a couple or family can share a number.
   async function openAddClient(prefillName) {
     if (typeof showPromptForm !== 'function' || typeof thEnsureClient !== 'function') return;
     const values = await showPromptForm('Add a client', [
@@ -2249,11 +2251,37 @@
       validate: (v) => (v.name ? null : 'A name is required.'),
     });
     if (!values) return;
-    const existed = typeof thFindClientByName === 'function' && thFindClientByName(values.name);
-    const record = thEnsureClient(values.name, { phone: values.phone, email: values.email, address: values.address });
-    if (!record) return;
+    const extras = { phone: values.phone, email: values.email, address: values.address };
+    const match = typeof thFindExistingClient === 'function' ? thFindExistingClient(values.name, extras) : { record: null, matchedBy: null };
+    let record = null;
+    let message = 'Client added.';
+    if (match.matchedBy === 'phone' && typeof showConfirm === 'function') {
+      const same = await showConfirm(
+        match.record.name + ' already has the phone number ' + (match.record.phone || values.phone) + '.\n\nIs ' + values.name + ' the same person?',
+        { confirmText: 'Same person', cancelText: 'No' }
+      );
+      if (same) {
+        record = thEnsureClient(values.name, extras);
+        message = 'Opening ' + record.name + '.';
+      } else {
+        const addNew = await showConfirm(
+          'Add ' + values.name + ' as a separate client with the same phone number?',
+          { confirmText: 'Add separately', cancelText: 'Cancel' }
+        );
+        if (!addNew) return;
+        record = thCreateClient(values.name, extras);
+      }
+    } else {
+      record = thEnsureClient(values.name, extras);
+      if (match.matchedBy === 'email') message = 'That email belongs to ' + record.name + ' -- opening them.';
+      else if (match.matchedBy === 'name') message = values.name + ' was already a client -- opening them.';
+    }
+    if (!record) {
+      if (typeof showToast === 'function') showToast('That email already belongs to another client.', { type: 'error' });
+      return;
+    }
     if (typeof haptic === 'function') haptic('success');
-    if (typeof showToast === 'function') showToast(existed ? values.name + ' was already a client -- opening them.' : 'Client added.');
+    if (typeof showToast === 'function') showToast(message);
     location.href = '/tools/client-detail.html?id=' + encodeURIComponent(record.id);
   }
 
@@ -2517,6 +2545,8 @@
         headers: Object.assign(supabaseJsonHeaders(), { 'Prefer': 'return=minimal' }),
         body: JSON.stringify(patch),
       });
+      // 409: the one-email-per-client rule (sql/item1/04).
+      if (res.status === 409) throw new Error('that email already belongs to another client');
       if (!res.ok) throw new Error('HTTP ' + res.status);
       showToast('Saved.');
     } catch (e) {

@@ -3437,6 +3437,17 @@ Things worth knowing before touching this area:
 - **`not_a_client`** is a new column; those rows leave the candidate list for good, and their open pairs become `dismissed`.
 - **Production dry run (rolled back):** as Steve, merging the contact card into the client-list card filled role and notes and left one open pair (client list + portal).
 - Tests: `tests/sync/client-review-db.test.js` (11, PGlite) and `tests/tools/client-duplicates-panel.test.js` (10, jsdom running the panel's real script against a fake PostgREST).
+- **Applied 2026-09-30.** Connor then had the three Connor Dodart cards merged into the client-list one (as connor@, through `merge_client_candidate`): 9 live clients, 0 open pairs.
+
+## 2026-09-30 -- One client per person: email blocked, phone checked, name flagged
+
+Connor: "make sure we can't have duplicates in the future." Decided with him: the same **email** is always the same client and is blocked outright; the same **phone** makes the app reuse the existing client (Add on the Clients page asks, since a couple or family can share a number); the same **name** is only a review flag, since two different people can share one.
+
+- **App (`tools/data-layer.js`):** `thFindExistingClient(name, extras)` looks by email, then name, then phone (last 10 digits, 7+ only). `thEnsureClient()` and `thBackfillClients()` use it, so every save path (jobs, invoices, quotes, contracts, bookings, the backfill) reuses the existing client. Enrichment never copies an email that's already on another client. `thCreateClient()` is the one way to add a separate person with the same phone, and it refuses a taken email.
+- **Clients page Add:** a phone match under a different name asks "Is X the same person?" and, if not, "Add separately?". An email match opens the existing client.
+- **Server (`sql/item1/04_one_client_per_email.sql`):** a unique index on `(tenant_id, email_norm)` over live clients (not merged, not "not a client"). The seed folds a same-email row into the existing client instead of creating a second: the row is still written, already merged, so its legacy id reaches the step 2 backfill, and the fold is recorded as a decided pair (`decided_by 'automatic: same email'`). A portal account whose email is on file links to that client. `merge_client_candidate()` now marks the merged client merged before filling the kept one's blanks, so moving an email across can't trip the index. The review panel's Edit shows "that email already belongs to another client" on a 409.
+- **Production dry run (rolled back):** the index builds; a second "CONNOR@…" insert is refused; a seeded row with Connor's email folds into his client and fills the blank address.
+- Tests: `tests/sync/client-one-per-email-db.test.js` (10, PGlite), `tests/sync/client-one-per-person.test.js` (8, jsdom), plus two new Add-client tests in `tests/tools/clients-directory.test.js` and one in `tests/tools/client-duplicates-panel.test.js`.
 
 <!-- Add new entries above this line -->
 

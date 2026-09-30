@@ -23,7 +23,7 @@ const CONNOR_REGISTRY = { id: 'uuid-reg', display_name: 'Connor Dodart', email: 
 const CONNOR_CONTACT = { id: 'uuid-con', display_name: 'Connor Dodart', email: 'Connor@triplehenterprisesllc.biz', phone: '(435)632-6901', address: null, role: 'Developer', notes: '<b>The Coolest</b>', seed_source: 'contact' };
 const PAIRS = [{ id: 7, reasons: ['email', 'name', 'phone'], a: CONNOR_REGISTRY, b: CONNOR_CONTACT }];
 
-function setup({ pairs = PAIRS, confirm = true, prompt = null, failRpc = null } = {}) {
+function setup({ pairs = PAIRS, confirm = true, prompt = null, failRpc = null, patchStatus = 204 } = {}) {
   const dom = new JSDOM(`<!doctype html><body>
     <div id="clientDupNotice" hidden><span id="clientDupNoticeText"></span></div>
     <div id="clientDuplicatesPanel"><div id="clientDuplicatesSummary"></div><div id="clientDuplicatesList"></div></div>
@@ -51,7 +51,7 @@ function setup({ pairs = PAIRS, confirm = true, prompt = null, failRpc = null } 
     if (rpc === 'mark_client_not_a_client') open = open.filter((p) => p.a.id !== body.p_client && p.b.id !== body.p_client);
     if (rpc) return { ok: true, status: 200, text: async () => (rpc === 'refresh_my_client_candidates' ? '0' : '{}') };
     if (method === 'GET') return { ok: true, status: 200, json: async () => open };
-    return { ok: true, status: 204, text: async () => '' };
+    return { ok: patchStatus < 300, status: patchStatus, text: async () => '' };
   };
   w.eval(escapers + '\n' + PANEL_JS.replace(/\n  (const|let) /g, '\n  var ') +
     '\nwindow.__dup = { renderClientDuplicates, mergeClientDuplicate, keepClientDuplicatesSeparate, markDuplicateNotAClient, editClientDuplicate, openClientDuplicates, refreshClientDupNotice };');
@@ -132,6 +132,13 @@ test('Edit patches that client row, turning blanks into null', async () => {
   assert.match(patch.url, /\/rest\/v1\/clients\?id=eq\.uuid-reg$/);
   assert.deepEqual(patch.body, { display_name: 'Connor D', email: null, phone: '4356326901', address: null, notes: 'x' });
   assert.equal(patch.headers.Prefer, 'return=minimal');
+});
+
+test('Edit to an email another client already has says so, in plain words', async () => {
+  const { api, toasts } = setup({ patchStatus: 409, prompt: { display_name: 'Connor', email: 'taken@example.com', phone: '', address: '', notes: '' } });
+  await api.renderClientDuplicates();
+  await api.editClientDuplicate(7, 'a');
+  assert.deepEqual(toasts[0], { msg: 'Could not save: that email already belongs to another client', type: 'error' });
 });
 
 test('the Clients tab notice shows the count only for someone who can review', async () => {
