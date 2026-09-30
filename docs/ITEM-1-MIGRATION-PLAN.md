@@ -103,13 +103,9 @@ This is real new schema, not a column added to an existing table.
 - Build a small review queue in `tools/clients.html`: merge / keep separate / edit. A merge repoints every FK and sets `merged_into_id`.
 - Backfill `client_id` on existing rows from the reviewed mapping. Rows that can't be confidently matched stay null and go on a review list.
 
-**1c. Replace the local identity path.** `thEnsureClient()` / `thFindClientByName()` switch to a server lookup-or-create against `clients`. A typed name offers matching existing clients before creating a new one, so the "two spellings, two clients" problem stops at entry time instead of only being cleaned up after.
+**1c. (Moved.)** Switching `thEnsureClient()` / `thFindClientByName()` to the unified server lookup now happens in **Phase 3.5**, after the outbox exists. Until then, entry keeps using the current local identity path. Phase 1 is server-side only, so it can ship early without affecting offline behavior.
 
-> **Open risk, flagged in review (2026-09-30):** this phase precedes Phase 3 (the offline outbox) in the plan's ship order. If 1c ships before Phase 3, there is a real window where creating a job/invoice for a **new** client name while offline has no path: the local fallback is gone, and the server round-trip 1c depends on can't happen with no signal. Resolve by either resequencing (build the outbox's client-create path before flipping `thEnsureClient()` over) or having 1c explicitly queue through whatever outbox scaffolding exists by then, even if the rest of Phase 3 isn't done yet.
-
-Client History, follow-up reminders, returning-client detection, and the referral nudge must move from name-text matching to `client_id`. Add them to the Phase 0 census.
-
-**Exit criteria:** `clients` live; review queue worked through; `client_id` populated on all rows except a known, listed remainder; new entries go through the unified lookup.
+**Exit criteria:** `clients` live; review queue worked through; `client_id` populated on all rows except a known, listed remainder. (Entry-time lookup is Phase 3.5's exit criterion, not this one.)
 
 ---
 
@@ -159,9 +155,35 @@ The goal is to keep offline writes without keeping localStorage as the source of
 
 Option (a) is simplest and probably sufficient, but this needs Steve's input on how often he invoices on-site with no signal.
 
-**3g. Offline reads.** The seam serves the last-fetched pages from the IndexedDB cache when offline, marked as possibly stale in the UI.
+**3g. Offline reads.** The seam serves the last-fetched pages from the IndexedDB cache when offline, marked as possibly stale in the UI. The cache must also hold the tenant's **client list** (id, display name, normalized match columns). Phase 3.5 relies on it to pick existing clients offline.
 
 **Exit criteria:** outbox proven with forced-offline tests (create job offline → create linked invoice offline → reconnect → both land, FK intact); conflict path demonstrated; numbering decision made and implemented.
+
+---
+
+## Phase 3.5 — Client lookup cutover
+
+This was Phase 1c. It depends on 3a–3d (IndexedDB outbox, client-generated UUIDs, idempotent drain) and on the 3g client cache, so it cannot ship before them. This resolves open decision #7.
+
+`thEnsureClient()` / `thFindClientByName()` switch from local name-text matching to the unified `clients` table, with four paths:
+
+- **Online:** server lookup-or-create against `clients`. A typed name offers matching existing clients before creating a new one.
+- **Offline, existing client:** match against the 3g cached client list, so selecting a known client still works with no signal.
+- **Offline, new name:** create the client with a client-generated UUID and `needs_match = true`, queued through the outbox. Jobs and invoices created in the same offline session reference it by FK immediately.
+- **On drain:** after the client-create op applies, run the Phase 1b candidate matching against the new row. Any hits go to the existing Phase 1b review queue. A merge repoints FKs and sets `merged_into_id`, the same as any other merge. `needs_match` clears when the row is reviewed or has no candidates.
+
+An offline create cannot dedup against the server, so the outbox alone would faithfully create duplicates. This design never blocks offline entry, and it catches duplicates for a human decision on reconnect instead of letting them pile up silently.
+
+Also in this phase: Client History, follow-up reminders, returning-client detection, and the referral nudge move from name-text matching to `client_id`.
+
+**Schema addition** (to the Phase 1a `clients` table): `needs_match boolean not null default false`.
+
+**Exit criteria:**
+- Online create of a name close to an existing client offers the existing match before creating.
+- Offline selection of an existing client from cache produces a correct `client_id` FK after drain.
+- Forced-offline test: create a new client with a near-duplicate name → create a job and a linked invoice for it → reconnect → all three land with FKs intact, **and the new client appears in the review queue as a candidate duplicate.**
+- Merging it from the queue repoints the job and invoice to the surviving client.
+- No remaining call sites use the local name-text identity path.
 
 ---
 
@@ -245,14 +267,14 @@ So:
 4. Cutover monitoring window length per entity.
 5. Soft deletes: permanent, or purge after N days?
 6. Notes, job templates, compliance, known issues: stay in the blob, or migrate in a later pass?
-7. **Phase 1c / Phase 3 sequencing** (flagged in review, 2026-09-30): does the unified client lookup need to ship after the offline outbox's client-create path exists, to avoid a no-path gap for offline new-client creation?
+7. ~~Client lookup cutover sequenced before the outbox leaves no offline path for new clients.~~ **Resolved:** moved from Phase 1c to Phase 3.5, after the outbox; offline new-client creates are flagged `needs_match` and routed to the review queue on drain.
 
 ## How this unblocks the rest of the roadmap
 
 | Roadmap item | Unblocked by |
 |---|---|
 | 5. Indexes | Phase 2 query-shape list |
-| 3. N+1 client search | Phase 1 `clients` table + Phase 2 seam (one RPC behind `clients.list()`) |
+| 3. N+1 client search | Phase 1 `clients` table + Phase 2 seam (one RPC behind `clients.list()`); entry-time lookup lands in Phase 3.5 |
 | 4. Pagination | Phase 2 keyset contract, live per entity at Phase 5 |
 | 2. SQL aggregates | Phase 5; dashboards read server-computed views instead of reducing arrays |
 | 6. `slice()` cleanup | Phase 5, page by page |
