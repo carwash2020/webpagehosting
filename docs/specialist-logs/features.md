@@ -3424,6 +3424,19 @@ Things worth knowing before touching this area:
 - **Phone matching** uses the last 10 digits (7+ only), so `(435)632-6901` and `4356326901` match and a leading 1 doesn't matter.
 - **Production dry run (rolled back):** 9 registry + 1 contact + 1 portal = 11 clients, 0 record names; 3 candidate pairs, all Connor Dodart (email, name, phone); 2 unmatched jobs, both tombstoned clients.
 - Test: `tests/sync/client-seeding-db.test.js` (18, PGlite, running the real 06/07/01/02 files).
+- **Applied and seeded 2026-09-30** with Connor's approval: 11 clients, 3 open pairs, matching the dry run.
+
+## 2026-09-30 -- Item 1 Phase 1b part 2: the duplicate review queue
+
+`tools/clients.html` gets a **Possible duplicate clients** panel, first on the Portal tab, and a notice on the Clients tab when there's anything to review. Each pair shows both cards side by side with their source (client list, Job Tracker contact, portal account, name on a record) and why they matched. The actions: **Keep this one** (merge the other into it), **Different people**, **Not a client**, and **Edit**.
+
+`sql/item1/03_client_review_actions.sql` holds the server side: `merge_client_candidate`, `keep_client_candidate_separate`, `mark_client_not_a_client` and `refresh_my_client_candidates`, all SECURITY DEFINER behind `client_review_tenant()` (staff in the caller's tenant with `can_manage_invoices`, the Portal tab's permission). Edit is a plain PATCH under the existing `clients` policy.
+
+- **A merge fills blanks, never overwrites,** repoints `contracts.client_id`, `client_profiles.client_id` and anything already merged into the merged client (so there are no chains), and sets `merged_into_id`. The merged row keeps its `legacy_id` / `legacy_contact_id`; the step 2 FK backfill resolves old ids through `merged_into_id`.
+- **Every merge is recorded** in `client_duplicate_candidates.merge_detail` (what was filled, the kept row's values before, which contracts and portal accounts moved), so a wrong merge can be traced and undone by hand.
+- **`not_a_client`** is a new column; those rows leave the candidate list for good, and their open pairs become `dismissed`.
+- **Production dry run (rolled back):** as Steve, merging the contact card into the client-list card filled role and notes and left one open pair (client list + portal).
+- Tests: `tests/sync/client-review-db.test.js` (11, PGlite) and `tests/tools/client-duplicates-panel.test.js` (10, jsdom running the panel's real script against a fake PostgREST).
 
 <!-- Add new entries above this line -->
 

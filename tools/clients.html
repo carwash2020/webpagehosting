@@ -71,7 +71,7 @@
      file dev-tools.html and site-content.html already load, rather
      than duplicating any of it -- these five panels' help-modal
      content already lives there from when they were built. -->
-<script src="/tools/dev-tools-shared.js?v=ab4eedc467" defer></script>
+<script src="/tools/dev-tools-shared.js?v=c6ddd67c67" defer></script>
 <!-- Client Lookup dispute-evidence export (2026-09-05), requested
      directly -- same jsPDF version/SRI hash/async loading pattern
      already proven on invoice-generator.html. -->
@@ -145,6 +145,19 @@
      "List rows"); this is only this page's layout around them. */
   .cd-toolbar { display: flex; gap: 10px; align-items: center; margin: 4px 0 10px; }
   .cd-add-btn { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; }
+  .cd-dup-notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 10px 0; padding: 10px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--orange-tint-soft); }
+  .cd-dup-notice[hidden] { display: none; }
+  .dup-pair { border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+  .dup-pair-why { font-size: 13px; color: var(--text-dim); margin-bottom: 10px; }
+  .dup-pair-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 600px) { .dup-pair-sides { grid-template-columns: 1fr; } }
+  .dup-side { border: 1px solid var(--border); border-radius: 10px; padding: 10px; min-width: 0; overflow-wrap: anywhere; }
+  .dup-side-source { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; }
+  .dup-side-name { font-weight: 600; margin: 2px 0 6px; }
+  .dup-side dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; font-size: 13.5px; }
+  .dup-side dt { color: var(--text-dim); }
+  .dup-side dd { margin: 0; }
+  .dup-side-actions, .dup-pair-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
   .cd-add-btn .th-icon { width: 16px; height: 16px; margin-right: 0; stroke-width: 2.4; }
   .cd-summary { color: var(--text-dim); font-size: 13px; margin: 8px 2px 10px; }
   .cd-summary strong { color: var(--white); font-weight: 600; }
@@ -308,7 +321,11 @@
          booked). A read-only filter over the same directory rows. -->
     <button type="button" class="th-chip th-v2-chip" data-filter="leads" onclick="setClientDirFilter('leads')">New leads <span class="th-chip-count" id="clientDirLeadsCount"></span></button>
   </div>
-  <div class="cd-summary" id="clientDirSummary"></div>
+  <div class="cd-dup-notice" id="clientDupNotice" hidden>
+    <span id="clientDupNoticeText"></span>
+    <button type="button" class="secondary-btn" onclick="openClientDuplicates()">Review</button>
+  </div>
+    <div class="cd-summary" id="clientDirSummary"></div>
   <div class="th-list" id="clientDirList"></div>
 </div>
 
@@ -316,6 +333,23 @@
 <p class="tool-sub">Everything about the client portal in one place &mdash; who has access, what has been sent, what they have requested, and who gets notified about it.<span id="syncStatusText"></span></p>
 
   <div class="dev-panels-grid">
+  <!--
+    Possible duplicate clients (Item 1 Phase 1b, 2026-09-30): the review
+    queue for the server's unified clients table
+    (sql/item1/02_client_seeding_and_duplicate_candidates.sql and
+    03_client_review_actions.sql). Pairs come from a shared email, phone
+    or name; nothing merges until someone picks Merge here. Same
+    permission as this tab, enforced again by the server.
+  -->
+  <div class="dev-panel dev-panel-wide" id="clientDuplicatesPanel">
+    <div class="dev-panel-heading">
+      <h2>Possible duplicate clients</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('clientduplicates')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div id="clientDuplicatesSummary" class="tool-sub" style="margin-bottom:10px;"></div>
+    <div id="clientDuplicatesList"></div>
+  </div>
+
   <!--
     Client Lookup (2026-09-05), requested directly: "we need to have
     some sort of client look up... Put in a email, name, phone
@@ -2261,7 +2295,7 @@
         if (location.hash === '#new') openAddClient();
       });
       if (location.hash === '#new') openAddClient();
-      window.addEventListener('th-role-loaded', (e) => applyPortalPermission(e.detail));
+      window.addEventListener('th-role-loaded', (e) => { applyPortalPermission(e.detail); refreshClientDupNotice(e.detail); });
       // Pull the latest from the cloud (and learn the account's role),
       // then re-list: a client added on another device shows up here.
       if (typeof initSyncOnLoad === 'function') {
@@ -2294,9 +2328,223 @@
     }
   });
 
+  // Possible duplicate clients (Item 1 Phase 1b, 2026-09-30). Reads the
+  // server's clients / client_duplicate_candidates tables, not this
+  // device's th_clients list. Every action is an RPC that checks the
+  // reviewer's permission itself (sql/item1/03_client_review_actions.sql).
+  const DUP_SOURCE_LABELS = {
+    registry: 'Client list',
+    contact: 'Job Tracker contact',
+    portal: 'Portal account',
+    record_name: 'Name on a job or invoice',
+    created: 'Added',
+  };
+  const DUP_REASON_LABELS = { email: 'same email', phone: 'same phone', name: 'same name' };
+  const DUP_CLIENT_FIELDS = 'id,display_name,email,phone,address,role,notes,seed_source';
+  let clientDuplicatePairs = [];
+
+  function supabaseJsonHeaders() {
+    return {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': 'Bearer ' + getAuthToken(),
+      'Content-Type': 'application/json',
+    };
+  }
+
+  async function clientReviewRpc(name, body) {
+    const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/rpc/' + name, 10000, {
+      method: 'POST',
+      headers: supabaseJsonHeaders(),
+      body: JSON.stringify(body || {}),
+    });
+    if (!res.ok) {
+      let detail = 'HTTP ' + res.status;
+      try { const j = await res.json(); if (j && j.message) detail = j.message; } catch (e) { /* not JSON */ }
+      throw new Error(detail);
+    }
+    const text = await res.text();
+    return text ? JSON.parse(text) : null;
+  }
+
+  async function loadClientDuplicatePairs() {
+    // Refresh first, so the list reflects edits and new clients.
+    await clientReviewRpc('refresh_my_client_candidates');
+    const res = await fetchWithTimeout(
+      SUPABASE_URL + '/rest/v1/client_duplicate_candidates?status=eq.open&order=created_at.asc,id.asc&limit=100' +
+        '&select=id,reasons,a:client_a(' + DUP_CLIENT_FIELDS + '),b:client_b(' + DUP_CLIENT_FIELDS + ')',
+      8000,
+      { headers: supabaseJsonHeaders() }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }
+
+  function renderDuplicateSide(pair, side) {
+    const c = pair[side];
+    const row = (label, value) => value ? '<dt>' + label + '</dt><dd>' + escapeHtml(value) + '</dd>' : '';
+    return '<div class="dup-side">' +
+      '<div class="dup-side-source">' + escapeHtml(DUP_SOURCE_LABELS[c.seed_source] || 'Client') + '</div>' +
+      '<div class="dup-side-name">' + escapeHtml(c.display_name) + '</div>' +
+      '<dl>' + row('Email', c.email) + row('Phone', c.phone) + row('Address', c.address) +
+        row('Role', c.role) + row('Notes', c.notes) + '</dl>' +
+      '<div class="dup-side-actions">' +
+        '<button type="button" class="primary-btn" onclick="mergeClientDuplicate(' + pair.id + ', \'' + side + '\')" ' +
+          'aria-label="' + escapeAttr('Keep ' + c.display_name + ' (' + (DUP_SOURCE_LABELS[c.seed_source] || 'client') + ') and merge the other into it') + '">Keep this one</button>' +
+        '<button type="button" class="secondary-btn" onclick="editClientDuplicate(' + pair.id + ', \'' + side + '\')">Edit</button>' +
+        '<button type="button" class="secondary-btn" onclick="markDuplicateNotAClient(' + pair.id + ', \'' + side + '\')">Not a client</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function updateClientDupNotice(count) {
+    const el = document.getElementById('clientDupNotice');
+    if (!el) return;
+    el.hidden = !count;
+    document.getElementById('clientDupNoticeText').textContent =
+      count === 1 ? '1 possible duplicate client to review.' : count + ' possible duplicate clients to review.';
+  }
+
+  async function renderClientDuplicates() {
+    const el = document.getElementById('clientDuplicatesList');
+    const summaryEl = document.getElementById('clientDuplicatesSummary');
+    el.innerHTML = '<p class="tool-sub">Loading...</p>';
+    try {
+      clientDuplicatePairs = (await loadClientDuplicatePairs()).filter(p => p.a && p.b);
+      updateClientDupNotice(clientDuplicatePairs.length);
+      if (!clientDuplicatePairs.length) {
+        summaryEl.textContent = '';
+        el.innerHTML = '<p class="tool-sub">No possible duplicates to review.</p>';
+        return;
+      }
+      summaryEl.textContent = clientDuplicatePairs.length === 1
+        ? '1 pair to review. Nothing is merged until you choose.'
+        : clientDuplicatePairs.length + ' pairs to review. Nothing is merged until you choose.';
+      el.innerHTML = clientDuplicatePairs.map(pair => {
+        const why = (pair.reasons || []).map(r => DUP_REASON_LABELS[r] || r).join(', ');
+        return '<div class="dup-pair" id="dupPair' + pair.id + '">' +
+          '<div class="dup-pair-why">Possible match: ' + escapeHtml(why) + '</div>' +
+          '<div class="dup-pair-sides">' + renderDuplicateSide(pair, 'a') + renderDuplicateSide(pair, 'b') + '</div>' +
+          '<div class="dup-pair-actions">' +
+            '<button type="button" class="secondary-btn" onclick="keepClientDuplicatesSeparate(' + pair.id + ')">Different people</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    } catch (e) {
+      summaryEl.textContent = '';
+      el.innerHTML = '<p class="error-state">Could not load possible duplicates: ' + escapeHtml(e.message || String(e)) + '</p>';
+    }
+  }
+
+  function findDuplicatePair(pairId) {
+    return clientDuplicatePairs.find(p => p.id === pairId) || null;
+  }
+
+  async function mergeClientDuplicate(pairId, keepSide) {
+    const pair = findDuplicatePair(pairId);
+    if (!pair) return;
+    const keep = pair[keepSide];
+    const gone = pair[keepSide === 'a' ? 'b' : 'a'];
+    const ok = await showConfirm(
+      'Merge these into one client?\n\n' +
+      'Keep: ' + keep.display_name + ' (' + (DUP_SOURCE_LABELS[keep.seed_source] || 'client') + ')\n' +
+      'Merge in: ' + gone.display_name + ' (' + (DUP_SOURCE_LABELS[gone.seed_source] || 'client') + ')\n\n' +
+      'Anything linked to the second one (contracts, a portal account) moves to the first. Details the first is missing are filled in from the second; nothing already there is overwritten.',
+      { confirmText: 'Merge', cancelText: 'Cancel' }
+    );
+    if (!ok) return;
+    try {
+      await clientReviewRpc('merge_client_candidate', { p_candidate: pairId, p_keep: keep.id });
+      if (typeof haptic === 'function') haptic('success');
+      showToast('Merged into ' + keep.display_name + '.');
+    } catch (e) {
+      showToast('Could not merge: ' + (e.message || String(e)), { type: 'error' });
+    }
+    renderClientDuplicates();
+  }
+
+  async function keepClientDuplicatesSeparate(pairId) {
+    try {
+      await clientReviewRpc('keep_client_candidate_separate', { p_candidate: pairId });
+      showToast('Kept as two clients.');
+    } catch (e) {
+      showToast('Could not save: ' + (e.message || String(e)), { type: 'error' });
+    }
+    renderClientDuplicates();
+  }
+
+  async function markDuplicateNotAClient(pairId, side) {
+    const pair = findDuplicatePair(pairId);
+    if (!pair) return;
+    const c = pair[side];
+    const ok = await showConfirm(
+      'Mark ' + c.display_name + ' (' + (DUP_SOURCE_LABELS[c.seed_source] || 'client') + ') as not a client?\n\n' +
+      'Use this for a supplier or another trade. It stops showing up as a possible duplicate. Nothing is deleted.',
+      { confirmText: 'Not a client', cancelText: 'Cancel' }
+    );
+    if (!ok) return;
+    try {
+      await clientReviewRpc('mark_client_not_a_client', { p_client: c.id });
+      showToast(c.display_name + ' marked as not a client.');
+    } catch (e) {
+      showToast('Could not save: ' + (e.message || String(e)), { type: 'error' });
+    }
+    renderClientDuplicates();
+  }
+
+  async function editClientDuplicate(pairId, side) {
+    const pair = findDuplicatePair(pairId);
+    if (!pair || typeof showPromptForm !== 'function') return;
+    const c = pair[side];
+    const values = await showPromptForm('Edit ' + c.display_name, [
+      { id: 'display_name', label: 'Name', defaultValue: c.display_name || '' },
+      { id: 'email', label: 'Email', type: 'email', defaultValue: c.email || '' },
+      { id: 'phone', label: 'Phone', type: 'tel', defaultValue: c.phone || '' },
+      { id: 'address', label: 'Address', defaultValue: c.address || '' },
+      { id: 'notes', label: 'Notes', defaultValue: c.notes || '' },
+    ], {
+      confirmText: 'Save',
+      validate: (v) => (String(v.display_name || '').trim() ? null : 'A name is required.'),
+    });
+    if (!values) return;
+    const patch = {};
+    ['display_name', 'email', 'phone', 'address', 'notes'].forEach(k => {
+      const v = String(values[k] || '').trim();
+      patch[k] = v || null;
+    });
+    try {
+      const res = await fetchWithTimeout(SUPABASE_URL + '/rest/v1/clients?id=eq.' + encodeURIComponent(c.id), 8000, {
+        method: 'PATCH',
+        headers: Object.assign(supabaseJsonHeaders(), { 'Prefer': 'return=minimal' }),
+        body: JSON.stringify(patch),
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      showToast('Saved.');
+    } catch (e) {
+      showToast('Could not save: ' + (e.message || String(e)), { type: 'error' });
+    }
+    renderClientDuplicates();
+  }
+
+  function openClientDuplicates() {
+    activateClientsTab('portal');
+    const panel = document.getElementById('clientDuplicatesPanel');
+    if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // The Clients tab's notice: one count request, only for someone who can
+  // review (the Portal tab's permission).
+  async function refreshClientDupNotice(roleInfo) {
+    if (!roleInfo || !roleInfo.canManageInvoices) return;
+    try {
+      const pairs = await loadClientDuplicatePairs();
+      updateClientDupNotice(pairs.filter(p => p.a && p.b).length);
+    } catch (e) { /* offline or not reviewable: no notice */ }
+  }
+
   function renderPortalPanels() {
     if (portalPanelsRendered) return;
     portalPanelsRendered = true;
+    renderClientDuplicates();
     renderPortalBugReports();
     renderPortalClientErrors();
     renderReferralCredits();
