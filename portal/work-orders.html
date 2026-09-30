@@ -425,7 +425,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=ef680484b9">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=7564929584">
 </head>
 <body class="portal-page">
 
@@ -1012,10 +1012,11 @@
   const PROGRESS_STEP_LABELS = ['Received', 'Reviewing', 'Scheduled', 'Completed'];
   // "Where things stand" (Claude Design Package C8, 2026-09-29): the same
   // four real stages as the bar it replaces, drawn as steps -- done steps
-  // filled blue with a check, the current one a ring with a dot (a soft
+  // filled orange with a check, the current one a ring with a dot (a soft
   // pulse where motion is allowed), later ones hollow. Dates only where
   // the request has one: when it was sent, and the visit it's scheduled
-  // for. Blue, per the portal's colour rule for visit progress. Each date
+  // for. Orange, the brand colour (the design's blue was dropped at the
+  // owner's word, 2026-09-30). Each date
   // reads in the same zone as the line on the card that repeats it: Sent
   // like "Requested ..." (formatDate, the viewer's own), Scheduled like
   // "Scheduled for ..." (formatScheduledAt, the business's).
