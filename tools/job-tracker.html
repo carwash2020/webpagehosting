@@ -792,16 +792,16 @@
     </div>
     <div class="form-section-body">
     <div class="tool-form-row">
-      <div class="form-field"><label>Job Title / Description</label><input type="text" id="jobTitle" placeholder="Fix leaking kitchen faucet"></div>
-      <div class="form-field"><label>Client Name</label><input type="text" id="jobClient" placeholder="Sarah Miller" onchange="autofillJobClient()"></div>
+      <div class="form-field"><label for="jobTitle">Job Title / Description</label><input type="text" id="jobTitle" placeholder="Fix leaking kitchen faucet"></div>
+      <div class="form-field"><label for="jobClient">Client Name</label><input type="text" id="jobClient" placeholder="Sarah Miller" onchange="autofillJobClient()"></div>
     </div>
     <div class="tool-form-row">
-      <div class="form-field"><label>Client Phone</label><input type="tel" id="jobPhone" placeholder="(435) 555-0123"></div>
-      <div class="form-field"><label>Address</label><input type="text" id="jobAddress" placeholder="123 Main St, St. George"></div>
+      <div class="form-field"><label for="jobPhone">Client Phone</label><input type="tel" id="jobPhone" placeholder="(435) 555-0123"></div>
+      <div class="form-field"><label for="jobAddress">Address</label><input type="text" id="jobAddress" placeholder="123 Main St, St. George"></div>
     </div>
     <div class="tool-form-row">
       <div class="form-field">
-        <label>Client Email <span class="tool-sub" style="font-weight:normal;">(optional -- lets this client see this job and its warranty status in the portal once marked Done)</span></label>
+        <label for="jobClientEmail">Client Email <span class="tool-sub" style="font-weight:normal;">(optional -- lets this client see this job and its warranty status in the portal once marked Done)</span></label>
         <input type="email" id="jobClientEmail" placeholder="client@example.com">
       </div>
     </div>
@@ -814,17 +814,17 @@
          a non-empty value here becomes a pending row in the ledger. -->
     <div class="tool-form-row">
       <div class="form-field">
-        <label>Referred By <span class="tool-sub" style="font-weight:normal;">(optional -- $25 credit for them once this job is done and paid)</span></label>
+        <label for="jobReferredBy">Referred By <span class="tool-sub" style="font-weight:normal;">(optional -- $25 credit for them once this job is done and paid)</span></label>
         <input type="text" id="jobReferredBy" placeholder="Who sent them our way?">
         <p class="tool-sub" id="jobFirstTimeNudge" style="display:none; color:var(--orange); margin-top:4px;">First-time customer -- worth asking who referred them, if you haven't already.</p>
       </div>
     </div>
     <div class="tool-form-row">
-      <div class="form-field"><label>Priority</label>
+      <div class="form-field"><label for="jobPriority">Priority</label>
         <select id="jobPriority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select>
       </div>
-      <div class="form-field"><label>Due Date</label><input type="date" id="jobDate"></div>
-      <div class="form-field"><label>Status</label>
+      <div class="form-field"><label for="jobDate">Due Date</label><input type="date" id="jobDate"></div>
+      <div class="form-field"><label for="jobStatus">Status</label>
         <select id="jobStatus"><option value="not-started" selected>Not Started</option><option value="in-progress">In Progress</option><option value="done">Done</option></select>
       </div>
     </div>
@@ -837,13 +837,13 @@
          doubling as the completion date for warranty math. -->
     <div class="tool-form-row">
       <div class="form-field">
-        <label>Actual Hours Worked <span class="tool-sub" style="font-weight:normal;">(optional -- fill in once done, to see $/hr on the job card and in Profitability)</span></label>
+        <label for="jobHoursWorked">Actual Hours Worked <span class="tool-sub" style="font-weight:normal;">(optional -- fill in once done, to see $/hr on the job card and in Profitability)</span></label>
         <input type="number" id="jobHoursWorked" step="0.25" min="0" placeholder="e.g. 2.5">
       </div>
     </div>
     <div class="tool-form-row">
       <div class="form-field">
-        <label>Notes</label>
+        <label for="jobNotes">Notes</label>
         <div style="position:relative;">
           <textarea id="jobNotes" placeholder="Anything worth remembering about this job"></textarea>
           <button type="button" id="jobNotesMicBtn" class="voice-dictation-btn" style="display:none;" aria-label="Dictate notes" title="Dictate notes">
@@ -872,7 +872,7 @@
   <div class="tool-form-row">
     <div class="icon-search" id="jobSearchWrap">
       <button class="icon-search-toggle" onclick="toggleIconSearch('jobSearchWrap')" aria-label="Search jobs" title="Search jobs"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg></button>
-      <input type="text" id="jobSearch" class="icon-search-input" placeholder="Search jobs by title or client..." oninput="debouncedCall('jobSearch', renderJobs)">
+      <input type="text" id="jobSearch" aria-label="Search jobs" class="icon-search-input" placeholder="Search jobs by title or client..." oninput="debouncedCall('jobSearch', renderJobs)">
     </div>
     <button class="small-btn" id="jobSelectModeBtn" onclick="toggleJobSelectionMode()">Select</button>
     <!-- One view switch, three views (2026-09-21): List / Board /
@@ -1002,15 +1002,15 @@
     </div>
     <div class="form-section-body">
     <div class="tool-form-row">
-      <div class="form-field"><label>Name</label><input type="text" id="contactName" placeholder="Ray Bice"></div>
-      <div class="form-field"><label>Role / Company</label><input type="text" id="contactRole" placeholder="Glamour Works - Supplier"></div>
+      <div class="form-field"><label for="contactName">Name</label><input type="text" id="contactName" placeholder="Ray Bice"></div>
+      <div class="form-field"><label for="contactRole">Role / Company</label><input type="text" id="contactRole" placeholder="Glamour Works - Supplier"></div>
     </div>
     <div class="tool-form-row">
-      <div class="form-field"><label>Phone</label><input type="tel" id="contactPhone" placeholder="(435) 674-7477"></div>
-      <div class="form-field"><label>Email</label><input type="email" id="contactEmail" placeholder="ray@example.com"></div>
+      <div class="form-field"><label for="contactPhone">Phone</label><input type="tel" id="contactPhone" placeholder="(435) 674-7477"></div>
+      <div class="form-field"><label for="contactEmail">Email</label><input type="email" id="contactEmail" placeholder="ray@example.com"></div>
     </div>
     <div class="tool-form-row">
-      <div class="form-field"><label>Notes</label><input type="text" id="contactNotes" placeholder="Anything worth remembering"></div>
+      <div class="form-field"><label for="contactNotes">Notes</label><input type="text" id="contactNotes" placeholder="Anything worth remembering"></div>
     </div>
     <div class="edit-mode-note" id="contactEditNote" style="display:none;"></div>
     <button class="primary-btn" id="addContactBtn" onclick="addContact()">Add Contact</button>
@@ -1031,14 +1031,14 @@
       <button class="primary-btn note-new-btn" onclick="createNote()">+ New Note</button>
       <div class="icon-search" id="noteSearchWrap" style="margin-bottom:10px;">
         <button class="icon-search-toggle" onclick="toggleIconSearch('noteSearchWrap')" aria-label="Search notes" title="Search notes"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg></button>
-        <input type="text" id="noteSearch" class="icon-search-input" placeholder="Search notes..." oninput="debouncedCall('noteSearch', renderNotesList)">
+        <input type="text" id="noteSearch" aria-label="Search notes" class="icon-search-input" placeholder="Search notes..." oninput="debouncedCall('noteSearch', renderNotesList)">
       </div>
       <div id="notesList"></div>
     </div>
     <div class="notes-editor">
       <div class="form-section" id="noteEditorSection" style="display:none;">
-        <input type="text" id="noteTitle" placeholder="Note title" oninput="scheduleNoteSave()">
-        <textarea id="noteBody" placeholder="Anything on your mind..." oninput="scheduleNoteSave()"></textarea>
+        <input type="text" id="noteTitle" aria-label="Note title" placeholder="Note title" oninput="scheduleNoteSave()">
+        <textarea id="noteBody" aria-label="Note" placeholder="Anything on your mind..." oninput="scheduleNoteSave()"></textarea>
         <div class="save-indicator" id="noteSaveIndicator">Saved</div>
       </div>
       <div class="empty-state" id="noteEmptyState">Select a note on the left, or start a new one.</div>
@@ -1097,19 +1097,19 @@
       <h3>Log Expense<span id="quickExpenseJobLabel" style="display:block; font-size:13px; color:var(--text-dim); font-weight:400; margin-top:4px;"></span></h3>
       <div class="help-modal-body">
         <div class="tool-form-row">
-          <div class="form-field"><label>Type</label>
+          <div class="form-field"><label for="quickExpenseType">Type</label>
             <select id="quickExpenseType" onchange="toggleQuickExpenseTypeFields()">
               <option value="expense">Expense</option>
               <option value="mileage">Mileage</option>
             </select>
           </div>
-          <div class="form-field"><label>Date</label><input type="date" id="quickExpenseDate"></div>
+          <div class="form-field"><label for="quickExpenseDate">Date</label><input type="date" id="quickExpenseDate"></div>
         </div>
-        <div class="form-field"><label>Description</label><input type="text" id="quickExpenseDesc" placeholder="e.g. Replacement thermostat"></div>
+        <div class="form-field"><label for="quickExpenseDesc">Description</label><input type="text" id="quickExpenseDesc" placeholder="e.g. Replacement thermostat"></div>
         <div class="tool-form-row">
-          <div class="form-field" id="quickExpenseAmountField"><label>Amount</label><input type="number" inputmode="decimal" id="quickExpenseAmount" placeholder="0.00"></div>
-          <div class="form-field" id="quickExpenseMilesField" style="display:none;"><label>Miles</label><input type="number" inputmode="decimal" id="quickExpenseMiles" placeholder="0"></div>
-          <div class="form-field"><label>Payment</label>
+          <div class="form-field" id="quickExpenseAmountField"><label for="quickExpenseAmount">Amount</label><input type="number" inputmode="decimal" id="quickExpenseAmount" placeholder="0.00"></div>
+          <div class="form-field" id="quickExpenseMilesField" style="display:none;"><label for="quickExpenseMiles">Miles</label><input type="number" inputmode="decimal" id="quickExpenseMiles" placeholder="0"></div>
+          <div class="form-field"><label for="quickExpensePayment">Payment</label>
             <select id="quickExpensePayment">
               <option value="cash">Cash</option>
               <option value="card">Card</option>
@@ -1121,10 +1121,10 @@
           </div>
         </div>
         <div class="tool-form-row">
-          <div class="form-field"><label>Vendor / Store (optional)</label><input type="text" id="quickExpenseVendor" placeholder="Home Depot"></div>
-          <div class="form-field" id="quickExpensePartNumberField"><label>Part Number (optional)</label><input type="text" id="quickExpensePartNumber" placeholder="e.g. WPW10321304"></div>
+          <div class="form-field"><label for="quickExpenseVendor">Vendor / Store (optional)</label><input type="text" id="quickExpenseVendor" placeholder="Home Depot"></div>
+          <div class="form-field" id="quickExpensePartNumberField"><label for="quickExpensePartNumber">Part Number (optional)</label><input type="text" id="quickExpensePartNumber" placeholder="e.g. WPW10321304"></div>
         </div>
-        <div class="form-field" id="quickExpenseReceiptField"><label>Receipt photo (required)</label><input type="file" id="quickExpenseReceipt" accept="image/*"></div>
+        <div class="form-field" id="quickExpenseReceiptField"><label for="quickExpenseReceipt">Receipt photo (required)</label><input type="file" id="quickExpenseReceipt" accept="image/*"></div>
         <div class="save-indicator" id="quickExpenseSaveIndicator"></div>
         <button class="primary-btn wide" id="quickExpenseSaveBtn" onclick="submitQuickExpense()" style="margin-top:14px;">Save Expense</button>
         <p class="tool-sub" style="margin-top:10px; margin-bottom:0;"><a href="#" onclick="showQuickExpenseTutorial(); return false;" style="color:var(--blue-light);">How this works</a> &middot; or use the full <a href="/tools/finance.html#expenses" style="color:var(--blue-light);">Expenses page</a> instead.</p>

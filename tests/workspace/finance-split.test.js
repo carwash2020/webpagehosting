@@ -910,7 +910,9 @@ test('every URL in the precache list actually exists as a real file', () => {
   const arrayMatch = src.match(/const PRECACHE_URLS = \[([\s\S]*?)\n\];/);
   const urls = [...arrayMatch[1].matchAll(/'(\/[^']+)'/g)].map(m => m[1]);
   assert.ok(urls.length > 20, 'sanity check that the list was actually parsed');
-  const missing = urls.filter(u => !fs.existsSync(path.join(__dirname, '..', '..', u.replace(/^\//, ''))));
+  // A ?v= stamp is part of the cache key but not the file name (the logo
+  // is precached at the stamped URL pages request, 2026-09-30).
+  const missing = urls.filter(u => !fs.existsSync(path.join(__dirname, '..', '..', u.replace(/^\//, '').replace(/\?.*$/, ''))));
   assert.deepEqual(missing, []);
 });
 

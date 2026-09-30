@@ -21,7 +21,7 @@ test('the panel lives on clients.html, which is confirmed accessible to Owner ac
 });
 
 test('the search input requires no special setup and calls the debounced search on every keystroke', () => {
-  assert.match(HTML, /id="clientLookupSearch" placeholder="Search by email, name, or phone\.\.\." [^>]*oninput="scheduleClientLookupSearch\(\)"/);
+  assert.match(HTML, /id="clientLookupSearch" aria-label="Search clients by email, name or phone" placeholder="Search by email, name, or phone\.\.\." [^>]*oninput="scheduleClientLookupSearch\(\)"/);
 });
 
 test('the search is debounced at 400ms, matching the interval already established elsewhere in this codebase, since this fires up to 4 real REST calls per search', () => {

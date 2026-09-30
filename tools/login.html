@@ -382,10 +382,10 @@
         <span class="th-code-box"></span><span class="th-code-box"></span><span class="th-code-box"></span>
         <span class="th-code-box"></span><span class="th-code-box"></span><span class="th-code-box"></span>
       </div>
-      <input type="text" id="mfaChallengeCodeInput" class="mfa-code-input th-code-real-input" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" placeholder="123456" maxlength="6">
+      <input type="text" id="mfaChallengeCodeInput" aria-label="6-digit code from your authenticator app" class="mfa-code-input th-code-real-input" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" placeholder="123456" maxlength="6">
     </div>
     <p class="th-code-hint th-code-only">Paste works too. It checks as soon as the sixth digit is in.</p>
-    <input type="text" id="mfaRecoveryCodeInput" class="mfa-code-input th-recovery-field th-recovery-only" style="display:none;" placeholder="XXXX-XXXX" autocomplete="off">
+    <input type="text" id="mfaRecoveryCodeInput" aria-label="Recovery code" class="mfa-code-input th-recovery-field th-recovery-only" style="display:none;" placeholder="XXXX-XXXX" autocomplete="off">
     <p class="th-code-hint th-recovery-only" style="display:none;">Using a code removes your old authenticator. You'll set up a new one next.</p>
     <div class="login-error" id="mfaChallengeError"></div>
     <button type="button" class="primary-btn login-btn" id="mfaChallengeSubmitBtn">Verify</button>
@@ -408,7 +408,7 @@
         <button type="button" class="secondary-btn" id="mfaEnrollCopySecretBtn" style="display:none; padding:4px 10px; font-size:12px; flex:0 0 auto;">Copy</button>
       </div>
     </div>
-    <input type="text" id="mfaEnrollCodeInput" class="mfa-code-input" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" placeholder="123456" maxlength="6">
+    <input type="text" id="mfaEnrollCodeInput" aria-label="6-digit code from your authenticator app" class="mfa-code-input" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" placeholder="123456" maxlength="6">
     <div class="login-error" id="mfaEnrollError"></div>
     <button type="button" class="primary-btn login-btn" id="mfaEnrollVerifyBtn">Verify &amp; Continue</button>
     <button type="button" class="mfa-link-btn" id="mfaEnrollCancelLink">Cancel and sign out</button>

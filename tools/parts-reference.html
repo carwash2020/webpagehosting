@@ -407,7 +407,7 @@
        help modal. Pinned / recent chips follow directly under the box. -->
   <div class="pr-search-filter-row">
     <div class="form-field pr-search-field" style="margin-bottom:0;">
-      <label>Search</label>
+      <label for="prSearchInput">Search</label>
       <input type="text" id="prSearchInput" placeholder="Search type, brand, or model..." autocomplete="off" enterkeyhint="search" oninput="debouncedCall('prSearch', renderUnits)">
     </div>
     <div class="form-field pr-filter-field" style="margin-bottom:0;">
@@ -434,29 +434,29 @@
     <div id="prAddUnitForm" style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
       <div class="tool-form-row">
         <div class="form-field">
-          <label>Appliance Type</label>
+          <label for="prNewType">Appliance Type</label>
           <input type="text" id="prNewType" list="prTypeDatalist" placeholder="e.g. Washer, Dryer, Dishwasher" autocomplete="off">
           <datalist id="prTypeDatalist"></datalist>
         </div>
         <div class="form-field">
-          <label>Brand</label>
+          <label for="prNewBrand">Brand</label>
           <input type="text" id="prNewBrand" list="prBrandDatalist" placeholder="e.g. GE" autocomplete="off">
           <datalist id="prBrandDatalist"></datalist>
         </div>
       </div>
       <div class="tool-form-row">
         <div class="form-field full">
-          <label>Model / Series (optional)</label>
+          <label for="prNewModel">Model / Series (optional)</label>
           <input type="text" id="prNewModel" placeholder="e.g. GFW650 Series">
         </div>
       </div>
       <div class="tool-form-row">
         <div class="form-field">
-          <label>Manual Link (optional)</label>
+          <label for="prNewManualLink">Manual Link (optional)</label>
           <input type="text" id="prNewManualLink" placeholder="https://...">
         </div>
         <div class="form-field">
-          <label>Parts Catalog Link (optional)</label>
+          <label for="prNewPartsLink">Parts Catalog Link (optional)</label>
           <input type="text" id="prNewPartsLink" placeholder="https://...">
         </div>
       </div>

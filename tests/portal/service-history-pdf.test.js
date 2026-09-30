@@ -13,7 +13,6 @@ const vm = require('vm');
 
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const JOBS = fs.readFileSync(repo('portal', 'jobs.html'), 'utf8');
-const DASHBOARD = fs.readFileSync(repo('portal', 'dashboard.html'), 'utf8');
 
 // Skips past the parameter list before looking for the body's brace --
 // buildServiceHistory takes a destructured object, so the first "{"
@@ -157,10 +156,9 @@ test('the download only appears once there is a job to put in it', () => {
   assert.match(extractFn(JOBS, 'renderJobs'), /currentJobs = jobs;\s*document\.getElementById\('historyDownload'\)\.hidden = false;/);
 });
 
-test('jsPDF is the same pinned build and integrity hash Invoices already loads', () => {
-  const tag = (src) => src.match(/<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/jspdf@[^"]+" integrity="[^"]+" crossorigin="anonymous" async><\/script>/);
-  assert.ok(tag(JOBS), 'jobs.html loads jsPDF with SRI');
-  assert.equal(tag(JOBS)[0], tag(DASHBOARD)[0]);
+test('jsPDF is fetched on the first tap (same pinned build as Invoices, via pdfLoadJsPdf)', () => {
+  assert.doesNotMatch(JOBS, /<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/jspdf@/);
+  assert.match(extractFn(JOBS, 'downloadServiceHistory'), /try \{ await pdfLoadJsPdf\(\); \} catch \(e\)/);
 });
 
 test('every lookup is scoped to the signed-in email with explicit columns -- nothing internal can ride along', () => {

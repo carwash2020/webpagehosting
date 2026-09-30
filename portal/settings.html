@@ -593,7 +593,7 @@
             <img id="mfaQrImg" alt="Scan this QR code with your authenticator app" style="width:180px; height:180px; background:#fff; border-radius:8px; padding:8px;">
           </div>
           <div class="set-card-sub" style="margin-bottom:8px;">Scan this with an authenticator app (Google Authenticator, Authy, etc.), then enter the 6-digit code it shows.</div>
-          <input type="text" id="mfaCodeInput" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" maxlength="6" style="width:100%; padding:11px 13px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:8px; color:var(--white); font-size:16px; font-family:inherit; box-sizing:border-box; margin-bottom:10px; letter-spacing:2px; text-align:center;">
+          <input type="text" id="mfaCodeInput" aria-label="6-digit code from your authenticator app" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" maxlength="6" style="width:100%; padding:11px 13px; background:var(--bg-panel-2); border:1px solid var(--border); border-radius:8px; color:var(--white); font-size:16px; font-family:inherit; box-sizing:border-box; margin-bottom:10px; letter-spacing:2px; text-align:center;">
           <div style="display:flex; gap:10px;">
             <button class="btn secondary-btn" id="mfaEnrollCancelBtn" type="button" style="flex:1; justify-content:center;">Cancel</button>
             <button class="btn orange" id="mfaEnrollVerifyBtn" type="button" style="flex:1; justify-content:center;">Verify &amp; Turn On</button>

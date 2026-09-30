@@ -14,18 +14,13 @@ const path = require('path');
 const PAGE_PATH = path.join(__dirname, '..', '..', 'portal', 'quotes.html');
 const html = fs.readFileSync(PAGE_PATH, 'utf8');
 
-test('jsPDF is loaded from the same CDN version/integrity as portal/dashboard.html', () => {
-  const dashboardHtml = fs.readFileSync(
-    path.join(__dirname, '..', '..', 'portal', 'dashboard.html'),
-    'utf8'
-  );
-  const dashboardMatch = dashboardHtml.match(/<script src="(https:\/\/cdn\.jsdelivr\.net\/npm\/jspdf@[^"]+)" integrity="([^"]+)"/);
-  assert.ok(dashboardMatch, 'expected to find the jsPDF script tag in portal/dashboard.html to compare against');
-
-  const quotesMatch = html.match(/<script src="(https:\/\/cdn\.jsdelivr\.net\/npm\/jspdf@[^"]+)" integrity="([^"]+)"/);
-  assert.ok(quotesMatch, 'expected portal/quotes.html to load jsPDF via the same CDN pattern');
-  assert.equal(quotesMatch[1], dashboardMatch[1], 'jsPDF CDN URL/version should match the invoice PDF exactly');
-  assert.equal(quotesMatch[2], dashboardMatch[2], 'jsPDF integrity hash should match the invoice PDF exactly');
+// jsPDF loads on the first download since 2026-09-30 (pdfLoadJsPdf() in
+// js/pdf-layout.js, pinned to the Workspace's build -- checked in
+// jspdf-on-demand.test.js), not with the page.
+test('jsPDF is fetched on the first download, not with the page', () => {
+  assert.doesNotMatch(html, /<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/jspdf@/);
+  assert.match(html, /<script src="\/js\/pdf-layout\.js\?v=[0-9a-f]+" defer><\/script>/);
+  assert.match(html, /async function downloadQuotePDF\(quoteId\) \{[\s\S]*?try \{ await pdfLoadJsPdf\(\); \} catch \(e\)/);
 });
 
 test('downloadQuotePDF is defined and wired to a real button on every quote card', () => {

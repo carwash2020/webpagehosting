@@ -713,7 +713,7 @@
 // specificity) when there's nothing scheduled, and unhides it the
 // moment a real job exists again. workspace.html is precached. Same
 // reasoning as every prior bump in this file's history.
-const CACHE_NAME = 'th-workspace-v381'; // precache-fingerprint:388bd5a6d4b3
+const CACHE_NAME = 'th-workspace-v382'; // precache-fingerprint:4b494dd2d531
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
@@ -775,7 +775,9 @@ const PRECACHE_URLS = [
   '/tools/manifest.json',
   // Added 2026-08-14 -- same gap as above, these 2 scripts were live but unlisted.
   '/tools/qrcode-lib.js', '/tools/push-notifications.js',
-  '/images/logo-signature-orange.webp', '/images/icon-192.png', '/images/icon-512.png', '/images/apple-touch-icon.png',
+  // With the ?v= every page uses (2026-09-30): precached bare, the copy
+  // was never matched, ~57 KB fetched per install for nothing.
+  '/images/logo-signature-orange.webp?v=202608142300', '/images/icon-192.png', '/images/icon-512.png', '/images/apple-touch-icon.png',
 ];
 
 self.addEventListener('install', (event) => {

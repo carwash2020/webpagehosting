@@ -669,7 +669,7 @@
       <h3>Confirm dev password</h3>
       <div class="help-modal-body">
         <p style="margin-bottom:14px;">This is a soft confirmation to catch an accidental save, not real protection against someone technically determined -- anyone who's already logged into Connor's account and views this page's source could bypass it. It exists to stop a stray tap or someone else picking up an unlocked phone. Only asked once per browser session -- closing the tab resets it.</p>
-        <input type="password" id="devPasswordInput" placeholder="Dev password" style="width:100%; margin-bottom:12px;" onkeydown="if(event.key==='Enter') devPasswordSubmit();">
+        <input type="password" id="devPasswordInput" aria-label="Dev password" placeholder="Dev password" style="width:100%; margin-bottom:12px;" onkeydown="if(event.key==='Enter') devPasswordSubmit();">
         <div class="form-footer">
           <button class="primary-btn" onclick="devPasswordSubmit()">Confirm</button>
           <button class="secondary-btn" onclick="devPasswordCancel()">Cancel</button>

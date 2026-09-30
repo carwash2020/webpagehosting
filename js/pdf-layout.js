@@ -27,6 +27,32 @@
 // No module system, same as every other shared script here: a plain
 // <script src> tag, and everything below becomes a plain global.
 
+// jsPDF on demand (2026-09-30). The portal's Invoices, Visits and
+// Estimates pages used to load the ~360 KB library on every visit to
+// support a download most visits never make; they now call this on the
+// first download instead. Same pinned build and integrity hash as the
+// <script> tag the Workspace tools load (tests/portal/jspdf-on-demand
+// .test.js keeps them equal). One request per page, however many clicks.
+const PDF_JSPDF_SRC = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+const PDF_JSPDF_INTEGRITY = 'sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk';
+let pdfJsPdfLoading = null;
+function pdfLoadJsPdf() {
+  if (window.jspdf) return Promise.resolve(window.jspdf);
+  if (!pdfJsPdfLoading) {
+    pdfJsPdfLoading = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = PDF_JSPDF_SRC;
+      s.integrity = PDF_JSPDF_INTEGRITY;
+      s.crossOrigin = 'anonymous';
+      s.async = true;
+      s.onload = () => (window.jspdf ? resolve(window.jspdf) : reject(new Error('jsPDF loaded but did not start')));
+      s.onerror = () => { pdfJsPdfLoading = null; s.remove(); reject(new Error('jsPDF could not be downloaded')); };
+      document.head.appendChild(s);
+    });
+  }
+  return pdfJsPdfLoading;
+}
+
 // Print palette. ORANGE is the brand token (#ff8000); on white paper it
 // is used for rules, fills and large type only. Small orange text uses
 // ORANGE_DARK (#c96400, the site's --orange-dark), which reads on paper.
