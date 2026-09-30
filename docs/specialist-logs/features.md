@@ -3414,6 +3414,17 @@ Things worth knowing before touching this area:
 - **Deploy order:** apply the SQL and merge back to back. The new `sync.js` sends `legacy_client_id`, which PostgREST rejects if the column doesn't exist yet, and the nightly backup fails if `scripts/backup-tables.json` and the live table list disagree in either direction.
 - Test: `tests/sync/clients-table-db.test.js` (16, PGlite, running the real 06/07/01 files).
 
+## 2026-09-30 -- Item 1 Phase 1b part 1: seed `clients` and list duplicate candidates
+
+`sql/item1/02_client_seeding_and_duplicate_candidates.sql` adds `client_duplicate_candidates` (one row per pair, with `reasons` and a review `status`) and two postgres-only functions: `item1_seed_clients(tenant, sync_code)` and `refresh_client_duplicate_candidates(tenant)`.
+
+- **Seed order:** blob registry (`legacy_id`), blob contacts (`legacy_contact_id`, role, notes), portal accounts (linked back through `client_profiles.client_id`), then record names nothing else covers. Nothing is merged at seed time; the same person from three sources is three rows and three candidate pairs.
+- **Deleted clients stay deleted:** a live tombstone blocks a registry or contact entry by id, and a record name by `normalizedName`, the same rule as `thBackfillClients()`. Jobs still pointing at a deleted client (production: "Yelp customer", "Unknown") are the known unmatched remainder.
+- **Record names:** the latest record's spelling and details win; `created_at` is the first record's. Contract fields are read from `email`/`phone`/`serviceAddress`, the keys the form actually saves.
+- **Phone matching** uses the last 10 digits (7+ only), so `(435)632-6901` and `4356326901` match and a leading 1 doesn't matter.
+- **Production dry run (rolled back):** 9 registry + 1 contact + 1 portal = 11 clients, 0 record names; 3 candidate pairs, all Connor Dodart (email, name, phone); 2 unmatched jobs, both tombstoned clients.
+- Test: `tests/sync/client-seeding-db.test.js` (18, PGlite, running the real 06/07/01/02 files).
+
 <!-- Add new entries above this line -->
 
 - 2026-09-29 (from the visual lane, Claude Design Package C8): the design's "Where things stand" timeline has five steps: Requested → Scheduled → On the way → Done → Paid. The portal has data for only four of them, spread over separate records. So it shipped as four steps on each request card (`portal/work-orders.html`: Sent → Reviewed → Scheduled → Done, from `client_portal_work_orders.status`, with the sent and scheduled dates). Two steps need new data:

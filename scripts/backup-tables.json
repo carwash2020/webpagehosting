@@ -3,6 +3,7 @@
   "tables": {
     "tenants": "id",
     "clients": "id",
+    "client_duplicate_candidates": "id",
     "workspace_sync": "code",
     "workspace_sync_wiki": "code",
     "jobs": "id",
