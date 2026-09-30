@@ -3396,6 +3396,24 @@ Full SQL lives in `sql/multi-tenant/01`-`05`, applied to production in that orde
 - **Advisor cleanup:** `get_advisors(security)` flagged the 6 tenant-derivation trigger functions as directly RPC-callable. Trigger firing doesn't require the DML role to hold `EXECUTE` (that ACL check is only for a direct call), so `05_lock_down_trigger_functions.sql` revokes it from everyone without affecting the triggers -- confirmed live afterward.
 - **Not yet done, by design (Tier 0 only):** no signup/provisioning flow for a second tenant, no per-tenant branding, no billing. Edge functions (service-role, bypass RLS entirely) aren't tenant-scoped -- harmless with one real tenant, a real gap the moment a second one exists. See the roadmap conversation for what Tier 1 needs.
 
+## 2026-09-30 -- Item 1 Phase 0a-0c: inventory before the migration
+
+`docs/ITEM-1-INVENTORY.md` classifies every synced key, lists every read and write of the migrated keys, maps each blob field to its column, and documents how deletes propagate. `scripts/item1-census.js` regenerates the call-site list (208 direct sites, 42 shared helpers); re-run it before the Phase 4 device checklist and each Phase 5 cutover.
+
+Things worth knowing before touching this area:
+- Money columns are unconstrained `numeric`, business dates are `text`, and there was no `updated_at` trigger (so `updated_at` never changed). All three matter for Phases 3-4.
+- Every id is a `bigint` from `Date.now()` except clients (`'c_…'` strings) and contracts (`max(id)+1`), and many tables reference them as `bigint`. Decision 6: keep bigint ids, minted collision-safe on the device.
+- Full Backup (`dev-tools.html` `ALL_SYNCED_KEYS`) covers 17 of the 49 synced keys.
+
+## 2026-09-30 -- Item 1 Phase 1a step 1: `clients` table; old client ids move to `legacy_client_id`
+
+`sql/item1/01_clients_table_and_legacy_client_id.sql` creates `clients`, with address, role and notes (decisions 2 and 3), generated match columns, `legacy_id` / `legacy_contact_id`, the `set_tenant_id` trigger, a staff tenant policy, and a reusable `set_updated_at()` trigger. `contracts` and `client_profiles` get the uuid `client_id` FK.
+
+- **Why `client_id` moves in two steps:** `jobs`, `invoices` and `quotes` already use `client_id text` for the old `'c_…'` ids. Retyping it at once would fail every save from a tab still on old cached code (22P02), the Tier 0 failure shape. Step 1 adds `legacy_client_id`, copies the values, and switches `tools/sync.js` to write it. A trigger (`copy_client_id_to_legacy`) keeps old tabs working and counts their writes in `legacy_client_id_writes`. Step 2 swaps in the uuid FK once that count stops moving.
+- **Gotcha:** the mirror's upsert is `INSERT ... ON CONFLICT DO UPDATE`, so the BEFORE INSERT trigger fires on the proposed row even when it becomes an update. Every old-tab save is logged, re-saves included. That's what step 2 relies on.
+- **Deploy order:** apply the SQL and merge back to back. The new `sync.js` sends `legacy_client_id`, which PostgREST rejects if the column doesn't exist yet, and the nightly backup fails if `scripts/backup-tables.json` and the live table list disagree in either direction.
+- Test: `tests/sync/clients-table-db.test.js` (16, PGlite, running the real 06/07/01 files).
+
 <!-- Add new entries above this line -->
 
 - 2026-09-29 (from the visual lane, Claude Design Package C8): the design's "Where things stand" timeline has five steps: Requested → Scheduled → On the way → Done → Paid. The portal has data for only four of them, spread over separate records. So it shipped as four steps on each request card (`portal/work-orders.html`: Sent → Reviewed → Scheduled → Done, from `client_portal_work_orders.status`, with the sent and scheduled dates). Two steps need new data:

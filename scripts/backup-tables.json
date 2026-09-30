@@ -2,6 +2,7 @@
   "_about": "Every table in Supabase's public schema, and what the daily private backup (backup-sensitive-data.yml -> scripts/backup-tables.py) does with it. The script reads the live table list on every run and fails if a table isn't named here, so a new table can't go unbacked-up silently (this happened twice: 20 tables in 2026-09, then 16 more by 2026-09-30). 'tables' are backed up, each as database/<table>.json, fetched 1000 rows at a time in the order given (the primary key, so pages don't overlap). 'public_elsewhere' are backed up publicly by backup-cms-content.yml. 'excluded' are left out on purpose, each with its reason.",
   "tables": {
     "tenants": "id",
+    "clients": "id",
     "workspace_sync": "code",
     "workspace_sync_wiki": "code",
     "jobs": "id",
@@ -54,6 +55,7 @@
     "cron_tracked_http_requests": "Cron watchdog telemetry: no PII, regenerated as jobs run.",
     "cron_watchdog_state": "Cron watchdog's own working state: rebuilt on its next run.",
     "internal_mfa_gate_log": "Two-factor gate telemetry (what log mode would have blocked): reviewed live, not restored.",
-    "internal_mfa_recovery_codes": "Hashes of one-time sign-in codes. A restored copy would bring back codes already used or replaced, and copies of sign-in secrets shouldn't multiply; after a restore, people generate new codes."
+    "internal_mfa_recovery_codes": "Hashes of one-time sign-in codes. A restored copy would bring back codes already used or replaced, and copies of sign-in secrets shouldn't multiply; after a restore, people generate new codes.",
+    "legacy_client_id_writes": "Item 1 transition log: which tables an old cached sync.js last wrote client_id to, and when. No client data; dropped in Phase 1a step 2."
   }
 }

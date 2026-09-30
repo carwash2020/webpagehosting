@@ -91,10 +91,11 @@ Run it now to get a baseline, then after each later phase. It is the same tool P
 
 This is real new schema, not a column added to an existing table.
 
-**1a. Schema.**
-- New `clients` table: `id uuid pk` (this is the `client_id` every other table references), `tenant_id`, `display_name`, one email and one phone (decision 2), normalized match columns (lowercased/trimmed name, digits-only phone, lowercased email), `created_at`, `updated_at`, `merged_into_id` (nullable, for tracing merges).
+**1a. Schema.** (Adjusted 2026-09-30 by the inventory decisions; built in `sql/item1/01_clients_table_and_legacy_client_id.sql`.)
+- New `clients` table: `id uuid pk` (this is the `client_id` every other table references), `tenant_id` (with the `set_tenant_id` trigger), `display_name`, one email, one phone and one address (decision 2), `role` and `notes` from contacts, normalized match columns (`name_norm`, `email_norm`, `phone_digits`, generated), `legacy_id` (the old `'c_…'` registry id) and `legacy_contact_id` for seeding joins, `seed_source`, `needs_match`, `merged_into_id`, `created_at`, `updated_at` (with an `updated_at` trigger).
 - `client_profiles` stays the portal *account* table and gains `client_id` FK → `clients`. A portal login is not the same thing as a client record; one client may have zero or several portal accounts.
-- Jobs, invoices, quotes, contracts gain a nullable `client_id` FK. It becomes `NOT NULL` only after backfill and dedup are complete.
+- `jobs`, `invoices` and `quotes` already have `client_id text` holding the old registry ids. Those move to `legacy_client_id` in two steps, so a tab still running old cached code never fails a save: step 1 adds `legacy_client_id`, copies the values, and switches the mirror to write it (a trigger copies from `client_id` for old tabs and logs that it did); step 2, once the log shows no old writers, replaces the text `client_id` with the uuid FK. `contracts` gets `legacy_client_id` and the uuid `client_id` in step 1, since it has no column in the way.
+- The uuid `client_id` columns stay nullable. They become `NOT NULL` only after backfill and dedup are complete.
 - One email and one phone per client (decision 2, 2026-09-30). No contact-points child table.
 
 **1b. Seeding and dedup.**
