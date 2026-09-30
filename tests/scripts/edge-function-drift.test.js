@@ -81,7 +81,7 @@ test('the workflow checks after merges to edge-functions/ and weekly, reads sour
   assert.match(WORKFLOW, /cron: '40 14 \* \* 1'/);
   assert.match(WORKFLOW, /secrets\.SUPABASE_ACCESS_TOKEN/);
   assert.match(WORKFLOW, /supabase@2 functions list --project-ref "\$PROJECT_REF" -o json > live\/functions\.json/);
-  assert.match(WORKFLOW, /supabase@2 functions download "\$slug" --project-ref "\$PROJECT_REF"/);
+  assert.match(WORKFLOW, /supabase@2 functions download "\$slug" --project-ref "\$PROJECT_REF" --use-api/, 'original files, not the Docker re-emit');
   assert.match(WORKFLOW, /run: node scripts\/check-edge-function-drift\.js --list live\/functions\.json --live live\/supabase\/functions/);
   assert.doesNotMatch(WORKFLOW.replace(/^#.*$/gm, ''), /functions deploy/, 'reports drift; doesn\'t deploy');
   assert.match(WORKFLOW, /permissions:\n\s+contents: read/);
