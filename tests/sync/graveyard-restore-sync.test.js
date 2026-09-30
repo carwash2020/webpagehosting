@@ -165,7 +165,11 @@ test('which tombstones count: none restored, restored after the delete, deleted 
 
 test('every tombstone read in applySyncData goes through the same rule', () => {
   const apply = SYNC.slice(SYNC.indexOf('function applySyncData('), SYNC.indexOf('const SYNC_HISTORY_KEY'));
-  const reads = apply.match(/localStorage\.getItem\('th_[a-z_]+_tombstones'\) \|\| '\[\]'\)[^;]*/g) || [];
-  assert.ok(reads.length >= 16);
+  // Direct reads (the Wiki's two) plus the one read through
+  // ID_TOMBSTONE_KEY_FOR, the table every other list is filtered by (2026-09-30).
+  const reads = apply.match(/localStorage\.getItem\((?:'th_[a-z_]+_tombstones'|tombstoneKey)\) \|\| '\[\]'\)[^;]*/g) || [];
+  const tableEntries = (apply.match(/const ID_TOMBSTONE_KEY_FOR = \{([\s\S]*?)\};/)[1].match(/: 'th_[a-z_]+_tombstones',/g) || []).length;
+  assert.ok(tableEntries >= 16, 'the table covers every id-keyed list');
+  assert.ok(reads.length >= 3);
   assert.deepEqual(reads.filter(r => !r.includes('.filter(tombstoneCounts)')), []);
 });

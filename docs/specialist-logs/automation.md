@@ -387,3 +387,11 @@ around.
 - Not verifiable from the sandbox (no token, supabase.com blocked): the CLI download step. The compare script is tested (`tests/scripts/edge-function-drift.test.js`, 3), including a run against copies of all 41 repo functions.
 - Checked by hand today instead: the live list has the same 41 functions as `edge-functions/`. Since the folder was created (a9f8d44, 2026-09-23) only the 2026-09-25 changes touched functions, and every one of those was redeployed after (18:20-18:32). `get-job-photo-urls` (live since 09-16) matches the repo line for line. The full content diff waits for the workflow.
 
+## 2026-09-30 -- the 2026-09-25 automation notes, done
+
+- **`robots.txt`:** each of the 5 AI answer-bot groups now repeats `Disallow: /.claude/`, `/tools/` and `/portal/`. A bot obeys only its most specific group (RFC 9309), so they weren't bound by the `*` group's blocks. The groups stay separate (the robots test reads one block per User-agent).
+- **Lighthouse** audits `/locations/handyman-hurricane-ut.html` instead of the redirect stub it had been measuring since the 2026-09-21 move.
+- **`check-links.py`:**
+  - A proxy refusal (`Tunnel connection failed`) is now UNVERIFIABLE, not BROKEN. It only happens behind a sandboxed session's proxy (CI has none) and says nothing about the link. The suite's check-links test now passes in a sandbox too.
+  - Its docstring ("7 landing pages") and `check-links.yml`'s comment ("6 public pages") now describe the real list: 40 pages, kept in step with the sitemap.
+

@@ -98,6 +98,13 @@ click a setting by hand.
    written text, so schema stayed at 4 (visible quotes, not Google's
    raw total).~~
 
+   **Open again (2026-09-30):** the live count in Site Content says 6
+   (edited 2026-09-24), while the static text and JSON-LD on the
+   homepage, booking page and three St. George service pages still say
+   7. Visitors see 6 (the live value replaces it); a crawler that
+   doesn't run scripts reads 7. Steve: confirm the real Google count,
+   then set it in Site Content and the static copies are brought in line.
+
    **Update (2026-09-17, owner unlock):** GBP currently shows **5.0
    stars from 7 Google reviews**. Connor unlocked matching that total.
    `aggregateRating` is now ratingValue 5.0 / reviewCount 7, and
@@ -286,10 +293,13 @@ click a setting by hand.
       2026-09-08 audit. **Left alone and still fully visible** this
       pass; decide whether they should go, hide, or stay before anyone
       touches them again.
-    - **Redraw the teardown SVG** with the mockup's new parts (a lit
+    - ~~**Redraw the teardown SVG**~~ Done 2026-09-29 (the prototype port;
+      the drain pump, its callout and chip are in `index.html`). Original note:
+      with the mockup's new parts (a lit
       timer readout, a perforated drum pattern, a drain pump, a glass
       door gradient). Real illustration work, not a style tweak.
-    - **A full pointer-drag overlay on the before/after compare frame**,
+    - ~~**A full pointer-drag overlay on the before/after compare frame**~~
+      Done (pointer handlers on `revealFrame` in `index.html`). Original note:
       matching the mockup's `onPointerDown/Move/Up` interaction. The
       live page already has a working, tested, accessible range-input
       control doing this job; adding a second interaction layer is new
@@ -665,7 +675,9 @@ reference:
   Policies), with the FAQPage JSON-LD reordered to match the new
   visible order exactly. The Supabase-fetched live-FAQ path still
   renders flat when it loads -- grouping that too needs a category
-  column added to the `site_faq` table, not done here.
+  column added to the `site_faq` table, not done here. (Since done:
+  `site_faq` has a `category` column, checked live 2026-09-30, and the
+  live fetch selects it.)
 - **Custom invoice/quote line-item disclosure** (`portal/dashboard.html`,
   `portal/quotes.html`) -- the existing CSS chevron marker now gets a
   real open/close height transition (CSS-grid `0fr`/`1fr` trick)
@@ -925,6 +937,12 @@ action needed.
 
 ## Client portal redesign (2026-09-25 design handoff) -- deferred screens
 
+> **Mostly superseded (2026-09-30 note).** Portal v2 parts 1-2 (2026-09-28)
+> and Claude Design Package C (2026-09-29) built much of this: the referral
+> link on Home, urgency on requests, the owed dot on every page, and "where
+> things stand" steps on each request (C8, in place of a separate visit
+> page). Check the code before treating any line below as open.
+
 The design handoff (`Client Portal.dc.html` / `Client Portal Board.dc.html`,
 full spec in the handoff's `HANDOFF.md`) covers 11 screens. This branch
 (`portal-redesign`) shipped only the shell -- everything below is real,
@@ -1094,6 +1112,11 @@ portal inline styles into sheets, desktop SVG note size. None has a user
 impact worth the churn.
 
 ## Workspace tools redesign (2026-09-25 handoff, 4 phases)
+
+> **Superseded (2026-09-30 note).** Workspace W1-W5 (2026-09-28) and the
+> app v2 packages (2026-09-29) rebuilt these screens; see visual.md. What
+> follows is the original plan, kept for history -- check the code before
+> treating any line below as open.
 
 From the design handoff (`HANDOFF.md` + the approved `.dc.html`
 prototype exports, a Claude Code session's scratchpad folder -- ask for

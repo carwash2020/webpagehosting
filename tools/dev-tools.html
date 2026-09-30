@@ -53,14 +53,14 @@
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=8d5b635c84">
-<script src="/tools/data-layer.js?v=b2586a446b" defer></script>
+<script src="/tools/data-layer.js?v=114109db2f" defer></script>
 <script src="/tools/dev-tools-shared.js?v=ab4eedc467" defer></script>
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=7e8fb6ef3d" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
-<script src="/tools/sync.js?v=ac03ce9686" defer></script>
+<script src="/tools/sync.js?v=ef737be2c6" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -3519,6 +3519,7 @@
     renderFlaggedItems();
   }
   function deleteFlaggedItem(id) {
+    if (typeof thAddFlaggedTombstone === 'function') thAddFlaggedTombstone(id); // so a stale device can't bring it back
     const items = loadFlaggedItems().filter(i => i.id !== id);
     saveFlaggedItems(items);
     renderFlaggedItems();

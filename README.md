@@ -6048,3 +6048,19 @@ Tests: `tests/scripts/backup-scripts.test.js` (7), `tests/scripts/edge-function-
 
 Tests: `tests/design/batch2-labels-and-loading.test.js` (6), plus the updated portal PDF tests.
 
+## What changed, 2026-09-30 -- Sync keeps your latest edit; deleted notes and flags stay deleted
+
+- **Your latest edit wins over your own older copy.** After the first sync of a new kind of record (or a sync that briefly couldn't reach the server), editing that record again before the next sync could lose the edit to the older copy on the server. Each device now remembers exactly what it last sent, so its newer edits are kept.
+- **Deleted notes and flagged pages stay deleted.** A phone or computer that hadn't synced in a while could bring a deleted Job Tracker note or a "Flag this page" item back. They now get the same delete-tracking every other record has.
+
+Tests: `tests/sync/merge-base-and-note-tombstones.test.js` (7).
+
+## What changed, 2026-09-30 -- Search data fixes, and older to-dos cleaned up
+
+- **Search engines get fuller data.** Every blog post now tells Google which picture and page it belongs to. The homepage lists La Verkin and Leeds among the towns served, the job posting drops an invalid value and gains a postal code, and the blog index and booking page get the large link preview on X/Twitter. The homepage and booking page have up-to-date sitemap dates.
+- **AI answer bots stay out of internal pages.** ChatGPT, Perplexity and Claude's search bots were allowed everywhere, including the Workspace and portal paths. They now skip those, as regular search engines already do.
+- **Checks point at the right pages.** The weekly speed check measures the real Hurricane page instead of an old redirect, and the link checker no longer calls a link broken just because a sandboxed session's network blocked it.
+- **To-do list cleaned up.** Items that were already done (the washer teardown drawing, the before/after drag, grouped FAQs, the Workspace and portal redesign plans) are marked done or superseded in `docs/ACTION-ITEMS.md`. The review count (6 or 7) is back on the list for Steve to confirm.
+
+Tests: `tests/seo/batch4-search-data.test.js` (8).
+

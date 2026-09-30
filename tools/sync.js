@@ -135,6 +135,10 @@ const SYNC_DATA_KEYS = [
   'th_income_log',
   'th_contact_tombstones',
   'th_tracker_contacts',
+  // Notes and flagged items had no delete-tracking (2026-09-30): a device
+  // that hadn't synced since a delete pushed its old copy back and the
+  // note/flag reappeared everywhere. Tombstone before list, as above.
+  'th_note_tombstones',
   'th_tracker_notes_v2',
   'th_mileage_rate',
   'th_price_ref_tombstones',
@@ -195,6 +199,7 @@ const SYNC_DATA_KEYS = [
   // full message -- just the page, an optional note, and a timestamp.
   // Synced for the same reason as Known Issues above: flagged on the
   // phone, reviewed later in Dev Tools on any device.
+  'th_flagged_tombstones',
   'th_flagged_items',
   'th_setaside_rate',
   // Runway Dashboard's own data -- personal budget, business-month
@@ -249,6 +254,42 @@ const SYNC_BASE_KEY = 'th_sync_base';
 
 function loadSyncBase() {
   try { return JSON.parse(localStorage.getItem(SYNC_BASE_KEY) || '{}'); } catch (e) { return {}; }
+}
+
+// After a successful push the server holds exactly what was sent, so that
+// is the base the next merge should diff against (2026-09-30). The base
+// used to be saved only inside applySyncData(), for keys the server
+// already had: the first push of a new key, or a push after the pre-push
+// fetch failed, left no base (or an old one), and the next pull treated
+// this device's later edits to those records as losing to the server's
+// older copy ("remote wins" with no base, or a false conflict). Same key
+// set applySyncData() keeps a base for.
+const SYNC_BASE_SKIPPED_KEYS = new Set(['th_sync_conflicts', 'th_parts_reference_units', 'th_client_errors', 'th_graveyard']);
+function pushedArrayFor(data, k) {
+  if (!MERGE_KEY_FIELD[k] || SYNC_BASE_SKIPPED_KEYS.has(k) || typeof data[k] !== 'string') return null;
+  try {
+    const arr = JSON.parse(data[k]);
+    return Array.isArray(arr) ? arr : null;
+  } catch (e) {
+    return null; // not a JSON array: leave this key's base as it was
+  }
+}
+function saveSyncBaseFromPushed(data, keys) {
+  try {
+    const base = loadSyncBase();
+    let changed = false;
+    (keys || []).forEach(k => {
+      const arr = pushedArrayFor(data, k);
+      if (arr) { base[k] = arr; changed = true; }
+    });
+    if (changed) localStorage.setItem(SYNC_BASE_KEY, JSON.stringify(base));
+  } catch (e) {
+    // Best-effort bookkeeping (a full localStorage, say): the push itself
+    // already succeeded. Logged so it shows in Dev Tools' client errors.
+    if (typeof logClientError === 'function') {
+      logClientError('saveSyncBaseFromPushed: could not save the merge base after a push: ' + (e && e.message ? e.message : String(e)), 'sync.js', null, null, e && e.stack);
+    }
+  }
 }
 
 function saveSyncBaseForKey(key, arr) {
@@ -329,6 +370,7 @@ const MERGE_KEY_FIELD = {
   th_graveyard: 'graveyardId',
   th_tracker_contacts: 'id',
   th_tracker_notes_v2: 'id',
+  th_note_tombstones: 'id',
   th_expense_log: 'id',
   th_income_log: 'id',
   th_invoices: 'id',
@@ -342,6 +384,7 @@ const MERGE_KEY_FIELD = {
   th_sync_conflicts: 'id',
   th_known_issues: 'id',
   th_flagged_items: 'id',
+  th_flagged_tombstones: 'id',
   'rd_personal-expenses': 'id',
   'rd_personal-income': 'id',
   'rd_business-months': 'month',
@@ -584,6 +627,25 @@ function applySyncData(obj, keysToApply) {
     return Array.from(byId.values());
   };
 
+  const ID_TOMBSTONE_KEY_FOR = {
+    th_clients: 'th_client_tombstones',
+    th_tracker_jobs: 'th_job_tombstones',
+    th_expense_log: 'th_expense_tombstones',
+    th_income_log: 'th_income_tombstones',
+    th_tracker_contacts: 'th_contact_tombstones',
+    th_contracts: 'th_contract_tombstones',
+    th_invoices: 'th_invoice_tombstones',
+    th_quotes: 'th_quote_tombstones',
+    th_price_reference: 'th_price_ref_tombstones',
+    th_inventory: 'th_inventory_tombstones',
+    th_job_templates: 'th_template_tombstones',
+    th_known_issues: 'th_known_issue_tombstones',
+    th_review_requests_pending: 'th_review_requests_pending_tombstones',
+    th_tracker_notes_v2: 'th_note_tombstones',
+    th_flagged_items: 'th_flagged_tombstones',
+    th_shift_log: 'th_shift_tombstones',
+  };
+
   (keysToApply || SYNC_DATA_KEYS).forEach(k => {
     if (obj[k] === undefined || obj[k] === null) return;
     // Scalar, but not a plain overwrite like the settings keys below:
@@ -663,55 +725,20 @@ function applySyncData(obj, keysToApply) {
       // listed earlier in SYNC_DATA_KEYS and has therefore already
       // been merged and written by the time this branch runs.
       let finalArr = mergedArr;
-      if (k === 'th_clients') {
+      // Every list, not just clients, works this way through
+      // ID_TOMBSTONE_KEY_FOR (one table instead of a branch per list,
+      // 2026-09-30). th_inventory's entry is the 2026-09-23 fix: synced from
+      // the start but never read, so deleted parts came back.
+      const tombstoneKey = ID_TOMBSTONE_KEY_FOR[k];
+      if (tombstoneKey) {
         let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_client_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
+        try { tombstonedIds = JSON.parse(localStorage.getItem(tombstoneKey) || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
         if (tombstonedIds.length) {
           const tombstoneSet = new Set(tombstonedIds);
-          finalArr = mergedArr.filter(c => !tombstoneSet.has(c.id));
+          finalArr = mergedArr.filter(r => !tombstoneSet.has(r.id));
         }
-      } else if (k === 'th_tracker_jobs') {
-        let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_job_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
-        if (tombstonedIds.length) {
-          const tombstoneSet = new Set(tombstonedIds);
-          finalArr = mergedArr.filter(j => !tombstoneSet.has(j.id));
-        }
-      } else if (k === 'th_expense_log') {
-        let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_expense_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
-        if (tombstonedIds.length) {
-          const tombstoneSet = new Set(tombstonedIds);
-          finalArr = mergedArr.filter(e => !tombstoneSet.has(e.id));
-        }
-      } else if (k === 'th_income_log') {
-        let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_income_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
-        if (tombstonedIds.length) {
-          const tombstoneSet = new Set(tombstonedIds);
-          finalArr = mergedArr.filter(i => !tombstoneSet.has(i.id));
-        }
-      } else if (k === 'th_tracker_contacts') {
-        let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_contact_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
-        if (tombstonedIds.length) {
-          const tombstoneSet = new Set(tombstonedIds);
-          finalArr = mergedArr.filter(c => !tombstoneSet.has(c.id));
-        }
-      } else if (k === 'th_contracts') {
-        let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_contract_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
-        if (tombstonedIds.length) {
-          const tombstoneSet = new Set(tombstonedIds);
-          finalArr = mergedArr.filter(c => !tombstoneSet.has(c.id));
-        }
-      } else if (k === 'th_invoices') {
-        let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_invoice_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
-        if (tombstonedIds.length) {
-          const tombstoneSet = new Set(tombstonedIds);
-          finalArr = mergedArr.filter(i => !tombstoneSet.has(i.id));
-        }
+      }
+      if (k === 'th_invoices') {
         // Real bug fix (2026-09-16) -- see deriveInvoicePaid()'s comment
         // above: the per-field merge above can leave `paid` disagreeing
         // with paidAmount/total. Recompute it post-merge so this
@@ -721,58 +748,6 @@ function applySyncData(obj, keysToApply) {
           const correctPaid = deriveInvoicePaid(inv);
           return inv.paid === correctPaid ? inv : Object.assign({}, inv, { paid: correctPaid });
         });
-      } else if (k === 'th_quotes') {
-        let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_quote_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
-        if (tombstonedIds.length) {
-          const tombstoneSet = new Set(tombstonedIds);
-          finalArr = mergedArr.filter(q => !tombstoneSet.has(q.id));
-        }
-      } else if (k === 'th_price_reference') {
-        let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_price_ref_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
-        if (tombstonedIds.length) {
-          const tombstoneSet = new Set(tombstonedIds);
-          finalArr = mergedArr.filter(r => !tombstoneSet.has(r.id));
-        }
-      } else if (k === 'th_inventory') {
-        // Bug fix (2026-09-23): th_inventory's tombstones were synced from
-        // the start but never read here, so a stale device still holding a
-        // deleted part pushed it straight back.
-        let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_inventory_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
-        if (tombstonedIds.length) {
-          const tombstoneSet = new Set(tombstonedIds);
-          finalArr = mergedArr.filter(p => !tombstoneSet.has(p.id));
-        }
-      } else if (k === 'th_job_templates') {
-        let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_template_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
-        if (tombstonedIds.length) {
-          const tombstoneSet = new Set(tombstonedIds);
-          finalArr = mergedArr.filter(t => !tombstoneSet.has(t.id));
-        }
-      } else if (k === 'th_known_issues') {
-        let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_known_issue_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
-        if (tombstonedIds.length) {
-          const tombstoneSet = new Set(tombstonedIds);
-          finalArr = mergedArr.filter(i => !tombstoneSet.has(i.id));
-        }
-      } else if (k === 'th_review_requests_pending') {
-        let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_review_requests_pending_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
-        if (tombstonedIds.length) {
-          const tombstoneSet = new Set(tombstonedIds);
-          finalArr = mergedArr.filter(p => !tombstoneSet.has(p.id));
-        }
-      } else if (k === 'th_shift_log') {
-        let tombstonedIds = [];
-        try { tombstonedIds = JSON.parse(localStorage.getItem('th_shift_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedIds = []; }
-        if (tombstonedIds.length) {
-          const tombstoneSet = new Set(tombstonedIds);
-          finalArr = mergedArr.filter(s => !tombstoneSet.has(s.id));
-        }
       } else if (k === 'th_parts_reference_units') {
         let tombstonedUnitIds = [];
         try { tombstonedUnitIds = JSON.parse(localStorage.getItem('th_pr_unit_tombstones') || '[]').filter(tombstoneCounts).map(t => t.id); } catch (e) { tombstonedUnitIds = []; }
@@ -803,7 +778,9 @@ function applySyncData(obj, keysToApply) {
       // (folded in separately below, and diffing a conflict LOG against
       // a base has no meaning) and for the specialty merges above, which
       // don't consume a base in the first place.
-      if (k !== 'th_sync_conflicts' && k !== 'th_parts_reference_units' && k !== 'th_client_errors' && k !== 'th_graveyard') {
+      // Same four keys as SYNC_BASE_SKIPPED_KEYS (kept inline so this
+      // function stands alone; a test keeps the two lists equal).
+      if (!['th_sync_conflicts', 'th_parts_reference_units', 'th_client_errors', 'th_graveyard'].includes(k)) {
         saveSyncBaseForKey(k, finalArr);
       }
     } catch (e) {
@@ -946,6 +923,7 @@ async function pushSync() {
       body: JSON.stringify(body),
     });
     if (!res.ok) { recordSyncStatus('push', false, 'http-' + res.status); return { ok: false, error: 'http-' + res.status }; }
+    saveSyncBaseFromPushed(body[0].data, SYNC_DATA_KEYS);
     localStorage.setItem(SYNC_KNOWN_AT_KEY, nowIso);
     recordSyncStatus('push', true);
     return { ok: true };

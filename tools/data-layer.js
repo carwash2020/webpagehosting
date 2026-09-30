@@ -452,9 +452,28 @@ function thResolveFlaggedItem(id) {
   return list;
 }
 function thDeleteFlaggedItem(id) {
+  thAddFlaggedTombstone(id);
   const list = thRead(TH_FLAGGED_ITEMS_KEY, []).filter(item => item.id !== id);
   thWrite(TH_FLAGGED_ITEMS_KEY, list);
   return list;
+}
+
+// Notes and flagged items got tombstones (2026-09-30), same shape as every
+// other deletable record: without one, a device that hadn't synced since
+// the delete pushed its old copy back and the item reappeared everywhere.
+const TH_FLAGGED_TOMBSTONES_KEY = 'th_flagged_tombstones';
+function thAddFlaggedTombstone(id) {
+  let list = thRead(TH_FLAGGED_TOMBSTONES_KEY, []);
+  list = thPruneTombstones(list);
+  list.push({ id, deletedAt: new Date().toISOString() });
+  thWrite(TH_FLAGGED_TOMBSTONES_KEY, list);
+}
+const TH_NOTE_TOMBSTONES_KEY = 'th_note_tombstones';
+function thAddNoteTombstone(id) {
+  let list = thRead(TH_NOTE_TOMBSTONES_KEY, []);
+  list = thPruneTombstones(list);
+  list.push({ id, deletedAt: new Date().toISOString() });
+  thWrite(TH_NOTE_TOMBSTONES_KEY, list);
 }
 
 // Requested directly (2026-08-21): the Client Registry had no way to
