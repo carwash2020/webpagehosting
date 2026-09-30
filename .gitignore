@@ -2,3 +2,8 @@ node_modules/
 *.log
 .DS_Store
 scrollcraft/
+
+# Claude Code's isolated-worktree scratch directories (background Agent
+# tool calls with isolation:"worktree") -- harness-managed, not real repo
+# content, and must never be committed.
+.claude/worktrees/
