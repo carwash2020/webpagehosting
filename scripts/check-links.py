@@ -10,9 +10,9 @@ Two passes, deliberately different in what they check:
    correctly against tool pages even though those require login to
    view in a real browser.
 
-2. EXTERNAL links (public pages only -- index.html + the 7 landing
-   pages, since those are what real visitors and Google actually
-   crawl) -- a real HTTP request with a short timeout, reporting
+2. EXTERNAL links (public pages only -- the 40 in PUBLIC_PAGES below,
+   kept in step with sitemap.xml, since those are what real visitors
+   and Google actually crawl) -- a real HTTP request with a short timeout, reporting
    anything that doesn't come back 2xx/3xx. Internal tool pages are
    skipped here since they're not externally crawled and most of
    their external references are the same handful of CDN/font URLs
@@ -269,7 +269,13 @@ def check_external_links():
             # is exactly the anti-bot behaviour this list exists for,
             # and shouldn't fail a link check.
             status = None
-            if is_bot_hostile:
+            if 'Tunnel connection failed' in str(e):
+                # An outbound proxy refused the request (a sandboxed
+                # session's network policy, 2026-09-30) -- says nothing
+                # about the link itself. CI has no proxy, so this never
+                # hides a real failure there.
+                unverifiable.append(f"{url} -> {e} (this machine's proxy refused it, not treated as broken)")
+            elif is_bot_hostile:
                 unverifiable.append(f"{url} -> {e} (known bot-hostile platform, not treated as broken)")
             elif is_own_domain:
                 site_own_domain_flags.append(f"{url} -> {e}")

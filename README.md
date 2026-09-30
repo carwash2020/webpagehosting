@@ -6055,3 +6055,12 @@ Tests: `tests/design/batch2-labels-and-loading.test.js` (6), plus the updated po
 
 Tests: `tests/sync/merge-base-and-note-tombstones.test.js` (7).
 
+## What changed, 2026-09-30 -- Search data fixes, and older to-dos cleaned up
+
+- **Search engines get fuller data.** Every blog post now tells Google which picture and page it belongs to. The homepage lists La Verkin and Leeds among the towns served, the job posting drops an invalid value and gains a postal code, and the blog index and booking page get the large link preview on X/Twitter. The homepage and booking page have up-to-date sitemap dates.
+- **AI answer bots stay out of internal pages.** ChatGPT, Perplexity and Claude's search bots were allowed everywhere, including the Workspace and portal paths. They now skip those, as regular search engines already do.
+- **Checks point at the right pages.** The weekly speed check measures the real Hurricane page instead of an old redirect, and the link checker no longer calls a link broken just because a sandboxed session's network blocked it.
+- **To-do list cleaned up.** Items that were already done (the washer teardown drawing, the before/after drag, grouped FAQs, the Workspace and portal redesign plans) are marked done or superseded in `docs/ACTION-ITEMS.md`. The review count (6 or 7) is back on the list for Steve to confirm.
+
+Tests: `tests/seo/batch4-search-data.test.js` (8).
+

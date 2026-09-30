@@ -449,3 +449,21 @@ power.
 
 `services/plumbing-repairs.html`, `drywall-painting.html`, `handyman-repairs.html`, `assembly-installation.html` and `washer-dryer-repair.html` still carry the pre-2026-09-11 service-area SVG: 5 cities, and an aria-label without Leeds/La Verkin. Their own `.areas-links` cards right below list all 7. The other 12 pages have the 7-city SVG. Not changed (which cities a page's diagram shows is a content call, and it may wait on the open Leeds/La Verkin placement question in `visual.md`, 2026-09-25).
 - **Resolved 2026-09-25** (asked directly): all 5 pages now carry the 7-city SVG. `service-area-light-trail.test.js` now finds every page with the diagram instead of using a hand-kept list, so a page can't be missed again.
+
+## 2026-09-30 -- the 2026-09-25 SEO audit's engineering items, done
+
+- **Homepage `areaServed`** now includes La Verkin and Leeds. Both have standard-coverage town pages; the list had stopped at Ivins.
+- **Careers JobPosting:**
+  - `jobLocationType: "TELECOMMUTE_NOT_ALLOWED"` removed. Google's only value is `TELECOMMUTE`, and an on-site job leaves the field out.
+  - `postalCode` 84790 added (same as the business address).
+  - A Home › Careers breadcrumb added.
+  - Still owed: `validThrough` needs a closing date from Steve.
+- **Blog Article schema:** all 16 posts now name an `image` (the post's own share card, from Package D) and `mainEntityOfPage` (the canonical URL). Two things were not added:
+  - `dateModified`: the files' last-commit dates are mostly today's share-card meta change, not a content edit, so they'd be untrue.
+  - The author as Steven: who writes the posts is Steve's call.
+- **`twitter:card`** added to `blog/index.html` and `booking.html`, the two public pages without one.
+- **Sitemap `lastmod`:** `/` 2026-08-24 → 2026-09-29 (homepage v2) and `booking.html` 2026-08-25 → 2026-09-30 (the address in the summary).
+- The per-page share images were done in Package D.
+- **Still open, needs a person:** the review count (Site Content says 6, the static copies say 7; ACTION-ITEMS #6), and the long titles and descriptions (a copy call).
+- Test: `tests/seo/batch4-search-data.test.js` (8, with the automation items below).
+

@@ -29,7 +29,7 @@ jobs:
         with:
           urls: |
             https://www.triplehenterprisesllc.biz/
-            https://www.triplehenterprisesllc.biz/handyman-hurricane-ut.html
+            https://www.triplehenterprisesllc.biz/locations/handyman-hurricane-ut.html
           uploadArtifacts: true
           temporaryPublicStorage: true
           configPath: './.github/lighthouserc.json'

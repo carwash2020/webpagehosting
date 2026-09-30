@@ -8,21 +8,38 @@ Disallow: /portal/
 
 # AI answer-engine crawlers that fetch pages live to ground a chat
 # answer -- allow these, since being cited by ChatGPT/Perplexity/Claude
-# is a goal, not a risk, for this business.
+# is a goal, not a risk, for this business. A bot obeys only its most
+# specific group (RFC 9309), not the * group above, so each repeats the
+# internal-path blocks (2026-09-30).
 User-agent: OAI-SearchBot
 Allow: /
+Disallow: /.claude/
+Disallow: /tools/
+Disallow: /portal/
 
 User-agent: ChatGPT-User
 Allow: /
+Disallow: /.claude/
+Disallow: /tools/
+Disallow: /portal/
 
 User-agent: PerplexityBot
 Allow: /
+Disallow: /.claude/
+Disallow: /tools/
+Disallow: /portal/
 
 User-agent: Claude-SearchBot
 Allow: /
+Disallow: /.claude/
+Disallow: /tools/
+Disallow: /portal/
 
 User-agent: Claude-User
 Allow: /
+Disallow: /.claude/
+Disallow: /tools/
+Disallow: /portal/
 
 # Bulk AI-training crawlers -- distinct from the retrieval bots above.
 # Blocking these doesn't remove this site from Google/Bing search or

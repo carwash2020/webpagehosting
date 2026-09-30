@@ -3,8 +3,8 @@ name: Check links
 # Weekly, plus on-demand. Two passes -- see scripts/check-links.py for
 # the full rationale: internal references get checked against every
 # HTML file in the repo (no network needed), external links only
-# against the 6 public pages (index + 5 landing pages), since those are
-# what real visitors and Google actually crawl.
+# against the public pages in PUBLIC_PAGES (40 today, kept in step with
+# sitemap.xml), since those are what real visitors and Google crawl.
 
 on:
   schedule:
