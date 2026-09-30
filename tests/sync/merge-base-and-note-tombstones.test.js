@@ -107,7 +107,7 @@ test('the base is not saved for the four keys merged without one', async () => {
   assert.deepEqual(base.th_invoices, [{ id: 5, total: 10 }]);
   // The push path's skip list and applySyncData's inline one are the same four keys.
   const set = SYNC.match(/const SYNC_BASE_SKIPPED_KEYS = new Set\(\[([^\]]+)\]\);/)[1].match(/'[a-z_]+'/g).sort();
-  const inline = SYNC.match(/if \((k !== '[a-z_]+'(?: && )?)+\) \{\n\s+saveSyncBaseForKey\(k, finalArr\);/)[0].match(/'[a-z_]+'/g).sort();
+  const inline = SYNC.match(/if \(!\[([^\]]+)\]\.includes\(k\)\) \{\n\s+saveSyncBaseForKey\(k, finalArr\);/)[1].match(/'[a-z_]+'/g).sort();
   assert.deepEqual(set, inline);
 });
 

@@ -265,20 +265,31 @@ function loadSyncBase() {
 // older copy ("remote wins" with no base, or a false conflict). Same key
 // set applySyncData() keeps a base for.
 const SYNC_BASE_SKIPPED_KEYS = new Set(['th_sync_conflicts', 'th_parts_reference_units', 'th_client_errors', 'th_graveyard']);
+function pushedArrayFor(data, k) {
+  if (!MERGE_KEY_FIELD[k] || SYNC_BASE_SKIPPED_KEYS.has(k) || typeof data[k] !== 'string') return null;
+  try {
+    const arr = JSON.parse(data[k]);
+    return Array.isArray(arr) ? arr : null;
+  } catch (e) {
+    return null; // not a JSON array: leave this key's base as it was
+  }
+}
 function saveSyncBaseFromPushed(data, keys) {
   try {
     const base = loadSyncBase();
     let changed = false;
     (keys || []).forEach(k => {
-      if (!MERGE_KEY_FIELD[k] || SYNC_BASE_SKIPPED_KEYS.has(k) || data[k] === undefined || data[k] === null) return;
-      let arr;
-      try { arr = JSON.parse(data[k]); } catch (e) { return; }
-      if (!Array.isArray(arr)) return;
-      base[k] = arr;
-      changed = true;
+      const arr = pushedArrayFor(data, k);
+      if (arr) { base[k] = arr; changed = true; }
     });
     if (changed) localStorage.setItem(SYNC_BASE_KEY, JSON.stringify(base));
-  } catch (e) { /* best-effort bookkeeping, same as saveSyncBaseForKey */ }
+  } catch (e) {
+    // Best-effort bookkeeping (a full localStorage, say): the push itself
+    // already succeeded. Logged so it shows in Dev Tools' client errors.
+    if (typeof logClientError === 'function') {
+      logClientError('saveSyncBaseFromPushed: could not save the merge base after a push: ' + (e && e.message ? e.message : String(e)), 'sync.js', null, null, e && e.stack);
+    }
+  }
 }
 
 function saveSyncBaseForKey(key, arr) {
@@ -851,7 +862,7 @@ function applySyncData(obj, keysToApply) {
       // don't consume a base in the first place.
       // Same four keys as SYNC_BASE_SKIPPED_KEYS (kept inline so this
       // function stands alone; a test keeps the two lists equal).
-      if (k !== 'th_sync_conflicts' && k !== 'th_parts_reference_units' && k !== 'th_client_errors' && k !== 'th_graveyard') {
+      if (!['th_sync_conflicts', 'th_parts_reference_units', 'th_client_errors', 'th_graveyard'].includes(k)) {
         saveSyncBaseForKey(k, finalArr);
       }
     } catch (e) {
