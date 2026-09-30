@@ -59,8 +59,8 @@
 <script src="/tools/tools-nav-pwa.js?v=7e8fb6ef3d" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
-<script src="/tools/sync.js?v=0e885bb435" defer></script>
-<script src="/tools/push-notifications.js?v=180abd2a84" defer></script>
+<script src="/tools/sync.js?v=ac03ce9686" defer></script>
+<script src="/tools/push-notifications.js?v=3c123334a6" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -470,14 +470,16 @@
       }
     }
 
+    // Two-factor authentication -- role is already loaded above (for the
+    // role badge), reused here to decide mandatory vs. optional wording.
+    // Drawn before the push check (2026-09-30): it doesn't need push
+    // state, and a push check that stalled used to leave it on "Loading...".
+    await renderMfaSettingsCard();
+
     // Notifications -- reuses the exact same push-notifications.js
     // functions the Dashboard header's bell icon already calls, so
     // toggling here and toggling there always agree with each other.
     await refreshSettingsPushState();
-
-    // Two-factor authentication -- role is already loaded above (for the
-    // role badge), reused here to decide mandatory vs. optional wording.
-    await renderMfaSettingsCard();
   } catch (initError) {
     try {
         showInitErrorBanner('Settings', initError);

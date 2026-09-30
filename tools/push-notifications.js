@@ -28,9 +28,14 @@ function pushNotificationsSupported() {
   return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 }
 
+// getRegistration(), not .ready (2026-09-30): .ready never settles when no
+// worker ever registers (a failed registration, workers switched off), and
+// everything awaiting this -- Settings' startup, and the two-factor card
+// after it -- hung on "Loading...". No registration means no subscription.
 async function getExistingPushSubscription() {
   if (!pushNotificationsSupported()) return null;
-  const registration = await navigator.serviceWorker.ready;
+  const registration = await navigator.serviceWorker.getRegistration();
+  if (!registration) return null;
   return registration.pushManager.getSubscription();
 }
 
@@ -52,7 +57,15 @@ async function enablePushNotifications() {
     return { ok: false, error: 'Permission wasn\'t granted.' };
   }
 
-  const registration = await navigator.serviceWorker.ready;
+  // Subscribing does need an active worker, so this waits for one -- but
+  // not forever (same never-settling .ready as above).
+  const registration = await Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise((resolve) => setTimeout(() => resolve(null), 10000)),
+  ]);
+  if (!registration) {
+    return { ok: false, error: 'This page\'s background helper hasn\'t started, so notifications can\'t be set up yet. Reload the page and try again.' };
+  }
   let subscription;
   try {
     subscription = await registration.pushManager.subscribe({

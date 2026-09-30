@@ -6028,3 +6028,13 @@ This is Tier 0 only: no second-tenant signup flow, no per-tenant branding, no bi
 - **Not in this update:** the homepage reshuffle and the drawings in place of blog photos, both left for the owner (`docs/ACTION-ITEMS.md`). The booking "we're holding this time" countdown, because nothing actually holds a slot.
 
 Tests: `tests/design/package-d-public-site.test.js` (8).
+
+## What changed, 2026-09-30 -- Backups cover every table, a check for undeployed edge functions, and three small fixes
+
+- **Private backup covers everything again.** The nightly private backup had fallen 16 tables behind, including portal contracts, portal job messages, referrals, job applications and the invoice/quote/job records Finance reads. It now backs up every table. If a new table appears that isn't on the list (`scripts/backup-tables.json`), the backup stops and says so instead of silently skipping it. Big tables are read in pages, so none are cut off at 1000 rows, and every Storage bucket is included automatically.
+- **Edge-function drift check.** A new workflow compares the live Supabase functions with the repo after each merge that changes them and every Monday, and lists anything that still needs deploying. It needs one secret set up first (`docs/ACTION-ITEMS.md`, "Edge-function drift check").
+- **Restoring from the Graveyard** now puts invoices, quotes, contracts and jobs back where Finance and Runway read them, so a restored invoice shows up straight away.
+- **Settings' two-factor card** no longer gets stuck on "Loading..." on a device where the background helper never starts.
+- **The portal's Update button** no longer clears the Workspace's offline copy on a shared device.
+
+Tests: `tests/scripts/backup-scripts.test.js` (7), `tests/scripts/edge-function-drift.test.js` (3), `tests/tools/batch1-reliability.test.js` (5).

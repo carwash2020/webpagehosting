@@ -183,10 +183,13 @@
     document.body.appendChild(bar);
   }
 
-  /* Clears every cache this origin holds, tells any waiting worker to take
+  /* Clears the portal's own caches, tells any waiting worker to take
      over, then reloads. Deliberately does the cache clear itself rather
      than trusting the worker swap alone: a ?v= URL that has not changed
-     would otherwise still be served from the old cache-first entry. */
+     would otherwise still be served from the old cache-first entry.
+     Only th-portal-* (2026-09-30): it used to delete every cache on the
+     origin, which threw away the Workspace's offline copy (th-workspace-*)
+     on any device used for both. */
   window.portalUpdateNow = function portalUpdateNow() {
     var done = function () {
       try { sessionStorage.setItem(RELOAD_GUARD, '1'); } catch (e) { /* private mode */ }
@@ -199,7 +202,9 @@
       work.push(
         caches.keys()
           .then(function (names) {
-            return Promise.all(names.map(function (n) { return caches.delete(n); }));
+            return Promise.all(names
+              .filter(function (n) { return n.indexOf('th-portal-') === 0; })
+              .map(function (n) { return caches.delete(n); }));
           })
           .catch(function () { /* proceed regardless -- a reload still helps */ })
       );

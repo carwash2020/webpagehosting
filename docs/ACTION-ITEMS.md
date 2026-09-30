@@ -1133,6 +1133,21 @@ belongs with whichever phase touches each page's header next).
 
 <!-- Add new cross-surface visual plan phases above this line -->
 
+## Edge-function drift check -- needs one secret (2026-09-30)
+
+`.github/workflows/edge-function-drift.yml` compares the live Supabase
+functions with `edge-functions/` after every merge that touches them and
+every Monday, and fails with a list of what to deploy. It needs a
+Supabase personal access token to read function source:
+
+1. supabase.com -> Account -> Access Tokens -> Generate new token.
+2. This repo: Settings -> Secrets and variables -> Actions -> New
+   repository secret named `SUPABASE_ACCESS_TOKEN`.
+3. Actions -> "Edge function drift check" -> Run workflow, to see the
+   first report.
+
+Until then the workflow fails at its first step with these instructions.
+
 ## Claude Design Package D (2026-09-29) -- left for the owner
 
 Applied 2026-09-30: the address in the booking summary, a share card per
@@ -1203,7 +1218,9 @@ From the second pass (2026-09-29, #445-#469 and the portal leak fixes):
   Options: accept these as intended; or give tools/settings.html's
   `.secondary-btn` rows and the homepage chips the same 44px floor at
   <=760px.
-- **Settings' two-factor card waits on the service worker.** Settings'
+- ~~**Settings' two-factor card waits on the service worker.**~~ Fixed
+  2026-09-30: the card is drawn first, and the push check no longer waits
+  on a worker that never registers (bugfix.md). Original note: Settings'
   startup awaits `refreshSettingsPushState()` before `renderMfaSettingsCard()`,
   and the push check awaits `navigator.serviceWorker.ready`
   (`tools/push-notifications.js:33`). That promise never settles when no

@@ -1514,3 +1514,19 @@ Reported with screenshots. All three are CSS/markup-level; no handler changed.
 Checks: check-consistency, check-undefined-vars, check-visual-snapshot (6/6) and lint are clean. check-links reports only the 10 Unsplash URLs this sandbox's proxy refuses, identically on main. Stamps were re-run with `npm run fix-versions` (workspace v368, portal v174). The full suite results are in the PR.
 
 Test: `tests/design/visual-fixes-2026-09-29.test.js` (5). The first four cover the column basis, the clamp and toggle markup plus the helper in all three templates, the Show more/less toggle and trim in jsdom, and the legal column rule. The fifth covers the review span rule and the card-only wall. All 5 fail on origin/main 86a9f37.
+
+## 2026-09-30 -- three small reliability fixes (Graveyard restore, Settings two-factor card, portal Update)
+
+- **Graveyard restore now puts relational rows back** (`tools/dev-tools.html`).
+  - **Cause:** deleting an invoice, quote, contract or job also deletes its row from `invoices` / `quotes` / `contracts` / `jobs` (`mirrorDelete`). Restoring wrote the record back to the synced blob only. Finance, Runway and the overdue alert read `invoices`, so a restored invoice stayed missing there until some other invoice was saved (named in features.md, 2026-09-17).
+  - **Fix:** after lifting the tombstone, restore calls the same mirror the save path uses (`GRAVEYARD_RELATIONAL_MIRROR`: invoice, quote, contract, job). It's an upsert, so a row that's still there is harmless.
+  - **Not re-created on purpose:** the invoice's portal copy and its income entry. Re-publishing to a client's portal should stay a deliberate step.
+- **Settings' two-factor card no longer hangs on "Loading..."** (`tools/settings.html`, `tools/push-notifications.js`).
+  - **Cause:** startup awaited the push check before drawing the two-factor card, and the push check awaited `navigator.serviceWorker.ready`, which never settles when no worker registers.
+  - **Fix:** the two-factor card is drawn first. Reading push state uses `getRegistration()`, which answers straight away (no registration means no subscription). Enable still needs an active worker, so it waits at most 10s, then says to reload.
+- **The portal's Update button keeps the Workspace's offline copy** (`portal/portal-update.js`).
+  - **Cause:** `portalUpdateNow()` deleted every cache on the origin, including `th-workspace-*` (noted "checked, not changed" here on 2026-09-25).
+  - **Fix:** it deletes `th-portal-*` only. Dev Tools' "clear service worker and caches" still clears everything; that one is a deliberate developer action.
+
+Test: `tests/tools/batch1-reliability.test.js` (5); all five fail on the previous code.
+
