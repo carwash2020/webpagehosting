@@ -98,7 +98,7 @@ This is real new schema, not a column added to an existing table.
 - The uuid `client_id` columns stay nullable. They become `NOT NULL` only after backfill and dedup are complete.
 - One email and one phone per client (decision 2, 2026-09-30). No contact-points child table.
 
-**1b. Seeding and dedup.** (Seeding and candidate pairs built in `sql/item1/02_client_seeding_and_duplicate_candidates.sql`; the review queue and merges come next.)
+**1b. Seeding and dedup.** (Seeding and candidate pairs: `sql/item1/02_client_seeding_and_duplicate_candidates.sql`, applied and seeded 2026-09-30. Review queue and merges: `sql/item1/03_client_review_actions.sql` and the Possible duplicate clients panel in `tools/clients.html`.)
 - Seed candidates from four sources: `client_profiles` rows, local `thEnsureClient` records (collected via the Phase 4 device checklist or the blob), Job Tracker contacts (`th_tracker_contacts`), and distinct free-text client names on existing rows.
 - A contact that turns out not to be a client (a supplier or another trade) is marked "not a client" in the review queue and stays in the blob contact list.
 - Generate **candidate** duplicate groups by normalized email, phone, and name. Do not auto-merge.
