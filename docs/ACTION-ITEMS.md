@@ -1133,6 +1133,32 @@ belongs with whichever phase touches each page's header next).
 
 <!-- Add new cross-surface visual plan phases above this line -->
 
+## Claude Design Package D (2026-09-29) -- left for the owner
+
+Applied 2026-09-30: the address in the booking summary, a share card per
+page, and the portal's request steps back to orange. These two were not,
+because each changes how the site looks in a way that's the owner's call:
+
+- **D12, homepage restructure.** The design moves the lead form higher,
+  trims the middle sections, adds an inline FAQ and a large rating. Today
+  the hero already carries the rating line, Quick answers and the form,
+  and the phone hero is ~1845px tall. Options: leave it; or pick the parts
+  you want (the prototype is in the Package D handoff) and apply those.
+- **D15, drawings instead of blog photos.** All 16 posts lead with a
+  photo. The design would draw a line diagram of the part to check. One
+  drawn post among 15 photo posts would look out of place, so none were
+  swapped (the drain drawing is on the washer share cards). Options: keep
+  photos; or switch the blog as a set, starting with the two new posts
+  the design proposed (dryer thumping, washer no power), which aren't
+  written yet.
+- **Blue elsewhere.** "We don't use the blue we use orange" (2026-09-30)
+  was applied to everything this pass touched. Blue is still the site's
+  second accent: ~280 uses across 30 files (links, the service cards' top
+  edge, the portal's "visit" colour: `docs/specialist-logs/visual.md`, "One accent
+  per meaning"). Options: keep blue as the secondary accent; or retire it
+  and give its jobs to orange and neutrals (needs a new way to tell
+  "scheduled" from "owed" in the portal).
+
 ## From the bug lane's redesign regression pass (2026-09-25) -- needs a call
 
 Found while driving every flow in Chromium around #440 and #441. Neither is

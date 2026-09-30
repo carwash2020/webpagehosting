@@ -3009,13 +3009,13 @@ Source: `Package B Loading States.dc.html` and `handoff/package-B.css` from the 
 **C8, "Where things stand".**
 - **Where it went.** The design drew a visit detail page with five steps: Requested → Scheduled → On the way → Done → Paid. The portal has no such page, and no data for "On the way" or "Paid" (the reasons are logged in features.md). So the timeline replaced the segmented bar on each request card in `portal/work-orders.html`.
 - **What it shows.** The same four real stages as the bar (Sent → Reviewed → Scheduled → Done), with the same `quoted` = `reviewing` rule and the same aria-label ("Progress: Scheduled, step 3 of 4"), now an `<ol class="th-stand">` with `aria-current="step"`.
-  - Done steps are filled blue with a check.
+  - Done steps are filled with a check (blue at first, orange since 2026-09-30).
   - The current step is a ring with a dot, pulsing only where motion is allowed.
   - Later steps are hollow.
   - Dates appear where the request has them: Sent, and the visit Scheduled is set for.
 - **Dates in two zones.** Each date follows the zone of the card line it repeats. Sent is shown like "Requested …", in the viewer's zone. Scheduled is shown like "Scheduled for …", in Denver. Formatting both in Denver made a request sent after 6pm Mountain read "Requested Sep 30" beside "Sent Sep 29".
 - **Horizontal on phones.** The design's phone layout was vertical, but that was for a single page. On a list of cards, four stacked steps would add about 230px to every card, so it stays horizontal, with 13px/12.5px type under 761px. It measured one row and no overflow at 390px for every status.
-- **Colour.** Blue is Package C's colour rule for visit progress. The v2 bar had been orange.
+- **Colour.** Blue is Package C's colour rule for visit progress. The v2 bar had been orange. **Changed 2026-09-30:** back to orange (`--orange-text`) at the owner's word, "we don't use the blue we use orange"; see Package D below.
 
 **C9, the owed dot on every page** (the owner's call).
 - `portalApplyNavInvoiceDot()` now takes a count and sets `aria-label="Invoices, N unpaid"` on the link; the dot itself stays aria-hidden.
@@ -3026,3 +3026,31 @@ Source: `Package B Loading States.dc.html` and `handoff/package-B.css` from the 
 **Not applied.**
 - **C10, the staff banner:** the owner chose to skip it for now, and staff access to the portal stays undecided.
 - **C11, passkeys:** it needs real WebAuthn sign-in work; the design covers only the look.
+
+## 2026-09-30 -- Claude Design next pass, Package D (public site), applied where it helps
+
+The owner's brief for this one: "don't change anything that would make the site look worse". Everything below was screenshotted before it went in. Mid-pass the owner added: "We don't use the blue we use orange."
+
+**D13, the service address in the booking summary** (`booking.html`).
+- A "Service address" row under Date & time, filled as the address is typed on the details step (`updateSidebarAddress()`, text only, never HTML). Clearing the field puts back "Not entered yet".
+- The other filled rows use the 20px display face; an address set that way ran to four heavy lines, so this row is 15px body text that wraps anywhere.
+- **Not applied: the "we're holding this time" countdown.** Nothing holds a slot (a slot is only taken when the booking is sent), so the countdown would tell customers something untrue.
+
+**D14, a share card per page** (`scripts/og-cards/`, `scripts/build-og-cards.js`, `images/og/`).
+- 40 cards, one per page that has an `og:image`. Before this, every link shared the same image, and it still showed the retired blue logo.
+- Layout from the design: always dark, a 12px orange edge, a faint grid, an Oswald eyebrow that tells the page type at thumbnail size, the page's title in Anton, the orange logo, name and phone bottom-left. Services with a washer, and the washer-drain post, carry the drain drawing on the right. Towns carry a coverage pill.
+- **Orange only.** The prototype's blue grid, blue "Standard coverage" pill and blue water are gone. The grid is faint orange. Standard coverage is a filled orange pill and by-request an outlined one. The drawing's water is neutral grey.
+- **Capitals.** The design set titles in mixed case; the site sets Anton in capitals everywhere, so the cards do too (the brand name as well). Titles use `text-wrap: balance`: without it "DRYER WON'T TURN / ON?" and "PICK A REAL OPEN / TIME" left one word alone.
+- **No star rating.** The design put "5.0 ★ · 7 Google reviews" on the homepage card. The rating is edited live in Site Content, and a number baked into an image can't follow it, so the card doesn't show one.
+- The build sizes each title to fit (128px down) and fails on any card whose title, pill or eyebrow would leave the centre 1080x566 safe area.
+- `images/og-image.jpg`, which no page links now, is rewritten as a copy of the homepage card, so anything that cached the old URL gets the orange version. The business structured data on the homepage and the 8 town pages points at the homepage card too.
+- Every page's `og:image:width/height/alt` are set (1200x630, "Triple H Enterprises: <title>").
+
+**The portal's request steps are orange again** (`portal/portal-polish.css`). Package C had made them blue, following the design's colour rule; per the owner's note they're back to the brand orange. Checked on the portal (dark-only) at 390px and 1440px: one row, no overflow, every status.
+
+**Not applied, left for the owner** (`docs/ACTION-ITEMS.md`).
+- **D12, the homepage restructure** (the form moved up, the middle trimmed, an inline FAQ, a big rating). The hero already shows the rating line, Quick answers and the lead form, and a phone hero is ~1845px tall already. Moving these around is a judgement call about the owner's homepage, not a fix.
+- **D15, drawings in place of blog photos.** Every one of the 16 posts leads with a photo. A line drawing on one of them would make it the odd one out. The drawing is used on the share cards, where it helps. Worth doing as a set, with the two new posts the design proposed, if the owner wants that style.
+
+Tests: `tests/design/package-d-public-site.test.js` (8); the portal step colour is pinned in `tests/portal/package-c-portal.test.js`.
+

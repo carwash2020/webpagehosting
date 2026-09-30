@@ -6004,7 +6004,7 @@ Tests: `tests/tools/package-b-loading-access.test.js` (11; all 11 fail on the pr
 
 ## What changed, 2026-09-29 -- Client portal: "where things stand" on every request, and the money-owed dot on every page (Claude Design Package C)
 
-- **Where things stand.** Each request on the portal's Request page now shows its progress as four steps: Sent, Reviewed, Scheduled and Done. Finished steps get a blue check; the current step has a soft pulse. Each step shows its date where there is one: when the request was sent, and the day the visit is booked for. It replaces the old thin progress bar, with the same stages. "On the way" and "Paid" steps would need new data first; that's logged in `docs/specialist-logs/features.md`.
+- **Where things stand.** Each request on the portal's Request page now shows its progress as four steps: Sent, Reviewed, Scheduled and Done. Finished steps get an orange check (blue at first; switched to the brand orange on 2026-09-30); the current step has a soft pulse. Each step shows its date where there is one: when the request was sent, and the day the visit is booked for. It replaces the old thin progress bar, with the same stages. "On the way" and "Paid" steps would need new data first; that's logged in `docs/specialist-logs/features.md`.
 - **Money-owed dot everywhere.** The small dot on the Invoices tab now shows on every portal page while an invoice is unpaid, not only on Home and Invoices. It used to appear and disappear as a client moved between tabs. Screen readers hear "Invoices, 1 unpaid". It costs one small count request per page.
 - **Not in this update:** the staff "viewing as staff" banner (skipped for now), and Face ID/passkey sign-in, which needs real sign-in work.
 
@@ -6019,3 +6019,12 @@ Added the database foundation for eventually selling this software to other busi
 Applied live in 5 staged batches (`sql/multi-tenant/01`-`05`), each verified against real production data before the next one ran. Proven first in a fully disposable local Postgres (Supabase's branch/project-creation API was down all session), replaying the exact real policies pulled from the live project. Caught and fixed two real bugs this way before they ever touched production -- see `docs/specialist-logs/features.md`'s 2026-09-30 entry for the full detail, including a same-class regression to the #469 incident (an RLS change silently breaking a write path) caught this time by testing rather than by a customer.
 
 This is Tier 0 only: no second-tenant signup flow, no per-tenant branding, no billing yet. Edge functions (service-role, bypass RLS) aren't tenant-scoped -- harmless with one real tenant today, a real gap once a second one exists.
+
+## What changed, 2026-09-30 -- A share card for every page, the address in the booking summary, and the portal's steps back to orange (Claude Design Package D)
+
+- **Share cards.** A link to any page (in a text, on Facebook, in Slack) now previews with its own card: the page's title in big capitals on the dark background, with the orange logo and phone number. Before this every page shared the same image, which still showed the old blue logo. Towns show "Standard coverage" or "Available by request". Washer pages and the washer-drain post have a line drawing of the part to check. Orange only, no blue. To add or change a card, see `scripts/og-cards/README.md`.
+- **Booking summary shows the address.** On the booking page, the summary beside the form now lists the service address as it's typed, under the date and time.
+- **Portal request steps are orange.** The Sent / Reviewed / Scheduled / Done steps on the portal's Request page use the brand orange instead of blue.
+- **Not in this update:** the homepage reshuffle and the drawings in place of blog photos, both left for the owner (`docs/ACTION-ITEMS.md`). The booking "we're holding this time" countdown, because nothing actually holds a slot.
+
+Tests: `tests/design/package-d-public-site.test.js` (8).

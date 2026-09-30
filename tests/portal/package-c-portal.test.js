@@ -90,9 +90,12 @@ test('C9: every portal page sets the dot -- Home and Invoices from their own inv
   assert.match(read('portal', 'settings.html'), /portalRefreshNavInvoiceDot\(client, email\);/);
 });
 
-test('C8: the request-card steps are styled blue, pulse only with motion allowed, and replace the old bar entirely', () => {
+test('C8: the request-card steps are brand orange (no blue), pulse only with motion allowed, and replace the old bar entirely', () => {
   assert.match(POLISH, /body\.portal-page \.th-stand \{[^}]*grid-auto-flow: column;/);
-  assert.match(POLISH, /body\.portal-page \.th-stand li\.is-done \.th-stand-node \{ background: var\(--blue-text\); border-color: var\(--blue-text\); \}/);
+  assert.match(POLISH, /body\.portal-page \.th-stand li\.is-done \.th-stand-node \{ background: var\(--orange-text\); border-color: var\(--orange-text\); \}/);
+  // The owner's call (2026-09-30): "we don't use the blue, we use orange".
+  const stand = POLISH.slice(POLISH.indexOf('body.portal-page .th-stand {'), POLISH.indexOf('body.portal-page .wo-card .wo-urgency-tag,'));
+  assert.doesNotMatch(stand, /--blue|58, ?160, ?255/);
   assert.match(POLISH, /@media \(prefers-reduced-motion: no-preference\) \{\s*body\.portal-page \.th-stand li\.is-current \.th-stand-node \{ animation: th-stand-pulse/);
   assert.doesNotMatch(POLISH + read('portal', 'work-orders.html'), /wo-progress/, 'no leftovers from the segmented bar');
 });

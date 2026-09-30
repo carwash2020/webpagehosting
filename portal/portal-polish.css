@@ -2043,9 +2043,10 @@ body.portal-page .wo-card-date { font-size: 12.5px; color: var(--text-dim); }
 body.portal-page .wo-card-desc { font-size: 14px; color: var(--text); margin-top: 10px; }
 /* "Where things stand" (Claude Design Package C8, 2026-09-29) on each
    request card, replacing the segmented bar: four steps with a connector,
-   done steps filled blue with a check, the current step a ring with a
+   done steps filled orange with a check, the current step a ring with a
    centre dot (pulsing where motion is allowed), later steps hollow and
-   dim. Blue for visit progress, per the portal's colour rule. The design
+   dim. Orange, the brand colour: the design drew these blue and the owner
+   said no (2026-09-30, "we don't use the blue, we use orange"). The design
    drew a single visit page going vertical on phones; on a list of cards
    four stacked steps would add ~230px to every card, so it stays
    horizontal, with smaller type under 761px. */
@@ -2060,24 +2061,24 @@ body.portal-page .th-stand li::after {
   height: 2px; border-radius: 1px; background: var(--border);
 }
 body.portal-page .th-stand li:last-child::after { display: none; }
-body.portal-page .th-stand li.is-done::after { background: var(--blue-text); }
+body.portal-page .th-stand li.is-done::after { background: var(--orange-text); }
 body.portal-page .th-stand-node {
   width: 28px; height: 28px; box-sizing: border-box; border-radius: 50%;
   border: 2px solid var(--border); background: var(--bg-panel); display: grid; place-items: center;
 }
-body.portal-page .th-stand li.is-done .th-stand-node { background: var(--blue-text); border-color: var(--blue-text); }
+body.portal-page .th-stand li.is-done .th-stand-node { background: var(--orange-text); border-color: var(--orange-text); }
 body.portal-page .th-stand li.is-done .th-stand-node svg { width: 14px; height: 14px; fill: none; stroke: var(--bg); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-body.portal-page .th-stand li.is-current .th-stand-node { border-color: var(--blue-text); }
-body.portal-page .th-stand li.is-current .th-stand-node::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--blue-text); }
+body.portal-page .th-stand li.is-current .th-stand-node { border-color: var(--orange-text); }
+body.portal-page .th-stand li.is-current .th-stand-node::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--orange-text); }
 body.portal-page .th-stand-label { font-family: var(--font-ui); font-weight: 500; font-size: 14.5px; letter-spacing: .6px; color: var(--text-dim); }
 body.portal-page .th-stand li.is-done .th-stand-label,
 body.portal-page .th-stand li.is-current .th-stand-label { color: var(--text); }
 body.portal-page .th-stand-date { font-size: 13.5px; color: var(--text-dim); }
-body.portal-page .th-stand li.is-current .th-stand-date { color: var(--blue-text); }
+body.portal-page .th-stand li.is-current .th-stand-date { color: var(--orange-text); }
 @media (prefers-reduced-motion: no-preference) {
   body.portal-page .th-stand li.is-current .th-stand-node { animation: th-stand-pulse 2s ease-in-out infinite; }
 }
-@keyframes th-stand-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(58, 160, 255, .45); } 50% { box-shadow: 0 0 0 8px rgba(58, 160, 255, 0); } }
+@keyframes th-stand-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 128, 0, .45); } 50% { box-shadow: 0 0 0 8px rgba(255, 128, 0, 0); } }
 @media (max-width: 760px) {
   body.portal-page .th-stand-label { font-size: 13px; letter-spacing: .4px; }
   body.portal-page .th-stand-date { font-size: 12.5px; }

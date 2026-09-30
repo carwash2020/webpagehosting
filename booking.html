@@ -11,10 +11,10 @@
 <meta property="og:description" content="Pick a service and a real open time slot with Triple H Enterprises, and you'll get a confirmation right away.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://www.triplehenterprisesllc.biz/booking.html">
-<meta property="og:image" content="https://www.triplehenterprisesllc.biz/images/og-image.jpg">
+<meta property="og:image" content="https://www.triplehenterprisesllc.biz/images/og/booking.jpg">
 <meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="628">
-<meta property="og:image:alt" content="Triple H Enterprises - Handyman and Appliance Repair, St. George Utah">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Triple H Enterprises: Pick a real open time">
 <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
 <script type="application/ld+json">
 {
@@ -756,6 +756,9 @@
   .booking-sidebar .sidebar-item.is-pending .si-value{color:var(--text-dim); font-style:italic;}
   .booking-sidebar .sidebar-item:not(.is-pending){padding-right:44px;}
   .booking-sidebar .sidebar-item:not(.is-pending) .si-value{color:var(--text); font-family:var(--font-display); font-size:20px; letter-spacing:.3px;}
+  /* The address is detail, not a headline: body text, and it wraps anywhere
+     so a long street name can't push the sidebar wider (Package D13). */
+  .booking-sidebar #sidebarAddress:not(.is-pending) .si-value{font-family:var(--font-app); font-size:15px; font-weight:600; line-height:1.45; letter-spacing:0; overflow-wrap:anywhere;}
   .booking-sidebar .sidebar-item:not(.is-pending)::after{
     content:"\2713";
     position:absolute; right:2px; top:50%; margin-top:-17px;
@@ -1005,6 +1008,13 @@
     <div class="sidebar-item is-pending" id="sidebarDateTime">
       <div class="hex-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
       <div><div class="si-label">Date &amp; time</div><div class="si-value">Not chosen yet</div></div>
+    </div>
+    <!-- Service address (Claude Design Package D13, 2026-09-29): filled as
+         it's typed on the details step, so the summary shows where the
+         visit is, not only what and when. -->
+    <div class="sidebar-item is-pending" id="sidebarAddress">
+      <div class="hex-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></div>
+      <div><div class="si-label">Service address</div><div class="si-value">Not entered yet</div></div>
     </div>
     <div class="sidebar-note">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
@@ -1278,8 +1288,20 @@
       dtEl.innerHTML = '<div class="hex-icon">' + svgIcon('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>') + '</div>' +
         '<div><div class="si-label">Date &amp; time</div><div class="si-value">' + dateLabel + '</div><div class="si-sub">' + selectedSlot.label + '</div></div>';
     }
+    updateSidebarAddress();
     updateMobileSummary(currentStep);
   }
+
+  // The address the customer typed, as text (it's their input, never HTML).
+  function updateSidebarAddress() {
+    const item = document.getElementById('sidebarAddress');
+    const input = document.getElementById('bAddress');
+    if (!item || !input) return;
+    const value = input.value.trim();
+    item.classList.toggle('is-pending', !value);
+    item.querySelector('.si-value').textContent = value || 'Not entered yet';
+  }
+  document.getElementById('bAddress').addEventListener('input', updateSidebarAddress);
 
   // Compact sticky stand-in for .booking-sidebar on ≤960px, shown on
   // steps 2–3 once a service (and later a slot) is chosen.

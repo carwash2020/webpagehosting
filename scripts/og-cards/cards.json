@@ -1,0 +1,48 @@
+{
+  "_about": "Share cards (Open Graph images), one per page -- Claude Design next pass, Package D14 (2026-09-29). Rebuild with: node scripts/build-og-cards.js. Each card becomes images/og/<slug>.jpg and the page's og:image / twitter:image point at it. badge: standard | request. art: a file in scripts/og-cards/art/. No star rating on any card: the rating is edited live in Site Content (js/review-stats.js) and a baked-in number would go stale.",
+  "cards": [
+    { "page": "index.html", "slug": "home", "eyebrow": "Handyman & appliance repair · St. George, UT", "title": "Honesty. Hustle. Helpfulness." },
+    { "page": "about.html", "slug": "about", "eyebrow": "About", "title": "Meet Steven Robinson" },
+    { "page": "our-work.html", "slug": "our-work", "eyebrow": "Triple H Enterprises", "title": "Our Work" },
+    { "page": "booking.html", "slug": "booking", "eyebrow": "Book online", "title": "Pick a real open time" },
+    { "page": "careers.html", "slug": "careers", "eyebrow": "Careers", "title": "Work with Triple H" },
+    { "page": "privacy.html", "slug": "privacy", "eyebrow": "Triple H Enterprises", "title": "Privacy Policy" },
+    { "page": "terms.html", "slug": "terms", "eyebrow": "Triple H Enterprises", "title": "Terms & Conditions" },
+
+    { "page": "services/washer-dryer-repair.html", "slug": "service-washer-dryer-repair", "eyebrow": "Service · St. George, UT", "title": "Washer & Dryer Repair", "art": "drain.svg" },
+    { "page": "services/washer-dryer-repair-st-george-ut.html", "slug": "service-washer-repair-st-george", "eyebrow": "Service · St. George, UT", "title": "Washer & Appliance Repair", "art": "drain.svg" },
+    { "page": "services/dishwasher-repair-st-george-ut.html", "slug": "service-dishwasher-repair-st-george", "eyebrow": "Service · St. George, UT", "title": "Dishwasher Repair" },
+    { "page": "services/refrigerator-repair-st-george-ut.html", "slug": "service-refrigerator-repair-st-george", "eyebrow": "Service · St. George, UT", "title": "Refrigerator Repair" },
+    { "page": "services/plumbing-repairs.html", "slug": "service-plumbing-repairs", "eyebrow": "Service · St. George, UT", "title": "Plumbing Repairs" },
+    { "page": "services/drywall-painting.html", "slug": "service-drywall-painting", "eyebrow": "Service · St. George, UT", "title": "Drywall & Painting" },
+    { "page": "services/handyman-repairs.html", "slug": "service-handyman-repairs", "eyebrow": "Service · St. George, UT", "title": "General Handyman Repairs" },
+    { "page": "services/assembly-installation.html", "slug": "service-assembly-installation", "eyebrow": "Service · St. George, UT", "title": "Assembly & Installation" },
+
+    { "page": "locations/handyman-st-george-ut.html", "slug": "city-st-george", "eyebrow": "Handyman & appliance repair in", "title": "St. George", "badge": "standard" },
+    { "page": "locations/handyman-washington-city-ut.html", "slug": "city-washington-city", "eyebrow": "Handyman & appliance repair in", "title": "Washington City", "badge": "standard" },
+    { "page": "locations/handyman-hurricane-ut.html", "slug": "city-hurricane", "eyebrow": "Handyman & appliance repair in", "title": "Hurricane", "badge": "standard" },
+    { "page": "locations/handyman-santa-clara-ivins-ut.html", "slug": "city-santa-clara-ivins", "eyebrow": "Handyman & appliance repair in", "title": "Santa Clara & Ivins", "badge": "standard" },
+    { "page": "locations/handyman-la-verkin-ut.html", "slug": "city-la-verkin", "eyebrow": "Handyman & appliance repair in", "title": "La Verkin", "badge": "standard" },
+    { "page": "locations/handyman-leeds-ut.html", "slug": "city-leeds", "eyebrow": "Handyman & appliance repair in", "title": "Leeds", "badge": "standard" },
+    { "page": "locations/handyman-cedar-city-ut.html", "slug": "city-cedar-city", "eyebrow": "Handyman & appliance repair in", "title": "Cedar City", "badge": "request" },
+    { "page": "locations/handyman-mesquite-nv.html", "slug": "city-mesquite", "eyebrow": "Handyman & appliance repair in", "title": "Mesquite, NV", "badge": "request" },
+
+    { "page": "blog/index.html", "slug": "blog", "eyebrow": "Triple H Enterprises", "title": "The Blog" },
+    { "page": "blog/appliance-repair-or-replace.html", "slug": "blog-appliance-repair-or-replace", "eyebrow": "From the blog", "title": "Appliance repair or replace?" },
+    { "page": "blog/dishwasher-leaking.html", "slug": "blog-dishwasher-leaking", "eyebrow": "From the blog", "title": "Dishwasher leaking?" },
+    { "page": "blog/dishwasher-not-cleaning.html", "slug": "blog-dishwasher-not-cleaning", "eyebrow": "From the blog", "title": "Dishwasher not cleaning well?" },
+    { "page": "blog/dishwasher-not-draining.html", "slug": "blog-dishwasher-not-draining", "eyebrow": "From the blog", "title": "Dishwasher not draining?" },
+    { "page": "blog/dryer-not-heating.html", "slug": "blog-dryer-not-heating", "eyebrow": "From the blog", "title": "Dryer running but not heating?" },
+    { "page": "blog/dryer-wont-turn-on.html", "slug": "blog-dryer-wont-turn-on", "eyebrow": "From the blog", "title": "Dryer won’t turn on?" },
+    { "page": "blog/drywall-crack-above-door.html", "slug": "blog-drywall-crack-above-door", "eyebrow": "From the blog", "title": "That crack above your door keeps coming back?" },
+    { "page": "blog/fridge-not-cooling.html", "slug": "blog-fridge-not-cooling", "eyebrow": "From the blog", "title": "Fridge not cooling?" },
+    { "page": "blog/handyman-to-do-list.html", "slug": "blog-handyman-to-do-list", "eyebrow": "From the blog", "title": "The small jobs everyone forgets" },
+    { "page": "blog/ice-maker-not-working.html", "slug": "blog-ice-maker-not-working", "eyebrow": "From the blog", "title": "Ice maker not making ice?" },
+    { "page": "blog/oven-not-heating-right.html", "slug": "blog-oven-not-heating-right", "eyebrow": "From the blog", "title": "Oven not heating right?" },
+    { "page": "blog/toilet-running-flapper-valve.html", "slug": "blog-toilet-running", "eyebrow": "From the blog", "title": "Toilet running all night?" },
+    { "page": "blog/tv-mount-drywall-anchors.html", "slug": "blog-tv-mount-drywall-anchors", "eyebrow": "From the blog", "title": "Mounting a TV and can’t find a stud?" },
+    { "page": "blog/washer-leaking-water.html", "slug": "blog-washer-leaking-water", "eyebrow": "From the blog", "title": "Washer leaking water?" },
+    { "page": "blog/washer-wont-drain.html", "slug": "blog-washer-wont-drain", "eyebrow": "From the blog", "title": "Washer won’t drain?", "art": "drain.svg" },
+    { "page": "blog/washer-wont-spin.html", "slug": "blog-washer-wont-spin", "eyebrow": "From the blog", "title": "Washer won’t spin?" }
+  ]
+}

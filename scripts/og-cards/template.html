@@ -1,0 +1,111 @@
+<!doctype html>
+<!-- One share card (Open Graph image), 1200x630. Not part of the site:
+     scripts/build-og-cards.js opens this file, calls renderCard() once per
+     entry in cards.json and screenshots the result to images/og/<slug>.jpg.
+     Layout from Claude Design's Package D14, recoloured orange-only (the
+     prototype's blue grid, badge and water are not the brand). Always dark (previews sit on
+     any background); everything that matters stays inside the centre
+     1080x566, which survives the square crop some apps apply. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: 'Anton'; src: url('fonts/anton.woff2') format('woff2'); font-weight: 400; }
+  @font-face { font-family: 'Oswald'; src: url('fonts/oswald.woff2') format('woff2'); font-weight: 200 700; }
+  html, body { margin: 0; padding: 0; background: #0a0a0a; }
+  .card {
+    width: 1200px; height: 630px; position: relative; overflow: hidden;
+    background: #0a0a0a;
+    background-image: linear-gradient(rgba(255,128,0,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,128,0,.06) 1px, transparent 1px);
+    background-size: 40px 40px;
+    color: #e8e8e8;
+  }
+  .edge { position: absolute; left: 0; top: 0; bottom: 0; width: 12px; background: #ff8000; }
+  .glow { position: absolute; right: -120px; top: -160px; width: 620px; height: 620px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255,128,0,.22), transparent); }
+  .eyebrow { position: absolute; left: 84px; top: 78px; font-family: Oswald; font-weight: 500; letter-spacing: 3px; text-transform: uppercase; font-size: 26px; line-height: 1.2; color: #ffb347; white-space: nowrap; }
+  /* The site sets Anton in capitals everywhere; the cards follow. */
+  .title { position: absolute; left: 84px; top: 136px; width: 980px; font-family: Anton; line-height: .98; letter-spacing: .5px; text-transform: uppercase; color: #fff; overflow-wrap: normal; text-wrap: balance; }
+  .card.has-art .title { width: 620px; }
+  .badge { position: absolute; left: 84px; padding: 10px 22px; border-radius: 999px; border: 2px solid currentColor; font-family: Oswald; font-weight: 500; letter-spacing: 2px; text-transform: uppercase; font-size: 24px; line-height: 1.2; }
+  /* Orange only, no blue (owner, 2026-09-30): standard coverage is the
+     filled pill, by-request the outlined one. */
+  .badge.standard { color: #140900; background: #ff8000; border-color: #ff8000; }
+  .badge.request { color: #ffb347; border-color: #ff8000; }
+  .art { position: absolute; right: 24px; top: 150px; width: 560px; height: 315px; color: #d8d8d8;
+    --il-steel: #d8d8d8; --il-faint: #77726c; --il-hot: #ff8000; --il-tint: rgba(255,128,0,.16); --il-water: rgba(255,255,255,.07); --il-waterline: #9a9a9a; }
+  .art svg { width: 100%; height: 100%; display: block; }
+  .brand { position: absolute; left: 84px; bottom: 70px; display: flex; align-items: center; gap: 20px; }
+  .brand img { width: 76px; height: 76px; object-fit: contain; }
+  .brand-name { font-family: Anton; font-size: 34px; line-height: 1.15; letter-spacing: .5px; text-transform: uppercase; color: #e8e8e8; }
+  .brand-phone { font-family: Oswald; font-weight: 400; font-size: 24px; line-height: 1.25; letter-spacing: 1.5px; color: #9a9a9a; }
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="edge"></div>
+  <div class="glow"></div>
+  <div class="eyebrow" id="eyebrow"></div>
+  <div class="title" id="title"></div>
+  <div class="badge" id="badge" hidden></div>
+  <div class="art" id="art" hidden></div>
+  <div class="brand">
+    <img src="../../images/logo-signature-orange-176.webp" alt="">
+    <div><div class="brand-name">Triple H Enterprises</div><div class="brand-phone">(435) 414-1667</div></div>
+  </div>
+</div>
+<script>
+  // Title room: from its top (136) to 34px above the brand block (its top
+  // is 630 - 70 - 76 = 484). A badge sits 28px under the title and takes
+  // its share of that room.
+  const TITLE_TOP = 136, TITLE_FLOOR = 450, BADGE_GAP = 28;
+  const MAX_SIZE = 128, MIN_SIZE = 56, MAX_LINES = 3;
+
+  function fits(title, maxHeight, size) {
+    title.style.fontSize = size + 'px';
+    const lineBox = size * 0.98;
+    const lines = Math.round(title.scrollHeight / lineBox);
+    // No word wider than the column (it would spill sideways, not wrap).
+    const tooWide = title.scrollWidth > title.clientWidth + 1;
+    return !tooWide && lines <= MAX_LINES && title.scrollHeight <= maxHeight;
+  }
+
+  // Returns what the build script checks: the chosen size and the real
+  // extents, so a card that can't fit fails the build instead of shipping.
+  window.renderCard = async function renderCard(card, artSvg) {
+    const root = document.getElementById('card');
+    const title = document.getElementById('title');
+    const badge = document.getElementById('badge');
+    const art = document.getElementById('art');
+    document.getElementById('eyebrow').textContent = card.eyebrow;
+    title.textContent = card.title;
+    root.classList.toggle('has-art', !!artSvg);
+    art.hidden = !artSvg;
+    art.innerHTML = artSvg || '';
+    badge.hidden = !card.badge;
+    badge.className = 'badge' + (card.badge ? ' ' + card.badge : '');
+    badge.textContent = card.badge === 'request' ? 'Available by request' : card.badge === 'standard' ? 'Standard coverage' : '';
+    const loaded = await Promise.all([document.fonts.load('100px Anton'), document.fonts.load('500 26px Oswald')]);
+    await document.fonts.ready;
+
+    const badgeRoom = card.badge ? BADGE_GAP + badge.offsetHeight : 0;
+    const maxHeight = TITLE_FLOOR - TITLE_TOP - badgeRoom;
+    let size = MAX_SIZE;
+    while (size > MIN_SIZE && !fits(title, maxHeight, size)) size -= 2;
+    fits(title, maxHeight, size);
+    if (card.badge) badge.style.top = (TITLE_TOP + title.scrollHeight + BADGE_GAP) + 'px';
+
+    const eyebrow = document.getElementById('eyebrow').getBoundingClientRect();
+    const t = title.getBoundingClientRect();
+    const b = badge.hidden ? null : badge.getBoundingClientRect();
+    return {
+      size,
+      fits: fits(title, maxHeight, size),
+      eyebrowRight: eyebrow.right,
+      titleBottom: t.top + title.scrollHeight,
+      badgeBottom: b ? b.bottom : null,
+      fontsLoaded: loaded.every((faces) => faces.length > 0),
+    };
+  };
+</script>
+</body>
+</html>

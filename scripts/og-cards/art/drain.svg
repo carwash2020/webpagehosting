@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="Front-load washer with standing water in the drum. The drain pump filter behind the small access door at the bottom front is highlighted.">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="150" y="34" width="240" height="288" rx="10"></rect>
+        <line x1="150" y1="86" x2="390" y2="86"></line>
+        <rect x="166" y="48" width="62" height="24" rx="4"></rect><line x1="174" y1="60" x2="220" y2="60" stroke-width="1.5"></line>
+        <rect x="246" y="50" width="56" height="20" rx="3"></rect>
+        <circle cx="356" cy="60" r="15"></circle><line x1="356" y1="60" x2="346" y2="50"></line>
+        <rect x="166" y="322" width="22" height="8" rx="2"></rect><rect x="352" y="322" width="22" height="8" rx="2"></rect>
+      </g>
+      <defs><clipPath id="il-glass"><circle cx="270" cy="192" r="62"></circle></clipPath></defs>
+      <path d="M 200 212 q 17 -8 35 0 t 35 0 t 35 0 t 35 0 L 340 270 L 200 270 Z" fill="var(--il-water, rgba(58,160,255,.18))" clip-path="url(#il-glass)"></path>
+      <path d="M 200 212 q 17 -8 35 0 t 35 0 t 35 0 t 35 0" fill="none" stroke="var(--il-waterline, #7ec4ff)" stroke-width="2" clip-path="url(#il-glass)"></path>
+      <g fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="270" cy="192" r="78"></circle>
+        <circle cx="270" cy="192" r="62"></circle>
+        <path d="M 242 162 A 40 40 0 0 1 280 148" stroke-width="1.5" opacity=".6"></path>
+      </g>
+      <g fill="none" stroke="var(--il-faint, var(--text-dim, #9a9a9a))" stroke-width="1.5" stroke-dasharray="5 5" stroke-linecap="round">
+        <path d="M 270 270 L 270 292 Q 270 300 262 300 L 222 300"></path>
+        <path d="M 196 300 L 176 300 Q 168 300 168 292 L 168 110 Q 168 100 178 100"></path>
+        <path d="M 390 120 L 430 120 Q 470 120 470 150 L 470 330"></path>
+      </g>
+      <g fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="462" y="150" width="16" height="180" rx="3"></rect>
+        <path d="M 440 112 Q 470 96 470 140"></path>
+      </g>
+      <circle cx="209" cy="300" r="30" fill="var(--il-tint, var(--orange-tint, rgba(255,128,0,.14)))"></circle>
+      <g fill="none" stroke="var(--il-hot, var(--orange, #ff8000))" stroke-width="3" stroke-linejoin="round">
+        <rect x="180" y="286" width="58" height="28" rx="5"></rect>
+        <circle cx="209" cy="300" r="9"></circle>
+        <line x1="203" y1="300" x2="215" y2="300" stroke-width="2"></line>
+      </g>
+      <polyline opacity="0" points="180,300 142,262" fill="none" stroke="var(--il-hot, var(--orange, #ff8000))" stroke-width="1.5"></polyline>
+      <circle opacity="0" cx="180" cy="300" r="3" fill="var(--il-hot, var(--orange, #ff8000))"></circle>
+    </svg>

@@ -17,7 +17,9 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..', '..');
 const repo = (...p) => path.join(ROOT, ...p);
-const SKIP = new Set(['tools', 'portal', 'backups', 'node_modules', 'tests', 'docs', '.git', '.claude']);
+// scripts/: dev tooling, not pages (scripts/og-cards/template.html is the
+// share-card template, rendered to JPEGs and never served).
+const SKIP = new Set(['tools', 'portal', 'backups', 'node_modules', 'tests', 'docs', 'scripts', '.git', '.claude']);
 
 function publicHtml(dir = ROOT) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
