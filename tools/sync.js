@@ -266,7 +266,11 @@ const SYNC_KNOWN_AT_KEY = 'th_sync_known_at';
 // Every device auto-uses this same fixed code so sync just works silently.
 const DEFAULT_SYNC_CODE = 'tripleh-workspace-2026';
 
+// typeof first (2026-09-30): if supabase-config.js didn't load, this says
+// "not configured" instead of throwing a ReferenceError out of every
+// fire-and-forget mirror call (the Graveyard restore's among them).
 function isSyncConfigured() {
+  if (typeof SUPABASE_URL !== 'string' || typeof SUPABASE_ANON_KEY !== 'string') return false;
   return !SUPABASE_URL.startsWith('PASTE_') && !SUPABASE_ANON_KEY.startsWith('PASTE_');
 }
 

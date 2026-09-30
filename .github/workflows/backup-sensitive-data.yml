@@ -1,4 +1,4 @@
-name: Backup sensitive data (Client Portal, workspace_sync, leads, bookings, Storage files) to private repo
+name: Backup sensitive data (every table and Storage bucket, per scripts/backup-tables.json) to private repo
 
 # Everything backed up here contains either real customer PII (a
 # client's name/phone/address/email, a lead's contact info, a
@@ -107,66 +107,29 @@ jobs:
           PRIVATE_BACKUP_REPO_TOKEN: ${{ secrets.PRIVATE_BACKUP_REPO_TOKEN }}
         run: |
           git clone --quiet "https://x-access-token:${PRIVATE_BACKUP_REPO_TOKEN}@github.com/carwash2020/tripleh-private-backups.git" private-backups
-          mkdir -p private-backups/database
-          for bucket in secure-documents job-photos receipts invoice-pdfs work-order-photos; do
-            mkdir -p "private-backups/storage/$bucket"
-          done
 
-      - name: Fetch all sensitive tables from Supabase
+      # 2026-09-30: the table list lives in scripts/backup-tables.json
+      # and the script checks it against the live schema on every run,
+      # failing on any table that's neither backed up nor excluded with
+      # a reason. The old inline list had fallen 16 tables behind
+      # (client_portal_contracts and client_portal_job_messages since
+      # 2026-09-17), and one request per table stopped at PostgREST's
+      # 1000-row limit without an error; the script pages.
+      - name: Fetch every table from Supabase
         shell: bash
         env:
           SUPABASE_URL: https://csvfqdjuobylgafgolho.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: |
-          declare -A QUERY=(
-            [workspace_sync]="select=code,data,updated_at&order=code"
-            [workspace_sync_wiki]="select=code,data,updated_at&order=code"
-            [th_leads]="select=*&order=created_at"
-            [th_bookings]="select=*&order=start_at"
-            [th_job_photos]="select=*&order=id"
-            [push_subscriptions]="select=*&order=id"
-            [notification_log]="select=*&order=sent_at"
-            [notification_recipients]="select=*&order=id"
-            [site_content_history]="select=*&order=id"
-            [site_faq_history]="select=*&order=id"
-            [site_terms_history]="select=*&order=id"
-            [role_definitions]="select=*&order=name"
-            [account_roles]="select=*&order=email"
-            [client_profiles]="select=*&order=client_email"
-            [client_notification_preferences]="select=*&order=client_email"
-            [stripe_customers]="select=*&order=id"
-            [card_authorizations]="select=*&order=id"
-            [client_portal_invoices]="select=*&order=id"
-            [client_portal_quotes]="select=*&order=id"
-            [client_portal_jobs]="select=*&order=id"
-            [client_portal_checkups]="select=*&order=id"
-            [client_portal_work_orders]="select=*&order=id"
-            [client_portal_work_order_messages]="select=*&order=id"
-            [quote_questions]="select=*&order=id"
-            [portal_bug_reports]="select=*&order=id"
-            [portal_client_errors]="select=*&order=id"
-          )
-          for table in "${!QUERY[@]}"; do
-            curl -s -f \
-              -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
-              -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-              "$SUPABASE_URL/rest/v1/$table?${QUERY[$table]}" \
-              -o "private-backups/database/${table}.json.tmp" || {
-                echo "::error::Failed to fetch $table from Supabase"; exit 1;
-              }
-            python3 -m json.tool "private-backups/database/${table}.json.tmp" > "private-backups/database/${table}.json"
-            rm "private-backups/database/${table}.json.tmp"
-          done
+        run: python3 scripts/backup-tables.py private-backups/database
 
-      - name: Fetch every file from the 5 Storage buckets
+      # --all backs up whichever buckets exist (5 today), so a new one
+      # is covered without editing this file.
+      - name: Fetch every file from every Storage bucket
         shell: bash
         env:
           SUPABASE_URL: https://csvfqdjuobylgafgolho.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: |
-          for bucket in secure-documents job-photos receipts invoice-pdfs work-order-photos; do
-            python3 scripts/backup-storage-bucket.py "$bucket" "private-backups/storage/$bucket"
-          done
+        run: python3 scripts/backup-storage-bucket.py --all private-backups/storage
 
       - name: Commit and push to the private repo if content actually changed
         shell: bash

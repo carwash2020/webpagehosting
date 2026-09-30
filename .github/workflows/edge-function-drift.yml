@@ -1,0 +1,69 @@
+name: Edge function drift check (live Supabase functions vs edge-functions/)
+
+# Merging a change to edge-functions/ doesn't deploy it, and until this
+# workflow nothing noticed when the live function and the repo disagreed.
+# That drift caused three incidents (uptime-alert, Send-Push,
+# stripe-webhook). This downloads every live function's source and fails,
+# with a list of what to deploy, if any differs from edge-functions/
+# (scripts/check-edge-function-drift.js does the comparing). It does not
+# deploy anything: per-function settings like verify_jwt (off for
+# stripe-webhook, on for the rest) make a blind auto-deploy riskier than
+# a loud reminder.
+#
+# Runs after every merge that touches edge-functions/ (red until the
+# change is deployed, which is the point) and every Monday.
+#
+# ONE-TIME SETUP (by hand; this file can't do it):
+# 1. supabase.com -> Account -> Access Tokens -> Generate new token. Name
+#    it for this check. (A personal access token; the service-role key
+#    can't read function source.)
+# 2. This repo: Settings -> Secrets and variables -> Actions -> New
+#    repository secret, named exactly SUPABASE_ACCESS_TOKEN.
+# Until then the first step fails and says so.
+
+on:
+  push:
+    branches: [main]
+    paths: ['edge-functions/**']
+  schedule:
+    - cron: '40 14 * * 1'  # Mondays ~08:40 Mountain
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_REF: csvfqdjuobylgafgolho
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Check the access token is set
+        shell: bash
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "::error::SUPABASE_ACCESS_TOKEN repo secret is not set -- see the setup steps at the top of .github/workflows/edge-function-drift.yml."
+            exit 1
+          fi
+
+      # The CLI's download unpacks each deployed bundle back to source
+      # (with Docker, which ubuntu-latest has) into
+      # live/supabase/functions/<slug>/index.ts.
+      - name: Download every live function's source
+        shell: bash
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          mkdir -p live
+          npx --yes supabase@2 functions list --project-ref "$PROJECT_REF" -o json > live/functions.json
+          cd live
+          node -e "for (const f of require('./functions.json')) console.log(f.slug)" | while read -r slug; do
+            npx --yes supabase@2 functions download "$slug" --project-ref "$PROJECT_REF" || echo "::warning::Could not download $slug"
+          done
+
+      - name: Compare with edge-functions/
+        run: node scripts/check-edge-function-drift.js --list live/functions.json --live live/supabase/functions

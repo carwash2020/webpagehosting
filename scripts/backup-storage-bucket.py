@@ -32,6 +32,12 @@ body doesn't need this -- only the raw URL construction did.
 
 Usage:
     python3 backup-storage-bucket.py <bucket> <dest_dir>
+    python3 backup-storage-bucket.py --all <dest_root>
+
+--all (2026-09-30) backs up every bucket the project has, each into
+<dest_root>/<bucket>, so a bucket added later is covered without an edit.
+Listing pages through folders 1000 entries at a time (one list call
+stops at 1000).
 
 Requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY as environment
 variables. Exits non-zero (and prints a clear reason) on any failure,
@@ -46,25 +52,36 @@ import urllib.request
 import urllib.error
 import urllib.parse
 
+LIST_PAGE = 1000
+
 
 def list_all_files_recursive(base_url, headers, bucket, prefix=""):
     """Returns a flat list of every real file's full path in the bucket,
     descending into every subfolder. A folder entry has id: None; a
     real file entry does not."""
     list_url = f"{base_url}/storage/v1/object/list/{bucket}"
-    body = json.dumps({
-        "prefix": prefix,
-        "limit": 1000,
-        "offset": 0,
-        "sortBy": {"column": "name", "order": "asc"},
-    }).encode("utf-8")
-    req = urllib.request.Request(list_url, data=body, headers={**headers, "Content-Type": "application/json"}, method="POST")
-    try:
-        with urllib.request.urlopen(req) as resp:
-            entries = json.loads(resp.read())
-    except urllib.error.HTTPError as e:
-        print(f"::error::Failed to list '{bucket}' at prefix '{prefix}': HTTP {e.code} -- {e.read().decode(errors='replace')}")
-        sys.exit(1)
+    # One list call returns at most LIST_PAGE entries, so a folder past
+    # that (a busy job-photos month) would have been cut off with no
+    # error. Page through until a short page (2026-09-30).
+    entries, offset = [], 0
+    while True:
+        body = json.dumps({
+            "prefix": prefix,
+            "limit": LIST_PAGE,
+            "offset": offset,
+            "sortBy": {"column": "name", "order": "asc"},
+        }).encode("utf-8")
+        req = urllib.request.Request(list_url, data=body, headers={**headers, "Content-Type": "application/json"}, method="POST")
+        try:
+            with urllib.request.urlopen(req) as resp:
+                page = json.loads(resp.read())
+        except urllib.error.HTTPError as e:
+            print(f"::error::Failed to list '{bucket}' at prefix '{prefix}': HTTP {e.code} -- {e.read().decode(errors='replace')}")
+            sys.exit(1)
+        entries.extend(page)
+        if len(page) < LIST_PAGE:
+            break
+        offset += LIST_PAGE
 
     files = []
     for entry in entries:
@@ -92,13 +109,25 @@ def download_file(base_url, headers, bucket, path, dest_dir):
     return len(data)
 
 
+def list_buckets(base_url, headers):
+    req = urllib.request.Request(f"{base_url}/storage/v1/bucket", headers=headers)
+    try:
+        with urllib.request.urlopen(req) as resp:
+            buckets = json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        print(f"::error::Failed to list buckets: HTTP {e.code} -- {e.read().decode(errors='replace')}")
+        sys.exit(1)
+    return sorted(b["id"] for b in buckets)
+
+
 def main():
     if len(sys.argv) != 3:
         print("Usage: python3 backup-storage-bucket.py <bucket> <dest_dir>")
+        print("       python3 backup-storage-bucket.py --all <dest_root>   (every bucket, into <dest_root>/<bucket>)")
         sys.exit(1)
     bucket, dest_dir = sys.argv[1], sys.argv[2]
 
-    base_url = os.environ.get("SUPABASE_URL")
+    base_url = (os.environ.get("SUPABASE_URL") or "").rstrip("/")
     service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
     if not base_url or not service_key:
         print("::error::SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must both be set.")
@@ -106,6 +135,19 @@ def main():
 
     headers = {"apikey": service_key, "Authorization": f"Bearer {service_key}"}
 
+    # --all (2026-09-30): back up whatever buckets exist, so a new one
+    # can't be missed the way new tables were.
+    if bucket == "--all":
+        buckets = list_buckets(base_url, headers)
+        print(f"{len(buckets)} bucket(s): {', '.join(buckets)}")
+        for name in buckets:
+            backup_bucket(base_url, headers, name, os.path.join(dest_dir, name))
+        return
+    backup_bucket(base_url, headers, bucket, dest_dir)
+
+
+def backup_bucket(base_url, headers, bucket, dest_dir):
+    os.makedirs(dest_dir, exist_ok=True)
     print(f"Listing '{bucket}' recursively...")
     files = list_all_files_recursive(base_url, headers, bucket)
     print(f"{bucket}: {len(files)} real file(s) found")

@@ -367,3 +367,23 @@ around.
   Classify tunnel/proxy errors as UNVERIFIABLE. Its docstring ("7 landing
   pages") and `check-links.yml`'s comment ("6 public pages") are stale; the
   list has 37 entries since #424.
+
+## 2026-09-30 -- private backup catches up with the schema; edge-function drift check
+
+**Backup (`backup-sensitive-data.yml`).**
+- **Gap found:** checked against the live schema (51 tables), the backup covered 26. It was missing 16, among them `client_portal_contracts` and `client_portal_job_messages` (flagged here 2026-09-17), `client_portal_thread_reads`, `client_account_codes`, `referrals`, `th_job_applications`, the relational `jobs` / `invoices` / `invoice_line_items` / `quotes` / `quote_line_items` / `contracts`, `stripe_pos_charges_logged` and the new `tenants`.
+- **Second gap:** each table was one request, and PostgREST returns at most 1000 rows, so a table past 1000 rows would have been cut short with no error. The storage script's folder listing had the same 1000 cap.
+- **Fix:**
+  - `scripts/backup-tables.json` names every table as backed up, backed up elsewhere (the 3 CMS tables, `backup-cms-content.yml`) or excluded with a reason. The six excluded are cron and uptime telemetry, the two-factor gate log, and `internal_mfa_recovery_codes`: a restored copy would bring back used or replaced sign-in codes.
+  - `scripts/backup-tables.py` reads the live table list from PostgREST's OpenAPI description on every run and stops before writing anything if a table isn't named, or a named one is gone. It pages 1000 rows at a time by primary key and refuses a copy shorter than the row count PostgREST reports. Output bytes are unchanged (`json.tool` style, checked).
+  - `scripts/backup-storage-bucket.py --all` backs up whichever buckets exist (5 today) and pages folder listings.
+- `tenants` is first in the list: since multi-tenant Tier 0 every row references one, so it restores first.
+- Test: `tests/scripts/backup-scripts.test.js` (7) runs both scripts against a fake Supabase: 2500 rows in 3 pages; an unknown live table stops the run with nothing written; a short copy leaves yesterday's files alone; `--all` picks up a new bucket and pages a 1500-file folder.
+
+**Edge-function drift (`.github/workflows/edge-function-drift.yml`, `scripts/check-edge-function-drift.js`).**
+- Merging doesn't deploy functions, and nothing noticed when live and repo disagreed: three incidents (uptime-alert, Send-Push, stripe-webhook).
+- The workflow runs after any merge touching `edge-functions/` and every Monday. It downloads each live function's source with the Supabase CLI and fails, listing what to deploy, on any function that differs, is live-only, is repo-only or didn't download. It never deploys: per-function `verify_jwt` settings (off only for stripe-webhook) make a blind auto-deploy riskier than a loud reminder.
+- **Needs one secret before its first run:** `SUPABASE_ACCESS_TOKEN`, a Supabase personal access token (the service-role key can't read function source). Setup steps are at the top of the workflow; until then its first step fails and says so. Logged in ACTION-ITEMS.
+- Not verifiable from the sandbox (no token, supabase.com blocked): the CLI download step. The compare script is tested (`tests/scripts/edge-function-drift.test.js`, 3), including a run against copies of all 41 repo functions.
+- Checked by hand today instead: the live list has the same 41 functions as `edge-functions/`. Since the folder was created (a9f8d44, 2026-09-23) only the 2026-09-25 changes touched functions, and every one of those was redeployed after (18:20-18:32). `get-job-photo-urls` (live since 09-16) matches the repo line for line. The full content diff waits for the workflow.
+

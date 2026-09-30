@@ -60,7 +60,7 @@
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=7e8fb6ef3d" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
-<script src="/tools/sync.js?v=0e885bb435" defer></script>
+<script src="/tools/sync.js?v=ac03ce9686" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -3381,6 +3381,19 @@
     prUnit: { dataKey: 'th_parts_reference_units', tombstoneKey: 'th_pr_unit_tombstones', label: r => [r.brand, r.type || r.model].filter(Boolean).join(' ') || 'Appliance Wiki unit' },
     shift: { dataKey: 'th_shift_log', tombstoneKey: 'th_shift_tombstones', label: r => [r.email, r.start ? new Date(r.start).toLocaleString() : '', r.hours ? r.hours + ' h' : ''].filter(Boolean).join(' -- ') || 'Shift' },
   };
+  // Deleting an invoice, quote, contract or job also deletes its row from
+  // the relational tables (mirrorDelete in sync.js). Restoring has to put
+  // it back: Finance, Runway and the overdue alert read `invoices`, so a
+  // restored invoice stayed missing there until some other invoice was
+  // saved (2026-09-30). Upserts, so a record still present is harmless.
+  // The portal copy and an invoice's income entry are not re-created --
+  // re-publishing to a client's portal should stay a deliberate step.
+  const GRAVEYARD_RELATIONAL_MIRROR = {
+    invoice: (r) => { if (typeof mirrorInvoiceToRelational === 'function') mirrorInvoiceToRelational(r); },
+    quote: (r) => { if (typeof mirrorQuoteToRelational === 'function') mirrorQuoteToRelational(r); },
+    contract: (r) => { if (typeof mirrorContractToRelational === 'function') mirrorContractToRelational(r); },
+    job: (r) => { if (typeof mirrorJobsToRelational === 'function') mirrorJobsToRelational([r]); },
+  };
   const GRAVEYARD_TYPE_TITLES = {
     client: 'Client', job: 'Job', expense: 'Expense', income: 'Income', contact: 'Contact',
     contract: 'Contract', invoice: 'Invoice', quote: 'Quote', priceReference: 'Price reference', inventory: 'Inventory part',
@@ -3458,6 +3471,8 @@
       }
       // Marked restored, not deleted: see thLiftTombstone in data-layer.js.
       thLiftTombstone(cfg.tombstoneKey, entry.record.id);
+      const mirror = GRAVEYARD_RELATIONAL_MIRROR[entry.recordType];
+      if (mirror) mirror(entry.record);
     }
 
     thRemoveFromGraveyard(graveyardId);
