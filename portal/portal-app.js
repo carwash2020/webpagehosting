@@ -999,17 +999,46 @@ function portalApplyNavUnreadBadges(rows) {
 // Invoices tab when the client has money owed. A dot rather than a
 // number -- the exact amount already lives one tap away on Home and
 // on Invoices itself, and this only needs to answer "is anything
-// owed", not "how much". Callers pass whatever unpaid/paid rows they
-// already fetched for the page (home.html and dashboard.html both
-// load client_portal_invoices already); this never queries on its
-// own so it can't add a request to pages that never asked for one.
-function portalApplyNavInvoiceDot(hasOwed) {
+// owed", not "how much". Home and Invoices pass the count from the
+// invoices they already load; the other five pages call
+// portalRefreshNavInvoiceDot() below (owner's call, 2026-09-29, Claude
+// Design Package C9), so the dot means the same thing on every page
+// instead of appearing and disappearing as a client moves between tabs.
+// The dot stays aria-hidden; the Invoices link says "Invoices, 1 unpaid"
+// to screen readers while it shows. A boolean still works (true = 1).
+function portalApplyNavInvoiceDot(owed) {
   const link = document.querySelector('.portal-nav a[href="/portal/dashboard.html"]');
   if (!link) return;
   const dot = link.querySelector('.portal-nav-dot');
   if (!dot) return;
-  dot.hidden = !hasOwed;
-  dot.classList.toggle('is-visible', !!hasOwed);
+  const count = owed === true ? 1 : (Number(owed) || 0);
+  dot.hidden = count === 0;
+  dot.classList.toggle('is-visible', count > 0);
+  if (count > 0) link.setAttribute('aria-label', 'Invoices, ' + count + ' unpaid');
+  else link.removeAttribute('aria-label');
+}
+
+// One count-only request (HEAD, no rows) for the pages that don't load
+// invoices themselves: how many of this client's invoices are unpaid.
+// Filtered by email explicitly, like every portal read since the
+// 2026-09-29 fix (an internal account's RLS would otherwise count every
+// client's). A failed check changes nothing.
+async function portalRefreshNavInvoiceDot(supabaseClient, email) {
+  try {
+    if (!supabaseClient) return;
+    if (!email) {
+      const { data } = await supabaseClient.auth.getSession();
+      email = data && data.session ? data.session.user.email : null;
+    }
+    if (!email) return;
+    const { count, error } = await supabaseClient
+      .from('client_portal_invoices')
+      .select('id', { count: 'exact', head: true })
+      .eq('client_email', String(email).toLowerCase())
+      .eq('paid', false);
+    if (error) return;
+    portalApplyNavInvoiceDot(count || 0);
+  } catch (e) { /* the dot just stays as it was */ }
 }
 
 // ---------- Never miss a reply (2026-09-22) ----------

@@ -107,7 +107,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=8d5b635c84">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/portal/portal-app.js?v=202609231400"></script>
+<script src="/portal/portal-app.js?v=202609300100"></script>
 <!-- Shared business-hours data (2026-09-03) -- see business-hours.js's
      own header comment. This page used to keep its own hand-copied
      duplicate of these exact constants ("keep these in sync manually
@@ -321,7 +321,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=3c10b2da52">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=ef680484b9">
 </head>
 <body class="portal-page">
 
@@ -686,6 +686,7 @@
     document.getElementById('clientEmailDisplay').textContent = session.user.email;
     if (typeof portalSetHeaderInitials === 'function') portalSetHeaderInitials(session.user.email);
     await portalGuardWithBiometricLock(session.user.email, client);
+    portalRefreshNavInvoiceDot(client, session.user.email); // the owed dot, same on every page
     // Keeps the Request/Jobs unread badges on the bottom nav while
     // browsing other tabs (2026-09-22). Fire-and-forget; never throws.
     portalStartUnreadBadges(client);

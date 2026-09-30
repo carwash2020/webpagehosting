@@ -6001,3 +6001,13 @@ Tests: `tests/design/package-a-accessibility.test.js` (9; all 9 fail on the prev
 The Employee fix covers what Home shows. The data itself still syncs to every staff device; that's logged for the security lane in `docs/specialist-logs/security.md`. Details are in `docs/specialist-logs/visual.md`.
 
 Tests: `tests/tools/package-b-loading-access.test.js` (11; all 11 fail on the previous code).
+
+## What changed, 2026-09-29 -- Client portal: "where things stand" on every request, and the money-owed dot on every page (Claude Design Package C)
+
+- **Where things stand.** Each request on the portal's Request page now shows its progress as four steps: Sent, Reviewed, Scheduled and Done. Finished steps get a blue check; the current step has a soft pulse. Each step shows its date where there is one: when the request was sent, and the day the visit is booked for. It replaces the old thin progress bar, with the same stages. "On the way" and "Paid" steps would need new data first; that's logged in `docs/specialist-logs/features.md`.
+- **Money-owed dot everywhere.** The small dot on the Invoices tab now shows on every portal page while an invoice is unpaid, not only on Home and Invoices. It used to appear and disappear as a client moved between tabs. Screen readers hear "Invoices, 1 unpaid". It costs one small count request per page.
+- **Not in this update:** the staff "viewing as staff" banner (skipped for now), and Face ID/passkey sign-in, which needs real sign-in work.
+
+Also in this update: if something breaks while Workspace Home paints from the last visit, it's now logged in Dev Tools' client errors instead of silently ignored.
+
+Tests: `tests/portal/package-c-portal.test.js` (4) and the updated `tests/portal/work-order-progress-track.test.js` (8); all fail on the previous code except the service-worker check.

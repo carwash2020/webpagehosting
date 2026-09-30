@@ -112,7 +112,7 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=8d5b635c84">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/signature-pad.js?v=f95f8e1d28"></script>
-<script src="/portal/portal-app.js?v=202609231400"></script>
+<script src="/portal/portal-app.js?v=202609300100"></script>
 <script src="https://js.stripe.com/v3/"></script>
 <script src="/portal/push-notifications.js"></script>
 <style>
@@ -348,7 +348,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=3c10b2da52">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=ef680484b9">
 </head>
 <body class="portal-page">
 
@@ -1688,6 +1688,7 @@
     loadAuthorizations();
     loadNotificationPreferences();
     loadReferralLink(email);
+    portalRefreshNavInvoiceDot(client, email); // the owed dot, same on every page
 
     // Called here rather than only from the beforeinstallprompt
     // listener -- that event never fires on iOS at all, so relying on

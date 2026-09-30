@@ -1138,7 +1138,11 @@ belongs with whichever phase touches each page's header next).
 Found while driving every flow in Chromium around #440 and #441. Neither is
 a restyle slip, so neither was changed.
 
-- **Portal owed dot shows on 2 of 7 pages.** `portalApplyNavInvoiceDot()`
+- ~~**Portal owed dot shows on 2 of 7 pages.**~~ Decided 2026-09-29: show it
+  on every page (Claude Design Package C9). The other five pages now read
+  one count-only request (`portalRefreshNavInvoiceDot()`), and the Invoices
+  link says "Invoices, N unpaid" to screen readers. Original note:
+  `portalApplyNavInvoiceDot()`
   runs only on Home and Invoices (the pages that already load invoices), so
   the dot on the Invoices tab appears and disappears as a client moves
   between tabs while money is still owed. #441 chose this on purpose (no

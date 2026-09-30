@@ -112,7 +112,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=8d5b635c84">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/portal/portal-app.js?v=202609231400"></script>
+<script src="/portal/portal-app.js?v=202609300100"></script>
 <style>
   body { background: #0a0a0a; max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
   /* Widened for real desktop screens (2026-09-03), reported directly
@@ -473,7 +473,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=3c10b2da52">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=ef680484b9">
 </head>
 <body class="portal-page">
 
@@ -1267,7 +1267,7 @@
       renderGlance(summary);
       if (typeof portalSetHeaderInitials === 'function') portalSetHeaderInitials(summary.displayName || session.user.email);
       portalApplyNavUnreadBadges(summary.unread);
-      portalApplyNavInvoiceDot(summary.invoices.some(i => !i.paid));
+      portalApplyNavInvoiceDot(summary.invoices.filter(i => !i.paid).length);
       if (typeof portalApplyNavEstimatesDot === 'function') portalApplyNavEstimatesDot(summary.quotes.some(q => (q.status || 'pending') === 'pending'));
       watchHomeUnread(summary);
     } catch (e) {

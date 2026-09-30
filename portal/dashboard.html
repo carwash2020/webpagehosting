@@ -103,7 +103,7 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=8d5b635c84">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/signature-pad.js?v=f95f8e1d28"></script>
-<script src="/portal/portal-app.js?v=202609231400"></script>
+<script src="/portal/portal-app.js?v=202609300100"></script>
 <script src="https://js.stripe.com/v3/"></script>
 <script src="/js/pdf-layout.js?v=6a1ecc363f" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
@@ -301,7 +301,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=3c10b2da52">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=ef680484b9">
 </head>
 <body class="portal-page">
 
@@ -693,7 +693,7 @@
       return;
     }
     currentInvoices = invoices;
-    portalApplyNavInvoiceDot(invoices.some(inv => !inv.paid));
+    portalApplyNavInvoiceDot(invoices.filter(inv => !inv.paid).length);
     if (!invoices.length) {
       hidePayFirst();
       listEl.innerHTML = `<div class="empty-state is-neutral"><div class="empty-state-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9.5 9h5M9.5 13h5"/></svg></div><p class="empty-state-title">No invoices on file yet.</p><p class="empty-state-sub">When we invoice you, it will show up here so you can pay online.</p><a href="/portal/work-orders.html" class="btn orange empty-state-cta">Request Work</a></div>`;
