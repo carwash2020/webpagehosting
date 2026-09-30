@@ -24,7 +24,11 @@ test('applySyncData reads every tombstone list it syncs, after that list has mer
   const apply = SYNC.slice(SYNC.indexOf('function applySyncData('), SYNC.indexOf('const SYNC_HISTORY_KEY'));
   const keys = listed('SYNC_DATA_KEYS').concat(listed('WIKI_SYNC_KEYS'));
   assert.ok(keys.length >= 16);
-  const missing = keys.filter(k => !apply.includes("localStorage.getItem('" + k + "')"));
+  // Read either directly or through ID_TOMBSTONE_KEY_FOR (2026-09-30), the
+  // table applySyncData() filters each synced list by.
+  const table = SYNC.slice(SYNC.indexOf('const ID_TOMBSTONE_KEY_FOR = {'), SYNC.indexOf('};', SYNC.indexOf('const ID_TOMBSTONE_KEY_FOR = {')));
+  assert.ok(apply.includes('localStorage.getItem(tombstoneKey)'), 'the table is actually read');
+  const missing = keys.filter(k => !apply.includes("localStorage.getItem('" + k + "')") && !table.includes(": '" + k + "',"));
   assert.deepEqual(missing, [], 'a tombstone list nothing reads can\'t stop a stale device resurrecting what it deleted');
 });
 
