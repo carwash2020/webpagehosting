@@ -49,7 +49,7 @@ Fine for "one client's history" today; not fine for a repeat commercial client w
 
 Only `tenant_id`, a few FK columns, and `client_portal_work_orders`' `status`/`created_at`/`client_email` are indexed today. **No index** on `jobs.status`, `jobs.created_at`, `invoices.paid`/`status`, or the name/phone/email columns filtered/searched throughout the app.
 
-- Fix direction: btree indexes on the filter/sort columns actually used; `pg_trgm` GIN indexes for ILIKE search columns.
+- Fix direction: **composite indexes, not single-column, leading with `tenant_id`** — e.g. `(tenant_id, status, created_at)` on `jobs`. Every query now passes through RLS with `tenant_id = current_tenant_id()`, so a single-column index on just `status` or `created_at` may get ignored by the planner in favor of (or in addition to) the tenant filter; leading the composite key with `tenant_id` is what actually gets used. `pg_trgm` GIN indexes for the ILIKE search columns, same principle if those searches ever get tenant-scoped too.
 
 ### 6. Hardcoded small-scale assumptions
 
@@ -64,6 +64,13 @@ Several places (`workspace.html:1849-1879, 2478, 2564, 4103`) load a full array 
 3. Fix the N+1 client search (item 3) — high user-visible pain, self-contained.
 4. Move dashboards to SQL aggregates (item 2) and add pagination everywhere (item 4) — natural next step once #1 is live.
 5. Clean up the small-scale slice() patterns (item 6) as each page gets touched.
+
+### Cutover risks for item 1, flagged by review before work starts
+
+- **Test RLS during the migration, not after.** The relational tables already carry Tier 0 RLS. The moment the tools switch from `workspace_sync` reads to real queries, a staff session where `current_tenant_id()` doesn't resolve will quietly return **zero rows** — no error, just an empty dashboard. Confirm `current_tenant_id()` resolves for every real staff login path (Steve, Connor, any future account) early in the migration, not as an afterthought.
+- **Devices that haven't synced.** Data can still be sitting in `localStorage` on a phone or laptop that hasn't pushed its latest blob. Before backfilling the relational tables from `workspace_sync`, force a final sync from every device Steve and staff actually use, confirm it landed, and only then make the old blob path **read-only** so nothing writes to it after the backfill runs. Skipping this risks silently losing whatever's sitting unsynced on a device.
+- **Money math in SQL.** When dashboards move to aggregate queries (item 2), use `numeric` columns and do the rounding in Postgres, not JS. Otherwise the new totals can differ by a few cents from what the old JS math showed — reads as a regression even when the SQL is more correct.
+- **Keyset pagination, not offset.** For item 4, prefer keyset (`where created_at < $last order by created_at desc limit 50`) over `.range()` offset pagination — it holds up much better at high row counts (`.range()` gets progressively slower the deeper you page, keyset doesn't). Worth using from the start on the internal tools rather than retrofitting later.
 
 ---
 
