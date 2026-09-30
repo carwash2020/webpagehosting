@@ -54,7 +54,7 @@
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=8d5b635c84">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=ef737be2c6" defer></script>
+<script src="/tools/sync.js?v=0bd8128a5f" defer></script>
 <script src="/tools/data-layer.js?v=114109db2f" defer></script>
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
@@ -1169,11 +1169,21 @@
     if (!el) return;
     try {
       const status = JSON.parse(localStorage.getItem('th_sync_last') || 'null');
-      el.textContent = formatSyncStatus(status);
+      let text = formatSyncStatus(status);
+      // Relational mirror failures (Item 1 Phase 0d): saves that reached
+      // this device and the blob but NOT the database tables the calendar,
+      // route planner, and invoice views read. Device-local count.
+      const failures = (typeof loadMirrorFailures === 'function') ? loadMirrorFailures() : [];
+      if (failures.length) {
+        text += ' \u00b7 ' + failures.length + (failures.length === 1 ? ' save' : ' saves') +
+          " didn't reach the database (last: " + failures[0].table + ', ' + failures[0].error + ')';
+      }
+      el.textContent = text;
     } catch (e) { /* ignore */ }
   }
 
   window.addEventListener('th-sync-status', updateSyncStatusText);
+  window.addEventListener('th-mirror-failure', updateSyncStatusText);
 
   function updateRealtimeBadge(status) {
     const dot = document.getElementById('realtimeDot');

@@ -1078,51 +1078,146 @@ async function pullWikiSync() {
 // lead-insert mirror. A failure here (network down, RLS misconfigured)
 // never throws back to the caller and never blocks the localStorage save
 // that already happened -- these run strictly after it.
-async function mirrorUpsert(table, rows) {
-  if (!isSyncConfigured() || !rows || !rows.length) return;
+// Mirror failure log (2026-09-30, Item 1 Phase 0d -- see
+// docs/ITEM-1-MIGRATION-PLAN.md). The mirror used to swallow every error:
+// a 4xx (e.g. RLS 42501), a missing session, or a network failure all
+// looked identical to success. That hid a real outage -- after Tier 0,
+// every mirrored insert and upsert failed RLS (see
+// sql/multi-tenant/06_tenant_id_from_session_top_level_tables.sql) and
+// nothing surfaced. Still fire-and-forget and still never throws, but now
+// every failure is recorded to a device-local log (deliberately NOT in
+// SYNC_DATA_KEYS -- it describes this device's failed requests, not shared
+// data) and announced via 'th-mirror-failure', so the sync status line can
+// show it. Each mirror function also returns { ok, error } for callers
+// and tests that want it; existing callers ignore the return value.
+const MIRROR_FAILURES_KEY = 'th_mirror_failures';
+const MIRROR_FAILURES_MAX = 50;
+
+function recordMirrorFailure(table, op, error, ids) {
+  const entry = {
+    table, op, error: error || 'unknown',
+    ids: (ids || []).slice(0, 10),
+    time: new Date().toISOString(),
+  };
   try {
-    const token = (typeof getAuthToken === 'function') ? getAuthToken() : null;
-    if (!token) return;
-    await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${table}`, {
+    let log = [];
+    try { log = JSON.parse(localStorage.getItem(MIRROR_FAILURES_KEY) || '[]'); } catch (e) { log = []; }
+    if (!Array.isArray(log)) log = [];
+    log.unshift(entry); // most recent first
+    if (log.length > MIRROR_FAILURES_MAX) log.length = MIRROR_FAILURES_MAX;
+    localStorage.setItem(MIRROR_FAILURES_KEY, JSON.stringify(log));
+  } catch (e) { /* storage full or unavailable -- still announce below */ }
+  try { console.warn('Relational mirror failed:', entry); } catch (e) { /* ignore */ }
+  try { window.dispatchEvent(new CustomEvent('th-mirror-failure', { detail: entry })); } catch (e) { /* ignore */ }
+  return entry;
+}
+
+function loadMirrorFailures() {
+  try {
+    const log = JSON.parse(localStorage.getItem(MIRROR_FAILURES_KEY) || '[]');
+    return Array.isArray(log) ? log : [];
+  } catch (e) { return []; }
+}
+
+function clearMirrorFailures() {
+  try { localStorage.removeItem(MIRROR_FAILURES_KEY); } catch (e) { /* ignore */ }
+  try { window.dispatchEvent(new CustomEvent('th-mirror-failure', { detail: null })); } catch (e) { /* ignore */ }
+}
+
+// 'http-403 42501' when PostgREST returns its JSON error body (the
+// Postgres SQLSTATE is what actually distinguishes RLS from a bad column
+// or an FK violation), plain 'http-403' otherwise.
+async function describeMirrorError(res) {
+  if (!res) return 'no-response';
+  let code = '';
+  try {
+    if (typeof res.json === 'function') {
+      const body = await res.json();
+      if (body && body.code) code = ' ' + body.code;
+    }
+  } catch (e) { /* non-JSON body */ }
+  return 'http-' + res.status + code;
+}
+
+function mirrorAuthHeaders(token) {
+  return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${token}` };
+}
+
+function mirrorToken() {
+  return (typeof getAuthToken === 'function') ? getAuthToken() : null;
+}
+
+async function mirrorUpsert(table, rows) {
+  if (!isSyncConfigured() || !rows || !rows.length) return { ok: true, skipped: true };
+  const ids = rows.map(r => r && r.id).filter(v => v !== undefined && v !== null);
+  try {
+    const token = mirrorToken();
+    if (!token) { recordMirrorFailure(table, 'upsert', 'no-session', ids); return { ok: false, error: 'no-session' }; }
+    const res = await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${table}`, {
       method: 'POST',
-      headers: {
+      headers: Object.assign({
         'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${token}`,
         'Prefer': 'resolution=merge-duplicates,return=minimal',
-      },
+      }, mirrorAuthHeaders(token)),
       body: JSON.stringify(rows),
     });
-  } catch (e) { /* best-effort mirror -- the real localStorage save already happened */ }
+    if (!res || !res.ok) {
+      const error = await describeMirrorError(res);
+      recordMirrorFailure(table, 'upsert', error, ids);
+      return { ok: false, error };
+    }
+    return { ok: true };
+  } catch (e) {
+    recordMirrorFailure(table, 'upsert', 'network', ids);
+    return { ok: false, error: 'network' };
+  }
 }
 
 async function mirrorDelete(table, id) {
-  if (!isSyncConfigured() || id === undefined || id === null) return;
+  if (!isSyncConfigured() || id === undefined || id === null) return { ok: true, skipped: true };
   try {
-    const token = (typeof getAuthToken === 'function') ? getAuthToken() : null;
-    if (!token) return;
-    await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`, {
+    const token = mirrorToken();
+    if (!token) { recordMirrorFailure(table, 'delete', 'no-session', [id]); return { ok: false, error: 'no-session' }; }
+    const res = await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`, {
       method: 'DELETE',
-      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${token}` },
+      headers: mirrorAuthHeaders(token),
     });
-  } catch (e) { /* best-effort */ }
+    if (!res || !res.ok) {
+      const error = await describeMirrorError(res);
+      recordMirrorFailure(table, 'delete', error, [id]);
+      return { ok: false, error };
+    }
+    return { ok: true };
+  } catch (e) {
+    recordMirrorFailure(table, 'delete', 'network', [id]);
+    return { ok: false, error: 'network' };
+  }
 }
 
 // Line items have no stable id of their own on the client side, so the
 // only correct way to mirror a full replacement set is delete-then-insert
 // for that one parent id -- simpler and safer than trying to diff against
-// whatever's already there.
+// whatever's already there. Known gap (Phase 0d audit, tracked for the
+// outbox work): the delete and insert aren't atomic, and this runs
+// concurrently with the parent's own mirrorUpsert, so for a brand-new
+// parent the insert can race the parent row and fail its FK. Both are now
+// at least recorded instead of silent.
 async function mirrorReplaceLineItems(table, fkColumn, parentId, items) {
-  if (!isSyncConfigured() || parentId === undefined || parentId === null) return;
+  if (!isSyncConfigured() || parentId === undefined || parentId === null) return { ok: true, skipped: true };
   try {
-    const token = (typeof getAuthToken === 'function') ? getAuthToken() : null;
-    if (!token) return;
-    const headers = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${token}` };
-    await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${table}?${fkColumn}=eq.${encodeURIComponent(parentId)}`, {
+    const token = mirrorToken();
+    if (!token) { recordMirrorFailure(table, 'replace-line-items', 'no-session', [parentId]); return { ok: false, error: 'no-session' }; }
+    const headers = mirrorAuthHeaders(token);
+    const del = await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${table}?${fkColumn}=eq.${encodeURIComponent(parentId)}`, {
       method: 'DELETE', headers,
     });
+    if (!del || !del.ok) {
+      const error = await describeMirrorError(del);
+      recordMirrorFailure(table, 'replace-line-items:delete', error, [parentId]);
+      return { ok: false, error };
+    }
     if (items && items.length) {
-      await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${table}`, {
+      const ins = await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${table}`, {
         method: 'POST',
         headers: Object.assign({ 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, headers),
         body: JSON.stringify(items.map((it, idx) => ({
@@ -1131,12 +1226,21 @@ async function mirrorReplaceLineItems(table, fkColumn, parentId, items) {
           taxable: !!it.taxable, item_type: it.type || null,
         }))),
       });
+      if (!ins || !ins.ok) {
+        const error = await describeMirrorError(ins);
+        recordMirrorFailure(table, 'replace-line-items:insert', error, [parentId]);
+        return { ok: false, error };
+      }
     }
-  } catch (e) { /* best-effort */ }
+    return { ok: true };
+  } catch (e) {
+    recordMirrorFailure(table, 'replace-line-items', 'network', [parentId]);
+    return { ok: false, error: 'network' };
+  }
 }
 
 function mirrorJobsToRelational(jobs) {
-  mirrorUpsert('jobs', (jobs || []).map(j => ({
+  return mirrorUpsert('jobs', (jobs || []).map(j => ({
     id: j.id, title: j.title || '', client: j.client || null, client_id: j.clientId || null,
     phone: j.phone || null, address: j.address || null, client_email: j.clientEmail || null,
     priority: j.priority || null, job_date: j.date || null, status: j.status || null,
@@ -1173,21 +1277,25 @@ function mirrorReferralCreated(job) {
 // to that one job_id, not a blanket "mark everything earned", since a
 // job with no referral simply matches zero rows and this is a no-op.
 async function mirrorReferralEarnedForJob(jobId) {
-  if (!isSyncConfigured() || jobId === undefined || jobId === null) return;
+  if (!isSyncConfigured() || jobId === undefined || jobId === null) return { ok: true, skipped: true };
   try {
-    const token = (typeof getAuthToken === 'function') ? getAuthToken() : null;
-    if (!token) return;
-    await fetchWithRetry(`${SUPABASE_URL}/rest/v1/referrals?referred_job_id=eq.${encodeURIComponent(jobId)}&status=eq.pending`, {
+    const token = mirrorToken();
+    if (!token) { recordMirrorFailure('referrals', 'mark-earned', 'no-session', [jobId]); return { ok: false, error: 'no-session' }; }
+    const res = await fetchWithRetry(`${SUPABASE_URL}/rest/v1/referrals?referred_job_id=eq.${encodeURIComponent(jobId)}&status=eq.pending`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${token}`,
-        'Prefer': 'return=minimal',
-      },
+      headers: Object.assign({ 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }, mirrorAuthHeaders(token)),
       body: JSON.stringify({ status: 'earned', earned_at: new Date().toISOString() }),
     });
-  } catch (e) { /* best-effort -- the real invoice save already happened */ }
+    if (!res || !res.ok) {
+      const error = await describeMirrorError(res);
+      recordMirrorFailure('referrals', 'mark-earned', error, [jobId]);
+      return { ok: false, error };
+    }
+    return { ok: true };
+  } catch (e) {
+    recordMirrorFailure('referrals', 'mark-earned', 'network', [jobId]);
+    return { ok: false, error: 'network' };
+  }
 }
 
 // Tells the client portal an invoice was marked paid (or unpaid) by hand

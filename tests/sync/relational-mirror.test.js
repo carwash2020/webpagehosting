@@ -63,6 +63,7 @@ test('contract-generator.html: contract creation mirrors the new entry, and dele
 // fetch -- confirms it targets the right table/method/headers and sends
 // real row data, not just that the function exists.
 function loadMirrorFunctions() {
+  const failureLogSrc = SYNC_JS.match(/const MIRROR_FAILURES_KEY[\s\S]*?\nfunction mirrorToken\(\) \{[\s\S]*?\n\}/)[0];
   const upsertSrc = SYNC_JS.match(/async function mirrorUpsert[\s\S]*?\n\}/)[0];
   const deleteSrc = SYNC_JS.match(/async function mirrorDelete[\s\S]*?\n\}/)[0];
   const replaceLineItemsSrc = SYNC_JS.match(/async function mirrorReplaceLineItems[\s\S]*?\n\}/)[0];
@@ -77,13 +78,26 @@ function loadMirrorFunctions() {
   const fetchWithRetryStub = 'async function fetchWithRetry(url, opts) { return fetch(url, opts); }\n';
 
   const sandbox = { isSyncConfigured: () => true, getAuthToken: () => 'fake-token', fetch: (...args) => global.fetch(...args) };
-  const src = fetchWithRetryStub + upsertSrc + '\n' + deleteSrc + '\n' + replaceLineItemsSrc + '\n' + jobsSrc + '\n' + deriveInvoicePaidSrc + '\n' + invoiceSrc +
+  const src = fetchWithRetryStub + failureLogSrc + '\n' + upsertSrc + '\n' + deleteSrc + '\n' + replaceLineItemsSrc + '\n' + jobsSrc + '\n' + deriveInvoicePaidSrc + '\n' + invoiceSrc +
     '\nsandbox.mirrorUpsert = mirrorUpsert; sandbox.mirrorDelete = mirrorDelete; sandbox.mirrorReplaceLineItems = mirrorReplaceLineItems; sandbox.mirrorJobsToRelational = mirrorJobsToRelational; sandbox.mirrorInvoiceToRelational = mirrorInvoiceToRelational;' +
-    '\nsandbox.fetchWithRetry = fetchWithRetry; sandbox.fetch = fetch;';
+    '\nsandbox.fetchWithRetry = fetchWithRetry; sandbox.fetch = fetch;' +
+    '\nsandbox.loadMirrorFailures = loadMirrorFailures; sandbox.clearMirrorFailures = clearMirrorFailures;';
+  const store = new Map();
+  const localStorage = {
+    getItem: (k) => (store.has(k) ? store.get(k) : null),
+    setItem: (k, v) => store.set(k, String(v)),
+    removeItem: (k) => store.delete(k),
+  };
+  sandbox.events = [];
+  const window = { dispatchEvent: (e) => sandbox.events.push(e) };
+  const CustomEvent = class { constructor(type, init) { this.type = type; this.detail = init && init.detail; } };
+  const console = { warn: () => {} };
   // eslint-disable-next-line no-new-func
   new Function('sandbox', 'SUPABASE_URL', 'SUPABASE_ANON_KEY', 'isSyncConfigured', 'getAuthToken', 'fetch',
+    'localStorage', 'window', 'CustomEvent', 'console',
     src
-  )(sandbox, 'https://example-project.supabase.co', 'fake-anon-key', sandbox.isSyncConfigured, sandbox.getAuthToken, sandbox.fetch);
+  )(sandbox, 'https://example-project.supabase.co', 'fake-anon-key', sandbox.isSyncConfigured, () => sandbox.getAuthToken(), sandbox.fetch,
+    localStorage, window, CustomEvent, console);
   return sandbox;
 }
 
@@ -144,4 +158,67 @@ test('mirror functions never throw even when fetch itself fails -- best-effort, 
     mirrorJobsToRelational([{ id: 1, title: 'x' }]);
     await new Promise(resolve => setTimeout(resolve, 10));
   });
+});
+
+// Item 1 Phase 0d (2026-09-30): failures are recorded, not swallowed. The
+// live outage this was built for returned 403 with SQLSTATE 42501 on every
+// mirrored write after Tier 0, and the old code made that identical to
+// success.
+test('an RLS rejection is recorded with its SQLSTATE and the row ids, and announced', async () => {
+  const sb = loadMirrorFunctions();
+  global.fetch = async () => ({ ok: false, status: 403, json: async () => ({ code: '42501', message: 'new row violates row-level security policy' }) });
+  const result = await sb.mirrorJobsToRelational([{ id: 7, title: 'a' }, { id: 8, title: 'b' }]);
+  assert.deepEqual(result, { ok: false, error: 'http-403 42501' });
+  const log = sb.loadMirrorFailures();
+  assert.equal(log.length, 1);
+  assert.equal(log[0].table, 'jobs');
+  assert.equal(log[0].op, 'upsert');
+  assert.equal(log[0].error, 'http-403 42501');
+  assert.deepEqual(log[0].ids, [7, 8]);
+  assert.equal(sb.events.at(-1).type, 'th-mirror-failure');
+});
+
+test('a success records nothing', async () => {
+  const sb = loadMirrorFunctions();
+  global.fetch = async () => ({ ok: true, status: 201 });
+  assert.deepEqual(await sb.mirrorJobsToRelational([{ id: 1, title: 'x' }]), { ok: true });
+  assert.equal(sb.loadMirrorFailures().length, 0);
+});
+
+test('no session and network failure are both recorded, distinctly', async () => {
+  const sb = loadMirrorFunctions();
+  sb.getAuthToken = () => null;
+  assert.equal((await sb.mirrorDelete('invoices', 5)).error, 'no-session');
+  sb.getAuthToken = () => 'fake-token';
+  global.fetch = async () => { throw new Error('offline'); };
+  assert.equal((await sb.mirrorUpsert('quotes', [{ id: 9 }])).error, 'network');
+  const log = sb.loadMirrorFailures();
+  assert.deepEqual(log.map(e => [e.table, e.op, e.error]), [['quotes', 'upsert', 'network'], ['invoices', 'delete', 'no-session']]);
+});
+
+test('a failed line-item insert after a successful delete is recorded (the non-atomic replace gap)', async () => {
+  const sb = loadMirrorFunctions();
+  let n = 0;
+  global.fetch = async () => (++n === 1 ? { ok: true, status: 204 } : { ok: false, status: 409, json: async () => ({ code: '23503' }) });
+  const r = await sb.mirrorReplaceLineItems('invoice_line_items', 'invoice_id', 99, [{ desc: 'Labor' }]);
+  assert.equal(r.error, 'http-409 23503');
+  assert.equal(sb.loadMirrorFailures()[0].op, 'replace-line-items:insert');
+});
+
+test('the failure log is capped and device-local (never synced)', async () => {
+  const sb = loadMirrorFunctions();
+  global.fetch = async () => ({ ok: false, status: 500 });
+  for (let i = 0; i < 60; i++) await sb.mirrorUpsert('jobs', [{ id: i }]);
+  const log = sb.loadMirrorFailures();
+  assert.equal(log.length, 50);
+  assert.deepEqual(log[0].ids, [59], 'most recent first');
+  const syncKeys = SYNC_JS.match(/SYNC_DATA_KEYS\s*=\s*\[([\s\S]*?)\]/)[1];
+  assert.doesNotMatch(syncKeys, /th_mirror_failures/);
+});
+
+test('job-tracker.html shows mirror failures on the sync status line and re-renders on th-mirror-failure', () => {
+  const src = fs.readFileSync(path.join(TOOLS_DIR, 'job-tracker.html'), 'utf8');
+  const fn = src.match(/function updateSyncStatusText\(\)[\s\S]*?\n  \}/)[0];
+  assert.match(fn, /loadMirrorFailures\(\)/);
+  assert.match(src, /addEventListener\('th-mirror-failure', updateSyncStatusText\)/);
 });
