@@ -6012,6 +6012,14 @@ Also in this update: if something breaks while Workspace Home paints from the la
 
 Tests: `tests/portal/package-c-portal.test.js` (4) and the updated `tests/portal/work-order-progress-track.test.js` (8); all fail on the previous code except the service-worker check.
 
+## What changed, 2026-09-30 -- Multi-tenant Tier 0: real tenant isolation, live in production
+
+Added the database foundation for eventually selling this software to other businesses: a `tenants` table, `tenant_id` on every business table, and every staff-facing RLS policy extended with a real tenant check (`current_tenant_id()`, the tenant-resolution twin of `current_user_has_any_role()`). Triple H is tenant #1 (`slug: triple-h`) -- an ordinary row, not a hardcoded special case. Fully additive: nullable columns backfilled to Triple H, existing policies ANDed with a tenant check rather than replaced, zero behavior change for the real business today.
+
+Applied live in 5 staged batches (`sql/multi-tenant/01`-`05`), each verified against real production data before the next one ran. Proven first in a fully disposable local Postgres (Supabase's branch/project-creation API was down all session), replaying the exact real policies pulled from the live project. Caught and fixed two real bugs this way before they ever touched production -- see `docs/specialist-logs/features.md`'s 2026-09-30 entry for the full detail, including a same-class regression to the #469 incident (an RLS change silently breaking a write path) caught this time by testing rather than by a customer.
+
+This is Tier 0 only: no second-tenant signup flow, no per-tenant branding, no billing yet. Edge functions (service-role, bypass RLS) aren't tenant-scoped -- harmless with one real tenant today, a real gap once a second one exists.
+
 ## What changed, 2026-09-30 -- A share card for every page, the address in the booking summary, and the portal's steps back to orange (Claude Design Package D)
 
 - **Share cards.** A link to any page (in a text, on Facebook, in Slack) now previews with its own card: the page's title in big capitals on the dark background, with the orange logo and phone number. Before this every page shared the same image, which still showed the old blue logo. Towns show "Standard coverage" or "Available by request". Washer pages and the washer-drain post have a line drawing of the part to check. Orange only, no blue. To add or change a card, see `scripts/og-cards/README.md`.
@@ -6020,4 +6028,3 @@ Tests: `tests/portal/package-c-portal.test.js` (4) and the updated `tests/portal
 - **Not in this update:** the homepage reshuffle and the drawings in place of blog photos, both left for the owner (`docs/ACTION-ITEMS.md`). The booking "we're holding this time" countdown, because nothing actually holds a slot.
 
 Tests: `tests/design/package-d-public-site.test.js` (8).
-
