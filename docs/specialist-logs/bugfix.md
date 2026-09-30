@@ -1543,3 +1543,19 @@ Test: `tests/tools/batch1-reliability.test.js` (5); all five fail on the previou
   - **Cause:** each of the 16 posts' lead image sits in the first screen but was `loading="lazy"`, which delays the largest paint.
   - **Fix:** they're now `fetchpriority="high"`. No width/height was added: the Unsplash photos can't be viewed from here to pick safe proportions.
 
+## 2026-09-30 -- sync: the merge base is saved after every push; notes and flagged items get tombstones
+
+Both flagged here on 2026-09-23 ("still true") and again in the 2026-09-25 regression pass.
+
+- **Merge base after a push** (`tools/sync.js`).
+  - **Cause:** the per-field merge three-way-diffs against a base: what this device last knew the server held. That base was saved only inside `applySyncData()`, and only for keys the server already had. With no base, a record falls back to "remote wins"; with an old one, a double edit looks like a conflict the server copy wins. So two cases went wrong:
+    - The first push of a key (every record of a newly synced data type) left no base. This device's next edits to those records were then overwritten by its own older push on the following pull.
+    - A push after the pre-push fetch failed left the old base. A record edited again before the next pull became a false conflict that the server's older copy won.
+  - **Fix:** after a successful POST, `saveSyncBaseFromPushed()` records exactly what was sent (the server now holds it) as the base, for the same keys `applySyncData()` keeps one for (a test keeps the two skip lists equal). A failed push leaves the base alone.
+- **Tombstones for notes and "Flag this page" items** (`sync.js`, `data-layer.js`, `dev-tools.html`, `job-tracker.html`).
+  - **Cause:** neither list had delete-tracking, so a device that hadn't synced since a delete pushed its copy back and the note or flag reappeared everywhere.
+  - **Fix:**
+    - `th_note_tombstones` and `th_flagged_tombstones` sync just before their lists, and `applySyncData()` filters by them, like every other deletable record type.
+    - Deleting a note (Job Tracker) or a flag (Dev Tools, or `thDeleteFlaggedItem`) now records one.
+- Test: `tests/sync/merge-base-and-note-tombstones.test.js` (7) runs the real `sync.js` + `data-layer.js` against a fake server. Six fail on the previous code; the seventh (a failed push leaves the base alone) guards the fix.
+

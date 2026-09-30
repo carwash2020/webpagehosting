@@ -6048,3 +6048,10 @@ Tests: `tests/scripts/backup-scripts.test.js` (7), `tests/scripts/edge-function-
 
 Tests: `tests/design/batch2-labels-and-loading.test.js` (6), plus the updated portal PDF tests.
 
+## What changed, 2026-09-30 -- Sync keeps your latest edit; deleted notes and flags stay deleted
+
+- **Your latest edit wins over your own older copy.** After the first sync of a new kind of record (or a sync that briefly couldn't reach the server), editing that record again before the next sync could lose the edit to the older copy on the server. Each device now remembers exactly what it last sent, so its newer edits are kept.
+- **Deleted notes and flagged pages stay deleted.** A phone or computer that hadn't synced in a while could bring a deleted Job Tracker note or a "Flag this page" item back. They now get the same delete-tracking every other record has.
+
+Tests: `tests/sync/merge-base-and-note-tombstones.test.js` (7).
+
