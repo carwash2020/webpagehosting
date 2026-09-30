@@ -3383,3 +3383,9 @@ Built `design_handoff_first_impressions` (Workspace + client portal) end to end.
 - **Tour page-tip anchors are best-effort, not pixel-verified.** Each of the 6 one-time page tips (`thPageTip()` in `tools-nav-pwa.js`) is inserted before a real, existing element per page (`#jobsList`, `#invoiceSummary`, `#clientDirList`, `.tabs.tabs-sticky` on finance.html, `.settings-account`, and `#jobsCalendarWrap`'s own `.form-section` for the Calendar view) -- not visually screenshotted against the handoff's mocks. Worth a look in the `run` skill before calling this pixel-final.
 
 <!-- Add new entries above this line -->
+
+- 2026-09-29 (from the visual lane, Claude Design Package C8): the design's "Where things stand" timeline has five steps: Requested → Scheduled → On the way → Done → Paid. The portal has data for only four of them, spread over separate records. So it shipped as four steps on each request card (`portal/work-orders.html`: Sent → Reviewed → Scheduled → Done, from `client_portal_work_orders.status`, with the sent and scheduled dates). Two steps need new data:
+  - **"On the way":** the Workspace's On my way button texts the client, but records nothing the portal can read.
+  - **"Paid":** a work order has no link to the job and invoice it turns into (`client_portal_jobs.linked_invoice_number` exists, but nothing ties the job back to the request).
+  
+  Both would need a column or event per request (for example `client_portal_work_orders.on_the_way_at`, plus a `job_id` or `invoice_id` link).

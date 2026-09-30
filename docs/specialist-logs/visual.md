@@ -3003,3 +3003,26 @@ Source: `Package B Loading States.dc.html` and `handoff/package-B.css` from the 
   - When the pull lands, the new job appears, 4 figures settle, and the marker goes to "Up to date", then "Updated just now".
 - **All 7 blocked screens,** at 390 and 1440, show the page's name, "You're signed in as Jake (Employee).", and two 48px actions.
 - **Role check forced to fail:** "couldn't confirm" with Try again, which reloads into the page once the connection is back.
+
+## 2026-09-29 -- Claude Design next pass, Package C (client portal), applied
+
+**C8, "Where things stand".**
+- **Where it went.** The design drew a visit detail page with five steps: Requested → Scheduled → On the way → Done → Paid. The portal has no such page, and no data for "On the way" or "Paid" (the reasons are logged in features.md). So the timeline replaced the segmented bar on each request card in `portal/work-orders.html`.
+- **What it shows.** The same four real stages as the bar (Sent → Reviewed → Scheduled → Done), with the same `quoted` = `reviewing` rule and the same aria-label ("Progress: Scheduled, step 3 of 4"), now an `<ol class="th-stand">` with `aria-current="step"`.
+  - Done steps are filled blue with a check.
+  - The current step is a ring with a dot, pulsing only where motion is allowed.
+  - Later steps are hollow.
+  - Dates appear where the request has them: Sent, and the visit Scheduled is set for.
+- **Dates in two zones.** Each date follows the zone of the card line it repeats. Sent is shown like "Requested …", in the viewer's zone. Scheduled is shown like "Scheduled for …", in Denver. Formatting both in Denver made a request sent after 6pm Mountain read "Requested Sep 30" beside "Sent Sep 29".
+- **Horizontal on phones.** The design's phone layout was vertical, but that was for a single page. On a list of cards, four stacked steps would add about 230px to every card, so it stays horizontal, with 13px/12.5px type under 761px. It measured one row and no overflow at 390px for every status.
+- **Colour.** Blue is Package C's colour rule for visit progress. The v2 bar had been orange.
+
+**C9, the owed dot on every page** (the owner's call).
+- `portalApplyNavInvoiceDot()` now takes a count and sets `aria-label="Invoices, N unpaid"` on the link; the dot itself stays aria-hidden.
+- Quotes, Visits, Request, Contracts and Settings call `portalRefreshNavInvoiceDot()`. It makes one HEAD count request, filtered by the client's email. A failed check changes nothing.
+- Harness check: 3 unpaid gives a dot and "Invoices, 3 unpaid" on all 7 pages. Another client's unpaid invoice isn't counted. Paid up gives no dot and no label anywhere.
+- **Gotcha:** `portal-app.js` has a hand-set stamp (`?v=202609300100` now) that `fix-versions` doesn't manage, and two tests require it to match on all 9 portal pages. Bump it by hand whenever `portal-app.js` changes.
+
+**Not applied.**
+- **C10, the staff banner:** the owner chose to skip it for now, and staff access to the portal stays undecided.
+- **C11, passkeys:** it needs real WebAuthn sign-in work; the design covers only the look.

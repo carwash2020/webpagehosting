@@ -106,7 +106,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=8d5b635c84">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/portal/portal-app.js?v=202609231400"></script>
+<script src="/portal/portal-app.js?v=202609300100"></script>
 <!-- jsPDF for the service history download (2026-09-22) -- the same
      pinned version and integrity hash Invoices and Quotes load for
      their PDFs. async: it's only needed when the button is tapped. -->
@@ -298,7 +298,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=3c10b2da52">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=ef680484b9">
 </head>
 <body class="portal-page">
 
@@ -1294,6 +1294,7 @@
     document.getElementById('clientEmailDisplay').textContent = session.user.email;
     if (typeof portalSetHeaderInitials === 'function') portalSetHeaderInitials(session.user.email);
     await portalGuardWithBiometricLock(session.user.email, client);
+    portalRefreshNavInvoiceDot(client, session.user.email); // the owed dot, same on every page
 
     // Shown immediately, before the fetch (2026-09-03) -- same
     // reasoning as quotes.html's identical fix, found the same pass:

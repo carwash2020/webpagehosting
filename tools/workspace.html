@@ -4569,11 +4569,19 @@
       return hit ? hit.time : null;
     } catch (e) { return null; }
   }
+  // A renderer that throws here mustn't stop the others or the page: the
+  // full render after the pull still runs. It's reported, not swallowed,
+  // so a broken early paint shows up in Dev Tools' client errors.
+  function reportHomeRenderError(where, e) {
+    if (typeof logClientError === 'function') {
+      logClientError('Workspace Home ' + where + ': ' + (e && e.message ? e.message : String(e)), 'workspace.html', null, null, e && e.stack ? e.stack : null);
+    }
+  }
   function renderDashboardFromLastVisit() {
     if (!lastSuccessfulPullTime()) return false;
     applyHomeMoneyState();
     [renderGreetingBanner, renderTodayHero, renderWeekCard, renderMetrics, renderUpcoming, renderFollowups, renderInvoicesList, renderTodayV2]
-      .forEach(fn => { try { fn(); } catch (e) { /* the full render after the pull still runs */ } });
+      .forEach(fn => { try { fn(); } catch (e) { reportHomeRenderError('last-visit paint (' + fn.name + ')', e); } });
     settleChangedFigures();
     return true;
   }
@@ -4682,7 +4690,7 @@
     setHomeFresh(paintedFromLastVisit ? 'refreshing' : 'stale');
     // Money can show as soon as the role is confirmed, from this device's
     // copy, without waiting for the pull to finish.
-    window.addEventListener('th-role-loaded', () => { try { renderMetrics(); renderInvoicesList(); } catch (e) { /* renderDashboard redraws */ } });
+    window.addEventListener('th-role-loaded', () => { try { renderMetrics(); renderInvoicesList(); } catch (e) { reportHomeRenderError('money redraw on role load', e); } });
     const syncStartedAt = Date.now();
     initSyncOnLoad().then(renderDashboard).catch(renderDashboard).then(() => {
       const pulled = lastSuccessfulPullTime();

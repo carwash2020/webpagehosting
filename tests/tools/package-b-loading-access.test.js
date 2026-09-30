@@ -132,6 +132,33 @@ test('B7: Home paints from the last visit before the role check and the pull, on
   assert.equal(w.lastSuccessfulPullTime(), '2026-09-29T10:00:00Z');
 });
 
+test('B7: a renderer that throws during the last-visit paint is reported, and the rest still paint', () => {
+  const dom = new JSDOM('<!doctype html><body></body>', { runScripts: 'outside-only', url: 'https://example.test/' });
+  const w = dom.window;
+  w.eval(`
+    var ran = [], logged = [];
+    function lastSuccessfulPullTime() { return '2026-09-29T10:00:00Z'; }
+    function applyHomeMoneyState() { return 'pending'; }
+    function settleChangedFigures() {}
+    function logClientError(msg) { logged.push(msg); }
+    function renderGreetingBanner() { ran.push('greeting'); }
+    function renderTodayHero() { throw new Error('boom'); }
+    function renderWeekCard() { ran.push('week'); }
+    function renderMetrics() { ran.push('metrics'); }
+    function renderUpcoming() { ran.push('upcoming'); }
+    function renderFollowups() { ran.push('followups'); }
+    function renderInvoicesList() { ran.push('invoices'); }
+    function renderTodayV2() { ran.push('v2'); }
+  `);
+  w.eval(extractFn(WS, 'reportHomeRenderError'));
+  w.eval(extractFn(WS, 'renderDashboardFromLastVisit'));
+  assert.equal(w.renderDashboardFromLastVisit(), true);
+  assert.deepEqual(Array.from(w.ran), ['greeting', 'week', 'metrics', 'upcoming', 'followups', 'invoices', 'v2']);
+  assert.equal(w.logged.length, 1);
+  assert.match(w.logged[0], /last-visit paint \(renderTodayHero\): boom/);
+  assert.match(WS, /window\.addEventListener\('th-role-loaded', \(\) => \{ try \{ renderMetrics\(\); renderInvoicesList\(\); \} catch \(e\) \{ reportHomeRenderError\('money redraw on role load', e\); \} \}\);/);
+});
+
 test('B7: the freshness marker reads Refreshing, then Up to date, then how old', () => {
   const dom = new JSDOM('<!doctype html><body><span class="th-fresh" id="homeFresh" hidden></span></body>', { runScripts: 'outside-only', url: 'https://example.test/' });
   const w = dom.window;

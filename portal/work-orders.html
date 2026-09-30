@@ -117,7 +117,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=8d5b635c84">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/portal/portal-app.js?v=202609231400"></script>
+<script src="/portal/portal-app.js?v=202609300100"></script>
 <!-- Shared business-hours data (2026-09-04) -- see business-hours.js's
      own header comment for the full reasoning. -->
 <script src="/js/business-hours.js?v=5296319b73"></script>
@@ -383,9 +383,6 @@
      fills the same step as "reviewing" since the status pill itself
      already colors them identically. Omitted entirely for "declined":
      a closed request isn't partway through anything. */
-  .wo-progress { display: flex; gap: 4px; margin-top: 10px; }
-  .wo-progress-seg { flex: 1; height: 5px; border-radius: 3px; background: var(--border); }
-  .wo-progress-seg.is-filled { background: var(--blue-light); }
   .wo-urgency-tag { font-size: 11.5px; color: var(--text-dim); margin-top: 6px; }
   .wo-scheduled-tag {
     font-size: 13px; font-weight: 600; color: var(--orange-light); margin-top: 8px;
@@ -428,7 +425,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=3c10b2da52">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=ef680484b9">
 </head>
 <body class="portal-page">
 
@@ -1013,15 +1010,36 @@
   // it rather than contradicting it with a 5th distinct stage.
   const PROGRESS_STEPS = { submitted: 1, reviewing: 2, quoted: 2, scheduled: 3, completed: 4 };
   const PROGRESS_STEP_LABELS = ['Received', 'Reviewing', 'Scheduled', 'Completed'];
-  function progressTrackHtml(statusKey) {
+  // "Where things stand" (Claude Design Package C8, 2026-09-29): the same
+  // four real stages as the bar it replaces, drawn as steps -- done steps
+  // filled blue with a check, the current one a ring with a dot (a soft
+  // pulse where motion is allowed), later ones hollow. Dates only where
+  // the request has one: when it was sent, and the visit it's scheduled
+  // for. Blue, per the portal's colour rule for visit progress. Each date
+  // reads in the same zone as the line on the card that repeats it: Sent
+  // like "Requested ..." (formatDate, the viewer's own), Scheduled like
+  // "Scheduled for ..." (formatScheduledAt, the business's).
+  const STAND_CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  function standDate(iso, businessZone) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return new Intl.DateTimeFormat('en-US', Object.assign({ month: 'short', day: 'numeric' }, businessZone ? { timeZone: 'America/Denver', weekday: 'short' } : {})).format(d);
+  }
+  function progressTrackHtml(statusKey, wo) {
     const step = PROGRESS_STEPS[statusKey];
     if (!step) return ''; // "declined" (or anything unrecognized): closed, not partway through anything
-    const segs = [1, 2, 3, 4].map(n => `<span class="wo-progress-seg${n <= step ? ' is-filled' : ''}"></span>`).join('');
-    // v2 (2026-09-28): the four stages named under the bar (visual only;
-    // the aria-label above already says where it stands).
-    const names = ['Sent', 'Reviewed', 'Scheduled', 'Done'].map((label, i) => `<span class="wo-progress-step${i + 1 <= step ? ' is-reached' : ''}${i + 1 === step ? ' is-now' : ''}">${label}</span>`).join('');
-    return `<div class="wo-progress-wrap"><div class="wo-progress" role="img" aria-label="Progress: ${escapeHtml(PROGRESS_STEP_LABELS[step - 1])}, step ${step} of 4">${segs}</div><div class="wo-progress-steps" aria-hidden="true">${names}</div></div>`;
+    const finished = statusKey === 'completed';
+    const dates = { 1: standDate(wo && wo.created_at), 3: standDate(wo && wo.scheduled_at, true) };
+    const items = ['Sent', 'Reviewed', 'Scheduled', 'Done'].map((label, i) => {
+      const n = i + 1;
+      const state = (n < step || finished) ? 'is-done' : (n === step ? 'is-current' : '');
+      const date = n <= step ? (dates[n] || '') : '';
+      return `<li${state ? ` class="${state}"` : ''}${state === 'is-current' ? ' aria-current="step"' : ''}><span class="th-stand-node" aria-hidden="true">${state === 'is-done' ? STAND_CHECK : ''}</span><div><span class="th-stand-label">${label}</span>${date ? `<span class="th-stand-date">${escapeHtml(date)}</span>` : ''}</div></li>`;
+    }).join('');
+    return `<ol class="th-stand" aria-label="Progress: ${escapeHtml(PROGRESS_STEP_LABELS[step - 1])}, step ${step} of 4">${items}</ol>`;
   }
+
 
   function renderRequestCard(wo) {
     const statusKey = wo.status || 'submitted';
@@ -1037,7 +1055,7 @@
           </div>
           <span class="wo-status is-${escapeHtml(statusKey)}">${escapeHtml(statusLabel)}</span>
         </div>
-        ${progressTrackHtml(statusKey)}
+        ${progressTrackHtml(statusKey, wo)}
         <div class="wo-card-desc">${escapeHtml(wo.description)}</div>
         ${urgencyLabel ? `<div class="wo-urgency-tag${urgentClass}">${escapeHtml(urgencyLabel)}</div>` : ''}
         ${(statusKey === 'scheduled' && wo.scheduled_at) ? `<div class="wo-scheduled-tag">Scheduled for ${escapeHtml(formatScheduledAt(wo.scheduled_at))}</div>` : ''}
@@ -1451,6 +1469,7 @@
     document.getElementById('clientEmailDisplay').textContent = session.user.email;
     if (typeof portalSetHeaderInitials === 'function') portalSetHeaderInitials(session.user.email);
     await portalGuardWithBiometricLock(session.user.email, client);
+    portalRefreshNavInvoiceDot(client, session.user.email); // the owed dot, same on every page
     prefillRequestContact(session.user.email);
     renderMyRequests();
     initPortalPullToRefresh(renderMyRequests);
