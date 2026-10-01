@@ -496,6 +496,22 @@ function thDeleteClient(id) {
 
 // Gathers every distinct client name currently referenced anywhere, with the
 // best contact details available for each. Read-only -- inspects, never writes.
+// A contract's client contact details, from the keys the contract forms
+// actually save (2026-10-01). The form fields are phone, serviceAddress and
+// email (contract-generator.html's collectFields); this used to read
+// clientPhone / clientAddress / clientEmail, which no contract has ever had,
+// so a client first seen on a contract never got a phone, address or email
+// on their card (found in the Item 1 inventory). The old names are still
+// read as a fallback, in case a record somewhere carries them.
+function thContractClientDetails(fields) {
+  const f = fields || {};
+  return {
+    phone: f.phone || f.clientPhone || '',
+    address: f.serviceAddress || f.clientAddress || '',
+    email: f.email || f.clientEmail || '',
+  };
+}
+
 function thCollectClientNamesFromExistingData() {
   const found = {}; // normalizedKey -> { displayName, phone, address, email, sources:Set }
 
@@ -530,7 +546,7 @@ function thCollectClientNamesFromExistingData() {
   thRead(TH_KEYS.contracts, []).forEach(c => {
     if (linked(c)) return;
     const f = c && c.fields ? c.fields : {};
-    note(f.clientName, { phone: f.clientPhone, address: f.clientAddress, email: f.clientEmail }, 'contract');
+    note(f.clientName, thContractClientDetails(f), 'contract');
   });
 
   return found;

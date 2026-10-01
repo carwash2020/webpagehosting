@@ -3458,6 +3458,14 @@ Dev Tools' Full Backup / Restore kept its own list of 17 keys, which had drifted
 - A restore that includes wiki keys also calls `scheduleWikiSync()`, since the wiki syncs through its own table.
 - Test: `tests/tools/full-backup-keys.test.js` (7, jsdom running the real backup code against the real key lists).
 
+## 2026-10-01 -- Contracts fill in the client's phone, address and email
+
+The contract forms save `phone`, `serviceAddress` and `email` (`collectFields` in `tools/contract-generator.html`), but the contract save path and `thCollectClientNamesFromExistingData()` read `clientPhone`, `clientAddress` and `clientEmail`, which no contract has ever had. A client first seen on a contract got a card with no contact details, and an existing client's blanks were never filled from one (found in the Item 1 inventory). Both now go through `thContractClientDetails(fields)` in `tools/data-layer.js`, which reads the real keys (the old names stay as a fallback).
+
+- **Why the old test missed it:** `tests/sync/client-identity.test.js` only checked that the contract's `thEnsureClient` call mentioned "email", which `fields.clientEmail` did. It now checks the call goes through the helper and that no `fields.client(Phone|Address|Email)` read is left.
+- Existing contracts aren't re-applied: a client's blanks fill the next time a contract is generated for them (or a later backfill picks up a contract-only client).
+- Test: `tests/sync/contract-client-details.test.js` (5, including a check that all three contract types save the four keys the helper reads).
+
 <!-- Add new entries above this line -->
 
 - 2026-09-29 (from the visual lane, Claude Design Package C8): the design's "Where things stand" timeline has five steps: Requested → Scheduled → On the way → Done → Paid. The portal has data for only four of them, spread over separate records. So it shipped as four steps on each request card (`portal/work-orders.html`: Sent → Reviewed → Scheduled → Done, from `client_portal_work_orders.status`, with the sent and scheduled dates). Two steps need new data:
