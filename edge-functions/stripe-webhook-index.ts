@@ -370,6 +370,27 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ received: false, error: "Failed to mark invoice(s) paid" }), { status: 500 });
   }
 
+  // And in public.invoices, the relational copy the Recent list and the
+  // calendar read. Before 2026-10-01 a card payment reached it only when a
+  // device happened to re-mirror that invoice. One PATCH per invoice,
+  // since each has its own total. Best-effort like the blob write below:
+  // the client-facing row is already paid, so a failure here is logged,
+  // never retried by failing the webhook.
+  for (const row of unpaidRows) {
+    if (row.source_invoice_id == null) continue;
+    const relRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/invoices?id=eq.${encodeURIComponent(String(row.source_invoice_id))}`,
+      {
+        method: "PATCH",
+        headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({ paid: true, paid_amount: Number(row.total) || 0, updated_at: paidAt }),
+      },
+    ).catch((e) => ({ ok: false, text: async () => String(e) }) as any);
+    if (!relRes.ok) {
+      console.error(`Failed to mark public.invoices ${row.source_invoice_id} paid for PaymentIntent ${pi.id}: ${await relRes.text().catch(() => "")}`);
+    }
+  }
+
   // Also mark paid in workspace_sync's th_invoices, so Connor/Steve's
   // own invoice log reflects this too, not just the portal --
   // workspace_sync stores one row per sync "code" as a single JSON
@@ -398,12 +419,23 @@ Deno.serve(async (req: Request) => {
     const blob = syncRows[0].data;
     const invoices = JSON.parse(blob.th_invoices || "[]");
     const sourceIds = new Set(unpaidRows.map((inv: any) => inv.source_invoice_id));
+    const portalTotal = new Map(unpaidRows.map((inv: any) => [inv.source_invoice_id, Number(inv.total) || 0]));
     let changed = false;
     invoices.forEach((inv: any) => {
-      if (sourceIds.has(inv.id) && !inv.paid) {
-        inv.paid = true;
-        changed = true;
-      }
+      if (!sourceIds.has(inv.id)) return;
+      // Paid in full means paidAmount = total, the same as Mark paid in the
+      // app (workspace.html togglePaid, invoice-generator.html). This used
+      // to set only `paid`, and every device recomputes `paid` from
+      // paidAmount on sync (sync.js deriveInvoicePaid), so an invoice that
+      // had ever been marked unpaid (paidAmount 0) flipped back to unpaid
+      // after a real card payment (found in the Item 1 inventory, 2026-10-01).
+      const total = Number(inv.total ?? portalTotal.get(inv.id)) || 0;
+      const paidCents = Math.round((Number(inv.paidAmount) || 0) * 100);
+      const fullyRecorded = inv.paid === true && inv.paidAmount != null && paidCents >= Math.round(total * 100);
+      if (fullyRecorded) return;
+      inv.paid = true;
+      inv.paidAmount = total;
+      changed = true;
     });
     if (changed) {
       blob.th_invoices = JSON.stringify(invoices);
@@ -420,6 +452,7 @@ Deno.serve(async (req: Request) => {
       }
     }
   }
+
 
   return new Response(JSON.stringify({ received: true, invoices_marked_paid: unpaidIds.length }), { status: 200 });
 });
