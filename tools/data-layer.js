@@ -612,6 +612,43 @@ function thBackfillClients() {
 // Resolves a raw client name to its registry record, normalized -- so
 // "Sarah Miller", "sarah miller", and "Sarah  Miller" all return the same
 // client instead of three.
+// Has this person had work done before? (2026-10-01.) Finance's
+// first-time discount used to compare the typed name to job names
+// exactly (just lowercased), so "Sarah  Miller", or a returning client
+// whose old jobs were saved under another spelling but linked to the same
+// client card, read as brand new and got the discount box ticked (found in
+// the Item 1 inventory). This normalizes the name the same way the client
+// list does, finds the client card, and counts their jobs and invoices by
+// the card's id as well as by name.
+//
+// Returns { client, jobs, invoices, returning, similar }: `returning` is
+// true when any job or invoice is on file; `similar` lists other clients
+// whose names look like the typed one (every typed word starts a word of
+// theirs, e.g. "sarah m" -> "Sarah Miller"), as a hint only.
+function thClientHistory(name) {
+  const key = thNormalizeClientName(name);
+  const empty = { client: null, jobs: 0, invoices: 0, returning: false, similar: [] };
+  if (!key) return empty;
+  const client = thFindClientByName(name);
+  const matches = (recName, recClientId) =>
+    (client && recClientId && recClientId === client.id) || thNormalizeClientName(recName) === key;
+  const jobs = thRead(TH_KEYS.jobs, []).filter(j => j && matches(j.client, j.clientId)).length;
+  const invoices = thRead(TH_KEYS.invoices, []).filter(i => i && matches(i.clientName, i.clientId)).length;
+  let similar = [];
+  if (!jobs && !invoices) {
+    const words = key.split(' ');
+    similar = thLoadClients()
+      .filter(c => thNormalizeClientName(c.name) !== key)
+      .filter(c => {
+        const theirs = thNormalizeClientName(c.name).split(' ');
+        return words.every(w => theirs.some(t => t.startsWith(w)));
+      })
+      .map(c => c.name)
+      .slice(0, 3);
+  }
+  return { client, jobs, invoices, returning: jobs + invoices > 0, similar };
+}
+
 function thFindClientByName(name) {
   const key = thNormalizeClientName(name);
   if (!key) return null;
