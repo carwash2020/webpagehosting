@@ -63,7 +63,7 @@ These are real defects the inventory turned up. None is fixed here, to keep this
 | Bug | Where | Effect |
 |---|---|---|
 | **Fixed 2026-10-01:** Full Backup covered only 17 of the 49 synced keys (now reads `SYNC_DATA_KEYS` + `WIKI_SYNC_KEYS`, 52 keys) | `tools/dev-tools.html` `ALL_SYNCED_KEYS` (~1636) vs `tools/sync.js` `SYNC_DATA_KEYS` | A restore would lose the client registry, every tombstone (deleted records would come back), review requests, the shift log and Runway's data. |
-| Contracts never add contact details to the client record | `contract-generator.html:1081`, `data-layer.js:530` read `clientPhone`/`clientAddress`/`clientEmail`; the real keys are `phone`/`serviceAddress`/`email` | Client records made from a contract have no phone, address or email. |
+| **Fixed 2026-10-01:** Contracts never added contact details to the client record (now read through `thContractClientDetails()`) | `contract-generator.html:1081`, `data-layer.js:530` read `clientPhone`/`clientAddress`/`clientEmail`; the real keys are `phone`/`serviceAddress`/`email` | Client records made from a contract have no phone, address or email. |
 | Returning clients can get the first-time discount | `finance.html:724` `checkClientHistory` (exact name match) | A returning client typed with a different spelling ticks "First-time client, apply discount". |
 | Bulk job delete leaves the portal copy | `job-tracker.html` `bulkDeleteJobs` (single delete does remove it) | Clients can still see deleted jobs in the portal. |
 | A stale device can bring a deleted job back into `public.jobs` | `mirrorJobsToRelational` upserts the whole local jobs list | The calendar can show a deleted job. Already a known Phase 3 gap. |

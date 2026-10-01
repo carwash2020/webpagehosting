@@ -135,7 +135,6 @@ test('all four client-facing forms pass email into thEnsureClient', () => {
     { file: 'invoice-generator.html', fn: /function logInvoice\(totals\)[\s\S]*?\n  \}\n/, label: 'logInvoice' },
     { file: 'invoice-generator.html', fn: /function logQuote\(totals\)[\s\S]*?\n  \}\n/, label: 'logQuote' },
     { file: 'job-tracker.html', fn: /async function addJob\(\)[\s\S]*?\n  \}\n/, label: 'addJob' },
-    { file: 'contract-generator.html', fn: /thEnsureClient\([\s\S]{0,200}/, label: 'contract-generator' },
   ];
   for (const c of cases) {
     const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', c.file), 'utf8');
@@ -145,6 +144,17 @@ test('all four client-facing forms pass email into thEnsureClient', () => {
     assert.ok(call, `${c.label}: expected a thEnsureClient call with a details object`);
     assert.match(call[0], /email/, `${c.label} must pass email into the client registry`);
   }
+});
+
+// The contract form saves phone / serviceAddress / email; the old check
+// above only looked for the word "email" in the call, which the wrong keys
+// (fields.clientEmail) passed. Checked by behaviour in
+// tests/sync/contract-client-details.test.js; here, just that the save path
+// goes through the helper that reads the real keys.
+test('the contract save path feeds the registry through thContractClientDetails', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'contract-generator.html'), 'utf8');
+  assert.match(src, /thEnsureClient\(fields\.clientName, thContractClientDetails\(fields\)\)/);
+  assert.doesNotMatch(src, /fields\.client(Phone|Address|Email)/);
 });
 
 test('a booking converted to a job carries the email captured on the public website', () => {
