@@ -62,7 +62,7 @@ These are real defects the inventory turned up. None is fixed here, to keep this
 
 | Bug | Where | Effect |
 |---|---|---|
-| Full Backup covers only 17 of the 49 synced keys | `tools/dev-tools.html` `ALL_SYNCED_KEYS` (~1636) vs `tools/sync.js` `SYNC_DATA_KEYS` | A restore would lose the client registry, every tombstone (deleted records would come back), review requests, the shift log and Runway's data. |
+| **Fixed 2026-10-01:** Full Backup covered only 17 of the 49 synced keys (now reads `SYNC_DATA_KEYS` + `WIKI_SYNC_KEYS`, 52 keys) | `tools/dev-tools.html` `ALL_SYNCED_KEYS` (~1636) vs `tools/sync.js` `SYNC_DATA_KEYS` | A restore would lose the client registry, every tombstone (deleted records would come back), review requests, the shift log and Runway's data. |
 | Contracts never add contact details to the client record | `contract-generator.html:1081`, `data-layer.js:530` read `clientPhone`/`clientAddress`/`clientEmail`; the real keys are `phone`/`serviceAddress`/`email` | Client records made from a contract have no phone, address or email. |
 | Returning clients can get the first-time discount | `finance.html:724` `checkClientHistory` (exact name match) | A returning client typed with a different spelling ticks "First-time client, apply discount". |
 | Bulk job delete leaves the portal copy | `job-tracker.html` `bulkDeleteJobs` (single delete does remove it) | Clients can still see deleted jobs in the portal. |
@@ -110,7 +110,7 @@ A tombstone key goes wherever its data key goes. For migrated entities, Phase 3 
 
 Local-only keys (never synced), for completeness: `th_sync_base` (merge base), `th_mirror_failures` (mirror failure log), `th_sync_code`, `th_sync_last`, `th_dash_collapsed`, `th_wiki_sync_known_at`. The plan's "retire" class: `th_sync_code`, `th_sync_last` and `th_dash_collapsed` stay as local UI state; `th_sync_base` and `th_mirror_failures` retire per entity when that entity leaves the blob.
 
-**Full Backup mismatch:** Dev Tools' Full Backup/Restore uses its own 17-key list (`ALL_SYNCED_KEYS`, `tools/dev-tools.html:1636`). It is missing `th_clients`, every tombstone key, and the rest of the "stays" rows above except the settings. See the bugs table.
+**Full Backup mismatch (fixed 2026-10-01; Full Backup now reads sync.js's own lists):** Dev Tools' Full Backup/Restore used its own 17-key list (`ALL_SYNCED_KEYS`, `tools/dev-tools.html:1636`). It is missing `th_clients`, every tombstone key, and the rest of the "stays" rows above except the settings. See the bugs table.
 
 ---
 

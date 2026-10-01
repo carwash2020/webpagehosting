@@ -159,12 +159,13 @@ test('the heading badge shows the breakdown on wide screens and only the total o
   assert.match(WORKSPACE, /@media \(max-width: 720px\) \{\s*\.ai-badge-detail \{ display: none; \}\s*\.ai-badge-total \{ display: inline-block; \}/);
 });
 
-test('Backup & Restore moved to Dev Tools intact (2026-09-22, admin/dev capability, not a regular Settings item): the same ALL_SYNCED_KEYS list, both actions, the same confirm text; the dashboard and Settings both hand #backup off there', () => {
+test('Backup & Restore moved to Dev Tools intact (2026-09-22, admin/dev capability, not a regular Settings item): every synced key, both actions, the same confirm text; the dashboard and Settings both hand #backup off there', () => {
   const DEV_TOOLS = fs.readFileSync(repo('tools', 'dev-tools.html'), 'utf8');
   assert.doesNotMatch(WORKSPACE, /function downloadBackup|function restoreBackup|ALL_SYNCED_KEYS/);
   assert.doesNotMatch(SETTINGS, /function downloadBackup|function restoreBackup|ALL_SYNCED_KEYS/);
   assert.doesNotMatch(SETTINGS, /<h2>Your Data<\/h2>/, 'the Your Data section should no longer live in Settings');
-  assert.match(DEV_TOOLS, /const ALL_SYNCED_KEYS = \[[\s\S]*?'th_tracker_jobs', 'th_tracker_contacts', 'th_tracker_notes_v2',[\s\S]*?'th_inventory',\s*\];/);
+  // Since 2026-10-01 the key list is sync.js's own (see tests/tools/full-backup-keys.test.js).
+  assert.match(DEV_TOOLS, /function fullBackupKeys\(\)/);
   assert.match(DEV_TOOLS, /function downloadBackup\(\)/);
   assert.match(DEV_TOOLS, /function restoreBackup\(event\)/);
   assert.match(DEV_TOOLS, /This will REPLACE all current data/);

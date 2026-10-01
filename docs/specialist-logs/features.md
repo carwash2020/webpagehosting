@@ -3449,6 +3449,15 @@ Connor: "make sure we can't have duplicates in the future." Decided with him: th
 - **Production dry run (rolled back):** the index builds; a second "CONNOR@…" insert is refused; a seeded row with Connor's email folds into his client and fills the blank address.
 - Tests: `tests/sync/client-one-per-email-db.test.js` (10, PGlite), `tests/sync/client-one-per-person.test.js` (8, jsdom), plus two new Add-client tests in `tests/tools/clients-directory.test.js` and one in `tests/tools/client-duplicates-panel.test.js`.
 
+## 2026-10-01 -- Full Backup covers every synced key
+
+Dev Tools' Full Backup / Restore kept its own list of 17 keys, which had drifted from the 49 that sync (found in the Item 1 inventory). A backup left out the client registry, every tombstone (so a restore would bring deleted records back), review requests, the shift log, known issues, flagged items, Runway's data and the whole Appliance Wiki. `fullBackupKeys()` in `tools/dev-tools.html` now returns sync.js's own `SYNC_DATA_KEYS` + `WIKI_SYNC_KEYS` (52 keys, tombstones before their lists), so a key added to sync is backed up with nothing else to change.
+
+- **No silent partial backup:** if sync.js hasn't loaded, Download and Restore refuse instead of falling back to a shorter list.
+- **Format marker:** the file carries `_backup: { format: 2, createdAt, keys }`. A restore of an older 17-key file still works and says so in the confirm, and leaves every key it didn't include (the client list, tombstones) as it is.
+- A restore that includes wiki keys also calls `scheduleWikiSync()`, since the wiki syncs through its own table.
+- Test: `tests/tools/full-backup-keys.test.js` (7, jsdom running the real backup code against the real key lists).
+
 <!-- Add new entries above this line -->
 
 - 2026-09-29 (from the visual lane, Claude Design Package C8): the design's "Where things stand" timeline has five steps: Requested → Scheduled → On the way → Done → Paid. The portal has data for only four of them, spread over separate records. So it shipped as four steps on each request card (`portal/work-orders.html`: Sent → Reviewed → Scheduled → Done, from `client_portal_work_orders.status`, with the sent and scheduled dates). Two steps need new data:

@@ -39,9 +39,13 @@ test('th_inventory is registered in sync.js -- the exact bug class already found
 test('th_inventory is included in the Backup/Restore key list (on dev-tools.html since 2026-09-22, when Backup & Restore moved there from Settings)', () => {
   const devToolsHtml = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'dev-tools.html'), 'utf8');
   const settingsHtml = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'settings.html'), 'utf8');
-  assert.match(devToolsHtml, /ALL_SYNCED_KEYS = \[[\s\S]*?'th_inventory'[\s\S]*?\];/);
-  assert.doesNotMatch(workspaceHtml, /ALL_SYNCED_KEYS/, 'the dashboard no longer owns the backup key list');
-  assert.doesNotMatch(settingsHtml, /ALL_SYNCED_KEYS/, 'Settings no longer owns the backup key list either');
+  // Since 2026-10-01 the backup reads sync.js's own key list, so th_inventory
+  // is backed up because it syncs (tests/tools/full-backup-keys.test.js).
+  const syncJs = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'sync.js'), 'utf8');
+  assert.match(syncJs, /const SYNC_DATA_KEYS = \[[\s\S]*?'th_inventory',[\s\S]*?\n\];/);
+  assert.match(devToolsHtml, /function fullBackupKeys\(\) \{[\s\S]*?SYNC_DATA_KEYS\.concat\(WIKI_SYNC_KEYS/);
+  assert.doesNotMatch(workspaceHtml, /ALL_SYNCED_KEYS|fullBackupKeys/, 'the dashboard no longer owns the backup key list');
+  assert.doesNotMatch(settingsHtml, /ALL_SYNCED_KEYS|fullBackupKeys/, 'Settings no longer owns the backup key list either');
 });
 
 test('a deleted inventory item gets a tombstone, same pattern as every other deletable record type', () => {
