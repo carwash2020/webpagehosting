@@ -3473,6 +3473,14 @@ The contract forms save `phone`, `serviceAddress` and `email` (`collectFields` i
 - No orphans to clean up: production's `client_portal_jobs` was empty on 2026-10-01 (read-only check).
 - Test: `tests/tools/job-delete-portal-cleanup.test.js` (6, jsdom running the real delete functions).
 
+## 2026-10-01 -- First-time discount checks the client's real history
+
+Finance's cost calculator ticks "First-time client — apply discount" when the typed client has no prior work. `checkClientHistory()` compared the name to job names exactly (only lowercased), so extra spaces, or earlier jobs saved under another spelling but linked to the same client card, made a returning client look new (found in the Item 1 inventory). It now calls `thClientHistory(name)` in `tools/data-layer.js`, which normalizes the name like the client list does, finds the client card, and counts jobs **and invoices** by the card's id as well as by name.
+
+- A client card with no work yet (a lead) is still first-time.
+- **Hint, not a decision:** a name that only resembles someone on file (every typed word starts one of theirs, e.g. "sarah m" -> "Sarah Miller") leaves the box ticked and says who's on file, so a genuinely new "Sarah Johnson" isn't denied the discount.
+- Test: `tests/sync/first-time-discount.test.js` (8, jsdom running the real data-layer.js and checkClientHistory()).
+
 <!-- Add new entries above this line -->
 
 - 2026-09-29 (from the visual lane, Claude Design Package C8): the design's "Where things stand" timeline has five steps: Requested → Scheduled → On the way → Done → Paid. The portal has data for only four of them, spread over separate records. So it shipped as four steps on each request card (`portal/work-orders.html`: Sent → Reviewed → Scheduled → Done, from `client_portal_work_orders.status`, with the sent and scheduled dates). Two steps need new data:

@@ -55,7 +55,7 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=8d5b635c84">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=8060cfc3c2" defer></script>
-<script src="/tools/data-layer.js?v=bde95d88e9" defer></script>
+<script src="/tools/data-layer.js?v=7edc2602b7" defer></script>
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
@@ -721,16 +721,29 @@
     container.innerHTML = rows;
   }
 
+  // First-time discount check (fixed 2026-10-01): thClientHistory() in
+  // data-layer.js normalizes the name and counts jobs AND invoices, by the
+  // client card's id as well as by name, so a returning client typed with
+  // extra spaces or whose old work was saved under another spelling isn't
+  // treated as new. A name that only resembles someone on file is a hint,
+  // not a decision.
   function checkClientHistory() {
-    const name = document.getElementById('costClientName').value.trim().toLowerCase();
+    const typed = document.getElementById('costClientName').value.trim();
     const note = document.getElementById('clientHistoryNote');
-    if (!name) { note.textContent = ''; return; }
-    const priorJobs = thRead(TH_KEYS.jobs, []).filter(j => j.client && j.client.trim().toLowerCase() === name);
-    const isNew = priorJobs.length === 0;
-    document.getElementById('firstTimeClient').checked = isNew;
-    note.textContent = isNew
-      ? 'No prior jobs found for this name — treated as a first-time client (you can still uncheck the box below).'
-      : 'Returning client — ' + priorJobs.length + ' prior job' + (priorJobs.length === 1 ? '' : 's') + ' found.';
+    if (!typed) { note.textContent = ''; return; }
+    const h = thClientHistory(typed);
+    document.getElementById('firstTimeClient').checked = !h.returning;
+    if (h.returning) {
+      const parts = [];
+      if (h.jobs) parts.push(h.jobs + ' prior job' + (h.jobs === 1 ? '' : 's'));
+      if (h.invoices) parts.push(h.invoices + ' invoice' + (h.invoices === 1 ? '' : 's'));
+      note.textContent = 'Returning client' + (h.client ? ' (' + h.client.name + ')' : '') + ' — ' + parts.join(' and ') + ' found.';
+    } else if (h.similar.length) {
+      note.textContent = 'No prior work found for this exact name, but ' + h.similar.join(', ') +
+        (h.similar.length === 1 ? ' is' : ' are') + ' on file. If that\'s the same person, uncheck the first-time box below.';
+    } else {
+      note.textContent = 'No prior jobs or invoices found for this name — treated as a first-time client (you can still uncheck the box below).';
+    }
     calculateCost();
   }
 
