@@ -3466,6 +3466,13 @@ The contract forms save `phone`, `serviceAddress` and `email` (`collectFields` i
 - Existing contracts aren't re-applied: a client's blanks fill the next time a contract is generated for them (or a later backfill picks up a contract-only client).
 - Test: `tests/sync/contract-client-details.test.js` (5, including a check that all three contract types save the four keys the helper reads).
 
+## 2026-10-01 -- Bulk-deleted jobs leave the client portal too
+
+`deleteJob()` in `tools/job-tracker.html` tells `sync-job-to-portal` to delete the portal copy of a completed job (`{ delete: true, source_job_id }`), but `bulkDeleteJobs()` never did, so a client could still see jobs that had been bulk-deleted, warranty dates and all (found in the Item 1 inventory). The call is now `removeJobFromPortal(job)`, shared by both, and runs only for a job that was ever synced (status `done` with a client email). It's best-effort, after the undo window, and never blocks the internal delete.
+
+- No orphans to clean up: production's `client_portal_jobs` was empty on 2026-10-01 (read-only check).
+- Test: `tests/tools/job-delete-portal-cleanup.test.js` (6, jsdom running the real delete functions).
+
 <!-- Add new entries above this line -->
 
 - 2026-09-29 (from the visual lane, Claude Design Package C8): the design's "Where things stand" timeline has five steps: Requested → Scheduled → On the way → Done → Paid. The portal has data for only four of them, spread over separate records. So it shipped as four steps on each request card (`portal/work-orders.html`: Sent → Reviewed → Scheduled → Done, from `client_portal_work_orders.status`, with the sent and scheduled dates). Two steps need new data:
