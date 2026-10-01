@@ -3481,6 +3481,16 @@ Finance's cost calculator ticks "First-time client — apply discount" when the 
 - **Hint, not a decision:** a name that only resembles someone on file (every typed word starts one of theirs, e.g. "sarah m" -> "Sarah Miller") leaves the box ticked and says who's on file, so a genuinely new "Sarah Johnson" isn't denied the discount.
 - Test: `tests/sync/first-time-discount.test.js` (8, jsdom running the real data-layer.js and checkClientHistory()).
 
+## 2026-10-01 -- Stripe card payments record the amount paid
+
+`edge-functions/stripe-webhook-index.ts` marked an invoice paid in the workspace blob by setting only `paid = true`. Every device recomputes `paid` from `paidAmount` on sync (`deriveInvoicePaid` in `tools/sync.js`), so an invoice that had ever been marked unpaid (`paidAmount: 0`) flipped back to unpaid after a real card payment. And `public.invoices` heard about a card payment only when some device happened to re-mirror that invoice (found in the Item 1 inventory).
+
+- The blob entry now gets `paid: true` and `paidAmount: total` (the entry's own total, else the portal row's), the same as Mark paid in the app. An entry already fully recorded is left alone.
+- `public.invoices` is updated directly (`paid`, `paid_amount`, `updated_at`), one PATCH per invoice, right after the portal row is marked paid. Best-effort, like the blob write: the portal row is the record the client sees, so a failure is logged, never retried by failing the webhook.
+- Short payments are unchanged: nothing is marked paid anywhere.
+- **Deploy:** edge functions don't deploy on merge, and the drift check fails if the live copy differs from the repo. Deployed with Connor's approval, then merged.
+- Tests: 7 new cases in `tests/edge-functions/stripe-webhook-amount-check.test.js` (5 fail on the old webhook).
+
 <!-- Add new entries above this line -->
 
 - 2026-09-29 (from the visual lane, Claude Design Package C8): the design's "Where things stand" timeline has five steps: Requested → Scheduled → On the way → Done → Paid. The portal has data for only four of them, spread over separate records. So it shipped as four steps on each request card (`portal/work-orders.html`: Sent → Reviewed → Scheduled → Done, from `client_portal_work_orders.status`, with the sent and scheduled dates). Two steps need new data:

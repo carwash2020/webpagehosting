@@ -82,7 +82,12 @@ function loadWebhook(state) {
       state.workspace = JSON.parse(JSON.parse(init.body).data.th_invoices);
       return j([]);
     }
-    if (parsed.pathname === '/rest/v1/stripe_pos_charges_logged' && method === 'POST') {
+    if (parsed.pathname === '/rest/v1/invoices' && method === 'PATCH') {
+      (state.relational = state.relational || []).push({ id: parsed.searchParams.get('id'), ...JSON.parse(init.body) });
+      if (state.relationalFails) return j({ message: 'boom' }, 500);
+      return new Response(null, { status: 204 });
+    }
+        if (parsed.pathname === '/rest/v1/stripe_pos_charges_logged' && method === 'POST') {
       return j([{ payment_intent_id: JSON.parse(init.body).payment_intent_id }], 201);
     }
     if (parsed.pathname === '/functions/v1/Send-Push') {
@@ -399,4 +404,78 @@ test('the alert only goes through the exact-cased Send-Push slug with the servic
   assert.ok(src.includes('`${SUPABASE_URL}/functions/v1/Send-Push`'));
   assert.doesNotMatch(src, /functions\/v1\/send-push/);
   assert.match(src, /Authorization: `Bearer \$\{SERVICE_ROLE_KEY\}` \},\n\s*body: JSON\.stringify\(\{ type: "stripe-reconciliation-alert", title, body \}\)/);
+});
+
+
+// ------------------------------------------------- paidAmount (2026-10-01)
+// The webhook set only `paid` in th_invoices. Every device recomputes
+// `paid` from paidAmount on sync (sync.js deriveInvoicePaid), so an
+// invoice that had ever been marked unpaid (paidAmount 0) flipped back to
+// unpaid after a real card payment. It now records paidAmount = total,
+// like Mark paid in the app, and updates public.invoices directly.
+
+test('a card payment records paidAmount = total in the Invoice Log, so a sync cannot flip it back', async () => {
+  // Marked unpaid once by hand: paid false, paidAmount 0.
+  const state = { invoices: [invoice()], workspace: [{ id: 1007, total: 150, paid: false, paidAmount: 0 }] };
+  const f = loadWebhook(state);
+  const r = await f.deliver(pi());
+  assert.equal(r.status, 200);
+  assert.equal(state.workspace[0].paid, true);
+  assert.equal(state.workspace[0].paidAmount, 150);
+});
+
+test("an Invoice Log entry without its own total takes the portal row's", async () => {
+  const state = { invoices: [invoice({ total: 99.5 })], workspace: [{ id: 1007, paid: false }] };
+  const f = loadWebhook(state);
+  await f.deliver(pi({ amount: 9950, amount_received: 9950 }));
+  assert.equal(state.workspace[0].paidAmount, 99.5);
+});
+
+test('an entry flagged paid but with paidAmount 0 is corrected too', async () => {
+  const state = { invoices: [invoice()], workspace: [{ id: 1007, total: 150, paid: true, paidAmount: 0 }] };
+  const f = loadWebhook(state);
+  await f.deliver(pi());
+  assert.equal(state.workspace[0].paidAmount, 150);
+  assert.equal(f.workspacePatches().length, 1);
+});
+
+test('an entry already fully recorded is left alone (no needless blob write)', async () => {
+  const state = { invoices: [invoice()], workspace: [{ id: 1007, total: 150, paid: true, paidAmount: 150 }] };
+  const f = loadWebhook(state);
+  await f.deliver(pi());
+  assert.equal(f.workspacePatches().length, 0);
+});
+
+test('public.invoices is marked paid with its amount, one PATCH per invoice', async () => {
+  const state = {
+    invoices: [
+      invoice({ id: 7, source_invoice_id: 1007, total: 50, stripe_payment_intent_id: 'pi_bulk' }),
+      invoice({ id: 8, source_invoice_id: 1008, total: 75.5, stripe_payment_intent_id: 'pi_bulk' }),
+    ],
+    workspace: [{ id: 1007, total: 50, paid: false }, { id: 1008, total: 75.5, paid: false }],
+  };
+  const f = loadWebhook(state);
+  await f.deliver(pi({ id: 'pi_bulk', amount: 12550, amount_received: 12550, metadata: { client_portal_invoice_ids: '7,8' } }));
+  assert.deepEqual(state.relational.map((r) => [r.id, r.paid, r.paid_amount]),
+    [['eq.1007', true, 50], ['eq.1008', true, 75.5]]);
+  assert.ok(state.relational.every((r) => typeof r.updated_at === 'string'));
+  assert.deepEqual(state.workspace.map((i) => i.paidAmount), [50, 75.5]);
+});
+
+test('a failed public.invoices write is logged, not fatal: the portal and Invoice Log are still paid', async () => {
+  const state = { invoices: [invoice()], workspace: [{ id: 1007, total: 150, paid: false }], relationalFails: true };
+  const f = loadWebhook(state);
+  const r = await f.deliver(pi());
+  assert.equal(r.status, 200);
+  assert.equal(state.invoices[0].paid, true);
+  assert.equal(state.workspace[0].paidAmount, 150);
+});
+
+test('a short payment still marks nothing paid anywhere, public.invoices included', async () => {
+  const state = { invoices: [invoice()], workspace: [{ id: 1007, total: 150, paid: false, paidAmount: 0 }] };
+  const f = loadWebhook(state);
+  const r = await f.deliver(pi({ amount: 10000, amount_received: 10000 }));
+  assert.equal(r.body.invoices_marked_paid, 0);
+  assert.equal(state.workspace[0].paidAmount, 0);
+  assert.equal((state.relational || []).length, 0);
 });
