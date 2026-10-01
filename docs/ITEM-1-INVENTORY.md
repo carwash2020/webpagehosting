@@ -69,7 +69,7 @@ These are real defects the inventory turned up. None is fixed here, to keep this
 | A stale device can bring a deleted job back into `public.jobs` | `mirrorJobsToRelational` upserts the whole local jobs list | The calendar can show a deleted job. Already a known Phase 3 gap. |
 | **Fixed 2026-10-01:** Card payments could flip back to unpaid (webhook now sets `paidAmount` and updates `public.invoices`) | `stripe-webhook-index.ts:401-404` sets only `paid = true` | If the invoice was ever marked unpaid (`paidAmount: 0`), the next sync recomputes `paid` from `paidAmount` and shows it unpaid. |
 | Tombstones never expire | `thPruneTombstones` runs locally; the union merge restores pruned entries from the server | The lists grow forever (small, but unbounded). |
-| Online-booking jobs aren't mirrored | `workspace.html:3139-3157` writes localStorage directly | The job reaches `public.jobs` only when some other job is saved. |
+| **Fixed 2026-10-01:** Online-booking jobs aren't mirrored (now mirrored on conversion, and the booking's referral is kept) | `workspace.html:3139-3157` writes localStorage directly | The job reaches `public.jobs` only when some other job is saved. |
 | Follow-up reminders match by case-sensitive name | `workspace.html` `renderFollowups`, `send-push-index.ts` `checkFollowups` | A client who came back under a different spelling still shows as overdue for a follow-up. |
 
 ---

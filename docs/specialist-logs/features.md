@@ -134,6 +134,16 @@ Deliberately no AggregateRating there: the page only has the compact
 proof line, not the reviews wall, and `cta-trust-proof.test.js`
 already forbids it.
 
+## 2026-10-01 -- Booked jobs reach the database, with their referral
+
+`convertBookingToJob()` in `tools/workspace.html` (the Dashboard's "Add to Jobs" on an online booking) wrote the new job to localStorage only. The job reached `public.jobs` only when some other job was saved later, so until then the calendar and anything else reading the table didn't have it (found in the Item 1 inventory). It also dropped the booking's "Who referred you?" answer (`th_bookings.referred_by`), so a referrer never got their $25 credit, unlike a job added in the Job Tracker.
+
+- The new job is mirrored with `mirrorJobsToRelational([job])` as soon as it's saved. The job record now keeps `referredBy`.
+- When the booking names a referrer, a `referrals` row is created with `mirrorReferralCreated()`, after the job's mirror succeeds, since the row points at the job (`referred_job_id`). If the job mirror fails, no referral row is sent; the name stays on the job.
+- Both run in the background: the conversion never waits on them, and a failure is recorded by the mirror.
+- Nothing to backfill: production had no converted bookings and no booking referrals on 2026-10-01 (read-only check).
+- Test: `tests/workspace/booking-job-mirror.test.js` (5, jsdom running the real conversion and sync.js mirror functions; all 5 fail on the old code).
+
 <!-- Add new entries above this line -->
 ## 2026-09-17 -- /tools/ Action Items inbox + More overflow (UI only)
 

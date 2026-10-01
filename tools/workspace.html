@@ -3137,7 +3137,8 @@
     const jobs = loadJobs();
     const newId = Date.now();
     const currentUser = (typeof getCurrentUserEmail === 'function') ? getCurrentUserEmail() : null;
-    jobs.push({
+    const referredBy = (booking.referred_by || '').trim();
+    const newJob = {
       id: newId,
       title: booking.service_label,
       client: booking.name || '',
@@ -3152,9 +3153,26 @@
       showOnCalendar: true,
       createdBy: currentUser,
       lastEditedBy: currentUser,
-    });
+      referredBy,
+    };
+    jobs.push(newJob);
     localStorage.setItem('th_tracker_jobs', JSON.stringify(jobs));
     if (typeof scheduleSync === 'function') scheduleSync();
+    // Until 2026-10-01 this only wrote localStorage, so the job reached
+    // public.jobs only when some other job was saved later, and the
+    // booking's "Who referred you?" answer was dropped, so the referrer
+    // never got their credit (docs/ITEM-1-INVENTORY.md bugs table). The
+    // referral row points at the job (referrals.referred_job_id), so it
+    // waits for the job's mirror. Best-effort, as in job-tracker addJob():
+    // a failure is recorded by the mirror, and never blocks or delays the
+    // conversion (not awaited).
+    if (typeof mirrorJobsToRelational === 'function') {
+      Promise.resolve(mirrorJobsToRelational([newJob])).then((mirrored) => {
+        if (referredBy && mirrored && mirrored.ok && typeof mirrorReferralCreated === 'function') {
+          mirrorReferralCreated({ id: newId, client: newJob.client, phone: newJob.phone, referredBy });
+        }
+      }).catch(() => {});
+    }
 
     const markResult = await markBookingConverted(id, newId);
     if (!markResult.ok) {
