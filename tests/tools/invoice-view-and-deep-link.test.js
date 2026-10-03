@@ -73,11 +73,32 @@ test('View invoice opens the archived PDF in a tab opened inside the tap', async
   assert.equal(out.toasts.length, 0);
 });
 
-test('with no saved PDF, the blank tab is closed and it says so', async () => {
-  const { api, out } = setup({ signed: '' });
+test('with no saved PDF, it rebuilds the invoice from the saved record and opens that', async () => {
+  const { w, api, out } = setup({ signed: '' });
+  const rebuilt = [];
+  w.rebuildInvoicePdf = async (entry) => { rebuilt.push(entry.invoiceNumber); return { output: (kind) => (kind === 'bloburl' ? 'blob:https://example.com/rebuilt' : null) }; };
+  await api.viewInvoicePdf(INV.id);
+  assert.deepEqual(rebuilt, ['INV-2026-1051']);
+  assert.equal(out.tab.location.href, 'blob:https://example.com/rebuilt');
+  assert.equal(out.tab.closed, false);
+  assert.equal(out.toasts.length, 0);
+});
+
+test('with no saved PDF and no way to rebuild it, the blank tab is closed and it says so', async () => {
+  const { w, api, out } = setup({ signed: '' });
+  w.rebuildInvoicePdf = async () => { throw new Error('jsPDF could not be downloaded'); };
   await api.viewInvoicePdf(INV.id);
   assert.equal(out.tab.closed, true);
-  assert.match(out.toasts[0].m, /No saved PDF for #INV-2026-1051/);
+  assert.match(out.toasts[0].m, /Could not open #INV-2026-1051/);
+});
+
+test('the rebuild draws from the saved invoice, never the form, and is never uploaded', () => {
+  const fn = PAGE.match(/  async function rebuildInvoicePdf\(inv\) \{[\s\S]*?\n  \}\n/)[0];
+  for (const field of ['inv.invoiceNumber', 'inv.date', 'inv.terms', 'inv.line_items', 'inv.subtotal', 'inv.tax', 'inv.discount', 'inv.clientName', 'inv.clientEmail', 'inv.jobRefTitle']) {
+    assert.ok(fn.includes(field), 'uses ' + field);
+  }
+  assert.doesNotMatch(fn, /getElementById\('(clientName|invoiceNumber|invoiceDate|invoiceTerms)'\)/);
+  assert.doesNotMatch(fn, /storeInvoicePdf/);
 });
 
 test('with popups blocked, this tab goes to the PDF instead', async () => {

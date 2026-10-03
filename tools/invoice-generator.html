@@ -1244,16 +1244,74 @@
     if (!inv || !inv.invoiceNumber) { showToast('Could not find that invoice.', { type: 'error' }); return; }
     const pdfWindow = window.open('', '_blank');
     if (pdfWindow) pdfWindow.opener = null;
-    const url = (typeof getSignedStorageUrl === 'function')
+    let url = (typeof getSignedStorageUrl === 'function')
       ? await getSignedStorageUrl('invoice-pdfs', 'invoices/' + encodeURIComponent(inv.invoiceNumber) + '.pdf', 600)
       : '';
+    // No archived copy (an invoice from before archiving, or the upload
+    // failed when it was made): rebuild it from the saved invoice instead
+    // of showing nothing. Never stored -- the archive stays only what was
+    // actually issued.
+    if (!url) {
+      try {
+        const entry = loadInvoiceLog().find(i => i.id === id) || inv;
+        const doc = await rebuildInvoicePdf(entry);
+        if (doc) url = doc.output('bloburl');
+      } catch (e) {
+        url = '';
+      }
+    }
     if (!url) {
       if (pdfWindow) pdfWindow.close();
-      showToast('No saved PDF for #' + inv.invoiceNumber + ' (it may be from before invoices were saved as PDFs, or you are offline).', { type: 'error' });
+      showToast('Could not open #' + inv.invoiceNumber + ' -- no saved PDF, and it could not be rebuilt here. Check your connection and try again.', { type: 'error' });
       return;
     }
     if (pdfWindow) pdfWindow.location.href = url;
     else window.location.href = url;
+  }
+
+  // The invoice PDF drawn from a saved log entry rather than the form --
+  // the same pdf-layout.js blocks generatePDF() uses, fed from the entry's
+  // own saved fields (number, date, terms, line items, totals). Only for
+  // viewing when there is no archived copy.
+  async function rebuildInvoicePdf(inv) {
+    if (!window.jspdf && typeof pdfLoadJsPdf === 'function') await pdfLoadJsPdf();
+    if (!window.jspdf) return null;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const TYPE_LABELS = { standard: 'INVOICE', deposit: 'DEPOSIT INVOICE', balance: 'BALANCE DUE', progress: 'PROGRESS PAYMENT' };
+    const longDate = (d) => d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const due = (inv.date && typeof thInvoiceDueDate === 'function') ? thInvoiceDueDate({ date: inv.date, terms: inv.terms }) : null;
+    let y = await drawPdfHeader(doc, pageW, TYPE_LABELS[inv.invoiceType] || 'INVOICE', null, {
+      ref: inv.invoiceNumber,
+      meta: [
+        { label: 'Invoice #', value: inv.invoiceNumber || '' },
+        { label: 'Date', value: inv.date ? longDate(new Date(inv.date + 'T00:00:00')) : '' },
+        { label: 'Due', value: due ? longDate(due) : '' },
+        { label: 'Terms', value: inv.terms || '' },
+      ],
+    });
+    const billTo = [{ text: inv.clientName || '(client name)', bold: true }];
+    if (inv.clientEmail) billTo.push({ text: inv.clientEmail, muted: true });
+    y = pdfDrawInfoColumns(doc, { y, columns: [
+      { label: 'Bill to', lines: billTo },
+      { label: 'Job', lines: [inv.jobRefTitle || ''] },
+    ] });
+    const items = (Array.isArray(inv.line_items) ? inv.line_items : []).map(item => ({
+      ...item, qty: Number(item.qty) || 0, price: Number(item.price) || 0, amount: Number(item.amount) || 0,
+      unitLabel: lineItemUnitLabel(item.type),
+    }));
+    y = drawPdfLineItemsTable(doc, { y, items, pageW, pageH }).y;
+    const subtotal = Number(inv.subtotal) || items.reduce((t, i) => t + i.amount, 0);
+    y = drawPdfTotalsBlock(doc, { y, pageW, subtotal, tax: Number(inv.tax) || 0, discount: Number(inv.discount) || 0, discountLabel: 'Discount', totalLabel: 'TOTAL DUE' });
+    const paymentText = (document.getElementById('paymentText') || {}).value || '';
+    y = pdfDrawNoteBox(doc, { y: y + 10, label: 'Payment', lines: [
+      paymentText,
+      { text: 'Please reference invoice ' + (inv.invoiceNumber || '') + ' with payment.', small: true },
+    ] });
+    pdfFinalize(doc, { message: 'Thank you for choosing Triple H Enterprises. Work guaranteed.' });
+    return doc;
   }
 
   // ?invoice=<id> (2026-10-03): the client and job pages link each invoice
