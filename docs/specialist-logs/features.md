@@ -144,6 +144,15 @@ already forbids it.
 - Nothing to backfill: production had no converted bookings and no booking referrals on 2026-10-01 (read-only check).
 - Test: `tests/workspace/booking-job-mirror.test.js` (5, jsdom running the real conversion and sync.js mirror functions; all 5 fail on the old code).
 
+## 2026-10-03 -- Resend can send an invoice to a different email
+
+Requested directly ("fix resend so i can send it to a different email"). Resend in the Invoice Log (`resendInvoiceToClient()` in `tools/invoice-generator.html`) used to ask only "Resend to <email on file>?". It now opens a small form with a **Send to** field, filled in with the email on file.
+
+- Unchanged email: sends exactly as before.
+- Changed email: one confirm says the invoice moves to the new address's portal and the old address stops seeing it there (`sync-invoice-to-portal` upserts on `source_invoice_id` and sets `client_email`; a new portal address gets an invite instead of the usual notification). Then the new email is saved on the invoice (log + `mirrorInvoiceToRelational`) before sending, so the log, `public.invoices` and the portal agree. The client card is left alone.
+- An invalid address is refused in the form. A change in capitalisation only is not treated as a different email.
+- Test: `tests/tools/resend-invoice-other-email.test.js` (6, jsdom running the real Resend and dialog code; all fail on the old code).
+
 <!-- Add new entries above this line -->
 ## 2026-09-17 -- /tools/ Action Items inbox + More overflow (UI only)
 

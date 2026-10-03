@@ -1319,11 +1319,34 @@
   // handling omits the field entirely, and the upsert leaves the
   // portal row's existing line items (if any) untouched rather than
   // overwriting them with nothing.
+  //
+  // Send to a different email (2026-10-03, requested directly): the email
+  // is a field, filled in with the one on file. A changed email is saved
+  // on the invoice first (log and relational mirror; the client card is
+  // left alone), since
+  // sync-invoice-to-portal moves the portal row to that address: the new
+  // address gets it (an invite if they're new to the portal), the old one
+  // stops seeing it.
   async function resendInvoiceToClient(invoiceId) {
-    const inv = loadInvoiceLog().find(i => i.id === invoiceId);
+    const log = loadInvoiceLog();
+    const inv = log.find(i => i.id === invoiceId);
     if (!inv) { showToast('Could not find that invoice in the log.', { type: 'error' }); return; }
-    if (!inv.clientEmail) { showToast('That invoice has no client email on it.', { type: 'error' }); return; }
-    if (!(await showConfirm(`Resend invoice #${inv.invoiceNumber} to ${inv.clientEmail}?`))) return;
+    const oldEmail = (inv.clientEmail || '').trim();
+    const values = await showPromptForm(`Resend invoice #${inv.invoiceNumber}` + (inv.clientName ? ` (${inv.clientName})` : ''), [
+      { id: 'email', label: 'Send to', type: 'email', defaultValue: oldEmail, placeholder: 'name@example.com' },
+    ], {
+      confirmText: 'Send',
+      validate: (v) => (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email) ? null : 'Enter a valid email address.'),
+    });
+    if (!values) return;
+    const email = values.email;
+    if (email.toLowerCase() !== oldEmail.toLowerCase()) {
+      if (oldEmail && !(await showConfirm(`Send invoice #${inv.invoiceNumber} to ${email} instead of ${oldEmail}? It moves to ${email}'s portal, and ${oldEmail} will no longer see it there.`, { confirmText: 'Send' }))) return;
+      inv.clientEmail = email;
+      saveInvoiceLog(log);
+      if (typeof mirrorInvoiceToRelational === 'function') mirrorInvoiceToRelational(inv);
+      if (typeof renderInvoiceLog === 'function') renderInvoiceLog();
+    }
 
     try {
       if (typeof ensureFreshToken === 'function') await ensureFreshToken();
