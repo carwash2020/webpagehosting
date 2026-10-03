@@ -268,6 +268,7 @@
   .inv-log-head h3 { margin: 0; }
   .inv-log-tools { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
   .inv-item + .inv-item { margin-top: 6px; }
+  .inv-item.is-linked { outline: 2px solid var(--orange); outline-offset: -2px; border-radius: 10px; }
   .th-list > .inv-item + .inv-item { margin-top: 0; }
   .inv-row { padding-right: 4px; }
   .inv-row button.th-row-link { background: none; border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; width: 100%; }
@@ -1138,7 +1139,7 @@
     const sub = (st.status === 'overdue'
       ? num + escapeHtml(invoiceShortDate(inv.date)) + '</span><span class="th-row-sub">' + invoiceDueText(inv, st)
       : num + invoiceDueText(inv, st)) + (reminded ? ' &middot; ' + reminded.toLowerCase() : '');
-    return '<div class="inv-item" data-invoice-id="' + inv.id + '">' +
+    return '<div class="inv-item' + (inv.id === linkedRecordId ? ' is-linked' : '') + '" data-invoice-id="' + inv.id + '">' +
       '<div class="th-row inv-row">' +
         '<button type="button" class="th-row-link" data-long-press-target onclick="openInvoiceActions(' + inv.id + ')" aria-haspopup="dialog" aria-label="' + invoiceAttr(name + ', ' + amount + ', ' + st.status + '. Actions') + '">' +
           '<span class="th-row-avatar' + (st.status !== 'paid' && st.balance > 0 ? ' is-owed' : '') + '" aria-hidden="true">' + escapeHtml(invoiceInitials(name)) + '</span>' +
@@ -1213,6 +1214,7 @@
     if (!inv) return;
     const st = invoiceState(inv);
     const actions = [];
+    actions.push({ label: 'View invoice', onClick: () => viewInvoicePdf(id) });
     actions.push({ label: st.status === 'paid' ? 'Mark Unpaid' : 'Mark Paid', onClick: () => toggleInvoicePaid(id) });
     // A reminder already written (2026-09-23, rework part 10), a notch
     // firmer each time; its label says when the last one went out.
@@ -1220,13 +1222,70 @@
       const last = typeof thInvoiceRemindedLabel === 'function' ? thInvoiceRemindedLabel(inv) : '';
       actions.push({ label: 'Send a reminder' + (last ? ' (' + last.toLowerCase() + ')' : ''), onClick: () => thOpenReminderSheet(id) });
     }
-    if (inv.clientEmail) actions.push({ label: 'Resend to client', onClick: () => resendInvoiceToClient(id) });
+    actions.push({ label: inv.clientEmail ? 'Resend' : 'Send to an email', onClick: () => resendInvoiceToClient(id) });
     const clientHref = invoiceClientHref(inv);
     if (clientHref) actions.push({ label: 'Open client', onClick: () => { window.location.href = clientHref; } });
     if (inv.jobRefId) actions.push({ label: 'Open job', onClick: () => { window.location.href = '/tools/job-detail.html?id=' + encodeURIComponent(inv.jobRefId); } });
     actions.push({ label: 'Delete', isDanger: true, onClick: () => deleteInvoiceLogEntry(id) });
     const title = (inv.clientName || 'Invoice') + ' \u00b7 #' + (inv.invoiceNumber || '\u2014') + ' \u00b7 ' + money(st.status === 'paid' ? inv.total : st.balance);
     showQuickActionSheet(escapeHtml(title), actions);
+  }
+
+  // View invoice (2026-10-03, requested directly: "make it so i can actually
+  // view invoices"). Opens the PDF archived when the invoice was created
+  // (storeInvoicePdf: invoice-pdfs/invoices/<number>.pdf), so it shows
+  // exactly what the client got. The tab is opened synchronously inside
+  // the tap and pointed at the signed URL afterwards -- a window.open after
+  // an await is dropped by Safari's popup blocker (same pattern as
+  // clients.html viewArchivedInvoicePdf). With no tab at all (popups fully
+  // blocked) this tab goes to the PDF instead.
+  async function viewInvoicePdf(id) {
+    const inv = invoicesForDisplay().find(i => i.id === id) || loadInvoiceLog().find(i => i.id === id);
+    if (!inv || !inv.invoiceNumber) { showToast('Could not find that invoice.', { type: 'error' }); return; }
+    const pdfWindow = window.open('', '_blank');
+    if (pdfWindow) pdfWindow.opener = null;
+    const url = (typeof getSignedStorageUrl === 'function')
+      ? await getSignedStorageUrl('invoice-pdfs', 'invoices/' + encodeURIComponent(inv.invoiceNumber) + '.pdf', 600)
+      : '';
+    if (!url) {
+      if (pdfWindow) pdfWindow.close();
+      showToast('No saved PDF for #' + inv.invoiceNumber + ' (it may be from before invoices were saved as PDFs, or you are offline).', { type: 'error' });
+      return;
+    }
+    if (pdfWindow) pdfWindow.location.href = url;
+    else window.location.href = url;
+  }
+
+  // ?invoice=<id> (2026-10-03): the client and job pages link each invoice
+  // here by id. They used to pass only ?search=<client name>, which landed
+  // on the list with nothing opened ("it just takes me to a page but doesnt
+  // pull it up"). This opens that invoice's sheet -- View invoice first --
+  // and highlights its row. ?quote=<id> does the same for a quote. A PDF
+  // can't open on its own here: a browser only allows that from a tap.
+  var linkedRecordId = null; // var: invoiceRowHtml above reads it, before this line has run on some paths
+  function openRecordFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const invoiceId = Number(params.get('invoice'));
+    const quoteId = Number(params.get('quote'));
+    const isInvoice = !!invoiceId;
+    const id = invoiceId || quoteId;
+    if (!id) return;
+    const found = isInvoice
+      ? (invoicesForDisplay().find(i => i.id === id) || loadInvoiceLog().find(i => i.id === id))
+      : loadQuoteLog().find(q => q.id === id);
+    const keep = new URLSearchParams(window.location.search);
+    keep.delete('invoice'); keep.delete('quote');
+    const rest = keep.toString();
+    history.replaceState(null, '', window.location.pathname + (rest ? '?' + rest : '') + window.location.hash);
+    if (!found) { showToast('Could not find that ' + (isInvoice ? 'invoice' : 'quote') + ' on this device yet.', { type: 'error' }); return; }
+    linkedRecordId = id;
+    const row = document.querySelector(isInvoice ? '.inv-item[data-invoice-id="' + id + '"]' : '.inv-item[data-quote-id="' + id + '"]');
+    if (row) {
+      row.classList.add('is-linked');
+      if (typeof row.scrollIntoView === 'function') row.scrollIntoView({ block: 'center' });
+    }
+    if (isInvoice) openInvoiceActions(id);
+    else openQuoteActions(id);
   }
 
   function initInvoiceLogLongPress() {
@@ -1252,12 +1311,15 @@
     const inv = invoicesForDisplay().find(i => i.id === id);
     if (!inv) return null;
     const st = invoiceState(inv);
-    const actions = [{ kind: 'extra', icon: 'check', label: st.status === 'paid' ? 'Mark Unpaid' : 'Mark Paid', onClick: () => toggleInvoicePaid(id) }];
+    const actions = [
+      { kind: 'open', icon: 'receipt', label: 'View invoice', onClick: () => viewInvoicePdf(id) },
+      { kind: 'extra', icon: 'check', label: st.status === 'paid' ? 'Mark Unpaid' : 'Mark Paid', onClick: () => toggleInvoicePaid(id) },
+    ];
     if (st.status !== 'paid' && st.balance > 0 && typeof thOpenReminderSheet === 'function') {
       const last = typeof thInvoiceRemindedLabel === 'function' ? thInvoiceRemindedLabel(inv) : '';
       actions.push({ kind: 'extra', icon: 'bell', label: 'Send a reminder' + (last ? ' (' + last.toLowerCase() + ')' : ''), onClick: () => thOpenReminderSheet(id) });
     }
-    if (inv.clientEmail) actions.push({ kind: 'extra', icon: 'mail', label: 'Resend', onClick: () => resendInvoiceToClient(id) });
+    actions.push({ kind: 'extra', icon: 'mail', label: inv.clientEmail ? 'Resend' : 'Send to an email', onClick: () => resendInvoiceToClient(id) });
     const clientHref = invoiceClientHref(inv);
     if (clientHref) actions.push({ kind: 'open', icon: 'user-plus', label: 'Open client', onClick: () => { window.location.href = clientHref; } });
     if (inv.jobRefId) actions.push({ kind: 'open', icon: 'wrench', label: 'Open job', onClick: () => { window.location.href = '/tools/job-detail.html?id=' + encodeURIComponent(inv.jobRefId); } });
@@ -3367,6 +3429,7 @@
     // pos.html stub and any old POS bookmark land here.
     applyGenTabFromHash();
     window.addEventListener('hashchange', applyGenTabFromHash);
+    openRecordFromUrl();
     addQuoteLineItem();
     recalcQuote();
     applyQuickLineFromUrl(); // after the quote's starter row exists

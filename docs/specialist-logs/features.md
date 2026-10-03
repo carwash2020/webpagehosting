@@ -153,6 +153,16 @@ Requested directly ("fix resend so i can send it to a different email"). Resend 
 - An invalid address is refused in the form. A change in capitalisation only is not treated as a different email.
 - Test: `tests/tools/resend-invoice-other-email.test.js` (6, jsdom running the real Resend and dialog code; all fail on the old code).
 
+## 2026-10-03 -- Open an invoice from a client, and view its PDF
+
+Requested directly: "when i click on a client and click on invoice, it just takes me to a page but doesnt pull it up". `tools/client-detail.html` (timeline and Invoices/Quotes sections) and `tools/job-detail.html` linked every invoice and quote to `invoice-generator.html?search=<client name>#recent`, which only filtered the list. There was also no way to look at an invoice itself in the app.
+
+- The links now add `&invoice=<id>` or `&quote=<id>`. `openRecordFromUrl()` in `tools/invoice-generator.html` runs after the `#recent` tab opens: it opens that record's sheet, outlines and scrolls to its row, and drops the id from the address so a refresh doesn't reopen it. An id not on the device says so.
+- **View invoice** is the first action in the invoice sheet and the row's ⋯ menu. `viewInvoicePdf()` opens the PDF archived when the invoice was created (`invoice-pdfs/invoices/<number>.pdf`, via `getSignedStorageUrl`), so it is exactly what the client got. The tab opens inside the tap and is pointed at the signed URL afterwards (Safari drops a `window.open` after an await); with popups fully blocked, the page itself goes to the PDF. The PDF can't open by itself on arrival: browsers only allow that from a tap.
+- Resend is now in the sheet and menu for every invoice; with no email on file it reads "Send to an email" (see the Resend entry below).
+- Coverage on 2026-10-03: 6 of 7 invoices in `public.invoices` have an archived PDF; INV-2026-1000 (2026-09-03) doesn't, and shows a "No saved PDF" message.
+- Test: `tests/tools/invoice-view-and-deep-link.test.js` (9, jsdom running the real sheet, viewer and deep-link code; all fail on the old code).
+
 <!-- Add new entries above this line -->
 ## 2026-09-17 -- /tools/ Action Items inbox + More overflow (UI only)
 
