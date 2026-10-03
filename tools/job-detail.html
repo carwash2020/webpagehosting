@@ -581,12 +581,12 @@
 
     html += renderRecordSection('Invoices', bundle.linkedInvoices.map(i => ({
       title: 'Invoice ' + (i.invoiceNumber || ''), meta: (i.date || '') + ' \u00b7 ' + invoiceStatusWord(i),
-      amount: money(i.total || 0), href: '/tools/invoice-generator.html?search=' + encodeURIComponent(j.client || '') + '#recent',
+      amount: money(i.total || 0), href: '/tools/invoice-generator.html?search=' + encodeURIComponent(j.client || '') + '&invoice=' + encodeURIComponent(i.id) + '#recent',
     })), 'No invoice linked to this job yet.');
 
     html += renderRecordSection('Quotes', bundle.linkedQuotes.map(q => ({
       title: 'Quote ' + (q.quoteNumber || ''), meta: q.date || '',
-      amount: money(q.total || 0), href: '/tools/invoice-generator.html?search=' + encodeURIComponent(j.client || '') + '#recent',
+      amount: money(q.total || 0), href: '/tools/invoice-generator.html?search=' + encodeURIComponent(j.client || '') + '&quote=' + encodeURIComponent(q.id) + '#recent',
     })), 'No quote linked to this job yet.');
 
     // Real bug (2026-09-22): expenses are logged as { desc, vendor, type }

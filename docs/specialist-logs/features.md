@@ -144,6 +144,32 @@ already forbids it.
 - Nothing to backfill: production had no converted bookings and no booking referrals on 2026-10-01 (read-only check).
 - Test: `tests/workspace/booking-job-mirror.test.js` (5, jsdom running the real conversion and sync.js mirror functions; all 5 fail on the old code).
 
+## 2026-10-03 -- Resend can send an invoice to a different email
+
+Requested directly ("fix resend so i can send it to a different email"). Resend in the Invoice Log (`resendInvoiceToClient()` in `tools/invoice-generator.html`) used to ask only "Resend to <email on file>?". It now opens a small form with a **Send to** field, filled in with the email on file.
+
+- Unchanged email: sends exactly as before.
+- Changed email: one confirm says the invoice moves to the new address's portal and the old address stops seeing it there (`sync-invoice-to-portal` upserts on `source_invoice_id` and sets `client_email`; a new portal address gets an invite instead of the usual notification). Then the new email is saved on the invoice (log + `mirrorInvoiceToRelational`) before sending, so the log, `public.invoices` and the portal agree. The client card is left alone.
+- An invalid address is refused in the form. A change in capitalisation only is not treated as a different email.
+- Test: `tests/tools/resend-invoice-other-email.test.js` (6, jsdom running the real Resend and dialog code; all fail on the old code).
+
+## 2026-10-03 -- Open an invoice from a client, and view its PDF
+
+Requested directly: "when i click on a client and click on invoice, it just takes me to a page but doesnt pull it up". `tools/client-detail.html` (timeline and Invoices/Quotes sections) and `tools/job-detail.html` linked every invoice and quote to `invoice-generator.html?search=<client name>#recent`, which only filtered the list. There was also no way to look at an invoice itself in the app.
+
+- The links now add `&invoice=<id>` or `&quote=<id>`. `openRecordFromUrl()` in `tools/invoice-generator.html` runs after the `#recent` tab opens: it opens that record's sheet, outlines and scrolls to its row, and drops the id from the address so a refresh doesn't reopen it. An id not on the device says so.
+- **View invoice** is the first action in the invoice sheet and the row's ⋯ menu. `viewInvoicePdf()` opens the PDF archived when the invoice was created (`invoice-pdfs/invoices/<number>.pdf`, via `getSignedStorageUrl`), so it is exactly what the client got. The tab opens inside the tap and is pointed at the signed URL afterwards (Safari drops a `window.open` after an await); with popups fully blocked, the page itself goes to the PDF. The PDF can't open by itself on arrival: browsers only allow that from a tap.
+- Resend is now in the sheet and menu for every invoice; with no email on file it reads "Send to an email" (see the Resend entry below).
+- Coverage on 2026-10-03: 6 of 7 invoices in `public.invoices` have an archived PDF; INV-2026-1000 (2026-09-03) doesn't, and shows a "No saved PDF" message.
+- Test: `tests/tools/invoice-view-and-deep-link.test.js` (9, jsdom running the real sheet, viewer and deep-link code; all fail on the old code).
+
+## 2026-10-03 -- View invoice works without a saved PDF; Settings gets an Update button
+
+- **View invoice fallback.** When there's no archived PDF (an invoice from before archiving, like INV-2026-1000, or an upload that failed when the invoice was made), `viewInvoicePdf()` now rebuilds the PDF from the saved invoice with `rebuildInvoicePdf()`. It uses the same `js/pdf-layout.js` blocks as `generatePDF()`, fed from the entry's own saved fields, and is never uploaded, so the archive only ever holds what was issued. Checked by running the real function against jsPDF 2.5.1 (the same file the app loads; its SRI hash matches) with INV-2026-1090's data: one page, every line and the $212.66 total present.
+- **Settings -> App version -> Update** (requested directly: "it needs a update button so it can always be in the newest version when auto update doesn't catch one"). It shows the installed version (the service worker's `th-workspace-vNNN` cache name) and, on tap, asks for a new worker (`registration.update()`). If one installs and takes over (`skipWaiting` + `clients.claim`), the page reloads into it. Otherwise it says the app is current. Offline, it says so and does nothing. It doesn't force a reload when there is nothing new.
+- Invoices already create a client: `logInvoice()` calls `thEnsureClient(name, { address, email })` (email match first, then name). The Clients page reads that registry, so the client shows up there straight away. The unified `clients` table gets new clients only when `item1_seed_clients` is re-run (by design until Phase 3.5); on 2026-10-03, Tori Frampton (INV-2026-1063) was the one invoice client not in it yet.
+- Tests: `tests/tools/invoice-view-and-deep-link.test.js` (now 11) and `tests/tools/settings-check-for-updates.test.js` (6).
+
 <!-- Add new entries above this line -->
 ## 2026-09-17 -- /tools/ Action Items inbox + More overflow (UI only)
 

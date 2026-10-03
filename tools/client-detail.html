@@ -550,12 +550,12 @@
         date: i.date || '', t: 'Invoice ' + (i.invoiceNumber || ''),
         m: (i.date ? fmt(i.date) : '') + (bal <= 0 ? ' · Paid' : (overdueOf(i) ? ' · Overdue' : ' · Unpaid')),
         a: money(i.total || 0), tone: bal <= 0 ? 'green' : (overdueOf(i) ? 'red' : 'orange'),
-        href: '/tools/invoice-generator.html?search=' + encodeURIComponent(c.name) + '#recent',
+        href: '/tools/invoice-generator.html?search=' + encodeURIComponent(c.name) + '&invoice=' + encodeURIComponent(i.id) + '#recent',
       });
     });
     bundle.quotes.forEach(q => events.push({
       date: q.date || '', t: 'Quote ' + (q.quoteNumber || ''), m: q.date ? fmt(q.date) : '', a: money(q.total || 0), tone: 'purple',
-      href: '/tools/invoice-generator.html?search=' + encodeURIComponent(c.name) + '#recent',
+      href: '/tools/invoice-generator.html?search=' + encodeURIComponent(c.name) + '&quote=' + encodeURIComponent(q.id) + '#recent',
     }));
     bundle.contracts.forEach(k => events.push({
       date: String(k.dateGeneratedISO || '').slice(0, 10), t: k.type || 'Contract', m: k.dateGenerated || '', a: '', tone: 'idle',
@@ -603,7 +603,7 @@
         title: 'Invoice ' + (i.invoiceNumber || ''),
         meta: (i.date || '') + (bal <= 0 ? ' · Paid' : (overdueOf(i) ? ' · Overdue' : ' · Unpaid')),
         amount: money(i.total || 0) + (bal > 0 && bal < (Number(i.total) || 0) ? ' <span class="th-pill">' + money(bal) + ' left</span>' : ''),
-        href: '/tools/invoice-generator.html?search=' + encodeURIComponent(c.name) + '#recent',
+        href: '/tools/invoice-generator.html?search=' + encodeURIComponent(c.name) + '&invoice=' + encodeURIComponent(i.id) + '#recent',
       };
     }), 'No invoices sent to this client yet.');
 
@@ -611,7 +611,7 @@
       title: 'Quote ' + (q.quoteNumber || ''),
       meta: q.date || '',
       amount: money(q.total || 0),
-      href: '/tools/invoice-generator.html?search=' + encodeURIComponent(c.name) + '#recent',
+      href: '/tools/invoice-generator.html?search=' + encodeURIComponent(c.name) + '&quote=' + encodeURIComponent(q.id) + '#recent',
     })), 'No quotes sent to this client yet.');
 
     html += renderRecordSection('Contracts', bundle.contracts.slice().sort((a, b) => (b.dateGeneratedISO || '').localeCompare(a.dateGeneratedISO || '')).map(k => ({
