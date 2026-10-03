@@ -219,7 +219,8 @@ test('the invoice sheet opens the client (from the registry) and the job; a quot
   w.thFindClientById = (id) => (id === 'c1' ? { id: 'c1', name: 'Sarah Miller' } : null);
   w.thFindClientByName = (n) => (n === 'Sarah Miller' ? { id: 'c1', name: 'Sarah Miller' } : null);
   w.openInvoiceActions(9);
-  assert.deepEqual(shown.labels, ['Mark Paid', 'Open client', 'Open job', 'Delete']);
+  // View invoice leads, and an invoice with no email can still be sent (2026-10-03).
+  assert.deepEqual(shown.labels, ['View invoice', 'Mark Paid', 'Send to an email', 'Open client', 'Open job', 'Delete']);
   assert.equal(w.invoiceClientHref({ clientId: 'c1' }), '/tools/client-detail.html?id=c1');
   w.openQuoteActions(5);
   assert.deepEqual(shown.labels, ['Open client', 'Open job', 'Delete']);

@@ -213,7 +213,7 @@ test('Invoices: the sheet offers Send a reminder (saying when the last went), th
   vm.createContext(ctx);
   vm.runInContext(extractFn(DL, 'thDaysBetween') + extractFn(DL, 'thInvoiceReminders') + extractFn(DL, 'thInvoiceLastReminder') + extractFn(DL, 'thInvoiceRemindedLabel') + extractFn(INV, 'openInvoiceActions') + ';this.f = openInvoiceActions;', ctx);
   ctx.f(7);
-  assert.equal(shown[1], 'Send a reminder (reminded 3 days ago)');
+  assert.equal(shown[2], 'Send a reminder (reminded 3 days ago)', 'right after View invoice and Mark Paid');
   assert.match(extractFn(INV, 'invoiceRowHtml'), /\(reminded \? ' &middot; ' \+ reminded\.toLowerCase\(\) : ''\)/);
   assert.match(INV, /window\.addEventListener\('th-invoice-reminded', \(\) => renderInvoiceLog\(\)\);/);
 });
