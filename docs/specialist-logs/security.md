@@ -1489,3 +1489,15 @@ Net effect: an internal account signed into `/portal/login.html` with its own cr
 - **Not fixed, and a question for this lane.** Every staff device still holds the whole `workspace_sync` blob in localStorage, invoices included, because one shared row syncs to everyone. So an Employee who opens devtools can still read the figures the UI now hides. Closing that means per-role sync (a separate employee blob, or relational tables with RLS for invoices), which is a design decision, not a patch.
 
 <!-- Add new entries above this line -->
+
+## 2026-10-04 -- Two-factor setup could lock an account out
+
+Steve couldn't finish the required two-factor setup on his iPhone. Three bugs, one after another:
+
+1. **Blank QR code.** `mfaEnroll()` in `tools/auth.js` put Supabase's bare SVG into `data:image/svg+xml;utf-8,<svg…>` unencoded. The first `#` in a colour ends the URL as a fragment, so the image is broken. Confirmed in headless Chromium: the old URL fails to load and the new one loads. `mfaQrImageSrc()` now URL-encodes it. It also fixes an already-prefixed unencoded URI, and leaves encoded or base64 ones alone.
+2. **One abandoned setup blocked every retry.** Supabase refuses a new TOTP factor while an unverified one with the same friendly name exists (`A factor with the friendly name "" for this user already exists`). `tools/settings.html` already cleared leftovers first, but `tools/login.html`'s mandatory enrollment did not. `mfaEnroll()` now calls `mfaClearUnverifiedTotpFactors()` first, so every caller gets the cleanup. That function removes only unverified factors; a verified authenticator is never touched. Each attempt also gets its own friendly name (`Triple H Workspace <ISO time>`).
+3. **"factor_id must be an UUID".** With setup failed there was no factor id, and Verify sent the code anyway. In `login.html`, a failed start now shows the error and turns the button into **Try again**, which restarts setup (keeping the after-recovery wording). Verify never sends a code without a factor id.
+
+On 2026-10-04 Steve's account had one unverified factor (created 04:34 UTC) and no verified one. The next sign-in after this deploy clears it automatically.
+
+Tests: `tests/tools/mfa-enroll-stuck-setup.test.js` (6). They run the real auth.js functions against a fake Supabase Auth, and the real login.html enrollment step in jsdom. `tests/tools/internal-mfa.test.js` was updated for the encoded data URI.

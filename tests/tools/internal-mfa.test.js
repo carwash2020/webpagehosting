@@ -50,10 +50,11 @@ test('mfaEnroll() calls the real Supabase Auth REST endpoint with factor_type to
   assert.match(body, /factor_type: 'totp'/);
 });
 
-test('mfaEnroll() wraps a bare SVG qr_code as a data URI, matching what the SDK does internally', () => {
+test('mfaEnroll() turns the bare SVG qr_code into a URL-encoded data URI (an unencoded "#" broke the image, 2026-10-04)', () => {
   const start = AUTH_JS.indexOf('async function mfaEnroll(');
   const body = AUTH_JS.slice(start, AUTH_JS.indexOf('async function mfaChallenge('));
-  assert.match(body, /data:image\/svg\+xml;utf-8,/);
+  assert.match(body, /data\.totp\.qr_code = mfaQrImageSrc\(data\.totp\.qr_code\);/);
+  assert.match(AUTH_JS, /'data:image\/svg\+xml;charset=utf-8,' \+ encodeURIComponent\(raw\)/);
 });
 
 test('mfaVerify() hits /factors/:id/verify and returns the new (stepped-up) session', () => {
