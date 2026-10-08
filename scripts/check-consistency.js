@@ -47,11 +47,6 @@ const EXEMPT = {
   'login.html': 'the login gate itself -- requireAuth() would be circular here',
   'reset-password.html': "reached from a password-recovery email link before the person is logged in -- requireAuth() would lock them out of the one page meant to get them back in",
   'index.html': 'bare /tools/ directory URL -- soft-landing redirect to login.html, not a gated app page',
-  'contact-card.html': 'retired page, just a redirect stub to job-tracker.html',
-  'expense-logger.html': 'retired page, just a redirect stub to job-tracker.html',
-  'job-cost-lookup.html': 'retired page, just a redirect stub to job-tracker.html',
-  'calendar.html': 'retired 2026-09-21 -- just a redirect stub to job-tracker.html#calendar (the Calendar is a view inside Job Tracker now)',
-  'pos.html': 'retired 2026-09-21 -- just a redirect stub to invoice-generator.html#pos (POS is the Quick charge tab inside Invoices now)',
   'runway-dashboard.html': 'has its own fully self-contained <style> block, does not load /styles.css',
 };
 

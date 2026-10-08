@@ -713,11 +713,10 @@
 // specificity) when there's nothing scheduled, and unhides it the
 // moment a real job exists again. workspace.html is precached. Same
 // reasoning as every prior bump in this file's history.
-const CACHE_NAME = 'th-workspace-v400'; // precache-fingerprint:ad81ec30569c
+const CACHE_NAME = 'th-workspace-v402'; // precache-fingerprint:0d691cf98a61
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
-  '/tools/calendar.html', '/tools/route-planner.html', '/tools/review-request.html', '/tools/contact-card.html',
-  '/tools/job-cost-lookup.html', '/tools/expense-logger.html', '/tools/login.html',
+  '/tools/route-planner.html', '/tools/review-request.html', '/tools/login.html',
   // Bare /tools/ directory URL -- GitHub Pages 404 without this file.
   // Soft-lands on login.html. Same completeness rule as every other
   // real HTML file in tools/: missing from this list fails cache.addAll.
@@ -732,10 +731,6 @@ const PRECACHE_URLS = [
   // own page, now a genuine daily operational tool in its own right,
   // same reasoning as everything else on this line.
   '/tools/clients.html',
-  // Added 2026-09-03 -- the POS tool. Since 2026-09-21 a redirect stub to
-  // invoice-generator.html#pos (POS is the Quick charge tab there now),
-  // kept here so an old bookmark still resolves offline.
-  '/tools/pos.html',
   // Added 2026-08-20 -- same gap as above, these 3 pages (all from the
   // structural rework's Client/Job Detail views and the Finance split)
   // existed live but were never added here either.

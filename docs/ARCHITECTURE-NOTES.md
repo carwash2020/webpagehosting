@@ -93,8 +93,10 @@ sit silently broken for several pushes before it was found).
   cross-referencing itemized records into manual monthly totals --
   don't rebuild this.
 - `job-cost-lookup.html`/`expense-logger.html`/`contact-card.html`/
-  `calendar.html`/`pos.html` (both retired 2026-09-21) stay as redirect stubs, not
-  deleted -- old bookmarks matter.
+  `calendar.html`/`pos.html` were kept as redirect stubs (not deleted)
+  for old bookmarks, until 2026-10-08 -- internal tool pages are not
+  public search results, so that caution didn't carry its weight
+  forever, and they're deleted outright now.
 - The Graveyard (added 2026-08-26) intentionally does NOT cover a
   deleted expense's attached receipt photo -- that file is removed
   from cloud storage immediately, before the graveyard could ever

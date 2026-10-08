@@ -19,11 +19,11 @@ const path = require('path');
 
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 
-// Every page tools-nav-pwa.js actually wires up (excludes the thin
-// redirect stubs -- contact-card.html, job-cost-lookup.html,
-// expense-logger.html, calendar.html and pos.html (both retired
-// 2026-09-21), index.html -- which have no real content to transition
-// between).
+// Every page tools-nav-pwa.js actually wires up (excludes index.html,
+// which has no real content to transition between -- the retired
+// redirect stubs that used to need excluding here too, contact-card.html,
+// job-cost-lookup.html, expense-logger.html, calendar.html and pos.html,
+// were deleted outright on 2026-10-08, old bookmarks now just 404).
 const TOOL_PAGES = [
   'client-detail', 'clients', 'contract-generator', 'dev-tools',
   'finance', 'invoice-generator', 'job-detail', 'job-tracker', 'login',

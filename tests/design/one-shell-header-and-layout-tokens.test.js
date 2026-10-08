@@ -69,7 +69,7 @@ test('F16/F17: one shared base padding rule replaces the old 90px/44px/absent-en
   assert.match(STYLES_TOOLS, /body\.th-tool-page \{ padding: 44px 20px 60px; \}/);
 
   const allTouchedPages = [
-    'calendar.html', 'contract-generator.html', 'invoice-generator.html', 'job-tracker.html',
+    'contract-generator.html', 'invoice-generator.html', 'job-tracker.html',
     'review-request.html', 'route-planner.html', 'client-detail.html', 'dev-tools.html',
     'job-detail.html', 'settings.html', 'site-content.html', 'workspace.html',
   ];

@@ -213,16 +213,15 @@ test('POS never creates an invoice, quote, or portal record -- only a charge and
 
 // ---- workspace.html: the tile ----
 
-test('POS is the Quick charge tab inside Invoices (2026-09-21), so it rides the Invoices nav link and its can_manage_invoices gate; pos.html redirects there', () => {
+test('POS is the Quick charge tab inside Invoices (2026-09-21), so it rides the Invoices nav link and its can_manage_invoices gate; its old redirect stub (pos.html) was deleted outright on 2026-10-08', () => {
   const NAV = fs.readFileSync(repo('tools', 'tools-nav-pwa.js'), 'utf8');
   assert.doesNotMatch(NAV, /\/tools\/pos\.html/, 'POS must not be its own nav destination any more');
   assert.match(POS_PAGE, /<button class="tab-btn" data-tab="pos" onclick="activateGenTab\('pos'\)">Quick charge<\/button>/);
   assert.match(POS_PAGE, /<div class="tab-panel" id="tab-pos">/);
   // The invoice list leads the strip since 2026-09-22 (Workspace rework part 4).
   assert.match(POS_PAGE, /GEN_TAB_ORDER = \['recent', 'invoice', 'quote', 'pos'\]/);
-  const stub = fs.readFileSync(repo('tools', 'pos.html'), 'utf8');
-  assert.match(stub, /location\.replace\('\/tools\/invoice-generator\.html#pos'\)/);
-  assert.match(POS_PAGE, /function applyGenTabFromHash\(\)[\s\S]*?if \(tab === 'pos'\)/, 'the deep link the stub lands on must open the tab (and focus the email field)');
+  assert.ok(!fs.existsSync(repo('tools', 'pos.html')), 'pos.html should no longer exist');
+  assert.match(POS_PAGE, /function applyGenTabFromHash\(\)[\s\S]*?if \(tab === 'pos'\)/, 'the #pos deep link must open the tab (and focus the email field)');
   assert.match(NAV, /'\/tools\/invoice-generator\.html': function \(\) \{ return typeof canManageInvoices === 'function' && canManageInvoices\(\); \}/);
   // clients.html left the nav's permission map on 2026-09-22 (it opens on
   // the client list now; its own Portal tab carries the canManageInvoices gate).
