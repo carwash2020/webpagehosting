@@ -40,12 +40,11 @@ test('every destination the tile grid used to link is still a sidebar / More-she
   assert.match(WORKSPACE, /href="\/tools\/job-tracker\.html#calendar"/, 'Calendar is reached from the daily-action strip');
 });
 
-test('POS, a former tile, is the Quick charge tab inside Invoices since 2026-09-21 -- reached through the Invoices link, and its old URL redirects', () => {
+test('POS, a former tile, is the Quick charge tab inside Invoices since 2026-09-21 -- reached through the Invoices link; its old redirect stub was deleted outright on 2026-10-08', () => {
   assert.doesNotMatch(NAV, /\/tools\/pos\.html/);
   const invoice = fs.readFileSync(path.join(TOOLS_DIR, 'invoice-generator.html'), 'utf8');
   assert.match(invoice, /data-tab="pos"[^>]*>Quick charge</);
-  const stub = fs.readFileSync(path.join(TOOLS_DIR, 'pos.html'), 'utf8');
-  assert.match(stub, /invoice-generator\.html#pos/);
+  assert.ok(!fs.existsSync(path.join(TOOLS_DIR, 'pos.html')), 'pos.html should no longer exist');
 });
 
 test('the gated destinations keep their permission checks in the nav (the tile grid used to carry data-tile-perm for these)', () => {

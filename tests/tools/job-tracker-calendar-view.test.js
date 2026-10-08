@@ -4,10 +4,11 @@
 // hid work by default and disagreed with the Dashboard's own Today
 // hero (which never applied the flag). It is now the third view next
 // to List and Board -- same page, same job list, one persisted
-// preference -- and calendar.html is a redirect stub like
-// job-cost-lookup.html. These tests lock in the merge and the nav
-// changes that came with it (Calendar left the bottom bar; Clients
-// took the slot).
+// preference. calendar.html was kept as a redirect stub for old
+// bookmarks/PWA shortcuts until it and the other retired stubs were
+// deleted outright on 2026-10-08. These tests lock in the merge and
+// the nav changes that came with it (Calendar left the bottom bar;
+// Clients took the slot).
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -18,7 +19,6 @@ const { JSDOM } = require('jsdom');
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const TOOLS_DIR = repo('tools');
 const JT = fs.readFileSync(path.join(TOOLS_DIR, 'job-tracker.html'), 'utf8');
-const STUB = fs.readFileSync(path.join(TOOLS_DIR, 'calendar.html'), 'utf8');
 const NAV = fs.readFileSync(path.join(TOOLS_DIR, 'tools-nav-pwa.js'), 'utf8');
 const TOUR = fs.readFileSync(path.join(TOOLS_DIR, 'tools-tour.js'), 'utf8');
 const MANIFEST = JSON.parse(fs.readFileSync(path.join(TOOLS_DIR, 'manifest.json'), 'utf8'));
@@ -152,16 +152,12 @@ test('the Show on Calendar checkbox, card toggle, and toggle function are gone; 
   assert.match(sync, /show_on_calendar: !!j\.showOnCalendar/);
 });
 
-test('#calendar deep link opens the calendar view on the Jobs tab; the redirect stub and the PWA shortcut both use it', () => {
+test('#calendar deep link opens the calendar view on the Jobs tab; the PWA shortcut uses it directly now that calendar.html (the old redirect stub) is deleted', () => {
   const init = JT.slice(JT.indexOf("if (initialHash === 'calendar')"));
   assert.match(init, /setJobViewMode\('calendar'\)/);
-  assert.match(STUB, /<meta http-equiv="refresh" content="0; url=\/tools\/job-tracker\.html#calendar">/);
-  assert.match(STUB, /location\.replace\('\/tools\/job-tracker\.html#calendar'\)/);
-  assert.match(STUB, /requireAuth\(\)/, 'the stub keeps the login gate like the other stubs');
-  assert.doesNotMatch(STUB, /<link[^>]*rel="stylesheet"/, 'a redirect stub loads no stylesheet');
   const shortcut = MANIFEST.shortcuts.find(sc => sc.name === 'Calendar');
   assert.equal(shortcut.url, '/tools/job-tracker.html#calendar');
-  assert.match(CHECK, /'calendar\.html': 'retired 2026-09-21/);
+  assert.doesNotMatch(CHECK, /'calendar\.html'/, 'the retired-stub EXEMPT entry should be gone along with the file');
 });
 
 test('bookings still merge into the calendar as purple dots, with live updates, and the month swipe gesture rides inside the tab swipe handler', () => {

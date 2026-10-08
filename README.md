@@ -165,7 +165,6 @@ upside to offset the cost.
 | `tools/job-detail.html` | Full detail view for one job (photos, linked invoices, margin) — reached from job-tracker.html or finance.html, not linked from the main nav directly. |
 | `tools/login.html` | Auth entry point for the whole suite. |
 | `tools/reset-password.html` | Password reset flow, reached from a Supabase auth email link. |
-| `tools/contact-card.html`, `tools/job-cost-lookup.html`, `tools/expense-logger.html`, `tools/calendar.html`, `tools/pos.html` | Retired — redirect stubs kept so old bookmarks don't 404. `contact-card.html` redirects into `job-tracker.html`'s Contacts tab (never moved); `job-cost-lookup.html` and `expense-logger.html` redirect into `finance.html`'s Cost Lookup/Expenses tabs (both moved there from Job Tracker on 2026-08-20); `calendar.html` redirects to `job-tracker.html#calendar` (the Calendar became a Job Tracker view on 2026-09-21); `pos.html` redirects to `invoice-generator.html#pos` (POS became the Quick charge tab the same day). |
 
 ## Shared files (used by BOTH the public site and internal tools — stayed at repo root deliberately)
 
@@ -6063,4 +6062,11 @@ Tests: `tests/sync/merge-base-and-note-tombstones.test.js` (7).
 - **To-do list cleaned up.** Items that were already done (the washer teardown drawing, the before/after drag, grouped FAQs, the Workspace and portal redesign plans) are marked done or superseded in `docs/ACTION-ITEMS.md`. The review count (6 or 7) is back on the list for Steve to confirm.
 
 Tests: `tests/seo/batch4-search-data.test.js` (8).
+
+## What changed, 2026-10-08 -- The retired Workspace redirect stubs are deleted, not just hidden
+
+- **Five old pages are gone.** `tools/contact-card.html`, `tools/job-cost-lookup.html`, `tools/expense-logger.html`, `tools/calendar.html` and `tools/pos.html` were thin redirect stubs kept only so an old bookmark or PWA home-screen shortcut still landed somewhere after each page's real content moved into Job Tracker, Finance, or Invoices. They're internal-only tool pages, not public search results, so there was no SEO reason to keep them around — they're deleted outright now. An old shortcut to one of them 404s instead of soft-redirecting.
+- Removed every reference along with them: the service worker's offline precache list (bumped to v392), the login page's allowed-return-path allowlist, and `scripts/check-consistency.js`'s exemption list.
+
+Tests: existing suites updated in place (`tests/workspace/finance-split.test.js`, `tests/tools/app-shell-view-transitions.test.js`, `tests/tools/stale-auth-comment-fix.test.js`, `tests/tools/job-tracker-calendar-view.test.js`, `tests/dev-tools/live-consistency-page-list.test.js`, `tests/scripts/check-undefined-vars.test.js`, `tests/design/tools-grid-finance.test.js`, `tests/edge-functions/pos-and-saved-cards.test.js`, `tests/design/one-shell-header-and-layout-tokens.test.js`, `tests/tools/workspace-ia-round3.test.js`) — no new test file needed, this is pure deletion.
 

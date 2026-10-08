@@ -27,7 +27,11 @@ const STUBS = EXEMPT.filter((e) => /redirect stub/.test(e.why)).map((e) => e.pag
 
 test('the list and the EXEMPT list were both found', () => {
   assert.ok(PAGES.length >= 8, 'TOOL_PAGES_TO_CHECK: ' + PAGES.join(', '));
-  assert.ok(STUBS.includes('calendar.html') && STUBS.includes('pos.html'), 'redirect stubs in EXEMPT: ' + STUBS.join(', '));
+  // The retired redirect stubs (calendar.html, pos.html, contact-card.html,
+  // job-cost-lookup.html, expense-logger.html) were deleted outright on
+  // 2026-10-08, so check-consistency.js's EXEMPT list no longer carries
+  // any "redirect stub" entries at all.
+  assert.deepEqual(STUBS, []);
 });
 
 test('no retired redirect stub (per check-consistency.js EXEMPT) is on the live check list', () => {

@@ -33,10 +33,10 @@ test('auth.js now accurately describes the real role-based system (account_roles
 });
 
 const PAGES_WITH_INLINE_COMMENT = [
-  'calendar.html', 'client-detail.html', 'clients.html', 'contact-card.html',
-  'contract-generator.html', 'dev-tools.html', 'expense-logger.html',
-  'finance.html', 'invoice-generator.html', 'job-cost-lookup.html',
-  'job-detail.html', 'job-tracker.html', 'parts-reference.html', 'pos.html',
+  'client-detail.html', 'clients.html',
+  'contract-generator.html', 'dev-tools.html',
+  'finance.html', 'invoice-generator.html',
+  'job-detail.html', 'job-tracker.html', 'parts-reference.html',
   'review-request.html', 'route-planner.html', 'settings.html',
   'site-content.html', 'workspace.html',
 ];

@@ -98,19 +98,17 @@ test('there are no tolerated redeclaration exemptions -- a real bug hid behind e
   const src = fs.readFileSync(SCRIPT_PATH, 'utf8');
   assert.match(src, /const TOLERATED_REDECLARATIONS = new Set\(\[\]\);/, 'expected no tolerated exemptions at all');
 
-  const posHtml = fs.readFileSync(path.join(REPO_ROOT, 'tools', 'pos.html'), 'utf8');
   const authJs = fs.readFileSync(path.join(REPO_ROOT, 'tools', 'auth.js'), 'utf8');
   assert.match(authJs, /^const SUPABASE_URL\s*=/m, 'expected tools/auth.js to genuinely declare this, for this test to be meaningful');
-  assert.doesNotMatch(posHtml, /^\s*const SUPABASE_URL\s*=/m, 'tools/pos.html must not redeclare a constant tools/auth.js (which it loads) already declares');
-  // 2026-09-21: the POS script itself now lives on invoice-generator.html
-  // (Quick charge tab), which loads auth.js too -- same rule, same page
-  // -level scope, so the check follows the code.
+  // 2026-09-21: the POS script lives on invoice-generator.html (Quick
+  // charge tab) now -- pos.html itself (the redirect stub this bug was
+  // originally found in) was deleted outright on 2026-10-08.
   const invoiceHtml = fs.readFileSync(path.join(REPO_ROOT, 'tools', 'invoice-generator.html'), 'utf8');
   assert.match(invoiceHtml, /const STRIPE_PUBLISHABLE_KEY = /, 'expected the moved POS script on the invoice page');
   assert.doesNotMatch(invoiceHtml, /^\s*const SUPABASE_URL\s*=/m, 'tools/invoice-generator.html must not redeclare a constant tools/auth.js (which it loads) already declares');
 
   const result = runChecker();
-  assert.equal(result.exitCode, 0, `checker should still pass clean now that pos.html is fixed; got:\n${result.stderr}`);
+  assert.equal(result.exitCode, 0, `checker should still pass clean now that invoice-generator.html is fixed; got:\n${result.stderr}`);
 });
 
 test('a page loading no shared scripts at all is never checked for redeclarations against anything', () => {

@@ -131,15 +131,6 @@ test('finance.html has all 5 tabs and none of the Jobs/Contacts/Notes tabs', () 
   assert.deepEqual(tabButtons, ['cost', 'profitability', 'income', 'expenses', 'inventory']);
 });
 
-test('the two retired redirect stubs point at finance.html, not the old job-tracker.html location', () => {
-  const expenseLogger = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'expense-logger.html'), 'utf8');
-  const costLookup = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'job-cost-lookup.html'), 'utf8');
-  assert.match(expenseLogger, /url=\/tools\/finance\.html#expenses/);
-  assert.doesNotMatch(expenseLogger, /job-tracker\.html#expenses/);
-  assert.match(costLookup, /url=\/tools\/finance\.html#cost/);
-  assert.doesNotMatch(costLookup, /job-tracker\.html#cost/);
-});
-
 test('job-detail.html\'s Expenses link points at finance.html, not the old job-tracker.html location', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'job-detail.html'), 'utf8');
   assert.match(src, /href:\s*'\/tools\/finance\.html#expenses'/);

@@ -36,9 +36,10 @@ test('Runway Dashboard: remembers the last tab per device and honors a #hash, de
   assert.match(RUNWAY, /if \(initial === 'personal'\) \{ document\.getElementById\('panel-personal'\)\.classList\.add\('active'\); return; \}/);
 });
 
-test('login: every real, gated tool page is an allowed return path (clients.html and pos.html were missing)', () => {
+test('login: every real, gated tool page is an allowed return path (clients.html was missing; pos.html was later deleted outright as a retired redirect stub)', () => {
   const list = LOGIN.match(/const ALLOWED_RETURN_PATHS = new Set\(\[([\s\S]*?)\]\);/)[1];
-  for (const page of ['clients', 'pos', 'invoice-generator', 'job-tracker', 'finance', 'settings', 'workspace']) {
+  for (const page of ['clients', 'invoice-generator', 'job-tracker', 'finance', 'settings', 'workspace']) {
     assert.ok(list.includes("'/tools/" + page + ".html'"), page + ' should be an allowed return path');
   }
+  assert.doesNotMatch(list, /'\/tools\/pos\.html'/, 'pos.html no longer exists');
 });
