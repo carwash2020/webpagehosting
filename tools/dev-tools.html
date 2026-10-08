@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=7d9fef1e42"></script>
+<script src="/tools/auth.js?v=417378cc58"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -53,8 +53,8 @@
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=8d5b635c84">
-<script src="/tools/data-layer.js?v=1677d8d4c2" defer></script>
-<script src="/tools/dev-tools-shared.js?v=c6ddd67c67" defer></script>
+<script src="/tools/data-layer.js?v=7edc2602b7" defer></script>
+<script src="/tools/dev-tools-shared.js?v=ffcb14381f" defer></script>
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
@@ -758,15 +758,15 @@
        account-wide export/restore is an admin/dev-oriented capability
        (Restore REPLACES everything on this device), not something a
        regular Employee account needs -- Developer-only, matching every
-       other panel on this tab, not a one-off exception. Functionality is
-       unchanged from Settings: same ALL_SYNCED_KEYS list, same backup file
-       shape, same confirm text. -->
+       other panel on this tab, not a one-off exception. Since 2026-10-01
+       it backs up every synced key (fullBackupKeys(), below), not a
+       hand-kept list of 17. -->
   <div class="dev-panel dev-owner-hidden dev-panel-wide" id="backup">
     <div class="dev-panel-heading">
       <h2>Backup &amp; restore</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('backup')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
-    <p class="tool-sub">A full export of every job, invoice, expense, contact, and note stored on this account -- the same backup used to restore onto a new device if needed. Independent of cloud sync entirely.</p>
+    <p class="tool-sub">A full export of everything this account syncs: jobs, clients, contacts, invoices, quotes, contracts, expenses, income, notes, the Appliance Wiki, and the record of what's been deleted (so a restore can't bring deleted items back). The same backup used to restore onto a new device if needed. Independent of cloud sync entirely.</p>
     <div class="dev-check-row">
       <div>
         <div>Download a full backup</div>
@@ -1631,18 +1631,33 @@
   // A full account-wide export/restore is an admin/dev-oriented capability,
   // not something a regular Employee account needs day to day -- see the
   // panel's own DEV_INFO entry (dev-tools-shared.js) for the full reasoning.
-  // This is a straight relocation, not a rewrite: the exact same key list,
-  // backup file shape, and restore/confirm behavior as before.
-  const ALL_SYNCED_KEYS = [
-    'th_tracker_jobs', 'th_tracker_contacts', 'th_tracker_notes_v2',
-    'th_expense_log', 'th_income_log', 'th_mileage_rate', 'th_price_reference', 'th_invoices',
-    'th_quotes', 'th_tax_rate', 'th_tax_labor', 'th_tax_parts', 'th_compliance', 'th_job_templates', 'th_contracts', 'th_setaside_rate',
-    'th_inventory',
-  ];
+  //
+  // Every synced key, read from sync.js itself (2026-10-01). This used to be
+  // its own hand-kept list of 17 keys, which had drifted from the 49 that
+  // actually sync: a backup left out the client registry, every tombstone
+  // (so a restore would bring deleted records back), review requests, the
+  // shift log, known issues, flagged items, Runway's data, and the whole
+  // Appliance Wiki. Reading SYNC_DATA_KEYS + WIKI_SYNC_KEYS means a key added
+  // to sync is backed up the same day, with nothing else to remember. Order
+  // is sync's own: tombstones before the list they protect.
+  const BACKUP_FORMAT = 2;
+  function fullBackupKeys() {
+    if (typeof SYNC_DATA_KEYS === 'undefined' || typeof WIKI_SYNC_KEYS === 'undefined') return null;
+    return SYNC_DATA_KEYS.concat(WIKI_SYNC_KEYS.filter(k => SYNC_DATA_KEYS.indexOf(k) === -1));
+  }
 
   function downloadBackup() {
-    const backup = {};
-    ALL_SYNCED_KEYS.forEach(k => { backup[k] = localStorage.getItem(k); });
+    const keys = fullBackupKeys();
+    // A partial backup that looks complete is worse than none: refuse
+    // rather than fall back to a shorter list.
+    if (!keys) {
+      if (typeof showToast === 'function') showToast('Sync code has not loaded yet, so a full backup is not possible. Try again in a second.', { type: 'error' });
+      return;
+    }
+    const backup = {
+      _backup: { format: BACKUP_FORMAT, createdAt: new Date().toISOString(), keys: keys.length },
+    };
+    keys.forEach(k => { backup[k] = localStorage.getItem(k); });
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1652,7 +1667,7 @@
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    if (typeof showToast === 'function') showToast('Backup downloaded.');
+    if (typeof showToast === 'function') showToast('Backup downloaded (' + keys.length + ' kinds of data).');
   }
 
   function restoreBackup(event) {
@@ -1668,19 +1683,31 @@
         event.target.value = '';
         return;
       }
+      const keys = fullBackupKeys();
+      if (!keys) {
+        await showAlert('Sync code has not loaded yet, so a restore is not possible. Reload the page and try again.');
+        event.target.value = '';
+        return;
+      }
+      const present = keys.filter(k => data[k] !== undefined && data[k] !== null);
+      // A backup made before 2026-10-01 holds only 17 kinds of data. Say so,
+      // so nobody expects it to bring back the client list or deleted-record
+      // history it never had.
+      const older = !(data._backup && data._backup.format >= BACKUP_FORMAT);
       const confirmed = await showConfirm(
-        'This will REPLACE all current data (jobs, expenses, invoices, quotes, contacts, notes, price reference) ' +
-        'with what\'s in this backup file, on this device. This cannot be undone. Continue?',
+        'This will REPLACE all current data (jobs, clients, contacts, invoices, quotes, contracts, expenses, income, notes, ' +
+        'the Appliance Wiki and the rest) with what\'s in this backup file, on this device. This cannot be undone. Continue?' +
+        (older ? '\n\nThis is an older backup: it holds ' + present.length + ' kinds of data, not the full set, so anything it ' +
+          'doesn\'t include (such as the client list and deleted-record history) is left as it is now.' : ''),
         { danger: true, confirmText: 'Restore' }
       );
       if (!confirmed) { event.target.value = ''; return; }
 
-      ALL_SYNCED_KEYS.forEach(k => {
-        if (data[k] !== undefined && data[k] !== null) localStorage.setItem(k, data[k]);
-      });
+      present.forEach(k => { localStorage.setItem(k, data[k]); });
       if (typeof scheduleSync === 'function') scheduleSync();
+      if (typeof scheduleWikiSync === 'function' && WIKI_SYNC_KEYS.some(k => present.indexOf(k) !== -1)) scheduleWikiSync();
       event.target.value = '';
-      await showAlert('Backup restored. If you use Cloud Sync, this will push to the cloud shortly and become the new shared version on all devices.');
+      await showAlert('Backup restored (' + present.length + ' kinds of data). If you use Cloud Sync, this will push to the cloud shortly and become the new shared version on all devices.');
     };
     reader.readAsText(file);
   }

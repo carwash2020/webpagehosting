@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=7d9fef1e42"></script>
+<script src="/tools/auth.js?v=417378cc58"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -55,7 +55,7 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=8d5b635c84">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=8060cfc3c2" defer></script>
-<script src="/tools/data-layer.js?v=1677d8d4c2" defer></script>
+<script src="/tools/data-layer.js?v=7edc2602b7" defer></script>
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/signature-pad.js?v=f95f8e1d28" defer></script>
@@ -268,6 +268,7 @@
   .inv-log-head h3 { margin: 0; }
   .inv-log-tools { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
   .inv-item + .inv-item { margin-top: 6px; }
+  .inv-item.is-linked { outline: 2px solid var(--orange); outline-offset: -2px; border-radius: 10px; }
   .th-list > .inv-item + .inv-item { margin-top: 0; }
   .inv-row { padding-right: 4px; }
   .inv-row button.th-row-link { background: none; border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; width: 100%; }
@@ -1138,7 +1139,7 @@
     const sub = (st.status === 'overdue'
       ? num + escapeHtml(invoiceShortDate(inv.date)) + '</span><span class="th-row-sub">' + invoiceDueText(inv, st)
       : num + invoiceDueText(inv, st)) + (reminded ? ' &middot; ' + reminded.toLowerCase() : '');
-    return '<div class="inv-item" data-invoice-id="' + inv.id + '">' +
+    return '<div class="inv-item' + (inv.id === linkedRecordId ? ' is-linked' : '') + '" data-invoice-id="' + inv.id + '">' +
       '<div class="th-row inv-row">' +
         '<button type="button" class="th-row-link" data-long-press-target onclick="openInvoiceActions(' + inv.id + ')" aria-haspopup="dialog" aria-label="' + invoiceAttr(name + ', ' + amount + ', ' + st.status + '. Actions') + '">' +
           '<span class="th-row-avatar' + (st.status !== 'paid' && st.balance > 0 ? ' is-owed' : '') + '" aria-hidden="true">' + escapeHtml(invoiceInitials(name)) + '</span>' +
@@ -1213,6 +1214,7 @@
     if (!inv) return;
     const st = invoiceState(inv);
     const actions = [];
+    actions.push({ label: 'View invoice', onClick: () => viewInvoicePdf(id) });
     actions.push({ label: st.status === 'paid' ? 'Mark Unpaid' : 'Mark Paid', onClick: () => toggleInvoicePaid(id) });
     // A reminder already written (2026-09-23, rework part 10), a notch
     // firmer each time; its label says when the last one went out.
@@ -1220,13 +1222,128 @@
       const last = typeof thInvoiceRemindedLabel === 'function' ? thInvoiceRemindedLabel(inv) : '';
       actions.push({ label: 'Send a reminder' + (last ? ' (' + last.toLowerCase() + ')' : ''), onClick: () => thOpenReminderSheet(id) });
     }
-    if (inv.clientEmail) actions.push({ label: 'Resend to client', onClick: () => resendInvoiceToClient(id) });
+    actions.push({ label: inv.clientEmail ? 'Resend' : 'Send to an email', onClick: () => resendInvoiceToClient(id) });
     const clientHref = invoiceClientHref(inv);
     if (clientHref) actions.push({ label: 'Open client', onClick: () => { window.location.href = clientHref; } });
     if (inv.jobRefId) actions.push({ label: 'Open job', onClick: () => { window.location.href = '/tools/job-detail.html?id=' + encodeURIComponent(inv.jobRefId); } });
     actions.push({ label: 'Delete', isDanger: true, onClick: () => deleteInvoiceLogEntry(id) });
     const title = (inv.clientName || 'Invoice') + ' \u00b7 #' + (inv.invoiceNumber || '\u2014') + ' \u00b7 ' + money(st.status === 'paid' ? inv.total : st.balance);
     showQuickActionSheet(escapeHtml(title), actions);
+  }
+
+  // View invoice (2026-10-03, requested directly: "make it so i can actually
+  // view invoices"). Opens the PDF archived when the invoice was created
+  // (storeInvoicePdf: invoice-pdfs/invoices/<number>.pdf), so it shows
+  // exactly what the client got. The tab is opened synchronously inside
+  // the tap and pointed at the signed URL afterwards -- a window.open after
+  // an await is dropped by Safari's popup blocker (same pattern as
+  // clients.html viewArchivedInvoicePdf). With no tab at all (popups fully
+  // blocked) this tab goes to the PDF instead.
+  async function viewInvoicePdf(id) {
+    const inv = invoicesForDisplay().find(i => i.id === id) || loadInvoiceLog().find(i => i.id === id);
+    if (!inv || !inv.invoiceNumber) { showToast('Could not find that invoice.', { type: 'error' }); return; }
+    const pdfWindow = window.open('', '_blank');
+    if (pdfWindow) pdfWindow.opener = null;
+    let url = (typeof getSignedStorageUrl === 'function')
+      ? await getSignedStorageUrl('invoice-pdfs', 'invoices/' + encodeURIComponent(inv.invoiceNumber) + '.pdf', 600)
+      : '';
+    // No archived copy (an invoice from before archiving, or the upload
+    // failed when it was made): rebuild it from the saved invoice instead
+    // of showing nothing. Never stored -- the archive stays only what was
+    // actually issued.
+    if (!url) {
+      try {
+        const entry = loadInvoiceLog().find(i => i.id === id) || inv;
+        const doc = await rebuildInvoicePdf(entry);
+        if (doc) url = doc.output('bloburl');
+      } catch (e) {
+        url = '';
+      }
+    }
+    if (!url) {
+      if (pdfWindow) pdfWindow.close();
+      showToast('Could not open #' + inv.invoiceNumber + ' -- no saved PDF, and it could not be rebuilt here. Check your connection and try again.', { type: 'error' });
+      return;
+    }
+    if (pdfWindow) pdfWindow.location.href = url;
+    else window.location.href = url;
+  }
+
+  // The invoice PDF drawn from a saved log entry rather than the form --
+  // the same pdf-layout.js blocks generatePDF() uses, fed from the entry's
+  // own saved fields (number, date, terms, line items, totals). Only for
+  // viewing when there is no archived copy.
+  async function rebuildInvoicePdf(inv) {
+    if (!window.jspdf && typeof pdfLoadJsPdf === 'function') await pdfLoadJsPdf();
+    if (!window.jspdf) return null;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const TYPE_LABELS = { standard: 'INVOICE', deposit: 'DEPOSIT INVOICE', balance: 'BALANCE DUE', progress: 'PROGRESS PAYMENT' };
+    const longDate = (d) => d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const due = (inv.date && typeof thInvoiceDueDate === 'function') ? thInvoiceDueDate({ date: inv.date, terms: inv.terms }) : null;
+    let y = await drawPdfHeader(doc, pageW, TYPE_LABELS[inv.invoiceType] || 'INVOICE', null, {
+      ref: inv.invoiceNumber,
+      meta: [
+        { label: 'Invoice #', value: inv.invoiceNumber || '' },
+        { label: 'Date', value: inv.date ? longDate(new Date(inv.date + 'T00:00:00')) : '' },
+        { label: 'Due', value: due ? longDate(due) : '' },
+        { label: 'Terms', value: inv.terms || '' },
+      ],
+    });
+    const billTo = [{ text: inv.clientName || '(client name)', bold: true }];
+    if (inv.clientEmail) billTo.push({ text: inv.clientEmail, muted: true });
+    y = pdfDrawInfoColumns(doc, { y, columns: [
+      { label: 'Bill to', lines: billTo },
+      { label: 'Job', lines: [inv.jobRefTitle || ''] },
+    ] });
+    const items = (Array.isArray(inv.line_items) ? inv.line_items : []).map(item => ({
+      ...item, qty: Number(item.qty) || 0, price: Number(item.price) || 0, amount: Number(item.amount) || 0,
+      unitLabel: lineItemUnitLabel(item.type),
+    }));
+    y = drawPdfLineItemsTable(doc, { y, items, pageW, pageH }).y;
+    const subtotal = Number(inv.subtotal) || items.reduce((t, i) => t + i.amount, 0);
+    y = drawPdfTotalsBlock(doc, { y, pageW, subtotal, tax: Number(inv.tax) || 0, discount: Number(inv.discount) || 0, discountLabel: 'Discount', totalLabel: 'TOTAL DUE' });
+    const paymentText = (document.getElementById('paymentText') || {}).value || '';
+    y = pdfDrawNoteBox(doc, { y: y + 10, label: 'Payment', lines: [
+      paymentText,
+      { text: 'Please reference invoice ' + (inv.invoiceNumber || '') + ' with payment.', small: true },
+    ] });
+    pdfFinalize(doc, { message: 'Thank you for choosing Triple H Enterprises. Work guaranteed.' });
+    return doc;
+  }
+
+  // ?invoice=<id> (2026-10-03): the client and job pages link each invoice
+  // here by id. They used to pass only ?search=<client name>, which landed
+  // on the list with nothing opened ("it just takes me to a page but doesnt
+  // pull it up"). This opens that invoice's sheet -- View invoice first --
+  // and highlights its row. ?quote=<id> does the same for a quote. A PDF
+  // can't open on its own here: a browser only allows that from a tap.
+  var linkedRecordId = null; // var: invoiceRowHtml above reads it, before this line has run on some paths
+  function openRecordFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const invoiceId = Number(params.get('invoice'));
+    const quoteId = Number(params.get('quote'));
+    const isInvoice = !!invoiceId;
+    const id = invoiceId || quoteId;
+    if (!id) return;
+    const found = isInvoice
+      ? (invoicesForDisplay().find(i => i.id === id) || loadInvoiceLog().find(i => i.id === id))
+      : loadQuoteLog().find(q => q.id === id);
+    const keep = new URLSearchParams(window.location.search);
+    keep.delete('invoice'); keep.delete('quote');
+    const rest = keep.toString();
+    history.replaceState(null, '', window.location.pathname + (rest ? '?' + rest : '') + window.location.hash);
+    if (!found) { showToast('Could not find that ' + (isInvoice ? 'invoice' : 'quote') + ' on this device yet.', { type: 'error' }); return; }
+    linkedRecordId = id;
+    const row = document.querySelector(isInvoice ? '.inv-item[data-invoice-id="' + id + '"]' : '.inv-item[data-quote-id="' + id + '"]');
+    if (row) {
+      row.classList.add('is-linked');
+      if (typeof row.scrollIntoView === 'function') row.scrollIntoView({ block: 'center' });
+    }
+    if (isInvoice) openInvoiceActions(id);
+    else openQuoteActions(id);
   }
 
   function initInvoiceLogLongPress() {
@@ -1252,12 +1369,15 @@
     const inv = invoicesForDisplay().find(i => i.id === id);
     if (!inv) return null;
     const st = invoiceState(inv);
-    const actions = [{ kind: 'extra', icon: 'check', label: st.status === 'paid' ? 'Mark Unpaid' : 'Mark Paid', onClick: () => toggleInvoicePaid(id) }];
+    const actions = [
+      { kind: 'open', icon: 'receipt', label: 'View invoice', onClick: () => viewInvoicePdf(id) },
+      { kind: 'extra', icon: 'check', label: st.status === 'paid' ? 'Mark Unpaid' : 'Mark Paid', onClick: () => toggleInvoicePaid(id) },
+    ];
     if (st.status !== 'paid' && st.balance > 0 && typeof thOpenReminderSheet === 'function') {
       const last = typeof thInvoiceRemindedLabel === 'function' ? thInvoiceRemindedLabel(inv) : '';
       actions.push({ kind: 'extra', icon: 'bell', label: 'Send a reminder' + (last ? ' (' + last.toLowerCase() + ')' : ''), onClick: () => thOpenReminderSheet(id) });
     }
-    if (inv.clientEmail) actions.push({ kind: 'extra', icon: 'mail', label: 'Resend', onClick: () => resendInvoiceToClient(id) });
+    actions.push({ kind: 'extra', icon: 'mail', label: inv.clientEmail ? 'Resend' : 'Send to an email', onClick: () => resendInvoiceToClient(id) });
     const clientHref = invoiceClientHref(inv);
     if (clientHref) actions.push({ kind: 'open', icon: 'user-plus', label: 'Open client', onClick: () => { window.location.href = clientHref; } });
     if (inv.jobRefId) actions.push({ kind: 'open', icon: 'wrench', label: 'Open job', onClick: () => { window.location.href = '/tools/job-detail.html?id=' + encodeURIComponent(inv.jobRefId); } });
@@ -1319,11 +1439,34 @@
   // handling omits the field entirely, and the upsert leaves the
   // portal row's existing line items (if any) untouched rather than
   // overwriting them with nothing.
+  //
+  // Send to a different email (2026-10-03, requested directly): the email
+  // is a field, filled in with the one on file. A changed email is saved
+  // on the invoice first (log and relational mirror; the client card is
+  // left alone), since
+  // sync-invoice-to-portal moves the portal row to that address: the new
+  // address gets it (an invite if they're new to the portal), the old one
+  // stops seeing it.
   async function resendInvoiceToClient(invoiceId) {
-    const inv = loadInvoiceLog().find(i => i.id === invoiceId);
+    const log = loadInvoiceLog();
+    const inv = log.find(i => i.id === invoiceId);
     if (!inv) { showToast('Could not find that invoice in the log.', { type: 'error' }); return; }
-    if (!inv.clientEmail) { showToast('That invoice has no client email on it.', { type: 'error' }); return; }
-    if (!(await showConfirm(`Resend invoice #${inv.invoiceNumber} to ${inv.clientEmail}?`))) return;
+    const oldEmail = (inv.clientEmail || '').trim();
+    const values = await showPromptForm(`Resend invoice #${inv.invoiceNumber}` + (inv.clientName ? ` (${inv.clientName})` : ''), [
+      { id: 'email', label: 'Send to', type: 'email', defaultValue: oldEmail, placeholder: 'name@example.com' },
+    ], {
+      confirmText: 'Send',
+      validate: (v) => (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email) ? null : 'Enter a valid email address.'),
+    });
+    if (!values) return;
+    const email = values.email;
+    if (email.toLowerCase() !== oldEmail.toLowerCase()) {
+      if (oldEmail && !(await showConfirm(`Send invoice #${inv.invoiceNumber} to ${email} instead of ${oldEmail}? It moves to ${email}'s portal, and ${oldEmail} will no longer see it there.`, { confirmText: 'Send' }))) return;
+      inv.clientEmail = email;
+      saveInvoiceLog(log);
+      if (typeof mirrorInvoiceToRelational === 'function') mirrorInvoiceToRelational(inv);
+      if (typeof renderInvoiceLog === 'function') renderInvoiceLog();
+    }
 
     try {
       if (typeof ensureFreshToken === 'function') await ensureFreshToken();
@@ -3344,6 +3487,7 @@
     // pos.html stub and any old POS bookmark land here.
     applyGenTabFromHash();
     window.addEventListener('hashchange', applyGenTabFromHash);
+    openRecordFromUrl();
     addQuoteLineItem();
     recalcQuote();
     applyQuickLineFromUrl(); // after the quote's starter row exists

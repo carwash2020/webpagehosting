@@ -206,7 +206,9 @@ test('invoice-generator.html: toggleInvoicePaid nudges the badge down when marki
 test('invoice-generator.html: the invoice log gets a long-press init function opening the invoice sheet (Mark Paid or Unpaid / Resend / Delete), guarded against a missing attachLongPress and wired right after the initial render', () => {
   assert.match(invoiceGenHtml, /function initInvoiceLogLongPress\(\)[\s\S]*?if \(typeof attachLongPress !== 'function'\) return;[\s\S]*?\['invoiceLogList', 'quoteLogList'\][\s\S]*?attachLongPress\(container, '\.inv-item\[data-invoice-id\]', \(itemEl\) => openInvoiceActions\(Number\(itemEl\.dataset\.invoiceId\)\)\)/);
   const fn = invoiceGenHtml.match(/function openInvoiceActions\(id\)[\s\S]*?\n  \}/)[0];
-  assert.match(fn, /if \(inv\.clientEmail\) actions\.push\(\{ label: 'Resend to client'/);
+  // View invoice leads, and Resend is offered for every invoice (2026-10-03).
+  assert.match(fn, /actions\.push\(\{ label: 'View invoice', onClick: \(\) => viewInvoicePdf\(id\) \}\);/);
+  assert.match(fn, /actions\.push\(\{ label: inv\.clientEmail \? 'Resend' : 'Send to an email', onClick: \(\) => resendInvoiceToClient\(id\) \}\);/);
   assert.match(fn, /label: st\.status === 'paid' \? 'Mark Unpaid' : 'Mark Paid'/);
   assert.match(fn, /label: 'Delete', isDanger: true/);
   assert.match(fn, /showQuickActionSheet\(escapeHtml\(title\), actions\)/, 'the sheet renders its title as HTML');
@@ -245,12 +247,12 @@ test('invoice-generator.html: the invoice sheet, invoked end-to-end through the 
   capturedOnLongPress(row);
 
   assert.equal(sheetTitle, 'Jane &lt;b&gt;Doe&lt;/b&gt; \u00b7 #1042 \u00b7 $150.00');
-  assert.deepEqual(Array.from(sheetActions, a => a.label), ['Mark Paid', 'Resend to client', 'Delete'], 'no client in the registry and no job: no Open client / Open job');
-  sheetActions[0].onClick();
-  assert.equal(toggledId, 42);
+  assert.deepEqual(Array.from(sheetActions, a => a.label), ['View invoice', 'Mark Paid', 'Resend', 'Delete'], 'no client in the registry and no job: no Open client / Open job');
   sheetActions[1].onClick();
-  assert.equal(resendId, 42);
+  assert.equal(toggledId, 42);
   sheetActions[2].onClick();
+  assert.equal(resendId, 42);
+  sheetActions[3].onClick();
   assert.equal(deletedId, 42);
 });
 

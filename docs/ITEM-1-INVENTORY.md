@@ -62,14 +62,14 @@ These are real defects the inventory turned up. None is fixed here, to keep this
 
 | Bug | Where | Effect |
 |---|---|---|
-| Full Backup covers only 17 of the 49 synced keys | `tools/dev-tools.html` `ALL_SYNCED_KEYS` (~1636) vs `tools/sync.js` `SYNC_DATA_KEYS` | A restore would lose the client registry, every tombstone (deleted records would come back), review requests, the shift log and Runway's data. |
-| Contracts never add contact details to the client record | `contract-generator.html:1081`, `data-layer.js:530` read `clientPhone`/`clientAddress`/`clientEmail`; the real keys are `phone`/`serviceAddress`/`email` | Client records made from a contract have no phone, address or email. |
-| Returning clients can get the first-time discount | `finance.html:724` `checkClientHistory` (exact name match) | A returning client typed with a different spelling ticks "First-time client, apply discount". |
-| Bulk job delete leaves the portal copy | `job-tracker.html` `bulkDeleteJobs` (single delete does remove it) | Clients can still see deleted jobs in the portal. |
+| **Fixed 2026-10-01:** Full Backup covered only 17 of the 49 synced keys (now reads `SYNC_DATA_KEYS` + `WIKI_SYNC_KEYS`, 52 keys) | `tools/dev-tools.html` `ALL_SYNCED_KEYS` (~1636) vs `tools/sync.js` `SYNC_DATA_KEYS` | A restore would lose the client registry, every tombstone (deleted records would come back), review requests, the shift log and Runway's data. |
+| **Fixed 2026-10-01:** Contracts never added contact details to the client record (now read through `thContractClientDetails()`) | `contract-generator.html:1081`, `data-layer.js:530` read `clientPhone`/`clientAddress`/`clientEmail`; the real keys are `phone`/`serviceAddress`/`email` | Client records made from a contract have no phone, address or email. |
+| **Fixed 2026-10-01:** Returning clients could get the first-time discount (now `thClientHistory()`) | `finance.html:724` `checkClientHistory` (exact name match) | A returning client typed with a different spelling ticks "First-time client, apply discount". |
+| **Fixed 2026-10-01:** Bulk job delete left the portal copy (both deletes now call `removeJobFromPortal()`) | `job-tracker.html` `bulkDeleteJobs` (single delete does remove it) | Clients can still see deleted jobs in the portal. |
 | A stale device can bring a deleted job back into `public.jobs` | `mirrorJobsToRelational` upserts the whole local jobs list | The calendar can show a deleted job. Already a known Phase 3 gap. |
-| Card payments can flip back to unpaid (unverified at runtime) | `stripe-webhook-index.ts:401-404` sets only `paid = true` | If the invoice was ever marked unpaid (`paidAmount: 0`), the next sync recomputes `paid` from `paidAmount` and shows it unpaid. |
+| **Fixed 2026-10-01:** Card payments could flip back to unpaid (webhook now sets `paidAmount` and updates `public.invoices`) | `stripe-webhook-index.ts:401-404` sets only `paid = true` | If the invoice was ever marked unpaid (`paidAmount: 0`), the next sync recomputes `paid` from `paidAmount` and shows it unpaid. |
 | Tombstones never expire | `thPruneTombstones` runs locally; the union merge restores pruned entries from the server | The lists grow forever (small, but unbounded). |
-| Online-booking jobs aren't mirrored | `workspace.html:3139-3157` writes localStorage directly | The job reaches `public.jobs` only when some other job is saved. |
+| **Fixed 2026-10-01:** Online-booking jobs aren't mirrored (now mirrored on conversion, and the booking's referral is kept) | `workspace.html:3139-3157` writes localStorage directly | The job reaches `public.jobs` only when some other job is saved. |
 | Follow-up reminders match by case-sensitive name | `workspace.html` `renderFollowups`, `send-push-index.ts` `checkFollowups` | A client who came back under a different spelling still shows as overdue for a follow-up. |
 
 ---
@@ -110,7 +110,7 @@ A tombstone key goes wherever its data key goes. For migrated entities, Phase 3 
 
 Local-only keys (never synced), for completeness: `th_sync_base` (merge base), `th_mirror_failures` (mirror failure log), `th_sync_code`, `th_sync_last`, `th_dash_collapsed`, `th_wiki_sync_known_at`. The plan's "retire" class: `th_sync_code`, `th_sync_last` and `th_dash_collapsed` stay as local UI state; `th_sync_base` and `th_mirror_failures` retire per entity when that entity leaves the blob.
 
-**Full Backup mismatch:** Dev Tools' Full Backup/Restore uses its own 17-key list (`ALL_SYNCED_KEYS`, `tools/dev-tools.html:1636`). It is missing `th_clients`, every tombstone key, and the rest of the "stays" rows above except the settings. See the bugs table.
+**Full Backup mismatch (fixed 2026-10-01; Full Backup now reads sync.js's own lists):** Dev Tools' Full Backup/Restore used its own 17-key list (`ALL_SYNCED_KEYS`, `tools/dev-tools.html:1636`). It is missing `th_clients`, every tombstone key, and the rest of the "stays" rows above except the settings. See the bugs table.
 
 ---
 

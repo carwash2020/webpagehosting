@@ -44,7 +44,7 @@
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=8d5b635c84">
-<script src="/tools/auth.js?v=7d9fef1e42"></script>
+<script src="/tools/auth.js?v=417378cc58"></script>
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
@@ -740,20 +740,33 @@
     sub: document.getElementById('mfaEnrollSub').textContent,
   };
 
+  let lastEnrollOptions;
   async function startMandatoryEnrollment(options) {
+    lastEnrollOptions = options;
     const afterRecovery = !!(options && options.afterRecovery);
     document.getElementById('mfaEnrollTitle').textContent = afterRecovery ? 'Set up a new authenticator' : MFA_ENROLL_COPY.title;
     document.getElementById('mfaEnrollSub').textContent = afterRecovery
       ? 'Recovery code accepted. Your old authenticator was removed and your other devices were signed out. Scan this code with an authenticator app on the phone you have now, then enter the 6-digit code it shows. The old "Triple H Workspace" entry in your previous app no longer works.'
       : MFA_ENROLL_COPY.sub;
     const errorEl = document.getElementById('mfaEnrollError');
+    const verifyBtn = document.getElementById('mfaEnrollVerifyBtn');
     errorEl.textContent = '';
+    pendingFactorId = null;
+    document.getElementById('mfaEnrollQrImg').removeAttribute('src');
+    document.getElementById('mfaEnrollSecretFallback').textContent = '';
     showStep('mfaEnrollView');
+    verifyBtn.disabled = true; verifyBtn.textContent = 'Setting up...';
     const result = await mfaEnroll(pendingSession.access_token);
+    verifyBtn.disabled = false;
     if (!result.ok) {
-      errorEl.textContent = result.error + ' Please refresh and sign in again.';
+      // Setup didn't start, so there is nothing to verify a code against
+      // (sending one anyway gave Steve "factor_id must be an UUID",
+      // 2026-10-04). The button becomes Try again, which starts over.
+      errorEl.textContent = result.error;
+      verifyBtn.textContent = 'Try again';
       return;
     }
+    verifyBtn.textContent = 'Verify & Continue';
     pendingFactorId = result.factorId;
     document.getElementById('mfaEnrollQrImg').src = result.totp.qr_code;
     const copySecretBtn = document.getElementById('mfaEnrollCopySecretBtn');
@@ -811,6 +824,8 @@
     const errorEl = document.getElementById('mfaEnrollError');
     const code = document.getElementById('mfaEnrollCodeInput').value.trim();
     errorEl.textContent = '';
+    if (btn.disabled) return;
+    if (!pendingFactorId) { startMandatoryEnrollment(lastEnrollOptions); return; }
     if (!/^\d{6}$/.test(code)) { errorEl.textContent = 'Enter the 6-digit code from your authenticator app.'; return; }
 
     btn.disabled = true; btn.textContent = 'Verifying...';

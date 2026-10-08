@@ -828,23 +828,60 @@ async function mfaListVerifiedTotpFactor(accessToken) {
   }
 }
 
+// An <img src> for the QR code. Supabase's raw REST response has it as
+// bare SVG markup (the JS SDK prefixes `data:image/svg+xml;utf-8,`). The
+// markup has to be URL-encoded: unencoded, the first `#` in a colour
+// (fill="#000000") ends the URL as a fragment, so the image is broken --
+// on Steve's iPhone the QR box was blank (2026-10-04). Also accepts an
+// already-prefixed but unencoded data URI, and leaves an encoded or base64
+// one alone.
+function mfaQrImageSrc(qr) {
+  const raw = String(qr || '');
+  if (!raw) return '';
+  const m = raw.match(/^data:image\/svg\+xml(;[^,]*)?,([\s\S]*)$/);
+  if (m) {
+    if (/;base64/i.test(m[1] || '')) return raw;
+    const payload = m[2];
+    if (payload.indexOf('<') === -1) return raw; // already encoded
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(payload);
+  }
+  if (raw.startsWith('data:')) return raw;
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(raw);
+}
+
+// Removes setup attempts that were started and never finished. Supabase
+// refuses a new TOTP factor while an unverified one with the same friendly
+// name exists ("A factor with the friendly name "" for this user already
+// exists"), so one abandoned attempt -- a closed tab, a failed scan --
+// locked Steve out of setting up at all (2026-10-04). An unverified
+// factor can be removed with the account's own aal1 session; verified
+// factors are never touched here.
+async function mfaClearUnverifiedTotpFactors(accessToken) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${accessToken}` },
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const stale = ((data && data.factors) || []).filter((f) => f.factor_type === 'totp' && f.status !== 'verified');
+    for (const f of stale) await mfaUnenroll(accessToken, f.id);
+  } catch (e) { /* the enroll below reports any real problem */ }
+}
+
 async function mfaEnroll(accessToken) {
   try {
+    await mfaClearUnverifiedTotpFactors(accessToken);
     const res = await fetch(`${SUPABASE_URL}/auth/v1/factors`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${accessToken}` },
-      body: JSON.stringify({ factor_type: 'totp', issuer: 'Triple H Workspace' }),
+      // A friendly name unique to this attempt, so even a leftover the
+      // cleanup above couldn't remove can't block a new one.
+      body: JSON.stringify({ factor_type: 'totp', issuer: 'Triple H Workspace', friendly_name: 'Triple H Workspace ' + new Date().toISOString() }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) return { ok: false, error: data.error_description || data.msg || 'Could not start two-factor setup. Please try again.' };
-    // Supabase's raw REST response has the QR code as bare SVG markup --
-    // the JS SDK wraps it as a data URI before handing it to a caller
-    // (`data:image/svg+xml;utf-8,${qr_code}`, confirmed against its source)
-    // so an <img src> can use it directly. Done here too, since this call
-    // stands in for that SDK method.
-    if (data.totp && data.totp.qr_code && !String(data.totp.qr_code).startsWith('data:')) {
-      data.totp.qr_code = `data:image/svg+xml;utf-8,${data.totp.qr_code}`;
-    }
+    if (!data.id || !data.totp) return { ok: false, error: 'Could not start two-factor setup. Please try again.' };
+    data.totp.qr_code = mfaQrImageSrc(data.totp.qr_code);
     return { ok: true, factorId: data.id, totp: data.totp };
   } catch (e) {
     return { ok: false, error: 'Network error -- check your connection and try again.' };

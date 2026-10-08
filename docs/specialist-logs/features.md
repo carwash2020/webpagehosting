@@ -134,6 +134,42 @@ Deliberately no AggregateRating there: the page only has the compact
 proof line, not the reviews wall, and `cta-trust-proof.test.js`
 already forbids it.
 
+## 2026-10-01 -- Booked jobs reach the database, with their referral
+
+`convertBookingToJob()` in `tools/workspace.html` (the Dashboard's "Add to Jobs" on an online booking) wrote the new job to localStorage only. The job reached `public.jobs` only when some other job was saved later, so until then the calendar and anything else reading the table didn't have it (found in the Item 1 inventory). It also dropped the booking's "Who referred you?" answer (`th_bookings.referred_by`), so a referrer never got their $25 credit, unlike a job added in the Job Tracker.
+
+- The new job is mirrored with `mirrorJobsToRelational([job])` as soon as it's saved. The job record now keeps `referredBy`.
+- When the booking names a referrer, a `referrals` row is created with `mirrorReferralCreated()`, after the job's mirror succeeds, since the row points at the job (`referred_job_id`). If the job mirror fails, no referral row is sent; the name stays on the job.
+- Both run in the background: the conversion never waits on them, and a failure is recorded by the mirror.
+- Nothing to backfill: production had no converted bookings and no booking referrals on 2026-10-01 (read-only check).
+- Test: `tests/workspace/booking-job-mirror.test.js` (5, jsdom running the real conversion and sync.js mirror functions; all 5 fail on the old code).
+
+## 2026-10-03 -- Resend can send an invoice to a different email
+
+Requested directly ("fix resend so i can send it to a different email"). Resend in the Invoice Log (`resendInvoiceToClient()` in `tools/invoice-generator.html`) used to ask only "Resend to <email on file>?". It now opens a small form with a **Send to** field, filled in with the email on file.
+
+- Unchanged email: sends exactly as before.
+- Changed email: one confirm says the invoice moves to the new address's portal and the old address stops seeing it there (`sync-invoice-to-portal` upserts on `source_invoice_id` and sets `client_email`; a new portal address gets an invite instead of the usual notification). Then the new email is saved on the invoice (log + `mirrorInvoiceToRelational`) before sending, so the log, `public.invoices` and the portal agree. The client card is left alone.
+- An invalid address is refused in the form. A change in capitalisation only is not treated as a different email.
+- Test: `tests/tools/resend-invoice-other-email.test.js` (6, jsdom running the real Resend and dialog code; all fail on the old code).
+
+## 2026-10-03 -- Open an invoice from a client, and view its PDF
+
+Requested directly: "when i click on a client and click on invoice, it just takes me to a page but doesnt pull it up". `tools/client-detail.html` (timeline and Invoices/Quotes sections) and `tools/job-detail.html` linked every invoice and quote to `invoice-generator.html?search=<client name>#recent`, which only filtered the list. There was also no way to look at an invoice itself in the app.
+
+- The links now add `&invoice=<id>` or `&quote=<id>`. `openRecordFromUrl()` in `tools/invoice-generator.html` runs after the `#recent` tab opens: it opens that record's sheet, outlines and scrolls to its row, and drops the id from the address so a refresh doesn't reopen it. An id not on the device says so.
+- **View invoice** is the first action in the invoice sheet and the row's ⋯ menu. `viewInvoicePdf()` opens the PDF archived when the invoice was created (`invoice-pdfs/invoices/<number>.pdf`, via `getSignedStorageUrl`), so it is exactly what the client got. The tab opens inside the tap and is pointed at the signed URL afterwards (Safari drops a `window.open` after an await); with popups fully blocked, the page itself goes to the PDF. The PDF can't open by itself on arrival: browsers only allow that from a tap.
+- Resend is now in the sheet and menu for every invoice; with no email on file it reads "Send to an email" (see the Resend entry below).
+- Coverage on 2026-10-03: 6 of 7 invoices in `public.invoices` have an archived PDF; INV-2026-1000 (2026-09-03) doesn't, and shows a "No saved PDF" message.
+- Test: `tests/tools/invoice-view-and-deep-link.test.js` (9, jsdom running the real sheet, viewer and deep-link code; all fail on the old code).
+
+## 2026-10-03 -- View invoice works without a saved PDF; Settings gets an Update button
+
+- **View invoice fallback.** When there's no archived PDF (an invoice from before archiving, like INV-2026-1000, or an upload that failed when the invoice was made), `viewInvoicePdf()` now rebuilds the PDF from the saved invoice with `rebuildInvoicePdf()`. It uses the same `js/pdf-layout.js` blocks as `generatePDF()`, fed from the entry's own saved fields, and is never uploaded, so the archive only ever holds what was issued. Checked by running the real function against jsPDF 2.5.1 (the same file the app loads; its SRI hash matches) with INV-2026-1090's data: one page, every line and the $212.66 total present.
+- **Settings -> App version -> Update** (requested directly: "it needs a update button so it can always be in the newest version when auto update doesn't catch one"). It shows the installed version (the service worker's `th-workspace-vNNN` cache name) and, on tap, asks for a new worker (`registration.update()`). If one installs and takes over (`skipWaiting` + `clients.claim`), the page reloads into it. Otherwise it says the app is current. Offline, it says so and does nothing. It doesn't force a reload when there is nothing new.
+- Invoices already create a client: `logInvoice()` calls `thEnsureClient(name, { address, email })` (email match first, then name). The Clients page reads that registry, so the client shows up there straight away. The unified `clients` table gets new clients only when `item1_seed_clients` is re-run (by design until Phase 3.5); on 2026-10-03, Tori Frampton (INV-2026-1063) was the one invoice client not in it yet.
+- Tests: `tests/tools/invoice-view-and-deep-link.test.js` (now 11) and `tests/tools/settings-check-for-updates.test.js` (6).
+
 <!-- Add new entries above this line -->
 ## 2026-09-17 -- /tools/ Action Items inbox + More overflow (UI only)
 
@@ -3448,6 +3484,48 @@ Connor: "make sure we can't have duplicates in the future." Decided with him: th
 - **Server (`sql/item1/04_one_client_per_email.sql`):** a unique index on `(tenant_id, email_norm)` over live clients (not merged, not "not a client"). The seed folds a same-email row into the existing client instead of creating a second: the row is still written, already merged, so its legacy id reaches the step 2 backfill, and the fold is recorded as a decided pair (`decided_by 'automatic: same email'`). A portal account whose email is on file links to that client. `merge_client_candidate()` now marks the merged client merged before filling the kept one's blanks, so moving an email across can't trip the index. The review panel's Edit shows "that email already belongs to another client" on a 409.
 - **Production dry run (rolled back):** the index builds; a second "CONNOR@…" insert is refused; a seeded row with Connor's email folds into his client and fills the blank address.
 - Tests: `tests/sync/client-one-per-email-db.test.js` (10, PGlite), `tests/sync/client-one-per-person.test.js` (8, jsdom), plus two new Add-client tests in `tests/tools/clients-directory.test.js` and one in `tests/tools/client-duplicates-panel.test.js`.
+
+## 2026-10-01 -- Full Backup covers every synced key
+
+Dev Tools' Full Backup / Restore kept its own list of 17 keys, which had drifted from the 49 that sync (found in the Item 1 inventory). A backup left out the client registry, every tombstone (so a restore would bring deleted records back), review requests, the shift log, known issues, flagged items, Runway's data and the whole Appliance Wiki. `fullBackupKeys()` in `tools/dev-tools.html` now returns sync.js's own `SYNC_DATA_KEYS` + `WIKI_SYNC_KEYS` (52 keys, tombstones before their lists), so a key added to sync is backed up with nothing else to change.
+
+- **No silent partial backup:** if sync.js hasn't loaded, Download and Restore refuse instead of falling back to a shorter list.
+- **Format marker:** the file carries `_backup: { format: 2, createdAt, keys }`. A restore of an older 17-key file still works and says so in the confirm, and leaves every key it didn't include (the client list, tombstones) as it is.
+- A restore that includes wiki keys also calls `scheduleWikiSync()`, since the wiki syncs through its own table.
+- Test: `tests/tools/full-backup-keys.test.js` (7, jsdom running the real backup code against the real key lists).
+
+## 2026-10-01 -- Contracts fill in the client's phone, address and email
+
+The contract forms save `phone`, `serviceAddress` and `email` (`collectFields` in `tools/contract-generator.html`), but the contract save path and `thCollectClientNamesFromExistingData()` read `clientPhone`, `clientAddress` and `clientEmail`, which no contract has ever had. A client first seen on a contract got a card with no contact details, and an existing client's blanks were never filled from one (found in the Item 1 inventory). Both now go through `thContractClientDetails(fields)` in `tools/data-layer.js`, which reads the real keys (the old names stay as a fallback).
+
+- **Why the old test missed it:** `tests/sync/client-identity.test.js` only checked that the contract's `thEnsureClient` call mentioned "email", which `fields.clientEmail` did. It now checks the call goes through the helper and that no `fields.client(Phone|Address|Email)` read is left.
+- Existing contracts aren't re-applied: a client's blanks fill the next time a contract is generated for them (or a later backfill picks up a contract-only client).
+- Test: `tests/sync/contract-client-details.test.js` (5, including a check that all three contract types save the four keys the helper reads).
+
+## 2026-10-01 -- Bulk-deleted jobs leave the client portal too
+
+`deleteJob()` in `tools/job-tracker.html` tells `sync-job-to-portal` to delete the portal copy of a completed job (`{ delete: true, source_job_id }`), but `bulkDeleteJobs()` never did, so a client could still see jobs that had been bulk-deleted, warranty dates and all (found in the Item 1 inventory). The call is now `removeJobFromPortal(job)`, shared by both, and runs only for a job that was ever synced (status `done` with a client email). It's best-effort, after the undo window, and never blocks the internal delete.
+
+- No orphans to clean up: production's `client_portal_jobs` was empty on 2026-10-01 (read-only check).
+- Test: `tests/tools/job-delete-portal-cleanup.test.js` (6, jsdom running the real delete functions).
+
+## 2026-10-01 -- First-time discount checks the client's real history
+
+Finance's cost calculator ticks "First-time client — apply discount" when the typed client has no prior work. `checkClientHistory()` compared the name to job names exactly (only lowercased), so extra spaces, or earlier jobs saved under another spelling but linked to the same client card, made a returning client look new (found in the Item 1 inventory). It now calls `thClientHistory(name)` in `tools/data-layer.js`, which normalizes the name like the client list does, finds the client card, and counts jobs **and invoices** by the card's id as well as by name.
+
+- A client card with no work yet (a lead) is still first-time.
+- **Hint, not a decision:** a name that only resembles someone on file (every typed word starts one of theirs, e.g. "sarah m" -> "Sarah Miller") leaves the box ticked and says who's on file, so a genuinely new "Sarah Johnson" isn't denied the discount.
+- Test: `tests/sync/first-time-discount.test.js` (8, jsdom running the real data-layer.js and checkClientHistory()).
+
+## 2026-10-01 -- Stripe card payments record the amount paid
+
+`edge-functions/stripe-webhook-index.ts` marked an invoice paid in the workspace blob by setting only `paid = true`. Every device recomputes `paid` from `paidAmount` on sync (`deriveInvoicePaid` in `tools/sync.js`), so an invoice that had ever been marked unpaid (`paidAmount: 0`) flipped back to unpaid after a real card payment. And `public.invoices` heard about a card payment only when some device happened to re-mirror that invoice (found in the Item 1 inventory).
+
+- The blob entry now gets `paid: true` and `paidAmount: total` (the entry's own total, else the portal row's), the same as Mark paid in the app. An entry already fully recorded is left alone.
+- `public.invoices` is updated directly (`paid`, `paid_amount`, `updated_at`), one PATCH per invoice, right after the portal row is marked paid. Best-effort, like the blob write: the portal row is the record the client sees, so a failure is logged, never retried by failing the webhook.
+- Short payments are unchanged: nothing is marked paid anywhere.
+- **Deploy:** edge functions don't deploy on merge, and the drift check fails if the live copy differs from the repo. Deployed with Connor's approval, then merged.
+- Tests: 7 new cases in `tests/edge-functions/stripe-webhook-amount-check.test.js` (5 fail on the old webhook).
 
 <!-- Add new entries above this line -->
 

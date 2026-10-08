@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=7d9fef1e42"></script>
+<script src="/tools/auth.js?v=417378cc58"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -55,7 +55,7 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=8d5b635c84">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=8060cfc3c2" defer></script>
-<script src="/tools/data-layer.js?v=1677d8d4c2" defer></script>
+<script src="/tools/data-layer.js?v=7edc2602b7" defer></script>
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
@@ -1078,7 +1078,7 @@
     const nextId = log.length ? Math.max(...log.map(e => e.id)) + 1 : 1;
     const now = new Date();
     const contractClientId = (fields.clientName && typeof thEnsureClient === 'function')
-      ? (thEnsureClient(fields.clientName, { phone: fields.clientPhone, address: fields.clientAddress, email: fields.clientEmail }) || {}).id
+      ? (thEnsureClient(fields.clientName, thContractClientDetails(fields)) || {}).id
       : undefined;
     log.push({
       id: nextId,

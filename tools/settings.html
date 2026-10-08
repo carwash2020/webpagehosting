@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=7d9fef1e42"></script>
+<script src="/tools/auth.js?v=417378cc58"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -332,6 +332,21 @@
         </div>
         <span class="th-set-state" data-th-state-for="push" aria-hidden="true"></span>
         <button class="secondary-btn th-set-switch" id="settingsPushToggleBtn" onclick="handleSettingsPushToggle()">Turn on</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h2>App version</h2>
+    <p class="settings-desc">The app updates itself when it opens. If something looks out of date, check here: it fetches the newest version and reloads.</p>
+    <div class="th-set-card">
+      <div class="settings-row">
+        <span class="th-v2-icon-tile" aria-hidden="true"><svg class="th-icon" viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.8 4.2v3.6h-3.6"/></svg></span>
+        <div class="th-set-row-main">
+          <div class="settings-row-label">Check for updates</div>
+          <div class="settings-row-sub" id="settingsAppVersion">Version: checking&hellip;</div>
+        </div>
+        <button type="button" class="secondary-btn th-set-chev" id="settingsUpdateBtn" onclick="checkForAppUpdate()">Update</button>
       </div>
     </div>
   </div>
@@ -948,5 +963,70 @@
   })();
 </script>
 
+
+<script>
+  // Check for updates (2026-10-03, requested directly: "in settings it needs
+  // a update button so it can always be in the newest version when auto
+  // update doesn't catch one"). The automatic path (tools-nav-pwa.js) asks
+  // for a new service worker on open and on return to the foreground, and
+  // only shows its card when the page is really behind. This is the manual
+  // override: ask the server for a new worker now, let it take over
+  // (service-worker.js skipWaiting + clients.claim), then reload this page
+  // from the network. The version shown is the worker's cache name
+  // (th-workspace-vNNN, stamped by npm run fix-versions on every deploy).
+  async function currentAppVersion() {
+    try {
+      if (!('caches' in window)) return '';
+      const names = (await caches.keys()).filter(n => /^th-workspace-v\d+$/.test(n));
+      names.sort((a, b) => Number(b.split('-v')[1]) - Number(a.split('-v')[1]));
+      return names[0] ? names[0].replace('th-workspace-', '') : '';
+    } catch (e) { return ''; }
+  }
+  async function showAppVersion(prefix) {
+    const el = document.getElementById('settingsAppVersion');
+    if (!el) return;
+    const v = await currentAppVersion();
+    el.textContent = (prefix || '') + (v ? 'Version ' + v : 'Version not available on this device');
+  }
+  function waitForWorkerSwitch(ms) {
+    return new Promise(resolve => {
+      if (!('serviceWorker' in navigator)) return resolve(false);
+      const done = (v) => { clearTimeout(t); navigator.serviceWorker.removeEventListener('controllerchange', on); resolve(v); };
+      const on = () => done(true);
+      const t = setTimeout(() => done(false), ms);
+      navigator.serviceWorker.addEventListener('controllerchange', on);
+    });
+  }
+  async function checkForAppUpdate() {
+    const btn = document.getElementById('settingsUpdateBtn');
+    const label = document.getElementById('settingsAppVersion');
+    if (!navigator.onLine) { showToast('You are offline. Connect to the internet, then check again.', { type: 'error' }); return; }
+    if (btn) { btn.disabled = true; btn.textContent = 'Checking\u2026'; }
+    const before = await currentAppVersion();
+    let switched = false;
+    try {
+      const reg = ('serviceWorker' in navigator) ? await navigator.serviceWorker.getRegistration() : null;
+      if (reg) {
+        const switching = waitForWorkerSwitch(15000);
+        await reg.update();
+        // A new worker is installing or waiting only when the server had one.
+        if (reg.installing || reg.waiting) {
+          if (label) label.textContent = 'Downloading the new version\u2026';
+          switched = await switching;
+        }
+      }
+    } catch (e) { /* fall through: a fresh reload still picks up new pages */ }
+    const after = await currentAppVersion();
+    if (switched || (after && after !== before)) {
+      if (label) label.textContent = 'Updated to ' + after + '. Reloading\u2026';
+      setTimeout(() => window.location.reload(), 600);
+      return;
+    }
+    if (btn) { btn.disabled = false; btn.textContent = 'Update'; }
+    await showAppVersion('Up to date \u00b7 ');
+    showToast('You have the newest version.');
+  }
+  document.addEventListener('DOMContentLoaded', () => { showAppVersion(); });
+</script>
 </body>
 </html>

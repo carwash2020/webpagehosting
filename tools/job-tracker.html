@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=7d9fef1e42"></script>
+<script src="/tools/auth.js?v=417378cc58"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -55,7 +55,7 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=8d5b635c84">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=8060cfc3c2" defer></script>
-<script src="/tools/data-layer.js?v=1677d8d4c2" defer></script>
+<script src="/tools/data-layer.js?v=7edc2602b7" defer></script>
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
@@ -1711,6 +1711,25 @@
     showToast(type === 'mileage' ? 'Mileage logged.' : 'Expense logged.');
   }
 
+  // A completed job synced to the client portal (client_portal_jobs) has
+  // to be removed there too when it's deleted here, or the portal row
+  // (with its warranty status and date) stays visible to the client for a
+  // job that no longer exists. Only a job that was ever synced qualifies:
+  // status 'done' with a client email on file. Best-effort: the internal
+  // delete stands either way. Shared by deleteJob() and bulkDeleteJobs().
+  function removeJobFromPortal(job) {
+    if (!job || job.status !== 'done' || !job.clientEmail || typeof getAuthToken !== 'function') return;
+    fetch(`${SUPABASE_URL}/functions/v1/sync-job-to-portal`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${getAuthToken()}`,
+      },
+      body: JSON.stringify({ delete: true, source_job_id: job.id }),
+    }).catch(() => { /* best-effort -- internal delete already succeeded either way */ });
+  }
+
   async function deleteJob(id) {
     const confirmed = await showConfirm('Delete this job?', { danger: true, confirmText: 'Delete' });
     if (!confirmed) return;
@@ -1747,23 +1766,7 @@
       }
 
       const jobToDelete = loadJobs().find(j => j.id === id);
-      // A completed job synced to the client portal (client_portal_jobs)
-      // previously had no cleanup path at all once deleted internally --
-      // the portal row, including its warranty status/date, was left
-      // permanently orphaned, still showing to the client for a job that
-      // no longer exists here. Only fires for a job that was actually
-      // ever synced (status was 'done' with a client email on file).
-      if (jobToDelete && jobToDelete.status === 'done' && jobToDelete.clientEmail && typeof getAuthToken === 'function') {
-        fetch(`${SUPABASE_URL}/functions/v1/sync-job-to-portal`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${getAuthToken()}`,
-          },
-          body: JSON.stringify({ delete: true, source_job_id: id }),
-        }).catch(() => { /* best-effort -- internal delete already succeeded either way */ });
-      }
+      removeJobFromPortal(jobToDelete);
       saveJobs(loadJobs().filter(j => j.id !== id));
       if (typeof thAddJobTombstone === 'function') thAddJobTombstone(id);
       if (typeof mirrorDelete === 'function') mirrorDelete('jobs', id);
@@ -2200,6 +2203,9 @@
       const allJobs = loadJobs();
       const deletedJobs = allJobs.filter(j => idsToDelete.has(j.id));
       deletedJobs.forEach(j => {
+        // Bulk delete used to skip this (2026-10-01, found in the Item 1
+        // inventory): bulk-deleted done jobs stayed in the client portal.
+        removeJobFromPortal(j);
         if (typeof thAddJobTombstone === 'function') thAddJobTombstone(j.id);
         if (typeof mirrorDelete === 'function') mirrorDelete('jobs', j.id);
         if (typeof thAddToGraveyard === 'function') thAddToGraveyard('job', j);
