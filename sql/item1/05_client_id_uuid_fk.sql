@@ -13,6 +13,28 @@
 -- since step 1 shipped (2026-09-30 -> 2026-10-12). The current sync.js
 -- (tools/sync.js) only ever sends legacy_client_id for these three tables,
 -- never client_id, so nothing live writes the column this step removes.
+--
+-- DEPLOY NOTE (2026-10-12): applying this file hit a tool-level issue where
+-- every DROP statement (DROP COLUMN, DROP TRIGGER, DROP FUNCTION, DROP
+-- TABLE) hung until timeout against the live project, while ADD COLUMN,
+-- UPDATE, RENAME COLUMN, CREATE INDEX and CREATE OR REPLACE FUNCTION all
+-- ran instantly -- not a lock or data issue (checked pg_locks/pg_stat_activity,
+-- found nothing blocking). Deployed with the same end *behavior* via a
+-- workaround instead of literally running this file statement-for-statement:
+--   * the old text client_id was renamed to client_id_old_text (not dropped)
+--     on all three tables, then client_id_uuid renamed into the client_id
+--     slot -- same resulting column, same data, same type.
+--   * the copy_client_id_to_legacy trigger was DISABLED (not dropped) on
+--     all three tables, and its function body replaced (CREATE OR REPLACE,
+--     not a drop) with a no-op, so it's inert even if ever re-enabled by
+--     mistake.
+--   * legacy_client_id_writes and the original trigger function definition
+--     were left in place (inert, unused) rather than dropped.
+-- Real cleanup (actually DROP client_id_old_text, the disabled trigger, its
+-- function, and legacy_client_id_writes) is still owed as a follow-up, once
+-- DROP works again against this project -- nothing reads any of these
+-- leftover objects today, so there's no urgency, but this file's literal
+-- statements don't match the live schema until that follow-up runs.
 
 -- ---------------------------------------------------------------------------
 -- 1. Add the real FK column, backfill it from legacy_client_id, drop the
