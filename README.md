@@ -6077,3 +6077,11 @@ Tests: existing suites updated in place (`tests/workspace/finance-split.test.js`
 
 Tests: existing suites updated in place across content-quality, design and SEO.
 
+## What changed, 2026-10-12 -- Item 1 Phase 1a step 2 closed out: client_id is a real uuid FK everywhere, including contracts
+
+- **jobs/invoices/quotes' `client_id` is now the real `clients(id)` foreign key**, not the old free-text registry id (`sql/item1/05_client_id_uuid_fk.sql`). `legacy_client_id` is untouched and still used as a display fallback until Phase 2 replaces that read path with a real `clients` join.
+- **Found and fixed a gap while double-checking that step was fully closed:** `contracts.client_id` (the same uuid FK, added back in step 1) had no backfill at all — jobs/invoices/quotes got theirs in the step above, but contracts was left out of that loop. Only one contract exists today and it has no `legacy_client_id` set yet, so this was silently harmless so far, but the next contract linking a client would have gotten a `legacy_client_id` with no matching `client_id`. Fixed with a small follow-up backfill (`sql/item1/06_contracts_client_id_backfill.sql`), same resolution rule as the others (match through `legacy_id`, merges never chain).
+- **Open Decision #3 in `docs/ITEM-1-MIGRATION-PLAN.md` resolved:** offline invoice/quote numbering blocks generation (draft only) when offline — on-site invoicing with no signal is rare and specific to rural areas, not frequent enough to justify pre-allocating number blocks or provisional numbers.
+
+Tests: `tests/sync/client-id-uuid-fk-db.test.js` (7 tests, from the prior PR) plus a new `tests/sync/contracts-client-id-backfill-db.test.js` (4 tests) — both PGlite, run the real migration SQL in sequence.
+
