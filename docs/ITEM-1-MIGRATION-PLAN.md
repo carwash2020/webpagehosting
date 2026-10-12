@@ -150,12 +150,12 @@ The goal is to keep offline writes without keeping localStorage as the source of
 - A conflict produces a **conflict record** shown to a human with both versions, never a silent last-write-wins. At current volume this should be rare; the point is that it's never invisible.
 - Deletes become soft deletes (`deleted_at`) during the migration, so an offline edit to a row someone else deleted is detectable instead of resurrecting it or vanishing.
 
-**3f. Offline invoice/quote numbering (decision required).** `next_invoice_number()` / `next_quote_number()` are server-side and reject non-internal callers. An invoice created offline can't get its real number. That matters because the PDF prints the number. Options:
+**3f. Offline invoice/quote numbering.** `next_invoice_number()` / `next_quote_number()` are server-side and reject non-internal callers. An invoice created offline can't get its real number. That matters because the PDF prints the number. Options were:
 - (a) Block invoice/quote *generation* offline and allow draft only.
 - (b) Pre-allocate a small block of numbers per device while online.
 - (c) Use a provisional number on offline PDFs, reissued on drain.
 
-Option (a) is simplest and probably sufficient, but this needs Steve's input on how often he invoices on-site with no signal.
+**Resolved (2026-10-12):** option (a). Steve rarely invoices on-site with no signal at all — it's occasional, specific to rural areas (no-signal spots are the exception, not routine), not a frequent pattern worth the complexity of (b) or (c). Offline invoice/quote generation is blocked; draft only when offline, finalized (and numbered) once back online.
 
 **3g. Offline reads.** The seam serves the last-fetched pages from the IndexedDB cache when offline, marked as possibly stale in the UI. The cache must also hold the tenant's **client list** (id, display name, normalized match columns). Phase 3.5 relies on it to pick existing clients offline.
 
@@ -265,7 +265,7 @@ So:
 
 1. ~~Expenses and contacts: in item 1 scope, or a follow-on?~~ **Resolved (2026-09-30):** expenses and income are in scope and migrate last; contacts are mostly clients and merge into `clients`.
 2. ~~Clients: single email/phone per client now, or a contact-points child table from the start?~~ **Resolved (2026-09-30):** one email and one phone per client, plus the new `client_id`.
-3. Offline invoice/quote numbering: option (a), (b), or (c) in 3f. Needs Steve's input on on-site invoicing frequency.
+3. ~~Offline invoice/quote numbering: option (a), (b), or (c) in 3f. Needs Steve's input on on-site invoicing frequency.~~ **Resolved (2026-10-12):** option (a) — block invoice/quote generation offline, draft only. On-site no-signal invoicing is rare and rural-only, not frequent enough to justify (b)/(c)'s complexity.
 4. Cutover monitoring window length per entity.
 5. Soft deletes: permanent, or purge after N days?
 6. ~~Notes, job templates, compliance, known issues: stay in the blob, or migrate in a later pass?~~ **Resolved (2026-09-30):** they stay in the blob.
