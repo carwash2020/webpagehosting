@@ -107,7 +107,7 @@ This is real new schema, not a column added to an existing table.
 
 **1c. (Moved.)** Switching `thEnsureClient()` / `thFindClientByName()` to the unified server lookup now happens in **Phase 3.5**, after the outbox exists. Until then, entry keeps using the current local identity path. Phase 1 is server-side only, so it can ship early without affecting offline behavior.
 
-**Exit criteria:** `clients` live; review queue worked through; `client_id` populated on all rows except a known, listed remainder. (Entry-time lookup is Phase 3.5's exit criterion, not this one.)
+**Exit criteria:** `clients` live; review queue worked through; `client_id` populated on all rows except a known, listed remainder. (Entry-time lookup is Phase 3.5's exit criterion, not this one.) **Met (confirmed 2026-10-12):** 11 clients seeded, 2 duplicate candidates found and both already resolved (0 open) — Phase 1a/1b are fully closed out, including the `contracts.client_id` backfill gap found and fixed the same day (`sql/item1/06_contracts_client_id_backfill.sql`).
 
 ---
 
@@ -127,6 +127,11 @@ This is real new schema, not a column added to an existing table.
 **2d. Index design comes from this list.** Every `list()` filter plus sort becomes an index candidate. Each leads with `tenant_id`, since RLS adds it to every query, for example `(tenant_id, status, created_at)`. This is the input to roadmap item 5, and it's the first point at which writing index DDL makes sense.
 
 **Exit criteria:** every census call site routed through the seam with no behavior change; query-shape list reviewed; index DDL drafted from it (tracked under item 5).
+
+**Rollout order, decided 2026-10-12:** one entity at a time, call sites converted one page per PR — not a big-bang rewrite across all ~30+ localStorage sites at once, and not deferred until Phase 3's outbox exists (Phase 2's exit criteria needs every call site on the seam regardless, which is what makes Phase 5's later backing-store flip a small point change rather than a second sweep). **Jobs first**, per Phase 5's own stated cutover order and because jobs already has a proven relational read path (`fetchJobsFromRelational()`/`startJobsRealtime()` in `tools/sync.js`).
+
+- **Jobs 2a/2b/2c done (2026-10-12):** `thJobs` (`list`/`get`/`create`/`update`/`remove`) added to `tools/data-layer.js`, additive only -- no page calls it yet. `list()` covers every query shape job-tracker.html/calendar.html/route-planner.html/workspace.html/invoice-generator.html actually need (status, not-done-due-soon, date range, client/clientId, id list, recent N) as filter predicates, keyset-paginated on `id` descending (jobs have no separate `createdAt`; `id` is `Date.now()` at creation, already unique and roughly monotonic). `update()`'s `baseUpdatedAt` param is accepted for Phase 3's later conflict detection but not enforced -- jobs carry no `updatedAt` in localStorage today. Test: `tests/workspace/jobs-data-layer-seam.test.js` (10 tests).
+- **Not yet done:** rewiring job-tracker.html/calendar.html/route-planner.html/workspace.html/invoice-generator.html's actual call sites onto `thJobs` (each its own PR); 2a/2b/2c for invoices, quotes, contracts, expenses/income; 2d index DDL (needs the full query-shape list across all entities, not just jobs).
 
 ---
 
