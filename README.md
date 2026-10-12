@@ -6070,3 +6070,10 @@ Tests: `tests/seo/batch4-search-data.test.js` (8).
 
 Tests: existing suites updated in place (`tests/workspace/finance-split.test.js`, `tests/tools/app-shell-view-transitions.test.js`, `tests/tools/stale-auth-comment-fix.test.js`, `tests/tools/job-tracker-calendar-view.test.js`, `tests/dev-tools/live-consistency-page-list.test.js`, `tests/scripts/check-undefined-vars.test.js`, `tests/design/tools-grid-finance.test.js`, `tests/edge-functions/pos-and-saved-cards.test.js`, `tests/design/one-shell-header-and-layout-tokens.test.js`, `tests/tools/workspace-ia-round3.test.js`) — no new test file needed, this is pure deletion.
 
+## What changed, 2026-10-12 -- Google review count is 9 (was 7)
+
+- **Nine reviews now, still 5.0.** The homepage's rating strip, hero and Book Instantly proof lines, the booking page, and the 3 appliance service pages all say "9" instead of "7" (the live `site_content.googleReviewCount` value was already 9; this is the static no-JS/fetch-fail fallback text catching up to match it). Google rating stays 5.0. The written review wall stays at 4 verified quotes — the 2 new reviews are star-only, same pattern as the earlier 5→7 bump.
+- Caught one real bug along the way: a stray sed pass briefly clobbered an unrelated "Southern Utah Communities Served" stat on the homepage (which happened to also read "7", coincidentally) — the test suite flagged it immediately and it was restored to its real, unrelated value of 9.
+
+Tests: existing suites updated in place across content-quality, design and SEO.
+
