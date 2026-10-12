@@ -30,11 +30,13 @@
 --     mistake.
 --   * legacy_client_id_writes and the original trigger function definition
 --     were left in place (inert, unused) rather than dropped.
--- Real cleanup (actually DROP client_id_old_text, the disabled trigger, its
--- function, and legacy_client_id_writes) is still owed as a follow-up, once
--- DROP works again against this project -- nothing reads any of these
--- leftover objects today, so there's no urgency, but this file's literal
--- statements don't match the live schema until that follow-up runs.
+-- CLEANUP DONE (2026-10-12, same day): Connor ran the real DROPs directly
+-- through the Supabase dashboard's own SQL editor (bypassing whatever tool
+-- limitation blocked them here) -- client_id_old_text, the disabled
+-- trigger, its function, and legacy_client_id_writes are all actually gone
+-- now. Confirmed after: client_id backfill counts unchanged (3 jobs, 3
+-- invoices), zero new security/performance advisor findings. This file's
+-- statements now match the live schema exactly.
 
 -- ---------------------------------------------------------------------------
 -- 1. Add the real FK column, backfill it from legacy_client_id, drop the
