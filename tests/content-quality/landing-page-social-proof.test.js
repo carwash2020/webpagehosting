@@ -14,7 +14,7 @@
 // The fix reuses the exact same real Google review quotes and the
 // exact same reviews-wall/review-card CSS classes already proven on
 // index.html (no new CSS needed), with a "Read all reviews" link back
-// to /#reviews rather than duplicating the full 7-review wall (and its
+// to /#reviews rather than duplicating the full 9-review wall (and its
 // aggregateRating schema) on every page.
 
 const { test } = require('node:test');
@@ -66,10 +66,10 @@ for (const name of ALL_PAGES) {
     assert.match(html, /https:\/\/g\.page\/r\/CVJ0Qr-SsDkgEAI\/review/);
   });
 
-  test(`${name} does not duplicate the full 7-review wall or its aggregateRating schema`, () => {
+  test(`${name} does not duplicate the full 9-review wall or its aggregateRating schema`, () => {
     const html = read(name);
     const cardCount = (html.match(/<div class="review-card" data-reveal>/g) || []).length;
-    assert.ok(cardCount < 7, 'a per-page condensed proof section should stay smaller than the homepage\'s full wall');
+    assert.ok(cardCount < 9, 'a per-page condensed proof section should stay smaller than the homepage\'s full wall');
     assert.doesNotMatch(html, /"aggregateRating"/);
   });
 
@@ -104,10 +104,10 @@ for (const name of PAGES_WITHOUT_SCHEDULE) {
   });
 }
 
-test('index.html has the full written reviews wall (4 verified quotes); aggregateRating is the GBP total (7)', () => {
+test('index.html has the full written reviews wall (4 verified quotes); aggregateRating is the GBP total (9)', () => {
   const html = read('index.html');
   assert.match(html, /<section id="reviews">/);
   const cardCount = (html.match(/<div class="review-card" data-reveal>/g) || []).length;
   assert.equal(cardCount, 4, 'the homepage should carry exactly the verified written quotes -- do not invent cards for star-only Google reviews');
-  assert.match(html, /"reviewCount": "7"/);
+  assert.match(html, /"reviewCount": "9"/);
 });

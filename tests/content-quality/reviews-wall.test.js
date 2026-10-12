@@ -11,11 +11,15 @@
 //
 // 2026-09-17 owner unlock: Google Business Profile shows 5.0 from 7
 // Google reviews. aggregateRating.ratingValue stays 5.0 and
-// reviewCount now matches that GBP total (7), including star-only
+// reviewCount now matches that GBP total, including star-only
 // reviews that have no written text to quote. The wall still shows
 // only the 4 verified quotes -- do not invent Review objects or
 // cards for the star-only reviews. Update reviewCount by hand when
 // the owner confirms a new GBP total.
+//
+// 2026-10-12 owner update: GBP total is now 9 (was 7). Wall stays at
+// the same 4 verified written quotes -- the 2 new reviews are
+// star-only, same as before.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -49,12 +53,12 @@ test('the homepage wall has one review-card per review actually written', () => 
   assert.equal(cardCount, 4);
 });
 
-test("the homepage's aggregateRating matches Google Business Profile (5.0 from 7), not invented Review objects", () => {
+test("the homepage's aggregateRating matches Google Business Profile (5.0 from 9), not invented Review objects", () => {
   const cardCount = (INDEX.match(/class="review-card"/g) || []).length;
   const schema = schemaOf(INDEX);
   assert.equal(cardCount, 4, 'wall stays at the 4 written, verified quotes');
   assert.equal(schema.aggregateRating.ratingValue, '5.0');
-  assert.equal(Number(schema.aggregateRating.reviewCount), 7, 'reviewCount matches the owner-confirmed GBP total');
+  assert.equal(Number(schema.aggregateRating.reviewCount), 9, 'reviewCount matches the owner-confirmed GBP total');
   assert.doesNotMatch(INDEX, /"@type":\s*"Review"/, 'do not invent individual Review JSON-LD objects');
 });
 
