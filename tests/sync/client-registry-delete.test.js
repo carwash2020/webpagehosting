@@ -172,7 +172,12 @@ test('deleteJob (job-tracker.html) actually calls thAddJobTombstone when the del
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'job-tracker.html'), 'utf8');
   const fnMatch = src.match(/async function deleteJob\(id\)[\s\S]*?\n  \}/);
   assert.ok(fnMatch, 'deleteJob not found');
-  assert.match(fnMatch[0], /thAddJobTombstone\(/, 'deleteJob should record a tombstone, the same fix already applied to thDeleteClient');
+  // Item 1 Phase 2a (2026-10-12): deleteJob()'s storage write moved behind
+  // the thJobs data-access seam (tools/data-layer.js) -- thJobs.remove()
+  // calls thAddJobTombstone() internally now, rather than deleteJob() calling
+  // it directly, so the fix this test guards against regressing still holds,
+  // just one level removed.
+  assert.match(fnMatch[0], /thJobs\.remove\(/, 'deleteJob should record a tombstone via thJobs.remove(), the same fix already applied to thDeleteClient');
 });
 
 test('a stale device pushing back its old copy of a deleted job does not resurrect it on pull, since the tombstone (already merged first) is consulted when merging th_tracker_jobs -- the exact same scenario already fixed for clients, extended to jobs', () => {

@@ -30,10 +30,16 @@ test('job-tracker.html: saveJobs() mirrors every save, and both delete paths mir
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'job-tracker.html'), 'utf8');
   const saveJobsFn = src.match(/function saveJobs\(jobs\)[\s\S]*?\n  \}/)[0];
   assert.match(saveJobsFn, /mirrorJobsToRelational\(jobs\)/);
+  // Item 1 Phase 2a (2026-10-12): the single-job delete path (deleteJob())
+  // moved its storage write behind the thJobs seam -- thJobs.remove(id) in
+  // tools/data-layer.js calls mirrorDelete('jobs', id) internally now, so
+  // deleteJob() itself no longer has a literal mirrorDelete('jobs', ...)
+  // call. Bulk delete is untouched by that change and still calls it
+  // directly, once per job.
+  const deleteJobFn = src.match(/async function deleteJob\(id\)[\s\S]*?\n  \}/)[0];
+  assert.match(deleteJobFn, /thJobs\.remove\(id\)/, 'single-job delete should remove (and so mirror) via thJobs.remove(id)');
   const deleteMirrorCalls = [...src.matchAll(/mirrorDelete\('jobs', ([\w.]+)\)/g)].map(m => m[1]);
-  assert.equal(deleteMirrorCalls.length, 2, 'expected both the single-job and bulk-delete paths to mirror the delete');
-  assert.ok(deleteMirrorCalls.includes('id'), 'single-job delete should mirror by id');
-  assert.ok(deleteMirrorCalls.includes('j.id'), 'bulk-delete should mirror each job by its own id');
+  assert.deepEqual(deleteMirrorCalls, ['j.id'], 'bulk-delete should still mirror each job by its own id directly');
 });
 
 test('invoice-generator.html: logInvoice()/logQuote() mirror on create, the quote-conversion mirrors the updated quote, and both delete paths mirror the delete', () => {
