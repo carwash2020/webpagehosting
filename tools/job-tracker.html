@@ -1526,7 +1526,7 @@
   }
 
   function editJob(id) {
-    const job = loadJobs().find(j => j.id === id);
+    const job = thJobs.get(id);
     if (!job) return;
     editingJobId = id;
     toggleFormSection('jobFormSection', true);
@@ -1765,11 +1765,9 @@
         }
       }
 
-      const jobToDelete = loadJobs().find(j => j.id === id);
+      const jobToDelete = thJobs.get(id);
       removeJobFromPortal(jobToDelete);
-      saveJobs(loadJobs().filter(j => j.id !== id));
-      if (typeof thAddJobTombstone === 'function') thAddJobTombstone(id);
-      if (typeof mirrorDelete === 'function') mirrorDelete('jobs', id);
+      thJobs.remove(id);
       if (jobToDelete && typeof thAddToGraveyard === 'function') thAddToGraveyard('job', jobToDelete);
       renderJobs();
     }, 6000);
@@ -3569,7 +3567,7 @@
   }
 
   function downloadJobIcs(jobId) {
-    const job = loadJobs().find(j => j.id === jobId);
+    const job = thJobs.get(jobId);
     if (!job || !job.date) return;
 
     const descParts = [];
