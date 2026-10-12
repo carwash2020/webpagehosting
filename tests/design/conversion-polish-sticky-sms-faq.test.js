@@ -2,7 +2,7 @@
 // washer St. George LP (#286): sticky Call + Text + Book on those two
 // pages, and a compact high-intent FAQ next to the homepage form.
 // Does not invent fees, does not move Connor's hex-above-CTA stack,
-// and does not touch AggregateRating (stays 5.0 / 7) or the 4-card wall.
+// and does not touch AggregateRating (stays 5.0 / 9) or the 4-card wall.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -117,10 +117,10 @@ test('mobile still puts the hex crest above Schedule\/Call; the FAQ does not jum
   assert.doesNotMatch(STYLES, /\.hero-intent-faq\{[^}]*\border\s*:/);
 });
 
-test('AggregateRating stays 5.0 / 7; wall stays 4 written cards; compact FAQ is not a second FAQPage', () => {
+test('AggregateRating stays 5.0 / 9; wall stays 4 written cards; compact FAQ is not a second FAQPage', () => {
   const schema = schemaOf(INDEX);
   assert.equal(schema.aggregateRating.ratingValue, '5.0');
-  assert.equal(Number(schema.aggregateRating.reviewCount), 7);
+  assert.equal(Number(schema.aggregateRating.reviewCount), 9);
   assert.equal((INDEX.match(/class="review-card"/g) || []).length, 4);
   const faqSchemas = [...INDEX.matchAll(/"@type": "FAQPage"/g)];
   assert.equal(faqSchemas.length, 1, 'do not add a second FAQPage for the compact block');
