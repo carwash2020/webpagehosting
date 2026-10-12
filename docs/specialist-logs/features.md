@@ -3527,6 +3527,16 @@ Finance's cost calculator ticks "First-time client — apply discount" when the 
 - **Deploy:** edge functions don't deploy on merge, and the drift check fails if the live copy differs from the repo. Deployed with Connor's approval, then merged.
 - Tests: 7 new cases in `tests/edge-functions/stripe-webhook-amount-check.test.js` (5 fail on the old webhook).
 
+## 2026-10-12 -- Item 1 Phase 1a step 2: jobs/invoices/quotes' client_id becomes the real uuid FK
+
+`sql/item1/05_client_id_uuid_fk.sql`. Step 1 (2026-09-30) left `client_id` as text and added `legacy_client_id` as its permanent copy, specifically so a tab running old cached `sync.js` (which used to write `client_id` directly) wouldn't fail its save with a type error; `copy_client_id_to_legacy` logged every such write into `legacy_client_id_writes` so this step would know when it was safe to run.
+
+- **Confirmed live before writing this file:** `legacy_client_id_writes` had zero rows -- no old tab had written `client_id` directly in the 12 days since step 1 shipped, and the current `sync.js` only ever sends `legacy_client_id` for these three tables. Nothing live writes the column this step removes.
+- **The swap:** add a uuid column, backfill it from `legacy_client_id` by matching `clients.legacy_id` (resolving through `merged_into_id`, never chained -- a merge-of-a-merge always repoints to the final survivor, so one `coalesce` reaches it), drop the old text column, rename the new one into its place. A `legacy_client_id` with no matching client (a client deleted before Phase 1b's seed ran) leaves `client_id` null -- the same already-documented Phase 1b remainder, not a new gap.
+- **Removed the step-1 transition machinery** now that its job is done: the `copy_client_id_to_legacy` trigger/function and the `legacy_client_id_writes` table.
+- **Checked against live production data first:** 9 jobs / 4 invoices / 0 quotes / 1 contract total; every populated `legacy_client_id` resolves to a real client except 3 (tombstoned clients, the known remainder); no RLS policy, constraint or index referenced the text column; `tools/sync.js`'s relational-read functions (`fetchJobsFromRelational`/`fetchInvoicesFromRelational`) read `legacy_client_id ?? client_id` but never actually reach the `client_id` fallback today (confirmed: no row has `client_id` set while `legacy_client_id` is null) -- left as-is rather than touched here, since Phase 2 replaces that whole read path with a real `clients` join anyway.
+- Test: `tests/sync/client-id-uuid-fk-db.test.js` (7, PGlite, running the real 01-05 files).
+
 <!-- Add new entries above this line -->
 
 - 2026-09-29 (from the visual lane, Claude Design Package C8): the design's "Where things stand" timeline has five steps: Requested → Scheduled → On the way → Done → Paid. The portal has data for only four of them, spread over separate records. So it shipped as four steps on each request card (`portal/work-orders.html`: Sent → Reviewed → Scheduled → Done, from `client_portal_work_orders.status`, with the sent and scheduled dates). Two steps need new data:
