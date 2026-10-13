@@ -43,7 +43,11 @@ test('route-planner.html still consumes fetchJobsFromRelational() with the local
 test('job-tracker.html\'s merged Calendar view reads the same local job list as its List/Board views -- no second data source on one page', () => {
   const jt = fs.readFileSync(path.join(TOOLS_DIR, 'job-tracker.html'), 'utf8');
   const fn = jt.match(/function loadJobsForCalendar\(\)[\s\S]*?\n  \}/)[0];
-  assert.match(fn, /loadJobs\(\)/);
+  // Item 1 Phase 2a (2026-10-13): reads the same local th_tracker_jobs
+  // data, just through the thJobs seam (tools/data-layer.js) now instead
+  // of calling loadJobs() directly -- still the same single local source,
+  // which is the thing this test actually guards against regressing.
+  assert.match(fn, /thJobs\.list\(/);
   assert.doesNotMatch(fn, /cachedRelationalJobs/);
   assert.doesNotMatch(jt, /fetchJobsFromRelational\(/, 'no call into the relational read path from this page (a comment naming it is fine)');
 });

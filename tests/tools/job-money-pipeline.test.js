@@ -209,7 +209,7 @@ test('Jobs: a card wears its money pill -- To invoice links to the invoice form 
 test('Jobs: the To invoice filter and its count come from the same thJobsToInvoice list as the Dashboard; #to-invoice lands on it', () => {
   assert.match(JT, /<button class="sort-btn" data-status-filter="to-invoice" onclick="setStatusFilter\('to-invoice'\)">To invoice <span class="sort-btn-count" id="toInvoiceFilterCount"><\/span><\/button>/);
   const fn = extractFn(JT, 'renderJobs');
-  assert.match(fn, /const toInvoiceRows = \(typeof thJobsToInvoice === 'function'\) \? thJobsToInvoice\(loadJobs\(\), marginInvoices, marginManualIncome\) : \[\];/);
+  assert.match(fn, /const toInvoiceRows = \(typeof thJobsToInvoice === 'function'\) \? thJobsToInvoice\(thJobs\.list\(\{ pageSize: Infinity \}\)\.rows, marginInvoices, marginManualIncome\) : \[\];/);
   assert.match(fn, /else if \(currentStatusFilter === 'to-invoice'\) jobs = jobs\.filter\(j => marginData\.toInvoiceIds\.has\(j\.id\)\);/);
   assert.match(JT, /if \(initialHash === 'to-invoice'\) setStatusFilter\('to-invoice'\);/);
   assert.match(JT, /if \(h === 'to-invoice'\) \{ activateTab\('jobs'\); setStatusFilter\('to-invoice'\); return; \}/);
@@ -236,8 +236,13 @@ test('Jobs: marking a job done opens the Job done sheet -- Create invoice first 
 test('Jobs: the job sheet offers No charge on an unbilled done job and puts it back with "Needs an invoice after all"', () => {
   const jobs = [{ id: 3, title: 'T', status: 'done' }, { id: 4, title: 'W', status: 'done', noInvoice: true }];
   let shown = null;
+  // openJobActions() now reads via the real thJobs seam (jtFns() loads the
+  // real data-layer.js, DL, ahead of the extracted function) -- so the
+  // lookup has to come through localStorage's th_tracker_jobs key, same as
+  // thJobs.get() itself does, rather than stubbing thJobs directly (it
+  // would just be shadowed by DL's own const thJobs).
   const { openJobActions } = jtFns(['openJobActions'], {
-    loadJobs: () => jobs, localStorage: { getItem: () => '[]' }, escapeHtml: (x) => x,
+    localStorage: { getItem: (k) => (k === 'th_tracker_jobs' ? JSON.stringify(jobs) : '[]') }, escapeHtml: (x) => x,
     showQuickActionSheet: (t, a) => { shown = Array.from(a, x => x.label); }, document: { getElementById: () => null }, location: {},
   });
   openJobActions(3);
