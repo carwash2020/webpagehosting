@@ -174,9 +174,12 @@ test('job detail\'s Text, the Dashboard\'s On my way, and the Jobs sheet all ope
   assert.match(WS, /window\.addEventListener\('th-job-texted', renderTodayHero\);/);
 
   let shown = null;
+  // openJobActions() now looks a job up via thJobs.get(id) (Item 1 Phase 2a,
+  // 2026-10-13) instead of loadJobs().find() -- this stub reproduces the
+  // same single-job lookup.
   const ctx = {
     Math, String, Number,
-    loadJobs: () => [{ id: 1, title: 'A', client: 'Sarah <b>Miller</b>', phone: '1', status: 'not-started' }],
+    thJobs: { get: (id) => [{ id: 1, title: 'A', client: 'Sarah <b>Miller</b>', phone: '1', status: 'not-started' }].find((j) => j.id === id) },
     escapeHtml: (x) => String(x).replace(/</g, '&lt;').replace(/>/g, '&gt;'), showQuickActionSheet: (t, a) => { shown = a.map(x => x.label); },
     thOpenTextSheet() {}, setJobStatus() {}, document: { getElementById: () => null }, location: {},
   };
@@ -184,7 +187,7 @@ test('job detail\'s Text, the Dashboard\'s On my way, and the Jobs sheet all ope
   vm.runInContext(extractFn(JT, 'openJobActions') + ';this.f = openJobActions;', ctx);
   ctx.f(1);
   assert.equal(shown[1], 'Text Sarah', 'right after Mark Done');
-  ctx.loadJobs = () => [{ id: 1, title: 'A', client: '<img>', phone: '1', status: 'not-started' }];
+  ctx.thJobs = { get: (id) => [{ id: 1, title: 'A', client: '<img>', phone: '1', status: 'not-started' }].find((j) => j.id === id) };
   ctx.f(1);
   assert.equal(shown[1], 'Text &lt;img&gt;', 'the sheet renders labels as HTML, so the name is escaped');
 });

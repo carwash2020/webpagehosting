@@ -15,6 +15,7 @@ const SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'job-track
 const grab = (re) => { const m = SRC.match(re); assert.ok(m, 'found ' + re); return m[0]; };
 const EDIT_JOB = grab(/  function editJob\(id\) \{[\s\S]*?\n  \}\n/);
 const DOWNLOAD_ICS = grab(/  function downloadJobIcs\(jobId\) \{[\s\S]*?\n  \}\n/);
+const CREATE_FROM_TEMPLATE = grab(/  function createJobFromTemplate\(id\) \{[\s\S]*?\n  \}\n/);
 // downloadJobIcs() depends on these small helpers, defined elsewhere in the
 // same file -- grabbed as-is rather than reimplemented, so this test exercises
 // the real ICS formatting too.
@@ -95,4 +96,49 @@ test('downloadJobIcs() does nothing for a job with no date, even if thJobs.get()
   w.document.createElement = () => { created = true; return {}; };
   api.downloadJobIcs(7);
   assert.equal(created, false);
+});
+
+// createJobFromTemplate() now creates the job via thJobs.create() (Item 1
+// Phase 2a) instead of loadJobs()/jobs.push()/saveJobs() -- same end state
+// (one new not-started job, today's date, from the template), just through
+// the seam.
+function setupTemplate(templates) {
+  const dom = new JSDOM('<!doctype html><body></body>', { runScripts: 'outside-only', url: 'https://example.com/' });
+  const w = dom.window;
+  const created = [];
+  w.thJobs = { create: (row) => { created.push(row); return { id: 999, ...row }; } };
+  w.loadTemplates = () => templates;
+  w.saveTemplates = () => {};
+  w.todayDateStrBusinessTz = () => '2026-10-13';
+  w.renderJobs = () => {};
+  w.renderTemplates = () => {};
+  w.eval(CREATE_FROM_TEMPLATE + '\nwindow.__t = { createJobFromTemplate };');
+  return { w, api: w.__t, created };
+}
+
+test('createJobFromTemplate() creates a not-started job today, carrying the template\'s title and client', () => {
+  const { api, created } = setupTemplate([{ id: 1, title: 'Lawn mowing', client: 'Sarah Miller', lastCreatedDate: '2026-09-13' }]);
+  api.createJobFromTemplate(1);
+  assert.equal(created.length, 1);
+  // JSON round-trip: created[0] is a plain object built inside the JSDOM
+  // window realm, so its prototype differs from this file's own Object --
+  // deepEqual treats that as non-equal even with identical own properties.
+  assert.deepEqual(JSON.parse(JSON.stringify(created[0])), {
+    title: 'Lawn mowing', client: 'Sarah Miller', phone: '', address: '',
+    priority: 'medium', date: '2026-10-13', status: 'not-started',
+    notes: 'Created from recurring template.',
+  });
+});
+
+test('createJobFromTemplate() updates the template\'s lastCreatedDate', () => {
+  const template = { id: 1, title: 'Lawn mowing', client: '', lastCreatedDate: '2026-09-13' };
+  const { api } = setupTemplate([template]);
+  api.createJobFromTemplate(1);
+  assert.equal(template.lastCreatedDate, '2026-10-13');
+});
+
+test('createJobFromTemplate() on an id that doesn\'t exist creates nothing', () => {
+  const { api, created } = setupTemplate([{ id: 1, title: 'Lawn mowing', client: '' }]);
+  api.createJobFromTemplate(999);
+  assert.equal(created.length, 0);
 });
