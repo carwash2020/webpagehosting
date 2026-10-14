@@ -26,6 +26,10 @@
     { "page": "locations/handyman-leeds-ut.html", "slug": "city-leeds", "eyebrow": "Handyman & appliance repair in", "title": "Leeds", "badge": "standard" },
     { "page": "locations/handyman-cedar-city-ut.html", "slug": "city-cedar-city", "eyebrow": "Handyman & appliance repair in", "title": "Cedar City", "badge": "request" },
     { "page": "locations/handyman-mesquite-nv.html", "slug": "city-mesquite", "eyebrow": "Handyman & appliance repair in", "title": "Mesquite, NV", "badge": "request" },
+    { "page": "locations/handyman-sandy-ut.html", "slug": "city-sandy", "eyebrow": "Handyman & appliance repair in", "title": "Sandy, UT", "badge": "appointment" },
+    { "page": "locations/handyman-west-jordan-ut.html", "slug": "city-west-jordan", "eyebrow": "Handyman & appliance repair in", "title": "West Jordan, UT", "badge": "appointment" },
+    { "page": "locations/handyman-south-jordan-ut.html", "slug": "city-south-jordan", "eyebrow": "Handyman & appliance repair in", "title": "South Jordan, UT", "badge": "appointment" },
+    { "page": "locations/handyman-draper-ut.html", "slug": "city-draper", "eyebrow": "Handyman & appliance repair in", "title": "Draper, UT", "badge": "appointment" },
 
     { "page": "blog/index.html", "slug": "blog", "eyebrow": "Triple H Enterprises", "title": "The Blog" },
     { "page": "blog/appliance-repair-or-replace.html", "slug": "blog-appliance-repair-or-replace", "eyebrow": "From the blog", "title": "Appliance repair or replace?" },

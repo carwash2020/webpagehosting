@@ -6085,3 +6085,13 @@ Tests: existing suites updated in place across content-quality, design and SEO.
 
 Tests: `tests/sync/client-id-uuid-fk-db.test.js` (7 tests, from the prior PR) plus a new `tests/sync/contracts-client-id-backfill-db.test.js` (4 tests) — both PGlite, run the real migration SQL in sequence.
 
+## What changed, 2026-10-13 -- Four new Salt Lake valley pages: Sandy, West Jordan, South Jordan, and Draper, "by scheduled appointment"
+
+- **A new, separate service presence roughly 3 hours north of St. George**, distinct from both the daily St. George coverage area and the closer "by request" towns (Cedar City, Mesquite, an hour or less away). Four new pages -- `locations/handyman-sandy-ut.html`, `locations/handyman-west-jordan-ut.html`, `locations/handyman-south-jordan-ut.html`, and `locations/handyman-draper-ut.html` -- with their own framing: "by scheduled appointment," not "by request," carried through the hero, local section, FAQ copy, and a new `appointment` badge on the share-preview card (distinct wording from the existing "Available by request" badge).
+- **No radius-map diagram on these four pages or on the homepage for them.** The existing service-area SVG is scaled to a roughly hour-long radius around St. George; Salt Lake is off that scale entirely, so forcing a spoke onto it would misrepresent the relationship. The homepage gets one plain-text mention instead, outside the diagram.
+- **Added to the site-wide nav/footer "Areas" list** on every page that carries it (desktop dropdown, mobile menu, footer, and the separate booking-flow location picker on booking.html/manage-job.html/manage-booking.html) -- same list, now 12 towns instead of 8.
+- Real share-preview images built for all four (`images/og/city-sandy.jpg`, `images/og/city-west-jordan.jpg`, `images/og/city-south-jordan.jpg`, `images/og/city-draper.jpg`) via the existing card generator, not a placeholder.
+- Not done yet, left as open follow-up: the existing pages' own "what areas do you serve" FAQ copy doesn't mention Salt Lake; the next 4 cities in the agreed priority list (Murray, Cottonwood Heights, Holladay, Midvale).
+
+Tests: `tests/design/header-menus.test.js`, `tests/design/site-banner-no-layout-shift.test.js`, `tests/design/package-d-public-site.test.js`, `tests/design/booking-path-cleanup.test.js`, `tests/site-content/site-banners-public.test.js`, `tests/booking/booking-flow-picker-and-confirm.test.js` -- existing suites updated for the new page/list counts.
+

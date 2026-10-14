@@ -31,6 +31,11 @@
      filled pill, by-request the outlined one. */
   .badge.standard { color: #140900; background: #ff8000; border-color: #ff8000; }
   .badge.request { color: #ffb347; border-color: #ff8000; }
+  /* Salt Lake valley cities (2026-10-13): a separate, ~3-hour-away service
+     presence, scheduled in advance rather than by-request -- same outlined
+     treatment as .request, distinct wording so the share card itself
+     doesn't claim same-day availability it doesn't have. */
+  .badge.appointment { color: #ffb347; border-color: #ff8000; }
   .art { position: absolute; right: 24px; top: 150px; width: 560px; height: 315px; color: #d8d8d8;
     --il-steel: #d8d8d8; --il-faint: #77726c; --il-hot: #ff8000; --il-tint: rgba(255,128,0,.16); --il-water: rgba(255,255,255,.07); --il-waterline: #9a9a9a; }
   .art svg { width: 100%; height: 100%; display: block; }
@@ -83,7 +88,7 @@
     art.innerHTML = artSvg || '';
     badge.hidden = !card.badge;
     badge.className = 'badge' + (card.badge ? ' ' + card.badge : '');
-    badge.textContent = card.badge === 'request' ? 'Available by request' : card.badge === 'standard' ? 'Standard coverage' : '';
+    badge.textContent = card.badge === 'request' ? 'Available by request' : card.badge === 'appointment' ? 'By scheduled appointment' : card.badge === 'standard' ? 'Standard coverage' : '';
     const loaded = await Promise.all([document.fonts.load('100px Anton'), document.fonts.load('500 26px Oswald')]);
     await document.fonts.ready;
 

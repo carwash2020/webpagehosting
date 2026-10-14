@@ -98,7 +98,7 @@ test('D14: one card per page, unique slugs, and every card page exists', () => {
     assert.ok(fs.existsSync(repo(c.page)), c.page);
     assert.match(c.slug, /^[a-z0-9-]+$/);
     assert.ok(c.eyebrow && c.title, c.slug);
-    if (c.badge) assert.ok(['standard', 'request'].includes(c.badge), c.slug);
+    if (c.badge) assert.ok(['standard', 'request', 'appointment'].includes(c.badge), c.slug);
     if (c.art) assert.ok(fs.existsSync(repo('scripts', 'og-cards', 'art', c.art)), c.art);
     assert.equal(c.rating, undefined, 'no baked-in rating: it is edited live and would go stale');
   }
