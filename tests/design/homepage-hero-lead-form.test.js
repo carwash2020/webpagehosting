@@ -2,7 +2,7 @@
 // path next to Schedule/Call. Reuses the existing th_leads insert —
 // the same path as #scheduleForm. Does not invent a second backend,
 // does not move Connor's hex-above-CTA stack, and does not touch
-// AggregateRating (stays 5.0 / 7).
+// AggregateRating (stays 5.0 / 9).
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -105,10 +105,10 @@ test('sticky Call+Text+Book stays; no second public lead backend is invented', (
   assert.doesNotMatch(INDEX, /\/rest\/v1\/th_bookings/);
 });
 
-test('AggregateRating stays 5.0 / 7; wall stays 4 written cards', () => {
+test('AggregateRating stays 5.0 / 9; wall stays 4 written cards', () => {
   const schema = schemaOf(INDEX);
   assert.equal(schema.aggregateRating.ratingValue, '5.0');
-  assert.equal(Number(schema.aggregateRating.reviewCount), 7);
+  assert.equal(Number(schema.aggregateRating.reviewCount), 9);
   assert.equal((INDEX.match(/class="review-card"/g) || []).length, 4);
 });
 

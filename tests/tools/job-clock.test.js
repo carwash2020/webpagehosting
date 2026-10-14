@@ -300,7 +300,7 @@ test('Job detail keeps its loaded photos across a re-render (live sync, and now 
 test('Jobs list: the sheet leads with Start / Stop the clock, the row says On the clock, and Mark Done stops a running clock first', () => {
   let shown = null;
   const stub = {
-    loadJobs: () => jobs, escapeHtml: (v) => v, showQuickActionSheet: (t, a) => { shown = a.map(x => x.label); },
+    thJobs: { get: (id) => jobs.find((j) => j.id === id) }, escapeHtml: (v) => v, showQuickActionSheet: (t, a) => { shown = a.map(x => x.label); },
     thJobClockSince: (j) => (j.clockSince ? 1 : null), thJobClockElapsedMs: () => 65 * MIN, thStartClock() {}, thStopClock() {},
     setJobStatus() {}, document: { getElementById: () => null }, location: {},
   };
@@ -317,8 +317,20 @@ test('Jobs list: the sheet leads with Start / Stop the clock, the row says On th
 
   const calls = [];
   const store = [{ id: 5, title: 'E', status: 'in-progress', clockSince: 'x' }];
+  // setJobStatus() now reads/writes through thJobs.get()/thJobs.update()
+  // (Item 1 Phase 2a, 2026-10-13) instead of loadJobs()/saveJobs() --
+  // this stub reproduces the same single-job get and single-call update.
   const sctx = {
-    loadJobs: () => JSON.parse(JSON.stringify(store)), saveJobs: (j) => calls.push(['save', j[0].status]), renderJobs() {},
+    thJobs: {
+      get: (id) => store.find((j) => j.id === id),
+      update: (id, patch) => {
+        const j = store.find((x) => x.id === id);
+        Object.assign(j, patch);
+        calls.push(['save', j.status]);
+        return j;
+      },
+    },
+    renderJobs() {},
     thJobClockSince: (j) => (j.clockSince ? 1 : null), thStopJobClock: (id) => { calls.push(['stop', id]); store[0].clockSince = null; },
     openJobDoneSheet: async () => calls.push(['sheet']), Date,
   };

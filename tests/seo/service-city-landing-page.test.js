@@ -12,9 +12,9 @@
 //
 // AggregateRating is intentionally omitted (same rule as other
 // city/service pages: rating markup only on index.html, which has the
-// full wall). Visible copy still says the GBP-matched "5.0 from 7
+// full wall). Visible copy still says the GBP-matched "5.0 from 9
 // Google reviews". If a future clone adds aggregateRating, it must
-// stay 5.0 / 7.
+// stay 5.0 / 9.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -71,13 +71,13 @@ for (const page of PAGES) {
     assert.match(html, page.description);
   });
 
-  test(`${page.file}: hero pairs Schedule (orange, booking.html) with Call (outline, real tel) and GBP-matched 5.0 / 7 proof`, () => {
+  test(`${page.file}: hero pairs Schedule (orange, booking.html) with Call (outline, real tel) and GBP-matched 5.0 / 9 proof`, () => {
     const end = html.indexOf('</section>', html.indexOf('<section class="hero">'));
     const hero = html.slice(html.indexOf('<section class="hero">'), end);
     assert.match(hero, /class="btn orange" href="\/booking\.html"/);
     assert.match(hero, /Schedule an appointment/);
     assert.match(hero, /class="btn outline js-phone-link" href="tel:\+14354141667"/);
-    assert.match(hero, /5\.0 from 7 Google reviews/);
+    assert.match(hero, /5\.0 from 9 Google reviews/);
     assert.match(hero, page.heroQuote);
     assert.match(hero, /href="\/#reviews"/);
     assert.match(hero, /https:\/\/g\.page\/r\/CVJ0Qr-SsDkgEAI\/review/);
@@ -105,7 +105,7 @@ for (const page of PAGES) {
     assert.equal(faqs.mainEntity.length, visible);
   });
 
-  test(`${page.file}: Service JSON-LD targets St. George / Washington County; AggregateRating omitted, and if added later must stay 5.0 / 7`, () => {
+  test(`${page.file}: Service JSON-LD targets St. George / Washington County; AggregateRating omitted, and if added later must stay 5.0 / 9`, () => {
     const blocks = jsonLdBlocks(html);
     const service = blocks.find((d) => d['@type'] === 'Service');
     assert.ok(service, 'expected Service JSON-LD');
@@ -118,7 +118,7 @@ for (const page of PAGES) {
     for (const block of blocks) {
       if (block.aggregateRating) {
         assert.equal(block.aggregateRating.ratingValue, '5.0');
-        assert.equal(String(block.aggregateRating.reviewCount), '7');
+        assert.equal(String(block.aggregateRating.reviewCount), '9');
       }
     }
     assert.ok(

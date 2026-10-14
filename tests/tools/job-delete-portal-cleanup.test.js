@@ -38,6 +38,21 @@ function setup({ signedIn = true, undo = false } = {}) {
   w.saveJobs = (list) => { out.jobs = list; };
   w.thAddJobTombstone = (id) => out.tombstones.push(id);
   w.mirrorDelete = (table, id) => out.mirrored.push(id);
+  // deleteJob() now reads/removes through the thJobs seam (Item 1 Phase 2a)
+  // instead of calling loadJobs()/saveJobs()/thAddJobTombstone()/mirrorDelete()
+  // directly -- this stub reproduces that same end state against out.jobs so
+  // the rest of this test's assertions still hold. bulkDeleteJobs() is
+  // untouched by that change and still uses the plain stubs above.
+  w.thJobs = {
+    get: (id) => out.jobs.find((j) => j.id === id) || null,
+    remove: (id) => {
+      if (!out.jobs.some((j) => j.id === id)) return false;
+      out.jobs = out.jobs.filter((j) => j.id !== id);
+      out.tombstones.push(id);
+      out.mirrored.push(id);
+      return true;
+    },
+  };
   w.thAddToGraveyard = (type, j) => out.graveyard.push(j.id);
   w.showConfirm = async () => true;
   w.showAlert = async () => {};

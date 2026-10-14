@@ -80,7 +80,10 @@ test('header, mobile, and footer Schedule links on city/service pages go to /boo
     const src = fs.readFileSync(repo(file), 'utf8');
     assert.match(src, /<a href="\/booking\.html" class="nav-schedule-btn nav-phone-desktop">Schedule<\/a>/, `${file} header Schedule`);
     const mobileAt = src.indexOf('class="mobile-menu"');
-    const mobile = src.slice(mobileAt, mobileAt + 2500);
+    // Window grows with the Areas sublist (12 towns as of 2026-10-13, up
+    // from 8) -- generous headroom rather than a tight fit that breaks
+    // again on the next city added.
+    const mobile = src.slice(mobileAt, mobileAt + 3200);
     assert.match(mobile, /<a href="\/booking\.html">Schedule<\/a>/, `${file} mobile Schedule`);
     assert.match(src, /<li><a href="\/booking\.html">Schedule<\/a><\/li>/, `${file} footer/nav Schedule`);
   }

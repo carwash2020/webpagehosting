@@ -1799,3 +1799,112 @@ function thGetJobBundle(jobId) {
   return { job, margin, linkedInvoices, linkedQuotes, linkedExpenses, client, money };
 }
 
+// ---------------------------------------------------------------------------
+// ITEM 1 PHASE 2a: data-access seam -- jobs (docs/ITEM-1-MIGRATION-PLAN.md,
+// "Phase 2 -- Data-access seam and query shapes"). Jobs first, per the
+// decided rollout order recorded in that doc: jobs already has a proven
+// relational read path (fetchJobsFromRelational()/startJobsRealtime() in
+// tools/sync.js), and Phase 5's own cutover order starts with jobs too.
+//
+// ADDITIVE ONLY, same as every other function in this file. No page calls
+// thJobs yet -- job-tracker.html, calendar.html, route-planner.html,
+// workspace.html and invoice-generator.html all still read/write
+// th_tracker_jobs directly through their own loadJobs()/saveJobs() pairs.
+// Each page's call sites get routed through this seam one at a time, each
+// its own PR -- not a big-bang rewrite, so a mistake in one page's cutover
+// can't take down the other four. Backed by localStorage for now; Phase 5
+// is what flips the backing store, and only once every call site already
+// goes through here (that's Phase 2's own exit criteria, not this step's).
+//
+// 2b. Query shapes this needs to cover, from the census of jobs readers
+// above and in job-tracker.html/calendar.html/route-planner.html/
+// workspace.html/invoice-generator.html: all jobs most-recent-first (the
+// main Job Tracker list), by status, not-done jobs due within N days
+// (workspace Action Items/Daily), by date range (calendar, route planner),
+// by client/clientId (client history, job profitability), by an id list
+// (photo lookups, linked-invoice lookups), and recent N (workspace
+// Snapshot). list()'s filters argument below covers each of these as a
+// predicate rather than a separate method, since they all operate on the
+// same underlying row set.
+//
+// 2c. Pagination contract: keyset, descending on id. Jobs have no separate
+// createdAt field in localStorage -- id is `Date.now()` at creation, so
+// it's already a real, unique, roughly-monotonic stand-in for created_at,
+// the same role the plan's `(created_at, id)` cursor plays for the
+// relational tables. Default page size 50 (same number the plan uses for
+// the relational list() contract). No offset pagination.
+const TH_JOBS_PAGE_SIZE = 50;
+
+const thJobs = {
+  // filters: { status, notStatus, clientId, client, dateFrom, dateTo, ids,
+  // pageSize }. cursor: the `nextCursor` a previous call returned, or
+  // omitted/null for the first page.
+  list(filters, cursor) {
+    filters = filters || {};
+    let rows = thRead(TH_KEYS.jobs, []).filter(j => j && typeof j === 'object');
+    if (filters.status) rows = rows.filter(j => j.status === filters.status);
+    if (filters.notStatus) rows = rows.filter(j => j.status !== filters.notStatus);
+    if (filters.clientId) rows = rows.filter(j => j.clientId === filters.clientId);
+    if (filters.client) rows = rows.filter(j => j.client === filters.client);
+    if (filters.dateFrom) rows = rows.filter(j => j.date && j.date >= filters.dateFrom);
+    if (filters.dateTo) rows = rows.filter(j => j.date && j.date <= filters.dateTo);
+    if (filters.ids) {
+      const want = new Set(filters.ids);
+      rows = rows.filter(j => want.has(j.id));
+    }
+    rows.sort((a, b) => b.id - a.id);
+    if (cursor !== undefined && cursor !== null) rows = rows.filter(j => j.id < cursor);
+    const pageSize = filters.pageSize || TH_JOBS_PAGE_SIZE;
+    const page = rows.slice(0, pageSize);
+    return { rows: page, nextCursor: page.length === pageSize ? page[page.length - 1].id : null };
+  },
+
+  get(id) {
+    return thRead(TH_KEYS.jobs, []).find(j => j && j.id === id) || null;
+  },
+
+  create(row) {
+    const jobs = thRead(TH_KEYS.jobs, []);
+    const job = Object.assign({ id: Date.now() }, row);
+    jobs.push(job);
+    if (!thWrite(TH_KEYS.jobs, jobs)) return null;
+    if (typeof mirrorJobsToRelational === 'function') mirrorJobsToRelational(jobs);
+    return job;
+  },
+
+  // baseUpdatedAt: part of the interface now so Phase 3's conflict
+  // detection has somewhere to plug in later, but not enforced yet --
+  // jobs carry no `updatedAt` field in localStorage today (the 01 migration's
+  // set_updated_at trigger comment calls that out explicitly as a Phase 3
+  // concern, not this one). A caller without one yet should just omit it.
+  // If a job ever does carry updatedAt and it doesn't match, this returns
+  // a conflict marker instead of silently overwriting the newer write.
+  update(id, patch, baseUpdatedAt) {
+    const jobs = thRead(TH_KEYS.jobs, []);
+    const idx = jobs.findIndex(j => j && j.id === id);
+    if (idx === -1) return null;
+    if (baseUpdatedAt !== undefined && jobs[idx].updatedAt !== undefined && jobs[idx].updatedAt !== baseUpdatedAt) {
+      return { conflict: true, current: jobs[idx] };
+    }
+    jobs[idx] = Object.assign({}, jobs[idx], patch);
+    if (!thWrite(TH_KEYS.jobs, jobs)) return null;
+    if (typeof mirrorJobsToRelational === 'function') mirrorJobsToRelational(jobs);
+    return jobs[idx];
+  },
+
+  // Storage-level removal only (write + tombstone + mirror). Page-level
+  // concerns that currently live around job-tracker.html's own deleteJob()
+  // -- the undo toast, the 6-second grace window, Supabase photo cleanup,
+  // portal removal -- stay in the page when its call sites are migrated;
+  // they call thJobs.remove() as their last step, the same way they call
+  // saveJobs() today.
+  remove(id) {
+    const jobs = thRead(TH_KEYS.jobs, []);
+    if (!jobs.some(j => j && j.id === id)) return false;
+    if (!thWrite(TH_KEYS.jobs, jobs.filter(j => j.id !== id))) return false;
+    if (typeof thAddJobTombstone === 'function') thAddJobTombstone(id);
+    if (typeof mirrorDelete === 'function') mirrorDelete('jobs', id);
+    return true;
+  },
+};
+

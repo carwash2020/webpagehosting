@@ -101,7 +101,7 @@ test('openJobActions is the one sheet for a job -- More and long-press both open
   const calls = [];
   const jobs = [{ id: 5, title: '<b>Leak</b>', status: 'not-started', clientEmail: 'a@b.c' }, { id: 6, title: 'Done one', status: 'done' }];
   const { openJobActions } = run(['openJobActions'], {
-    loadJobs: () => jobs, escapeHtml: esc,
+    thJobs: { get: (id) => jobs.find((j) => j.id === id) }, escapeHtml: esc,
     showQuickActionSheet: (title, actions) => { shown = { title, labels: Array.from(actions, a => a.label), actions }; },
     setJobStatus: (id, st) => calls.push(['status', id, st]), toggleJobPhotos: () => calls.push(['photos']),
     sendJobConfirmationEmail: (id) => calls.push(['confirm', id]), showQuickExpenseModal: (id) => calls.push(['expense', id]),

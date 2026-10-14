@@ -1449,6 +1449,10 @@ test('job-tracker.html shows its default tab (Jobs) on a normal, hash-less load,
     window.getCurrentUserEmail = () => null;
     window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
     window.thRead = (key, fallback) => fallback;
+    // renderJobs() now reads through the thJobs seam (Item 1 Phase 2a,
+    // 2026-10-13) -- data-layer.js (the real thJobs) isn't loaded in this
+    // minimal sandbox, same as the other th*/window stubs just above.
+    window.thJobs = { list: () => ({ rows: [], nextCursor: null }), get: () => null, create: (row) => row, update: () => null, remove: () => false };
     window.attachLongPress = () => {};
     window.wireSearchClear = () => {};
     window.attachVoiceDictation = () => {};

@@ -5,9 +5,11 @@
 //
 // The migration's promise is "changes WHERE the value lives, not what it
 // says or how it renders", so the first tests assert exactly that: applying
-// today's saved values (5.0 / 7) to each real page leaves its HTML
+// today's saved values (5.0 / 9) to each real page leaves its HTML
 // byte-for-byte identical. (A real-browser before/after screenshot diff of
 // all 11 spots was also byte-identical; see the PR.)
+//
+// 2026-10-12 owner update: GBP total is now 9 (was 7).
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -48,10 +50,10 @@ function aggregateRatings(w) {
 // ---------------------------------------------------------------------------
 
 for (const file of PAGES) {
-  test(`${file}: applying today's saved values (5.0 / 7) leaves the page byte-for-byte unchanged`, () => {
+  test(`${file}: applying today's saved values (5.0 / 9) leaves the page byte-for-byte unchanged`, () => {
     const w = pageDom(file);
     const before = w.document.documentElement.outerHTML;
-    w.applyReviewStats({ googleRating: '5.0', googleReviewCount: '7', phone: null });
+    w.applyReviewStats({ googleRating: '5.0', googleReviewCount: '9', phone: null });
     assert.equal(w.document.documentElement.outerHTML, before);
   });
 }
@@ -59,7 +61,7 @@ for (const file of PAGES) {
 test('the static fallback text on every page agrees with index.html\'s JSON-LD aggregateRating', () => {
   const index = pageDom('index.html');
   const [ar] = aggregateRatings(index);
-  assert.deepEqual(ar, { '@type': 'AggregateRating', ratingValue: '5.0', reviewCount: '7' });
+  assert.deepEqual(ar, { '@type': 'AggregateRating', ratingValue: '5.0', reviewCount: '9' });
   for (const file of PAGES) {
     const w = pageDom(file);
     const found = phrases(w);
@@ -79,7 +81,7 @@ test('a new rating and count reach every hooked phrase, the stats strip, and the
     w.applyReviewStats({ googleRating: '4.9', googleReviewCount: '12' });
     const found = phrases(w);
     found.forEach(p => assert.equal(p, '4.9 from 12 Google reviews', file));
-    assert.doesNotMatch(w.document.body.textContent, /5\.0 from 7 Google reviews/, file + ' has no stale phrase left');
+    assert.doesNotMatch(w.document.body.textContent, /5\.0 from 9 Google reviews/, file + ' has no stale phrase left');
     total += found.length;
     if (file === 'index.html') {
       const ratingStat = w.document.querySelector('.js-review-rating-stat');

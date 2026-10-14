@@ -106,13 +106,13 @@ test('teardown stays on the page but no longer sits between trust and services',
   assert.match(INDEX, /id="teardownStage"/);
 });
 
-test('AggregateRating stays honest at 5.0 / 7 matching GBP; wall stays 4 written cards', () => {
+test('AggregateRating stays honest at 5.0 / 9 matching GBP; wall stays 4 written cards', () => {
   const schema = schemaOf(INDEX);
   const cards = (INDEX.match(/class="review-card"/g) || []).length;
   assert.equal(cards, 4, 'do not invent extra quote cards');
   assert.equal(schema.aggregateRating.ratingValue, '5.0');
-  assert.equal(Number(schema.aggregateRating.reviewCount), 7);
-  assert.match(INDEX, /5\.0 from 7 Google reviews/);
+  assert.equal(Number(schema.aggregateRating.reviewCount), 9);
+  assert.match(INDEX, /5\.0 from 9 Google reviews/);
   assert.doesNotMatch(INDEX, /5\.0 from 4 Google reviews/);
 });
 
