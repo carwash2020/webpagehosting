@@ -6103,3 +6103,13 @@ Tests: `tests/design/header-menus.test.js`, `tests/design/site-banner-no-layout-
 
 Tests: `tests/design/header-menus.test.js` (12->16 towns, `newTab.length` 17->21), `tests/design/site-banner-no-layout-shift.test.js` and `tests/site-content/site-banners-public.test.js` (43->47 banner pages), `tests/booking/booking-flow-picker-and-confirm.test.js` (17->21 triage pages) -- full local suite 4646/4646 passing.
 
+## What changed, 2026-10-14 -- the "what areas do you serve" FAQ follow-up, finally done
+
+The open item flagged three times across the last three PRs: the 16 existing St. George-area pages (`about.html`, `index.html`, `our-work.html`, 8 of the original city pages, 5 service pages) had a "What areas do you serve?" FAQ answer that never mentioned the Salt Lake valley presence at all, even after all 8 Salt Lake pages shipped.
+
+- **Every one of the 16 pages had the exact same byte-identical answer text**, in both the FAQPage JSON-LD schema and the visible `<details>`/accordion markup (2 occurrences per page, 32 total) -- confirmed before touching anything, so one clean substring replace across all 16 was safe rather than needing a page-by-page edit.
+- **Appended one sentence** naming all 8 Salt Lake cities and the "by scheduled appointment" framing, consistent with the wording already used on each Salt Lake page's own version of this same FAQ answer: "We also have a separate Salt Lake valley service presence -- Sandy, West Jordan, South Jordan, Draper, Murray, Cottonwood Heights, Holladay, and Midvale -- available by scheduled appointment, since it's a genuinely different market about three hours from our St. George base."
+- Verified the JSON-LD still parses cleanly on every page (the apostrophe in "it's" is fine inside a JSON string, but worth checking rather than assuming) and that no test hardcodes the old answer text or checks FAQ answer length -- only item *counts*, which this change doesn't touch.
+
+Tests: no test changes needed -- full local suite (4646/4646) and consistency/undefined-vars/link-check all pass unchanged.
+
