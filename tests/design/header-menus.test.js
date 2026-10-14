@@ -34,6 +34,10 @@ const AREA_LINKS = [
   '/locations/handyman-west-jordan-ut.html',
   '/locations/handyman-south-jordan-ut.html',
   '/locations/handyman-draper-ut.html',
+  '/locations/handyman-murray-ut.html',
+  '/locations/handyman-cottonwood-heights-ut.html',
+  '/locations/handyman-holladay-ut.html',
+  '/locations/handyman-midvale-ut.html',
 ];
 
 const PAGES = ['', 'locations', 'services', 'blog']
@@ -51,7 +55,7 @@ test('the header menus are on every public page that has a nav (39 of them)', ()
 });
 
 for (const page of PAGES) {
-  test(`${page}: both Areas lists carry all 12 towns, St. George first`, () => {
+  test(`${page}: both Areas lists carry all 16 towns, St. George first`, () => {
     const html = fs.readFileSync(repo(page), 'utf8');
     const nav = html.slice(html.indexOf('<ul class="nav-links">'), html.indexOf('class="mobile-menu"'));
     const areasAt = nav.lastIndexOf('<li class="nav-dropdown">');
@@ -129,7 +133,7 @@ for (const page of BOOKING_PAGES) {
     assert.match(html, /@media \(max-width:379px\)\{[\s\S]*?\.bk-menus\{order:3; flex-basis:100%;/, 'narrow phones put the menus on their own row');
     assert.match(html, /<script>\n\/\/ Header menus \(2026-09-29\)[\s\S]*?e\.key !== 'Escape'/, 'Escape closes an open menu');
     const newTab = [...header.matchAll(/<a href="\/(?:services|locations)\/[^"]+"([^>]*)>/g)].map((m) => m[1]);
-    assert.equal(newTab.length, 17);
+    assert.equal(newTab.length, 21);
     if (page === 'booking.html') {
       assert.ok(newTab.every((a) => a === ' target="_blank" rel="noopener"'), 'booking form links open in a new tab');
       assert.match(header, /Opens in a new tab, so your booking stays here\./);
