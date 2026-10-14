@@ -75,9 +75,9 @@ test('three-action bar keeps 44px targets and the 760px hide-on-desktop breakpoi
   assert.match(STYLES, /body:has\(\.sticky-call\)\{\s*padding-bottom:calc\(72px \+ env\(safe-area-inset-bottom/);
 });
 
-test('homepage compact FAQ sits after the estimate form, still in the hero, with no CSS order', () => {
+test('homepage compact FAQ sits after the estimate CTA, still in the hero, with no CSS order', () => {
   const hero = heroHtml();
-  const formAt = hero.indexOf('id="heroLeadForm"');
+  const formAt = hero.indexOf('hero-lead-cta');
   const faqAt = hero.indexOf('id="intent-faq"');
   const badgeAt = hero.indexOf('class="hero-badge"');
   const proofAt = hero.indexOf('class="cta-proof"');
