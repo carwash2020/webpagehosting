@@ -1617,7 +1617,7 @@
         </div>
         <div class="tool-form-row">
           <div class="form-field"><label for="bizSalesTax">Utah Sales Tax License #</label><input type="text" id="bizSalesTax"></div>
-          <div class="form-field"><label for="bizEin">EIN</label><input type="text" id="bizEin" placeholder="Leave blank until the IRS responds"></div>
+          <div class="form-field"><label for="bizEin">EIN</label><input type="text" id="bizEin" placeholder="None (no EIN; W-9 uses owner SSN)"></div>
         </div>
         <div class="tool-form-row">
           <div class="form-field"><label for="bizW9Status">W-9 Status / Notes</label><input type="text" id="bizW9Status"></div>
@@ -3210,10 +3210,12 @@
       stateOfFormation: 'Utah',
       businessAddress: '124 N 2750 E, St. George, UT 84790',
       salesTaxLicense: '2-135-717-696',
-      ein: '',
-      w9Status: 'Needs EIN \u2014 name/address filled, TIN pending IRS response',
+      ein: 'None (no EIN)',
+      w9Status: 'No EIN. W-9 uses the owner\'s name and SSN as the TIN (single-member LLC). Send only via a secure method; never as a plain email attachment.',
     },
-    licenses: [],
+    licenses: [
+      { city: 'City of St. George (Handyman)', licenseNumber: 'MSB26-000529', expirationDate: '2027-09-02' },
+    ],
   };
 
   function loadCompliance() {
@@ -3603,7 +3605,7 @@
         </div>
         <div class="compliance-detail-row">
           <span>UT Sales Tax License: <strong>${escapeHtml(biz.salesTaxLicense || '\u2014')}</strong></span>
-          <span>EIN: <strong>${escapeHtml(biz.ein || 'Pending')}</strong></span>
+          <span>EIN: <strong>${escapeHtml(biz.ein || 'None (no EIN)')}</strong></span>
         </div>
         <div class="compliance-detail-row">
           <span>W-9: <strong>${escapeHtml(biz.w9Status || '\u2014')}</strong></span>
