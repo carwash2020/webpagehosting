@@ -6,6 +6,9 @@ name: Tests and consistency check
 on:
   push:
   pull_request:
+  # Lets backup-cms-content.yml trigger the required `test` check on its
+  # own PR branch (pushes made with GITHUB_TOKEN don't fire push/PR events).
+  workflow_dispatch: {}
 
 permissions:
   contents: read

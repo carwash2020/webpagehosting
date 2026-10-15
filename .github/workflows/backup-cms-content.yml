@@ -19,6 +19,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  actions: write
 
 jobs:
   backup:
@@ -92,3 +93,13 @@ jobs:
             --body "Daily point-in-time backup of site_content, site_faq, and site_terms (see this workflow's own header comment for why: no paid Supabase backup tier, git history on these 3 files IS the backup). Auto-merges once the required \`test\` check passes." \
             --base main --head "$branch")
           gh pr merge --auto --squash "$pr_url"
+          # A push/PR made with GITHUB_TOKEN never triggers other workflows,
+          # so the required `test` check never ran and every backup PR sat
+          # open forever (#506, #511, #515 piled up). Dispatch it explicitly
+          # on this branch so auto-merge can actually land.
+          gh workflow run test.yml --ref "$branch"
+          # Each backup is a full snapshot, so any older still-open backup
+          # PR is superseded by this one.
+          gh pr list --state open --search "head:backup/cms-content-" --json number,headRefName \
+            -q ".[] | select(.headRefName != \"$branch\") | .number" |
+            while read -r n; do gh pr close "$n" --delete-branch --comment "Superseded by $pr_url"; done
