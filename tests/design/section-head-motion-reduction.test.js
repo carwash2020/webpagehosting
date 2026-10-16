@@ -30,9 +30,10 @@ test('section headings render immediately -- no opacity/transform fade -- via a 
   // regression-recovery pass folded #contact's own section-head into
   // #schedule's (one merged section, one heading), making 9. The
   // SEO fix that added the "From the blog" teaser section brought its
-  // own section-head, making 10 again.
+  // own section-head, making 10 again. SEO-4's "Helpful guides" block
+  // (#helpful-guides) adds one more, making 11.
   const count = [...INDEX.matchAll(/class="section-head" data-reveal>/g)].length;
-  assert.equal(count, 10, 'expected all 10 remaining section-head instances to still carry data-reveal');
+  assert.equal(count, 11, 'expected all 11 remaining section-head instances to still carry data-reveal');
 });
 
 test('the process step-line draw-in (gated on .section-head.is-visible via a sibling selector) is untouched', () => {
