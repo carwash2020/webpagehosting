@@ -27,17 +27,10 @@ const AREA_LINKS = [
   '/locations/handyman-la-verkin-ut.html',
   '/locations/handyman-cedar-city-ut.html',
   '/locations/handyman-mesquite-nv.html',
-  // Salt Lake valley (2026-10-13): a separate, ~3-hour-away service
-  // presence, not daily coverage -- see locations/handyman-sandy-ut.html's
-  // own header comment and docs/specialist-logs/features.md.
-  '/locations/handyman-sandy-ut.html',
-  '/locations/handyman-west-jordan-ut.html',
-  '/locations/handyman-south-jordan-ut.html',
-  '/locations/handyman-draper-ut.html',
-  '/locations/handyman-murray-ut.html',
-  '/locations/handyman-cottonwood-heights-ut.html',
-  '/locations/handyman-holladay-ut.html',
-  '/locations/handyman-midvale-ut.html',
+  // Salt Lake valley (2026-10-16): the 8 city pages were merged into one
+  // by-appointment page (travel from St. George, no local office); the old
+  // 8 files are redirect stubs and are never linked from the menus.
+  '/locations/handyman-salt-lake-valley-ut.html',
 ];
 
 const PAGES = ['', 'locations', 'services', 'blog']
@@ -133,7 +126,7 @@ for (const page of BOOKING_PAGES) {
     assert.match(html, /@media \(max-width:379px\)\{[\s\S]*?\.bk-menus\{order:3; flex-basis:100%;/, 'narrow phones put the menus on their own row');
     assert.match(html, /<script>\n\/\/ Header menus \(2026-09-29\)[\s\S]*?e\.key !== 'Escape'/, 'Escape closes an open menu');
     const newTab = [...header.matchAll(/<a href="\/(?:services|locations)\/[^"]+"([^>]*)>/g)].map((m) => m[1]);
-    assert.equal(newTab.length, 21);
+    assert.equal(newTab.length, 14);
     if (page === 'booking.html') {
       assert.ok(newTab.every((a) => a === ' target="_blank" rel="noopener"'), 'booking form links open in a new tab');
       assert.match(header, /Opens in a new tab, so your booking stays here\./);

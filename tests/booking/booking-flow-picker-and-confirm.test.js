@@ -467,8 +467,8 @@ function loadTriagePage(file, edit = (html) => html) {
   });
 }
 
-test('the homepage and every city/service page that loads triage.js are all covered (21)', () => {
-  assert.equal(TRIAGE_PAGES.length, 21, TRIAGE_PAGES.join(', '));
+test('the homepage and every city/service page that loads triage.js are all covered (14)', () => {
+  assert.equal(TRIAGE_PAGES.length, 14, TRIAGE_PAGES.join(', '));
   assert.ok(TRIAGE_PAGES.includes('index.html'));
 });
 
