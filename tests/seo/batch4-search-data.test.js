@@ -50,10 +50,14 @@ test('blog index and booking carry a large twitter card like every other public 
   }
 });
 
-test('the sitemap dates for the homepage and booking page reflect their recent redesigns', () => {
+test('the sitemap dates for the homepage and booking page are not older than their recent redesigns', () => {
+  // lastmod now tracks each file's real last git commit (2026-10-15 cleanup), so
+  // assert a floor rather than an exact date -- it only ever moves forward.
   const sm = read('sitemap.xml');
-  assert.match(sm, /<loc>https:\/\/www\.triplehenterprisesllc\.biz\/<\/loc>\n\s*<lastmod>2026-09-29<\/lastmod>/);
-  assert.match(sm, /<loc>https:\/\/www\.triplehenterprisesllc\.biz\/booking\.html<\/loc>\n\s*<lastmod>2026-09-30<\/lastmod>/);
+  const home = sm.match(/<loc>https:\/\/www\.triplehenterprisesllc\.biz\/<\/loc>\n\s*<lastmod>(\d{4}-\d{2}-\d{2})<\/lastmod>/);
+  const booking = sm.match(/<loc>https:\/\/www\.triplehenterprisesllc\.biz\/booking\.html<\/loc>\n\s*<lastmod>(\d{4}-\d{2}-\d{2})<\/lastmod>/);
+  assert.ok(home && home[1] >= '2026-09-29', 'homepage lastmod');
+  assert.ok(booking && booking[1] >= '2026-09-30', 'booking lastmod');
 });
 
 test('each AI answer bot is kept out of the internal paths too (it reads only its own group)', () => {
