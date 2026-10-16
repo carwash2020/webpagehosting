@@ -96,6 +96,7 @@ upside to offset the cost.
 | `locations/handyman-leeds-ut.html` | Leeds, UT |
 | `locations/handyman-cedar-city-ut.html` | Cedar City, UT — **by-request** (orange "AVAILABLE BY REQUEST" badge, own trip-fee FAQ) |
 | `locations/handyman-mesquite-nv.html` | Mesquite, NV — **by-request** (same badge treatment, NV address in schema) |
+| `locations/handyman-salt-lake-valley-ut.html` | Salt Lake valley (Sandy, West Jordan, South Jordan, Draper, Murray, Cottonwood Heights, Holladay, Midvale) — **by appointment only**, one page, framed as a planned trip from St. George (no local office; roughly 300 miles) |
 
 **Service landing pages** (`/services/`) — one per service, not tied to a specific city. **Moved from the repo root into `/services/` on 2026-09-21** -- a redirect stub was left behind at each old root path (see "Do not delete" below) specifically so this move doesn't cost the pages their existing Google ranking/backlinks.
 
@@ -133,7 +134,7 @@ upside to offset the cost.
 
 | File | Purpose |
 |---|---|
-| `sitemap.xml` | Lists all 48 live, indexable public URLs as of 2026-10-15 (each `lastmod` is that file's last git commit date; no `changefreq`/`priority`, which Google ignores): the homepage, `booking.html`, every city/service/service×city landing page above, `about.html`/`careers.html`/`our-work.html`, both legal pages, the blog index and its 16 posts, and the 16 city pages. Deliberately excluded: `manage-booking.html`/`manage-job.html` (token-gated, `noindex`), and everything under `/tools/`/`/portal/` (all `noindex`, including `portal/login.html` -- the internal tool suite and client portal are not meant to be discoverable via search). Update this and resubmit in Google Search Console any time a page is added or removed. |
+| `sitemap.xml` | Lists all 41 live, indexable public URLs as of 2026-10-16 (each `lastmod` is that file's last git commit date; no `changefreq`/`priority`, which Google ignores): the homepage, `booking.html`, every city/service/service×city landing page above, `about.html`/`careers.html`/`our-work.html`, both legal pages, the blog index and its 16 posts, and the 9 location pages (the 8 St. George-area towns plus the one Salt Lake valley page). Deliberately excluded: `manage-booking.html`/`manage-job.html` (token-gated, `noindex`), and everything under `/tools/`/`/portal/` (all `noindex`, including `portal/login.html` -- the internal tool suite and client portal are not meant to be discoverable via search). Update this and resubmit in Google Search Console any time a page is added or removed. |
 | `robots.txt` | Allows public-page crawlers; Disallow `/tools/` and `/portal/` (already noindex on those pages). Blocks bulk AI-training crawlers (`GPTBot`, `CCBot`, `Google-Extended`); allows live-retrieval/answer bots. |
 | `404.html` | Custom not-found page (self-contained, own inline styles, doesn't use `styles.css`) |
 | `.well-known/security.txt` | RFC 9116 security contact file. Requires `.nojekyll` (see above) to actually be reachable — this is exactly what broke for a long time. |
@@ -245,6 +246,7 @@ the assistant's GitHub token was never granted):
 - **`favicon.ico`** — must stay at repo root.
 - **`.nojekyll`** — must stay at repo root, with exactly that filename (dot included). See the warning at the top of this document.
 - **The 16 redirect stubs left at the old root paths of the pages moved into `/services/` and `/locations/` on 2026-09-21**: the 8 service pages (`washer-dryer-repair.html`, `plumbing-repairs.html`, `drywall-painting.html`, `handyman-repairs.html`, `assembly-installation.html`, `washer-dryer-repair-st-george-ut.html`, `refrigerator-repair-st-george-ut.html`, `dishwasher-repair-st-george-ut.html`) and the 8 city pages (`handyman-st-george-ut.html`, `handyman-hurricane-ut.html`, `handyman-washington-city-ut.html`, `handyman-santa-clara-ivins-ut.html`, `handyman-la-verkin-ut.html`, `handyman-leeds-ut.html`, `handyman-cedar-city-ut.html`, `handyman-mesquite-nv.html`). Each is a `<link rel="canonical">` + 0-delay `<meta http-equiv="refresh">` + JS `location.replace()` pointing at the real page's new path — deleting one turns a soft redirect into a hard 404 for anyone who still has the old URL bookmarked, linked, or indexed. Safe to remove only once Google Search Console shows the old URLs fully dropped from the index in favor of the new ones (months, not days) — not on a whim.
+- **The 8 Salt Lake valley redirect stubs (added 2026-10-16)**: `locations/handyman-sandy-ut.html`, `handyman-west-jordan-ut.html`, `handyman-south-jordan-ut.html`, `handyman-draper-ut.html`, `handyman-murray-ut.html`, `handyman-cottonwood-heights-ut.html`, `handyman-holladay-ut.html` and `handyman-midvale-ut.html` (all in `/locations/`). They were 8 near-identical city pages; each now canonicals and redirects to `locations/handyman-salt-lake-valley-ut.html`. Same rule as the stubs above: not in the sitemap, nothing links to them, keep the files until Search Console shows them dropped.
 
 ## Known open items
 
@@ -6113,3 +6115,13 @@ The open item flagged three times across the last three PRs: the 16 existing St.
 
 Tests: no test changes needed -- full local suite (4646/4646) and consistency/undefined-vars/link-check all pass unchanged.
 
+## What changed, 2026-10-16 -- the 8 Salt Lake valley pages become one honest page
+
+Why: the 8 pages (Sandy, West Jordan, South Jordan, Draper, Murray, Cottonwood Heights, Holladay, Midvale) were 82 to 84 percent identical, and said Triple H runs "a separate Salt Lake valley service presence". It doesn't: it's a St. George business that travels there by appointment. Google's spam policy names near-identical city pages as doorway pages.
+
+- **One page**, `locations/handyman-salt-lake-valley-ut.html`: says plainly that there is no office, shop or crew in the valley, that it's roughly 300 miles (about a four-hour drive) from St. George, that every visit is scheduled in advance and never same-day, how a visit works, how to prepare, and the 8 cities people ask about. One H1, one self-referencing canonical, JSON-LD (LocalBusiness, FAQPage, Service, BreadcrumbList) matching the visible text, no AggregateRating. New share card `images/og/city-salt-lake-valley.jpg` (card `city-salt-lake-valley` in `scripts/og-cards/cards.json`).
+- **The 8 old files are redirect stubs** (canonical + meta refresh 0 + `location.replace`), same pattern as the root stubs. Listed under "Do not delete".
+- **Removed the 8 from everywhere that linked them**: the Areas dropdown, mobile menu and footer lists on every page (one "Salt Lake Valley, UT" entry now), the booking/manage-job location pickers (and their CSS), the homepage `.areas-link` cards and note, `scripts/check-links.py`'s public list, and `tests/design/header-menus.test.js`. Every link points to the new page, never to a stub.
+- **`sitemap.xml`**: 48 URLs became 41 (8 removed, 1 added). The `lastmod` of each changed page is 2026-10-16, per the 2026-10-15 convention.
+- **The "What areas do you serve?" FAQ answer** (32 places: visible text and FAQPage JSON-LD on 16 pages) no longer says "a separate Salt Lake valley service presence" or "about three hours". It now says Triple H travels to the valley for jobs scheduled in advance, roughly 300 miles from St. George.
+- AggregateRating (5.0 from 9) and other pages' titles are untouched.

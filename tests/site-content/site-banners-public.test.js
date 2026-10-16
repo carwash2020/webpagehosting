@@ -240,8 +240,8 @@ for (const dir of ['', 'blog', 'locations', 'services']) {
   }
 }
 
-test('47 public pages have the banner slots', () => {
-  assert.equal(PAGES.length, 47);
+test('40 public pages have the banner slots', () => {
+  assert.equal(PAGES.length, 40);
 });
 
 for (const p of PAGES) {

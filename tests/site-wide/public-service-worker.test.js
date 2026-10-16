@@ -42,8 +42,11 @@ const keysMatch = (CLEANUP || '').match(/const TOOLS_KEYS = (\[[^\]]*\]);/);
 const TOOLS_KEYS = keysMatch ? JSON.parse(keysMatch[1].replace(/'/g, '"')) : null;
 
 // The full-layout pages that used to register the worker.
+// Redirect stubs (a bare <meta http-equiv="refresh"> page, e.g. the 8 old
+// Salt Lake valley files in locations/) have no layout and never load JS.
+const isStub = (f) => /<meta http-equiv="refresh"/.test(read(f));
 const FULL_PAGES = publicHtml().filter((f) =>
-  /^(services|locations|blog)\//.test(f) || ['index.html', 'about.html', 'careers.html', 'our-work.html', 'privacy.html', 'terms.html'].includes(f));
+  (/^(services|locations|blog)\//.test(f) || ['index.html', 'about.html', 'careers.html', 'our-work.html', 'privacy.html', 'terms.html'].includes(f)) && !isStub(f));
 
 test('no public page registers a service worker', () => {
   for (const file of publicHtml()) {
