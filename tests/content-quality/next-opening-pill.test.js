@@ -63,7 +63,7 @@ test('a successful lookup shows the real next opening beside the pill, linking t
   assert.match(el.innerHTML, /Next opening:/);
   const link = el.querySelector('a');
   assert.ok(link, 'expected a book-this-slot link');
-  assert.match(link.getAttribute('href'), /^\/booking\.html\?service=inspection&date=\d{4}-\d{2}-\d{2}$/);
+  assert.match(link.getAttribute('href'), /^\/booking\.html\?service=estimate&date=\d{4}-\d{2}-\d{2}$/);
 
   // The pill itself is untouched -- this is an addition, not a replacement.
   assert.equal(window.document.getElementById('openStatus').hidden, false);
@@ -96,9 +96,9 @@ test('nothing opening within the search horizon (findNextAvailableSlot resolves 
   assert.equal(window.document.getElementById('nextOpening').hidden, true);
 });
 
-test('the shortest service (Inspection, 45 min) is what the lookup searches for -- the earliest slot that could fit any visit, not one specific service', () => {
-  assert.match(TRIAGE_JS, /NEXT_OPENING_DURATION_MINUTES = 45/);
-  assert.match(TRIAGE_JS, /NEXT_OPENING_SERVICE_KEY = 'inspection'/);
+test('the shortest service (In-person Estimate, 30 min) is what the lookup searches for -- the earliest slot that could fit any visit, not one specific service', () => {
+  assert.match(TRIAGE_JS, /NEXT_OPENING_DURATION_MINUTES = 30/);
+  assert.match(TRIAGE_JS, /NEXT_OPENING_SERVICE_KEY = 'estimate'/);
 });
 
 test('the tools service worker cache was bumped, since /styles.css (precached) changed again for the new-opening line styling', () => {

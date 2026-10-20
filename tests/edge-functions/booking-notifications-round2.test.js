@@ -67,11 +67,18 @@ const BOOKING = {
   cancel_token: 'tok-abc', status: 'confirmed',
 };
 
+// Routes by URL (2026-10-20, delivery tracking): send-booking-email-index.ts
+// now also PATCHes /rest/v1/th_bookings with the Resend message id and a
+// send-status, right after a guest send -- that's a real, separate call
+// this mock must satisfy, but it was never an email and must not count
+// toward `sent`, which every test here still reads as "emails sent".
 function mockResend({ rejectAttachments = false } = {}) {
   const sent = [];
   globalThis.fetch = async (url, opts) => {
-    const body = JSON.parse(opts.body);
-    sent.push({ url: String(url), body });
+    const u = String(url);
+    const body = opts.body ? JSON.parse(opts.body) : null;
+    if (u.includes('/rest/v1/th_bookings')) return new Response('[]', { status: 200 });
+    sent.push({ url: u, body });
     if (rejectAttachments && body.attachments) return new Response('attachment rejected', { status: 422 });
     return new Response('{"id":"email_1"}', { status: 200 });
   };

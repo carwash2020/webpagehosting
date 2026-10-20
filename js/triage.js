@@ -280,11 +280,12 @@
 
     const SUPABASE_URL = 'https://csvfqdjuobylgafgolho.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs';
-    // Inspection is the shortest service (45 min) -- using it here finds
-    // the earliest slot that could fit ANY visit, not just a specific
-    // service the visitor hasn't chosen yet.
-    const NEXT_OPENING_DURATION_MINUTES = 45;
-    const NEXT_OPENING_SERVICE_KEY = 'inspection';
+    // In-person Estimate is the shortest service (30 min, added
+    // 2026-10-20 -- shorter than Inspection's 45) -- using it here
+    // finds the earliest slot that could fit ANY visit, not just a
+    // specific service the visitor hasn't chosen yet.
+    const NEXT_OPENING_DURATION_MINUTES = 30;
+    const NEXT_OPENING_SERVICE_KEY = 'estimate';
 
     findNextAvailableSlot(SUPABASE_URL, SUPABASE_ANON_KEY, NEXT_OPENING_DURATION_MINUTES).then(function (result) {
       if (!result) return;

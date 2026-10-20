@@ -3053,6 +3053,29 @@
   // Requested directly, connecting the new booking system (replacing
   // Cal.com) to the Job Tracker: a real appointment shouldn't sit in
   // a separate, disconnected system from every other job.
+  // Confirmation email delivery status (2026-10-20), read straight off
+  // th_bookings (select=* in fetchUnconvertedBookings already returns
+  // the new columns -- no sync.js change needed). resend-webhook-index.ts
+  // advances email_delivery_status as Resend's own events arrive;
+  // until the first one does, this falls back to whether the send
+  // itself succeeded. No badge at all when the booking has no email
+  // (nothing was ever attempted).
+  function emailStatusBadgeHtml(b) {
+    if (!b.email) return '';
+    if (b.email_send_status === 'failed') {
+      return ' <span style="display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:600;background:#4a1515;color:#ff8080;" title="The confirmation email to this customer failed to send -- call or text to confirm.">Email failed</span>';
+    }
+    const STATUS_LABELS = { sent: 'Sent', delivered: 'Delivered', opened: 'Opened', bounced: 'Bounced', complained: 'Complained' };
+    const status = b.email_delivery_status || (b.email_send_status === 'sent' ? 'sent' : '');
+    const label = STATUS_LABELS[status];
+    if (!label) return '';
+    const isBad = status === 'bounced' || status === 'complained';
+    const isGood = status === 'opened';
+    const bg = isBad ? '#4a1515' : (isGood ? '#143a22' : '#1a1a1a');
+    const fg = isBad ? '#ff8080' : (isGood ? '#6be08a' : '#999');
+    return ` <span style="display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:600;background:${bg};color:${fg};" title="Confirmation email: ${escapeHtml(label.toLowerCase())}">${escapeHtml(label)}</span>`;
+  }
+
   async function loadAndRenderBookings() {
     const container = document.getElementById('bookingsList');
     if (typeof fetchUnconvertedBookings !== 'function' || !isSyncConfigured()) {
@@ -3084,7 +3107,7 @@
         <div class="lead-card-top">
           <div>
             <div class="lead-card-name">${escapeHtml(b.name || '(no name)')}</div>
-            <div class="lead-card-meta">${escapeHtml(b.phone || '')}${b.email ? ' &middot; ' + escapeHtml(b.email) : ''}</div>
+            <div class="lead-card-meta">${escapeHtml(b.phone || '')}${b.email ? ' &middot; ' + escapeHtml(b.email) : ''}${emailStatusBadgeHtml(b)}</div>
             <div class="lead-card-meta">${escapeHtml(b.service_label)} &middot; ${dateLabel} at ${timeLabel}</div>
           </div>
           <div class="dash-list-item-right">

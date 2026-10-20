@@ -44,9 +44,20 @@
 // Required secrets (all already configured for the lead-email
 // pipeline; no new secrets needed):
 //   RESEND_API_KEY, LEAD_EMAIL_TO, LEAD_EMAIL_FROM
-// Auto-provided: SUPABASE_SERVICE_ROLE_KEY
+// Auto-provided: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+//
+// Delivery tracking (2026-10-20, add_booking_email_delivery_tracking.sql):
+// every guest-facing send now PATCHes the booking row with Resend's own
+// message id and a rough email_send_status ('sent'/'failed'). A genuine
+// send failure (both with- and without-attachment attempts) also fires
+// a plain internal alert email -- before this, a failed guest send only
+// showed up in function logs and the call still reported "ok". The
+// resend-webhook edge function (deployed separately) advances
+// email_delivery_status further as Resend's own delivery/open/bounce
+// events for that message id arrive.
 
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const LEAD_EMAIL_TO = (Deno.env.get("LEAD_EMAIL_TO") || "")
   .split(",")
@@ -58,6 +69,18 @@ const LEAD_EMAIL_FROM = Deno.env.get("LEAD_EMAIL_FROM") || "";
 // send-lead-email-index.ts -- see that file's own comment for why
 // this is a dedicated PNG rather than the site's .webp logo.
 const LOGO_URL = "https://www.triplehenterprisesllc.biz/images/logo-signature-email.png";
+
+// Animated checkmark (2026-10-20), requested directly: a small GIF
+// (settle-in + draw-in, ~13 frames) where the FIRST frame is already
+// the fully-settled final state. That ordering is the real "static
+// fallback" -- a client that only shows a GIF's first frame (classic
+// Outlook desktop, some webmail) sees the complete green check, never
+// a half-drawn or empty circle; a client that animates GIFs normally
+// plays the settle-in once and lands on that same final frame. No
+// separate "static" asset is referenced for this reason -- see
+// images/email/booking-confirmed-check-static.png if a future change
+// ever wants a genuinely non-animated <img> instead.
+const CHECKMARK_GIF_URL = "https://www.triplehenterprisesllc.biz/images/email/booking-confirmed-check.gif";
 
 // The business operates in one timezone -- all display formatting is
 // explicit about it rather than trusting the server's own default
@@ -72,6 +95,43 @@ function escapeHtml(value: unknown): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+// --- greeting (2026-10-20) ------------------------------------------------
+// A real booking's "name" field is free text -- plenty of customers type
+// a business name, not a person's. Taking the first word of whatever was
+// typed turned "Silver Silo Bakery" into "Hi Silver,". There's no
+// reliable way to tell a business name from a person's apart from the
+// text alone, so this only acts on the clearest signal (a legal suffix)
+// and otherwise prefers "Hi there," over guessing wrong in either
+// direction -- an ALL-CAPS name or one with 3+ words could just as
+// easily be an unusual personal name as a business, so those fall back
+// to "Hi there," rather than risk a first-name guess that's actually a
+// company's first word, or a full-name greeting that's actually
+// someone's whole name read back at them oddly.
+const BUSINESS_NAME_SUFFIXES = /\b(llc|l\.l\.c\.?|inc\.?|incorporated|corp\.?|corporation|co\.|company|group|enterprises?|services?|llp|lp|pllc|plc|ltd\.?)\b/i;
+
+// Returns the word(s) to put after "Hi " -- a first name, a full name
+// (clear business signal), or null when even that's ambiguous (the
+// caller then falls back to "there"). Unescaped: callers decide
+// HTML-escaping vs. plain text themselves.
+function greetingNameFor(name: unknown): string | null {
+  const raw = name ? String(name).trim() : "";
+  if (!raw) return null;
+  if (BUSINESS_NAME_SUFFIXES.test(raw)) {
+    // A clear, unambiguous business signal -- greet by the full name
+    // rather than guessing a first word out of it ("Hi Silver Silo
+    // Bakery LLC," not "Hi Silver,").
+    return raw;
+  }
+  const isAllCaps = /[A-Z]/.test(raw) && raw === raw.toUpperCase();
+  if (isAllCaps || raw.split(/\s+/).length >= 3) return null;
+  return raw.split(/\s+/)[0] || null;
+}
+
+function greetingFor(booking: Record<string, unknown>): string {
+  const word = greetingNameFor(booking.name);
+  return word ? `Hi ${word},` : "Hi there,";
 }
 
 function formatDateRange(startAt: string, endAt: string): { dateLabel: string; timeLabel: string } {
@@ -188,7 +248,11 @@ function googleCalendarUrl(booking: Record<string, unknown>): string {
 // Sends one email through Resend. With a calendar attachment, a
 // rejected send is retried once WITHOUT it -- the confirmation itself
 // always matters more than the file.
-async function sendEmail(body: Record<string, unknown>, icsContent?: string): Promise<boolean> {
+// Returns { ok, id } rather than a bare boolean (2026-10-20) -- id is
+// Resend's own message id (its response body is { id: "..." } on
+// success), needed so a guest send's delivery can later be tracked by
+// resend-webhook-index.ts.
+async function sendEmail(body: Record<string, unknown>, icsContent?: string): Promise<{ ok: boolean; id?: string }> {
   async function post(payload: Record<string, unknown>) {
     return await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -196,18 +260,82 @@ async function sendEmail(body: Record<string, unknown>, icsContent?: string): Pr
       body: JSON.stringify(payload),
     });
   }
+  async function idFrom(res: Response): Promise<string | undefined> {
+    try {
+      const data = await res.json();
+      return typeof data?.id === "string" ? data.id : undefined;
+    } catch {
+      return undefined;
+    }
+  }
   if (icsContent) {
     const withFile = { ...body, attachments: [{ filename: "triple-h-visit.ics", content: toBase64(icsContent) }] };
     const res = await post(withFile);
-    if (res.ok) return true;
+    if (res.ok) return { ok: true, id: await idFrom(res) };
     console.error("sendEmail: send with calendar attachment failed, retrying without it:", res.status, await res.text());
   }
   const res = await post(body);
   if (!res.ok) {
     console.error("sendEmail: Resend API error:", res.status, await res.text());
-    return false;
+    return { ok: false };
   }
-  return true;
+  return { ok: true, id: await idFrom(res) };
+}
+
+// --- delivery tracking (2026-10-20) ---------------------------------------
+// Best-effort: neither of these ever throws out of the caller -- a
+// failure here is logged, not allowed to cost the guest their email
+// over a tracking write.
+async function recordGuestEmailResult(bookingId: unknown, result: { ok: boolean; id?: string }): Promise<void> {
+  if (bookingId === undefined || bookingId === null || !SUPABASE_URL) return;
+  const patch: Record<string, unknown> = { email_send_status: result.ok ? "sent" : "failed" };
+  if (result.id) patch.resend_message_id = result.id;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/th_bookings?id=eq.${encodeURIComponent(String(bookingId))}`, {
+      method: "PATCH",
+      headers: {
+        apikey: SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify(patch),
+    });
+    if (!res.ok) console.error("recordGuestEmailResult: PATCH failed:", res.status, await res.text());
+  } catch (err: any) {
+    console.error("recordGuestEmailResult error:", err.message);
+  }
+}
+
+// A failed guest send used to only show up in function logs, with the
+// call still returning "ok" overall -- staff had no way to know a
+// customer never got their email unless the customer happened to call
+// asking where it was. This makes that failure visible the same way
+// every other notification failure in this pipeline already is: a
+// plain internal email.
+async function alertStaffOfFailedGuestEmail(booking: Record<string, unknown>, context: string): Promise<void> {
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
+      body: JSON.stringify({
+        from: LEAD_EMAIL_FROM,
+        to: LEAD_EMAIL_TO,
+        subject: `Customer email failed to send: ${booking.name || "a guest"} -- ${booking.service_label || "booking"}`,
+        text: [
+          `The ${context} email to this customer failed to send after retrying -- they probably never got it.`,
+          "",
+          `Name: ${booking.name || "not given"}`,
+          `Phone: ${booking.phone || "not given"}`,
+          `Email: ${booking.email || "not given"}`,
+          "",
+          "Consider calling or texting them directly to confirm the appointment.",
+        ].join("\n"),
+      }),
+    });
+  } catch (err: any) {
+    console.error("alertStaffOfFailedGuestEmail error:", err.message);
+  }
 }
 
 function buildInternalEmailHtml(booking: Record<string, unknown>): string {
@@ -251,8 +379,9 @@ function buildInternalEmailText(booking: Record<string, unknown>): string {
 
 function buildGuestEmailHtml(booking: Record<string, unknown>): string {
   const { dateLabel, timeLabel } = formatDateRange(String(booking.start_at), String(booking.end_at));
-  const firstName = booking.name ? String(booking.name).trim().split(/\s+/)[0] : "";
-  const greeting = firstName ? `Hi ${escapeHtml(firstName)},` : "Hi there,";
+  const greeting = escapeHtml(greetingFor(booking));
+  const address = booking.address ? String(booking.address).trim() : "";
+  const notes = booking.notes ? String(booking.notes).trim() : "";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -275,16 +404,15 @@ function buildGuestEmailHtml(booking: Record<string, unknown>): string {
         </tr>
         <tr>
           <td align="center" style="padding: 28px 28px 0;">
-            <!-- Green success checkmark badge (2026-09-19), requested
-                 directly, mirroring booking.html's own on-page checkmark.
-                 Plain HTML/CSS (a bgcolor'd table cell forced round with
-                 border-radius), not an SVG or animated GIF -- email
-                 client support for both is too inconsistent to rely on
-                 (this degrades to a green square in classic Outlook
-                 desktop, which is an acceptable, common fallback). -->
-            <table role="presentation" cellpadding="0" cellspacing="0" width="56" height="56" style="width: 56px; height: 56px;">
-              <tr><td align="center" valign="middle" bgcolor="#3ad66b" style="background: #3ad66b; border-radius: 50%; font-family: -apple-system, Helvetica, Arial, sans-serif; font-size: 28px; font-weight: 700; color: #0a0a0a; line-height: 56px;">&#10003;</td></tr>
-            </table>
+            <!-- Animated checkmark (2026-10-20): a GIF whose first
+                 frame is already the fully-settled state -- see
+                 CHECKMARK_GIF_URL's own comment above for why that
+                 covers the "static fallback" requirement without a
+                 second image. The old plain HTML/CSS circle (2026-09-19)
+                 is gone from here; it's still used, unanimated, for the
+                 reschedule/cancellation badges below, where an
+                 animation was never requested. -->
+            <img src="${CHECKMARK_GIF_URL}" width="56" height="56" alt="Confirmed" style="display: block; width: 56px; height: 56px; border: 0;">
           </td>
         </tr>
         <tr>
@@ -299,13 +427,15 @@ function buildGuestEmailHtml(booking: Record<string, unknown>): string {
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
               <tr><td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #777; font-size: 14px; width: 100px;">Service</td><td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; color: #222;">${escapeHtml(booking.service_label)}</td></tr>
               <tr><td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #777; font-size: 14px;">Date</td><td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; color: #222;">${escapeHtml(dateLabel)}</td></tr>
-              <tr><td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #777; font-size: 14px;">Time</td><td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; color: #222;">${escapeHtml(timeLabel)}</td></tr>
+              <tr><td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #777; font-size: 14px;">Arrival window</td><td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; color: #222;">${escapeHtml(timeLabel)}</td></tr>
+              ${address ? `<tr><td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #777; font-size: 14px;">Address</td><td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; color: #222;">${escapeHtml(address)}</td></tr>` : ""}
             </table>
+            ${notes ? `<p style="color: #222; font-size: 14px; line-height: 1.5; margin: 16px 0 0;"><strong>What's going on:</strong><br>${escapeHtml(notes).replace(/\n/g, "<br>")}</p>` : ""}
           </td>
         </tr>
         <tr>
           <td style="padding: 20px 28px 28px; font-family: -apple-system, Helvetica, Arial, sans-serif;">
-            <p style="color: #777; font-size: 13px; line-height: 1.5; margin: 0 0 20px;">This is an estimated time slot. The actual visit may run longer depending on what we find once we're there.</p>
+            <p style="color: #777; font-size: 13px; line-height: 1.5; margin: 0 0 20px;">We'll arrive sometime within that window -- the actual visit may run longer once we're there and can see what's involved.</p>
             <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 20px;"><strong>Add it to your calendar:</strong> open the attached calendar file, or <a href="${escapeHtml(googleCalendarUrl(booking))}" style="color: #ff8000;">add it to Google Calendar</a>. Either way your phone reminds you the day before and 2 hours before.</p>
             <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 20px;">Need to reschedule or cancel? <a href="https://www.triplehenterprisesllc.biz/manage-booking.html?token=${escapeHtml(booking.cancel_token)}" style="color: #ff8000;">Manage your booking here</a>, or just reply to this email or give us a call.</p>
             <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0;">Talk soon,<br><strong>Triple H Enterprises</strong></p>
@@ -329,17 +459,22 @@ function buildGuestEmailHtml(booking: Record<string, unknown>): string {
 
 function buildGuestEmailText(booking: Record<string, unknown>): string {
   const { dateLabel, timeLabel } = formatDateRange(String(booking.start_at), String(booking.end_at));
-  const firstName = booking.name ? String(booking.name).trim().split(/\s+/)[0] : "";
-  return [
-    firstName ? `Hi ${firstName},` : "Hi there,",
+  const address = booking.address ? String(booking.address).trim() : "";
+  const notes = booking.notes ? String(booking.notes).trim() : "";
+  const parts = [
+    greetingFor(booking),
     "",
     "Thanks for booking with Triple H Enterprises. Here's what we've got on the calendar:",
     "",
     `Service: ${booking.service_label}`,
     `Date: ${dateLabel}`,
-    `Time: ${timeLabel}`,
+    `Arrival window: ${timeLabel}`,
+  ];
+  if (address) parts.push(`Address: ${address}`);
+  if (notes) parts.push("", "What's going on:", notes);
+  parts.push(
     "",
-    "This is an estimated time slot. The actual visit may run longer depending on what we find once we're there.",
+    "We'll arrive sometime within that window -- the actual visit may run longer once we're there and can see what's involved.",
     "",
     `Add it to your calendar: open the attached calendar file, or add it to Google Calendar: ${googleCalendarUrl(booking)}`,
     "",
@@ -350,7 +485,8 @@ function buildGuestEmailText(booking: Record<string, unknown>): string {
     "Talk soon,",
     "Triple H Enterprises",
     "(435) 414-1667, triplehenterprisesllc.biz",
-  ].join("\n");
+  );
+  return parts.join("\n");
 }
 
 async function sendGuestConfirmation(booking: Record<string, unknown>): Promise<void> {
@@ -359,8 +495,9 @@ async function sendGuestConfirmation(booking: Record<string, unknown>): Promise<
     console.log("sendGuestConfirmation: booking has no email address, skipping guest confirmation");
     return;
   }
+  let result: { ok: boolean; id?: string } = { ok: false };
   try {
-    await sendEmail({
+    result = await sendEmail({
       from: `Triple H Enterprises <${LEAD_EMAIL_FROM}>`,
       to: guestEmail,
       reply_to: LEAD_EMAIL_TO,
@@ -371,6 +508,8 @@ async function sendGuestConfirmation(booking: Record<string, unknown>): Promise<
   } catch (err: any) {
     console.error("sendGuestConfirmation error:", err.message);
   }
+  await recordGuestEmailResult(booking.id, result);
+  if (!result.ok) await alertStaffOfFailedGuestEmail(booking, "confirmation");
 }
 
 // --- reschedule / cancellation (2026-09-22) ----------------------------
@@ -421,11 +560,6 @@ function changeEmailShell(title: string, badgeColor: string, badgeGlyph: string,
 </html>`;
 }
 
-function greetingFor(booking: Record<string, unknown>): string {
-  const firstName = booking.name ? String(booking.name).trim().split(/\s+/)[0] : "";
-  return firstName ? `Hi ${firstName},` : "Hi there,";
-}
-
 function buildRescheduledGuestEmailHtml(booking: Record<string, unknown>, oldBooking: Record<string, unknown>): string {
   const now = formatDateRange(String(booking.start_at), String(booking.end_at));
   const was = formatDateRange(String(oldBooking.start_at), String(oldBooking.end_at));
@@ -442,8 +576,9 @@ function buildRescheduledGuestEmailHtml(booking: Record<string, unknown>, oldBoo
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
               <tr><td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #777; font-size: 14px; width: 100px;">Service</td><td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; color: #222;">${escapeHtml(booking.service_label)}</td></tr>
               <tr><td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #777; font-size: 14px;">New date</td><td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; color: #222;"><strong>${escapeHtml(now.dateLabel)}</strong></td></tr>
-              <tr><td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #777; font-size: 14px;">New time</td><td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; color: #222;"><strong>${escapeHtml(now.timeLabel)}</strong></td></tr>
+              <tr><td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #777; font-size: 14px;">New arrival window</td><td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; color: #222;"><strong>${escapeHtml(now.timeLabel)}</strong></td></tr>
               <tr><td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #777; font-size: 14px;">Was</td><td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; color: #999;"><s>${escapeHtml(was.dateLabel)}, ${escapeHtml(was.timeLabel)}</s></td></tr>
+              ${booking.address ? `<tr><td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #777; font-size: 14px;">Address</td><td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; color: #222;">${escapeHtml(booking.address)}</td></tr>` : ""}
             </table>
           </td>
         </tr>
@@ -467,8 +602,9 @@ function buildRescheduledGuestEmailText(booking: Record<string, unknown>, oldBoo
     "",
     `Service: ${booking.service_label}`,
     `New date: ${now.dateLabel}`,
-    `New time: ${now.timeLabel}`,
+    `New arrival window: ${now.timeLabel}`,
     `(Was: ${was.dateLabel}, ${was.timeLabel})`,
+    ...(booking.address ? [`Address: ${booking.address}`] : []),
     "",
     `Update your calendar: open the attached file, or add the new time to Google Calendar: ${googleCalendarUrl(booking)}`,
     "",
@@ -565,14 +701,14 @@ async function handleBookingChange(booking: Record<string, unknown>, oldBooking:
   const internal = buildInternalChangeEmail(kind, booking, oldBooking);
   let internalOk = false;
   try {
-    internalOk = await sendEmail({
+    internalOk = (await sendEmail({
       from: LEAD_EMAIL_FROM,
       to: LEAD_EMAIL_TO,
       reply_to: booking.email || undefined,
       subject: internal.subject,
       html: internal.html,
       text: internal.text,
-    });
+    })).ok;
   } catch (err: any) {
     console.error("Internal booking change email error:", err.message);
   }
@@ -580,8 +716,9 @@ async function handleBookingChange(booking: Record<string, unknown>, oldBooking:
   const guestEmail = booking.email ? String(booking.email).trim() : "";
   if (guestEmail) {
     try {
+      let result: { ok: boolean; id?: string };
       if (isReschedule) {
-        await sendEmail({
+        result = await sendEmail({
           from: `Triple H Enterprises <${LEAD_EMAIL_FROM}>`,
           to: guestEmail,
           reply_to: LEAD_EMAIL_TO,
@@ -590,7 +727,7 @@ async function handleBookingChange(booking: Record<string, unknown>, oldBooking:
           text: buildRescheduledGuestEmailText(booking, oldBooking),
         }, buildBookingIcs(booking));
       } else {
-        await sendEmail({
+        result = await sendEmail({
           from: `Triple H Enterprises <${LEAD_EMAIL_FROM}>`,
           to: guestEmail,
           reply_to: LEAD_EMAIL_TO,
@@ -599,6 +736,8 @@ async function handleBookingChange(booking: Record<string, unknown>, oldBooking:
           text: buildCancelledGuestEmailText(booking),
         });
       }
+      await recordGuestEmailResult(booking.id, result);
+      if (!result.ok) await alertStaffOfFailedGuestEmail(booking, kind);
     } catch (err: any) {
       console.error("Guest booking change email error:", err.message);
     }
