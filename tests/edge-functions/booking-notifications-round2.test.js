@@ -67,11 +67,18 @@ const BOOKING = {
   cancel_token: 'tok-abc', status: 'confirmed',
 };
 
+// Routes by URL (2026-10-20, delivery tracking): send-booking-email-index.ts
+// now also PATCHes /rest/v1/th_bookings with the Resend message id and a
+// send-status, right after a guest send -- that's a real, separate call
+// this mock must satisfy, but it was never an email and must not count
+// toward `sent`, which every test here still reads as "emails sent".
 function mockResend({ rejectAttachments = false } = {}) {
   const sent = [];
   globalThis.fetch = async (url, opts) => {
-    const body = JSON.parse(opts.body);
-    sent.push({ url: String(url), body });
+    const u = String(url);
+    const body = opts.body ? JSON.parse(opts.body) : null;
+    if (u.includes('/rest/v1/th_bookings')) return new Response('[]', { status: 200 });
+    sent.push({ url: u, body });
     if (rejectAttachments && body.attachments) return new Response('attachment rejected', { status: 422 });
     return new Response('{"id":"email_1"}', { status: 200 });
   };
@@ -106,7 +113,13 @@ test('send-booking-email: a new booking still sends the staff email and the gues
   assert.match(ics, /UID:th-booking-42@triplehenterprisesllc\.biz/);
   assert.match(ics, /TRIGGER:-P1D/);
   assert.match(ics, /TRIGGER:-PT2H/);
-  assert.match(guest.body.html, /calendar\.google\.com\/calendar\/render\?action=TEMPLATE/);
+  // 2026-10-22: the Google Calendar link now routes through add-to-calendar.html
+  // on our own domain (a Resend deliverability advisory flagged the raw
+  // calendar.google.com href for a sending-domain mismatch) -- see that
+  // page's own tests and send-booking-email.test.js's link-wrapping test.
+  // Still confirms the real Google Calendar URL is in there, just wrapped.
+  assert.match(guest.body.html, /href="https:\/\/www\.triplehenterprisesllc\.biz\/add-to-calendar\.html\?u=/);
+  assert.match(decodeURIComponent(guest.body.html.match(/add-to-calendar\.html\?u=([^"]+)/)[1]), /^https:\/\/calendar\.google\.com\/calendar\/render\?action=TEMPLATE/);
   assert.doesNotMatch(guest.body.html, /<b>Public<\/b>/, 'guest-supplied text stays escaped');
 });
 

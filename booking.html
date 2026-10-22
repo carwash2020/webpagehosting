@@ -1217,7 +1217,18 @@
   // own existing service icons from index.html exactly, for visual
   // consistency -- only Inspection is new artwork (a magnifying glass),
   // since that service doesn't appear on the homepage.
+  //
+  // "In-person Estimate" added 2026-10-20 -- booking.html had no quote
+  // option, so a quote visit had to be booked as "Inspection" (wrong
+  // label on the calendar/email, and 45 min is longer than a quote
+  // actually needs). 30 minutes: shorter than Inspection, since sizing
+  // up a job takes less time than diagnosing one. New clipboard-check
+  // icon (not the Inspection magnifying glass, which implies diagnosing
+  // a problem that already exists) -- distinct artwork for a distinct
+  // intent (pricing a job, not troubleshooting one).
   const SERVICES = [
+    { key: 'estimate', label: 'In-person Estimate', minutes: 30, desc: 'Walk the job with us so we can scope it out and give you a firm price before any work starts.',
+      icon: '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 2h6v3H9z"/><path d="m9 13 2 2 4-4"/>' },
     { key: 'inspection', label: 'Inspection', minutes: 45, desc: 'A diagnostic visit to figure out what\'s actually wrong before committing to a repair.',
       icon: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>' },
     { key: 'plumbing', label: 'Plumbing Fixes & Leaks', minutes: 60, desc: 'Faucets, toilets, garbage disposals, and leaks that need to stop before they turn into bigger problems.',
