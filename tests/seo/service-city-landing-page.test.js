@@ -26,8 +26,8 @@ const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const PAGES = [
   {
     file: 'services/washer-dryer-repair-st-george-ut.html',
-    title: 'Washer & Appliance Repair, St. George | Triple H Enterprises',
-    h1: 'Washer &amp; Appliance Repair in St. George',
+    title: 'Washer & Dryer Repair in St. George, UT | Triple H',
+    h1: 'Washer &amp; Dryer Repair in St. George',
     description: /<meta name="description" content="Washer and appliance repair in St\. George and Washington County\./,
     repairFaq: /repair this washer or replace/i,
     blogPost: '/blog/washer-wont-drain.html',
