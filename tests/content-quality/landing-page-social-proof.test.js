@@ -104,10 +104,10 @@ for (const name of PAGES_WITHOUT_SCHEDULE) {
   });
 }
 
-test('index.html has the full written reviews wall (4 verified quotes); aggregateRating is the GBP total (9)', () => {
+test('index.html has the full written reviews wall (7 verified quotes); aggregateRating is the GBP total (9)', () => {
   const html = read('index.html');
   assert.match(html, /<section id="reviews">/);
   const cardCount = (html.match(/<div class="review-card" data-reveal>/g) || []).length;
-  assert.equal(cardCount, 4, 'the homepage should carry exactly the verified written quotes -- do not invent cards for star-only Google reviews');
+  assert.equal(cardCount, 7, 'the homepage should carry exactly the verified written quotes -- do not invent cards for star-only Google reviews');
   assert.match(html, /"reviewCount": "9"/);
 });

@@ -121,7 +121,7 @@ test('AggregateRating stays 5.0 / 9; wall stays 4 written cards; compact FAQ is 
   const schema = schemaOf(INDEX);
   assert.equal(schema.aggregateRating.ratingValue, '5.0');
   assert.equal(Number(schema.aggregateRating.reviewCount), 9);
-  assert.equal((INDEX.match(/class="review-card"/g) || []).length, 4);
+  assert.equal((INDEX.match(/class="review-card"/g) || []).length, 7);
   const faqSchemas = [...INDEX.matchAll(/"@type": "FAQPage"/g)];
   assert.equal(faqSchemas.length, 1, 'do not add a second FAQPage for the compact block');
 });

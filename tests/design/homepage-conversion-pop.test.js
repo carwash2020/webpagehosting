@@ -109,7 +109,7 @@ test('teardown stays on the page but no longer sits between trust and services',
 test('AggregateRating stays honest at 5.0 / 9 matching GBP; wall stays 4 written cards', () => {
   const schema = schemaOf(INDEX);
   const cards = (INDEX.match(/class="review-card"/g) || []).length;
-  assert.equal(cards, 4, 'do not invent extra quote cards');
+  assert.equal(cards, 7, 'do not invent extra quote cards beyond the 7 real, verified reviews (3 added 2026-10-22)');
   assert.equal(schema.aggregateRating.ratingValue, '5.0');
   assert.equal(Number(schema.aggregateRating.reviewCount), 9);
   assert.match(INDEX, /5\.0 from 9 Google reviews/);
