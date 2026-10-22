@@ -180,3 +180,21 @@ test('the checkmark is a hosted GIF, not the old plain HTML/CSS circle, and only
   const guest = resendCalls.find((c) => c.to === 'guest@example.com');
   assert.match(guest.html, /booking-confirmed-check\.gif/);
 });
+
+// 2026-10-22: Resend's deliverability advisor flags a link whose domain
+// doesn't match the sending domain as a spam-filter risk -- the "Add to
+// Google Calendar" link used to be a raw calendar.google.com href directly
+// in the email. It's now routed through add-to-calendar.html on our own
+// domain, which validates the real target is genuinely calendar.google.com
+// before following it (see that page's own tests).
+test('the "Add to Google Calendar" link points at our own domain, not a raw calendar.google.com href', async () => {
+  const { insert, resendCalls } = loadFunction({});
+  await insert({ ...BASE_BOOKING, name: 'Jane Smith', address: '1 Main St' });
+  const guest = resendCalls.find((c) => c.to === 'guest@example.com');
+  assert.doesNotMatch(guest.html, /href="https:\/\/calendar\.google\.com/, 'no raw calendar.google.com href in the email itself');
+  assert.match(guest.html, /href="https:\/\/www\.triplehenterprisesllc\.biz\/add-to-calendar\.html\?u=/);
+  const match = guest.html.match(/add-to-calendar\.html\?u=([^"]+)/);
+  assert.ok(match, 'expected the add-to-calendar.html link with a u= param');
+  const realTarget = decodeURIComponent(match[1]);
+  assert.match(realTarget, /^https:\/\/calendar\.google\.com\/calendar\/render\?/, 'the wrapped target is still the real Google Calendar URL');
+});

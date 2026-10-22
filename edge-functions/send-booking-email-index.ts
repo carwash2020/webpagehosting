@@ -245,6 +245,15 @@ function googleCalendarUrl(booking: Record<string, unknown>): string {
   return "https://calendar.google.com/calendar/render?" + params.join("&");
 }
 
+// Routed through our own domain (2026-10-22), not a raw calendar.google.com
+// href -- Resend's deliverability advisor flags links whose domain doesn't
+// match the sending domain as a spam-filter risk. add-to-calendar.html does
+// the actual hop, after checking the target is genuinely calendar.google.com
+// (see that file's own comment for why it isn't a generic open redirect).
+function calendarLinkUrl(booking: Record<string, unknown>): string {
+  return `${SITE_ORIGIN}/add-to-calendar.html?u=${encodeURIComponent(googleCalendarUrl(booking))}`;
+}
+
 // Sends one email through Resend. With a calendar attachment, a
 // rejected send is retried once WITHOUT it -- the confirmation itself
 // always matters more than the file.
@@ -436,7 +445,7 @@ function buildGuestEmailHtml(booking: Record<string, unknown>): string {
         <tr>
           <td style="padding: 20px 28px 28px; font-family: -apple-system, Helvetica, Arial, sans-serif;">
             <p style="color: #777; font-size: 13px; line-height: 1.5; margin: 0 0 20px;">We'll arrive sometime within that window -- the actual visit may run longer once we're there and can see what's involved.</p>
-            <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 20px;"><strong>Add it to your calendar:</strong> open the attached calendar file, or <a href="${escapeHtml(googleCalendarUrl(booking))}" style="color: #ff8000;">add it to Google Calendar</a>. Either way your phone reminds you the day before and 2 hours before.</p>
+            <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 20px;"><strong>Add it to your calendar:</strong> open the attached calendar file, or <a href="${escapeHtml(calendarLinkUrl(booking))}" style="color: #ff8000;">add it to Google Calendar</a>. Either way your phone reminds you the day before and 2 hours before.</p>
             <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 20px;">Need to reschedule or cancel? <a href="https://www.triplehenterprisesllc.biz/manage-booking.html?token=${escapeHtml(booking.cancel_token)}" style="color: #ff8000;">Manage your booking here</a>, or just reply to this email or give us a call.</p>
             <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0;">Talk soon,<br><strong>Triple H Enterprises</strong></p>
           </td>
@@ -476,7 +485,7 @@ function buildGuestEmailText(booking: Record<string, unknown>): string {
     "",
     "We'll arrive sometime within that window -- the actual visit may run longer once we're there and can see what's involved.",
     "",
-    `Add it to your calendar: open the attached calendar file, or add it to Google Calendar: ${googleCalendarUrl(booking)}`,
+    `Add it to your calendar: open the attached calendar file, or add it to Google Calendar: ${calendarLinkUrl(booking)}`,
     "",
     `Need to reschedule or cancel? Manage your booking here: https://www.triplehenterprisesllc.biz/manage-booking.html?token=${booking.cancel_token}`,
     "",
@@ -584,7 +593,7 @@ function buildRescheduledGuestEmailHtml(booking: Record<string, unknown>, oldBoo
         </tr>
         <tr>
           <td style="padding: 20px 28px 28px; font-family: -apple-system, Helvetica, Arial, sans-serif;">
-            <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 20px;"><strong>Update your calendar:</strong> open the attached file, or <a href="${escapeHtml(googleCalendarUrl(booking))}" style="color: #ff8000;">add the new time to Google Calendar</a>.</p>
+            <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 20px;"><strong>Update your calendar:</strong> open the attached file, or <a href="${escapeHtml(calendarLinkUrl(booking))}" style="color: #ff8000;">add the new time to Google Calendar</a>.</p>
             <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 20px;">Need to change it again? <a href="${escapeHtml(manageUrl(booking))}" style="color: #ff8000;">Manage your booking here</a>, or just reply to this email or give us a call.</p>
             <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0;">See you then,<br><strong>Triple H Enterprises</strong></p>
           </td>
@@ -606,7 +615,7 @@ function buildRescheduledGuestEmailText(booking: Record<string, unknown>, oldBoo
     `(Was: ${was.dateLabel}, ${was.timeLabel})`,
     ...(booking.address ? [`Address: ${booking.address}`] : []),
     "",
-    `Update your calendar: open the attached file, or add the new time to Google Calendar: ${googleCalendarUrl(booking)}`,
+    `Update your calendar: open the attached file, or add the new time to Google Calendar: ${calendarLinkUrl(booking)}`,
     "",
     `Need to change it again? Manage your booking here: ${manageUrl(booking)}`,
     "",

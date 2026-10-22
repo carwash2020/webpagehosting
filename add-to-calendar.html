@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Add to your calendar - Triple H Enterprises</title>
+<style>
+  body {
+    background: #0a0a0a;
+    color: #e8e8e8;
+    font-family: -apple-system, Helvetica, Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    margin: 0;
+    text-align: center;
+    padding: 24px;
+  }
+  a { color: #ff8000; }
+</style>
+</head>
+<body>
+  <div>
+    <p id="redirectMsg">Taking you to Google Calendar&hellip;</p>
+    <p id="fallback" style="display: none;"><a href="/booking.html">Return to Triple H Enterprises</a></p>
+  </div>
+  <script>
+  // Redirect-through-our-domain for the "Add to Google Calendar" link in
+  // booking confirmation/reschedule emails (2026-10-22). Resend's
+  // deliverability advisor flags links whose domain doesn't match the
+  // sending domain as a spam-filter risk -- send-booking-email-index.ts
+  // used to put a raw calendar.google.com href directly in the email;
+  // now it points here instead, on our own domain, and this page does
+  // the actual hop to Google.
+  //
+  // The real destination is passed in the `u` query param (the exact
+  // same calendar.google.com/calendar/render?... URL the email always
+  // built). This is intentionally NOT a generic "redirect to any URL"
+  // page -- that would be an open redirect, letting anyone craft a
+  // triplehenterprisesllc.biz link that silently sends a visitor
+  // somewhere else entirely, trading on this domain's trust. The target
+  // is checked below and only ever followed when it's genuinely
+  // https://calendar.google.com -- anything else shows a plain message
+  // and a way back, never a redirect.
+  (function () {
+    var target = new URLSearchParams(window.location.search).get('u');
+    var ok = false;
+    if (target) {
+      try {
+        var url = new URL(target);
+        ok = url.protocol === 'https:' && url.hostname === 'calendar.google.com';
+      } catch (e) {
+        ok = false;
+      }
+    }
+    if (ok) {
+      // Indirection purely for testability: jsdom (used by this repo's
+      // own tests) doesn't implement real page navigation at all --
+      // window.location.replace() always silently no-ops there. A test
+      // can set window.__addToCalendarRedirect before this script runs
+      // to observe the computed target instead. In a real browser this
+      // global is never set, so the real redirect always happens.
+      (window.__addToCalendarRedirect || function (url) { window.location.replace(url); })(target);
+    } else {
+      document.getElementById('redirectMsg').textContent = 'That calendar link looks invalid.';
+      document.getElementById('fallback').style.display = 'block';
+    }
+  })();
+  </script>
+</body>
+</html>
