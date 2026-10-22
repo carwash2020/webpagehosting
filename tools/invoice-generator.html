@@ -1392,6 +1392,7 @@
     const q = loadQuoteLog().find(x => x.id === id);
     if (!q) return null;
     const actions = [];
+    actions.push({ kind: 'extra', icon: 'mail', label: q.clientEmail ? 'Resend' : 'Send to an email', onClick: () => resendQuoteToClient(id) });
     const clientHref = invoiceClientHref(q);
     if (clientHref) actions.push({ kind: 'open', icon: 'user-plus', label: 'Open client', onClick: () => { window.location.href = clientHref; } });
     if (q.jobRefId) actions.push({ kind: 'open', icon: 'wrench', label: 'Open job', onClick: () => { window.location.href = '/tools/job-detail.html?id=' + encodeURIComponent(q.jobRefId); } });
@@ -1416,7 +1417,10 @@
       getMenu: (row) => quoteRowMenu(Number(row.dataset.quoteId)),
       buttonHost: '.inv-row',
       longPress: false,
-      actions: [{ kind: 'delete', selector: '.inv-row-actions button[onclick^="deleteQuoteLogEntry"]', label: 'Delete' }],
+      actions: [
+        { kind: 'extra', selector: '.inv-row-actions button[onclick^="resendQuoteToClient"]', label: 'Resend' },
+        { kind: 'delete', selector: '.inv-row-actions button[onclick^="deleteQuoteLogEntry"]', label: 'Delete' },
+      ],
     });
   }
 
@@ -1491,6 +1495,103 @@
       const result = await res.json().catch(() => ({}));
       if (result && result.ok) {
         showToast('Invoice #' + inv.invoiceNumber + ' resent to ' + inv.clientEmail + '.');
+      } else {
+        showToast('Resend failed: ' + ((result && result.error) || 'unknown error'), { type: 'error' });
+      }
+    } catch (e) {
+      showToast('Resend failed: ' + (e.message || String(e)), { type: 'error' });
+    }
+  }
+
+  // Re-sends an already-logged quote to its client (2026-10-22) --
+  // quotes had no resend at all, even though the Download Estimate PDF
+  // error for a bad email told Steve to "fix it and use Resend from
+  // the Recent Quotes list."
+  //
+  // Deliberately does NOT just call sync-quote-to-portal the way
+  // resendInvoiceToClient above does -- that function only emails the
+  // client when the quote is new to their portal (isNewQuote) or they
+  // are a brand-new portal client (isNewClient). A genuine resend of
+  // an already-synced quote to the SAME email is neither, so it would
+  // silently upsert the row and email nobody -- the exact bug
+  // portal-invoice-quote-resend.test.js documents and fixed for
+  // clients.html's resendPortalQuote/resendPortalInvoice. This follows
+  // that same fix here: when the email isn't changing, call
+  // send-quote-notification directly so an email always actually
+  // goes out (or a real "they opted out" answer comes back -- not a
+  // false "resent"). Changing the destination email is a different
+  // case -- that still needs sync-quote-to-portal to move the portal
+  // row (and invite a genuinely new client), so that path is unchanged.
+  async function resendQuoteToClient(quoteId) {
+    const log = loadQuoteLog();
+    const q = log.find(x => x.id === quoteId);
+    if (!q) { showToast('Could not find that quote in the log.', { type: 'error' }); return; }
+    const oldEmail = (q.clientEmail || '').trim();
+    const values = await showPromptForm(`Resend estimate #${q.quoteNumber}` + (q.clientName ? ` (${q.clientName})` : ''), [
+      { id: 'email', label: 'Send to', type: 'email', defaultValue: oldEmail, placeholder: 'name@example.com' },
+    ], {
+      confirmText: 'Send',
+      validate: (v) => (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email) ? null : 'Enter a valid email address.'),
+    });
+    if (!values) return;
+    const email = values.email;
+    const emailChanged = email.toLowerCase() !== oldEmail.toLowerCase();
+    if (emailChanged) {
+      if (oldEmail && !(await showConfirm(`Send estimate #${q.quoteNumber} to ${email} instead of ${oldEmail}? It moves to ${email}'s portal, and ${oldEmail} will no longer see it there.`, { confirmText: 'Send' }))) return;
+      q.clientEmail = email;
+      saveQuoteLog(log);
+      if (typeof mirrorQuoteToRelational === 'function') mirrorQuoteToRelational(q);
+      if (typeof renderQuoteLog === 'function') renderQuoteLog();
+    }
+
+    try {
+      if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+      if (emailChanged) {
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/sync-quote-to-portal`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${getAuthToken()}`,
+          },
+          body: JSON.stringify({
+            source_quote_id: q.id,
+            client_email: q.clientEmail,
+            client_name: q.clientName,
+            quote_number: q.quoteNumber,
+            quote_date: q.date,
+            description: q.jobRefTitle || null,
+            line_items: q.line_items,
+            total: q.total,
+          }),
+        });
+        const result = await res.json().catch(() => ({}));
+        if (result && result.ok) {
+          showToast('Estimate #' + q.quoteNumber + ' resent to ' + q.clientEmail + '.');
+        } else {
+          showToast('Resend failed: ' + ((result && result.error) || 'unknown error'), { type: 'error' });
+        }
+        return;
+      }
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/send-quote-notification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${getAuthToken()}`,
+        },
+        body: JSON.stringify({
+          client_email: q.clientEmail,
+          client_name: q.clientName,
+          quote_number: q.quoteNumber,
+          total: Number(q.total),
+        }),
+      });
+      const result = await res.json().catch(() => ({}));
+      if (result && result.ok && result.skipped) {
+        showToast('Not sent -- this client has turned off invoice/quote emails in their portal Settings.', { type: 'error' });
+      } else if (result && result.ok) {
+        showToast('Estimate #' + q.quoteNumber + ' resent to ' + q.clientEmail + '.');
       } else {
         showToast('Resend failed: ' + ((result && result.error) || 'unknown error'), { type: 'error' });
       }
@@ -2901,6 +3002,12 @@
       quoteNumber: document.getElementById('quoteNumber').value,
       clientName: quoteClientNameVal || '(no name)',
       clientId: quoteClientId,
+      // Saved on the entry itself (2026-10-22) -- previously only ever
+      // passed straight to sync-quote-to-portal and never kept, so a
+      // quote sent once had no record of who it went to and the
+      // "Resend" action the error message pointed at couldn't exist.
+      // Mirrors clientEmail on the invoice log exactly.
+      clientEmail: document.getElementById('quoteClientEmail').value.trim() || null,
       date: document.getElementById('quoteDate').value || todayDateStrBusinessTz(),
       subtotal: totals.subtotal,
       tax: totals.tax || 0,
@@ -3013,6 +3120,7 @@
             <span class="inv-row-end"><span class="inv-row-amt">${money(q.total)}</span>${pill}</span>
           </button>
           <span class="inv-row-actions">
+            ${q.clientEmail ? `<button class="small-btn" onclick="resendQuoteToClient(${q.id})">Resend</button>` : ''}
             <button class="small-btn" style="color:#e05252; border-color:#e05252;" onclick="deleteQuoteLogEntry(${q.id})" aria-label="Delete this quote">Delete</button>
           </span>
         </div>
@@ -3027,6 +3135,7 @@
     const q = loadQuoteLog().find(x => x.id === id);
     if (!q) return;
     const actions = [];
+    actions.push({ label: q.clientEmail ? 'Resend' : 'Send to an email', onClick: () => resendQuoteToClient(id) });
     const clientHref = invoiceClientHref(q);
     if (clientHref) actions.push({ label: 'Open client', onClick: () => { window.location.href = clientHref; } });
     if (q.jobRefId) actions.push({ label: 'Open job', onClick: () => { window.location.href = '/tools/job-detail.html?id=' + encodeURIComponent(q.jobRefId); } });

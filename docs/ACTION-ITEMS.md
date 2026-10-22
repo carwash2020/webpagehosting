@@ -1222,13 +1222,17 @@ a restyle slip, so neither was changed.
   extra request on the other pages). Options: accept it; or read one
   unpaid-invoice count on every portal page (one small `head`/count query)
   so the dot means the same thing everywhere.
-- **Quote email error points at a feature that doesn't exist.** With a
+- ~~**Quote email error points at a feature that doesn't exist.**~~ **Done
+  (2026-10-22):** `logQuote()` now saves `clientEmail` on the entry, and a
+  real `resendQuoteToClient()` exists (Recent Quotes row, row menu, and
+  action sheet) -- see README.md's 2026-10-22 entry for the full writeup,
+  including why it was built the correct way from the start rather than
+  copying the invoice side's own latent resend bug (logged separately,
+  not fixed here: `docs/specialist-logs/bugfix.md`). Original note: with a
   malformed client email, Download Estimate PDF says "Fix it and use
   Resend from the Recent Quotes list" (`tools/invoice-generator.html`
-  ~2671). Quotes have no Resend (only invoices do), and saved quotes don't
-  store `clientEmail` at all, so there is nothing to resend with. Options:
-  reword it ("fix the email and download again"), or store the email on the
-  quote and add a Resend like invoices have (a feature, features lane).
+  ~2671). Quotes had no Resend (only invoices did), and saved quotes
+  didn't store `clientEmail` at all, so there was nothing to resend with.
 
 From the second pass (2026-09-29, #445-#469 and the portal leak fixes):
 
