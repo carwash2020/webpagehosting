@@ -1451,6 +1451,19 @@
   // sync-invoice-to-portal moves the portal row to that address: the new
   // address gets it (an invite if they're new to the portal), the old one
   // stops seeing it.
+  //
+  // Split by whether the email actually changed (2026-10-22, found while
+  // building quotes' own resend -- see resendQuoteToClient below): calling
+  // sync-invoice-to-portal unconditionally silently emails nobody on the
+  // ordinary resend case (same email, already synced), since that
+  // function only triggers send-invoice-notification when the invoice is
+  // new to the portal or the client is brand new to it -- exactly the bug
+  // already found and fixed once for clients.html's Portal panel
+  // (resendPortalInvoice, see tests/tools/portal-invoice-quote-resend.test.js).
+  // An unchanged email now calls send-invoice-notification directly, so a
+  // resend always genuinely sends (or reports a real opt-out). A changed
+  // email still needs sync-invoice-to-portal, since that's what actually
+  // moves/creates the portal row.
   async function resendInvoiceToClient(invoiceId) {
     const log = loadInvoiceLog();
     const inv = log.find(i => i.id === invoiceId);
@@ -1464,7 +1477,8 @@
     });
     if (!values) return;
     const email = values.email;
-    if (email.toLowerCase() !== oldEmail.toLowerCase()) {
+    const emailChanged = email.toLowerCase() !== oldEmail.toLowerCase();
+    if (emailChanged) {
       if (oldEmail && !(await showConfirm(`Send invoice #${inv.invoiceNumber} to ${email} instead of ${oldEmail}? It moves to ${email}'s portal, and ${oldEmail} will no longer see it there.`, { confirmText: 'Send' }))) return;
       inv.clientEmail = email;
       saveInvoiceLog(log);
@@ -1474,7 +1488,34 @@
 
     try {
       if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/sync-invoice-to-portal`, {
+      if (emailChanged) {
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/sync-invoice-to-portal`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${getAuthToken()}`,
+          },
+          body: JSON.stringify({
+            source_invoice_id: inv.id,
+            client_email: inv.clientEmail,
+            client_name: inv.clientName,
+            invoice_number: inv.invoiceNumber,
+            invoice_date: inv.date,
+            description: inv.jobRefTitle || null,
+            line_items: inv.line_items,
+            total: inv.total,
+          }),
+        });
+        const result = await res.json().catch(() => ({}));
+        if (result && result.ok) {
+          showToast('Invoice #' + inv.invoiceNumber + ' resent to ' + inv.clientEmail + '.');
+        } else {
+          showToast('Resend failed: ' + ((result && result.error) || 'unknown error'), { type: 'error' });
+        }
+        return;
+      }
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/send-invoice-notification`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1482,18 +1523,17 @@
           'Authorization': `Bearer ${getAuthToken()}`,
         },
         body: JSON.stringify({
-          source_invoice_id: inv.id,
           client_email: inv.clientEmail,
           client_name: inv.clientName,
           invoice_number: inv.invoiceNumber,
-          invoice_date: inv.date,
+          total: Number(inv.total),
           description: inv.jobRefTitle || null,
-          line_items: inv.line_items,
-          total: inv.total,
         }),
       });
       const result = await res.json().catch(() => ({}));
-      if (result && result.ok) {
+      if (result && result.ok && result.skipped) {
+        showToast('Not sent -- this client has turned off invoice/quote emails in their portal Settings.', { type: 'error' });
+      } else if (result && result.ok) {
         showToast('Invoice #' + inv.invoiceNumber + ' resent to ' + inv.clientEmail + '.');
       } else {
         showToast('Resend failed: ' + ((result && result.error) || 'unknown error'), { type: 'error' });
