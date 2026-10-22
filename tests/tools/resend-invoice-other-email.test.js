@@ -53,7 +53,11 @@ function setup({ invoice = INVOICE, confirm = true } = {}) {
   return { w, out, field, click, saved };
 }
 
-test('the email field starts with the email on file, and sending it unchanged works as before', async () => {
+test('the email field starts with the email on file, and sending it unchanged now sends via send-invoice-notification', async () => {
+  // 2026-10-22: an unchanged email no longer goes through
+  // sync-invoice-to-portal at all -- see resend-invoice-actually-emails.test.js
+  // for why (it only emails on a genuinely new invoice/quote or client,
+  // so a plain resend used to silently email nobody).
   const { w, out, field, click, saved } = setup();
   const p = w.__r(INVOICE.id);
   await new Promise((r) => setTimeout(r, 0));
@@ -62,10 +66,9 @@ test('the email field starts with the email on file, and sending it unchanged wo
   click('Send');
   await p;
   assert.equal(out.sent.length, 1);
-  assert.equal(out.sent[0].url, 'https://x.supabase.co/functions/v1/sync-invoice-to-portal');
+  assert.equal(out.sent[0].url, 'https://x.supabase.co/functions/v1/send-invoice-notification');
   assert.equal(out.sent[0].body.client_email, 'old@example.com');
   assert.equal(out.sent[0].body.total, 212.66);
-  assert.deepEqual(out.sent[0].body.line_items, INVOICE.line_items);
   assert.equal(out.confirms.length, 0, 'no second question when the email is unchanged');
   assert.equal(out.mirrored.length, 0);
   assert.equal(saved().clientEmail, 'old@example.com');

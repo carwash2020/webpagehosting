@@ -223,7 +223,9 @@ test('the invoice sheet opens the client (from the registry) and the job; a quot
   assert.deepEqual(shown.labels, ['View invoice', 'Mark Paid', 'Send to an email', 'Open client', 'Open job', 'Delete']);
   assert.equal(w.invoiceClientHref({ clientId: 'c1' }), '/tools/client-detail.html?id=c1');
   w.openQuoteActions(5);
-  assert.deepEqual(shown.labels, ['Open client', 'Open job', 'Delete']);
+  // Resend leads here too now (2026-10-22) -- quotes had no resend at all
+  // before, same shape as the invoice sheet's own "Send to an email".
+  assert.deepEqual(shown.labels, ['Send to an email', 'Open client', 'Open job', 'Delete']);
   assert.equal(shown.title, 'Sarah Miller · #Q-5 · $420.00');
   w.close();
 });
