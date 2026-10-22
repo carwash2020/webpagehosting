@@ -20,7 +20,7 @@ function reviewQuotes(html) {
 
 test('homepage hero and Book Instantly each carry compact proof that quotes a real on-site review', () => {
   const quotes = reviewQuotes(INDEX);
-  assert.ok(quotes.length === 4, 'homepage wall stays at 4 written reviews');
+  assert.ok(quotes.length === 7, 'homepage wall now carries 7 written reviews (3 added 2026-10-22)');
   const washer = quotes.find((q) => q.includes('Steven was wonderful! Got our washer fixed quickly'));
   assert.ok(washer, 'expected the washer review on the homepage wall');
 
@@ -42,7 +42,7 @@ test('homepage hero and Book Instantly each carry compact proof that quotes a re
 
 test('compact proof does not add review cards; count matches Google Business Profile (5.0 / 9)', () => {
   const cards = INDEX.match(/class="review-card"/g) || [];
-  assert.equal(cards.length, 4, 'homepage wall stays at the 4 written, verified quotes');
+  assert.equal(cards.length, 7, 'homepage wall now carries 7 written, verified quotes (3 added 2026-10-22)');
   assert.match(INDEX, /"reviewCount": "9"/);
   assert.match(INDEX, /5\.0 from 9 Google reviews/);
   assert.doesNotMatch(INDEX, /5\.0 from 4 Google reviews/);
