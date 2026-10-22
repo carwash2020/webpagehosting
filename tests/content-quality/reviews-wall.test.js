@@ -20,6 +20,13 @@
 // 2026-10-12 owner update: GBP total is now 9 (was 7). Wall stays at
 // the same 4 verified written quotes -- the 2 new reviews are
 // star-only, same as before.
+//
+// 2026-10-22: added 3 new verified written Google reviews (Arlene
+// Compton, tori Frampton, Ashley Palmer -- all 5-star), placed before
+// the existing 4, newest first. Wall is now 7 written cards, all
+// anonymized as "Verified Customer on Google" per house style.
+// aggregateRating stays at 5.0 / 9 (unchanged, already matched the
+// GBP total before this change).
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -50,13 +57,13 @@ function schemaOf(html) {
 
 test('the homepage wall has one review-card per review actually written', () => {
   const cardCount = (INDEX.match(/class="review-card"/g) || []).length;
-  assert.equal(cardCount, 4);
+  assert.equal(cardCount, 7);
 });
 
 test("the homepage's aggregateRating matches Google Business Profile (5.0 from 9), not invented Review objects", () => {
   const cardCount = (INDEX.match(/class="review-card"/g) || []).length;
   const schema = schemaOf(INDEX);
-  assert.equal(cardCount, 4, 'wall stays at the 4 written, verified quotes');
+  assert.equal(cardCount, 7, 'wall stays at the 7 written, verified quotes');
   assert.equal(schema.aggregateRating.ratingValue, '5.0');
   assert.equal(Number(schema.aggregateRating.reviewCount), 9, 'reviewCount matches the owner-confirmed GBP total');
   assert.doesNotMatch(INDEX, /"@type":\s*"Review"/, 'do not invent individual Review JSON-LD objects');
@@ -79,16 +86,23 @@ test('landing pages do not claim an aggregateRating they have no visible reviews
   }
 });
 
-test('the three newest reviews are present verbatim, newest first', () => {
+test('the 3 newest reviews (added 2026-10-22) are present verbatim, newest first', () => {
   const quotes = [...INDEX.matchAll(/<p class="review-quote">"([^"]*)"<\/p>/g)].map((m) => m[1]);
-  assert.equal(quotes[0], 'Awesome guy to work with!');
-  assert.match(quotes[1], /Steven was wonderful! Got our washer fixed quickly/);
-  assert.match(quotes[2], /Best experience ever with a handyman/);
+  assert.match(quotes[0], /Super fast and efficient handyman/);
+  assert.match(quotes[1], /He did a great job! He went out on a Saturday quick/);
+  assert.match(quotes[2], /I highly recommend Triple H for any handyman work/);
 });
 
-test('the 4th review (Jilleen Walker, added 2026-09-16) is present verbatim', () => {
+test('the 4 previously-newest reviews are still present verbatim, in order, after the 3 new ones', () => {
   const quotes = [...INDEX.matchAll(/<p class="review-quote">"([^"]*)"<\/p>/g)].map((m) => m[1]);
-  assert.match(quotes[3], /Steve such a handsome guy very fast and efficient/);
+  assert.equal(quotes[3], 'Awesome guy to work with!');
+  assert.match(quotes[4], /Steven was wonderful! Got our washer fixed quickly/);
+  assert.match(quotes[5], /Best experience ever with a handyman/);
+});
+
+test('the 7th review (Jilleen Walker, added 2026-09-16) is present verbatim', () => {
+  const quotes = [...INDEX.matchAll(/<p class="review-quote">"([^"]*)"<\/p>/g)].map((m) => m[1]);
+  assert.match(quotes[6], /Steve such a handsome guy very fast and efficient/);
 });
 
 test('no carousel machinery (slider track, dots, autoplay, swipe) remains -- this is a static wall now', () => {
