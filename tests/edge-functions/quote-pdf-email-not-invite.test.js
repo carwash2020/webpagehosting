@@ -101,14 +101,16 @@ test('send-quote-notification attaches the PDF and says "attached" when pdf_base
   assert.match(resendCalls[0].subject, /Your estimate from Triple H Enterprises/);
   assert.match(resendCalls[0].html, /Your estimate is attached/);
   assert.match(resendCalls[0].html, /is attached to this email as a PDF/);
+  assert.equal(resendCalls[0].bcc, 'steve@triplehenterprisesllc.biz', 'Steve gets a copy of the actual estimate email, BCC on the same send');
 });
 
-test('send-quote-notification without pdf_base64 falls back to the PDF-less "review" copy (the resend path)', async () => {
+test('send-quote-notification without pdf_base64 falls back to the PDF-less "review" copy (the resend path) and does NOT BCC Steve', async () => {
   const { call, resendCalls } = setupNotify();
   await call({ client_email: 'client@example.com', client_name: 'Jane Smith', quote_number: 'EST-1', total: 250, has_portal_account: true });
   assert.equal(resendCalls[0].attachments, undefined);
   assert.match(resendCalls[0].subject, /New quote to review/);
   assert.match(resendCalls[0].html, /You have a new quote to review/);
+  assert.equal(resendCalls[0].bcc, undefined, 'no BCC on the PDF-less fallback -- this is not "the estimate emailed to the customer"');
 });
 
 test('the "review online" CTA only appears when has_portal_account is true', async () => {

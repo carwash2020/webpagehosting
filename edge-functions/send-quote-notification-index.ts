@@ -25,6 +25,13 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const LEAD_EMAIL_FROM = Deno.env.get("LEAD_EMAIL_FROM") || "";
 const PORTAL_URL = "https://www.triplehenterprisesllc.biz/portal/quotes.html";
+// Steve gets a copy whenever the actual estimate PDF goes out (2026-10-23,
+// requested directly) -- BCC'd on the same send, so it's the exact email
+// the client received, not a separate re-composed copy that could drift.
+// Deliberately only when hasPdf: a PDF-less fallback send (the
+// resend-to-same-email path, see the header comment) isn't "the estimate
+// emailed to the customer" in the sense meant here.
+const STEVE_EMAIL = "steve@triplehenterprisesllc.biz";
 const LOGO_URL = "https://www.triplehenterprisesllc.biz/images/logo-signature-email.png";
 
 const ALLOWED_ORIGIN = "https://www.triplehenterprisesllc.biz";
@@ -312,6 +319,7 @@ Deno.serve(async (req: Request) => {
         filename: (typeof pdf_filename === "string" && pdf_filename.trim()) || `${quote_number}.pdf`,
         content: pdf_base64,
       }];
+      emailPayload.bcc = STEVE_EMAIL;
     }
 
     const emailRes = await fetch("https://api.resend.com/emails", {
