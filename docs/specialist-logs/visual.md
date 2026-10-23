@@ -3,6 +3,77 @@
 Started 2026-09-16, alongside the `tripleh-visual` skill. See `README.md` in
 this directory for how these logs work.
 
+## 2026-10-23 -- invoice/estimate PDF redesign: dark masthead, Inter, job box, CTA card
+
+Approved spec, scoped tightly to `generatePDF()`/`generateQuotePDF()`
+(and `rebuildInvoicePdf()`, the no-archive viewer that shares their
+exact blocks) in `tools/invoice-generator.html` -- NOT the 2026-09-24
+white letterhead every other document `js/pdf-layout.js` draws (job
+sheets, contracts, service history, portal receipts/estimates). Those
+keep Anton/Oswald/Archivo and the white letterhead, untouched.
+
+- **New, invoice/estimate-only functions** in `js/pdf-layout.js`:
+  `pdfDrawInvoiceMasthead`/`pdfDrawInvoiceHeader` (dark bar, logo,
+  wordmark, large orange title+number, orange stripe), `pdfDrawJobBox`
+  (light-orange box), `pdfParseApplianceInfo` (regex pull of
+  Model/Serial out of the free-text job description -- there is no
+  structured appliance field anywhere in this app, checked directly).
+  First cut matched "Model and Serial numbers vary per unit" as if
+  "and"/"numbers" were real values -- fixed by requiring the captured
+  token contain a digit (`pdfParseApplianceInfo`'s `looksLikeCode`).
+  Caught only by actually rendering a PDF with that exact sentence and
+  looking at it; would never have shown up from reading the regex.
+- **Shared functions threaded with an opt-in `theme: 'inter'` / `cta` /
+  `darkHeader` / `taxRatePct`** (`pdfDrawInfoColumns`, `drawPdfTable`,
+  `pdfDrawSummary`, `drawPdfTotalsBlock`, `pdfDrawNoteBox`,
+  `drawPdfFooter`/`pdfFinalize`) rather than changed outright --
+  every other caller omits these and renders exactly as before.
+  `drawPdfLineItemsTable` itself was changed in place (dark header,
+  zebra, sub-label, Taxable Yes/No) since it has no other caller.
+- **Inter, for real**: fetched the actual Google Fonts static TTFs
+  (400/600/700) and subset them with `pyftsubset` the same way the
+  existing fonts were built (Latin + the punctuation this file uses),
+  ~34KB each -- `fonts/pdf/Inter-{Regular,SemiBold,Bold}.ttf`,
+  registered as styles normal/bold/black. Not a fallback.
+- **One-page budget was a real fight.** The first pass (dark masthead
+  at the old letterhead's generous padding + a 92-100pt CTA/stamp
+  reservation) pushed a totally normal 4-item invoice WITH a warranty
+  note onto page 2 by about 2.5pt -- only visible by actually rendering
+  and checking `pdfContentBottom(doc)` against the real y after each
+  block, not by eyeballing the drawing code. Trimmed the masthead
+  (108->96pt bar, tighter line spacing), the job box padding, the CTA
+  card's minimum height (100->78), and two call-site gaps, recovering
+  ~55pt. A normal job (handful of items, +warranty note) now has ~45pt
+  to spare on one page; 10 line items across 4 units genuinely needs a
+  second page, which paginates correctly onto the existing light
+  `pdfDrawContinuationHeader` (not worth a second dark running-header
+  design for a case this template exists to avoid).
+- **Verified by actually rendering real jsPDF 2.5.1 output** (`npm pack
+  jspdf@2.5.1` -- the jsdelivr CDN is proxy-blocked in this sandbox,
+  the npm registry isn't) via Playwright against a local
+  `python3 -m http.server`, then `pdftoppm` to PNG and looking at it.
+  Four scenarios: a normal invoice with model/serial + warranty
+  (1 page), one with no appliance data and a discount (1 page, no
+  blank Model:/Serial: rows), a 10-item multi-unit invoice (genuinely
+  2 pages, continuation header correct), and a normal estimate with a
+  CTA card and valid-until date (1 page). No home address anywhere.
+- **"Valid until" and the Payment CTA's method text were inferred**,
+  not given: there's no valid-until field on the estimate form (added
+  quoteDate + 30 days, stated again in the disclaimer's own text) and
+  the CTA card says "See payment details below" rather than naming a
+  method itself, so it never contradicts the editable `paymentText`
+  field or re-opens the Venmo/Cash App question that test suite
+  already settled.
+- Tests: full existing suite re-run (`invoice-line-item-type`,
+  `job-sheet-and-invoice-warranty`, `receipt-pdf-stamp-fix`,
+  `invoice-cleanup-and-archive`, `local-business-schema`,
+  `finance-split`, `smoke-job-invoice-paid`, `quotes`/`quotes-pdf`,
+  `service-history-pdf`, `dashboard-invoice-pdf`, `client-lookup`,
+  `app-feel-haptics-longpress`, `batch2-labels-and-loading`,
+  `check-undefined-vars`) -- all green, nothing needed updating since
+  the redesign kept every literal string/line those tests pin.
+  `check-consistency`/`check-undefined-vars`/`check-links` all clean.
+
 ## 2026-09-18 -- fixed both hero-lead-form defects from the #291 review
 
 Connor confirmed via Tha Boss/the hub to apply the two real defects

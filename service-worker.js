@@ -713,7 +713,7 @@
 // specificity) when there's nothing scheduled, and unhides it the
 // moment a real job exists again. workspace.html is precached. Same
 // reasoning as every prior bump in this file's history.
-const CACHE_NAME = 'th-workspace-v410'; // precache-fingerprint:c1f95aa84807
+const CACHE_NAME = 'th-workspace-v413'; // precache-fingerprint:bea4d03c258a
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/route-planner.html', '/tools/review-request.html', '/tools/login.html',
@@ -749,11 +749,14 @@ const PRECACHE_URLS = [
   '/tools/reset-password.html', '/tools/tools-tour.js',
   // The shared jsPDF document system (U15/W18, 2026-09-08; moved to
   // /js/ 2026-09-24 so the portal can share it), plus what it pulls in
-  // at PDF time: the four subset brand fonts and the PNG logo -- so an
-  // invoice made offline still comes out fully branded.
+  // at PDF time: the subset brand fonts and the PNG logo -- so an
+  // invoice made offline still comes out fully branded. Inter
+  // (2026-10-23) added for the invoice/estimate redesign; the other
+  // four fonts stay for every other document pdf-layout.js draws.
   '/js/pdf-layout.js',
   '/fonts/pdf/Anton-Regular.ttf', '/fonts/pdf/Oswald-Medium.ttf',
   '/fonts/pdf/Archivo-Regular.ttf', '/fonts/pdf/Archivo-SemiBold.ttf',
+  '/fonts/pdf/Inter-Regular.ttf', '/fonts/pdf/Inter-SemiBold.ttf', '/fonts/pdf/Inter-Bold.ttf',
   '/images/logo-signature-orange.png',
   // Bug fix (2026-08-20): tools-common.js no longer exists -- it was
   // split into 4 focused files (structural item #42). cache.addAll()
