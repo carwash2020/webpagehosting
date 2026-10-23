@@ -1,10 +1,24 @@
 // Supabase Edge Function: send-quote-notification
 //
-// Same shape as send-invoice-notification, for a client who already
-// has a portal account getting notified about a NEW quote to review.
-// Called from sync-quote-to-portal only when the client isn't brand
-// new (the invite flow already covers their very first portal item,
-// whether that's a quote or an invoice).
+// Sends the estimate email for every quote sync, not just existing
+// portal clients (2026-10-23 bug fix -- see docs/specialist-logs/bugfix.md).
+// Root cause of the original bug: sync-quote-to-portal called send-invite
+// (a bare "create your account" email with no mention of the quote at
+// all) for a brand-new client's first-ever quote, instead of actually
+// delivering the estimate -- a customer requesting a quick estimate got
+// an account-setup email, not their price. Invoices still auto-invite a
+// new client (they need portal access to pay), but a quote recipient
+// doesn't need an account just to see what something costs, so quotes no
+// longer trigger send-invite at all: sync-quote-to-portal now calls this
+// function unconditionally, and the actual estimate PDF is attached
+// directly via Resend (`pdf_base64`/`pdf_filename`, both optional -- the
+// Resend feature in invoice-generator.html calls this function too, for
+// an unchanged-email resend, without regenerating the PDF, so the
+// PDF-less fallback copy below still exists for that case).
+// `has_portal_account` controls whether the email's secondary "review
+// online" link is shown at all -- a brand-new client has no password set
+// (no invite was ever sent), so pointing them at a login page they can't
+// get into would be a dead end.
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -107,7 +121,21 @@ function formatCurrency(n: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 }
 
-function buildEmailHtml(clientName: string, quoteNumber: string, total: number, description: string | null): string {
+function buildEmailHtml(
+  clientName: string, quoteNumber: string, total: number, description: string | null,
+  hasPdf: boolean, hasPortalAccount: boolean,
+): string {
+  const heading = hasPdf ? "Your estimate is attached" : "You have a new quote to review";
+  const intro = hasPdf
+    ? "Your estimate from Triple H Enterprises is attached to this email as a PDF."
+    : "You have a new quote to review from Triple H Enterprises.";
+  const cta = hasPortalAccount
+    ? `<tr>
+          <td align="center" style="padding: 24px 28px 28px;">
+            <a href="${PORTAL_URL}" style="display: inline-block; background: #ff8000; color: #ffffff; text-decoration: none; font-family: -apple-system, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 600; padding: 14px 32px; border-radius: 8px;">${hasPdf ? "Review Online" : "Review Quote"}</a>
+          </td>
+        </tr>`
+    : "";
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -115,7 +143,7 @@ function buildEmailHtml(clientName: string, quoteNumber: string, total: number, 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light">
 <meta name="supported-color-schemes" content="light">
-<title>New quote to review, Triple H Enterprises</title>
+<title>${escapeHtml(heading)}, Triple H Enterprises</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f4f4f4;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f4f4f4" style="background: #f4f4f4; padding: 32px 16px;">
@@ -129,8 +157,9 @@ function buildEmailHtml(clientName: string, quoteNumber: string, total: number, 
         </tr>
         <tr>
           <td style="padding: 32px 28px 8px; font-family: -apple-system, Helvetica, Arial, sans-serif;">
-            <h1 style="color: #ff8000; font-size: 22px; margin: 0 0 20px; text-align: center;">You have a new quote to review</h1>
+            <h1 style="color: #ff8000; font-size: 22px; margin: 0 0 20px; text-align: center;">${escapeHtml(heading)}</h1>
             <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 20px;">Hi ${escapeHtml(clientName)},</p>
+            <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 20px;">${escapeHtml(intro)}</p>
           </td>
         </tr>
         <tr>
@@ -142,11 +171,7 @@ function buildEmailHtml(clientName: string, quoteNumber: string, total: number, 
             </table>
           </td>
         </tr>
-        <tr>
-          <td align="center" style="padding: 24px 28px 28px;">
-            <a href="${PORTAL_URL}" style="display: inline-block; background: #ff8000; color: #ffffff; text-decoration: none; font-family: -apple-system, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 600; padding: 14px 32px; border-radius: 8px;">Review Quote</a>
-          </td>
-        </tr>
+        ${cta}
         <tr>
           <td style="background: #ff8000; height: 4px; line-height: 4px; font-size: 1px;">&nbsp;</td>
         </tr>
@@ -163,17 +188,22 @@ function buildEmailHtml(clientName: string, quoteNumber: string, total: number, 
 </html>`;
 }
 
-function buildEmailText(clientName: string, quoteNumber: string, total: number, description: string | null): string {
+function buildEmailText(
+  clientName: string, quoteNumber: string, total: number, description: string | null,
+  hasPdf: boolean, hasPortalAccount: boolean,
+): string {
   return [
     `Hi ${clientName},`,
     "",
-    "You have a new quote to review from Triple H Enterprises.",
+    hasPdf
+      ? "Your estimate from Triple H Enterprises is attached to this email as a PDF."
+      : "You have a new quote to review from Triple H Enterprises.",
     "",
     `Quote: ${quoteNumber}`,
     description ? `For: ${description}` : "",
     `Estimated total: ${formatCurrency(total)}`,
     "",
-    `Review it here: ${PORTAL_URL}`,
+    hasPortalAccount ? `Review it online: ${PORTAL_URL}` : "",
     "",
     "Triple H Enterprises",
     "(435) 414-1667, triplehenterprisesllc.biz",
@@ -244,30 +274,50 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: MFA_REQUIRED_ERROR, code: "mfa_required" }, 403);
     }
 
-    const { client_email, client_name, quote_number, total, description } = await req.json();
+    const {
+      client_email, client_name, quote_number, total, description,
+      pdf_base64, pdf_filename, has_portal_account,
+    } = await req.json();
     if (
       typeof client_email !== "string" || !client_email.includes("@") ||
       typeof quote_number !== "string" || typeof total !== "number"
     ) {
       return json({ ok: false, error: "Missing or invalid fields." }, 400);
     }
+    if (pdf_base64 !== undefined && pdf_base64 !== null && typeof pdf_base64 !== "string") {
+      return json({ ok: false, error: "pdf_base64 must be a string if provided." }, 400);
+    }
 
     const displayName = (typeof client_name === "string" && client_name.trim()) || client_email;
+    const hasPdf = typeof pdf_base64 === "string" && pdf_base64.length > 0;
+    // A brand-new client (no invite was ever sent for a quote, see the
+    // header comment) has no password set -- pointing them at a portal
+    // login they can't get into would be a dead end, so the CTA is only
+    // shown when the caller confirms a real account already exists.
+    const hasPortalAccount = has_portal_account === true;
 
     if (!(await clientWantsNotification(client_email, "wants_invoice_quote_emails"))) {
       return json({ ok: true, skipped: "client opted out of invoice/quote emails" });
     }
 
+    const emailPayload: Record<string, unknown> = {
+      from: `Triple H Enterprises <${LEAD_EMAIL_FROM}>`,
+      to: client_email,
+      subject: hasPdf ? `Your estimate from Triple H Enterprises: ${quote_number}` : `New quote to review: ${quote_number}`,
+      html: buildEmailHtml(displayName, quote_number, total, description || null, hasPdf, hasPortalAccount),
+      text: buildEmailText(displayName, quote_number, total, description || null, hasPdf, hasPortalAccount),
+    };
+    if (hasPdf) {
+      emailPayload.attachments = [{
+        filename: (typeof pdf_filename === "string" && pdf_filename.trim()) || `${quote_number}.pdf`,
+        content: pdf_base64,
+      }];
+    }
+
     const emailRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
-      body: JSON.stringify({
-        from: `Triple H Enterprises <${LEAD_EMAIL_FROM}>`,
-        to: client_email,
-        subject: `New quote to review: ${quote_number}`,
-        html: buildEmailHtml(displayName, quote_number, total, description || null),
-        text: buildEmailText(displayName, quote_number, total, description || null),
-      }),
+      body: JSON.stringify(emailPayload),
     });
 
     if (!emailRes.ok) {
