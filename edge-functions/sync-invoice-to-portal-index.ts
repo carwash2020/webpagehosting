@@ -19,6 +19,21 @@
 // invoice-generator.html already sending it and dashboard.html already
 // expecting to render it. Whatever the exact history, fixed now:
 // line_items flows through to the stored row like every other field.
+//
+// Updated 2026-10-23 (URGENT bug fix, requested directly, same fix
+// already applied to quotes -- see sync-quote-to-portal-index.ts and
+// send-invoice-notification-index.ts's header comments for the full
+// root-cause writeup): no longer auto-invites a brand-new client. The
+// invite email mentioned nothing about the invoice at all -- a client
+// got "create your account," never what they owed or why. Every
+// invoice sync now delivers the actual invoice instead (PDF attached,
+// when the caller sends one) through send-invoice-notification
+// unconditionally. Side effect worth knowing: a brand-new client's
+// referral account code (see tests/referrals/account-codes.test.js)
+// used to be generated automatically the moment send-invite fired for
+// their first invoice -- since that no longer happens here, a new
+// client's account code isn't created until Steve explicitly sends
+// them a portal invite (Dev Tools, or client-detail.html).
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -124,6 +139,7 @@ Deno.serve(async (req: Request) => {
     const {
       source_invoice_id, client_email, client_name,
       invoice_number, invoice_date, description, total, line_items,
+      pdf_base64, pdf_filename,
     } = body;
 
     if (
@@ -150,6 +166,11 @@ Deno.serve(async (req: Request) => {
       { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
     );
     const existingRows = existingRes.ok ? await existingRes.json() : [];
+    // Only checks client_portal_invoices, not client_portal_quotes too --
+    // deliberate, now that quotes never auto-invite (2026-10-23): a prior
+    // quote never created a real account either, so it's not evidence of
+    // one. An invoice invite (explicit, from Dev Tools or a prior invoice
+    // sync before this fix) is the only thing that does.
     const isNewClient = existingRows.length === 0;
 
     const existingInvoiceRes = await fetch(
@@ -188,23 +209,27 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: `Database error: ${errText.slice(0, 300)}` }, 502);
     }
 
+    // 2026-10-23 bug fix: an invoice no longer triggers send-invite for a
+    // brand-new client -- see send-invoice-notification-index.ts's header
+    // comment for the full root-cause writeup. Every invoice sync now
+    // delivers the actual invoice (PDF attached, when the caller sent
+    // one) through send-invoice-notification unconditionally, regardless
+    // of isNewClient/isNewInvoice. has_portal_account tells that function
+    // whether a "View and Pay" link makes sense to show at all -- it
+    // doesn't for a client who's never been invited and so has no
+    // password set.
     let emailResult: unknown = null;
     try {
-      if (isNewClient) {
-        const inviteRes = await fetch(`${SUPABASE_URL}/functions/v1/send-invite`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: authHeader },
-          body: JSON.stringify({ client_email: normalizedEmail, client_name }),
-        });
-        emailResult = { type: "invite", ...(await inviteRes.json()) };
-      } else if (isNewInvoice) {
-        const notifyRes = await fetch(`${SUPABASE_URL}/functions/v1/send-invoice-notification`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: authHeader },
-          body: JSON.stringify({ client_email: normalizedEmail, client_name, invoice_number, total, description }),
-        });
-        emailResult = { type: "notification", ...(await notifyRes.json()) };
-      }
+      const notifyRes = await fetch(`${SUPABASE_URL}/functions/v1/send-invoice-notification`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: authHeader },
+        body: JSON.stringify({
+          client_email: normalizedEmail, client_name, invoice_number, total, description,
+          pdf_base64: pdf_base64 || null, pdf_filename: pdf_filename || null,
+          has_portal_account: !isNewClient,
+        }),
+      });
+      emailResult = { type: "notification", ...(await notifyRes.json()) };
     } catch (err: any) {
       emailResult = { ok: false, error: err.message };
     }
