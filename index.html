@@ -2785,7 +2785,16 @@
   // received (2026-08-24) before Formspree was removed. A database
   // trigger on th_leads fires an Edge Function that emails Steve and
   // Connor via Resend the instant this insert lands.
-  const LEADS_SUPABASE_URL = 'https://csvfqdjuobylgafgolho.supabase.co';
+  // A single absolute URL literal, not SUPABASE_URL glued to a REST v1 path
+  // (2026-10-26) -- Google crawled the equivalent concatenation
+  // elsewhere on this page (the site_terms fetch below) as if
+  // a bare REST v1 path were a real, same-host relative path, and indexed
+  // it as a 404 (GSC, first detected 2026-10-23). Writing the full
+  // endpoint as one literal means the real supabase.co host is always
+  // right there in the source text next to the REST v1 path, so a crawler
+  // extracting URL-looking strings can't mistake it for a path on
+  // this site.
+  const LEADS_URL = 'https://csvfqdjuobylgafgolho.supabase.co/rest/v1/th_leads';
   const LEADS_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs';
 
   // The #schedule form is the single homepage lead form (the hero
@@ -2834,7 +2843,7 @@
     // now fails with Postgres 23505 / HTTP 409, handled as success
     // below -- the visitor sees the same "sent" confirmation either
     // way, without a second row or a second notification email.
-    fetch(LEADS_SUPABASE_URL + '/rest/v1/th_leads', {
+    fetch(LEADS_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -3530,10 +3539,12 @@
   // reason -- a person visiting this page should never see a broken
   // page because Supabase was slow or unreachable for a moment.
   (function () {
-    const SITE_CONTENT_SUPABASE_URL = 'https://csvfqdjuobylgafgolho.supabase.co';
+    // Full absolute URL literal, not SUPABASE_URL glued to a REST v1 path --
+    // see the LEADS_URL comment above for why (2026-10-26).
+    const SITE_CONTENT_URL = 'https://csvfqdjuobylgafgolho.supabase.co/rest/v1/site_content?select=key,value';
     const SITE_CONTENT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs';
 
-    fetch(SITE_CONTENT_SUPABASE_URL + '/rest/v1/site_content?select=key,value', {
+    fetch(SITE_CONTENT_URL, {
       headers: { 'apikey': SITE_CONTENT_SUPABASE_ANON_KEY },
     })
       .then(res => res.ok ? res.json() : [])
@@ -3610,7 +3621,9 @@
   // fetch times out, the 12 static FAQ items already in the HTML stay
   // exactly as they are.
   (function () {
-    const FAQ_SUPABASE_URL = 'https://csvfqdjuobylgafgolho.supabase.co';
+    // Full absolute URL literal, not SUPABASE_URL glued to a REST v1 path --
+    // see the LEADS_URL comment above for why (2026-10-26).
+    const FAQ_URL = 'https://csvfqdjuobylgafgolho.supabase.co/rest/v1/site_faq?select=question,answer,category&order=sort_order.asc';
     const FAQ_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs';
 
     function escapeFaqHtml(str) {
@@ -3619,7 +3632,7 @@
       return div.innerHTML;
     }
 
-    fetch(FAQ_SUPABASE_URL + '/rest/v1/site_faq?select=question,answer,category&order=sort_order.asc', {
+    fetch(FAQ_URL, {
       headers: { 'apikey': FAQ_SUPABASE_ANON_KEY },
     })
       .then(res => res.ok ? res.json() : [])
@@ -3690,7 +3703,12 @@
   // if the phone/email fields ever change. Same known tradeoff as the
   // FAQ answers that mention it.
   (function () {
-    const TERMS_SUPABASE_URL = 'https://csvfqdjuobylgafgolho.supabase.co';
+    // Full absolute URL literal, not SUPABASE_URL glued to a REST v1 path --
+    // this exact concatenation (TERMS_SUPABASE_URL glued to a REST v1
+    // site_terms path) is what Google crawled as a same-host relative
+    // path and indexed as a 404 (GSC, first detected 2026-10-23); see
+    // the LEADS_URL comment above (2026-10-26).
+    const TERMS_URL = 'https://csvfqdjuobylgafgolho.supabase.co/rest/v1/site_terms?select=heading,body&order=sort_order.asc';
     const TERMS_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs';
 
     function escapeTermsHtml(str) {
@@ -3699,7 +3717,7 @@
       return div.innerHTML;
     }
 
-    fetch(TERMS_SUPABASE_URL + '/rest/v1/site_terms?select=heading,body&order=sort_order.asc', {
+    fetch(TERMS_URL, {
       headers: { 'apikey': TERMS_SUPABASE_ANON_KEY },
     })
       .then(res => res.ok ? res.json() : [])
@@ -3714,7 +3732,7 @@
       .catch(() => { /* static fallback content already shown is correct */ });
   })();
 </script>
-<script src="/js/business-hours.js?v=5296319b73"></script>
+<script src="/js/business-hours.js?v=e0e3b29210"></script>
 <script>
   // ---------- seasonal care note ----------
   // One practical thing worth doing this month. Plain maintenance advice,

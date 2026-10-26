@@ -34,7 +34,11 @@ async function fetchBookingsForRange(supabaseUrl, supabaseAnonKey, startDateStr,
   const afterLastDayUtc = zonedTimeToUtc(addDaysToDateStr(startDateStr, days), 0, 0);
   const rangeStart = new Date(firstDayUtc.getTime() - 24 * 60 * 60 * 1000).toISOString();
   const rangeEnd = new Date(afterLastDayUtc.getTime() + 24 * 60 * 60 * 1000).toISOString();
-  const res = await fetch(supabaseUrl + '/rest/v1/rpc/get_booking_availability', {
+  // BOOKING_AVAILABILITY_URL (from /js/business-hours.js, always
+  // loaded before this file), not supabaseUrl glued to a REST v1 RPC path --
+  // see business-hours.js's own fetchBookingsForDate() for why
+  // (2026-10-26).
+  const res = await fetch(BOOKING_AVAILABILITY_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

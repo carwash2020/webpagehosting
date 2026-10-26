@@ -15,7 +15,7 @@ const { JSDOM } = require('jsdom');
 
 const PAGE_PATH = path.join(__dirname, '..', '..', 'booking.html');
 const BUSINESS_HOURS_SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'js', 'business-hours.js'), 'utf8')
-  + '\nwindow.BUSINESS_TIMEZONE = BUSINESS_TIMEZONE; window.HOURS_BY_WEEKDAY = HOURS_BY_WEEKDAY; window.DAYS_AHEAD_SHOWN = DAYS_AHEAD_SHOWN; window.zonedTimeToUtc = zonedTimeToUtc; window.businessWeekday = businessWeekday; window.todayDateStrInBusinessTz = todayDateStrInBusinessTz; window.addDaysToDateStr = addDaysToDateStr; window.formatHoursLabel = formatHoursLabel; window.fetchBookingsForDate = fetchBookingsForDate; window.computeSlotsForDate = computeSlotsForDate; window.findNextAvailableSlot = findNextAvailableSlot;';
+  + '\nwindow.BUSINESS_TIMEZONE = BUSINESS_TIMEZONE; window.HOURS_BY_WEEKDAY = HOURS_BY_WEEKDAY; window.DAYS_AHEAD_SHOWN = DAYS_AHEAD_SHOWN; window.BOOKING_AVAILABILITY_URL = BOOKING_AVAILABILITY_URL; window.zonedTimeToUtc = zonedTimeToUtc; window.businessWeekday = businessWeekday; window.todayDateStrInBusinessTz = todayDateStrInBusinessTz; window.addDaysToDateStr = addDaysToDateStr; window.formatHoursLabel = formatHoursLabel; window.fetchBookingsForDate = fetchBookingsForDate; window.computeSlotsForDate = computeSlotsForDate; window.findNextAvailableSlot = findNextAvailableSlot;';
 
 // booking.html and manage-booking.html also load /js/booking-flow.js
 // (2026-09-22: whole-window availability, add to calendar), right after

@@ -25,7 +25,7 @@ const MANAGE_HTML = fs.readFileSync(repo('manage-booking.html'), 'utf8');
 const SQL = fs.readFileSync(repo('sql', 'booking', 'add_create_booking_rpc.sql'), 'utf8');
 const FLOW_SRC = fs.readFileSync(repo('js', 'booking-flow.js'), 'utf8');
 const BUSINESS_HOURS_SRC = fs.readFileSync(repo('js', 'business-hours.js'), 'utf8')
-  + '\nwindow.BUSINESS_TIMEZONE = BUSINESS_TIMEZONE; window.HOURS_BY_WEEKDAY = HOURS_BY_WEEKDAY; window.DAYS_AHEAD_SHOWN = DAYS_AHEAD_SHOWN;';
+  + '\nwindow.BUSINESS_TIMEZONE = BUSINESS_TIMEZONE; window.HOURS_BY_WEEKDAY = HOURS_BY_WEEKDAY; window.DAYS_AHEAD_SHOWN = DAYS_AHEAD_SHOWN; window.BOOKING_AVAILABILITY_URL = BOOKING_AVAILABILITY_URL;';
 
 const TOKEN = '11111111-2222-3333-4444-555555555555';
 const KEY = 'th_upcoming_booking';

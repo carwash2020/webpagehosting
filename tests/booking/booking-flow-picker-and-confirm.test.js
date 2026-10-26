@@ -27,7 +27,7 @@ const MANAGE_HTML = fs.readFileSync(repo('manage-booking.html'), 'utf8');
 const INDEX_HTML = fs.readFileSync(repo('index.html'), 'utf8');
 const FLOW_SRC = fs.readFileSync(repo('js', 'booking-flow.js'), 'utf8');
 const BUSINESS_HOURS_SRC = fs.readFileSync(repo('js', 'business-hours.js'), 'utf8')
-  + '\nwindow.BUSINESS_TIMEZONE = BUSINESS_TIMEZONE; window.HOURS_BY_WEEKDAY = HOURS_BY_WEEKDAY; window.DAYS_AHEAD_SHOWN = DAYS_AHEAD_SHOWN; window.zonedTimeToUtc = zonedTimeToUtc; window.businessWeekday = businessWeekday; window.todayDateStrInBusinessTz = todayDateStrInBusinessTz; window.addDaysToDateStr = addDaysToDateStr; window.formatHoursLabel = formatHoursLabel; window.computeSlotsForDate = computeSlotsForDate;';
+  + '\nwindow.BUSINESS_TIMEZONE = BUSINESS_TIMEZONE; window.HOURS_BY_WEEKDAY = HOURS_BY_WEEKDAY; window.DAYS_AHEAD_SHOWN = DAYS_AHEAD_SHOWN; window.BOOKING_AVAILABILITY_URL = BOOKING_AVAILABILITY_URL; window.zonedTimeToUtc = zonedTimeToUtc; window.businessWeekday = businessWeekday; window.todayDateStrInBusinessTz = todayDateStrInBusinessTz; window.addDaysToDateStr = addDaysToDateStr; window.formatHoursLabel = formatHoursLabel; window.computeSlotsForDate = computeSlotsForDate;';
 
 function loadHtml(html, url, mockFetch, { withFlow = true } = {}) {
   const dom = new JSDOM(html, {

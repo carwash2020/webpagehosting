@@ -27,7 +27,7 @@ const FLOW_SRC = fs.readFileSync(repo('js', 'booking-flow.js'), 'utf8');
 // picker reads are handed to window explicitly (same as the round 1
 // booking tests do).
 const BUSINESS_HOURS_SRC = fs.readFileSync(repo('js', 'business-hours.js'), 'utf8')
-  + '\nwindow.BUSINESS_TIMEZONE = BUSINESS_TIMEZONE; window.HOURS_BY_WEEKDAY = HOURS_BY_WEEKDAY; window.DAYS_AHEAD_SHOWN = DAYS_AHEAD_SHOWN;';
+  + '\nwindow.BUSINESS_TIMEZONE = BUSINESS_TIMEZONE; window.HOURS_BY_WEEKDAY = HOURS_BY_WEEKDAY; window.DAYS_AHEAD_SHOWN = DAYS_AHEAD_SHOWN; window.BOOKING_AVAILABILITY_URL = BOOKING_AVAILABILITY_URL;';
 const QUOTES = fs.readFileSync(repo('portal', 'quotes.html'), 'utf8');
 const JOBS = fs.readFileSync(repo('portal', 'jobs.html'), 'utf8');
 const WO = fs.readFileSync(repo('portal', 'work-orders.html'), 'utf8');

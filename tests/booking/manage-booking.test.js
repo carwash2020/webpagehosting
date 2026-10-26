@@ -16,7 +16,7 @@ const BUSINESS_HOURS_SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'js'
   // See booking.test.js's identical comment for why this explicit
   // window.X = X exposure is needed -- const declarations via
   // indirect eval() don't become window properties on their own.
-  + '\nwindow.BUSINESS_TIMEZONE = BUSINESS_TIMEZONE; window.HOURS_BY_WEEKDAY = HOURS_BY_WEEKDAY; window.DAYS_AHEAD_SHOWN = DAYS_AHEAD_SHOWN; window.zonedTimeToUtc = zonedTimeToUtc; window.businessWeekday = businessWeekday; window.todayDateStrInBusinessTz = todayDateStrInBusinessTz; window.addDaysToDateStr = addDaysToDateStr; window.formatHoursLabel = formatHoursLabel;';
+  + '\nwindow.BUSINESS_TIMEZONE = BUSINESS_TIMEZONE; window.HOURS_BY_WEEKDAY = HOURS_BY_WEEKDAY; window.DAYS_AHEAD_SHOWN = DAYS_AHEAD_SHOWN; window.BOOKING_AVAILABILITY_URL = BOOKING_AVAILABILITY_URL; window.zonedTimeToUtc = zonedTimeToUtc; window.businessWeekday = businessWeekday; window.todayDateStrInBusinessTz = todayDateStrInBusinessTz; window.addDaysToDateStr = addDaysToDateStr; window.formatHoursLabel = formatHoursLabel;';
 
 // booking.html and manage-booking.html also load /js/booking-flow.js
 // (2026-09-22: whole-window availability, add to calendar), right after
