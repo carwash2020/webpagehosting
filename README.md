@@ -6168,3 +6168,14 @@ The latent bug logged (not fixed) in the quotes entry above -- `resendInvoiceToC
 - **`resendInvoiceToClient()`** (`tools/invoice-generator.html`) now splits on whether the destination email actually changed: unchanged calls `send-invoice-notification` directly (always genuinely sends, or reports an honest "this client opted out" instead of a false "resent"); changed still goes through `sync-invoice-to-portal`, since that's what actually moves/creates the portal row. Exact same split as `resendQuoteToClient()`.
 
 Tests: new `tests/tools/resend-invoice-actually-emails.test.js` (5 tests covering the unchanged-email path this fix changes: direct `send-invoice-notification` call, opted-out handling, a genuine send failure, the changed-email path confirmed unaffected, and capitalisation-only changes). Updated `tests/tools/resend-invoice-other-email.test.js`'s first test, which asserted the old (buggy) unchanged-email behavior. Full relevant suite (1348+ tests) passing, plus `check-consistency.js` (`CACHE_NAME` bumped again), `check-undefined-vars.js`, and `check-links.py` clean.
+
+## What changed, 2026-10-26 -- crawl links for URLs Google has discovered but not indexed
+
+Search Console (property `https://www.triplehenterprisesllc.biz/`, data through 2026-10-22) listed 22 URLs as "Discovered - currently not indexed." This pass adds one or two in-content links from pages Google already crawls, in sentences and blocks that already talked about the service or the symptom. No new city pages, no sitemap additions, no AggregateRating edits, no footer list of all 22.
+
+- **Homepage.** The service blurbs now also link `services/washer-dryer-repair.html` and `services/plumbing-repairs.html`, which the nav already listed but the body did not. The "From the blog" section (not the capped Helpful guides block) links the five symptom posts that had no homepage link.
+- **About.** The repair paragraph links the appliance, plumbing, drywall, handyman, and assembly pages, plus the ice-maker note. The "What areas do you serve?" answer now names Leeds, La Verkin, and Santa Clara and Ivins (the old sentence stopped at Santa Clara) and links each town page. The FAQPage text matches that wording.
+- **Two posts** that already described the next symptom now link it: `dishwasher-not-cleaning.html` to the leaking post, and `washer-leaking-water.html` to the won't-spin post.
+- **Left alone:** `blog/dryer-wont-turn-on.html` (6 inbound, SEO-4 floor 5, already in Helpful guides) and `careers.html` (6 inbound, floor 4). Booking's Services and Areas menus already link the five bookable services and every target city; that list is pinned by test and was not copied into the form.
+
+Tests: `tests/seo/inbound-internal-links.test.js`.

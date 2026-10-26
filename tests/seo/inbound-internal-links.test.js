@@ -73,6 +73,44 @@ test('homepage links the three St. George appliance pages and a guides block of 
   assert.ok(posts.size >= 3 && posts.size <= 5, `Helpful guides block should list 3-5 posts, found ${posts.size}`);
 });
 
+test('discovered-not-indexed URLs have a contextual link from a hub, outside the capped Helpful guides block', () => {
+  const { pages } = inbound();
+  const home = pages['index.html'];
+  const services = home.slice(home.indexOf('<section id="services">'), home.indexOf('<aside class="schedule-rail"'));
+  assert.match(services, /href="\/services\/washer-dryer-repair\.html"/);
+  assert.match(services, /href="\/services\/plumbing-repairs\.html"/);
+
+  const teaser = home.match(/<section id="blog-teaser">[\s\S]*?<\/section>/)[0];
+  for (const post of ['washer-wont-spin', 'washer-leaking-water', 'dishwasher-not-draining', 'dishwasher-leaking', 'ice-maker-not-working']) {
+    assert.match(teaser, new RegExp(`href="/blog/${post}\\.html"`), `homepage blog teaser should link ${post}`);
+  }
+
+  const about = pages['about.html'].slice(pages['about.html'].indexOf('<main'), pages['about.html'].indexOf('<footer'));
+  for (const href of [
+    '/services/washer-dryer-repair.html',
+    '/services/washer-dryer-repair-st-george-ut.html',
+    '/services/refrigerator-repair-st-george-ut.html',
+    '/services/dishwasher-repair-st-george-ut.html',
+    '/services/plumbing-repairs.html',
+    '/services/drywall-painting.html',
+    '/services/handyman-repairs.html',
+    '/services/assembly-installation.html',
+    '/blog/ice-maker-not-working.html',
+    '/locations/handyman-hurricane-ut.html',
+    '/locations/handyman-washington-city-ut.html',
+    '/locations/handyman-santa-clara-ivins-ut.html',
+    '/locations/handyman-leeds-ut.html',
+    '/locations/handyman-la-verkin-ut.html',
+    '/locations/handyman-cedar-city-ut.html',
+    '/locations/handyman-mesquite-nv.html',
+  ]) {
+    assert.ok(about.includes(`href="${href}"`), `about.html should link ${href} in the body`);
+  }
+
+  assert.match(pages['blog/dishwasher-not-cleaning.html'], /href="\/blog\/dishwasher-leaking\.html"/);
+  assert.match(pages['blog/washer-leaking-water.html'], /href="\/blog\/washer-wont-spin\.html"/);
+});
+
 test('no public page links into /tools/', () => {
   const { pages } = inbound();
   for (const [file, html] of Object.entries(pages)) {
