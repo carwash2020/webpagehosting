@@ -81,7 +81,7 @@ test('the id is NOT cleared on a failed submission, so a retry after a real fail
 // ---- index.html: the insert itself ----
 
 test('the th_leads insert is a plain POST -- no on_conflict, no Prefer: resolution=ignore-duplicates -- since ON CONFLICT requires SELECT access anon does not have', () => {
-  const fnMatch = INDEX.match(/fetch\(LEADS_SUPABASE_URL \+ '\/rest\/v1\/th_leads', \{[\s\S]*?\n\s*\}\);/);
+  const fnMatch = INDEX.match(/fetch\(LEADS_URL, \{[\s\S]*?\n\s*\}\);/);
   assert.ok(fnMatch, 'expected to isolate the th_leads insert call');
   assert.doesNotMatch(fnMatch[0], /on_conflict/);
   assert.doesNotMatch(fnMatch[0], /resolution=ignore-duplicates/);

@@ -5,6 +5,12 @@ Disallow: /.claude/
 # Internal app surfaces — already noindex on pages; keep crawlers out of the paths too.
 Disallow: /tools/
 Disallow: /portal/
+# Not a real page -- Google crawled this literal substring out of page
+# source where it never resolved to the intended Supabase host (GSC:
+# https://www.triplehenterprisesllc.biz/rest/v1/site_terms?... 404,
+# first detected 2026-10-23). The underlying page source has since been
+# fixed so this can't recur, but blocking it here too costs nothing.
+Disallow: /rest/
 
 # AI answer-engine crawlers that fetch pages live to ground a chat
 # answer -- allow these, since being cited by ChatGPT/Perplexity/Claude
@@ -16,30 +22,35 @@ Allow: /
 Disallow: /.claude/
 Disallow: /tools/
 Disallow: /portal/
+Disallow: /rest/
 
 User-agent: ChatGPT-User
 Allow: /
 Disallow: /.claude/
 Disallow: /tools/
 Disallow: /portal/
+Disallow: /rest/
 
 User-agent: PerplexityBot
 Allow: /
 Disallow: /.claude/
 Disallow: /tools/
 Disallow: /portal/
+Disallow: /rest/
 
 User-agent: Claude-SearchBot
 Allow: /
 Disallow: /.claude/
 Disallow: /tools/
 Disallow: /portal/
+Disallow: /rest/
 
 User-agent: Claude-User
 Allow: /
 Disallow: /.claude/
 Disallow: /tools/
 Disallow: /portal/
+Disallow: /rest/
 
 # Bulk AI-training crawlers -- distinct from the retrieval bots above.
 # Blocking these doesn't remove this site from Google/Bing search or
