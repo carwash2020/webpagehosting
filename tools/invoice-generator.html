@@ -67,7 +67,7 @@
      masthead/footer/totals-block drawing code below moved into this
      shared file, now also used by job-detail.html's job sheet and
      contract-generator.html. -->
-<script src="/js/pdf-layout.js?v=1be6d8cd44" defer></script>
+<script src="/js/pdf-layout.js?v=4dca739ad1" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -1283,34 +1283,48 @@
     const TYPE_LABELS = { standard: 'INVOICE', deposit: 'DEPOSIT INVOICE', balance: 'BALANCE DUE', progress: 'PROGRESS PAYMENT' };
     const longDate = (d) => d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     const due = (inv.date && typeof thInvoiceDueDate === 'function') ? thInvoiceDueDate({ date: inv.date, terms: inv.terms }) : null;
-    let y = await drawPdfHeader(doc, pageW, TYPE_LABELS[inv.invoiceType] || 'INVOICE', null, {
-      ref: inv.invoiceNumber,
-      meta: [
-        { label: 'Invoice #', value: inv.invoiceNumber || '' },
-        { label: 'Date', value: inv.date ? longDate(new Date(inv.date + 'T00:00:00')) : '' },
-        { label: 'Due', value: due ? longDate(due) : '' },
-        { label: 'Terms', value: inv.terms || '' },
-      ],
+    // Same masthead/info-columns/job-box redesign as generatePDF() --
+    // this rebuilds the identical document from a saved log entry, so
+    // it has to stay visually identical to what generatePDF() produced.
+    let y = await pdfDrawInvoiceHeader(doc, pageW, TYPE_LABELS[inv.invoiceType] || 'INVOICE', null, {
+      ref: inv.invoiceNumber || '',
     });
     const billTo = [{ text: inv.clientName || '(client name)', bold: true }];
     if (inv.clientEmail) billTo.push({ text: inv.clientEmail, muted: true });
-    y = pdfDrawInfoColumns(doc, { y, columns: [
+    y = pdfDrawInfoColumns(doc, { y, theme: 'inter', columns: [
+      { label: 'From', lines: [
+        { text: 'Triple H Enterprises LLC', bold: true },
+        'St. George, Utah',
+        '(435) 414-1667',
+      ] },
       { label: 'Bill to', lines: billTo },
-      { label: 'Job', lines: [inv.jobRefTitle || ''] },
+      { label: 'Invoice details', lines: [
+        'Invoice #: ' + (inv.invoiceNumber || ''),
+        'Date: ' + (inv.date ? longDate(new Date(inv.date + 'T00:00:00')) : ''),
+        'Terms: ' + (inv.terms || ''),
+        due ? 'Due: ' + longDate(due) : null,
+      ].filter(Boolean) },
     ] });
+    const jobDescriptionVal = inv.jobRefTitle || '';
+    const applianceInfo = pdfParseApplianceInfo(jobDescriptionVal);
+    y = pdfDrawJobBox(doc, { y, text: jobDescriptionVal, model: applianceInfo.model, serial: applianceInfo.serial });
     const items = (Array.isArray(inv.line_items) ? inv.line_items : []).map(item => ({
       ...item, qty: Number(item.qty) || 0, price: Number(item.price) || 0, amount: Number(item.amount) || 0,
       unitLabel: lineItemUnitLabel(item.type),
     }));
     y = drawPdfLineItemsTable(doc, { y, items, pageW, pageH }).y;
     const subtotal = Number(inv.subtotal) || items.reduce((t, i) => t + i.amount, 0);
-    y = drawPdfTotalsBlock(doc, { y, pageW, subtotal, tax: Number(inv.tax) || 0, discount: Number(inv.discount) || 0, discountLabel: 'Discount', totalLabel: 'TOTAL DUE' });
+    const rebuildTaxRate = Number(inv.subtotal) ? (Number(inv.tax) || 0) / Number(inv.subtotal) * 100 : 0;
+    y = drawPdfTotalsBlock(doc, {
+      y, pageW, subtotal, tax: Number(inv.tax) || 0, taxRatePct: rebuildTaxRate, discount: Number(inv.discount) || 0, discountLabel: 'Discount', totalLabel: 'TOTAL DUE', theme: 'inter',
+      cta: { heading: 'Pay this invoice', lines: ['See payment details below.', 'Questions? Call or text (435) 414-1667.'] },
+    });
     const paymentText = (document.getElementById('paymentText') || {}).value || '';
-    y = pdfDrawNoteBox(doc, { y: y + 10, label: 'Payment', lines: [
+    y = pdfDrawNoteBox(doc, { y: y + 6, label: 'Payment', theme: 'inter', lines: [
       paymentText,
       { text: 'Please reference invoice ' + (inv.invoiceNumber || '') + ' with payment.', small: true },
     ] });
-    pdfFinalize(doc, { message: 'Thank you for choosing Triple H Enterprises. Work guaranteed.' });
+    pdfFinalize(doc, { message: 'Thank you for choosing Triple H Enterprises. Work guaranteed.', theme: 'inter' });
     return doc;
   }
 
@@ -2512,14 +2526,13 @@
     // use for "overdue" (data-layer.js thInvoiceDueDate), so the date
     // printed here is the date the app will later hold the client to.
     const dueDate = (invoiceDateIso && typeof thInvoiceDueDate === 'function') ? thInvoiceDueDate({ date: invoiceDateIso, terms: invoiceTermsVal }) : null;
-    let y = await drawPdfHeader(doc, pageW, INVOICE_TYPE_LABELS[invoiceTypeVal] || 'INVOICE', null, {
+    // 2026-10-23 redesign: dark masthead (pdfDrawInvoiceHeader, in
+    // place of the white print letterhead every other document still
+    // uses) + a three-column info row (From / Bill to / Invoice
+    // details) + a light-orange job box, all in Inter. See
+    // js/pdf-layout.js's own "Invoice / estimate masthead" comment.
+    let y = await pdfDrawInvoiceHeader(doc, pageW, INVOICE_TYPE_LABELS[invoiceTypeVal] || 'INVOICE', null, {
       ref: invoiceNumberVal,
-      meta: [
-        { label: 'Invoice #', value: invoiceNumberVal },
-        { label: 'Date', value: invoiceDateDisplay },
-        { label: 'Due', value: dueDate ? longDate(dueDate) : '' },
-        { label: 'Terms', value: invoiceTermsVal },
-      ],
     });
 
     const billTo = [{ text: document.getElementById('clientName').value || '(client name)', bold: true }];
@@ -2530,10 +2543,28 @@
       const reach = [c.email, c.phone].filter(Boolean).join('  \u00b7  ');
       if (reach) billTo.push({ text: reach, muted: true });
     });
-    y = pdfDrawInfoColumns(doc, { y, columns: [
+    y = pdfDrawInfoColumns(doc, { y, theme: 'inter', columns: [
+      { label: 'From', lines: [
+        { text: 'Triple H Enterprises LLC', bold: true },
+        'St. George, Utah',
+        '(435) 414-1667',
+      ] },
       { label: 'Bill to', lines: billTo },
-      { label: 'Job', lines: [document.getElementById('jobDescription').value || ''] },
+      { label: 'Invoice details', lines: [
+        'Invoice #: ' + invoiceNumberVal,
+        'Date: ' + invoiceDateDisplay,
+        'Terms: ' + invoiceTermsVal,
+        dueDate ? 'Due: ' + longDate(dueDate) : null,
+      ].filter(Boolean) },
     ] });
+
+    // Job box (light-orange): the description, plus Model/Serial only
+    // when pdfParseApplianceInfo() actually finds them in the text --
+    // see its own comment in js/pdf-layout.js for why this is a parse
+    // rather than a real structured field.
+    const jobDescriptionVal = document.getElementById('jobDescription').value || '';
+    const applianceInfo = pdfParseApplianceInfo(jobDescriptionVal);
+    y = pdfDrawJobBox(doc, { y, text: jobDescriptionVal, model: applianceInfo.model, serial: applianceInfo.serial });
 
     // The shared drawPdfLineItemsTable() (js/pdf-layout.js) expects
     // each item's own unitLabel precomputed rather than reaching back
@@ -2551,9 +2582,12 @@
     const discount = parseFloat(document.getElementById('discountAmount').value) || 0;
     const discountLabel = document.getElementById('discountLabel').value;
     const total = Math.round(Math.max(0, subtotal + tax - discount) * 100) / 100;
-    y = drawPdfTotalsBlock(doc, { y, pageW, subtotal, tax, discount, discountLabel, totalLabel: 'TOTAL DUE' });
+    y = drawPdfTotalsBlock(doc, {
+      y, pageW, subtotal, tax, taxRatePct: taxRate, discount, discountLabel, totalLabel: 'TOTAL DUE', theme: 'inter',
+      cta: { heading: 'Pay this invoice', lines: ['See payment details below.', 'Questions? Call or text (435) 414-1667.'] },
+    });
 
-    y = pdfDrawNoteBox(doc, { y: y + 10, label: 'Payment', lines: [
+    y = pdfDrawNoteBox(doc, { y: y + 6, label: 'Payment', theme: 'inter', lines: [
       document.getElementById('paymentText').value,
       { text: 'Please reference invoice ' + invoiceNumberVal + ' with payment.', small: true },
     ] });
@@ -2573,7 +2607,7 @@
         if (!isNaN(completionDate.getTime())) {
           const warrantyEnd = new Date(completionDate);
           warrantyEnd.setDate(warrantyEnd.getDate() + 30);
-          y = pdfDrawNoteBox(doc, { y, label: 'Warranty', tone: 'green',
+          y = pdfDrawNoteBox(doc, { y, label: 'Warranty', tone: 'green', theme: 'inter',
             text: 'Covered by our 30-day labor warranty through ' + longDate(warrantyEnd) + '.' });
         }
       }
@@ -2581,7 +2615,7 @@
 
     // Footer final pass: every page gets the footer with a real "Page X
     // of Y" (item #52), and the closing line goes on the last page only.
-    pdfFinalize(doc, { message: 'Thank you for choosing Triple H Enterprises. Work guaranteed.' });
+    pdfFinalize(doc, { message: 'Thank you for choosing Triple H Enterprises. Work guaranteed.', theme: 'inter' });
 
     const filename = 'TripleH_Invoice_' + (document.getElementById('clientName').value || 'Client').replace(/[^a-z0-9]/gi, '_') + '.pdf';
     // logInvoice() now RETURNS the entry it created (2026-09-02 fix --
@@ -3284,29 +3318,48 @@
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
     const pageW = doc.internal.pageSize.getWidth();
 
-    // 2026-09-24 redesign: same shared document system as the invoice
-    // above -- an estimate and an invoice from this business now differ
-    // only where their content does.
+    // 2026-10-23 redesign: same dark masthead + 3-column info row + job
+    // box as generatePDF() above -- an estimate and an invoice from
+    // this business differ only where their content does. "Valid
+    // until" is 30 days from the estimate date (there's no separate
+    // valid-until field in this form; 30 days is this trade's usual
+    // quote-honoring window and is stated again in the fine print
+    // below, not just implied by a bare date).
     const quoteNumberVal = document.getElementById('quoteNumber').value;
     const quoteDateIso = document.getElementById('quoteDate').value;
     const quoteDateDisplay = quoteDateIso
       ? new Date(quoteDateIso + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
       : '';
-    let y = await drawPdfHeader(doc, pageW, 'ESTIMATE', null, {
+    let validUntilDisplay = '';
+    if (quoteDateIso) {
+      const validUntil = new Date(quoteDateIso + 'T00:00:00');
+      validUntil.setDate(validUntil.getDate() + 30);
+      validUntilDisplay = validUntil.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+    let y = await pdfDrawInvoiceHeader(doc, pageW, 'ESTIMATE', null, {
       ref: quoteNumberVal,
-      meta: [
-        { label: 'Estimate #', value: quoteNumberVal },
-        { label: 'Date', value: quoteDateDisplay },
-      ],
     });
 
     const forLines = [{ text: document.getElementById('quoteClientName').value || '(client name)', bold: true }];
     const quoteClientAddressVal = document.getElementById('quoteClientAddress').value;
     if (quoteClientAddressVal) forLines.push(quoteClientAddressVal);
-    y = pdfDrawInfoColumns(doc, { y, columns: [
+    y = pdfDrawInfoColumns(doc, { y, theme: 'inter', columns: [
+      { label: 'From', lines: [
+        { text: 'Triple H Enterprises LLC', bold: true },
+        'St. George, Utah',
+        '(435) 414-1667',
+      ] },
       { label: 'Prepared for', lines: forLines },
-      { label: 'Job', lines: [document.getElementById('quoteJobDescription').value || ''] },
+      { label: 'Estimate details', lines: [
+        'Estimate #: ' + quoteNumberVal,
+        'Date: ' + quoteDateDisplay,
+        validUntilDisplay ? 'Valid until: ' + validUntilDisplay : null,
+      ].filter(Boolean) },
     ] });
+
+    const quoteJobDescriptionVal = document.getElementById('quoteJobDescription').value || '';
+    const quoteApplianceInfo = pdfParseApplianceInfo(quoteJobDescriptionVal);
+    y = pdfDrawJobBox(doc, { y, text: quoteJobDescriptionVal, model: quoteApplianceInfo.model, serial: quoteApplianceInfo.serial });
 
     // The shared drawPdfLineItemsTable() (js/pdf-layout.js) expects
     // each item's own unitLabel precomputed rather than reaching back
@@ -3324,15 +3377,18 @@
     const discount = parseFloat(document.getElementById('quoteDiscountAmount').value) || 0;
     const discountLabel = document.getElementById('quoteDiscountLabel').value;
     const total = Math.round(Math.max(0, subtotal + tax - discount) * 100) / 100;
-    y = drawPdfTotalsBlock(doc, { y, pageW, subtotal, tax, discount, discountLabel, totalLabel: 'EST. TOTAL' });
+    y = drawPdfTotalsBlock(doc, {
+      y, pageW, subtotal, tax, taxRatePct: quoteTaxRate, discount, discountLabel, totalLabel: 'EST. TOTAL', theme: 'inter',
+      cta: { heading: 'Approve this estimate', lines: ['Call or text (435) 414-1667 to get on the schedule.'] },
+    });
 
     // The estimate disclaimer is kept word for word -- it's what makes
     // this document an estimate rather than a bill -- but it's now a
     // labelled terms box instead of a loose italic paragraph.
-    y = pdfDrawNoteBox(doc, { y: y + 10, label: 'About this estimate', tone: 'neutral',
-      text: 'This is an estimate only, not a bill. Actual final cost may vary based on parts and labor actually required once work begins.' });
+    y = pdfDrawNoteBox(doc, { y: y + 10, label: 'About this estimate', tone: 'neutral', theme: 'inter',
+      text: 'This is an estimate only, not a bill. Actual final cost may vary based on parts and labor actually required once work begins.' + (validUntilDisplay ? ' Valid through ' + validUntilDisplay + '.' : '') });
 
-    pdfFinalize(doc, {});
+    pdfFinalize(doc, { theme: 'inter' });
 
     const filename = 'TripleH_Estimate_' + (document.getElementById('quoteClientName').value || 'Client').replace(/[^a-z0-9]/gi, '_') + '.pdf';
     const newEntry = logQuote({ subtotal, tax, discount, total });

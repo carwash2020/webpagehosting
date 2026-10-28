@@ -66,6 +66,7 @@ const PDF_COLORS = {
   ZEBRA: [248, 246, 243],
   ORANGE: [255, 128, 0],
   ORANGE_DARK: [201, 100, 0],
+  ORANGE_LIGHT: [255, 179, 71],
   ORANGE_TINT: [255, 243, 230],
   GREEN: [28, 125, 72],
   GREEN_TINT: [236, 247, 240],
@@ -74,6 +75,14 @@ const PDF_COLORS = {
   NAVY: [28, 28, 28],
   GRAY: [104, 104, 104],
   LIGHTGRAY: [214, 214, 214],
+  // 2026-10-23 invoice/estimate redesign: the dark "app" surface,
+  // reused on paper only for the masthead and the CTA card beside the
+  // totals -- everything else stays white to keep this a one-page,
+  // toner-light document (see the 2026-09-24 entry above for why the
+  // old all-dark letterhead was dropped).
+  DARK_BG: [10, 10, 10],
+  WHITE: [255, 255, 255],
+  LIGHT_ON_DARK: [214, 214, 214],
 };
 
 // The business facts every document prints. No street address, on
@@ -105,6 +114,21 @@ const PDF_FONT_FILES = [
   { file: 'Oswald-Medium.ttf', family: 'Oswald', style: 'normal' },
   { file: 'Archivo-Regular.ttf', family: 'Archivo', style: 'normal' },
   { file: 'Archivo-SemiBold.ttf', family: 'Archivo', style: 'bold' },
+  // Inter (2026-10-23, invoice/estimate redesign): the approved spec
+  // calls for Inter specifically on the client-facing invoice/estimate
+  // template. Latin subsets built the same way as the files above
+  // (fontTools pyftsubset against the real Google Fonts static TTFs,
+  // U+0020-007E plus a handful of typographic punctuation marks this
+  // file actually uses -- curly apostrophe, middle dot, en/em dash),
+  // ~34KB each instead of the ~325KB full Google Fonts file. Scoped to
+  // ONLY the new invoice/estimate drawing functions below (pdfRole(),
+  // pdfDrawInvoiceMasthead, pdfDrawJobBox) via an opt-in `theme:
+  // 'inter'` passed through the shared block functions -- every other
+  // document this file draws (job sheets, contracts, service history,
+  // portal receipts) is untouched and keeps Anton/Oswald/Archivo.
+  { file: 'Inter-Regular.ttf', family: 'Inter', style: 'normal' },
+  { file: 'Inter-SemiBold.ttf', family: 'Inter', style: 'bold' },
+  { file: 'Inter-Bold.ttf', family: 'Inter', style: 'black' },
 ];
 
 // role -> [brand family, style] / [fallback family, style]
@@ -113,7 +137,27 @@ const PDF_FONT_ROLES = {
   label: [['Oswald', 'normal'], ['helvetica', 'bold']],
   body: [['Archivo', 'normal'], ['helvetica', 'normal']],
   bold: [['Archivo', 'bold'], ['helvetica', 'bold']],
+  // Inter roles for the invoice/estimate redesign (see PDF_FONT_FILES
+  // comment above). interDisplay uses the real 700 weight (Bold.ttf,
+  // registered under style 'black' since 'bold' was already taken by
+  // the 600 weight, matching the Archivo-SemiBold pattern above).
+  interDisplay: [['Inter', 'black'], ['helvetica', 'bold']],
+  interLabel: [['Inter', 'bold'], ['helvetica', 'bold']],
+  interBody: [['Inter', 'normal'], ['helvetica', 'normal']],
+  interBold: [['Inter', 'bold'], ['helvetica', 'bold']],
 };
+
+// Maps a generic role (display/label/body/bold) to its Inter
+// equivalent when theme === 'inter'; passes any already-prefixed or
+// unrecognised role through unchanged. Threaded as an optional
+// `theme` field through the shared block-drawing functions so the
+// invoice/estimate redesign can opt into Inter without changing the
+// look of every other document this file draws.
+function pdfRole(role, theme) {
+  if (theme !== 'inter') return role;
+  const map = { display: 'interDisplay', label: 'interLabel', body: 'interBody', bold: 'interBold' };
+  return map[role] || role;
+}
 
 // ---------------------------------------------------------------------
 // Loading: logo + fonts. Both optional; a document still renders
@@ -431,6 +475,149 @@ async function drawPdfHeader(doc, pageW, typeLabel, preloadedLogoDataUrl, opts) 
 }
 
 // ---------------------------------------------------------------------
+// Invoice / estimate masthead (2026-10-23 redesign)
+//
+// A dark charcoal header bar (matching the live site's --bg), the
+// logo, the business name, the trade line and city, and a large
+// orange document title + number -- approved directly in place of the
+// 2026-09-24 white print letterhead for just these two client-facing
+// documents (generatePDF/generateQuotePDF in invoice-generator.html).
+// Every other document pdf-layout.js draws (job sheets, contracts,
+// service history, portal receipts/estimates) keeps the white
+// letterhead above, unchanged -- drawPdfHeader() is untouched.
+//
+// Genuine multi-page overflow (rare for a normal job) still falls
+// back to the shared light pdfDrawContinuationHeader() on page 2+ via
+// the ordinary pdfNewPage()/pdfEnsureSpace() path -- not worth a
+// second dark running-header design for a case this template is built
+// to avoid in the first place.
+// ---------------------------------------------------------------------
+
+function pdfDrawInvoiceMasthead(doc, { title, number }) {
+  const { WHITE, ORANGE, ORANGE_LIGHT, LIGHT_ON_DARK, DARK_BG } = PDF_COLORS;
+  const st = pdfState(doc);
+  const pageW = doc.internal.pageSize.getWidth();
+  const L = PDF_GEOM.MARGIN, R = pageW - PDF_GEOM.MARGIN;
+  const barH = 96;
+
+  doc.setFillColor(...DARK_BG);
+  doc.rect(0, 0, pageW, barH, 'F');
+
+  const logoW = 42, logoH = 42 * (506 / 550);
+  let textX = L;
+  if (st.logo) {
+    try { doc.addImage(st.logo, 'PNG', L, 22, logoW, logoH); textX = L + logoW + 14; } catch (e) { /* logo optional */ }
+  }
+  pdfSetFont(doc, 'interDisplay', 18, WHITE);
+  doc.text('TRIPLE H', textX, 44);
+  const w1 = doc.getTextWidth('TRIPLE H ');
+  pdfSetFont(doc, 'interDisplay', 18, ORANGE);
+  doc.text('ENTERPRISES', textX + w1, 44);
+  pdfSetFont(doc, 'interLabel', 7, ORANGE_LIGHT);
+  pdfSpacedText(doc, 'HANDYMAN & APPLIANCE REPAIR', textX, 57, 1.1);
+  pdfSetFont(doc, 'interBody', 8, LIGHT_ON_DARK);
+  doc.text(PDF_BRAND.tagline + '  ·  St. George, UT', textX, 70);
+
+  // Large orange title + document number, right-aligned.
+  pdfSetFont(doc, 'interDisplay', 29, ORANGE);
+  let size = 29;
+  const maxTitleW = (R - L) * 0.52;
+  while (size > 18 && doc.getTextWidth(String(title)) > maxTitleW) { size -= 1; doc.setFontSize(size); }
+  const tw = doc.getTextWidth(String(title));
+  doc.text(String(title), R - tw, 48);
+  if (number) {
+    pdfSetFont(doc, 'interBody', 10, LIGHT_ON_DARK);
+    const nw = doc.getTextWidth(String(number));
+    doc.text(String(number), R - nw, 65);
+  }
+
+  // Thin orange stripe under the dark bar.
+  doc.setFillColor(...ORANGE);
+  doc.rect(0, barH, pageW, 4, 'F');
+
+  st.letterheadDrawn = true;
+  return barH + 4 + 20;
+}
+
+// Same shape as drawPdfHeader() -- (doc, pageW, typeLabel, logo, opts)
+// -- so invoice-generator.html can drop it in directly. opts: { ref,
+// title, runningLabel }. The detailed meta (number/date/terms) moves
+// into pdfDrawInfoColumns()'s "details" column below the masthead
+// instead of living in the header itself.
+async function pdfDrawInvoiceHeader(doc, pageW, typeLabel, preloadedLogoDataUrl, opts) {
+  opts = opts || {};
+  const st = await pdfPrepareDoc(doc, {
+    typeLabel: opts.runningLabel || typeLabel,
+    ref: opts.ref,
+    logoDataUrl: preloadedLogoDataUrl || undefined,
+  });
+  if (st.letterheadDrawn) return pdfDrawContinuationHeader(doc);
+  return pdfDrawInvoiceMasthead(doc, { title: opts.title || typeLabel, number: opts.ref });
+}
+
+// Pulls "Model ..." / "Serial ..." (or "S/N ...") out of a free-text
+// job description, e.g. "GE Range/Stove Repair -- Model JB256D M3WW,
+// Serial ZT123456". There is no structured appliance-model/serial
+// field anywhere in this app today (checked job-tracker.html and the
+// invoice/estimate forms directly) -- the description is the only
+// place this ever gets typed -- so pdfDrawJobBox() below only shows a
+// Model/Serial row when one of these actually matches, never a blank
+// placeholder.
+function pdfParseApplianceInfo(description) {
+  const text = String(description || '');
+  // A real model/serial code always has a digit in it -- requiring one
+  // keeps this from matching ordinary prose like "Model and Serial
+  // numbers vary per unit" (a real description seen in testing) as if
+  // "and"/"numbers" were the actual values.
+  const looksLikeCode = (s) => !!s && /\d/.test(s);
+  const modelM = text.match(/\bmodel\s*#?\s*:?\s*([A-Za-z0-9][A-Za-z0-9\-\/.]{1,24})/i);
+  const serialM = text.match(/\b(?:serial(?:\s*#|\s*no\.?)?|s\/n)\s*#?\s*:?\s*([A-Za-z0-9][A-Za-z0-9\-\/.]{1,24})/i);
+  const model = modelM ? modelM[1].replace(/[,;.]+$/, '') : null;
+  const serial = serialM ? serialM[1].replace(/[,;.]+$/, '') : null;
+  return {
+    model: looksLikeCode(model) ? model : null,
+    serial: looksLikeCode(serial) ? serial : null,
+  };
+}
+
+// The light-orange job box under the info columns: the job description,
+// plus Model / Serial rows only when pdfParseApplianceInfo() actually
+// found them (see its own comment for why that's a parse, not a real
+// field). Kept together on one page, same pattern as pdfDrawNoteBox.
+function pdfDrawJobBox(doc, { y, text, model, serial }) {
+  const { INK, MUTED, ORANGE, ORANGE_DARK, ORANGE_TINT } = PDF_COLORS;
+  const pageW = doc.internal.pageSize.getWidth();
+  const L = PDF_GEOM.MARGIN, R = pageW - PDF_GEOM.MARGIN;
+  const width = R - L;
+  const textW = width - 30;
+  const body = String(text || '').trim() || '(no job description)';
+
+  pdfSetFont(doc, 'interBold', 10.5);
+  const lines = pdfLines(doc, body, textW);
+  const facts = [model ? 'Model: ' + model : null, serial ? 'Serial: ' + serial : null].filter(Boolean);
+  const h = 14 + 13 + lines.length * 13 + facts.length * 12 + 6;
+  y = pdfEnsureSpace(doc, y, h);
+
+  doc.setFillColor(...ORANGE_TINT);
+  doc.rect(L, y, width, h, 'F');
+  doc.setFillColor(...ORANGE);
+  doc.rect(L, y, 3, h, 'F');
+
+  let ty = y + 14;
+  pdfSetFont(doc, 'interLabel', 7.5, ORANGE_DARK);
+  pdfSpacedText(doc, 'JOB', L + 15, ty, 1);
+  ty += 13;
+  pdfSetFont(doc, 'interBold', 10.5, INK);
+  lines.forEach(line => { doc.text(line, L + 15, ty); ty += 13; });
+  facts.forEach(f => {
+    pdfSetFont(doc, 'interBody', 8.5, MUTED);
+    doc.text(f, L + 15, ty);
+    ty += 12;
+  });
+  return y + h + 12;
+}
+
+// ---------------------------------------------------------------------
 // Content blocks
 // ---------------------------------------------------------------------
 
@@ -441,7 +628,7 @@ function pdfSectionLabel(doc, text, y, opts) {
   const pageW = doc.internal.pageSize.getWidth();
   const L = opts.x !== undefined ? opts.x : PDF_GEOM.MARGIN;
   const R = opts.right !== undefined ? opts.right : pageW - PDF_GEOM.MARGIN;
-  pdfSetFont(doc, 'label', opts.size || 8, opts.color || ORANGE_DARK);
+  pdfSetFont(doc, pdfRole('label', opts.theme), opts.size || 8, opts.color || ORANGE_DARK);
   const w = pdfSpacedText(doc, String(text).toUpperCase(), L, y, 1);
   if (opts.rule !== false && L + w + 10 < R) {
     doc.setDrawColor(...RULE); doc.setLineWidth(0.6);
@@ -453,7 +640,7 @@ function pdfSectionLabel(doc, text, y, opts) {
 // Side-by-side labelled blocks (BILL TO / JOB SITE / PREPARED BY...).
 // columns: [{ label, lines: [string | { text, bold, muted }] }].
 // Each column wraps to its own width; returns y below the tallest.
-function pdfDrawInfoColumns(doc, { y, columns, gap }) {
+function pdfDrawInfoColumns(doc, { y, columns, gap, theme }) {
   const { INK, MUTED } = PDF_COLORS;
   const pageW = doc.internal.pageSize.getWidth();
   const L = PDF_GEOM.MARGIN, R = pageW - PDF_GEOM.MARGIN;
@@ -468,7 +655,7 @@ function pdfDrawInfoColumns(doc, { y, columns, gap }) {
     (c.lines || []).forEach(l => {
       const item = typeof l === 'string' ? { text: l } : l;
       if (!item || !item.text) return;
-      pdfSetFont(doc, item.bold ? 'bold' : 'body', item.bold ? 10.5 : 9.5);
+      pdfSetFont(doc, pdfRole(item.bold ? 'bold' : 'body', theme), item.bold ? 10.5 : 9.5);
       pdfLines(doc, item.text, colW).forEach(line => out.push({ line, bold: !!item.bold, muted: !!item.muted }));
     });
     return out;
@@ -479,9 +666,9 @@ function pdfDrawInfoColumns(doc, { y, columns, gap }) {
   let bottom = y;
   cols.forEach((c, i) => {
     const x = L + i * (colW + gap);
-    let cy = pdfSectionLabel(doc, c.label, y, { x, right: x + colW, after: 15 });
+    let cy = pdfSectionLabel(doc, c.label, y, { x, right: x + colW, after: 15, theme });
     layouts[i].forEach(it => {
-      pdfSetFont(doc, it.bold ? 'bold' : 'body', it.bold ? 10.5 : 9.5, it.muted ? MUTED : INK);
+      pdfSetFont(doc, pdfRole(it.bold ? 'bold' : 'body', theme), it.bold ? 10.5 : 9.5, it.muted ? MUTED : INK);
       doc.text(it.line, x, cy);
       cy += it.bold ? 14 : 12.5;
     });
@@ -518,8 +705,8 @@ function pdfDrawParagraph(doc, { y, text, x, width, size, color, role, lineHeigh
 //   { text, sub: [string | { text, color }], subColor, color, bold }.
 // Rows wrap and grow; a row never splits across pages, and the column
 // heads repeat under the running header on every new page.
-function drawPdfTable(doc, { y, columns, rows, zebra, emptyText }) {
-  const { INK, BODY, MUTED, RULE, ZEBRA } = PDF_COLORS;
+function drawPdfTable(doc, { y, columns, rows, zebra, emptyText, darkHeader, theme }) {
+  const { INK, BODY, MUTED, RULE, ZEBRA, DARK_BG, WHITE } = PDF_COLORS;
   const pageW = doc.internal.pageSize.getWidth();
   const L = PDF_GEOM.MARGIN, R = pageW - PDF_GEOM.MARGIN;
   const tableW = R - L;
@@ -532,24 +719,36 @@ function drawPdfTable(doc, { y, columns, rows, zebra, emptyText }) {
     return col;
   });
 
+  // darkHeader (2026-10-23, invoice/estimate redesign): a filled dark
+  // header row instead of a plain hairline-ruled label row. Opt-in --
+  // every other caller of this shared table (job sheets, contracts,
+  // service history, portal lists) is unaffected.
+  const headH = darkHeader ? 22 : 18;
   function head(atY) {
-    pdfSetFont(doc, 'label', 7.5, MUTED);
+    if (darkHeader) {
+      doc.setFillColor(...DARK_BG);
+      doc.rect(L, atY, tableW, headH, 'F');
+    }
+    pdfSetFont(doc, pdfRole('label', theme), 7.5, darkHeader ? WHITE : MUTED);
     cols.forEach(c => {
       const t = String(c.label).toUpperCase();
-      if (c.align === 'right') pdfSpacedText(doc, t, c.x + c.w - PAD, atY + 11, 0.8, 'right');
-      else if (c.align === 'center') pdfSpacedText(doc, t, c.x + c.w / 2, atY + 11, 0.8, 'center');
-      else pdfSpacedText(doc, t, c.x + PAD, atY + 11, 0.8);
+      const ty = atY + (darkHeader ? 14 : 11);
+      if (c.align === 'right') pdfSpacedText(doc, t, c.x + c.w - PAD, ty, 0.8, 'right');
+      else if (c.align === 'center') pdfSpacedText(doc, t, c.x + c.w / 2, ty, 0.8, 'center');
+      else pdfSpacedText(doc, t, c.x + PAD, ty, 0.8);
     });
-    doc.setDrawColor(...INK); doc.setLineWidth(1.1);
-    doc.line(L, atY + 18, R, atY + 18);
-    return atY + 18;
+    if (!darkHeader) {
+      doc.setDrawColor(...INK); doc.setLineWidth(1.1);
+      doc.line(L, atY + 18, R, atY + 18);
+    }
+    return atY + headH;
   }
 
-  y = pdfEnsureSpace(doc, y, 18 + 26);
+  y = pdfEnsureSpace(doc, y, headH + 26);
   y = head(y);
 
   if (!rows.length && emptyText) {
-    pdfSetFont(doc, 'body', 9.5, MUTED);
+    pdfSetFont(doc, pdfRole('body', theme), 9.5, MUTED);
     doc.text(emptyText, L + PAD, y + 17);
     y += 26;
     doc.setDrawColor(...RULE); doc.setLineWidth(0.6);
@@ -564,9 +763,9 @@ function drawPdfTable(doc, { y, columns, rows, zebra, emptyText }) {
       const cell = (raw && typeof raw === 'object') ? raw : { text: raw };
       const text = cell.text === undefined || cell.text === null ? '' : String(cell.text);
       const size = c.size || 9.5;
-      pdfSetFont(doc, cell.bold || c.bold ? 'bold' : 'body', size);
+      pdfSetFont(doc, pdfRole(cell.bold || c.bold ? 'bold' : 'body', theme), size);
       const lines = c.wrap === false ? [text] : pdfLines(doc, text, c.w - PAD * 2);
-      pdfSetFont(doc, 'body', 8.5);
+      pdfSetFont(doc, pdfRole('body', theme), 8.5);
       // sub lines: strings, or { text, color } for a line of its own colour.
       const sub = [].concat(...(cell.sub || []).map(s => {
         const it = (s && typeof s === 'object') ? s : { text: s };
@@ -589,14 +788,14 @@ function drawPdfTable(doc, { y, columns, rows, zebra, emptyText }) {
       let ty = y + 16;
       const color = cell.color || (c.muted ? MUTED : INK);
       lines.forEach(line => {
-        pdfSetFont(doc, cell.bold || c.bold ? 'bold' : 'body', size, color);
+        pdfSetFont(doc, pdfRole(cell.bold || c.bold ? 'bold' : 'body', theme), size, color);
         if (c.align === 'right') doc.text(line, c.x + c.w - PAD - doc.getTextWidth(line), ty);
         else if (c.align === 'center') doc.text(line, c.x + c.w / 2 - doc.getTextWidth(line) / 2, ty);
         else doc.text(line, c.x + PAD, ty);
         ty += 12.5;
       });
       sub.forEach(({ line, color: subColor }) => {
-        pdfSetFont(doc, 'body', 8.5, subColor || cell.subColor || BODY);
+        pdfSetFont(doc, pdfRole('body', theme), 8.5, subColor || cell.subColor || BODY);
         if (c.align === 'right') doc.text(line, c.x + c.w - PAD - doc.getTextWidth(line), ty - 1.5);
         else doc.text(line, c.x + PAD, ty - 1.5);
         ty += 11;
@@ -615,30 +814,43 @@ function drawPdfTable(doc, { y, columns, rows, zebra, emptyText }) {
 // (pageH/tableBottom are accepted for older callers and ignored -- the
 // table now paginates against the shared content floor, and the totals
 // block keeps itself together on its own.)
+// 2026-10-23 redesign: a dark header row, zebra stripes, a one-line
+// sub-label under each description (the item's own Type -- Labor /
+// Mileage / Part / Other -- plus its part # when there is one, reusing
+// the per-item fields invoice-generator.html already collects, rather
+// than inventing a new one), and a Taxable Yes/No column in place of
+// the old standalone Part # column.
+const PDF_LINE_ITEM_TYPE_LABELS = { labor: 'Labor', mileage: 'Mileage', part: 'Part', other: 'Other' };
 function drawPdfLineItemsTable(doc, { y, items }) {
   let subtotal = 0;
   let taxableSubtotal = 0;
   const rows = items.map(item => {
     subtotal += item.amount;
     if (item.taxable) taxableSubtotal += item.amount;
+    const subBits = [];
+    if (item.type && PDF_LINE_ITEM_TYPE_LABELS[item.type]) subBits.push(PDF_LINE_ITEM_TYPE_LABELS[item.type]);
+    if (item.part) subBits.push('Part #' + item.part);
     return {
-      desc: item.desc,
-      part: item.part || '\u2014',
+      desc: { text: item.desc, sub: subBits.length ? [subBits.join('  \u00b7  ')] : [] },
       qty: String(item.qty) + (item.unitLabel ? ' ' + item.unitLabel : ''),
       price: pdfMoney(item.price),
-      amount: pdfMoney(item.amount),
+      amount: { text: pdfMoney(item.amount), bold: true },
+      taxable: item.taxable ? 'Yes' : 'No',
     };
   });
   y = drawPdfTable(doc, {
     y,
     rows,
+    zebra: true,
+    darkHeader: true,
+    theme: 'inter',
     emptyText: 'No line items.',
     columns: [
-      { key: 'desc', label: 'Description', width: 0.44 },
-      { key: 'part', label: 'Part #', width: 0.16, muted: true, size: 8.5 },
-      { key: 'qty', label: 'Qty', width: 0.12, align: 'center', muted: true },
-      { key: 'price', label: 'Price', width: 0.13, align: 'right' },
-      { key: 'amount', label: 'Amount', width: 0.15, align: 'right', bold: true },
+      { key: 'desc', label: 'Description', width: 0.46 },
+      { key: 'qty', label: 'Qty', width: 0.15, align: 'center', muted: true },
+      { key: 'price', label: 'Price', width: 0.14, align: 'right' },
+      { key: 'amount', label: 'Amount', width: 0.14, align: 'right' },
+      { key: 'taxable', label: 'Taxable', width: 0.11, align: 'center', muted: true, size: 8.5 },
     ],
   });
   return { y, subtotal, taxableSubtotal };
@@ -692,23 +904,30 @@ function pdfDrawStamp(doc, { cx, cy, text, sub, tone, angle }) {
 // empty space to its left) moves to a new page together, so a total is
 // never orphaned from its subtotal and a stamp can never sit on text.
 // rows: [{ label, value, tone }], total: { label, value, tone }.
-function pdfDrawSummary(doc, { y, rows, total, stamp }) {
-  const { INK, BODY, MUTED, ORANGE, ORANGE_DARK, ORANGE_TINT, GREEN, GREEN_TINT, RULE } = PDF_COLORS;
+// cta (2026-10-23, invoice/estimate redesign): a dark call-to-action
+// card drawn in the same reserved space to the left of the totals
+// column that a stamp uses -- "Approve this estimate" / "Pay this
+// invoice" plus a short line or two (e.g. the phone number). Only
+// drawn when there's no stamp (a paid receipt shows PAID instead; it
+// doesn't need a payment CTA). { heading, lines: [string] }.
+function pdfDrawSummary(doc, { y, rows, total, stamp, cta, theme }) {
+  const { INK, BODY, MUTED, ORANGE, ORANGE_DARK, ORANGE_TINT, GREEN, GREEN_TINT, RULE, DARK_BG, WHITE, ORANGE_LIGHT } = PDF_COLORS;
   const pageW = doc.internal.pageSize.getWidth();
   const R = pageW - PDF_GEOM.MARGIN, L = PDF_GEOM.MARGIN;
   const colW = 236;
   const x = R - colW;
   rows = (rows || []).filter(Boolean);
   const height = 14 + rows.length * 18 + 44;
-  y = pdfEnsureSpace(doc, y, Math.max(height, stamp ? 90 : 0));
+  const ctaH = cta && !stamp ? 80 : 0;
+  y = pdfEnsureSpace(doc, y, Math.max(height, stamp ? 90 : 0, ctaH));
   const top = y;
 
   let ry = y + 18;
   rows.forEach(r => {
     const color = r.tone === 'discount' ? ORANGE_DARK : r.tone === 'green' ? GREEN : INK;
-    pdfSetFont(doc, 'body', 9.5, r.tone === 'discount' ? ORANGE_DARK : BODY);
+    pdfSetFont(doc, pdfRole('body', theme), 9.5, r.tone === 'discount' ? ORANGE_DARK : BODY);
     doc.text(String(r.label), x + 10, ry);
-    pdfSetFont(doc, 'body', 9.5, color);
+    pdfSetFont(doc, pdfRole('body', theme), 9.5, color);
     doc.text(String(r.value), R - 10 - doc.getTextWidth(String(r.value)), ry);
     ry += 18;
   });
@@ -720,12 +939,12 @@ function pdfDrawSummary(doc, { y, rows, total, stamp }) {
     doc.rect(x, by, colW, 38, 'F');
     doc.setFillColor(...(green ? GREEN : ORANGE));
     doc.rect(x, by, colW, 2.5, 'F');
-    pdfSetFont(doc, 'label', 9, green ? GREEN : ORANGE_DARK);
+    pdfSetFont(doc, pdfRole('label', theme), 9, green ? GREEN : ORANGE_DARK);
     // Long labels shrink rather than run into the amount.
     let ls = 9;
     while (ls > 6.5 && pdfSpacedWidth(doc, String(total.label).toUpperCase(), 1) > colW * 0.45) { ls -= 0.5; doc.setFontSize(ls); }
     pdfSpacedText(doc, String(total.label).toUpperCase(), x + 10, by + 24, 1);
-    pdfSetFont(doc, 'display', 19, INK);
+    pdfSetFont(doc, pdfRole('display', theme), 19, INK);
     const tv = String(total.value);
     doc.text(tv, R - 10 - doc.getTextWidth(tv), by + 26);
     ry = by + 38;
@@ -735,6 +954,22 @@ function pdfDrawSummary(doc, { y, rows, total, stamp }) {
     const leftW = x - L - 16;
     pdfDrawStamp(doc, Object.assign({ cx: L + Math.min(leftW, 260) / 2 + 8, cy: top + Math.max(ry - top, 70) / 2 + 4 }, stamp));
     ry = Math.max(ry, top + 80);
+  } else if (cta) {
+    const leftW = Math.min(x - L - 16, 230);
+    const boxH = Math.max(ry - top, 78);
+    doc.setFillColor(...DARK_BG);
+    doc.rect(L, top, leftW, boxH, 'F');
+    doc.setFillColor(...ORANGE);
+    doc.rect(L, top, leftW, 3, 'F');
+    let cy = top + 21;
+    pdfSetFont(doc, pdfRole('bold', theme), 10.5, ORANGE_LIGHT);
+    pdfLines(doc, String(cta.heading || '').toUpperCase(), leftW - 28).forEach(line => { doc.text(line, L + 14, cy); cy += 13; });
+    cy += 4;
+    pdfSetFont(doc, pdfRole('body', theme), 8.75, WHITE);
+    (cta.lines || []).forEach(l => {
+      pdfLines(doc, String(l), leftW - 28).forEach(line => { doc.text(line, L + 14, cy); cy += 11.5; });
+    });
+    ry = Math.max(ry, top + boxH);
   }
   doc.setDrawColor(...RULE);
   return ry + 8;
@@ -743,16 +978,20 @@ function pdfDrawSummary(doc, { y, rows, total, stamp }) {
 // Subtotal / Sales Tax / optional discount / total -- the invoice and
 // estimate summary. Same signature it has always had, plus an optional
 // stamp. Returns the y just below the block.
-function drawPdfTotalsBlock(doc, { y, pageW, subtotal, tax, discount, discountLabel, totalLabel, stamp }) {
+function drawPdfTotalsBlock(doc, { y, pageW, subtotal, tax, taxRatePct, discount, discountLabel, totalLabel, stamp, cta, theme }) {
   const total = Math.max(0, subtotal + tax - discount);
+  // Sales tax rate shown alongside the label (2026-10-23 redesign),
+  // e.g. "Sales tax (7.25%)", when a real rate was passed in.
+  const rateStr = taxRatePct ? (Math.round(taxRatePct * 100) / 100) + '%' : '';
+  const taxLabel = 'Sales tax' + (rateStr ? ' (' + rateStr + ')' : '');
   const rows = [
     { label: 'Subtotal', value: pdfMoney(subtotal) },
-    { label: 'Sales tax', value: pdfMoney(tax) },
+    { label: taxLabel, value: pdfMoney(tax) },
   ];
   if (discount > 0 && String(discountLabel || '').trim() !== '') {
     rows.push({ label: discountLabel, value: '-' + pdfMoney(discount).replace('-', ''), tone: 'discount' });
   }
-  return pdfDrawSummary(doc, { y: y + 10, rows, total: { label: totalLabel, value: pdfMoney(total) }, stamp });
+  return pdfDrawSummary(doc, { y: y + 6, rows, total: { label: totalLabel, value: pdfMoney(total) }, stamp, cta, theme });
 }
 
 // Contracts: one labelled price given the same emphasis as an invoice
@@ -774,7 +1013,7 @@ function drawPdfTotalHighlight(doc, { x, y, width, label, value }) {
 // A boxed note: payment instructions, warranty, estimate terms, the
 // contract's review note. tone: 'orange' | 'green' | 'neutral'.
 // Kept together on one page; returns y below it.
-function pdfDrawNoteBox(doc, { y, label, text, lines, tone, x, width }) {
+function pdfDrawNoteBox(doc, { y, label, text, lines, tone, x, width, theme }) {
   const { BODY, MUTED, ORANGE, ORANGE_DARK, ORANGE_TINT, GREEN, GREEN_TINT, RULE, ZEBRA } = PDF_COLORS;
   const pageW = doc.internal.pageSize.getWidth();
   x = x !== undefined ? x : PDF_GEOM.MARGIN;
@@ -784,13 +1023,13 @@ function pdfDrawNoteBox(doc, { y, label, text, lines, tone, x, width }) {
   const fill = tone === 'green' ? GREEN_TINT : tone === 'neutral' ? ZEBRA : ORANGE_TINT;
   const textW = width - 30;
 
-  pdfSetFont(doc, 'body', 9);
+  pdfSetFont(doc, pdfRole('body', theme), 9);
   const body = [];
   if (text) pdfLines(doc, text, textW).forEach(l => body.push({ line: l }));
   (lines || []).forEach(l => {
     const item = typeof l === 'string' ? { text: l } : l;
     if (!item || !item.text) return;
-    pdfSetFont(doc, 'body', item.small ? 8 : 9);
+    pdfSetFont(doc, pdfRole('body', theme), item.small ? 8 : 9);
     pdfLines(doc, item.text, textW).forEach(line => body.push({ line, small: !!item.small, bold: !!item.bold }));
   });
   const h = 14 + (label ? 14 : 0) + body.reduce((s, b) => s + (b.small ? 11 : 12.5), 0) + 6;
@@ -802,12 +1041,12 @@ function pdfDrawNoteBox(doc, { y, label, text, lines, tone, x, width }) {
   doc.rect(x, y, 3, h, 'F');
   let ty = y + 16;
   if (label) {
-    pdfSetFont(doc, 'label', 7.5, labelColor);
+    pdfSetFont(doc, pdfRole('label', theme), 7.5, labelColor);
     pdfSpacedText(doc, String(label).toUpperCase(), x + 15, ty, 1);
     ty += 14;
   }
   body.forEach(b => {
-    pdfSetFont(doc, b.bold ? 'bold' : 'body', b.small ? 8 : 9, b.small ? MUTED : BODY);
+    pdfSetFont(doc, pdfRole(b.bold ? 'bold' : 'body', theme), b.small ? 8 : 9, b.small ? MUTED : BODY);
     doc.text(b.line, x + 15, ty);
     ty += b.small ? 11 : 12.5;
   });
@@ -823,16 +1062,16 @@ function drawPdfFooter(doc, pageW, pageH, opts) {
   const L = PDF_GEOM.MARGIN, R = pageW - PDF_GEOM.MARGIN;
   const footerY = pageH - PDF_GEOM.FOOTER_RULE;
   if (opts.message) {
-    pdfSetFont(doc, 'body', 8.5, ORANGE_DARK);
+    pdfSetFont(doc, pdfRole('body', opts.theme), 8.5, ORANGE_DARK);
     const m = String(opts.message);
     doc.text(m, pageW / 2 - doc.getTextWidth(m) / 2, footerY - 9);
   }
   doc.setDrawColor(...RULE); doc.setLineWidth(0.75);
   doc.line(L, footerY, R, footerY);
-  pdfSetFont(doc, 'body', 7.5, MUTED);
+  pdfSetFont(doc, pdfRole('body', opts.theme), 7.5, MUTED);
   doc.text([PDF_BRAND.legalName, 'St. George, Utah', PDF_BRAND.phone, PDF_BRAND.email, PDF_BRAND.web].join('  \u00b7  '), L, footerY + 14);
   if (opts.pageInfo) {
-    pdfSetFont(doc, 'label', 7.5, MUTED);
+    pdfSetFont(doc, pdfRole('label', opts.theme), 7.5, MUTED);
     const t = 'Page ' + opts.pageInfo.pageNum + ' of ' + opts.pageInfo.totalPages;
     doc.text(t, R - doc.getTextWidth(t), footerY + 14);
   }
@@ -851,6 +1090,7 @@ function pdfFinalize(doc, opts) {
     drawPdfFooter(doc, pageW, pageH, {
       message: p === totalPages ? opts.message : null,
       pageInfo: { pageNum: p, totalPages },
+      theme: opts.theme,
     });
   }
 }
