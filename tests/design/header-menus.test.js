@@ -27,10 +27,15 @@ const AREA_LINKS = [
   '/locations/handyman-la-verkin-ut.html',
   '/locations/handyman-cedar-city-ut.html',
   '/locations/handyman-mesquite-nv.html',
-  // Salt Lake valley (2026-10-16): the 8 city pages were merged into one
-  // by-appointment page (travel from St. George, no local office); the old
-  // 8 files are redirect stubs and are never linked from the menus.
-  '/locations/handyman-salt-lake-valley-ut.html',
+  // Salt Lake valley coverage was temporarily pulled from advertising on
+  // 2026-10-28 (travel distance became unworkable for Steve's current
+  // capacity -- see README.md's "What changed, 2026-10-28" entry and
+  // docs/ACTION-ITEMS.md). The consolidated page
+  // (locations/handyman-salt-lake-valley-ut.html) is now itself a redirect
+  // stub pointing at the homepage, same as the 8 old per-city files it used
+  // to consolidate, so none of them are linked from the menus anymore. This
+  // is explicitly NOT permanent -- restoring this one entry is part of
+  // reversing that change.
 ];
 
 const PAGES = ['', 'locations', 'services', 'blog']
@@ -48,7 +53,7 @@ test('the header menus are on every public page that has a nav (39 of them)', ()
 });
 
 for (const page of PAGES) {
-  test(`${page}: both Areas lists carry all 16 towns, St. George first`, () => {
+  test(`${page}: both Areas lists carry all 8 towns, St. George first`, () => {
     const html = fs.readFileSync(repo(page), 'utf8');
     const nav = html.slice(html.indexOf('<ul class="nav-links">'), html.indexOf('class="mobile-menu"'));
     const areasAt = nav.lastIndexOf('<li class="nav-dropdown">');
@@ -126,7 +131,7 @@ for (const page of BOOKING_PAGES) {
     assert.match(html, /@media \(max-width:379px\)\{[\s\S]*?\.bk-menus\{order:3; flex-basis:100%;/, 'narrow phones put the menus on their own row');
     assert.match(html, /<script>\n\/\/ Header menus \(2026-09-29\)[\s\S]*?e\.key !== 'Escape'/, 'Escape closes an open menu');
     const newTab = [...header.matchAll(/<a href="\/(?:services|locations)\/[^"]+"([^>]*)>/g)].map((m) => m[1]);
-    assert.equal(newTab.length, 14);
+    assert.equal(newTab.length, 13);
     if (page === 'booking.html') {
       assert.ok(newTab.every((a) => a === ' target="_blank" rel="noopener"'), 'booking form links open in a new tab');
       assert.match(header, /Opens in a new tab, so your booking stays here\./);

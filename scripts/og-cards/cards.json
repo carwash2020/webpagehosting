@@ -26,7 +26,6 @@
     { "page": "locations/handyman-leeds-ut.html", "slug": "city-leeds", "eyebrow": "Handyman & appliance repair in", "title": "Leeds", "badge": "standard" },
     { "page": "locations/handyman-cedar-city-ut.html", "slug": "city-cedar-city", "eyebrow": "Handyman & appliance repair in", "title": "Cedar City", "badge": "request" },
     { "page": "locations/handyman-mesquite-nv.html", "slug": "city-mesquite", "eyebrow": "Handyman & appliance repair in", "title": "Mesquite, NV", "badge": "request" },
-    { "page": "locations/handyman-salt-lake-valley-ut.html", "slug": "city-salt-lake-valley", "eyebrow": "Handyman & appliance repair in", "title": "Salt Lake Valley", "badge": "appointment" },
 
     { "page": "blog/index.html", "slug": "blog", "eyebrow": "Triple H Enterprises", "title": "The Blog" },
     { "page": "blog/appliance-repair-or-replace.html", "slug": "blog-appliance-repair-or-replace", "eyebrow": "From the blog", "title": "Appliance repair or replace?" },

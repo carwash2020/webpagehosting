@@ -17,11 +17,28 @@ function blockFor(userAgent) {
   return m[1];
 }
 
-test('the * crawler block disallows /tools/ and /portal/ in addition to /.claude/', () => {
+test('the * crawler block disallows /tools/, /portal/, and /rest/ in addition to /.claude/', () => {
   const star = blockFor('\\*');
   assert.match(star, /Disallow:\s*\/\.claude\//);
   assert.match(star, /Disallow:\s*\/tools\//);
   assert.match(star, /Disallow:\s*\/portal\//);
+  // /rest/ (2026-10-26) -- not a real page; Google crawled a bare
+  // '/rest/v1/...' substring out of page source as if it were a
+  // same-host relative path and indexed it as a 404 (GSC: .../rest/v1/
+  // site_terms?..., first detected 2026-10-23). The underlying page
+  // source no longer produces that bare substring, but this costs
+  // nothing as a backstop.
+  assert.match(star, /Disallow:\s*\/rest\//);
+});
+
+test('every repeated AI answer-engine bot group also disallows /rest/, matching its other internal-path blocks', () => {
+  for (const bot of ['OAI-SearchBot', 'ChatGPT-User', 'PerplexityBot', 'Claude-SearchBot', 'Claude-User']) {
+    const block = blockFor(bot);
+    assert.match(block, /Disallow:\s*\/\.claude\//, bot);
+    assert.match(block, /Disallow:\s*\/tools\//, bot);
+    assert.match(block, /Disallow:\s*\/portal\//, bot);
+    assert.match(block, /Disallow:\s*\/rest\//, bot);
+  }
 });
 
 test('Sitemap URL is unchanged', () => {

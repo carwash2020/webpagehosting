@@ -103,7 +103,7 @@ test('/tools/ and /portal/ do not load the public marketing analytics-events.js'
 
 test('the homepage lead form fires lead_form_submitted only on a real successful insert, not optimistically', () => {
   const html = fs.readFileSync(repo('index.html'), 'utf8');
-  const successBlock = html.slice(html.indexOf("fetch(LEADS_SUPABASE_URL"), html.indexOf("fetch(LEADS_SUPABASE_URL") + 1900);
+  const successBlock = html.slice(html.indexOf("fetch(LEADS_URL"), html.indexOf("fetch(LEADS_URL") + 1900);
   assert.match(successBlock, /if \(response\.ok \|\| response\.status === 409\) \{[\s\S]*?lead_form_submitted[\s\S]*?\}/);
 });
 

@@ -467,3 +467,9 @@ power.
 - **Still open, needs a person:** the review count (Site Content says 6, the static copies say 7; ACTION-ITEMS #6), and the long titles and descriptions (a copy call).
 - Test: `tests/seo/batch4-search-data.test.js` (8, with the automation items below).
 
+## 2026-10-26 -- hub links for "Discovered - currently not indexed"
+
+Search Console had 22 of those URLs. Most service and city pages already had a homepage areas card or a service blurb, plus the sitewide nav. The missing piece was a second in-content link from about, and homepage body links for the parent appliance page, plumbing, and five symptom posts that never appeared in either homepage blog block.
+
+Did not add a link list to the footer or to booking.html. Booking's Services and Areas menus already point at the five bookable services and the city pages, and `header-menus.test.js` pins that list. Did not touch dryer-wont-turn-on (already in Helpful guides; SEO-4 floor is 5 and it has 6) or careers (floor 4, has 6). About's area FAQ now names Leeds, La Verkin, and Santa Clara and Ivins, which the old sentence left inside "surrounding Southern Utah." Plumbing stays "plumbing repairs," not a water-heater claim. No prices, no review counts, no AggregateRating.
+

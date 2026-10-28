@@ -16,7 +16,7 @@ function jsonLd(html) {
 
 test('the homepage business lists every town it has a standard-coverage page for', () => {
   const biz = jsonLd(read('index.html')).find((d) => d.areaServed);
-  for (const town of ['St. George, UT', 'Hurricane, UT', 'Washington, UT', 'Santa Clara, UT', 'Ivins, UT', 'La Verkin, UT', 'Leeds, UT', 'Cedar City, UT', 'Mesquite, NV']) {
+  for (const town of ['St. George, UT', 'Hurricane, UT', 'Washington, UT', 'Santa Clara, UT', 'Ivins, UT', 'La Verkin, UT', 'Leeds, UT', 'Cedar City, UT', 'Duck Creek, UT', 'Mesquite, NV']) {
     assert.ok(biz.areaServed.includes(town), town);
   }
 });
