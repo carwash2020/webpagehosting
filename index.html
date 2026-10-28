@@ -109,7 +109,7 @@
     "addressRegion": "UT",
     "addressCountry": "US"
   },
-  "areaServed": ["St. George, UT", "Hurricane, UT", "Washington, UT", "Santa Clara, UT", "Ivins, UT", "La Verkin, UT", "Leeds, UT", "Cedar City, UT", "Mesquite, NV"],
+  "areaServed": ["St. George, UT", "Hurricane, UT", "Washington, UT", "Santa Clara, UT", "Ivins, UT", "La Verkin, UT", "Leeds, UT", "Cedar City, UT", "Duck Creek, UT", "Mesquite, NV"],
   "priceRange": "$$",
   "image": "https://www.triplehenterprisesllc.biz/images/og/home.jpg",
   "hasOfferCatalog": {
@@ -241,7 +241,7 @@
       "name": "What areas do you serve?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "St. George, Hurricane, Washington, Santa Clara, and the surrounding Southern Utah area. We can also take on larger jobs in Cedar City or Mesquite, NV by request, just contact us to check availability and scheduling. We also travel to the Salt Lake valley (Sandy, West Jordan, South Jordan, Draper, Murray, Cottonwood Heights, Holladay, and Midvale) for jobs scheduled in advance by appointment. It's roughly 300 miles from our St. George base, so those visits are planned trips, never same-day."
+        "text": "St. George, Hurricane, Washington, Santa Clara, and the surrounding Southern Utah area. We can also take on larger jobs in Cedar City, Duck Creek, or Mesquite, NV by request, just contact us to check availability and scheduling."
       }
     },
     {
@@ -341,7 +341,6 @@
           <li><a href="/locations/handyman-la-verkin-ut.html">La Verkin</a></li>
           <li><a href="/locations/handyman-cedar-city-ut.html">Cedar City</a></li>
           <li><a href="/locations/handyman-mesquite-nv.html">Mesquite, NV</a></li>
-          <li><a href="/locations/handyman-salt-lake-valley-ut.html">Salt Lake Valley, UT</a></li>
         </ul>
       </li>
       <li><a href="/booking.html">Schedule</a></li>
@@ -394,7 +393,6 @@
       <li><a href="/locations/handyman-la-verkin-ut.html">La Verkin</a></li>
       <li><a href="/locations/handyman-cedar-city-ut.html">Cedar City</a></li>
       <li><a href="/locations/handyman-mesquite-nv.html">Mesquite, NV</a></li>
-      <li><a href="/locations/handyman-salt-lake-valley-ut.html">Salt Lake Valley, UT</a></li>
     </ul>
     <a href="/booking.html">Schedule</a>
     <a href="#contact">Contact</a>
@@ -574,7 +572,7 @@
         </div>
         <div class="trust-item">
           <h3>Serving Southern Utah</h3>
-          <p>St. George, Hurricane, Washington, Santa Clara, and the surrounding area. Larger jobs in Cedar City or Mesquite, NV by request, contact us to check availability.</p>
+          <p>St. George, Hurricane, Washington, Santa Clara, and the surrounding area. Larger jobs in Cedar City, Duck Creek, or Mesquite, NV by request, contact us to check availability.</p>
         </div>
         <div class="trust-item">
           <h3>Clear, Upfront Pricing</h3>
@@ -1489,19 +1487,23 @@
         <a class="areas-link is-request" data-city="mesquite" href="/locations/handyman-mesquite-nv.html">
           <b>Mesquite, NV</b><small>By request &middot; about 40 minutes SW</small>
         </a>
-        <!-- Salt Lake valley (8 cities, one page): a by-appointment travel
-             service from St. George, not a local office -- this card is
-             deliberately NOT paired with an SVG spoke/data-city group
-             (service-area-hover-link.test.js only requires the original 8;
-             the hover JS no-ops gracefully for a data-city with no match),
-             since forcing it onto a diagram scaled for a same-day
-             coverage area would misrepresent the relationship. -->
-        <a class="areas-link is-request" data-city="salt-lake-valley" href="/locations/handyman-salt-lake-valley-ut.html">
-          <b>Salt Lake Valley, UT</b><small>By appointment &middot; travel from St. George</small>
-        </a>
+        <!-- Duck Creek, UT (added 2026-10-28, by-request tier, same treatment
+             as Cedar City/Mesquite above): no dedicated landing page, so this
+             card links nowhere and is deliberately NOT paired with an SVG
+             spoke/data-city group, same reasoning the former Salt Lake Valley
+             card documented here used (service-area-hover-link.test.js only
+             requires the original 8; the hover JS no-ops gracefully for a
+             data-city with no match). -->
+        <span class="areas-link is-request" data-city="duck-creek">
+          <b>Duck Creek, UT</b><small>By request &middot; about an hour north</small>
+        </span>
       </div>
-      <p class="areas-request-note" data-reveal>Cedar City and Mesquite aren't part of our regular route, but for larger jobs they're often worth the trip &mdash; contact us directly to check availability and scheduling before booking.</p>
-      <p class="areas-request-note" data-reveal>We also travel to the Salt Lake valley (Sandy, West Jordan, South Jordan, Draper, Murray, Cottonwood Heights, Holladay, and Midvale), roughly 300 miles north of St. George. Those jobs are scheduled in advance by appointment, not same-day.</p>
+      <p class="areas-request-note" data-reveal>Cedar City, Duck Creek, and Mesquite aren't part of our regular route, but for larger jobs they're often worth the trip &mdash; contact us directly to check availability and scheduling before booking.</p>
+      <!-- Salt Lake Valley travel coverage temporarily pulled, 2026-10-28:
+           see README.md's "What changed, 2026-10-28" entry and
+           docs/ACTION-ITEMS.md for exactly what this removed and how to
+           restore it once Steve's capacity allows. This is NOT a permanent
+           decision. -->
     </div>
   </section>
 
@@ -1766,7 +1768,6 @@
           <li><a href="/locations/handyman-la-verkin-ut.html">La Verkin</a></li>
           <li><a href="/locations/handyman-cedar-city-ut.html">Cedar City <span style="color:var(--orange-text); font-size:11px;">(by request)</span></a></li>
           <li><a href="/locations/handyman-mesquite-nv.html">Mesquite, NV <span style="color:var(--orange-text); font-size:11px;">(by request)</span></a></li>
-          <li><a href="/locations/handyman-salt-lake-valley-ut.html">Salt Lake Valley, UT <span style="color:var(--orange-text); font-size:11px;">(by appointment)</span></a></li>
         </ul>
       </div>
 
@@ -1933,7 +1934,7 @@
             What areas do you serve?
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
           </button>
-          <div class="faq-answer"><p>St. George, Hurricane, Washington, Santa Clara, and the surrounding Southern Utah area. We can also take on larger jobs in Cedar City or Mesquite, NV by request, just contact us to check availability and scheduling. We also travel to the Salt Lake valley (Sandy, West Jordan, South Jordan, Draper, Murray, Cottonwood Heights, Holladay, and Midvale) for jobs scheduled in advance by appointment. It's roughly 300 miles from our St. George base, so those visits are planned trips, never same-day.</p></div>
+          <div class="faq-answer"><p>St. George, Hurricane, Washington, Santa Clara, and the surrounding Southern Utah area. We can also take on larger jobs in Cedar City, Duck Creek, or Mesquite, NV by request, just contact us to check availability and scheduling.</p></div>
         </div>
 
         <div class="faq-item">

@@ -108,7 +108,6 @@ const KNOWN_PRE_EXISTING_DEBT = [
   'locations/handyman-la-verkin-ut.html',
   'locations/handyman-leeds-ut.html',
   'locations/handyman-mesquite-nv.html',
-  'locations/handyman-salt-lake-valley-ut.html',
   'locations/handyman-santa-clara-ivins-ut.html',
   'locations/handyman-st-george-ut.html',
   'locations/handyman-washington-city-ut.html',
