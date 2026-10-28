@@ -2624,6 +2624,24 @@
     // before the form resets, requested directly: "add a 'sent' pop
     // up for when it works and a 'failed' pop up for when it doesn't
     // so we know."
+    // The actual invoice PDF (2026-10-23 bug fix, same shape as the
+    // identical fix just made to estimates -- see generateQuotePDF()'s
+    // comment for the full reasoning): sync-invoice-to-portal/
+    // send-invoice-notification now attach the real PDF when given one,
+    // so it's base64-encoded here from the exact same `doc` instance
+    // already used for the local save/share above -- not a second render.
+    let pdfBase64 = null;
+    try {
+      const dataUri = doc.output('datauristring');
+      const commaAt = dataUri.indexOf(',');
+      if (commaAt !== -1) pdfBase64 = dataUri.slice(commaAt + 1);
+    } catch (e) {
+      // Never blocks the invoice workflow -- falls back to the
+      // PDF-less email copy if this somehow fails.
+      if (typeof logClientError === 'function') {
+        logClientError(`generatePDF(): could not base64-encode PDF for email attachment -- ${e.message || String(e)}`, 'invoice-generator.html', null, null, null);
+      }
+    }
     const clientEmailVal = document.getElementById('clientEmail').value.trim();
     // clientEmail's type="email" never gets native browser validation
     // here -- this page has no <form> element at all, so
@@ -2654,11 +2672,13 @@
             description: newEntry.jobRefTitle || null,
             line_items: getLineItems(),
             total: newEntry.total,
+            pdf_base64: pdfBase64,
+            pdf_filename: filename,
           }),
         });
         const result = await syncRes.json().catch(() => ({}));
         if (result && result.ok) {
-          await showAlert('Sent! Invoice ' + newEntry.invoiceNumber + ' was emailed to ' + clientEmailVal + ' and posted to their portal.');
+          await showAlert('Sent! Invoice ' + newEntry.invoiceNumber + ' was emailed to ' + clientEmailVal + (pdfBase64 ? ' with the PDF attached.' : ' and posted to their portal.'));
         } else {
           // A real, specific reason -- e.g. "This account is an
           // internal tool account, not a client" or "Missing or
@@ -3331,6 +3351,27 @@
     // absolutely no feedback, ever, success or failure. Same real
     // pop-up treatment as invoices now: a modal that must be
     // dismissed, with the actual server-returned reason on failure.
+    //
+    // The actual estimate PDF (2026-10-23 bug fix): the email this
+    // triggers used to carry no PDF at all -- a brand-new client got
+    // only a bare "create your account" invite with zero mention of
+    // the quote, and even an existing client only got a "log in to
+    // review" link. sync-quote-to-portal/send-quote-notification now
+    // attach the real PDF when it's given one, so the quote itself
+    // generates its base64 here, same `doc.output()` instance already
+    // used for the local download/share above -- not a second render.
+    let pdfBase64 = null;
+    try {
+      const dataUri = doc.output('datauristring');
+      const commaAt = dataUri.indexOf(',');
+      if (commaAt !== -1) pdfBase64 = dataUri.slice(commaAt + 1);
+    } catch (e) {
+      // Never blocks the estimate workflow -- falls back to the
+      // PDF-less email copy if this somehow fails.
+      if (typeof logClientError === 'function') {
+        logClientError(`generateQuotePDF(): could not base64-encode PDF for email attachment -- ${e.message || String(e)}`, 'invoice-generator.html', null, null, null);
+      }
+    }
     const quoteClientEmailVal = document.getElementById('quoteClientEmail').value.trim();
     // Same validation gap fixed on the invoice side above -- see that
     // comment for why.
@@ -3356,11 +3397,13 @@
             description: newEntry.jobRefTitle || document.getElementById('quoteJobDescription').value || null,
             line_items: getQuoteLineItems(),
             total: newEntry.total,
+            pdf_base64: pdfBase64,
+            pdf_filename: filename,
           }),
         });
         const result = await syncRes.json().catch(() => ({}));
         if (result && result.ok) {
-          await showAlert('Sent! Estimate ' + newEntry.quoteNumber + ' was emailed to ' + quoteClientEmailVal + ' and posted to their portal.');
+          await showAlert('Sent! Estimate ' + newEntry.quoteNumber + ' was emailed to ' + quoteClientEmailVal + (pdfBase64 ? ' with the PDF attached.' : ' and posted to their portal.'));
         } else {
           await showAlert('Failed to send: ' + ((result && result.error) || 'unknown error') + '\n\nThe estimate is still saved in your log.');
         }
