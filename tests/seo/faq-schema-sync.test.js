@@ -125,7 +125,7 @@ test('a failed/empty site_faq fetch leaves the static fallback schema and accord
 
 test('the schema-rebuild code lives inside the same .then() as the visible accordion render, not a separate fetch', () => {
   const html = fs.readFileSync(INDEX_HTML_PATH, 'utf8');
-  const fnMatch = html.match(/fetch\(FAQ_SUPABASE_URL[\s\S]*?\.catch\(\(\) => \{[\s\S]*?\}\);\s*\n\s*\}\)\(\);/);
+  const fnMatch = html.match(/fetch\(FAQ_URL[\s\S]*?\.catch\(\(\) => \{[\s\S]*?\}\);\s*\n\s*\}\)\(\);/);
   assert.ok(fnMatch, 'expected to isolate the FAQ fetch IIFE');
   assert.match(fnMatch[0], /faqList\.innerHTML = categoryOrder\.map/, 'expected the visible-accordion render (grouped by category) in this same block');
   assert.match(fnMatch[0], /getElementById\('faqSchema'\)/, 'expected the schema rebuild in this same block, not a second fetch');

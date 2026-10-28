@@ -215,7 +215,7 @@ test('an email hook, if one is added to these pages, follows the saved address t
 // ---------------------------------------------------------------------------
 
 const BUSINESS_HOURS_SRC = read('js', 'business-hours.js')
-  + '\nwindow.BUSINESS_TIMEZONE = BUSINESS_TIMEZONE; window.HOURS_BY_WEEKDAY = HOURS_BY_WEEKDAY; window.DAYS_AHEAD_SHOWN = DAYS_AHEAD_SHOWN;';
+  + '\nwindow.BUSINESS_TIMEZONE = BUSINESS_TIMEZONE; window.HOURS_BY_WEEKDAY = HOURS_BY_WEEKDAY; window.DAYS_AHEAD_SHOWN = DAYS_AHEAD_SHOWN; window.BOOKING_AVAILABILITY_URL = BOOKING_AVAILABILITY_URL;';
 const FLOW_SRC = read('js', 'booking-flow.js');
 const DAY = 86400000;
 const FULLY_BOOKED = [{ start_at: new Date(Date.now() - 3 * DAY).toISOString(), end_at: new Date(Date.now() + 40 * DAY).toISOString() }];

@@ -37,6 +37,12 @@ const HOURS_BY_WEEKDAY = {
 
 const DAYS_AHEAD_SHOWN = 14;
 
+// Full absolute endpoint, not built as supabaseUrl glued to a REST v1 path
+// (2026-10-26) -- see the comment on fetchBookingsForDate()'s fetch
+// call below for why. Every real caller on this site already points
+// at this one Supabase project.
+const BOOKING_AVAILABILITY_URL = 'https://csvfqdjuobylgafgolho.supabase.co/rest/v1/rpc/get_booking_availability';
+
 // --- timezone helpers, identical to booking.html's own (now shared) ---
 
 function zonedTimeToUtc(dateStr, hh, mm) {
@@ -130,7 +136,14 @@ async function fetchBookingsForDate(supabaseUrl, supabaseAnonKey, dateStr, exclu
   const dayStartUtc = zonedTimeToUtc(dateStr, 0, 0);
   const rangeStart = new Date(dayStartUtc.getTime() - 24 * 60 * 60 * 1000).toISOString();
   const rangeEnd = new Date(dayStartUtc.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString();
-  const res = await fetch(supabaseUrl + '/rest/v1/rpc/get_booking_availability', {
+  // BOOKING_AVAILABILITY_URL, not supabaseUrl glued to a REST v1 RPC path --
+  // that exact shape of concatenation is what let Google's crawler
+  // mistake a sibling fetch elsewhere on this site for a real,
+  // same-host relative path and index it as a 404 (GSC, first
+  // detected 2026-10-23). supabaseUrl/supabaseAnonKey stay as this
+  // function's documented signature for every existing caller, but
+  // the endpoint itself is always this site's one real project.
+  const res = await fetch(BOOKING_AVAILABILITY_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

@@ -46,7 +46,6 @@ PUBLIC_PAGES = [
     'locations/handyman-cedar-city-ut.html',
     'locations/handyman-hurricane-ut.html',
     'locations/handyman-mesquite-nv.html',
-    'locations/handyman-salt-lake-valley-ut.html',
     'locations/handyman-santa-clara-ivins-ut.html',
     'locations/handyman-washington-city-ut.html',
     'locations/handyman-la-verkin-ut.html',
