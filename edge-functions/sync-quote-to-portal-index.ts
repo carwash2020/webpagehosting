@@ -20,6 +20,11 @@
 // client_address -- needed once a client can schedule a job straight
 // from an approved quote (schedule-quote-job), so the visit address
 // doesn't have to be re-typed during scheduling.
+//
+// Updated 2026-10-23 (bug fix): also accepts and forwards pdf_base64 /
+// pdf_filename, and no longer auto-invites a brand-new client -- see
+// send-quote-notification-index.ts's header comment for the full
+// root-cause writeup.
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -125,6 +130,7 @@ Deno.serve(async (req: Request) => {
     const {
       source_quote_id, client_email, client_name, client_address,
       quote_number, quote_date, description, total, line_items,
+      pdf_base64, pdf_filename,
     } = body;
 
     if (
@@ -154,11 +160,13 @@ Deno.serve(async (req: Request) => {
     const existingQuoteClientRows = existingClientRes.ok ? await existingClientRes.json() : [];
     const existingInvoiceClientRows = existingInvoiceClientRes.ok ? await existingInvoiceClientRes.json() : [];
     // A client counts as "new" only if they have no portal presence at
-    // all yet -- neither a prior quote nor a prior invoice. A client
-    // who's only ever received invoices before, and is now getting
-    // their first quote, already has a portal account from send-invite
-    // firing on that first invoice; they just need the notification
-    // email, not a second invite.
+    // all yet -- neither a prior quote nor a prior invoice. This no
+    // longer decides whether to send an invite (quotes never do, see
+    // above) -- it only decides whether the estimate email's "review
+    // online" link makes sense to show (has_portal_account below): a
+    // client who's only ever received invoices before already has a
+    // real account from send-invite firing on that first invoice, so
+    // they can actually log in; a genuinely new client can't yet.
     const isNewClient = existingQuoteClientRows.length === 0 && existingInvoiceClientRows.length === 0;
 
     const existingQuoteRes = await fetch(
@@ -198,23 +206,27 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: `Database error: ${errText.slice(0, 300)}` }, 502);
     }
 
+    // 2026-10-23 bug fix: a quote no longer triggers send-invite for a
+    // brand-new client -- see send-quote-notification-index.ts's header
+    // comment for the full root-cause writeup. Every quote sync now
+    // delivers the actual estimate (PDF attached, when the caller sent
+    // one) through send-quote-notification unconditionally, regardless
+    // of isNewClient/isNewQuote. has_portal_account tells that function
+    // whether a "review online" link makes sense to show at all -- it
+    // doesn't for a client who's never been invited and so has no
+    // password set.
     let emailResult: unknown = null;
     try {
-      if (isNewClient) {
-        const inviteRes = await fetch(`${SUPABASE_URL}/functions/v1/send-invite`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: authHeader },
-          body: JSON.stringify({ client_email: normalizedEmail, client_name }),
-        });
-        emailResult = { type: "invite", ...(await inviteRes.json()) };
-      } else if (isNewQuote) {
-        const notifyRes = await fetch(`${SUPABASE_URL}/functions/v1/send-quote-notification`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: authHeader },
-          body: JSON.stringify({ client_email: normalizedEmail, client_name, quote_number, total, description }),
-        });
-        emailResult = { type: "notification", ...(await notifyRes.json()) };
-      }
+      const notifyRes = await fetch(`${SUPABASE_URL}/functions/v1/send-quote-notification`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: authHeader },
+        body: JSON.stringify({
+          client_email: normalizedEmail, client_name, quote_number, total, description,
+          pdf_base64: pdf_base64 || null, pdf_filename: pdf_filename || null,
+          has_portal_account: !isNewClient,
+        }),
+      });
+      emailResult = { type: "notification", ...(await notifyRes.json()) };
     } catch (err: any) {
       emailResult = { ok: false, error: err.message };
     }
