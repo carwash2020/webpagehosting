@@ -315,6 +315,24 @@ click a setting by hand.
       `tools/site-content.html` -- small work, just not done in this
       pass.
 
+20. **Re-enable Salt Lake Valley coverage once Steve's capacity allows --
+    temporarily pulled on 2026-10-28** because the driving distance
+    (~300 miles each way) became too much on top of his current job
+    load. This was explicitly framed as temporary, not a permanent
+    business decision -- Steve asked for the advertised area to be
+    narrowed back to the Mesquite-to-Cedar-City range until his
+    schedule has room for the longer trips again. See README.md's
+    "What changed, 2026-10-28" changelog entry for the exact, numbered
+    restore checklist (which file to un-stub, every nav/footer/mobile
+    location that needs the "Salt Lake Valley, UT" entry back, the
+    sitemap line, and the verbatim old FAQ sentence to restore in both
+    its visible and JSON-LD copies). **Duck Creek, UT was added to the
+    by-request tier in that same change but is unrelated and permanent
+    -- do not remove it when restoring Salt Lake Valley.** Nothing to
+    do here until Steve confirms he has the capacity again; this item
+    exists so a future session doesn't "helpfully" restore it on its
+    own, and so it's easy to find exactly what to undo when asked.
+
 <!-- Add new manual action items above this line -->
 
 ## SEO action items (need a human, outside of code)
