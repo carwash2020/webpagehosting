@@ -52,14 +52,14 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=963d6c5acd">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=5e679ddb01">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=8060cfc3c2" defer></script>
 <script src="/tools/data-layer.js?v=c595490771" defer></script>
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=9fc30a63b8" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=f3223273ae" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <!-- U16 fix (High-Impact Upgrades, 2026-09-07): jsPDF for the new
      "Generate Job Sheet" button, same version/CDN as invoice-generator.html
@@ -360,6 +360,19 @@
     body.th-tool-page[data-th-page="job-detail"] .job-col-side .section-heading .help-btn { min-height: 44px; min-width: 44px; }
     body.th-tool-page[data-th-page="job-detail"] .job-hero-contact a { padding: 14px 0; margin: -14px 0; }
   }
+  /* Phase 2 revision (2026-10-30), Connor's review items 3 and 8.
+     - The tracker lights the step the job is AT (its last reached step,
+       aria-current), the same thing the status badge says; the step after
+       it is a hollow ring, "what's next", never lit.
+     - The header title is the job's own title (set in renderJobDetail()),
+       so it ends in an ellipsis when long. */
+  body.th-tool-page[data-th-page="job-detail"] .job-track-step.is-reached.is-current .job-track-dot { background: var(--orange-light); box-shadow: 0 0 0 4px var(--tone-orange-bg); }
+  body.th-tool-page[data-th-page="job-detail"] .job-track-step.is-next .job-track-dot { background: var(--bg-panel); box-shadow: inset 0 0 0 2px var(--orange-tint-border); animation: none; }
+  body.th-tool-page[data-th-page="job-detail"] .job-track-step.is-next .job-track-label { color: var(--text-dim); }
+  body.th-tool-page[data-th-page="job-detail"] .job-track-step.is-reached + .job-track-step.is-next::before { background: var(--border); }
+  body.th-tool-page[data-th-page="job-detail"] .job-next-actions { margin-top: 12px; }
+  body.th-tool-page[data-th-page="job-detail"] .hub-header-left.th-has-kicker { flex-wrap: nowrap; }
+  body.th-tool-page[data-th-page="job-detail"] #jobHeaderTitle { flex: 0 1 auto; min-width: 0; }
 </style>
 </head>
 <body data-th-page="job-detail">
@@ -380,12 +393,16 @@
 
 <div id="jobDetailView" style="display:none;">
   <div class="hub-header">
+    <!-- Phase 2 revision (2026-10-30): an iOS-style back chevron, top-left
+         and apart from the round buttons on the right. -->
+    <div class="hub-header-back">
+      <a href="/tools/job-tracker.html" class="help-btn" aria-label="Back to Job Tracker" title="Back to Job Tracker"><svg class="th-icon" aria-hidden="true"><use href="#icon-chevron" xlink:href="#icon-chevron"></use></svg></a>
+    </div>
     <div class="hub-header-left">
       <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
-      <span class="hub-title">Job</span>
+      <span class="hub-title" id="jobHeaderTitle">Job</span>
     </div>
     <div class="hub-header-right">
-      <a href="/tools/job-tracker.html" class="help-btn" aria-label="Back to Job Tracker" title="Back to Job Tracker" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
     </div>
   </div>
   <p class="hub-sub"><span class="realtime-badge" id="realtimeBadge" onclick="retryLiveSync()" title="Live sync" style="margin-left:0;"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span></p>
@@ -399,7 +416,9 @@
 </div>
 
 <script>
-  const STATUS_LABEL = { 'not-started': 'Not Started', 'in-progress': 'In Progress', 'done': 'Done' };
+  // The same words as the tracker's steps and Home's status pill (Phase 2
+  // revision, 2026-10-30), so the badge and the lit step always agree.
+  const STATUS_LABEL = { 'not-started': 'Booked', 'in-progress': 'Working', 'done': 'Done' };
   let currentJobId = null;
   let currentJobPhotos = [];
 
@@ -433,6 +452,26 @@
     window.addEventListener('th-invoice-reminded', onJobRealtimeChange);
     window.addEventListener('th-job-texted', onJobRealtimeChange);
   });
+
+  // Next step's "Mark done" (Phase 2 revision, 2026-10-30).
+  document.addEventListener('click', (e) => {
+    const b = e.target && e.target.closest ? e.target.closest('[data-mark-done]') : null;
+    if (!b) return;
+    e.preventDefault();
+    markJobDoneHere(b.getAttribute('data-mark-done'));
+  });
+  function markJobDoneHere(id) {
+    if (typeof thFinishJob !== 'function') return;
+    const job = thFinishJob(id);
+    if (!job) {
+      if (typeof showToast === 'function') showToast("Couldn't mark it done. Try again.", { type: 'error' });
+      return;
+    }
+    if (typeof haptic === 'function') haptic('success');
+    if (typeof celebrateCompletion === 'function') celebrateCompletion();
+    if (typeof showToast === 'function') showToast((job.title || 'Job') + ' marked done.');
+    onJobRealtimeChange();
+  }
 
   function updateRealtimeBadge(status) {
     const dot = document.getElementById('realtimeDot');
@@ -492,6 +531,8 @@
   function renderJobDetail(bundle) {
     const j = bundle.job;
     document.title = j.title + ' | Triple H Enterprises (Internal Tool)';
+    const headerTitle = document.getElementById('jobHeaderTitle');
+    if (headerTitle) { headerTitle.textContent = j.title || 'Job'; headerTitle.title = j.title || ''; }
 
     const dateDisplay = j.date ? new Date(j.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'No date set';
     const metaParts = [dateDisplay];
@@ -559,7 +600,7 @@
         (j.address ? '<span class="job-hero-where">' + escapeHtml(j.address) + '</span>' : '') + '</div>' +
       '<div class="job-hero-badges">' +
         '<span class="badge badge-' + escapeHtml(j.priority || 'medium') + '">' + escapeHtml(j.priority || 'medium') + '</span>' +
-        '<span class="badge badge-status status-' + escapeHtml(j.status || 'not-started') + '">' + (STATUS_LABEL[j.status] || j.status || 'Not Started') + '</span>' +
+        '<span class="badge badge-status status-' + escapeHtml(j.status || 'not-started') + '">' + (STATUS_LABEL[j.status] || j.status || 'Booked') + '</span>' +
         '<span class="badge badge-when">' + escapeHtml(whenPill) + '</span>' +
         warrantyBadgeHtml(j) +
       '</div>' +
@@ -717,9 +758,15 @@
     const m = bundle.money;
     const track = thJobSteps(j, m);
     const allDone = track.current === null;
+    // Phase 2 revision (2026-10-30): the lit step is the last one reached --
+    // where the job is now, the same as its status badge ("Working" lights
+    // Working). The step after it is only outlined, as what comes next.
+    // track.current is thJobSteps()'s next, unreached step.
+    const reached = track.steps.filter(st => st.reached);
+    const here = reached.length ? reached[reached.length - 1].key : null;
     const steps = track.steps.map(st => {
-      const cls = st.reached ? ' is-reached' : (st.key === track.current ? ' is-current' : '');
-      return '<li class="job-track-step' + cls + '"' + (st.key === track.current ? ' aria-current="step"' : '') + '>' +
+      const cls = (st.reached ? ' is-reached' : '') + (st.key === here ? ' is-current' : '') + (st.key === track.current ? ' is-next' : '');
+      return '<li class="job-track-step' + cls + '"' + (st.key === here ? ' aria-current="step"' : '') + '>' +
         '<span class="job-track-dot" aria-hidden="true"></span><span class="job-track-label">' + st.label + '</span></li>';
     }).join('');
     const attr = typeof escapeAttr === 'function' ? escapeAttr : escapeHtml;
@@ -736,7 +783,11 @@
       else if (days < 0) { tone = ' is-todo'; text = '<strong>Booked for ' + long + '</strong> and not started yet.'; }
       else text = 'Booked for ' + long + '.';
     } else if (m.stage === 'working') {
-      text = 'In progress.';
+      // An action, not the status again (Phase 2 revision, 2026-10-30).
+      // thFinishJob() is the shared "Mark it done" the clock's Stop sheet
+      // uses: it saves the clock's time if it's running, then sets Done.
+      text = 'Working on it.';
+      actions += '<button type="button" class="primary-btn job-next-btn" data-mark-done="' + attr(j.id) + '">Mark done</button>';
     } else if (m.stage === 'to-invoice') {
       tone = ' is-todo';
       text = '<strong>Done, not invoiced yet.</strong> Bill it while the work is fresh.';

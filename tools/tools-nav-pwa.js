@@ -838,6 +838,13 @@
     holder.appendChild(badge);
     var pending = document.getElementById('pendingChangesBadge');
     if (pending) holder.appendChild(pending);
+    // One dot, one meaning (Phase 2 revision, 2026-10-30): the unsynced-
+    // changes badge is no longer a second, orange dot. Its words stay for
+    // screen readers; while this device still has changes to send, the one
+    // dot pulses (styles-tools.css, .th-status.is-pending) unless it's red.
+    function setPending(on) { holder.classList.toggle('is-pending', !!on); }
+    window.addEventListener('th-sync-pending-change', function (e) { setPending(e && e.detail && e.detail.pending); });
+    if (typeof hasPendingLocalChanges === 'function') setPending(hasPendingLocalChanges());
     var words = badge.querySelector('span:not(.realtime-dot)');
     function tip() {
       var t = words ? (words.textContent || '').trim() : '';
@@ -2704,12 +2711,18 @@ function thQuickAddContext() {
 // tour is in progress (tools-tour.js's APP_TOUR_STEP_KEY), so a person
 // is never shown two "here's how this works" prompts at once. `anchor`
 // is the element the tip is inserted directly before.
-function thPageTip(pageKey, bodyHtml, anchor) {
+// opts.once (Phase 2 revision, 2026-10-30, Jobs): the tip is shown on one
+// visit only -- it counts as seen the moment it appears, so it never takes
+// room on a repeat visit even if nobody taps the x.
+function thPageTip(pageKey, bodyHtml, anchor, opts) {
   try {
     if (localStorage.getItem('th_tip_' + pageKey)) return;
     if (localStorage.getItem('th_app_tour_step') !== null) return;
   } catch (e) { return; }
   if (!anchor || !anchor.parentNode) return;
+  if (opts && opts.once) {
+    try { localStorage.setItem('th_tip_' + pageKey, '1'); } catch (e) { /* ignore */ }
+  }
   var card = document.createElement('div');
   card.className = 'th-page-tip';
   card.setAttribute('role', 'note');

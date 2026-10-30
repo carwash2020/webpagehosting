@@ -68,7 +68,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=963d6c5acd">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=5e679ddb01">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=8060cfc3c2" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -81,7 +81,7 @@
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=9fc30a63b8" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=f3223273ae" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
@@ -1194,6 +1194,15 @@
     body.th-tool-page[data-th-page="workspace"] a.today-money-row.today-money-todo { min-height: 44px; align-items: center; }
     body.th-tool-page[data-th-page="workspace"] .icon-search-toggle { width: 44px; height: 44px; }
   }
+  /* Phase 2 revision (2026-10-30), Connor's review item 12: an empty ring
+     says why it's empty ("Clock not started", "Nothing billed today")
+     instead of "0 of 8 h" / "$0 of $0". */
+  body.th-tool-page[data-th-page="workspace"] .today-ring.is-empty .th-ring-center .today-ring-empty {
+    margin: 0; padding: 0 6px; font-size: 11px; font-weight: 500; line-height: 1.25; text-align: center; color: var(--text-dim);
+  }
+  /* Item 7 follow-on: in sentence case "Route today · 2 stops" wrapped in
+     its half-width button; one line, tighter sides. */
+  body.th-tool-page[data-th-page="workspace"] .today-next-links > * { padding-left: 10px; padding-right: 10px; white-space: nowrap; font-size: 14px; }
 </style>
 </head>
 <body data-th-page="workspace" data-role-state="pending" data-home-money="pending">
@@ -1300,7 +1309,7 @@
 <div class="global-search-block">
     <div class="icon-search is-expanded" id="globalSearchWrap">
     <button class="icon-search-toggle" onclick="toggleIconSearch('globalSearchWrap')" aria-label="Find a client" title="Find a client"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg></button>
-    <input type="text" id="globalSearch" class="icon-search-input" placeholder="Find a client &mdash; searches jobs, contacts, invoices, quotes, and contracts..." oninput="debouncedCall('globalSearch', renderGlobalSearch)" aria-label="Search everything by client name">
+    <input type="text" id="globalSearch" class="icon-search-input" placeholder="Search clients, jobs, invoices" oninput="debouncedCall('globalSearch', renderGlobalSearch)" aria-label="Search everything by client name">
   </div>
   <div id="globalSearchResults"></div>
 </div>
@@ -1645,7 +1654,7 @@
 
       <div class="analytics-subheading" style="margin-top:26px;">City Business Licenses</div>
       <div id="licensesList"></div>
-      <button class="secondary-btn" style="margin-top:10px;" onclick="addLicensePrompt()">+ Add License</button>
+      <button class="secondary-btn" style="margin-top:10px;" onclick="addLicensePrompt()">+ Add license</button>
       <div class="analytics-subheading">Secure Documents <button class="help-btn" onclick="openCardInfo('secureDocuments')" aria-label="What is this?" title="What is this?">?</button></div>
       <div id="secureDocsList"></div>
       <div class="icon-search" id="secureDocsUploadWrap" style="width:100%; margin-top:10px;">
@@ -3959,7 +3968,7 @@
         ${clockBtn}
         </div>
         <div class="today-next-links">
-        <a href="/tools/job-detail.html?id=${encodeURIComponent(job.id)}" class="primary-btn">Open Job</a>
+        <a href="/tools/job-detail.html?id=${encodeURIComponent(job.id)}" class="primary-btn">Open job</a>
         ${routeUrl ? `<a href="${escapeAttr(routeUrl)}" class="secondary-btn" target="_blank" rel="noopener" id="todayRouteLink">${routeStops === 1 ? 'Directions' : 'Route today \u00b7 ' + routeStops + ' stops'}</a>` : '<a href="/tools/job-tracker.html" class="secondary-btn">View in Job Tracker</a>'}
         </div>
       </div>`;
@@ -4296,12 +4305,24 @@
     const ring = (value, tone, center, of, label, name) =>
       '<div class="today-ring">' + thRingSvg({ value, tone, size: 86, stroke: 9, key: 'today-' + name, label,
         center: '<b>' + center + '</b><span>' + of + '</span>' }) + '<span class="today-ring-label">' + name + '</span></div>';
+    // Nothing to measure yet (Phase 2 revision, 2026-10-30): "0 of 8 h" and
+    // "$0 of $0" read as broken, so an empty ring says why it's empty
+    // instead -- an empty track with a short line in the middle.
+    const emptyRing = (tone, line1, line2, label, name) =>
+      '<div class="today-ring is-empty">' + thRingSvg({ value: 0, tone, size: 86, stroke: 9, key: 'today-' + name, label,
+        center: '<span class="today-ring-empty">' + line1 + '<br>' + line2 + '</span>' }) + '<span class="today-ring-label">' + name + '</span></div>';
     const rings = [
-      ring(all.length ? done / all.length : 0, 'orange', done + '/' + all.length, 'jobs', done + ' of ' + all.length + ' jobs done today', 'Jobs'),
-      ring(hours / 8, 'green', (hours % 1 ? hours.toFixed(1) : String(hours)), 'of 8 h', hours + ' hours on the clock today, of 8', 'On the clock'),
+      all.length
+        ? ring(done / all.length, 'orange', done + '/' + all.length, 'jobs', done + ' of ' + all.length + ' jobs done today', 'Jobs')
+        : emptyRing('orange', 'No jobs', 'today', 'No jobs scheduled today', 'Jobs'),
+      hours > 0
+        ? ring(hours / 8, 'green', (hours % 1 ? hours.toFixed(1) : String(hours)), 'of 8 h', hours + ' hours on the clock today, of 8', 'On the clock')
+        : emptyRing('green', 'Clock not', 'started', 'No time on the clock yet today', 'On the clock'),
     ];
     if (anyFinanceAccessV2()) {
-      rings.push(ring(invoiced > 0 ? paid / invoiced : 0, 'blue', wholeMoneyV2(paid), 'of ' + wholeMoneyV2(invoiced), money(paid) + ' paid of ' + money(invoiced) + ' invoiced today', 'Paid'));
+      rings.push(invoiced > 0
+        ? ring(paid / invoiced, 'blue', wholeMoneyV2(paid), 'of ' + wholeMoneyV2(invoiced), money(paid) + ' paid of ' + money(invoiced) + ' invoiced today', 'Paid')
+        : emptyRing('blue', 'Nothing', 'billed today', 'Nothing invoiced today yet', 'Paid'));
     }
     el.innerHTML = rings.join('');
     if (typeof thAnimateRings === 'function') thAnimateRings(el);

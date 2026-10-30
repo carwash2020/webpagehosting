@@ -6223,3 +6223,19 @@ Fixed:
 4. **Manifest:** maskable 192/512 icons (`images/icon-maskable-*.png`, the logo at 88% on the app's own background so Android's circle mask doesn't clip it) and an explicit `id` (equal to `start_url`, so installed copies keep their identity).
 
 Not changed: any data, sync, status, invoice or PDF logic. jsPDF on Job detail (about 360KB, already `defer`) stays eager, because lazy-loading it would change the PDF button's flow. Screenshots: `docs/workspace-phase2-native-app-2026-10-30/`. Details: `docs/specialist-logs/visual.md`.
+
+**Revision round, same day (Connor's 12-point review of PR #543).** Fixed on the same branch, each re-measured at 390x844:
+1. The header hugs the top: in a browser tab the 44px safe-area floor no longer pads an empty band above the title. The installed app keeps the floor, which guards iOS returning 0, with a 6px margin.
+2. Home's round buttons sit right of the title, as on Jobs and Job detail.
+3. Job detail has an iOS-style back chevron top-left, and its header shows the job's own title.
+4. One status dot: green for synced, red for a sync problem, a pulse while catching up. Jobs no longer prints raw sync errors ("(no-data-yet)"). Real trouble shows as a small banner in sync.js's own words.
+5. Jobs shows the first job card without scrolling. The intro is computer-only, List/Board/Calendar and Sort moved into one View sheet on phones, and the Tip shows on one visit only.
+6. Segmented controls span the full width.
+7. One casing rule: titles, headings and controls in sentence case, and the priority badge reads "High" everywhere.
+8. Job detail's tracker lights the step the job is at, matching its badge. A Working job's Next step is a **Mark done** button (the shared `thFinishJob()`).
+9. The search placeholders read "Search clients, jobs, invoices" and "Search jobs".
+10. Recurring job templates uses the same chevron as Add a job. Select is the search field's height.
+11. All five bottom-bar labels sit on one baseline.
+12. Empty Home rings say "Clock not started" / "Nothing billed today" instead of "0 of 8 h" / "$0 of $0".
+
+The stub/seed screenshot harness is in `docs/workspace-phase2-native-app-2026-10-30/harness/`. Not changed: Jobs' "Not started / In progress" wording, and any sync, data or invoice logic beyond the Mark done button. Details: `docs/specialist-logs/visual.md`.
