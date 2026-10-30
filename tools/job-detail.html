@@ -52,14 +52,14 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=8d5b635c84">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=45a37ea5ee">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=8060cfc3c2" defer></script>
 <script src="/tools/data-layer.js?v=c595490771" defer></script>
-<script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
+<script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=7e8fb6ef3d" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=3791c46d1a" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <!-- U16 fix (High-Impact Upgrades, 2026-09-07): jsPDF for the new
      "Generate Job Sheet" button, same version/CDN as invoice-generator.html
@@ -352,6 +352,48 @@
     body.th-tool-page[data-th-page="job-detail"].th-has-bottomnav { padding-bottom: calc(85px + 72px + env(safe-area-inset-bottom, 0px)); }
   }
   @media (max-width: 420px) { body.th-tool-page[data-th-page="job-detail"] .job-hero-title { font-size: 30px; } body.th-tool-page[data-th-page="job-detail"] .job-clock-time { font-size: 32px; } }
+  /* Phase 2 native-app pass (2026-10-30): the controls that still measured
+     under 44px at 390x844 with a coarse pointer. Desktop/mouse unchanged.
+     The hero's client and phone links are one 17px line; vertical padding
+     with an equal negative margin gives them a ~44px hit box in place. */
+  @media (pointer: coarse) {
+    body.th-tool-page[data-th-page="job-detail"] .job-col-side .section-heading .help-btn { min-height: 44px; min-width: 44px; }
+    body.th-tool-page[data-th-page="job-detail"] .job-hero-contact a { padding: 14px 0; margin: -14px 0; }
+  }
+  /* Phase 2 revision (2026-10-30), Connor's review items 3 and 8.
+     - The tracker lights the step the job is AT (its last reached step,
+       aria-current), the same thing the status badge says; the step after
+       it is a hollow ring, "what's next", never lit.
+     - The header title is the job's own title (set in renderJobDetail()),
+       so it ends in an ellipsis when long. */
+  body.th-tool-page[data-th-page="job-detail"] .job-track-step.is-reached.is-current .job-track-dot { background: var(--orange-light); box-shadow: 0 0 0 4px var(--tone-orange-bg); }
+  body.th-tool-page[data-th-page="job-detail"] .job-track-step.is-next .job-track-dot { background: var(--bg-panel); box-shadow: inset 0 0 0 2px var(--orange-tint-border); animation: none; }
+  body.th-tool-page[data-th-page="job-detail"] .job-track-step.is-next .job-track-label { color: var(--text-dim); }
+  body.th-tool-page[data-th-page="job-detail"] .job-track-step.is-reached + .job-track-step.is-next::before { background: var(--border); }
+  body.th-tool-page[data-th-page="job-detail"] .job-next-actions { margin-top: 12px; }
+  body.th-tool-page[data-th-page="job-detail"] .hub-header-left.th-has-kicker { flex-wrap: nowrap; }
+  body.th-tool-page[data-th-page="job-detail"] #jobHeaderTitle { flex: 0 1 auto; min-width: 0; }
+  /* PR #543 review round 3, item 2: three round buttons (shift clock,
+     Search, More tools) left the job title ~95px and cut it off. On a phone
+     or tablet they fold into one "⋯" (mountHeaderOverflow() below), whose
+     sheet presses the same buttons, so each still does exactly what it did.
+     A green dot on the ⋯ while on shift keeps that status visible. The
+     header buttons are computer-hidden already (the sidebar has them). */
+  .th-hdr-overflow { display: none; }
+  @media (max-width: 1023px) {
+    body.th-tool-page[data-th-page="job-detail"] .th-hdr-actions > :not(.th-hdr-overflow) { display: none !important; }
+    body.th-tool-page[data-th-page="job-detail"] .th-hdr-actions > .th-hdr-overflow { display: inline-flex; position: relative; }
+    body.th-tool-page[data-th-page="job-detail"] .th-hdr-overflow.is-on-shift::after,
+    body.th-tool-page[data-th-page="job-detail"] .th-hdr-overflow.is-due::after {
+      content: ''; position: absolute; top: 7px; right: 7px; width: 8px; height: 8px; border-radius: 50%;
+      background: var(--status-live); box-shadow: 0 0 0 2px var(--bg);
+    }
+    body.th-tool-page[data-th-page="job-detail"] .th-hdr-overflow.is-due::after { background: var(--orange); }
+  }
+  /* Round 3, item 5: Mark done is full width, the same weight as Start the
+     clock (the other main action in this area). Same button, same handler. */
+  body.th-tool-page[data-th-page="job-detail"] .job-next-actions:has(> [data-mark-done]) { align-self: stretch; }
+  body.th-tool-page[data-th-page="job-detail"] .job-next-actions .job-next-btn[data-mark-done] { display: flex; flex: 1 1 100%; width: 100%; justify-content: center; margin-left: 0; margin-right: 0; }
 </style>
 </head>
 <body data-th-page="job-detail">
@@ -372,12 +414,16 @@
 
 <div id="jobDetailView" style="display:none;">
   <div class="hub-header">
+    <!-- Phase 2 revision (2026-10-30): an iOS-style back chevron, top-left
+         and apart from the round buttons on the right. -->
+    <div class="hub-header-back">
+      <a href="/tools/job-tracker.html" class="help-btn" aria-label="Back to Job Tracker" title="Back to Job Tracker"><svg class="th-icon" aria-hidden="true"><use href="#icon-chevron" xlink:href="#icon-chevron"></use></svg></a>
+    </div>
     <div class="hub-header-left">
       <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
-      <span class="hub-title">Job</span>
+      <span class="hub-title" id="jobHeaderTitle">Job</span>
     </div>
     <div class="hub-header-right">
-      <a href="/tools/job-tracker.html" class="help-btn" aria-label="Back to Job Tracker" title="Back to Job Tracker" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
     </div>
   </div>
   <p class="hub-sub"><span class="realtime-badge" id="realtimeBadge" onclick="retryLiveSync()" title="Live sync" style="margin-left:0;"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span></p>
@@ -391,7 +437,9 @@
 </div>
 
 <script>
-  const STATUS_LABEL = { 'not-started': 'Not Started', 'in-progress': 'In Progress', 'done': 'Done' };
+  // The same words as the tracker's steps and Home's status pill (Phase 2
+  // revision, 2026-10-30), so the badge and the lit step always agree.
+  const STATUS_LABEL = { 'not-started': 'Booked', 'in-progress': 'Working', 'done': 'Done' };
   let currentJobId = null;
   let currentJobPhotos = [];
 
@@ -425,6 +473,67 @@
     window.addEventListener('th-invoice-reminded', onJobRealtimeChange);
     window.addEventListener('th-job-texted', onJobRealtimeChange);
   });
+
+  // Next step's "Mark done" (Phase 2 revision, 2026-10-30).
+  document.addEventListener('click', (e) => {
+    const b = e.target && e.target.closest ? e.target.closest('[data-mark-done]') : null;
+    if (!b) return;
+    e.preventDefault();
+    markJobDoneHere(b.getAttribute('data-mark-done'));
+  });
+  function markJobDoneHere(id) {
+    if (typeof thFinishJob !== 'function') return;
+    const job = thFinishJob(id);
+    if (!job) {
+      if (typeof showToast === 'function') showToast("Couldn't mark it done. Try again.", { type: 'error' });
+      return;
+    }
+    if (typeof haptic === 'function') haptic('success');
+    if (typeof celebrateCompletion === 'function') celebrateCompletion();
+    if (typeof showToast === 'function') showToast((job.title || 'Job') + ' marked done.');
+    onJobRealtimeChange();
+  }
+
+  // PR #543 review round 3, item 2: one "⋯" in place of the three header
+  // buttons on a phone/tablet (CSS hides them at <=1023px). Each sheet row
+  // clicks the original button, so the shift sheet, Search and More tools
+  // keep their own handlers, labels and state; the rows are built at tap
+  // time from those buttons, so the shift row always says what that button
+  // says (Start my day / On shift since ... End my day).
+  function mountHeaderOverflow() {
+    const host = document.querySelector('.hub-header-right .th-hdr-actions');
+    if (!host || host.querySelector('.th-hdr-overflow')) return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'th-hdr-btn th-hdr-overflow';
+    btn.setAttribute('aria-label', 'More actions');
+    btn.title = 'More actions';
+    btn.setAttribute('aria-haspopup', 'dialog');
+    btn.innerHTML = '<svg class="th-icon" aria-hidden="true"><use href="#icon-more" xlink:href="#icon-more"></use></svg>';
+    host.appendChild(btn);
+    function syncShift() {
+      const s = document.getElementById('thShiftBtn');
+      const on = !!(s && !s.hidden && s.classList.contains('is-on'));
+      const due = !!(s && !s.hidden && s.classList.contains('is-due'));
+      btn.classList.toggle('is-on-shift', on);
+      btn.classList.toggle('is-due', due);
+      btn.setAttribute('aria-label', on ? 'More actions (on shift)' : due ? 'More actions (a shift needs an end time)' : 'More actions');
+    }
+    syncShift();
+    window.addEventListener('th-shift-change', () => setTimeout(syncShift, 0));
+    window.addEventListener('storage', (e) => { if (!e.key || e.key === 'th_shift_log') setTimeout(syncShift, 0); });
+    btn.addEventListener('click', () => {
+      syncShift();
+      const press = (sel) => () => { const b = host.querySelector(sel); if (b) b.click(); };
+      const actions = [];
+      const shift = document.getElementById('thShiftBtn');
+      if (shift && !shift.hidden) actions.push({ label: escapeHtml(shift.getAttribute('aria-label') || 'Start my day'), icon: 'clock', onClick: press('#thShiftBtn') });
+      if (host.querySelector('.th-hdr-search')) actions.push({ label: 'Search', icon: 'search', onClick: press('.th-hdr-search') });
+      if (host.querySelector('.th-hdr-menu')) actions.push({ label: 'More tools', icon: 'grid', onClick: press('.th-hdr-menu') });
+      if (typeof showQuickActionSheet === 'function') showQuickActionSheet('More', actions, { opener: btn });
+    });
+  }
+  document.addEventListener('DOMContentLoaded', () => setTimeout(mountHeaderOverflow, 0));
 
   function updateRealtimeBadge(status) {
     const dot = document.getElementById('realtimeDot');
@@ -484,6 +593,8 @@
   function renderJobDetail(bundle) {
     const j = bundle.job;
     document.title = j.title + ' | Triple H Enterprises (Internal Tool)';
+    const headerTitle = document.getElementById('jobHeaderTitle');
+    if (headerTitle) { headerTitle.textContent = j.title || 'Job'; headerTitle.title = j.title || ''; }
 
     const dateDisplay = j.date ? new Date(j.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'No date set';
     const metaParts = [dateDisplay];
@@ -551,7 +662,7 @@
         (j.address ? '<span class="job-hero-where">' + escapeHtml(j.address) + '</span>' : '') + '</div>' +
       '<div class="job-hero-badges">' +
         '<span class="badge badge-' + escapeHtml(j.priority || 'medium') + '">' + escapeHtml(j.priority || 'medium') + '</span>' +
-        '<span class="badge badge-status status-' + escapeHtml(j.status || 'not-started') + '">' + (STATUS_LABEL[j.status] || j.status || 'Not Started') + '</span>' +
+        '<span class="badge badge-status status-' + escapeHtml(j.status || 'not-started') + '">' + (STATUS_LABEL[j.status] || j.status || 'Booked') + '</span>' +
         '<span class="badge badge-when">' + escapeHtml(whenPill) + '</span>' +
         warrantyBadgeHtml(j) +
       '</div>' +
@@ -709,9 +820,15 @@
     const m = bundle.money;
     const track = thJobSteps(j, m);
     const allDone = track.current === null;
+    // Phase 2 revision (2026-10-30): the lit step is the last one reached --
+    // where the job is now, the same as its status badge ("Working" lights
+    // Working). The step after it is only outlined, as what comes next.
+    // track.current is thJobSteps()'s next, unreached step.
+    const reached = track.steps.filter(st => st.reached);
+    const here = reached.length ? reached[reached.length - 1].key : null;
     const steps = track.steps.map(st => {
-      const cls = st.reached ? ' is-reached' : (st.key === track.current ? ' is-current' : '');
-      return '<li class="job-track-step' + cls + '"' + (st.key === track.current ? ' aria-current="step"' : '') + '>' +
+      const cls = (st.reached ? ' is-reached' : '') + (st.key === here ? ' is-current' : '') + (st.key === track.current ? ' is-next' : '');
+      return '<li class="job-track-step' + cls + '"' + (st.key === here ? ' aria-current="step"' : '') + '>' +
         '<span class="job-track-dot" aria-hidden="true"></span><span class="job-track-label">' + st.label + '</span></li>';
     }).join('');
     const attr = typeof escapeAttr === 'function' ? escapeAttr : escapeHtml;
@@ -728,7 +845,11 @@
       else if (days < 0) { tone = ' is-todo'; text = '<strong>Booked for ' + long + '</strong> and not started yet.'; }
       else text = 'Booked for ' + long + '.';
     } else if (m.stage === 'working') {
-      text = 'In progress.';
+      // An action, not the status again (Phase 2 revision, 2026-10-30).
+      // thFinishJob() is the shared "Mark it done" the clock's Stop sheet
+      // uses: it saves the clock's time if it's running, then sets Done.
+      text = 'Working on it.';
+      actions += '<button type="button" class="primary-btn job-next-btn" data-mark-done="' + attr(j.id) + '">Mark done</button>';
     } else if (m.stage === 'to-invoice') {
       tone = ' is-todo';
       text = '<strong>Done, not invoiced yet.</strong> Bill it while the work is fresh.';

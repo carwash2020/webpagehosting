@@ -263,10 +263,23 @@ function jdTrack(job, invoices, income, perms) {
   return ctx.f({ job, money: ctx.stage(job, invoices || [], income || []) }, allowed);
 }
 
-test('Job Detail: the tracker marks each reached step, rings the next one, and says what happens next with the button for it', () => {
+// Phase 2 revision (2026-10-30, Connor's review of PR #543, item 8): the lit
+// (aria-current) step is where the job IS -- its last reached step, the same
+// thing the status badge says -- and the step after it is only outlined as
+// "next". Before, the next, unreached step carried is-current, so a Working
+// job lit "Done" beside an "In Progress" badge.
+test('Job Detail: the tracker lights the step the job is at, outlines the next one, and says what happens next with the button for it', () => {
   const toInvoice = jdTrack({ id: 5, status: 'done', client: 'Sarah' });
-  assert.match(toInvoice, /<li class="job-track-step is-current" aria-current="step"><span class="job-track-dot" aria-hidden="true"><\/span><span class="job-track-label">Invoiced<\/span><\/li>/);
+  assert.match(toInvoice, /<li class="job-track-step is-reached is-current" aria-current="step"><span class="job-track-dot" aria-hidden="true"><\/span><span class="job-track-label">Done<\/span><\/li>/);
+  assert.match(toInvoice, /<li class="job-track-step is-next"><span class="job-track-dot" aria-hidden="true"><\/span><span class="job-track-label">Invoiced<\/span><\/li>/);
   assert.equal((toInvoice.match(/is-reached/g) || []).length, 3);
+  assert.equal((toInvoice.match(/aria-current="step"/g) || []).length, 1, 'one lit step');
+
+  const working = jdTrack({ id: 7, status: 'in-progress', client: 'Maria' });
+  assert.match(working, /<li class="job-track-step is-reached is-current" aria-current="step"><span class="job-track-dot" aria-hidden="true"><\/span><span class="job-track-label">Working<\/span><\/li>/, 'a Working job lights Working, not Done');
+  assert.match(working, /<li class="job-track-step is-next"><span class="job-track-dot" aria-hidden="true"><\/span><span class="job-track-label">Done<\/span><\/li>/);
+  assert.match(working, /<button type="button" class="primary-btn job-next-btn" data-mark-done="7">Mark done<\/button>/, 'Next step is an action, not the status again');
+  assert.doesNotMatch(working, /In progress\./);
   assert.match(toInvoice, /<div class="job-next is-todo">/);
   assert.match(toInvoice, /href="\/tools\/invoice-generator\.html\?jobRef=5">Create invoice<\/a>/);
   assert.match(toInvoice, /href="\/tools\/finance\.html\?job=5#income">Paid another way<\/a>/);

@@ -79,6 +79,10 @@
     { href: '/tools/clients.html',     icon: 'users',  label: 'Clients' },
     { money: true,                     icon: 'dollar', label: 'Money' }
   ];
+  // Screens with no tab of their own, keyed by path: the tab they sit under.
+  var TAB_PARENT = {
+    '/tools/job-detail.html': '/tools/job-tracker.html'
+  };
 
   // Per-href permission checks for every restricted destination that
   // can appear in the sidebar/More sheet (out of everything in
@@ -797,8 +801,12 @@
     }
     var href = d.money ? lastMoneyHref() : d.href;
     var isHere = d.money ? isMoneyPath(path) : path === d.href;
-    var cls = (d.money ? 'th-bn-money' : '') + (isHere ? ' is-active' : '');
-    return '<a href="' + href + '" class="' + cls.trim() + '"' + (isHere ? ' aria-current="page"' : '') + '>' +
+    // A drill-down screen keeps its parent tab lit, the way a native tab bar
+    // does (Phase 2, 2026-10-30): Job detail lights Jobs. aria-current is
+    // "true", not "page": the link goes to the list, not this screen.
+    var isParent = !isHere && !d.money && TAB_PARENT[path] === d.href;
+    var cls = (d.money ? 'th-bn-money' : '') + ((isHere || isParent) ? ' is-active' : '');
+    return '<a href="' + href + '" class="' + cls.trim() + '"' + (isHere ? ' aria-current="page"' : (isParent ? ' aria-current="true"' : '')) + '>' +
       '<span class="th-bn-icon th-hex-icon" aria-hidden="true">' + iconSvg(d.icon) + '</span>' +
       '<span>' + d.label + '</span></a>';
   }
@@ -830,14 +838,63 @@
     holder.appendChild(badge);
     var pending = document.getElementById('pendingChangesBadge');
     if (pending) holder.appendChild(pending);
+    // One dot, one meaning (Phase 2 revision, 2026-10-30): the unsynced-
+    // changes badge is no longer a second, orange dot. Its words stay for
+    // screen readers; while this device still has changes to send, the one
+    // dot pulses (styles-tools.css, .th-status.is-pending) unless it's red.
+    function setPending(on) { holder.classList.toggle('is-pending', !!on); }
+    window.addEventListener('th-sync-pending-change', function (e) { setPending(e && e.detail && e.detail.pending); });
+    if (typeof hasPendingLocalChanges === 'function') setPending(hasPendingLocalChanges());
     var words = badge.querySelector('span:not(.realtime-dot)');
     function tip() {
-      var t = words ? (words.textContent || '').trim() : '';
+      var t = holder.classList.contains('is-trouble') ? 'Sync problem. Tap to retry.' : (words ? (words.textContent || '').trim() : '');
       if (t) { badge.title = t; badge.setAttribute('aria-label', t); }
     }
     tip();
     if (words && typeof MutationObserver !== 'undefined') new MutationObserver(tip).observe(words, { childList: true, characterData: true, subtree: true });
     if (from && from.classList && from.classList.contains('hub-sub') && !from.children.length) from.classList.add('th-hub-sub-empty');
+
+    // Review round 3 (2026-10-30): red means the same thing the sync banner
+    // means, and nothing else. Before, red came from the live-update
+    // websocket (each page's updateRealtimeBadge -> .is-error), while the
+    // banner came from the backup status (th_sync_last + mirror failures),
+    // so the dot could be red with no banner. A dropped websocket only
+    // pauses instant updates from other devices -- saves still back up --
+    // so on its own it now shows a neutral grey dot (styles-tools.css).
+    // Both the dot and the banner read thSyncTrouble(), on the same events.
+    // Jobs has its own banner (#syncStatusText); other pages get a shared
+    // one under the header, shown only while there's trouble.
+    var note = document.getElementById('syncStatusText');
+    if (!note) {
+      var hdr = badge.closest('.hub-header, header') || title.closest('.hub-header, header');
+      if (hdr && hdr.parentNode) {
+        note = document.createElement('p');
+        note.id = 'thSyncNote';
+        note.className = 'th-sync-note';
+        note.setAttribute('role', 'status');
+        hdr.parentNode.insertBefore(note, hdr.nextSibling);
+      } else {
+        note = null;
+      }
+    }
+    function setTrouble() {
+      var t = null;
+      try { t = thSyncTrouble(); } catch (e) { t = null; } // never take the shell down over a status read
+      holder.classList.toggle('is-trouble', !!t);
+      tip();
+      if (note && note.id === 'thSyncNote') {
+        note.classList.toggle('is-issue', !!t);
+        note.textContent = '';
+        if (t) {
+          note.innerHTML = '<svg class="th-icon" aria-hidden="true"><use href="#icon-warning" xlink:href="#icon-warning"></use></svg><span></span>';
+          note.lastChild.textContent = t.text;
+        }
+      }
+    }
+    setTrouble();
+    window.addEventListener('th-sync-status', setTrouble);
+    window.addEventListener('th-mirror-failure', setTrouble);
+    window.addEventListener('storage', function (e) { if (!e.key || e.key === 'th_sync_last' || e.key === 'th_mirror_failures') setTrouble(); });
   }
 
   function inject() {
@@ -932,6 +989,38 @@
 var TH_NEW_TAB_KEYS = ['metaKey', 'ctrlKey', 'shiftKey', 'altKey'];
 
 // An ordinary left click the page itself hasn't already handled.
+// Review round 3 (2026-10-30): is there sync trouble worth telling someone
+// about? One answer for the header dot (red) and the sync banner, so they
+// always agree. Returns null, or { text } in plain words (sync.js's
+// warnIfSyncFailed() copy; no error codes or table names). Not trouble:
+// "no-data-yet" (the cloud has nothing for this account yet) and sync not
+// being set up on this device.
+// (The quiet list lives inside: the shell calls this while this file is
+// still running, before a top-level var below the call would be set.)
+function thSyncTrouble() {
+  var quiet = ['no-data-yet', 'not-configured', 'no-code'];
+  var status = null;
+  try { status = JSON.parse(localStorage.getItem('th_sync_last') || 'null'); } catch (e) { status = null; }
+  var text = '';
+  if (status && !status.ok && quiet.indexOf(status.error) === -1) {
+    text = status.error === 'session-expired'
+      ? "Couldn't back up to the cloud — your login session expired. Log out and back in to fix this."
+      : "Couldn't back up to the cloud just now. Your changes are still saved on this device, and it'll retry automatically.";
+  }
+  // Mirror failures stay logged until cleared in Dev Tools, so only the
+  // last day's count here: one old failure must not keep the dot red for
+  // weeks. Dev Tools still lists every one.
+  var failures = [];
+  try { failures = (typeof loadMirrorFailures === 'function') ? (loadMirrorFailures() || []) : []; } catch (e) { failures = []; }
+  var dayAgo = Date.now() - 864e5;
+  failures = failures.filter(function (f) { var t = f && Date.parse(f.time); return !t || t > dayAgo; });
+  if (failures.length) {
+    text = (text ? text + ' ' : '') + (failures.length === 1 ? '1 recent save' : failures.length + ' recent saves') +
+      " hasn't reached the shared calendar and invoices yet. It's safe on this device.";
+  }
+  return text ? { text: text } : null;
+}
+
 function thIsPlainClick(e) {
   if (e.defaultPrevented || e.button !== 0) return false;
   return !TH_NEW_TAB_KEYS.some(function (k) { return e[k]; });
@@ -2696,12 +2785,18 @@ function thQuickAddContext() {
 // tour is in progress (tools-tour.js's APP_TOUR_STEP_KEY), so a person
 // is never shown two "here's how this works" prompts at once. `anchor`
 // is the element the tip is inserted directly before.
-function thPageTip(pageKey, bodyHtml, anchor) {
+// opts.once (Phase 2 revision, 2026-10-30, Jobs): the tip is shown on one
+// visit only -- it counts as seen the moment it appears, so it never takes
+// room on a repeat visit even if nobody taps the x.
+function thPageTip(pageKey, bodyHtml, anchor, opts) {
   try {
     if (localStorage.getItem('th_tip_' + pageKey)) return;
     if (localStorage.getItem('th_app_tour_step') !== null) return;
   } catch (e) { return; }
   if (!anchor || !anchor.parentNode) return;
+  if (opts && opts.once) {
+    try { localStorage.setItem('th_tip_' + pageKey, '1'); } catch (e) { /* ignore */ }
+  }
   var card = document.createElement('div');
   card.className = 'th-page-tip';
   card.setAttribute('role', 'note');

@@ -6211,3 +6211,40 @@ Tests: `tests/seo/inbound-internal-links.test.js`.
 *Tests updated for the new counts:* `tests/design/header-menus.test.js`, `tests/design/site-banner-no-layout-shift.test.js`, `tests/design/package-d-public-site.test.js` (via the deleted share-card asset), `tests/site-content/site-banners-public.test.js`, `tests/booking/booking-flow-picker-and-confirm.test.js`, `tests/seo/batch4-search-data.test.js` (Duck Creek assertion added), `tests/seo/no-bare-rest-v1-path.test.js`.
 
 Full relevant suite (design/, seo/, booking/, content-quality/, site-wide/, site-content/, tools/, portal/, referrals/) passing, plus `check-consistency.js`, `check-undefined-vars.js`, and `check-links.py` clean.
+
+## What changed, 2026-10-30 -- Workspace Phase 2: native-app gaps on Home, Jobs and Job detail
+
+A gap audit of Home (`tools/workspace.html`), Jobs (`tools/job-tracker.html`) and Job detail (`tools/job-detail.html`) against a native-app checklist, then fixes for the real gaps only. Most of the checklist was already built by W1/W2 and the v2 packages (2026-09-28/29): the bottom tab bar, app headers, flat cards, form sheets, the Job detail thumb bar, safe-area insets on every fixed bar, `prefers-reduced-motion` on every animation, and the iOS/manifest PWA tags. None of that was redone.
+
+Fixed:
+1. **Job detail now lights the Jobs tab** in the bottom bar (`aria-current="true"`), the way a native tab bar keeps a drill-down's parent tab lit. Before, no tab was lit there. (`tools-nav-pwa.js`, a `TAB_PARENT` map.)
+2. **The bottom bar is 85px again.** v2's smaller icons left it at 81px while every offset (body padding, toasts, sticky bars, Job detail's thumb bar) assumes 85, so a 4px strip of page showed between the thumb bar and the nav.
+3. **44px tap targets**, measured at 390x844 with a coarse pointer. The biggest one was a cascade bug: Home's ops-lane and Money owed pills (Mark paid, Invoice, Handled) were 34px on phones, because the 34px rule's `:not(.is-remind)` out-specified the 44px touch rule. Also fixed: Route all / Insights links, the money "To invoice" row, Home's collapsible section headings, the Jobs search field and its Templates bar and ?, job-card title links (the only way into Job detail; padded in place, not a whole-card link, which would break swipe-to-Done), Job detail's hero client/phone links and "+ Add", and the sync status dot when it's the retry button.
+4. **Manifest:** maskable 192/512 icons (`images/icon-maskable-*.png`, the logo at 88% on the app's own background so Android's circle mask doesn't clip it) and an explicit `id` (equal to `start_url`, so installed copies keep their identity).
+
+Not changed: any data, sync, status, invoice or PDF logic. jsPDF on Job detail (about 360KB, already `defer`) stays eager, because lazy-loading it would change the PDF button's flow. Screenshots: `docs/workspace-phase2-native-app-2026-10-30/`. Details: `docs/specialist-logs/visual.md`.
+
+**Revision round, same day (Connor's 12-point review of PR #543).** Fixed on the same branch, each re-measured at 390x844:
+1. The header hugs the top: in a browser tab the 44px safe-area floor no longer pads an empty band above the title. The installed app keeps the floor, which guards iOS returning 0, with a 6px margin.
+2. Home's round buttons sit right of the title, as on Jobs and Job detail.
+3. Job detail has an iOS-style back chevron top-left, and its header shows the job's own title.
+4. One status dot: green for synced, red for a sync problem, a pulse while catching up. Jobs no longer prints raw sync errors ("(no-data-yet)"). Real trouble shows as a small banner in sync.js's own words.
+5. Jobs shows the first job card without scrolling. The intro is computer-only, List/Board/Calendar and Sort moved into one View sheet on phones, and the Tip shows on one visit only.
+6. Segmented controls span the full width.
+7. One casing rule: titles, headings and controls in sentence case, and the priority badge reads "High" everywhere.
+8. Job detail's tracker lights the step the job is at, matching its badge. A Working job's Next step is a **Mark done** button (the shared `thFinishJob()`).
+9. The search placeholders read "Search clients, jobs, invoices" and "Search jobs".
+10. Recurring job templates uses the same chevron as Add a job. Select is the search field's height.
+11. All five bottom-bar labels sit on one baseline.
+12. Empty Home rings say "Clock not started" / "Nothing billed today" instead of "0 of 8 h" / "$0 of $0".
+
+The stub/seed screenshot harness is in `docs/workspace-phase2-native-app-2026-10-30/harness/`. Not changed: Jobs' "Not started / In progress" wording, and any sync, data or invoice logic beyond the Mark done button. Details: `docs/specialist-logs/visual.md`.
+
+**Review round 3, same day (Connor's 5 polish items on PR #543).** Same branch, each checked on the rendered page at 390x844:
+1. **The status dot was red with nothing wrong.** Red came from the live-update connection (Supabase Realtime), while the Jobs banner came from the backup status, so the two could disagree. In the screenshot harness the Supabase library is blocked, which made every shot red. Now one shared check, `thSyncTrouble()` in `tools-nav-pwa.js`, drives both the red dot and the banner: a failed backup, or a relational save that failed in the last 24 hours. Green means live updates are connected. Grey means connecting, or live updates are off; saves still back up. Red only ever appears together with the banner. Home, Job detail and the other tool pages get the same banner under the header, shown only when there's trouble. Tapping the red dot retries the backup.
+2. Job detail's header has one **⋯** button instead of three, so the job title fits. Its sheet lists Start my day (the shift clock), Search and More tools, and each row presses the original button, so nothing changed behind them.
+3. The bottom bar's "New" label is grey like the other inactive tabs. The orange hexagon stays.
+4. Home's **Open job** and **Route today · 2 stops** are a matched pair: both 48px, the same type, and one line each. A long route label ends in an ellipsis instead of wrapping.
+5. Job detail's **Mark done** is full width, like Start the clock.
+
+The harness now serves the pinned supabase-js locally and answers the Realtime join, so the shots show a genuinely healthy (green) dot. `verify.js` runs 58 checks, up from 26. Details: `docs/specialist-logs/visual.md`.

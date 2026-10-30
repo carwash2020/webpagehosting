@@ -3,6 +3,85 @@
 Started 2026-09-16, alongside the `tripleh-visual` skill. See `README.md` in
 this directory for how these logs work.
 
+## 2026-10-30 -- Workspace Phase 2, review round 3: Connor's 5 polish items on PR #543
+
+These are five items from Connor's look at round 2's 390x844 shots. All were fixed on the same branch and checked on the rendered page with the harness. `verify.js` is now 58 checks, up from 26.
+
+**1. Red dot with nothing wrong. This needed real investigation.** I reproduced it in the harness first. The stub aborts the jsdelivr supabase-js script, so `getSupabaseClient()` is null and `startRealtimeSync()` reports `'unavailable'`. Every page's own `updateRealtimeBadge()` then adds `.is-error`, which turns the dot red. Meanwhile `th_sync_last` only said `no-data-yet`, which isn't trouble. That explains the screenshots. The real design bug underneath: **the dot and the banner read different signals.** The dot read the Realtime websocket, and the Jobs banner read the backup status (`th_sync_last` plus mirror failures). On a real phone the websocket alone drops often: iOS suspends the PWA, cell handoffs, and `CLOSED`/`TIMED_OUT` after retries. Each drop gave a red dot with no banner, while backups were fine. That's plausible for "red constantly", but I can't confirm it without Connor's device.
+- **Fix:** a global `thSyncTrouble()` in `tools-nav-pwa.js` returns `{ text }` or null. It's the only source of red, and Jobs' `updateSyncStatusText()` reads it too. Both listen for `th-sync-status`, `th-mirror-failure` and `storage`. `mountStatusDot()` sets `.th-status.is-trouble` and, on pages without `#syncStatusText`, adds a shared `#thSyncNote` banner right after the header. The banner is empty and hidden by `:empty` unless there's trouble, and it applies to every tool page, since the dot is one component.
+- **CSS:** `.realtime-dot.is-error` inside `.th-status` is now grey. The pending pulse wins over it, and `.is-trouble` forces red. I didn't touch any page's `updateRealtimeBadge()`. `retryLiveSync()` calls `pushSync()` when the dot is red for trouble, and keeps the reload for a grey, disconnected dot.
+- **Mirror failures** count only from the last 24h. They stay in localStorage until Dev Tools clears them, so counting all of them would pin the dot red after one old failure. That's a behaviour change for Jobs' banner too: older failures no longer show there. Dev Tools still lists them all.
+- **Trap I hit:** I first declared the quiet-errors list as a top-level `var` below the IIFE. `inject()` runs while the file is still executing, so the var was `undefined`, and whenever `th_sync_last` held a failure it threw and killed the entire shell (no bottom bar, no header buttons, no icons). The list is now inside the function, and `setTrouble()` is wrapped in try/catch. **Anything `inject()` calls must be a function declaration or set above the IIFE.**
+- **Harness:** `harness/live-stub.js` serves the pinned supabase-js@2.112.3 UMD locally (from `npm pack`; its sha384 matches the page's SRI) and answers the Realtime `phx_join` with the client's own postgres_changes bindings plus ids. The pages then reach `SUBSCRIBED` through their own code, and the dot is honestly green. The real client renders Jobs later than the old 1.8s wait, so waits are 2.5–3s now.
+
+**2. Job detail title truncation.** The three header buttons are the shift clock (`#thShiftBtn`), Search (`openCommandPalette`) and More tools (`thMoreSheet`). On Job detail at ≤1023px, CSS hides them and `mountHeaderOverflow()` adds one ⋯ (`.th-hdr-overflow`). Its `showQuickActionSheet` rows are built at tap time and `.click()` the original buttons, so their handlers, labels and state are untouched; `shift-clock-shell.test.js` still finds the shift button in `.th-hdr-actions`. A dot on the ⋯ shows on-shift (green) or needs-end-time (orange). Mount it with `setTimeout(0)` after DOMContentLoaded: the page's inline listener fires before the deferred shell has finished. The title box is now 266px wide. "Hang 3 shelves + TV mount" fits in the fallback font.
+
+**3. New label.** `.th-bn-create { color: var(--text-dim) }` at the end of `styles-tools.css`. The disc has its own `background: var(--orange)`, so it's unaffected.
+
+**4. Home's pair.** The boxes already measured 46/46. The mismatch was a 3px orange lip (box-shadow) plus Oswald 700, against a bordered Archivo 400. Both are now 48px, Archivo 600 14px, a 1px border, and no lip. Open job is `flex: 0 0 38%`, and the route label gets the rest. The labels are wrapped in `.today-next-link-label` with an ellipsis (`text-overflow` doesn't work on a flex container's bare text), and the full text is the link's `title`. Measured with fallback fonts: it fits at 390 and 360, and ellipsizes at 320.
+
+**5. Mark done.** Its parent `.job-next` is a column with `align-items: flex-start`, so `.job-next-actions` shrink-wrapped to 98px and `width: 100%` on the button did nothing. `.job-next-actions:has(> [data-mark-done]) { align-self: stretch }` fixes it, and other stages' buttons are unchanged. It measures 328px against Start the clock's 332px (different card padding).
+
+**Not done / open:** the screenshots still use fallback fonts. Item 1's real-device cause is inferred (websocket drops), not observed. The live-stub needs `SUPABASE_UMD`; without it, shots show a grey dot.
+
+## 2026-10-30 -- Workspace Phase 2, revision round: Connor's 12-point review of PR #543
+
+Connor reviewed the PR's own 390x844 after-shots (there's no preview deploy, and the tools need his login + 2FA) and listed 12 items. All were fixed on the same branch, then re-measured in Chromium at 390x844 with the same stubbed harness. That harness is now committed at `docs/workspace-phase2-native-app-2026-10-30/harness/` (`shoot.js` for the screenshots and report, `verify.js` for 26 behaviour checks). Shared rules live in one block at the end of `styles-tools.css`, prefixed `html body.th-tool-page:is(...)`. Each page's own v2 block loads after that file at the same specificity, so without the extra `html` the shared rule silently loses on these pages.
+
+**Decisions worth knowing before touching these again:**
+- **The header's 44px safe-area floor stays.** It's tested in ~10 places and guards iOS returning `env()=0`. It now applies only to the installed app, under `(display-mode: standalone)` with a 6px margin. In a browser tab (`display-mode: browser`) the page is never under the status bar, so the bar pads 8px with no `env()`. Without either media match, nothing changes. Body `padding-top` is 0 on these pages at ≤1023px. The `.tabs.tabs-sticky` offset was retuned per mode (62px / `60px + floor`) and measured: it lands exactly on the header's bottom edge in both. CDP can't emulate `display-mode`, so standalone was checked by injecting the stylesheet with the query forced on.
+- **One status dot.** The unsynced-changes badge is visually hidden (it keeps its words for screen readers). `mountStatusDot()` toggles `.th-status.is-pending` from `th-sync-pending-change`, and the dot pulses grey while pending (unless it's red). This applies to every tool page: it's one component.
+- **No raw sync errors.** Jobs' `#syncStatusText` moved out of the intro into its own `.th-sync-note`. It shows sync.js's own `warnIfSyncFailed()` copy as a red banner. `no-data-yet`, `not-configured` and `no-code` aren't trouble and show nothing. Mirror failures say how many saves without the table name or error code. "Last synced" is shown on a computer only.
+- **Jobs' View sheet reuses `showQuickActionSheet()`** (the same calls as the inline controls: `setJobViewMode`/`setSort`). The current choice uses `kind: 'current'`, which becomes `data-kind`, plus a CSS check mark. The inline List/Board/Calendar and Sort controls are hidden at ≤1023px and stay on desktop. The intro paragraph is also desktop-only.
+- **`thPageTip(key, text, anchor, { once: true })`** marks the tip seen as soon as it shows. Only Jobs uses it. Other pages' tips are unchanged (they stay until × is tapped).
+- **The casing rule, as applied:** titles, headings and controls (buttons, segments, bars, chips, action-sheet rows) are sentence case, as typed. Small tracked eyebrow/caption labels keep caps: the date kicker, "Next step", "Tip", section labels, ring/step captions, the thumb-bar and bottom-bar labels. Removing `text-transform` exposed Title Case source strings, which I fixed at the source ("Open Job", "Not Started" chips, "Sort by Date", "+ New Template", "+ Add License"). Tool names stay as named everywhere else (the "Job Tracker" title matches the sidebar; a test pins it). In sentence case "Route today · 2 stops" wrapped in its half-width button; it's now nowrap.
+- **Priority badge**: one shared rule (tone pill, `text-transform: capitalize`) for the three pages, so it reads "High" on Home, the Jobs cards and Job detail. The pages' own older `.badge` copies are still there underneath. The shared rule wins; delete the copies in the visual-consistency phase.
+- **Job detail's tracker**: `is-current` and `aria-current` go on the last *reached* step (where the job is). The next step is `is-next`, a hollow ring. Before, `thJobSteps().current`, the next unreached step, was lit, so a Working job lit "Done". The status badge now uses the stepper's words (Booked/Working/Done). Next step for a Working job is a **Mark done** button (`data-mark-done`), using the shared `thFinishJob()`, the same write as the clock sheet's "Mark it done". `tests/tools/job-money-pipeline.test.js` was updated for the new semantics.
+- **Bottom bar baseline:** the + disc used 34px of the column against the tabs' 28px, and `<button>` doesn't inherit line-height, so "New" sat 6px low. The disc is now `margin: -21px 0 -3px` with `line-height: 1.6`, measured at 805px for all five labels.
+
+**Measured at 390x844 (stub):** kicker top 8px (was ~66). The header is one 62px row on all three pages. The segments are 366px, equal to the card width. Search/Select/View are all 46px. The first Jobs card is 567–749 with the first-visit tip and 440–622 on a repeat visit; the nav starts at 759. No horizontal overflow at 390/820/1280, light or dark.
+
+**Not done / open:**
+- **Vocabulary split:** Jobs' list badges and chips still say "Not started / In progress" (STATUS_LABEL there is pinned by tests and the board columns). Home and Job detail say Booked/Working/Done.
+- The Booked stage's Next step is still text only. The clock card right under it holds the action ("Start the clock" also starts the job).
+- Screenshots use fallback fonts because the stub aborts Google Fonts, the same as the first pass. Anton titles in sentence case look different on a real device.
+
+## 2026-10-30 -- Workspace Phase 2 ("native app feel"): a gap audit of Home, Jobs, Job detail
+
+The ask was a native-app checklist (bottom tabs, 44px targets, app headers, cards, transitions, safe areas, PWA, fast load). `docs/ACTION-ITEMS.md`'s 09-25 "4 phases" plan is stale: W1/W2 and the v2 packages (09-28/29) already built most of it. Audited the live files first, then fixed only real gaps. **Don't redo any of the "already done" list below.**
+
+**Already done (verified in the files and in Chromium at 390x844):**
+- The bottom tab bar (`tools-nav-pwa.js` `DESTS` + `barItemHtml`; styled W1.12/V2.2) has safe-area padding, an active state and reduced-motion gating. It's a view-transition name.
+- App headers (V2.1 kicker + Anton title + status dot) and flat cards are shipped. The header's 44px top floor (`max(env(safe-area-inset-top), 44px)`) is deliberate, for the black-translucent status bar.
+- Safe areas: every fixed bar on these pages already uses `env(safe-area-inset-*)`: the bottom nav, Job detail's thumb bar, sheets, toasts and the update card.
+- Motion: every animation on the three pages, and the shared sheets, nav and view transitions, already has a `prefers-reduced-motion` gate. Nothing added.
+- PWA head tags: the manifest link, theme-color, `apple-mobile-web-app-*`, `apple-touch-icon` and `viewport-fit=cover` are on all three pages. Home (the `start_url`) also has splash images.
+- The segmented controls and chips (`.th-v2-seg` / `.th-v2-chip`, Jobs tabs, view/sort/status) already reach 44px under `(pointer: coarse)`.
+
+**Real gaps, fixed:**
+- **Job detail lit no tab.** `TAB_PARENT` in `tools-nav-pwa.js` maps a drill-down path to its tab, so Job detail now lights Jobs. It uses `aria-current="true"`, not `"page"`, because the link goes to the list. The desktop sidebar has the same gap (`destIsHere()`), which I left alone: it's off the phone checklist and drives `aria-current="page"`. Client detail would want a `'/tools/client-detail.html': '/tools/clients.html'` entry too; that page was out of scope.
+- **The bottom bar was 81px, not 85.** V2.2's 28px icon boxes shrank it, while every offset assumes 85. On Job detail, page content showed through a 4px strip between the thumb bar and the nav. I pinned `min-height: calc(85px + safe-area)` on the bar rather than retuning the offsets.
+- **The `:not()` specificity trap, again** (same class of bug as `.small-btn` on 09-22). Home's 34px pill rule uses `.paid-toggle-btn:not(.is-remind)`. The `:not()` adds a class to its specificity, so the later `(pointer: coarse)` 44px rule lost, and Mark paid / Invoice / Handled were 34px on real phones. A coarse rule must repeat the `:not(...)` to win.
+- Other sub-44 controls got 44px under `(pointer: coarse)`, in each page's own `<style>`:
+  - Home: Route all, Insights ›, the "To invoice" money row, section headings and the income search.
+  - Jobs: the Templates bar, and its ? via an `::after` hit area so the 30px look is kept; the search pill.
+  - Job detail: "+ Add".
+  - Shared: the status dot, via an `::after` hit area, only while `.is-retryable`.
+- **Text links that are a screen's only way in** (job-card titles; the client/phone links in Job detail's hero) got `padding: 14px 0; margin: -14px 0`. On an inline link that grows the hit box to 45px without moving anything. **A whole-card stretched link would break swipe-to-Done**: `initJobCardSwipeReveal` ignores any pointerdown that starts on an `a`.
+- **Jobs search row trap:** widening the toggle made `#jobSearchWrap`'s automatic minimum (toggle + the input's intrinsic width) too wide, and "Select" wrapped to the next row. `min-width: 0` on the pill restores the 240px flex-basis behaviour. Re-check this row whenever anything in that pill grows.
+- **Manifest:** added maskable 192/512 icons (the logo at 88% on `#0a0a0a`; checked under the strictest 40%-radius circle) and `"id"`, equal to `start_url`, which is the spec default, so installed copies keep their identity.
+
+**Left alone on purpose:**
+- Home's ready-to-invoice title link (16px). It sits in an ellipsis-clipped title that would clip any padded hit box, and the row's 44px ⋯ already has "Open job".
+- jsPDF on Job detail: about 360KB, but already `defer` and off the critical path. Lazy-loading it would change the PDF button's flow.
+
+**Method notes:**
+- Playwright's `fullPage` screenshot resets device emulation, so `(pointer: coarse)` stops matching. Measure tap targets before any full-page capture, or every coarse-gated control reads as too small.
+- `getBoundingClientRect` doesn't include `::after` hit areas. Verify those with `elementFromPoint` just outside the box.
+- Tool pages use `scroll-behavior: smooth`, so `scrollIntoView` + measure in the same tick reads the old position.
+
+Screenshots (390x844, dark, before = main): `docs/workspace-phase2-native-app-2026-10-30/`.
+
 ## 2026-10-23 -- invoice/estimate PDF redesign: dark masthead, Inter, job box, CTA card
 
 Approved spec, scoped tightly to `generatePDF()`/`generateQuotePDF()`

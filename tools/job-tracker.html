@@ -52,14 +52,14 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=8d5b635c84">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=45a37ea5ee">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=8060cfc3c2" defer></script>
 <script src="/tools/data-layer.js?v=c595490771" defer></script>
-<script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
+<script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=7e8fb6ef3d" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=3791c46d1a" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
@@ -758,6 +758,61 @@
     body.th-tool-page[data-th-page="job-tracker"] #tab-contacts > .th-sheet-trigger { grid-column: 1; }
     body.th-tool-page[data-th-page="job-tracker"] #tab-contacts > #contactSearchWrap { grid-column: 2; }
   }
+  /* Phase 2 native-app pass (2026-10-30): the controls that still measured
+     under 44px at 390x844 with a coarse pointer. Desktop/mouse unchanged.
+     - The Templates bar is the toggle for its inline card (30px tall); its
+       ? keeps its 30px look and gets a 44px hit area around it.
+     - A job card's title link is the one way into Job detail, and it was a
+       17px line of text. Vertical padding with an equal negative margin
+       grows the hit box to 45px without moving anything. A whole-card link
+       was ruled out: the card's swipe-to-Done handler ignores any press
+       that starts on a link, so it would have killed the swipe. */
+  @media (pointer: coarse) {
+    body.th-tool-page[data-th-page="job-tracker"] #templatesFormSection .form-section-header { min-height: 44px; }
+    body.th-tool-page[data-th-page="job-tracker"] #templatesFormSection .form-section-header .help-btn { position: relative; }
+    body.th-tool-page[data-th-page="job-tracker"] #templatesFormSection .form-section-header .help-btn::after { content: ''; position: absolute; inset: -7px; }
+    /* min-width: 0 keeps Select on the search row: with the wider toggle,
+       the pill's automatic minimum (toggle + the input's intrinsic width)
+       outgrew the room beside Select and the row wrapped. */
+    body.th-tool-page[data-th-page="job-tracker"] #jobSearchWrap { min-width: 0; }
+    body.th-tool-page[data-th-page="job-tracker"] #jobSearchWrap .icon-search-toggle { width: 44px; height: 44px; }
+    body.th-tool-page[data-th-page="job-tracker"] #jobSearchWrap .icon-search-input { min-height: 44px; }
+    body.th-tool-page[data-th-page="job-tracker"] .job-card-title > a { padding: 14px 0; margin: -14px 0; }
+  }
+  /* Phase 2 revision (2026-10-30), Connor's review items 4, 5, 6, 9, 10.
+     Goal: at 390x844 the first job card shows without scrolling.
+     - The intro paragraph is computer-only; a phone already knows what Jobs is.
+     - List/Board/Calendar and Sort move into one View sheet (openJobViewSheet())
+       on a phone/tablet; the inline controls stay on a computer.
+     - Search, Select and View share one 46px row.
+     - Recurring job templates gets the same chevron as Add a job. */
+  body.th-tool-page[data-th-page="job-tracker"] .jt-view-btn {
+    flex: 0 0 46px; width: 46px; height: 46px; padding: 0; display: none; align-items: center; justify-content: center;
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; color: var(--text); cursor: pointer;
+  }
+  body.th-tool-page[data-th-page="job-tracker"] .jt-view-btn .th-icon { width: 20px; height: 20px; margin: 0; }
+  body.th-tool-page[data-th-page="job-tracker"] .jt-view-btn:active { transform: scale(.96); background: var(--bg-panel-2); }
+  body.th-tool-page[data-th-page="job-tracker"] .jt-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+  body.th-tool-page[data-th-page="job-tracker"] .quick-actions-btn[data-kind="current"] { border-color: var(--orange-tint-border); background: var(--orange-tint-soft); }
+  body.th-tool-page[data-th-page="job-tracker"] .quick-actions-btn[data-kind="current"]::after {
+    content: ''; margin-left: auto; width: 18px; height: 18px; flex-shrink: 0; background: var(--orange-light);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+  body.th-tool-page[data-th-page="job-tracker"] #jobSearchWrap, body.th-tool-page[data-th-page="job-tracker"] #jobSelectModeBtn { box-sizing: border-box; height: 46px; min-height: 46px; }
+  body.th-tool-page[data-th-page="job-tracker"] #jobSelectModeBtn { padding: 0 16px; }
+  body.th-tool-page[data-th-page="job-tracker"] #templatesFormSection .form-section-header .collapse-chevron { font-size: 0; transform: rotate(90deg); }
+  body.th-tool-page[data-th-page="job-tracker"] #templatesFormSection.is-collapsed .form-section-header .collapse-chevron { transform: none; }
+  body.th-tool-page[data-th-page="job-tracker"] #templatesFormSection .form-section-header .collapse-chevron::before { content: '\203a'; font-size: 20px; line-height: 1; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="job-tracker"] #templatesFormSection .form-section-header h3 { color: var(--text); }
+  @media (max-width: 1023px) {
+    body.th-tool-page[data-th-page="job-tracker"] .jt-intro { display: none; }
+    body.th-tool-page[data-th-page="job-tracker"] #tab-jobs > .tool-form-row { flex-wrap: nowrap; }
+    body.th-tool-page[data-th-page="job-tracker"] #jobSearchWrap { flex: 1 1 0; min-width: 0; }
+    body.th-tool-page[data-th-page="job-tracker"] #jobSelectModeBtn { flex: 0 0 auto; }
+    body.th-tool-page[data-th-page="job-tracker"] .jt-view-btn { display: inline-flex; }
+    body.th-tool-page[data-th-page="job-tracker"] #jobViewSwitch, body.th-tool-page[data-th-page="job-tracker"] #tab-jobs > .controls-row { display: none; }
+  }
 </style>
 </head>
 <body data-th-page="job-tracker">
@@ -773,9 +828,13 @@
     <a href="/tools/workspace.html" class="help-btn" aria-label="Back to Workspace" title="Back to Workspace" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
   </div>
 </div>
-<p class="tool-sub">Jobs as a list, board, or calendar, plus contacts and notes. Pricing, income, and expenses are on Finance <a href="/tools/finance.html" style="color:var(--orange-light);">&rarr;</a>.<span id="syncStatusText"></span>
+<p class="tool-sub jt-intro">Jobs as a list, board, or calendar, plus contacts and notes. Pricing, income, and expenses are on Finance <a href="/tools/finance.html" style="color:var(--orange-light);">&rarr;</a>.
   <span class="realtime-badge" id="realtimeBadge" onclick="retryLiveSync()" title="Live sync"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span>
 </p>
+<!-- Sync status in plain words (Phase 2 revision, 2026-10-30): a small
+     banner when something's wrong, never an internal error code. The
+     quiet "last synced" line shows on a computer only. -->
+<p class="th-sync-note" id="syncStatusText" role="status"></p>
 
 <div class="tabs tabs-sticky">
   <button class="tab-btn is-active" data-tab="jobs">Jobs</button>
@@ -787,7 +846,7 @@
 <div class="tab-panel is-active" id="tab-jobs">
   <div class="form-section is-collapsed" id="jobFormSection">
     <div class="form-section-header" onclick="toggleFormSection('jobFormSection')">
-      <h3>Add a Job</h3>
+      <h3>Add a job</h3>
       <span class="collapse-chevron">&#9660;</span>
     </div>
     <div class="form-section-body">
@@ -860,21 +919,26 @@
 
   <div class="form-section is-collapsed" id="templatesFormSection" data-th-inline>
     <div class="form-section-header" onclick="toggleFormSection('templatesFormSection')">
-      <h3>Recurring Job Templates <span id="templatesDueBadge"></span> <button class="help-btn" onclick="event.stopPropagation(); openCardInfo('templates')" aria-label="What is this?" title="What is this?">?</button></h3>
+      <h3>Recurring job templates <span id="templatesDueBadge"></span> <button class="help-btn" onclick="event.stopPropagation(); openCardInfo('templates')" aria-label="What is this?" title="What is this?">?</button></h3>
       <span class="collapse-chevron">&#9660;</span>
     </div>
     <div class="form-section-body">
     <div id="templatesList"></div>
-    <button class="secondary-btn" style="margin-top:12px;" onclick="addTemplatePrompt()">+ New Template</button>
+    <button class="secondary-btn" style="margin-top:12px;" onclick="addTemplatePrompt()">+ New template</button>
     </div>
   </div>
 
   <div class="tool-form-row">
     <div class="icon-search" id="jobSearchWrap">
       <button class="icon-search-toggle" onclick="toggleIconSearch('jobSearchWrap')" aria-label="Search jobs" title="Search jobs"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg></button>
-      <input type="text" id="jobSearch" aria-label="Search jobs" class="icon-search-input" placeholder="Search jobs by title or client..." oninput="debouncedCall('jobSearch', renderJobs)">
+      <input type="text" id="jobSearch" aria-label="Search jobs" class="icon-search-input" placeholder="Search jobs" oninput="debouncedCall('jobSearch', renderJobs)">
     </div>
     <button class="small-btn" id="jobSelectModeBtn" onclick="toggleJobSelectionMode()">Select</button>
+    <!-- Phase 2 revision (2026-10-30): on a phone or tablet, List / Board /
+         Calendar and the sort order live behind this one button (a sheet),
+         instead of two full-width segmented rows above the jobs. The inline
+         controls below stay on a computer. -->
+    <button type="button" class="jt-view-btn" id="jobViewBtn" onclick="openJobViewSheet(this)" aria-label="View and sort" title="View and sort" aria-haspopup="dialog"><svg class="th-icon" aria-hidden="true"><use href="#icon-settings" xlink:href="#icon-settings"></use></svg></button>
     <!-- One view switch, three views (2026-09-21): List / Board /
          Calendar. Calendar used to be its own page (calendar.html, now
          a redirect stub to #calendar here) -- same jobs, one page. -->
@@ -898,15 +962,15 @@
 
   <div class="controls-row">
     <div class="sort-group">
-      <button class="sort-btn is-active" data-sort="date" onclick="setSort('date')">Sort by Date</button>
-      <button class="sort-btn" data-sort="priority" onclick="setSort('priority')">Sort by Priority</button>
+      <button class="sort-btn is-active" data-sort="date" onclick="setSort('date')">Sort by date</button>
+      <button class="sort-btn" data-sort="priority" onclick="setSort('priority')">Sort by priority</button>
     </div>
   </div>
 
   <div class="sort-group" id="statusFilterGroup" style="margin-bottom: 16px;">
     <button class="sort-btn is-active" data-status-filter="not-done" onclick="setStatusFilter('not-done')">Active <span class="jt-chip-n" data-filter-count="not-done"></span></button>
-    <button class="sort-btn" data-status-filter="not-started" onclick="setStatusFilter('not-started')">Not Started <span class="jt-chip-n" data-filter-count="not-started"></span></button>
-    <button class="sort-btn" data-status-filter="in-progress" onclick="setStatusFilter('in-progress')">In Progress <span class="jt-chip-n" data-filter-count="in-progress"></span></button>
+    <button class="sort-btn" data-status-filter="not-started" onclick="setStatusFilter('not-started')">Not started <span class="jt-chip-n" data-filter-count="not-started"></span></button>
+    <button class="sort-btn" data-status-filter="in-progress" onclick="setStatusFilter('in-progress')">In progress <span class="jt-chip-n" data-filter-count="in-progress"></span></button>
     <button class="sort-btn" data-status-filter="done" onclick="setStatusFilter('done')">Completed <span class="jt-chip-n" data-filter-count="done"></span></button>
     <button class="sort-btn" data-status-filter="to-invoice" onclick="setStatusFilter('to-invoice')">To invoice <span class="sort-btn-count" id="toInvoiceFilterCount"></span></button>
     <button class="sort-btn" data-status-filter="all" onclick="setStatusFilter('all')">All <span class="jt-chip-n" data-filter-count="all"></span></button>
@@ -1157,28 +1221,32 @@
   // "Last edited by" label to match this page's original tooltip text.
 
   // ---------- Passive sync status (no buttons, just quiet confirmation) ----------
-  function formatSyncStatus(status) {
-    if (!status) return '';
-    const when = new Date(status.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    if (status.ok) return ' Last ' + status.type + ' to cloud: ' + when + '.';
-    return ' Cloud sync issue at ' + when + ' (' + status.error + ').';
-  }
-
+  // Phase 2 revision (2026-10-30): plain words only. Internal error codes
+  // (no-data-yet, http-500, table names) never reach the screen; the copy is
+  // sync.js's own warnIfSyncFailed() wording. "no-data-yet" (the cloud has
+  // nothing for this account yet) and sync not being set up aren't trouble.
+  // Review round 3 (2026-10-30): whether there's trouble, and its words,
+  // come from the shared thSyncTrouble() (tools-nav-pwa.js), the same call
+  // that turns the header dot red, so the banner and the dot always agree.
+  // Relational mirror failures (saves that reached this device and the blob
+  // but not the tables the calendar, route planner and invoices read) are
+  // counted there too; which table and why stays in Dev Tools.
   function updateSyncStatusText() {
     const el = document.getElementById('syncStatusText');
     if (!el) return;
     try {
       const status = JSON.parse(localStorage.getItem('th_sync_last') || 'null');
-      let text = formatSyncStatus(status);
-      // Relational mirror failures (Item 1 Phase 0d): saves that reached
-      // this device and the blob but NOT the database tables the calendar,
-      // route planner, and invoice views read. Device-local count.
-      const failures = (typeof loadMirrorFailures === 'function') ? loadMirrorFailures() : [];
-      if (failures.length) {
-        text += ' \u00b7 ' + failures.length + (failures.length === 1 ? ' save' : ' saves') +
-          " didn't reach the database (last: " + failures[0].table + ', ' + failures[0].error + ')';
+      const trouble = (typeof thSyncTrouble === 'function') ? thSyncTrouble() : null;
+      const issue = !!trouble;
+      const text = trouble ? trouble.text
+        : (status && status.ok ? 'Last synced ' + new Date(status.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) + '.' : '');
+      el.classList.toggle('is-issue', issue);
+      if (issue) {
+        el.innerHTML = '<svg class="th-icon" aria-hidden="true"><use href="#icon-warning" xlink:href="#icon-warning"></use></svg><span></span>';
+        el.lastChild.textContent = text;
+      } else {
+        el.textContent = text;
       }
-      el.textContent = text;
     } catch (e) { /* ignore */ }
   }
 
@@ -2050,6 +2118,29 @@
       }
       renderTemplates();
     });
+  }
+
+  // One sheet for View and Sort on a phone/tablet (Phase 2 revision,
+  // 2026-10-30). It calls the same setJobViewMode()/setSort() the inline
+  // controls do, so both stay in step.
+  function openJobViewSheet(opener) {
+    if (typeof showQuickActionSheet !== 'function') return;
+    const mode = loadJobViewMode();
+    const opt = (label, icon, on, onClick) => ({
+      label: label + (on ? '<span class="jt-sr">, current</span>' : ''), icon, kind: on ? 'current' : undefined, onClick,
+    });
+    const actions = [
+      opt('List', 'note', mode === 'list', () => setJobViewMode('list')),
+      opt('Board', 'grid', mode === 'board', () => setJobViewMode('board')),
+      opt('Calendar', 'calendar', mode === 'calendar', () => setJobViewMode('calendar')),
+    ];
+    if (mode !== 'calendar') {
+      actions.push(
+        opt('Sort by date', 'clock', currentSort === 'date', () => setSort('date')),
+        opt('Sort by priority', 'flag', currentSort === 'priority', () => setSort('priority')),
+      );
+    }
+    showQuickActionSheet('View and sort', actions, { opener, cancelLabel: 'Done' });
   }
 
   function setSort(sortType) {
@@ -3644,7 +3735,11 @@
   document.addEventListener('DOMContentLoaded', function () {
     initAppTour();
     if (typeof thPageTip === 'function') {
-      thPageTip('jobs', "Tap a job's status to move it along. Status, sort and view live under Filter.", document.getElementById('jobsList'));
+      // Shown on one visit only (Phase 2 revision, 2026-10-30).
+      const jobsTip = window.matchMedia && window.matchMedia('(max-width: 1023px)').matches
+        ? "Tap a job's status to move it along. List, board, calendar and sort are under the View button beside Search."
+        : "Tap a job's status to move it along. Switch views and the sort order just above the list.";
+      thPageTip('jobs', jobsTip, document.getElementById('jobsList'), { once: true });
       var calWrap = document.getElementById('jobsCalendarWrap');
       if (calWrap) thPageTip('calendar', 'Tap any day for its jobs, and Add to Phone to export it to your own calendar.', calWrap.querySelector('.form-section') || calWrap);
     }

@@ -68,7 +68,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=8d5b635c84">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=45a37ea5ee">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=8060cfc3c2" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -78,10 +78,10 @@
 <script src="/js/business-hours.js?v=e0e3b29210"></script>
 <script src="/tools/push-notifications.js?v=3c123334a6" defer></script>
 <script src="/tools/data-layer.js?v=c595490771" defer></script>
-<script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
+<script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=7e8fb6ef3d" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=3791c46d1a" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
@@ -1177,6 +1177,49 @@
   body.th-tool-page[data-th-page="workspace"]:not([data-home-money="shown"]) #lane-money,
   body.th-tool-page[data-th-page="workspace"]:not([data-home-money="shown"]) #section-snapshot,
   body.th-tool-page[data-th-page="workspace"][data-home-money="hidden"] #todayMoney { display: none; }
+  /* Phase 2 native-app pass (2026-10-30): the controls that still measured
+     under 44px at 390x844 with a coarse pointer. Same (pointer: coarse)
+     gate the rest of this page uses; desktop/mouse sizes are unchanged.
+     The pills need the :not(.is-remind) in their selectors: the 34px rule
+     above carries it, and that extra class out-specified the coarse 44px
+     rule after it, so every non-Remind pill (Mark paid, Invoice, Handled)
+     was 34px on a real phone -- the .small-btn trap from 2026-09-22. */
+  @media (pointer: coarse) {
+    body.th-tool-page[data-th-page="workspace"] .ops-lane .paid-toggle-btn:not(.is-remind),
+    body.th-tool-page[data-th-page="workspace"] .today-money .paid-toggle-btn:not(.is-remind),
+    body.th-tool-page[data-th-page="workspace"] #readyToInvoiceList .paid-toggle-btn,
+    body.th-tool-page[data-th-page="workspace"] .th-v2-link,
+    body.th-tool-page[data-th-page="workspace"] .section-heading:not(.is-static),
+    body.th-tool-page[data-th-page="workspace"] .icon-search.is-expanded .icon-search-input { min-height: 44px; }
+    body.th-tool-page[data-th-page="workspace"] a.today-money-row.today-money-todo { min-height: 44px; align-items: center; }
+    body.th-tool-page[data-th-page="workspace"] .icon-search-toggle { width: 44px; height: 44px; }
+  }
+  /* Phase 2 revision (2026-10-30), Connor's review item 12: an empty ring
+     says why it's empty ("Clock not started", "Nothing billed today")
+     instead of "0 of 8 h" / "$0 of $0". */
+  body.th-tool-page[data-th-page="workspace"] .today-ring.is-empty .th-ring-center .today-ring-empty {
+    margin: 0; padding: 0 6px; font-size: 11px; font-weight: 500; line-height: 1.25; text-align: center; color: var(--text-dim);
+  }
+  /* Item 7 follow-on: in sentence case "Route today · 2 stops" wrapped in
+     its half-width button; one line, tighter sides. */
+  body.th-tool-page[data-th-page="workspace"] .today-next-links > * { padding-left: 10px; padding-right: 10px; white-space: nowrap; font-size: 14px; }
+  /* PR #543 review round 3, item 4: Open job and Route today are one pair.
+     The primary carried a 3px orange lip and Oswald 700, the secondary a
+     1px border and Archivo 400, so they read as two heights and two styles.
+     Now: the same 48px box (a 1px border on both, no lip), the same type,
+     and the label is one line -- a longer one ("Route today · 10 stops",
+     "View in Job Tracker") ends in an ellipsis; the full text is the
+     link's title. Orange fill vs outline still says primary vs secondary. */
+  html body.th-tool-page[data-th-page="workspace"] .today-next-links > :is(.primary-btn, .secondary-btn) {
+    height: 48px; min-height: 48px; padding: 0 12px; box-sizing: border-box; border: 1px solid transparent; box-shadow: none; transform: none;
+    font-family: var(--font-app); font-size: 14px; font-weight: 600; line-height: 1.2; min-width: 0; overflow: hidden;
+  }
+  /* "Open job" is short; the route label gets the rest of the row so
+     "Route today · 2 stops" fits on one line at 390px. */
+  html body.th-tool-page[data-th-page="workspace"] .today-next-links > .primary-btn { flex: 0 0 38%; }
+  html body.th-tool-page[data-th-page="workspace"] .today-next-links > .secondary-btn { flex: 1 1 0; }
+  html body.th-tool-page[data-th-page="workspace"] .today-next-links > .secondary-btn { border-color: var(--border); }
+  html body.th-tool-page[data-th-page="workspace"] .today-next-links .today-next-link-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
 </head>
 <body data-th-page="workspace" data-role-state="pending" data-home-money="pending">
@@ -1283,7 +1326,7 @@
 <div class="global-search-block">
     <div class="icon-search is-expanded" id="globalSearchWrap">
     <button class="icon-search-toggle" onclick="toggleIconSearch('globalSearchWrap')" aria-label="Find a client" title="Find a client"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg></button>
-    <input type="text" id="globalSearch" class="icon-search-input" placeholder="Find a client &mdash; searches jobs, contacts, invoices, quotes, and contracts..." oninput="debouncedCall('globalSearch', renderGlobalSearch)" aria-label="Search everything by client name">
+    <input type="text" id="globalSearch" class="icon-search-input" placeholder="Search clients, jobs, invoices" oninput="debouncedCall('globalSearch', renderGlobalSearch)" aria-label="Search everything by client name">
   </div>
   <div id="globalSearchResults"></div>
 </div>
@@ -1628,7 +1671,7 @@
 
       <div class="analytics-subheading" style="margin-top:26px;">City Business Licenses</div>
       <div id="licensesList"></div>
-      <button class="secondary-btn" style="margin-top:10px;" onclick="addLicensePrompt()">+ Add License</button>
+      <button class="secondary-btn" style="margin-top:10px;" onclick="addLicensePrompt()">+ Add license</button>
       <div class="analytics-subheading">Secure Documents <button class="help-btn" onclick="openCardInfo('secureDocuments')" aria-label="What is this?" title="What is this?">?</button></div>
       <div id="secureDocsList"></div>
       <div class="icon-search" id="secureDocsUploadWrap" style="width:100%; margin-top:10px;">
@@ -3942,8 +3985,8 @@
         ${clockBtn}
         </div>
         <div class="today-next-links">
-        <a href="/tools/job-detail.html?id=${encodeURIComponent(job.id)}" class="primary-btn">Open Job</a>
-        ${routeUrl ? `<a href="${escapeAttr(routeUrl)}" class="secondary-btn" target="_blank" rel="noopener" id="todayRouteLink">${routeStops === 1 ? 'Directions' : 'Route today \u00b7 ' + routeStops + ' stops'}</a>` : '<a href="/tools/job-tracker.html" class="secondary-btn">View in Job Tracker</a>'}
+        <a href="/tools/job-detail.html?id=${encodeURIComponent(job.id)}" class="primary-btn"><span class="today-next-link-label">Open job</span></a>
+        ${routeUrl ? `<a href="${escapeAttr(routeUrl)}" class="secondary-btn" target="_blank" rel="noopener" id="todayRouteLink" title="${routeStops === 1 ? 'Directions' : 'Route today \u00b7 ' + routeStops + ' stops'}"><span class="today-next-link-label">${routeStops === 1 ? 'Directions' : 'Route today \u00b7 ' + routeStops + ' stops'}</span></a>` : '<a href="/tools/job-tracker.html" class="secondary-btn"><span class="today-next-link-label">View in Job Tracker</span></a>'}
         </div>
       </div>`;
 
@@ -4279,12 +4322,24 @@
     const ring = (value, tone, center, of, label, name) =>
       '<div class="today-ring">' + thRingSvg({ value, tone, size: 86, stroke: 9, key: 'today-' + name, label,
         center: '<b>' + center + '</b><span>' + of + '</span>' }) + '<span class="today-ring-label">' + name + '</span></div>';
+    // Nothing to measure yet (Phase 2 revision, 2026-10-30): "0 of 8 h" and
+    // "$0 of $0" read as broken, so an empty ring says why it's empty
+    // instead -- an empty track with a short line in the middle.
+    const emptyRing = (tone, line1, line2, label, name) =>
+      '<div class="today-ring is-empty">' + thRingSvg({ value: 0, tone, size: 86, stroke: 9, key: 'today-' + name, label,
+        center: '<span class="today-ring-empty">' + line1 + '<br>' + line2 + '</span>' }) + '<span class="today-ring-label">' + name + '</span></div>';
     const rings = [
-      ring(all.length ? done / all.length : 0, 'orange', done + '/' + all.length, 'jobs', done + ' of ' + all.length + ' jobs done today', 'Jobs'),
-      ring(hours / 8, 'green', (hours % 1 ? hours.toFixed(1) : String(hours)), 'of 8 h', hours + ' hours on the clock today, of 8', 'On the clock'),
+      all.length
+        ? ring(done / all.length, 'orange', done + '/' + all.length, 'jobs', done + ' of ' + all.length + ' jobs done today', 'Jobs')
+        : emptyRing('orange', 'No jobs', 'today', 'No jobs scheduled today', 'Jobs'),
+      hours > 0
+        ? ring(hours / 8, 'green', (hours % 1 ? hours.toFixed(1) : String(hours)), 'of 8 h', hours + ' hours on the clock today, of 8', 'On the clock')
+        : emptyRing('green', 'Clock not', 'started', 'No time on the clock yet today', 'On the clock'),
     ];
     if (anyFinanceAccessV2()) {
-      rings.push(ring(invoiced > 0 ? paid / invoiced : 0, 'blue', wholeMoneyV2(paid), 'of ' + wholeMoneyV2(invoiced), money(paid) + ' paid of ' + money(invoiced) + ' invoiced today', 'Paid'));
+      rings.push(invoiced > 0
+        ? ring(paid / invoiced, 'blue', wholeMoneyV2(paid), 'of ' + wholeMoneyV2(invoiced), money(paid) + ' paid of ' + money(invoiced) + ' invoiced today', 'Paid')
+        : emptyRing('blue', 'Nothing', 'billed today', 'Nothing invoiced today yet', 'Paid'));
     }
     el.innerHTML = rings.join('');
     if (typeof thAnimateRings === 'function') thAnimateRings(el);

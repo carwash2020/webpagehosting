@@ -3511,6 +3511,12 @@ body.th-tool-page .th-status .realtime-badge {
 body.th-tool-page .th-status .realtime-badge > span:not(.realtime-dot) {
   position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
 }
+/* Phase 2 (2026-10-30): when the dot is the retry button, a 44px hit
+   area around its 32px box on a touch screen. Same look. */
+@media (pointer: coarse) {
+  body.th-tool-page .th-status .realtime-badge.is-retryable { position: relative; }
+  body.th-tool-page .th-status .realtime-badge.is-retryable::after { content: ''; position: absolute; inset: -6px; }
+}
 body.th-tool-page .th-status .realtime-dot {
   width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
   background: var(--status-idle);
@@ -3819,6 +3825,11 @@ body.th-tool-page .th-bottom-nav a.is-active .th-bn-icon .th-icon { color: var(-
 body.th-tool-page .th-bottom-nav a:active .th-bn-icon { background: none; transform: scale(.92); }
 body.th-tool-page .th-bottom-nav .th-bn-create { color: var(--orange-light); }
 body.th-tool-page .th-bn-create-disc { width: 52px; height: 52px; margin-top: -18px; }
+/* Phase 2 (2026-10-30): pin the bar to the 85px every offset above assumes
+   (body padding, toasts, the update card, sticky bars, Job detail's thumb
+   bar). V2.2's 28px icon boxes left it at 81px, so a 4px strip of page
+   showed between Job detail's thumb bar and this bar. */
+body.th-tool-page .th-bottom-nav { min-height: calc(85px + env(safe-area-inset-bottom, 0px)); }
 body.th-tool-page .th-bn-create-disc .th-icon { width: 24px; height: 24px; color: var(--th-ink-on-orange); stroke-width: 2.6; }
 
 /* ---- V2.3 rings, donuts and gauges (thRingSvg / thDonutSvg) ---- */
@@ -4139,3 +4150,170 @@ body.th-tool-page .th-v2-rule-head::after { content: ''; flex: 1; height: var(--
   color: var(--text-dim); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;
 }
 @media (hover: hover) { .th-page-tip-close:hover { color: var(--text); } }
+
+/* ==========================================================================
+   Phase 2 revision (2026-10-30): Connor's review of PR #543, items 1-12.
+   Home, Jobs and Job detail only, except the two pieces of shared chrome
+   marked "every tool page" (the status dot and the bottom bar's labels),
+   which are one component everywhere. Selectors start with
+   "html body.th-tool-page:is(...)" on purpose: each page's own v2 block
+   loads after this file at the same specificity, and these must win there.
+   ========================================================================== */
+
+/* ---- Item 1: the app bar hugs the top like a native nav bar ----
+   In a browser tab the page never sits under the status bar (the browser's
+   own chrome is above it), so the 44px safe-area floor used everywhere
+   else was pure dead space here: 12px of body padding + 44px floor + 10px
+   = ~66px above the kicker. In the installed app (standalone, the status
+   bar is translucent over the page) the floor stays -- it guards the iOS
+   bug where env() reads 0 on a notched phone -- but the body strip above
+   the bar goes and the bar's own margin drops to 6px. Phone/tablet only;
+   the desktop bar is fixed and unchanged. */
+@media (max-width: 1023px) {
+  html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"]) { padding-top: 0; }
+}
+@media (max-width: 1023px) and (display-mode: browser) {
+  html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"]) .hub-header { padding-top: 8px; padding-bottom: 8px; }
+  html body.th-tool-page[data-th-page="job-tracker"] .tabs.tabs-sticky { top: 62px; }
+}
+@media (max-width: 1023px) and (display-mode: standalone) {
+  html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"]) .hub-header { padding-top: calc(6px + max(env(safe-area-inset-top, 0px), 44px)); padding-bottom: 8px; }
+  html body.th-tool-page[data-th-page="job-tracker"] .tabs.tabs-sticky { top: calc(60px + max(env(safe-area-inset-top, 0px), 44px)); }
+}
+
+/* ---- Item 2: one header layout -- title left, round buttons right ----
+   Home's header wrapped its buttons onto a second row; Jobs and Job detail
+   already had them on the right. */
+@media (max-width: 1023px) {
+  html body.th-tool-page[data-th-page="workspace"] .hub-header-main-row { flex-wrap: nowrap; }
+  html body.th-tool-page[data-th-page="workspace"] .hub-header-left { flex: 1 1 auto; }
+  html body.th-tool-page[data-th-page="workspace"] .hub-header-right { flex: 0 0 auto; flex-wrap: nowrap; }
+}
+
+/* ---- Item 3: Job detail's back chevron, top-left, apart from the buttons ---- */
+html body.th-tool-page[data-th-page="job-detail"] .hub-header { justify-content: flex-start; }
+html body.th-tool-page[data-th-page="job-detail"] .hub-header-left { flex: 1 1 auto; min-width: 0; }
+html body.th-tool-page[data-th-page="job-detail"] .hub-header-right { flex: 0 0 auto; }
+html body.th-tool-page[data-th-page="job-detail"] .hub-header-back { flex: 0 0 auto; display: flex; margin: 0 -8px 0 -12px; }
+html body.th-tool-page[data-th-page="job-detail"] .hub-header-back > a.help-btn {
+  width: 44px; height: 44px; min-width: 44px; padding: 0; border: 0; border-radius: 12px; background: none; box-shadow: none;
+  color: var(--orange-light); display: inline-flex; align-items: center; justify-content: center; text-decoration: none;
+}
+html body.th-tool-page[data-th-page="job-detail"] .hub-header-back > a.help-btn .th-icon { width: 26px; height: 26px; margin: 0; stroke-width: 2.4; transform: scaleX(-1); }
+html body.th-tool-page[data-th-page="job-detail"] .hub-header-back > a.help-btn:active { background: var(--bg-panel-2); }
+@media (min-width: 1024px) { html body.th-tool-page[data-th-page="job-detail"] .hub-header-back { margin-left: -8px; } }
+
+/* ---- Item 4: one status dot, one meaning (every tool page) ----
+   Green: synced and live. Red: a sync problem (tap to retry). A soft pulse
+   while it's connecting or still sending this device's changes. The
+   unsynced-changes badge used to be a second, orange dot beside it; its
+   words stay for screen readers, and it now drives the one dot instead
+   (tools-nav-pwa.js sets .is-pending on .th-status). */
+body.th-tool-page .th-status .pending-changes-badge {
+  position: absolute; width: 1px; height: 1px; min-width: 0; min-height: 0; padding: 0; margin: 0;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+}
+body.th-tool-page .th-status .pending-changes-badge::before { display: none; }
+body.th-tool-page .th-status.is-pending .realtime-dot:not(.is-error) {
+  background: var(--status-idle);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-idle) 24%, transparent);
+  animation: th-w-dot-wait 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) { body.th-tool-page .th-status .realtime-dot { animation: none; } }
+
+/* Sync trouble, in words (Jobs, #syncStatusText): a small banner, only
+   when something is actually wrong. The quiet "last synced" line shows
+   on a computer only. */
+html body.th-tool-page .th-sync-note { margin: 0 0 12px; font-size: 13px; line-height: 1.45; color: var(--text-dim); }
+html body.th-tool-page .th-sync-note:empty { display: none; }
+html body.th-tool-page .th-sync-note.is-issue {
+  display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px;
+  background: var(--tone-red-bg); border: 1px solid color-mix(in srgb, var(--status-error) 35%, transparent);
+  border-radius: var(--th-radius-card, 16px); color: var(--text); font-size: 14px;
+}
+html body.th-tool-page .th-sync-note.is-issue .th-icon { flex-shrink: 0; width: 18px; height: 18px; margin: 1px 0 0; color: var(--tone-red-fg); }
+@media (max-width: 1023px) { html body.th-tool-page .th-sync-note:not(.is-issue) { display: none; } }
+
+/* ---- Item 6: segmented controls span the full width, equal segments ---- */
+html body.th-tool-page[data-th-page="workspace"] .dash-view-switch,
+html body.th-tool-page[data-th-page="job-tracker"] .tabs,
+html body.th-tool-page[data-th-page="job-tracker"] .tabs.tabs-sticky { display: flex; width: 100%; max-width: none; }
+html body.th-tool-page[data-th-page="workspace"] .dash-view-switch > a,
+html body.th-tool-page[data-th-page="job-tracker"] .tabs > .tab-btn { flex: 1 1 0; min-width: 0; padding-left: 8px; padding-right: 8px; }
+
+/* ---- Item 7: one casing rule ----
+   Titles, headings and controls (buttons, segments, bars, chips, badges)
+   are sentence case, as typed. The only capitals left are the small
+   tracked eyebrow labels that sit over a heading or under an icon (the
+   date kicker, "Next step", "Tip", section labels, ring/step captions,
+   the bottom bar), which is the iOS grouped-list convention. */
+html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"]) :is(
+  .hub-title, .greeting-banner-greeting, .today-next-job-title, .job-hero-title, .dash-group-label, .th-v2-rule-head
+) { text-transform: none; letter-spacing: .2px; }
+html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"]) :is(
+  .th-v2-seg > a, .th-v2-seg > button, .tab-btn, .sort-btn, .th-sheet-trigger, .primary-btn, .secondary-btn, .small-btn,
+  .paid-toggle-btn, .dash-primary-action, .today-next-cell, .job-next-btn, .th-v2-link, .th-v2-add,
+  .job-card-actions .job-done-btn, .quick-actions-btn, #templatesFormSection .form-section-header h3
+) { text-transform: none; letter-spacing: .2px; }
+html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"]) :is(.th-v2-seg > a, .th-v2-seg > button, .tab-btn, .sort-btn) { font-size: 14px; }
+html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"]) :is(.th-sheet-trigger, #templatesFormSection .form-section-header h3) { font-size: 15px; font-weight: 600; }
+
+/* One priority badge on all three pages (Home's next job, the Jobs cards,
+   Job detail's header): a tone pill, the word capitalised -- "High". */
+html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"]) .badge:is(.badge-high, .badge-medium, .badge-low) {
+  display: inline-flex; align-items: center; padding: 3px 9px; border: 0; border-radius: 999px;
+  font-family: var(--font-app); font-size: 12px; font-weight: 600; line-height: 1.35; letter-spacing: 0; text-transform: capitalize;
+}
+html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"]) .badge.badge-high { background: var(--tone-red-bg); color: var(--tone-red-fg); }
+html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"]) .badge.badge-medium { background: var(--tone-orange-bg); color: var(--tone-orange-fg); }
+html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"]) .badge.badge-low { background: var(--tone-blue-bg); color: var(--tone-blue-fg); }
+
+/* ---- Item 11: the five bottom-bar labels on one baseline (every tool page) ----
+   The raised + disc took 34px of the column (52px less its -18px lift)
+   where the tab icons take 28px, and a <button> doesn't inherit the
+   links' line-height, so "New" sat 6px lower than Home/Jobs/Clients/Money.
+   The disc lifts 3px more and gives back 3px underneath; the label takes
+   the same line-height as the others. */
+body.th-tool-page .th-bottom-nav .th-bn-create { line-height: 1.6; }
+body.th-tool-page .th-bottom-nav .th-bn-create-label { line-height: inherit; }
+body.th-tool-page .th-bottom-nav .th-bn-create-disc { margin-top: -21px; margin-bottom: -3px; }
+
+/* ==== PR #543 review round 3 (2026-10-30) -- shared pieces ==== */
+
+/* ---- Round 3 item 1: red means the banner's trouble, nothing else ----
+   tools-nav-pwa.js sets .is-trouble on .th-status from thSyncTrouble(), the
+   same call the sync banner reads. The live-update websocket (each page's
+   .realtime-dot.is-error) dropping isn't trouble on its own: saves still
+   back up, only instant updates from other devices pause. So:
+     green  live updates connected, nothing wrong
+     grey   connecting / live updates off (still tappable to reconnect);
+            a soft pulse while this device still has changes to send
+     red    backup trouble, and the banner says what (tap to retry) */
+body.th-tool-page .th-status .realtime-dot.is-error {
+  background: var(--status-idle);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-idle) 24%, transparent);
+  animation: none;
+}
+html body.th-tool-page .th-status.is-pending .realtime-dot {
+  background: var(--status-idle);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-idle) 24%, transparent);
+  animation: th-w-dot-wait 1.4s ease-in-out infinite;
+}
+html body.th-tool-page .th-status.is-trouble .realtime-dot[class] {
+  background: var(--status-error);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-error) 28%, transparent);
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) { html body.th-tool-page .th-status .realtime-dot[class] { animation: none; } }
+body.th-tool-page .th-status.is-trouble .realtime-badge { cursor: pointer; }
+@media (pointer: coarse) {
+  body.th-tool-page .th-status.is-trouble .realtime-badge { position: relative; }
+  body.th-tool-page .th-status.is-trouble .realtime-badge::after { content: ''; position: absolute; inset: -6px; }
+}
+/* The shared banner (#thSyncNote, pages without their own) reuses the
+   .th-sync-note rules above: empty and hidden unless there's trouble. */
+
+/* ---- Round 3 item 3: "New" is grey like the other tab labels ----
+   The orange hexagon is emphasis enough; an orange label read as the
+   current tab. The disc keeps its own orange fill. */
+body.th-tool-page .th-bottom-nav .th-bn-create { color: var(--text-dim); }
