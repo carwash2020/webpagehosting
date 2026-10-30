@@ -68,7 +68,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=5e679ddb01">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=45a37ea5ee">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=8060cfc3c2" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -78,10 +78,10 @@
 <script src="/js/business-hours.js?v=e0e3b29210"></script>
 <script src="/tools/push-notifications.js?v=3c123334a6" defer></script>
 <script src="/tools/data-layer.js?v=c595490771" defer></script>
-<script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
+<script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=f3223273ae" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=3791c46d1a" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
@@ -1203,6 +1203,23 @@
   /* Item 7 follow-on: in sentence case "Route today · 2 stops" wrapped in
      its half-width button; one line, tighter sides. */
   body.th-tool-page[data-th-page="workspace"] .today-next-links > * { padding-left: 10px; padding-right: 10px; white-space: nowrap; font-size: 14px; }
+  /* PR #543 review round 3, item 4: Open job and Route today are one pair.
+     The primary carried a 3px orange lip and Oswald 700, the secondary a
+     1px border and Archivo 400, so they read as two heights and two styles.
+     Now: the same 48px box (a 1px border on both, no lip), the same type,
+     and the label is one line -- a longer one ("Route today · 10 stops",
+     "View in Job Tracker") ends in an ellipsis; the full text is the
+     link's title. Orange fill vs outline still says primary vs secondary. */
+  html body.th-tool-page[data-th-page="workspace"] .today-next-links > :is(.primary-btn, .secondary-btn) {
+    height: 48px; min-height: 48px; padding: 0 12px; box-sizing: border-box; border: 1px solid transparent; box-shadow: none; transform: none;
+    font-family: var(--font-app); font-size: 14px; font-weight: 600; line-height: 1.2; min-width: 0; overflow: hidden;
+  }
+  /* "Open job" is short; the route label gets the rest of the row so
+     "Route today · 2 stops" fits on one line at 390px. */
+  html body.th-tool-page[data-th-page="workspace"] .today-next-links > .primary-btn { flex: 0 0 38%; }
+  html body.th-tool-page[data-th-page="workspace"] .today-next-links > .secondary-btn { flex: 1 1 0; }
+  html body.th-tool-page[data-th-page="workspace"] .today-next-links > .secondary-btn { border-color: var(--border); }
+  html body.th-tool-page[data-th-page="workspace"] .today-next-links .today-next-link-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
 </head>
 <body data-th-page="workspace" data-role-state="pending" data-home-money="pending">
@@ -3968,8 +3985,8 @@
         ${clockBtn}
         </div>
         <div class="today-next-links">
-        <a href="/tools/job-detail.html?id=${encodeURIComponent(job.id)}" class="primary-btn">Open job</a>
-        ${routeUrl ? `<a href="${escapeAttr(routeUrl)}" class="secondary-btn" target="_blank" rel="noopener" id="todayRouteLink">${routeStops === 1 ? 'Directions' : 'Route today \u00b7 ' + routeStops + ' stops'}</a>` : '<a href="/tools/job-tracker.html" class="secondary-btn">View in Job Tracker</a>'}
+        <a href="/tools/job-detail.html?id=${encodeURIComponent(job.id)}" class="primary-btn"><span class="today-next-link-label">Open job</span></a>
+        ${routeUrl ? `<a href="${escapeAttr(routeUrl)}" class="secondary-btn" target="_blank" rel="noopener" id="todayRouteLink" title="${routeStops === 1 ? 'Directions' : 'Route today \u00b7 ' + routeStops + ' stops'}"><span class="today-next-link-label">${routeStops === 1 ? 'Directions' : 'Route today \u00b7 ' + routeStops + ' stops'}</span></a>` : '<a href="/tools/job-tracker.html" class="secondary-btn"><span class="today-next-link-label">View in Job Tracker</span></a>'}
         </div>
       </div>`;
 

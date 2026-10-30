@@ -52,14 +52,14 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=5e679ddb01">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=45a37ea5ee">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=8060cfc3c2" defer></script>
 <script src="/tools/data-layer.js?v=c595490771" defer></script>
-<script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
+<script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=f3223273ae" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=3791c46d1a" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
@@ -1225,35 +1225,21 @@
   // (no-data-yet, http-500, table names) never reach the screen; the copy is
   // sync.js's own warnIfSyncFailed() wording. "no-data-yet" (the cloud has
   // nothing for this account yet) and sync not being set up aren't trouble.
-  const SYNC_QUIET_ERRORS = ['no-data-yet', 'not-configured', 'no-code'];
-  function formatSyncStatus(status) {
-    if (!status) return { text: '', issue: false };
-    const when = new Date(status.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-    if (status.ok) return { text: 'Last synced ' + when + '.', issue: false };
-    if (SYNC_QUIET_ERRORS.includes(status.error)) return { text: '', issue: false };
-    if (status.error === 'session-expired') {
-      return { text: "Couldn't back up to the cloud \u2014 your login session expired. Log out and back in to fix this.", issue: true };
-    }
-    return { text: "Couldn't back up to the cloud just now. Your changes are still saved on this device, and it'll retry automatically.", issue: true };
-  }
-
+  // Review round 3 (2026-10-30): whether there's trouble, and its words,
+  // come from the shared thSyncTrouble() (tools-nav-pwa.js), the same call
+  // that turns the header dot red, so the banner and the dot always agree.
+  // Relational mirror failures (saves that reached this device and the blob
+  // but not the tables the calendar, route planner and invoices read) are
+  // counted there too; which table and why stays in Dev Tools.
   function updateSyncStatusText() {
     const el = document.getElementById('syncStatusText');
     if (!el) return;
     try {
       const status = JSON.parse(localStorage.getItem('th_sync_last') || 'null');
-      let { text, issue } = formatSyncStatus(status);
-      // Relational mirror failures (Item 1 Phase 0d): saves that reached
-      // this device and the blob but NOT the database tables the calendar,
-      // route planner, and invoice views read. Device-local count; which
-      // table and why stays in Dev Tools, not here.
-      const failures = (typeof loadMirrorFailures === 'function') ? loadMirrorFailures() : [];
-      if (failures.length) {
-        issue = true;
-        text = (text && !text.startsWith('Last synced') ? text + ' ' : '') +
-          (failures.length === 1 ? '1 recent save' : failures.length + ' recent saves') +
-          " hasn't reached the shared calendar and invoices yet. It's safe on this device.";
-      }
+      const trouble = (typeof thSyncTrouble === 'function') ? thSyncTrouble() : null;
+      const issue = !!trouble;
+      const text = trouble ? trouble.text
+        : (status && status.ok ? 'Last synced ' + new Date(status.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) + '.' : '');
       el.classList.toggle('is-issue', issue);
       if (issue) {
         el.innerHTML = '<svg class="th-icon" aria-hidden="true"><use href="#icon-warning" xlink:href="#icon-warning"></use></svg><span></span>';

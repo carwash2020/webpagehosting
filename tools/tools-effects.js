@@ -180,6 +180,16 @@ function openInfoModal(title, bodyHtml) {
 // "Live sync active" badge should do nothing.
 function retryLiveSync() {
   const dot = document.getElementById('realtimeDot');
+  // Review round 3 (2026-10-30): a red dot now means backup trouble (the
+  // same thing the sync banner says -- thSyncTrouble()), so a tap retries
+  // the backup; its result updates the dot and the banner. A grey dot whose
+  // live connection dropped keeps the old reload-to-reconnect.
+  const status = dot && dot.closest ? dot.closest('.th-status') : null;
+  if (status && status.classList.contains('is-trouble') && typeof pushSync === 'function') {
+    if (typeof showToast === 'function') showToast('Retrying the backup…');
+    Promise.resolve(pushSync()).catch(() => {});
+    return;
+  }
   if (dot && dot.classList.contains('is-error')) location.reload();
 }
 

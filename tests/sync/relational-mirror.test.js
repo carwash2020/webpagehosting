@@ -228,6 +228,13 @@ test('the failure log is capped and device-local (never synced)', async () => {
 test('job-tracker.html shows mirror failures on the sync status line and re-renders on th-mirror-failure', () => {
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'job-tracker.html'), 'utf8');
   const fn = src.match(/function updateSyncStatusText\(\)[\s\S]*?\n  \}/)[0];
-  assert.match(fn, /loadMirrorFailures\(\)/);
+  // PR #543 review round 3: the trouble check (mirror failures included)
+  // moved into the shared thSyncTrouble() in tools-nav-pwa.js, which also
+  // drives the header dot's red state, so the banner and the dot agree.
+  assert.match(fn, /thSyncTrouble\(\)/);
+  const nav = fs.readFileSync(path.join(TOOLS_DIR, 'tools-nav-pwa.js'), 'utf8');
+  const shared = nav.match(/function thSyncTrouble\(\)[\s\S]*?\n\}/)[0];
+  assert.match(shared, /loadMirrorFailures\(\)/);
+  assert.match(nav, /addEventListener\('th-mirror-failure', setTrouble\)/);
   assert.match(src, /addEventListener\('th-mirror-failure', updateSyncStatusText\)/);
 });

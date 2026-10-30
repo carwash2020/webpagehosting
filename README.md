@@ -6239,3 +6239,12 @@ Not changed: any data, sync, status, invoice or PDF logic. jsPDF on Job detail (
 12. Empty Home rings say "Clock not started" / "Nothing billed today" instead of "0 of 8 h" / "$0 of $0".
 
 The stub/seed screenshot harness is in `docs/workspace-phase2-native-app-2026-10-30/harness/`. Not changed: Jobs' "Not started / In progress" wording, and any sync, data or invoice logic beyond the Mark done button. Details: `docs/specialist-logs/visual.md`.
+
+**Review round 3, same day (Connor's 5 polish items on PR #543).** Same branch, each checked on the rendered page at 390x844:
+1. **The status dot was red with nothing wrong.** Red came from the live-update connection (Supabase Realtime), while the Jobs banner came from the backup status, so the two could disagree. In the screenshot harness the Supabase library is blocked, which made every shot red. Now one shared check, `thSyncTrouble()` in `tools-nav-pwa.js`, drives both the red dot and the banner: a failed backup, or a relational save that failed in the last 24 hours. Green means live updates are connected. Grey means connecting, or live updates are off; saves still back up. Red only ever appears together with the banner. Home, Job detail and the other tool pages get the same banner under the header, shown only when there's trouble. Tapping the red dot retries the backup.
+2. Job detail's header has one **⋯** button instead of three, so the job title fits. Its sheet lists Start my day (the shift clock), Search and More tools, and each row presses the original button, so nothing changed behind them.
+3. The bottom bar's "New" label is grey like the other inactive tabs. The orange hexagon stays.
+4. Home's **Open job** and **Route today · 2 stops** are a matched pair: both 48px, the same type, and one line each. A long route label ends in an ellipsis instead of wrapping.
+5. Job detail's **Mark done** is full width, like Start the clock.
+
+The harness now serves the pinned supabase-js locally and answers the Realtime join, so the shots show a genuinely healthy (green) dot. `verify.js` runs 58 checks, up from 26. Details: `docs/specialist-logs/visual.md`.

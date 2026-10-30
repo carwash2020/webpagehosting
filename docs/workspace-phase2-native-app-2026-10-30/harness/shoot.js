@@ -4,18 +4,23 @@
 // Renders Home, Jobs and Job detail at 390x844 (dark, touch, 2x) against a
 // local static server, with Supabase stubbed (every supabase.co request is
 // answered locally, an Owner role row, no real data) and six seeded jobs
-// plus one invoice in localStorage. Live sync can't connect here, so the
-// header dot is red in these shots. Also writes report.json: tap targets
+// plus one invoice in localStorage. Also writes report.json: tap targets
 // under 44px, horizontal overflow, the lit tab, page errors.
 //
+// Review round 3: with SUPABASE_UMD set (see live-stub.js) the pages load
+// the real supabase-js and the Realtime join is answered locally, so the
+// header dot is green (healthy) in the main shots. Without it the dot is
+// grey: live updates can't connect here, and that alone isn't trouble.
+//
 //   python3 -m http.server 8543            (from the repo root)
-//   node docs/workspace-phase2-native-app-2026-10-30/harness/shoot.js http://localhost:8543 /tmp/shots
+//   SUPABASE_UMD=/path/to/supabase.js node docs/workspace-phase2-native-app-2026-10-30/harness/shoot.js http://localhost:8543 /tmp/shots
 //
 // Needs Playwright (not a dependency of this repo): npm i -g playwright, or
 // PLAYWRIGHT=/path/to/node_modules/playwright.
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const fs = require('fs');
 const path = require('path');
+const { installLiveStub } = require('./live-stub');
 
 const base = process.argv[2];
 const out = process.argv[3];
@@ -94,6 +99,7 @@ const TARGET_AUDIT = () => {
       localStorage.setItem('th_install_dismissed', String(Date.now()));
     } catch (e) { /* ignore */ }
   }, { jobs, invoices, jwt: fakeJwt() });
+  const report = {};
   await ctx.route('**/*', (route) => {
     const u = route.request().url();
     if (u.startsWith(base)) return route.continue();
@@ -105,18 +111,18 @@ const TARGET_AUDIT = () => {
     return route.abort();
   });
 
+  report.live = await installLiveStub(ctx);
   const pages = [
     { name: 'home', url: '/tools/workspace.html' },
     { name: 'jobs', url: '/tools/job-tracker.html' },
     { name: 'detail', url: '/tools/job-detail.html?id=101' },
   ];
-  const report = {};
   for (const p of pages) {
     const page = await ctx.newPage();
     const errs = [];
     page.on('pageerror', (e) => errs.push(String(e)));
     await page.goto(base + p.url, { waitUntil: 'load' });
-    await page.waitForTimeout(1800);
+    await page.waitForTimeout(3000);
     await page.evaluate(() => document.querySelectorAll('.th-install-banner, .th-update-card, .onboarding-card, .th-tour, .th-tour-card').forEach((e) => e.remove()));
     const coarse = await page.evaluate(() => matchMedia('(pointer: coarse)').matches);
     const bad = await page.evaluate(TARGET_AUDIT);
@@ -127,7 +133,11 @@ const TARGET_AUDIT = () => {
       const nav = document.querySelector('.th-bottom-nav');
       const act = nav ? [...nav.querySelectorAll('a.is-active')].map((a) => a.textContent.trim()) : null;
       const over=[];document.querySelectorAll('body *').forEach(el=>{const r=el.getBoundingClientRect();if(r.right>392&&r.width>0){let q=el.parentElement,clip=false;while(q&&q!==document.body){if(/(auto|hidden|scroll|clip)/.test(getComputedStyle(q).overflowX)){clip=true;break}q=q.parentElement}if(!clip)over.push(el.tagName+'#'+el.id+'.'+(typeof el.className==='string'?el.className.slice(0,50):'')+' r='+Math.round(r.right))}});
-      return { url: location.pathname, activeTab: act, scrollW: document.documentElement.scrollWidth, over: over.slice(0,10) };
+      const dot = document.getElementById('realtimeDot');
+      const ht = document.querySelector('.hub-title');
+      return { url: location.pathname, activeTab: act, scrollW: document.documentElement.scrollWidth, over: over.slice(0,10),
+        dot: dot && { cls: dot.className, bg: getComputedStyle(dot).backgroundColor, trouble: !!dot.closest('.th-status.is-trouble') },
+        title: ht && { text: ht.textContent.trim(), clipped: ht.scrollWidth > ht.clientWidth, w: Math.round(ht.getBoundingClientRect().width) } };
     });
     report[p.name] = { meta, errs, bad };
     await page.close();
@@ -137,7 +147,7 @@ const TARGET_AUDIT = () => {
   {
     const page = await ctx.newPage();
     await page.goto(base + '/tools/job-tracker.html', { waitUntil: 'load' });
-    await page.waitForTimeout(1800);
+    await page.waitForTimeout(3000);
     await page.evaluate(() => document.querySelectorAll('.th-install-banner, .th-update-card, .onboarding-card, .th-tour, .th-tour-card').forEach((e) => e.remove()));
     report.jobsRepeat = await page.evaluate(() => { const c = document.querySelector('#jobsList .job-card').getBoundingClientRect(); return { cardTop: Math.round(c.top), cardBottom: Math.round(c.bottom), navTop: Math.round(document.querySelector('.th-bottom-nav').getBoundingClientRect().top), tip: !!(document.getElementById('jobsList').previousElementSibling || {}).classList?.contains('th-page-tip') }; });
     await page.screenshot({ path: path.join(out, 'jobs-repeat-visit-390-dark.png') });
@@ -148,6 +158,34 @@ const TARGET_AUDIT = () => {
     await page.waitForTimeout(300);
     report.syncNote = await page.evaluate(() => document.getElementById('syncStatusText').textContent);
     await page.screenshot({ path: path.join(out, 'jobs-sync-trouble-390-dark.png') });
+    await page.close();
+  }
+
+  // Review round 3 extras: Job detail's ⋯ sheet, and sync trouble on Home
+  // and Job detail (the shared banner + red dot), driven through the
+  // page's own status event, same as the Jobs one above.
+  {
+    const page = await ctx.newPage();
+    await page.goto(base + '/tools/job-detail.html?id=101', { waitUntil: 'load' });
+    await page.waitForTimeout(3000);
+    await page.evaluate(() => document.querySelectorAll('.th-install-banner, .th-update-card, .onboarding-card, .th-tour, .th-tour-card').forEach((e) => e.remove()));
+    await page.click('.th-hdr-overflow'); await page.waitForTimeout(600);
+    await page.screenshot({ path: path.join(out, 'detail-more-sheet-390-dark.png') });
+    await page.keyboard.press('Escape'); await page.waitForTimeout(400);
+    await page.evaluate(() => { localStorage.setItem('th_sync_last', JSON.stringify({ ok: false, type: 'push', error: 'http-503', time: Date.now() })); window.dispatchEvent(new CustomEvent('th-sync-status')); });
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: path.join(out, 'detail-sync-trouble-390-dark.png') });
+    await page.close();
+  }
+  {
+    const page = await ctx.newPage();
+    await page.goto(base + '/tools/workspace.html', { waitUntil: 'load' });
+    await page.waitForTimeout(3000);
+    await page.evaluate(() => document.querySelectorAll('.th-install-banner, .th-update-card, .onboarding-card, .th-tour, .th-tour-card').forEach((e) => e.remove()));
+    await page.evaluate(() => { localStorage.setItem('th_sync_last', JSON.stringify({ ok: false, type: 'push', error: 'http-503', time: Date.now() })); window.dispatchEvent(new CustomEvent('th-sync-status')); });
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: path.join(out, 'home-sync-trouble-390-dark.png') });
+    await page.evaluate(() => { localStorage.setItem('th_sync_last', JSON.stringify({ ok: true, type: 'push', error: null, time: Date.now() })); window.dispatchEvent(new CustomEvent('th-sync-status')); });
     await page.close();
   }
   fs.writeFileSync(path.join(out, 'report.json'), JSON.stringify(report, null, 2));

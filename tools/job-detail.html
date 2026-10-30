@@ -52,14 +52,14 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=5e679ddb01">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=45a37ea5ee">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=8060cfc3c2" defer></script>
 <script src="/tools/data-layer.js?v=c595490771" defer></script>
-<script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
+<script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=f3223273ae" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=3791c46d1a" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <!-- U16 fix (High-Impact Upgrades, 2026-09-07): jsPDF for the new
      "Generate Job Sheet" button, same version/CDN as invoice-generator.html
@@ -373,6 +373,27 @@
   body.th-tool-page[data-th-page="job-detail"] .job-next-actions { margin-top: 12px; }
   body.th-tool-page[data-th-page="job-detail"] .hub-header-left.th-has-kicker { flex-wrap: nowrap; }
   body.th-tool-page[data-th-page="job-detail"] #jobHeaderTitle { flex: 0 1 auto; min-width: 0; }
+  /* PR #543 review round 3, item 2: three round buttons (shift clock,
+     Search, More tools) left the job title ~95px and cut it off. On a phone
+     or tablet they fold into one "⋯" (mountHeaderOverflow() below), whose
+     sheet presses the same buttons, so each still does exactly what it did.
+     A green dot on the ⋯ while on shift keeps that status visible. The
+     header buttons are computer-hidden already (the sidebar has them). */
+  .th-hdr-overflow { display: none; }
+  @media (max-width: 1023px) {
+    body.th-tool-page[data-th-page="job-detail"] .th-hdr-actions > :not(.th-hdr-overflow) { display: none !important; }
+    body.th-tool-page[data-th-page="job-detail"] .th-hdr-actions > .th-hdr-overflow { display: inline-flex; position: relative; }
+    body.th-tool-page[data-th-page="job-detail"] .th-hdr-overflow.is-on-shift::after,
+    body.th-tool-page[data-th-page="job-detail"] .th-hdr-overflow.is-due::after {
+      content: ''; position: absolute; top: 7px; right: 7px; width: 8px; height: 8px; border-radius: 50%;
+      background: var(--status-live); box-shadow: 0 0 0 2px var(--bg);
+    }
+    body.th-tool-page[data-th-page="job-detail"] .th-hdr-overflow.is-due::after { background: var(--orange); }
+  }
+  /* Round 3, item 5: Mark done is full width, the same weight as Start the
+     clock (the other main action in this area). Same button, same handler. */
+  body.th-tool-page[data-th-page="job-detail"] .job-next-actions:has(> [data-mark-done]) { align-self: stretch; }
+  body.th-tool-page[data-th-page="job-detail"] .job-next-actions .job-next-btn[data-mark-done] { display: flex; flex: 1 1 100%; width: 100%; justify-content: center; margin-left: 0; margin-right: 0; }
 </style>
 </head>
 <body data-th-page="job-detail">
@@ -472,6 +493,47 @@
     if (typeof showToast === 'function') showToast((job.title || 'Job') + ' marked done.');
     onJobRealtimeChange();
   }
+
+  // PR #543 review round 3, item 2: one "⋯" in place of the three header
+  // buttons on a phone/tablet (CSS hides them at <=1023px). Each sheet row
+  // clicks the original button, so the shift sheet, Search and More tools
+  // keep their own handlers, labels and state; the rows are built at tap
+  // time from those buttons, so the shift row always says what that button
+  // says (Start my day / On shift since ... End my day).
+  function mountHeaderOverflow() {
+    const host = document.querySelector('.hub-header-right .th-hdr-actions');
+    if (!host || host.querySelector('.th-hdr-overflow')) return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'th-hdr-btn th-hdr-overflow';
+    btn.setAttribute('aria-label', 'More actions');
+    btn.title = 'More actions';
+    btn.setAttribute('aria-haspopup', 'dialog');
+    btn.innerHTML = '<svg class="th-icon" aria-hidden="true"><use href="#icon-more" xlink:href="#icon-more"></use></svg>';
+    host.appendChild(btn);
+    function syncShift() {
+      const s = document.getElementById('thShiftBtn');
+      const on = !!(s && !s.hidden && s.classList.contains('is-on'));
+      const due = !!(s && !s.hidden && s.classList.contains('is-due'));
+      btn.classList.toggle('is-on-shift', on);
+      btn.classList.toggle('is-due', due);
+      btn.setAttribute('aria-label', on ? 'More actions (on shift)' : due ? 'More actions (a shift needs an end time)' : 'More actions');
+    }
+    syncShift();
+    window.addEventListener('th-shift-change', () => setTimeout(syncShift, 0));
+    window.addEventListener('storage', (e) => { if (!e.key || e.key === 'th_shift_log') setTimeout(syncShift, 0); });
+    btn.addEventListener('click', () => {
+      syncShift();
+      const press = (sel) => () => { const b = host.querySelector(sel); if (b) b.click(); };
+      const actions = [];
+      const shift = document.getElementById('thShiftBtn');
+      if (shift && !shift.hidden) actions.push({ label: escapeHtml(shift.getAttribute('aria-label') || 'Start my day'), icon: 'clock', onClick: press('#thShiftBtn') });
+      if (host.querySelector('.th-hdr-search')) actions.push({ label: 'Search', icon: 'search', onClick: press('.th-hdr-search') });
+      if (host.querySelector('.th-hdr-menu')) actions.push({ label: 'More tools', icon: 'grid', onClick: press('.th-hdr-menu') });
+      if (typeof showQuickActionSheet === 'function') showQuickActionSheet('More', actions, { opener: btn });
+    });
+  }
+  document.addEventListener('DOMContentLoaded', () => setTimeout(mountHeaderOverflow, 0));
 
   function updateRealtimeBadge(status) {
     const dot = document.getElementById('realtimeDot');

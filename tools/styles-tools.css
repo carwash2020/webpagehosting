@@ -4277,3 +4277,43 @@ html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker
 body.th-tool-page .th-bottom-nav .th-bn-create { line-height: 1.6; }
 body.th-tool-page .th-bottom-nav .th-bn-create-label { line-height: inherit; }
 body.th-tool-page .th-bottom-nav .th-bn-create-disc { margin-top: -21px; margin-bottom: -3px; }
+
+/* ==== PR #543 review round 3 (2026-10-30) -- shared pieces ==== */
+
+/* ---- Round 3 item 1: red means the banner's trouble, nothing else ----
+   tools-nav-pwa.js sets .is-trouble on .th-status from thSyncTrouble(), the
+   same call the sync banner reads. The live-update websocket (each page's
+   .realtime-dot.is-error) dropping isn't trouble on its own: saves still
+   back up, only instant updates from other devices pause. So:
+     green  live updates connected, nothing wrong
+     grey   connecting / live updates off (still tappable to reconnect);
+            a soft pulse while this device still has changes to send
+     red    backup trouble, and the banner says what (tap to retry) */
+body.th-tool-page .th-status .realtime-dot.is-error {
+  background: var(--status-idle);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-idle) 24%, transparent);
+  animation: none;
+}
+html body.th-tool-page .th-status.is-pending .realtime-dot {
+  background: var(--status-idle);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-idle) 24%, transparent);
+  animation: th-w-dot-wait 1.4s ease-in-out infinite;
+}
+html body.th-tool-page .th-status.is-trouble .realtime-dot[class] {
+  background: var(--status-error);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-error) 28%, transparent);
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) { html body.th-tool-page .th-status .realtime-dot[class] { animation: none; } }
+body.th-tool-page .th-status.is-trouble .realtime-badge { cursor: pointer; }
+@media (pointer: coarse) {
+  body.th-tool-page .th-status.is-trouble .realtime-badge { position: relative; }
+  body.th-tool-page .th-status.is-trouble .realtime-badge::after { content: ''; position: absolute; inset: -6px; }
+}
+/* The shared banner (#thSyncNote, pages without their own) reuses the
+   .th-sync-note rules above: empty and hidden unless there's trouble. */
+
+/* ---- Round 3 item 3: "New" is grey like the other tab labels ----
+   The orange hexagon is emphasis enough; an orange label read as the
+   current tab. The disc keeps its own orange fill. */
+body.th-tool-page .th-bottom-nav .th-bn-create { color: var(--text-dim); }
