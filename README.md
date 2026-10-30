@@ -6248,3 +6248,11 @@ The stub/seed screenshot harness is in `docs/workspace-phase2-native-app-2026-10
 5. Job detail's **Mark done** is full width, like Start the clock.
 
 The harness now serves the pinned supabase-js locally and answers the Realtime join, so the shots show a genuinely healthy (green) dot. `verify.js` runs 58 checks, up from 26. Details: `docs/specialist-logs/visual.md`.
+
+## What changed, 2026-10-30 -- Workspace touch-ups after PR #543: Mark done lip, Jobs page density
+
+Two small follow-ups to the merged Workspace Phase 2 (#543), both measured at 390x844 with the same harness:
+1. **Job detail's Mark done has no orange lip.** The shared `body .primary-btn` rule gives every primary a 3px `--orange-dark` box-shadow lip and weight 700. Home's Open job lost it in #543's round 3; Job detail's Next-step primaries (Mark done, Send a reminder, invoice links) now match: flat orange, no lip, and Start the clock's weight. Same button, same `data-mark-done` / `markJobDoneHere()` wiring.
+2. **Jobs: Add a job and Templates share one row on a phone/tablet**, the two-column layout the page already used on a computer. Collapsed, the templates card reads "Templates" (screen readers still get "Recurring job templates") and its ? waits for the open card. Opening it restores the old full-width stacked layout. The first job card now sits at 358px on a repeat visit (was 440) and 475px on a first visit with the tip (was 541).
+
+Screenshots: `docs/workspace-touchups-2026-10-30/`. `verify.js` runs 65 checks, up from 58. Details: `docs/specialist-logs/visual.md`.

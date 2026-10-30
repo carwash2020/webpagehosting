@@ -3,6 +3,21 @@
 Started 2026-09-16, alongside the `tripleh-visual` skill. See `README.md` in
 this directory for how these logs work.
 
+## 2026-10-30 -- Workspace touch-ups after PR #543: Mark done lip, Jobs page density
+
+These are two follow-ups Connor asked for after #543 merged. Both were measured with the #543 harness (`verify.js` now runs 65 checks, up from 58). Shots are in `docs/workspace-touchups-2026-10-30/`.
+
+**1. Mark done's lip.** The lip comes from the shared `body .primary-btn { box-shadow: 0 3px 0 0 var(--orange-dark); font-weight: 700 }` rule (and its `:active` 1px lip). Home's pair beat it in round 3 with an explicit override. Job detail had none, so `[data-mark-done]` still showed the lip, in Oswald 700 beside Start the clock's Oswald 400. **Fix:** `body.th-tool-page[data-th-page="job-detail"] .job-next-btn.primary-btn { border: 0; box-shadow: none; font-weight: 400 }`, and `:active` gets `scale(.98)` instead of the lip squash. I scoped it to every primary in the Next-step card, not just Mark done: Send a reminder and the invoice links are the same component and would otherwise still have the lip. I didn't change any markup or handler. The data-mark-done delegate still calls `markJobDoneHere()`, and that test pin is unchanged. **Any new primary button on these pages needs the same override, or it brings the lip back.**
+
+**2. Jobs density.** On a phone, Add a job (56px) and the templates card (58px) were two full rows (148px with margins) above the search row. **Fix:** at ≤1023px, `#tab-jobs.is-active` is the same 2-column grid the page already used at ≥1024px. The trigger sits in column 1, the collapsed templates card in column 2, and both are 52px. Collapsed, the heading shows "Templates": "Recurring job " is in a `.jt-tpl-lead` span that's visually hidden, not removed, so screen readers still hear the full name. `::first-letter` capitalises "templates". Open, the card and the trigger both go back to full width via `:has(> #templatesFormSection:not(.is-collapsed))`, the old stacked layout. Due templates auto-open, so they still get the full card.
+- **First card top at 390x844:** 440 to **358** on a repeat visit, and 541 to **475** on a first visit (with the tip). Board and Calendar are 82px higher, with their spacing unchanged.
+- **Ruled out:** folding these into the bottom bar's New sheet (it already has Job, but that's a global create entry and `#add-job` scrolls and focuses the inline flow; Templates has no place there). Also ruled out: Templates in the View sheet. It's not a view, and its body is an inline card that would still need somewhere to render.
+- **Trap 1, a flex section:** I first made the collapsed section `display:flex` to centre it. Its collapsed (zero-height) `.form-section-body` became a flex item that took the width and squeezed the header to 14px, so the chevron sat on the label. Keep it a block. The header's `min-height: 44px` plus 4px padding gives 52.
+- **Trap 2, the ?:** in a 179px tile, the ?'s 44px hit area was a quarter of the tile, and a tap on the tile's middle opened the info instead of the card. The ? is hidden while collapsed (phone/tablet only) and shows on the open card. verify.js's hit-area check now opens the card first.
+- **Trap 3, margins in the grid:** grid items don't collapse margins. The first `.job-group-head`'s 18px top margin stacked on the chips' 14px (or the tip's 16px). I set it to 4px in the grid, which gives 18px (20px with the tip), the same as before.
+
+**Not fully certain:** "Templates" alone is a shorter label than before. The ? explains it once the card is open. Screenshots still use fallback fonts.
+
 ## 2026-10-30 -- Workspace Phase 2, review round 3: Connor's 5 polish items on PR #543
 
 These are five items from Connor's look at round 2's 390x844 shots. All were fixed on the same branch and checked on the rendered page with the harness. `verify.js` is now 58 checks, up from 26.
