@@ -3,6 +3,42 @@
 Started 2026-09-16, alongside the `tripleh-visual` skill. See `README.md` in
 this directory for how these logs work.
 
+## 2026-10-30 -- Workspace Phase 2 ("native app feel"): a gap audit of Home, Jobs, Job detail
+
+The ask was a native-app checklist (bottom tabs, 44px targets, app headers, cards, transitions, safe areas, PWA, fast load). `docs/ACTION-ITEMS.md`'s 09-25 "4 phases" plan is stale: W1/W2 and the v2 packages (09-28/29) already built most of it. Audited the live files first, then fixed only real gaps. **Don't redo any of the "already done" list below.**
+
+**Already done (verified in the files and in Chromium at 390x844):**
+- The bottom tab bar (`tools-nav-pwa.js` `DESTS` + `barItemHtml`; styled W1.12/V2.2) has safe-area padding, an active state and reduced-motion gating. It's a view-transition name.
+- App headers (V2.1 kicker + Anton title + status dot) and flat cards are shipped. The header's 44px top floor (`max(env(safe-area-inset-top), 44px)`) is deliberate, for the black-translucent status bar.
+- Safe areas: every fixed bar on these pages already uses `env(safe-area-inset-*)`: the bottom nav, Job detail's thumb bar, sheets, toasts and the update card.
+- Motion: every animation on the three pages, and the shared sheets, nav and view transitions, already has a `prefers-reduced-motion` gate. Nothing added.
+- PWA head tags: the manifest link, theme-color, `apple-mobile-web-app-*`, `apple-touch-icon` and `viewport-fit=cover` are on all three pages. Home (the `start_url`) also has splash images.
+- The segmented controls and chips (`.th-v2-seg` / `.th-v2-chip`, Jobs tabs, view/sort/status) already reach 44px under `(pointer: coarse)`.
+
+**Real gaps, fixed:**
+- **Job detail lit no tab.** `TAB_PARENT` in `tools-nav-pwa.js` maps a drill-down path to its tab, so Job detail now lights Jobs. It uses `aria-current="true"`, not `"page"`, because the link goes to the list. The desktop sidebar has the same gap (`destIsHere()`), which I left alone: it's off the phone checklist and drives `aria-current="page"`. Client detail would want a `'/tools/client-detail.html': '/tools/clients.html'` entry too; that page was out of scope.
+- **The bottom bar was 81px, not 85.** V2.2's 28px icon boxes shrank it, while every offset assumes 85. On Job detail, page content showed through a 4px strip between the thumb bar and the nav. I pinned `min-height: calc(85px + safe-area)` on the bar rather than retuning the offsets.
+- **The `:not()` specificity trap, again** (same class of bug as `.small-btn` on 09-22). Home's 34px pill rule uses `.paid-toggle-btn:not(.is-remind)`. The `:not()` adds a class to its specificity, so the later `(pointer: coarse)` 44px rule lost, and Mark paid / Invoice / Handled were 34px on real phones. A coarse rule must repeat the `:not(...)` to win.
+- Other sub-44 controls got 44px under `(pointer: coarse)`, in each page's own `<style>`:
+  - Home: Route all, Insights ›, the "To invoice" money row, section headings and the income search.
+  - Jobs: the Templates bar, and its ? via an `::after` hit area so the 30px look is kept; the search pill.
+  - Job detail: "+ Add".
+  - Shared: the status dot, via an `::after` hit area, only while `.is-retryable`.
+- **Text links that are a screen's only way in** (job-card titles; the client/phone links in Job detail's hero) got `padding: 14px 0; margin: -14px 0`. On an inline link that grows the hit box to 45px without moving anything. **A whole-card stretched link would break swipe-to-Done**: `initJobCardSwipeReveal` ignores any pointerdown that starts on an `a`.
+- **Jobs search row trap:** widening the toggle made `#jobSearchWrap`'s automatic minimum (toggle + the input's intrinsic width) too wide, and "Select" wrapped to the next row. `min-width: 0` on the pill restores the 240px flex-basis behaviour. Re-check this row whenever anything in that pill grows.
+- **Manifest:** added maskable 192/512 icons (the logo at 88% on `#0a0a0a`; checked under the strictest 40%-radius circle) and `"id"`, equal to `start_url`, which is the spec default, so installed copies keep their identity.
+
+**Left alone on purpose:**
+- Home's ready-to-invoice title link (16px). It sits in an ellipsis-clipped title that would clip any padded hit box, and the row's 44px ⋯ already has "Open job".
+- jsPDF on Job detail: about 360KB, but already `defer` and off the critical path. Lazy-loading it would change the PDF button's flow.
+
+**Method notes:**
+- Playwright's `fullPage` screenshot resets device emulation, so `(pointer: coarse)` stops matching. Measure tap targets before any full-page capture, or every coarse-gated control reads as too small.
+- `getBoundingClientRect` doesn't include `::after` hit areas. Verify those with `elementFromPoint` just outside the box.
+- Tool pages use `scroll-behavior: smooth`, so `scrollIntoView` + measure in the same tick reads the old position.
+
+Screenshots (390x844, dark, before = main): `docs/workspace-phase2-native-app-2026-10-30/`.
+
 ## 2026-10-23 -- invoice/estimate PDF redesign: dark masthead, Inter, job box, CTA card
 
 Approved spec, scoped tightly to `generatePDF()`/`generateQuotePDF()`

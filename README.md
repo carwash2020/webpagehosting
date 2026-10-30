@@ -6211,3 +6211,15 @@ Tests: `tests/seo/inbound-internal-links.test.js`.
 *Tests updated for the new counts:* `tests/design/header-menus.test.js`, `tests/design/site-banner-no-layout-shift.test.js`, `tests/design/package-d-public-site.test.js` (via the deleted share-card asset), `tests/site-content/site-banners-public.test.js`, `tests/booking/booking-flow-picker-and-confirm.test.js`, `tests/seo/batch4-search-data.test.js` (Duck Creek assertion added), `tests/seo/no-bare-rest-v1-path.test.js`.
 
 Full relevant suite (design/, seo/, booking/, content-quality/, site-wide/, site-content/, tools/, portal/, referrals/) passing, plus `check-consistency.js`, `check-undefined-vars.js`, and `check-links.py` clean.
+
+## What changed, 2026-10-30 -- Workspace Phase 2: native-app gaps on Home, Jobs and Job detail
+
+A gap audit of Home (`tools/workspace.html`), Jobs (`tools/job-tracker.html`) and Job detail (`tools/job-detail.html`) against a native-app checklist, then fixes for the real gaps only. Most of the checklist was already built by W1/W2 and the v2 packages (2026-09-28/29): the bottom tab bar, app headers, flat cards, form sheets, the Job detail thumb bar, safe-area insets on every fixed bar, `prefers-reduced-motion` on every animation, and the iOS/manifest PWA tags. None of that was redone.
+
+Fixed:
+1. **Job detail now lights the Jobs tab** in the bottom bar (`aria-current="true"`), the way a native tab bar keeps a drill-down's parent tab lit. Before, no tab was lit there. (`tools-nav-pwa.js`, a `TAB_PARENT` map.)
+2. **The bottom bar is 85px again.** v2's smaller icons left it at 81px while every offset (body padding, toasts, sticky bars, Job detail's thumb bar) assumes 85, so a 4px strip of page showed between the thumb bar and the nav.
+3. **44px tap targets**, measured at 390x844 with a coarse pointer. The biggest one was a cascade bug: Home's ops-lane and Money owed pills (Mark paid, Invoice, Handled) were 34px on phones, because the 34px rule's `:not(.is-remind)` out-specified the 44px touch rule. Also fixed: Route all / Insights links, the money "To invoice" row, Home's collapsible section headings, the Jobs search field and its Templates bar and ?, job-card title links (the only way into Job detail; padded in place, not a whole-card link, which would break swipe-to-Done), Job detail's hero client/phone links and "+ Add", and the sync status dot when it's the retry button.
+4. **Manifest:** maskable 192/512 icons (`images/icon-maskable-*.png`, the logo at 88% on the app's own background so Android's circle mask doesn't clip it) and an explicit `id` (equal to `start_url`, so installed copies keep their identity).
+
+Not changed: any data, sync, status, invoice or PDF logic. jsPDF on Job detail (about 360KB, already `defer`) stays eager, because lazy-loading it would change the PDF button's flow. Screenshots: `docs/workspace-phase2-native-app-2026-10-30/`. Details: `docs/specialist-logs/visual.md`.

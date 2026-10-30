@@ -79,6 +79,10 @@
     { href: '/tools/clients.html',     icon: 'users',  label: 'Clients' },
     { money: true,                     icon: 'dollar', label: 'Money' }
   ];
+  // Screens with no tab of their own, keyed by path: the tab they sit under.
+  var TAB_PARENT = {
+    '/tools/job-detail.html': '/tools/job-tracker.html'
+  };
 
   // Per-href permission checks for every restricted destination that
   // can appear in the sidebar/More sheet (out of everything in
@@ -797,8 +801,12 @@
     }
     var href = d.money ? lastMoneyHref() : d.href;
     var isHere = d.money ? isMoneyPath(path) : path === d.href;
-    var cls = (d.money ? 'th-bn-money' : '') + (isHere ? ' is-active' : '');
-    return '<a href="' + href + '" class="' + cls.trim() + '"' + (isHere ? ' aria-current="page"' : '') + '>' +
+    // A drill-down screen keeps its parent tab lit, the way a native tab bar
+    // does (Phase 2, 2026-10-30): Job detail lights Jobs. aria-current is
+    // "true", not "page": the link goes to the list, not this screen.
+    var isParent = !isHere && !d.money && TAB_PARENT[path] === d.href;
+    var cls = (d.money ? 'th-bn-money' : '') + ((isHere || isParent) ? ' is-active' : '');
+    return '<a href="' + href + '" class="' + cls.trim() + '"' + (isHere ? ' aria-current="page"' : (isParent ? ' aria-current="true"' : '')) + '>' +
       '<span class="th-bn-icon th-hex-icon" aria-hidden="true">' + iconSvg(d.icon) + '</span>' +
       '<span>' + d.label + '</span></a>';
   }

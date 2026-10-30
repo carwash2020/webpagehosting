@@ -68,7 +68,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=8d5b635c84">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=963d6c5acd">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=8060cfc3c2" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -81,7 +81,7 @@
 <script src="/tools/tools-effects.js?v=1f6fadbe41" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=7e8fb6ef3d" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=9fc30a63b8" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
@@ -1177,6 +1177,23 @@
   body.th-tool-page[data-th-page="workspace"]:not([data-home-money="shown"]) #lane-money,
   body.th-tool-page[data-th-page="workspace"]:not([data-home-money="shown"]) #section-snapshot,
   body.th-tool-page[data-th-page="workspace"][data-home-money="hidden"] #todayMoney { display: none; }
+  /* Phase 2 native-app pass (2026-10-30): the controls that still measured
+     under 44px at 390x844 with a coarse pointer. Same (pointer: coarse)
+     gate the rest of this page uses; desktop/mouse sizes are unchanged.
+     The pills need the :not(.is-remind) in their selectors: the 34px rule
+     above carries it, and that extra class out-specified the coarse 44px
+     rule after it, so every non-Remind pill (Mark paid, Invoice, Handled)
+     was 34px on a real phone -- the .small-btn trap from 2026-09-22. */
+  @media (pointer: coarse) {
+    body.th-tool-page[data-th-page="workspace"] .ops-lane .paid-toggle-btn:not(.is-remind),
+    body.th-tool-page[data-th-page="workspace"] .today-money .paid-toggle-btn:not(.is-remind),
+    body.th-tool-page[data-th-page="workspace"] #readyToInvoiceList .paid-toggle-btn,
+    body.th-tool-page[data-th-page="workspace"] .th-v2-link,
+    body.th-tool-page[data-th-page="workspace"] .section-heading:not(.is-static),
+    body.th-tool-page[data-th-page="workspace"] .icon-search.is-expanded .icon-search-input { min-height: 44px; }
+    body.th-tool-page[data-th-page="workspace"] a.today-money-row.today-money-todo { min-height: 44px; align-items: center; }
+    body.th-tool-page[data-th-page="workspace"] .icon-search-toggle { width: 44px; height: 44px; }
+  }
 </style>
 </head>
 <body data-th-page="workspace" data-role-state="pending" data-home-money="pending">
