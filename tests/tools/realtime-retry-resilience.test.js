@@ -86,6 +86,8 @@ function makeHarness() {
     const REALTIME_BACKGROUND_RETRY_MS = ${extractConst('REALTIME_BACKGROUND_RETRY_MS')};
     const REALTIME_WATCHDOG_MS = ${extractConst('REALTIME_WATCHDOG_MS')};
     let _realtimeChannel = null;
+    ${extractFn(SYNC, 'subscribeFreshChannel')}
+    ${extractFn(SYNC, 'realtimeFailureLoggable')}
     ${extractFn(SYNC, 'startRealtimeSync')}
   `;
   vm.runInContext(src, sandbox);
@@ -181,11 +183,12 @@ test('a successful reconnect resets the failure flag, so a later, separate outag
   assert.equal(h.logs.length, 2, 'expected the second, separate outage to log its own entry');
 });
 
-test('the intermediate-retry channel is always cleaned up before the next attempt, avoiding a duplicate-subscription bug', () => {
+test('the failed channel is always removed before the next attempt, avoiding a duplicate-subscription bug', () => {
   const h = makeHarness();
   h.sandbox.startRealtimeSync(h.onRemoteChange, h.onStatusChange);
   h.fireLatestStatus('CHANNEL_ERROR');
-  assert.equal(h.removedChannels.length, 1, 'expected the failed channel to be removed before scheduling a retry');
+  h.runLatestRetryTimer();
+  assert.equal(h.removedChannels.length, 1, 'expected the failed channel to be removed before re-subscribing');
 });
 
 test('the stuck-forever watchdog fires well after the full foreground retry budget (29s), so it cannot preempt a real retry in flight', () => {
@@ -212,4 +215,108 @@ test('startLeadsRealtime, startBookingsRealtime, startJobsRealtime, and startInv
     assert.match(fnSrc, /if \(status === 'SUBSCRIBED'\) loggedFailure = false;/, `${fnName} should reset its logged-failure flag on reconnect`);
     assert.match(fnSrc, /REALTIME_WATCHDOG_MS/, `${fnName} should use the widened watchdog delay`);
   }
+});
+
+// Regression: the 30s background retry re-created the same-named channel
+// without removing the old one. supabase-js returns the existing, already
+// subscribed channel for a same-named channel(), and .on() on it throws
+// "cannot add postgres_changes callbacks for realtime:... after subscribe()".
+// This fake models that: same-name channel() returns the registered one,
+// .on() throws once subscribed, and removeChannel is async like the real one.
+function makeStrictHarness({ hidden = false, onLine = true } = {}) {
+  const timers = [];
+  const logs = [];
+  const registry = new Map();
+  const callbacks = [];
+  const errors = [];
+  const client = {
+    channel(name) {
+      if (registry.has(name)) return registry.get(name);
+      const ch = {
+        name, subscribed: false,
+        on() { if (this.subscribed) throw new Error('cannot add postgres_changes callbacks for realtime:' + name + ' after subscribe()'); return this; },
+        subscribe(cb) { this.subscribed = true; callbacks.push(cb); return this; },
+      };
+      registry.set(name, ch);
+      return ch;
+    },
+    removeChannel(ch) { return new Promise((r) => setTimeout(() => { registry.delete(ch.name); r('ok'); }, 0)); },
+  };
+  const sandbox = {
+    setTimeout: (fn, delay) => { const t = { fn, delay }; timers.push(t); return t; },
+    getSupabaseClient: () => client, getSyncCode: () => 'code',
+    localStorage: { getItem: () => null, setItem: () => {} }, pullSync: async () => {},
+    logClientError: (m) => logs.push(m),
+    document: { hidden }, navigator: { onLine },
+  };
+  vm.createContext(sandbox);
+  vm.runInContext(`
+    const REALTIME_RETRY_DELAYS = ${extractConst('REALTIME_RETRY_DELAYS')};
+    const REALTIME_BACKGROUND_RETRY_MS = ${extractConst('REALTIME_BACKGROUND_RETRY_MS')};
+    const REALTIME_WATCHDOG_MS = ${extractConst('REALTIME_WATCHDOG_MS')};
+    let _realtimeChannel = null, _leadsRealtimeChannel = null, _applicantsRealtimeChannel = null,
+        _bookingsRealtimeChannel = null, _jobsRealtimeChannel = null, _invoicesRealtimeChannel = null;
+    ${extractFn(SYNC, 'subscribeFreshChannel')}
+    ${extractFn(SYNC, 'realtimeFailureLoggable')}
+    ${['startRealtimeSync', 'startLeadsRealtime', 'startApplicantsRealtime', 'startBookingsRealtime', 'startJobsRealtime', 'startInvoicesRealtime'].map((n) => extractFn(SYNC, n)).join('\n')}
+  `, sandbox);
+  const flush = async () => { await new Promise((r) => setTimeout(r, 10)); };
+  // Runs pending retry timers (not the watchdog) and lets removal finish.
+  const retry = async () => {
+    const t = timers.filter((x) => x.delay !== sandbox.REALTIME_WATCHDOG_MS).pop();
+    assert.ok(t, 'expected a retry timer');
+    timers.splice(timers.indexOf(t), 1);
+    try { t.fn(); } catch (e) { errors.push(e); }
+    await flush();
+  };
+  return { sandbox, logs, callbacks, errors, flush, retry, fire: (st) => callbacks[callbacks.length - 1](st) };
+}
+
+for (const fn of ['startRealtimeSync', 'startLeadsRealtime', 'startApplicantsRealtime', 'startBookingsRealtime', 'startJobsRealtime', 'startInvoicesRealtime']) {
+  test(`${fn}: foreground and background retries re-subscribe without throwing`, async () => {
+    const h = makeStrictHarness();
+    const unhandled = [];
+    const onUnhandled = (e) => unhandled.push(e);
+    process.on('unhandledRejection', onUnhandled);
+    try {
+      h.sandbox[fn](() => {}, () => {});
+      // 4 foreground retries, then 3 background retries.
+      for (let i = 0; i < 7; i++) { h.fire('TIMED_OUT'); await h.retry(); }
+      assert.equal(h.callbacks.length, 8, 'every retry subscribed a channel');
+      assert.deepEqual(h.errors.map((e) => e.message), []);
+      assert.deepEqual(unhandled.map((e) => e && e.message), []);
+      h.fire('SUBSCRIBED');
+    } finally { process.off('unhandledRejection', onUnhandled); }
+  });
+}
+
+test('CHANNEL_ERROR is not logged while the tab is hidden or the device is offline, and is logged once visible', async () => {
+  for (const opts of [{ hidden: true }, { onLine: false }]) {
+    const h = makeStrictHarness(opts);
+    h.sandbox.startRealtimeSync(() => {}, () => {});
+    for (let i = 0; i < 4; i++) { h.fire('CHANNEL_ERROR'); await h.retry(); }
+    h.fire('CHANNEL_ERROR');
+    assert.deepEqual(h.logs, [], JSON.stringify(opts));
+    // Conditions improve but the channel is still failing: now it logs once.
+    h.sandbox.document.hidden = false; h.sandbox.navigator.onLine = true;
+    await h.retry(); h.fire('CHANNEL_ERROR'); await h.flush();
+    assert.equal(h.logs.length, 1);
+  }
+});
+
+test('the portal error capture ignores "Skipping view transition" rejections', () => {
+  const portal = fs.readFileSync(repo('portal', 'portal-app.js'), 'utf8');
+  const sent = [];
+  const sandbox = { fetch: (u, o) => { sent.push(JSON.parse(o.body).message); return Promise.resolve(); }, window: { location: { pathname: '/portal/home.html' }, addEventListener() {} }, navigator: { userAgent: 'x' } };
+  vm.createContext(sandbox);
+  vm.runInContext(`
+    const PORTAL_ERROR_LOG_SUPABASE_URL = 'u'; const PORTAL_ERROR_LOG_ANON_KEY = 'k';
+    let portalErrorLogCount = 0; const PORTAL_ERROR_LOG_MAX_PER_PAGE = 10;
+    ${extractFn(portal, 'isIgnorablePortalError')}
+    ${extractFn(portal, 'logPortalClientError')}
+    ${extractFn(portal, 'sendPortalErrorReport')}
+  `, sandbox);
+  sandbox.logPortalClientError('Skipping view transition because document visibility state has become hidden.', 'unhandledrejection');
+  sandbox.logPortalClientError('Real failure', 'portal-app.js');
+  assert.deepEqual(sent, ['Real failure']);
 });

@@ -2102,6 +2102,31 @@ const REALTIME_BACKGROUND_RETRY_MS = 30000;
 // in flight -- see the matching watchdog comment further down.
 const REALTIME_WATCHDOG_MS = 35000;
 
+// Every retry of a realtime channel goes through here. supabase-js hands
+// back the existing channel when you ask for a same-named one, and that
+// channel is already subscribed, so a second `.on('postgres_changes')`
+// throws "cannot add postgres_changes callbacks ... after subscribe()".
+// The foreground retries used to remove the old channel first; the
+// 30-second background retries did not. Now the old channel is removed
+// (and the removal awaited, because supabase-js drops it from its channel
+// list asynchronously) before ANY re-subscribe, for all six channels.
+// The first attempt has no old channel and runs synchronously.
+function subscribeFreshChannel(client, existingChannel, build) {
+  if (!existingChannel) { build(); return; }
+  let removal = null;
+  try { removal = client.removeChannel(existingChannel); } catch (e) { removal = null; }
+  if (removal && typeof removal.then === 'function') removal.catch(() => {}).then(build);
+  else build();
+}
+
+// A hidden tab or an offline device drops its websocket all the time and
+// recovers on its own; those aren't worth a th_client_errors entry.
+function realtimeFailureLoggable() {
+  if (typeof document !== 'undefined' && document.hidden) return false;
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return false;
+  return true;
+}
+
 // Subscribes to live changes on this device's sync row. When ANY device
 // (including this one) pushes a change, `onRemoteChange` fires -- pull the
 // latest and re-render, no page reload needed. `onStatusChange` reports
@@ -2120,6 +2145,7 @@ function startRealtimeSync(onRemoteChange, onStatusChange) {
   // See the REALTIME_RETRY_DELAYS/REALTIME_BACKGROUND_RETRY_MS comment
   // above for the full explanation and the real evidence behind it.
   function attemptSubscribe(attempt) {
+    subscribeFreshChannel(client, _realtimeChannel, () => {
     _realtimeChannel = client
       .channel('workspace-sync-' + code)
       .on(
@@ -2155,13 +2181,12 @@ function startRealtimeSync(onRemoteChange, onStatusChange) {
           // (2026-09-05 finding, still true): logging every one of these
           // at error severity crowded out th_client_errors' own 20-entry
           // cap with non-actionable noise.
-          client.removeChannel(_realtimeChannel);
           setTimeout(() => attemptSubscribe(attempt + 1), REALTIME_RETRY_DELAYS[attempt]);
           return; // don't mark resolved or notify the page yet -- a retry is still in flight
         }
         realtimeResolved = true;
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          if (!loggedFailure) {
+          if (!loggedFailure && realtimeFailureLoggable()) {
             loggedFailure = true;
             if (typeof logClientError === 'function') {
               logClientError('Realtime workspace_sync channel status: ' + status + ` (foreground retries exhausted after ${REALTIME_RETRY_DELAYS.length} attempts; retrying quietly every ${REALTIME_BACKGROUND_RETRY_MS / 1000}s in the background)`, 'sync.js', null, null, null);
@@ -2179,6 +2204,7 @@ function startRealtimeSync(onRemoteChange, onStatusChange) {
         if (status === 'SUBSCRIBED') loggedFailure = false;
         if (onStatusChange) onStatusChange(status);
       });
+    });
   }
   attemptSubscribe(0);
 
@@ -2212,6 +2238,7 @@ function startLeadsRealtime(onChange, onStatusChange) {
   // Same retry fix as startRealtimeSync above -- see that comment for
   // the full explanation, backed by this project's own Supabase logs.
   function attemptSubscribe(attempt) {
+    subscribeFreshChannel(client, _leadsRealtimeChannel, () => {
     _leadsRealtimeChannel = client
       .channel('leads-realtime')
       .on(
@@ -2231,13 +2258,12 @@ function startLeadsRealtime(onChange, onStatusChange) {
         if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && attempt < REALTIME_RETRY_DELAYS.length) {
           // Not logged as an error -- same reasoning as the
           // workspace_sync channel's own subscribe() above.
-          client.removeChannel(_leadsRealtimeChannel);
           setTimeout(() => attemptSubscribe(attempt + 1), REALTIME_RETRY_DELAYS[attempt]);
           return;
         }
         realtimeResolved = true;
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          if (!loggedFailure) {
+          if (!loggedFailure && realtimeFailureLoggable()) {
             loggedFailure = true;
             if (typeof logClientError === 'function') {
               logClientError('Realtime th_leads channel status: ' + status + ` (foreground retries exhausted after ${REALTIME_RETRY_DELAYS.length} attempts; retrying quietly every ${REALTIME_BACKGROUND_RETRY_MS / 1000}s in the background)`, 'sync.js', null, null, null);
@@ -2250,6 +2276,7 @@ function startLeadsRealtime(onChange, onStatusChange) {
         if (status === 'SUBSCRIBED') loggedFailure = false;
         if (onStatusChange) onStatusChange(status);
       });
+    });
   }
   attemptSubscribe(0);
 
@@ -2273,6 +2300,7 @@ function startApplicantsRealtime(onChange, onStatusChange) {
   // Same retry fix as startLeadsRealtime above -- see that comment for
   // the full explanation, backed by this project's own Supabase logs.
   function attemptSubscribe(attempt) {
+    subscribeFreshChannel(client, _applicantsRealtimeChannel, () => {
     _applicantsRealtimeChannel = client
       .channel('applicants-realtime')
       .on(
@@ -2290,13 +2318,12 @@ function startApplicantsRealtime(onChange, onStatusChange) {
       )
       .subscribe((status) => {
         if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && attempt < REALTIME_RETRY_DELAYS.length) {
-          client.removeChannel(_applicantsRealtimeChannel);
           setTimeout(() => attemptSubscribe(attempt + 1), REALTIME_RETRY_DELAYS[attempt]);
           return;
         }
         realtimeResolved = true;
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          if (!loggedFailure) {
+          if (!loggedFailure && realtimeFailureLoggable()) {
             loggedFailure = true;
             if (typeof logClientError === 'function') {
               logClientError('Realtime th_job_applications channel status: ' + status + ` (foreground retries exhausted after ${REALTIME_RETRY_DELAYS.length} attempts; retrying quietly every ${REALTIME_BACKGROUND_RETRY_MS / 1000}s in the background)`, 'sync.js', null, null, null);
@@ -2309,6 +2336,7 @@ function startApplicantsRealtime(onChange, onStatusChange) {
         if (status === 'SUBSCRIBED') loggedFailure = false;
         if (onStatusChange) onStatusChange(status);
       });
+    });
   }
   attemptSubscribe(0);
 
@@ -2344,6 +2372,7 @@ function startBookingsRealtime(onChange, onStatusChange) {
   let loggedFailure = false;
 
   function attemptSubscribe(attempt) {
+    subscribeFreshChannel(client, _bookingsRealtimeChannel, () => {
     _bookingsRealtimeChannel = client
       .channel('bookings-realtime')
       .on(
@@ -2363,13 +2392,12 @@ function startBookingsRealtime(onChange, onStatusChange) {
         if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && attempt < REALTIME_RETRY_DELAYS.length) {
           // Not logged as an error -- same reasoning as the
           // workspace_sync channel's own subscribe() above.
-          client.removeChannel(_bookingsRealtimeChannel);
           setTimeout(() => attemptSubscribe(attempt + 1), REALTIME_RETRY_DELAYS[attempt]);
           return;
         }
         realtimeResolved = true;
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          if (!loggedFailure) {
+          if (!loggedFailure && realtimeFailureLoggable()) {
             loggedFailure = true;
             if (typeof logClientError === 'function') {
               logClientError('Realtime th_bookings channel status: ' + status + ` (foreground retries exhausted after ${REALTIME_RETRY_DELAYS.length} attempts; retrying quietly every ${REALTIME_BACKGROUND_RETRY_MS / 1000}s in the background)`, 'sync.js', null, null, null);
@@ -2382,6 +2410,7 @@ function startBookingsRealtime(onChange, onStatusChange) {
         if (status === 'SUBSCRIBED') loggedFailure = false;
         if (onStatusChange) onStatusChange(status);
       });
+    });
   }
   attemptSubscribe(0);
 
@@ -2405,6 +2434,7 @@ function startJobsRealtime(onChange, onStatusChange) {
   let loggedFailure = false;
 
   function attemptSubscribe(attempt) {
+    subscribeFreshChannel(client, _jobsRealtimeChannel, () => {
     _jobsRealtimeChannel = client
       .channel('jobs-realtime')
       .on(
@@ -2422,13 +2452,12 @@ function startJobsRealtime(onChange, onStatusChange) {
       )
       .subscribe((status) => {
         if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && attempt < REALTIME_RETRY_DELAYS.length) {
-          client.removeChannel(_jobsRealtimeChannel);
           setTimeout(() => attemptSubscribe(attempt + 1), REALTIME_RETRY_DELAYS[attempt]);
           return;
         }
         realtimeResolved = true;
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          if (!loggedFailure) {
+          if (!loggedFailure && realtimeFailureLoggable()) {
             loggedFailure = true;
             if (typeof logClientError === 'function') {
               logClientError('Realtime jobs channel status: ' + status + ` (foreground retries exhausted after ${REALTIME_RETRY_DELAYS.length} attempts; retrying quietly every ${REALTIME_BACKGROUND_RETRY_MS / 1000}s in the background)`, 'sync.js', null, null, null);
@@ -2441,6 +2470,7 @@ function startJobsRealtime(onChange, onStatusChange) {
         if (status === 'SUBSCRIBED') loggedFailure = false;
         if (onStatusChange) onStatusChange(status);
       });
+    });
   }
   attemptSubscribe(0);
 
@@ -2465,6 +2495,7 @@ function startInvoicesRealtime(onChange, onStatusChange) {
   let loggedFailure = false;
 
   function attemptSubscribe(attempt) {
+    subscribeFreshChannel(client, _invoicesRealtimeChannel, () => {
     _invoicesRealtimeChannel = client
       .channel('invoices-realtime')
       .on(
@@ -2482,13 +2513,12 @@ function startInvoicesRealtime(onChange, onStatusChange) {
       )
       .subscribe((status) => {
         if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && attempt < REALTIME_RETRY_DELAYS.length) {
-          client.removeChannel(_invoicesRealtimeChannel);
           setTimeout(() => attemptSubscribe(attempt + 1), REALTIME_RETRY_DELAYS[attempt]);
           return;
         }
         realtimeResolved = true;
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          if (!loggedFailure) {
+          if (!loggedFailure && realtimeFailureLoggable()) {
             loggedFailure = true;
             if (typeof logClientError === 'function') {
               logClientError('Realtime invoices channel status: ' + status + ` (foreground retries exhausted after ${REALTIME_RETRY_DELAYS.length} attempts; retrying quietly every ${REALTIME_BACKGROUND_RETRY_MS / 1000}s in the background)`, 'sync.js', null, null, null);
@@ -2501,6 +2531,7 @@ function startInvoicesRealtime(onChange, onStatusChange) {
         if (status === 'SUBSCRIBED') loggedFailure = false;
         if (onStatusChange) onStatusChange(status);
       });
+    });
   }
   attemptSubscribe(0);
 
