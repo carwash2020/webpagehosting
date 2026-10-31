@@ -89,7 +89,7 @@ test('login.html checks the real assurance level after a correct password, not j
 
 test('login.html only redirects immediately when no step-up to aal2 is required', () => {
   const aalIdx = LOGIN.indexOf('client.auth.mfa.getAuthenticatorAssuranceLevel()');
-  const redirectIdx = LOGIN.lastIndexOf("window.location.replace('/portal/home.html')");
+  const redirectIdx = LOGIN.lastIndexOf('goHomeAfterSignIn();');
   assert.ok(redirectIdx > aalIdx, 'the unconditional redirect should come after the AAL check, not before it');
   assert.match(LOGIN, /aal\.nextLevel === 'aal2' && aal\.currentLevel !== 'aal2'/);
 });
@@ -105,7 +105,9 @@ test('login.html shows a real challenge overlay and verifies the code via Supaba
   const cancelStart = LOGIN.indexOf('async function cancel()', openStart);
   const verifyBody = LOGIN.slice(verifyStart, cancelStart);
   assert.match(verifyBody, /if \(error\) \{[\s\S]*?return;[\s\S]*?\}/);
-  assert.match(verifyBody, /window\.location\.replace\('\/portal\/home\.html'\);/);
+  assert.match(verifyBody, /goHomeAfterSignIn\(\);/);
+  // goHomeAfterSignIn() is the one place that navigates: success animation first, then the same redirect.
+  assert.match(LOGIN, /function goHomeAfterSignIn\(\) \{\s*ThSignin\.success\(\(\) => window\.location\.replace\('\/portal\/home\.html'\)\);\s*\}/);
 });
 
 test("login.html's challenge Cancel signs the just-created session out rather than leaving it half-authenticated", () => {

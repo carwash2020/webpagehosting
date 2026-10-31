@@ -143,11 +143,11 @@ test('the page guard: Face ID standing in for the code is the only prompt; with 
 
 test('login.html: after the password, a Face ID device gets Face ID instead of the code (the code one tap away); elsewhere the code', () => {
   const submit = LOGIN.slice(LOGIN.indexOf("document.getElementById('loginForm').addEventListener('submit'"), LOGIN.indexOf('function openMfaChallenge('));
-  assert.match(submit, /if \(portalIsBiometricLockEnabled\(email\)\) \{\s*await portalFaceIdInsteadOfCode\(email, \(\) => openMfaChallenge\(factorId\)\);\s*window\.location\.replace\('\/portal\/home\.html'\);\s*return;\s*\}\s*openMfaChallenge\(factorId\);/);
+  assert.match(submit, /if \(portalIsBiometricLockEnabled\(email\)\) \{\s*await portalFaceIdInsteadOfCode\(email, \(\) => openMfaChallenge\(factorId\)\);\s*goHomeAfterSignIn\(\);\s*return;\s*\}\s*openMfaChallenge\(factorId\);/);
   const faceIdIdx = submit.indexOf('portalFaceIdInsteadOfCode(');
   const aalIdx = submit.indexOf('getAuthenticatorAssuranceLevel()');
   assert.ok(aalIdx > 0 && faceIdIdx > aalIdx, 'only for an account the assurance check says owes a second step');
-  assert.match(submit, /\/\/ The password was just typed: no Face ID lock straight after it\.\s*portalMarkSignedIn\(email\);\s*window\.location\.replace\('\/portal\/home\.html'\);/);
+  assert.match(submit, /\/\/ The password was just typed: no Face ID lock straight after it\.\s*portalMarkSignedIn\(email\);\s*goHomeAfterSignIn\(\);/);
 });
 
 test('login.html: a signed-in session that still owes the code stays for the code on load -- refreshing no longer skips it', () => {
@@ -158,7 +158,7 @@ test('login.html: a signed-in session that still owes the code stays for the cod
   assert.ok(onLoad.indexOf('openMfaChallenge(') < onLoad.indexOf("window.location.replace('/portal/home.html')"), 'the code comes before any redirect');
   assert.match(onLoad, /await client\.auth\.signOut\(\{ scope: 'local' \}\);\s*return;\s*\}\s*\}\s*window\.location\.replace/, 'no factor to ask for: stay on the form, never bounce back to home.html (which would send it straight back here)');
   const verify = LOGIN.slice(LOGIN.indexOf('async function verify()'), LOGIN.indexOf('async function cancel()'));
-  assert.match(verify, /if \(signingInEmail\) portalMarkSignedIn\(signingInEmail\);\s*window\.location\.replace\('\/portal\/home\.html'\);/, 'password and code just done: no Face ID lock after');
+  assert.match(verify, /if \(signingInEmail\) portalMarkSignedIn\(signingInEmail\);\s*goHomeAfterSignIn\(\);/, 'password and code just done: no Face ID lock after');
 });
 
 // --- settings.html ---------------------------------------------------------
