@@ -26,7 +26,7 @@ explains what this repo actually hosts.
 
 - Keep the two businesses' code and data separate, even though they
   share this repo and some genuinely shared files -- see "Shared
-  files" in the main `README.md` for exactly what's shared and why.
+  files" in `docs/REFERENCE.md` for exactly what's shared and why.
 - If you're touching a file more than one page loads (`sync.js`,
   `data-layer.js`, `styles.css`, etc.), that's a shared file --
   `npm run fix-versions` needs to run after, not just before you

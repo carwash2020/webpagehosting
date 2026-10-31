@@ -140,9 +140,9 @@ comment in a doc (including this one).
 This file is deliberately short-lived pick-up notes, not a changelog.
 For what's actually shipped and when:
 
-- **`README.md`** — has a running "What changed, `<date range>`" section
-  near the bottom for each recent block of work; the most recent one is
-  the fastest way to see what's new.
+- **`docs/CHANGELOG.md`** — has a running "What changed, `<date range>`" section
+  for each block of work, newest at the bottom (moved out of `README.md`
+  on 2026-10-31); the most recent one is the fastest way to see what's new.
 - **`DISASTER_RECOVERY.md`** — the deepest source for exact mechanisms,
   real incidents, and lessons learned the hard way (including a whole
   scenario, as of 2026-09-08, on why a CodeQL alert can survive
@@ -167,7 +167,7 @@ Two notes:
   template that references placeholder assets on purpose, and scanning it
   reports false "broken links" otherwise.
 - The design language from that skill is already chosen and built;
-  README.md's "What changed" sections describe what's been layered on top
+  `docs/CHANGELOG.md`'s "What changed" sections describe what's been layered on top
   of it since. The skill's own full process (brief, grammar, fingerprint
   gate) is for starting an entirely new visual direction, not for routine
   follow-up work.
@@ -191,7 +191,7 @@ development environment used for most of this work can't test it.
 `jobs`/`invoices`/`invoice_line_items`/`quotes`/`quote_line_items`/
 `contracts` are real Postgres tables now (2026-09-08), with real foreign
 keys, dual-written alongside the existing blob-sync save path on every
-real create/update/delete. See README.md's "Jobs/invoices/quotes/
+real create/update/delete. See `docs/CHANGELOG.md`'s "Jobs/invoices/quotes/
 contracts get real relational tables" section for the full reasoning.
 
 **Phase 2 (moving reads to the relational tables, retiring the blob for
@@ -390,7 +390,7 @@ still what every other remaining page's read still depends on.
 - The homepage runs noticeably longer than a typical single-page site on
   purpose (Master Audit, W01–W24) — it's been through multiple explicit
   length-reduction passes already; don't assume length itself is a bug
-  before checking `DISASTER_RECOVERY.md`/README's recent "What changed"
+  before checking `DISASTER_RECOVERY.md`/`docs/CHANGELOG.md`'s recent "What changed"
   entries for what's already been deliberately trimmed and what's been
   kept on purpose.
 
