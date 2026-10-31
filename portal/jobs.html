@@ -106,7 +106,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=d7410af6b7">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous"></script>
-<script src="/portal/portal-app.js?v=202609300100"></script>
+<script src="/portal/portal-app.js?v=202610310100"></script>
 <!-- jsPDF for the service history download loads on the first tap
      (pdfLoadJsPdf() in pdf-layout.js, 2026-09-30), not with the page. -->
 <script src="/js/pdf-layout.js?v=4dca739ad1" defer></script>
@@ -296,7 +296,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=7564929584">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=2c6fd305e8">
 </head>
 <body class="portal-page">
 
@@ -372,7 +372,7 @@
 <div class="history-download" id="historyDownload" hidden>
   <div class="history-download-text">
     <div class="history-download-title">Service history</div>
-    <div class="history-download-sub">Every job we've done, with dates and invoices, as one PDF -- handy when you sell the house or file a claim.</div>
+    <div class="history-download-sub">Every job we've done, with dates and invoices, as one PDF. Handy when you sell the house or file a claim.</div>
   </div>
   <button type="button" class="btn secondary-btn history-download-btn" id="historyDownloadBtn" onclick="downloadServiceHistory()">Download PDF</button>
 </div>
@@ -1019,7 +1019,7 @@
         </div>
         ${hasPhotos ? `<div class="job-photos" id="jobPhotos-${j.id}"><p style="color:var(--text-dim); font-size:12px;">Loading photos...</p></div>` : ''}
         <div class="job-card-actions">
-        ${j.linked_invoice_number ? `<a class="job-receipt-link" href="/portal/dashboard.html?invoice=${encodeURIComponent(j.linked_invoice_number)}">View Receipt</a>` : ''}
+        ${j.linked_invoice_number ? `<a class="job-receipt-link" href="/portal/dashboard.html?invoice=${encodeURIComponent(j.linked_invoice_number)}">View receipt</a>` : ''}
         <button type="button" class="job-messages-toggle portal-thread-toggle${jobUnreadCounts[j.id] ? ' has-unread' : ''}" onclick="toggleJobMessages(${j.id}, this)" aria-expanded="false" aria-controls="jobMessages-${j.id}">${JOB_THREAD_ICON}Messages${jobUnreadBadgeHtml(j.id)}</button>
         </div>
         <div class="job-messages-panel" id="jobMessages-${j.id}" style="display:none;"></div>
@@ -1329,7 +1329,7 @@
       return;
     }
     if (!jobs.length) {
-      listEl.innerHTML = `<div class="empty-state is-neutral"><div class="empty-state-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8"/></svg></div><p class="empty-state-title">No completed jobs on file yet.</p><p class="empty-state-sub">Finished work and warranties will land here. Need something done in the meantime?</p><a href="/portal/work-orders.html" class="btn orange empty-state-cta">Request Work</a></div>`;
+      listEl.innerHTML = `<div class="empty-state is-neutral"><div class="empty-state-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8"/></svg></div><p class="empty-state-title">No completed jobs on file yet.</p><p class="empty-state-sub">Finished work and warranties will land here. Need something done in the meantime?</p><a href="/portal/work-orders.html" class="btn orange empty-state-cta">Request work</a></div>`;
       return;
     }
     renderWarrantyOverview(jobs);

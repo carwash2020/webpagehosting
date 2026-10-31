@@ -967,6 +967,20 @@ action needed.
 
 ## Client portal redesign (2026-09-25 design handoff) -- deferred screens
 
+> **Status, 2026-10-31 (portal redesign PR, `docs/portal-redesign-2026-10-31/`).**
+> Checked against the live files. Built: the shell, Home's referral card
+> (links to Settings › Refer a friend), request urgency as a three-way
+> control, "where things stand" steps (C8), Settings as a menu, sign-in
+> (rebuilt in #551). That PR added the Workspace's native-app chrome
+> (sticky one-row header, status dot + banner, sentence case, flat
+> primaries, 44px targets). **Still open, not started:** Home's amount
+> count-up; Invoices' Open/Paid segment and phone stat tiles (the ring and
+> legend stay); one list for estimates + contracts (an IA call); the
+> picker's tap-pop (its "Full" day label exists, `js/booking-flow.js`);
+> request "kind" chips; message
+> "About: job" chips, typing dots and badge bounce; `set-password.html`
+> still has the v2 look, not #551's sign-in look.
+>
 > **Mostly superseded (2026-09-30 note).** Portal v2 parts 1-2 (2026-09-28)
 > and Claude Design Package C (2026-09-29) built much of this: the referral
 > link on Home, urgency on requests, the owed dot on every page, and "where

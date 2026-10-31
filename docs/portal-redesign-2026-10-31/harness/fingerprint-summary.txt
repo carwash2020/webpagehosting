@@ -1,0 +1,14 @@
+home: 14 amounts/counts, 64 wiring entries
+dashboard: 21 amounts/counts, 58 wiring entries
+quotes: 8 amounts/counts, 48 wiring entries
+jobs: 5 amounts/counts, 50 wiring entries
+work-orders: 3 amounts/counts, 66 wiring entries
+contracts: 3 amounts/counts, 43 wiring entries
+settings: 1 amounts/counts, 102 wiring entries
+home (empty): 4 amounts/counts, 53 wiring entries
+dashboard (empty): 2 amounts/counts, 43 wiring entries
+quotes (empty): 0 amounts/counts, 31 wiring entries
+jobs (empty): 0 amounts/counts, 42 wiring entries
+work-orders (empty): 0 amounts/counts, 56 wiring entries
+contracts (empty): 0 amounts/counts, 31 wiring entries
+settings (empty): 1 amounts/counts, 102 wiring entries

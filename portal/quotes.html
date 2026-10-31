@@ -107,7 +107,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=d7410af6b7">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous"></script>
-<script src="/portal/portal-app.js?v=202609300100"></script>
+<script src="/portal/portal-app.js?v=202610310100"></script>
 <!-- Shared business-hours data (2026-09-03) -- see business-hours.js's
      own header comment. This page used to keep its own hand-copied
      duplicate of these exact constants ("keep these in sync manually
@@ -320,7 +320,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=7564929584">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=2c6fd305e8">
 </head>
 <body class="portal-page">
 
@@ -727,7 +727,7 @@
     // The Estimates tab's dot (v2 shell), from the quotes this page just read.
     if (typeof portalApplyNavEstimatesDot === 'function') portalApplyNavEstimatesDot(quotes.some(q => q.status === 'pending'));
     if (!quotes.length) {
-      listEl.innerHTML = `<div class="empty-state is-neutral"><div class="empty-state-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h7.5L18 8v12.5H6z"/><path d="M13.5 3.5V8H18"/><path d="M9 12.5h6M9 16h6"/></svg></div><p class="empty-state-title">No quotes on file yet.</p><p class="empty-state-sub">When we send you an estimate, it will show up here so you can approve it.</p><a href="/portal/work-orders.html" class="btn orange empty-state-cta">Request Work</a></div>`;
+      listEl.innerHTML = `<div class="empty-state is-neutral"><div class="empty-state-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h7.5L18 8v12.5H6z"/><path d="M13.5 3.5V8H18"/><path d="M9 12.5h6M9 16h6"/></svg></div><p class="empty-state-title">No quotes on file yet.</p><p class="empty-state-sub">When we send you an estimate, it will show up here so you can approve it.</p><a href="/portal/work-orders.html" class="btn orange empty-state-cta">Request work</a></div>`;
       return;
     }
 

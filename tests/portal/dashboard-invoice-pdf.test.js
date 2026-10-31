@@ -82,7 +82,7 @@ test('a paid invoice card shows the paid date', () => {
 });
 
 test('the download button reads "Download Receipt" once paid, not just "Download PDF"', () => {
-  assert.match(html, /\$\{inv\.paid \? 'Download Receipt' : 'Download PDF'\}/);
+  assert.match(html, /\$\{inv\.paid \? 'Download receipt' : 'Download PDF'\}/);
 });
 
 test('the generated PDF is labeled RECEIPT when paid and INVOICE when not', () => {

@@ -237,12 +237,12 @@ test('invoice empty and error states match quotes/jobs: icon variants, not the s
   assert.match(DASHBOARD, /empty-state is-neutral/);
   assert.match(DASHBOARD, /No invoices on file yet/);
   assert.match(DASHBOARD, /Couldn't load your invoices/);
-  assert.match(DASHBOARD, /empty-state-cta">Request Work/);
+  assert.match(DASHBOARD, /empty-state-cta">Request work/);
 });
 
 test('quotes and jobs empty states keep their nav icons and add a Request Work CTA', () => {
-  assert.match(QUOTES, /empty-state-cta">Request Work/);
-  assert.match(JOBS, /empty-state-cta">Request Work/);
+  assert.match(QUOTES, /empty-state-cta">Request work/);
+  assert.match(JOBS, /empty-state-cta">Request work/);
   assert.match(QUOTES, /When we send you an estimate/);
   assert.match(JOBS, /Finished work and warranties/);
 });
@@ -250,7 +250,7 @@ test('quotes and jobs empty states keep their nav icons and add a Request Work C
 test('contracts empty state is neutral with an icon, and does not invent a create-contract CTA', () => {
   assert.match(CONTRACTS, /empty-state is-neutral/);
   assert.match(CONTRACTS, /No contracts on file yet/);
-  assert.doesNotMatch(CONTRACTS, /empty-state-cta">Request Work/);
+  assert.doesNotMatch(CONTRACTS, /empty-state-cta">Request work/);
 });
 
 test('the portal service worker cache is at or above v89 for this pass', () => {
