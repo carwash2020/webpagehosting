@@ -4720,3 +4720,16 @@ html body.th-tool-page[data-th-page="invoice-generator"] .quote-banner {
   background: rgba(255,128,0,.1); border: 1px solid rgba(255,128,0,.3); border-radius: 18px;
   padding: 14px 16px; color: var(--text); font-size: 14.5px; line-height: 1.45;
 }
+
+/* ---- Cross-surface consistency pass (2026-10-31) ----
+   One flat primary on Home, Jobs and Job detail too. Phase 3/4 gave every
+   other tool page (and #553 every portal page) the flat primary -- no lip,
+   no border, weight 400, a press scale -- but Phase 2's three pages only
+   had it per component (Job detail's Next step, Home's pair), so Home's
+   Start my day (Your week) and Upload (Secure documents) still carried the
+   3px orange lip at weight 700. */
+html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"]) .primary-btn { border: 0; box-shadow: none; font-weight: 400; }
+html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"]) .primary-btn:active { box-shadow: none; transform: scale(.98); }
+@media (prefers-reduced-motion: reduce) {
+  html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"]) .primary-btn:active { transform: none; }
+}

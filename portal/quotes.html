@@ -105,9 +105,9 @@
     navigation: auto;
   }
 </style>
-<link rel="stylesheet" href="/tools/styles-tools.css?v=d7410af6b7">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=f212452f48">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous"></script>
-<script src="/portal/portal-app.js?v=202610310100"></script>
+<script src="/portal/portal-app.js?v=202610310200"></script>
 <!-- Shared business-hours data (2026-09-03) -- see business-hours.js's
      own header comment. This page used to keep its own hand-copied
      duplicate of these exact constants ("keep these in sync manually
@@ -320,7 +320,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=2c6fd305e8">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=f0d57c5e20">
 </head>
 <body class="portal-page">
 
@@ -683,7 +683,7 @@
       return;
     }
     document.getElementById('clientEmailDisplay').textContent = session.user.email;
-    if (typeof portalSetHeaderInitials === 'function') portalSetHeaderInitials(session.user.email);
+    if (typeof portalLoadHeaderInitials === 'function') portalLoadHeaderInitials(client, session.user.email);
     await portalGuardWithBiometricLock(session.user.email, client);
     portalRefreshNavInvoiceDot(client, session.user.email); // the owed dot, same on every page
     // Keeps the Request/Jobs unread badges on the bottom nav while

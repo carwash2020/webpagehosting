@@ -1154,7 +1154,7 @@ test('finance.html\'s DOMContentLoaded init actually runs to completion and rend
 // rendered as bare floating buttons with no container background --
 // exactly matching what the reported screenshots showed.
 
-test('the bottom nav has Finance instead of Routes, and Route Planner is still reachable from the Workspace dashboard', () => {
+test('the bottom nav has Finance instead of Routes, and Route Planner is still reachable from the Workspace (More / Search)', () => {
   const navSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'tools-nav-pwa.js'), 'utf8');
   assert.match(navSrc, /href:\s*'\/tools\/finance\.html'.*icon:\s*'dollar'.*label:\s*'Finance'/s);
   assert.doesNotMatch(navSrc, /label:\s*'Routes'/);
@@ -1164,10 +1164,9 @@ test('the bottom nav has Finance instead of Routes, and Route Planner is still r
   assert.match(navSrc, /href: '\/tools\/route-planner\.html',\s+icon: 'map',\s+label: 'Route Planner'/, 'Route Planner must still be linked from somewhere, or it becomes unreachable');
   const wsSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'workspace.html'), 'utf8');
   // Redundancy pass (2026-10-31): the Next Job card's own Route today
-  // left; Today's route's Route all is the one dashboard link to the
-  // day's route (same buildTodayRouteUrl()).
-  assert.doesNotMatch(wsSrc, /id="todayRouteLink"/);
-  assert.match(wsSrc, /id="todayRouteAll"/, 'and the dashboard offers the day\'s route directly, on Today\'s route');
+  // left. Cross-surface pass, round 2 (2026-10-31): Today's route's Route
+  // all left Home too, so Route Planner is the one way to route the day.
+  assert.doesNotMatch(wsSrc, /id="todayRouteLink"|id="todayRouteAll"/, 'no route link on Home');
 });
 
 test('finance.html uses the shared .tabs class (not the old, unstyled tab-row) and gets the sticky modifier', () => {
