@@ -5921,7 +5921,7 @@ Connor approved all 19 items from a read-only audit of places the Workspace show
 
 A final look-only pass over the Workspace tools and the client portal, measured side by side at 390x844. **Chrome only: no data, payment, PDF, auth or messaging logic changed, and nothing moved, so no redirects were needed.**
 
-- **Workspace Home:** the Next Job card no longer has a Navigate button or a Maps link on the address. Directions for one job live only in Job detail. Today's route keeps Route all.
+- **Workspace Home:** nothing route- or navigation-related is left on Home. The Next Job card has no Navigate button and no Maps link on the address, and the Today's route card (the day's timeline and its Route all link) is gone. Directions for one job live in Job detail. The whole day's route is Route Planner's **Pull today's jobs**, then **Open full route in Google Maps** (in More, or search "route"). Today's jobs are still listed under Today on Jobs.
 - **Portal avatar:** every page shows the same initials (KR, never KI on some tabs). Each page now reads the client's saved name the same way, instead of reusing letters Home cached on the device. Settings' profile card uses the same rule.
 - **Matched to the Workspace:** portal status pills (sentence case, Archivo 12px), Contracts' back chevron (a bare orange chevron at the left edge), the header buttons' fill, and the header kicker and title metrics. Home's Start my day, Upload and Open job are the flat primary every other page uses.
 

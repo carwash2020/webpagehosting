@@ -36,13 +36,13 @@ function extractFn(html, name) {
   return html.slice(start, i);
 }
 
-test('the old 8-drawer Today section is gone -- replaced by a real hero with next job and money owed (the hidden Rest of Today list left in the 2026-10-31 redundancy pass: Today\'s route shows the whole day)', () => {
+test('the old 8-drawer Today section is gone -- replaced by a real hero with next job and money owed (the hidden Rest of Today list left in the 2026-10-31 redundancy pass, and Today\'s route left Home in the cross-surface pass)', () => {
   assert.doesNotMatch(WORKSPACE, /id="section-today"|id="todayJobsList"|id="body-today"/);
   assert.match(WORKSPACE, /<div class="today-hero" id="todayHero">/);
   assert.match(WORKSPACE, /id="todayNextJob"/);
   assert.match(WORKSPACE, /id="todayMoney"/);
   assert.doesNotMatch(WORKSPACE, /id="todayRestOfDay"|class="today-restofday"/);
-  assert.match(WORKSPACE, /id="todayRoute"/, 'the day\'s jobs are on Today\'s route');
+  assert.doesNotMatch(WORKSPACE, /id="todayRoute"|id="todayRouteCard"/, 'no route on Home: the day\'s jobs are under Today on Jobs, the day\'s route is Route Planner\'s');
 });
 
 test('renderDashboard renders the Today hero (not the old renderTodayJobs) as part of every render', () => {

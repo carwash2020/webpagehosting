@@ -37,11 +37,14 @@ async function open(browser, url, opts, wait) {
       return {
         restOfDay: !!document.getElementById('todayRestOfDay'),
         heroRoute: !!document.getElementById('todayRouteLink'),
-        routeAll: (() => { const a = document.getElementById('todayRouteAll'); return a && !a.hidden && /google\.com\/maps\/dir/.test(a.href); })(),
+        // Cross-surface pass, round 2 (2026-10-31): Today's route left Home,
+        // so nothing on Home links to a map, a route or Route Planner.
+        routeCard: !!document.getElementById('todayRouteCard') || !!document.getElementById('todayRouteAll'),
+        mapLinks: [...document.querySelectorAll('main a[href], #mainContent a[href], .today-cols a[href]')].map((a) => a.getAttribute('href')).filter((h) => /google\.com\/maps|maps\.google\.|route-planner\.html/.test(h)),
+        navigateText: /\bNavigate\b|Route all|Today.s route/.test((document.getElementById('todayCols') || document.body).innerText),
         heroOf: /\d+ of \d+/.test((document.querySelector('.today-next-job-label') || {}).textContent || ''),
         summary: (document.getElementById('todaySummaryLine') || {}).textContent || '',
         ringJobs: (document.querySelector('#todayRings .today-ring') || {}).textContent || '',
-        routeCount: (document.getElementById('todayRouteCount') || {}).textContent || '',
         search: !!document.getElementById('globalSearch'),
         strip,
         incomeLane: !!document.getElementById('lane-money'),
@@ -57,9 +60,9 @@ async function open(browser, url, opts, wait) {
       };
     });
     check(1, 'Rest of Today gone from the DOM', !r.restOfDay);
-    check(2, 'one route button: Route all on Today\'s route (a Maps link), none on Next Job', !r.heroRoute && r.routeAll);
+    check(2, 'no route on Home: no Route today, no Today\'s route / Route all, no Navigate, no Maps or Route Planner link (cross-surface pass)', !r.heroRoute && !r.routeCard && !r.navigateText && r.mapLinks.length === 0, r.mapLinks.join(','));
     check(18, 'Next Job card has no "1 of N"; the summary line has no "stops left"', !r.heroOf && !/stops? left/.test(r.summary), r.summary);
-    check(18, 'the count stays on the Jobs ring and Today\'s route', /0\/3/.test(r.ringJobs) && /3 stops/.test(r.routeCount), r.ringJobs + ' | ' + r.routeCount);
+    check(18, 'the count stays on the Jobs ring', /0\/3/.test(r.ringJobs), r.ringJobs);
     check(6, 'no Home search box', !r.search);
     check(7, 'daily strip is Find client + Calendar only', JSON.stringify(r.strip) === '["Find client","Calendar"]', r.strip.join(','));
     check(8, 'no Income lane; Money owed lists all 7 unpaid once (6 + 1 folded) with one Mark paid each', !r.incomeLane && r.unpaidRows === 7 && r.markPaid === 7, r.unpaidRows + ' rows, ' + r.markPaid + ' Mark paid');
@@ -121,6 +124,17 @@ async function open(browser, url, opts, wait) {
     // shell's mountStatusDot() lifts it into the header's status dot, as on
     // every other page.
     check(4, 'Cost Analyzer card gone; stops and live-sync badge still there', !r.card && r.badge && r.stops === 2);
+    // Cross-surface pass, round 2: the whole day's route lives here only.
+    // Pull today's jobs loads today's 3 open jobs; Open full route is one
+    // Google Maps directions link through all three.
+    // The stub answers the relational jobs table with [] (a real empty
+    // answer), so fail that fetch here and let Route Planner use its own
+    // documented fallback: the seeded th_tracker_jobs Home reads too.
+    await page.evaluate(() => { window.fetchJobsFromRelational = async () => ({ ok: false }); window.pullTodaysJobs(); });
+    await page.waitForTimeout(2500);
+    const dlg = await page.evaluate(() => { const o = document.querySelector('#customDialogOverlay.is-open'); const t = o ? o.textContent.trim().slice(0, 120) : ''; const ok = o && o.querySelector('.dialog-btn-primary'); if (ok) ok.click(); return t; });
+    const pulled = await page.evaluate(() => ({ stops: [...document.querySelectorAll('.stop-input')].map((i) => i.value.trim()).filter(Boolean), href: (document.getElementById('openRouteBtn') || {}).href || '' }));
+    check('route', 'Route Planner: Pull today\'s jobs -> Open full route is a Maps route through today\'s 3 open jobs', pulled.stops.length === 3 && /google\.com\/maps\/dir\/\?api=1&destination=/.test(pulled.href) && (pulled.href.match(/%7C|\|/g) || []).length === 1, pulled.stops.length + ' stops | ' + pulled.href.slice(0, 90) + (dlg ? ' | dialog: ' + dlg : ''));
     check('smoke', 'Route Planner: no page errors', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
@@ -284,6 +298,7 @@ async function open(browser, url, opts, wait) {
     await d.ctx.close();
     const j = await open(browser, '/tools/job-detail.html?id=101');
     check('smoke', 'Job detail: no page errors, and its Expense link still goes to Finance', j.errors.length === 0 && await j.page.evaluate(() => [...document.querySelectorAll('a')].some((a) => /finance\.html\?job=101#expenses/.test(a.getAttribute('href') || ''))), j.errors.join(' | '));
+    check('route', 'Job detail: its own Directions still opens Google Maps to this job\'s address (untouched)', await j.page.evaluate(() => [...document.querySelectorAll('a')].some((a) => /Directions/.test(a.textContent) && (a.getAttribute('href') || '') === 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent('123 Red Cliffs Dr, St. George, UT'))));
     await j.ctx.close();
   }
   // Dev Tools (item 12).
