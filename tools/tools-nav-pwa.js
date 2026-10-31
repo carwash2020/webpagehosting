@@ -81,7 +81,10 @@
   ];
   // Screens with no tab of their own, keyed by path: the tab they sit under.
   var TAB_PARENT = {
-    '/tools/job-detail.html': '/tools/job-tracker.html'
+    '/tools/job-detail.html': '/tools/job-tracker.html',
+    // Workspace Phase 4 (2026-10-31): Client detail lights Clients, as
+    // Job detail lights Jobs.
+    '/tools/client-detail.html': '/tools/clients.html'
   };
 
   // Per-href permission checks for every restricted destination that
@@ -829,6 +832,12 @@
   function mountStatusDot() {
     var badge = document.querySelector('.hub-header .realtime-badge, header#mainContent .realtime-badge, #realtimeBadge');
     var title = document.querySelector('.hub-header .hub-title, header#mainContent h1');
+    // Workspace Phase 4 (2026-10-31): a page that saves synced data but runs
+    // no live updates (Reviews, Appliance Wiki) has no dot to show, yet a
+    // failed backup there was only a passing toast. It opts in with
+    // <body data-th-sync-banner> and gets the same banner, same words, same
+    // events as every other page -- just without the dot.
+    if (!badge && title && document.body.hasAttribute('data-th-sync-banner')) { mountSyncNote(title, null); return; }
     if (!badge || !title || badge.closest('.th-status')) return;
     var from = badge.parentNode;
     var holder = document.createElement('span');
@@ -862,11 +871,17 @@
     // pauses instant updates from other devices -- saves still back up --
     // so on its own it now shows a neutral grey dot (styles-tools.css).
     // Both the dot and the banner read thSyncTrouble(), on the same events.
-    // Jobs has its own banner (#syncStatusText); other pages get a shared
-    // one under the header, shown only while there's trouble.
+    mountSyncNote(title, holder, tip, badge);
+  }
+
+  // The shared sync banner (#thSyncNote) under the header, and the dot's
+  // red state when there is one (holder = .th-status). Jobs has its own
+  // banner (#syncStatusText); other pages get this one, shown only while
+  // there's trouble. A function declaration: inject() calls it.
+  function mountSyncNote(title, holder, tip, badge) {
     var note = document.getElementById('syncStatusText');
     if (!note) {
-      var hdr = badge.closest('.hub-header, header') || title.closest('.hub-header, header');
+      var hdr = (badge && badge.closest('.hub-header, header')) || title.closest('.hub-header, header');
       if (hdr && hdr.parentNode) {
         note = document.createElement('p');
         note.id = 'thSyncNote';
@@ -880,8 +895,8 @@
     function setTrouble() {
       var t = null;
       try { t = thSyncTrouble(); } catch (e) { t = null; } // never take the shell down over a status read
-      holder.classList.toggle('is-trouble', !!t);
-      tip();
+      if (holder) holder.classList.toggle('is-trouble', !!t);
+      if (tip) tip();
       if (note && note.id === 'thSyncNote') {
         note.classList.toggle('is-issue', !!t);
         note.textContent = '';

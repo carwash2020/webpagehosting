@@ -4152,6 +4152,175 @@ body.th-tool-page .th-v2-rule-head::after { content: ''; flex: 1; height: var(--
 @media (hover: hover) { .th-page-tip-close:hover { color: var(--text); } }
 
 /* ==========================================================================
+   Workspace Phase 4 (2026-10-31): Clients, Client detail and the remaining
+   tool pages (Contracts, Route Planner, Reviews, Appliance Wiki, Settings,
+   Site Content, Dev Tools) get Phase 2's native-app chrome. Runway keeps
+   its own copy (it doesn't load this file); sign-in and reset password are
+   untouched (see visual.md). Every value here is Phase 2's or Phase 3's,
+   applied to these pages' own selectors -- no new look. Chrome only: no
+   rule here changes what a button does or any number on a page.
+
+   It sits above Phase 2's block on purpose: Phase 3 (PR #545) edits
+   Phase 2's :is() page lists and appends at the end of this file, so a
+   separate block here merges cleanly in either order. Same
+   "html body.th-tool-page" prefix, so these win over each page's own
+   later <style> at the same specificity.
+   ========================================================================== */
+
+/* ---- The app bar hugs the top (Phase 2 item 1, same values) ---- */
+@media (max-width: 1023px) {
+  html body.th-tool-page:is([data-th-page="clients"], [data-th-page="client-detail"], [data-th-page="contract-generator"], [data-th-page="route-planner"], [data-th-page="review-request"], [data-th-page="parts-reference"], [data-th-page="settings"], [data-th-page="site-content"], [data-th-page="dev-tools"]) { padding-top: 0; }
+}
+/* Sticky bars under the header land on its bottom edge. Dev Tools' tab bar
+   and Site Content's section chips used top: 0, so on a phone they slid
+   over the sticky header once scrolled; they now stop under it. */
+@media (max-width: 1023px) and (display-mode: browser) {
+  html body.th-tool-page:is([data-th-page="clients"], [data-th-page="client-detail"], [data-th-page="contract-generator"], [data-th-page="route-planner"], [data-th-page="review-request"], [data-th-page="parts-reference"], [data-th-page="settings"], [data-th-page="site-content"], [data-th-page="dev-tools"]) .hub-header { padding-top: 8px; padding-bottom: 8px; }
+  html body.th-tool-page[data-th-page="clients"] .tabs.tabs-sticky,
+  html body.th-tool-page[data-th-page="contract-generator"] .contract-tabs { top: 62px; }
+  /* No status dot in these headers, so the bar is 60px, not 62. */
+  html body.th-tool-page[data-th-page="review-request"] .tabs.tabs-sticky,
+  html body.th-tool-page[data-th-page="parts-reference"] .pr-search-filter-row,
+  html body.th-tool-page[data-th-page="dev-tools"] #devTabBar,
+  html body.th-tool-page[data-th-page="site-content"] #scSectionNav { top: 60px; }
+}
+@media (max-width: 1023px) and (display-mode: standalone) {
+  html body.th-tool-page:is([data-th-page="clients"], [data-th-page="client-detail"], [data-th-page="contract-generator"], [data-th-page="route-planner"], [data-th-page="review-request"], [data-th-page="parts-reference"], [data-th-page="settings"], [data-th-page="site-content"], [data-th-page="dev-tools"]) .hub-header { padding-top: calc(6px + max(env(safe-area-inset-top, 0px), 44px)); padding-bottom: 8px; }
+  html body.th-tool-page[data-th-page="clients"] .tabs.tabs-sticky,
+  html body.th-tool-page[data-th-page="contract-generator"] .contract-tabs { top: calc(60px + max(env(safe-area-inset-top, 0px), 44px)); }
+  html body.th-tool-page[data-th-page="review-request"] .tabs.tabs-sticky,
+  html body.th-tool-page[data-th-page="parts-reference"] .pr-search-filter-row,
+  html body.th-tool-page[data-th-page="dev-tools"] #devTabBar,
+  html body.th-tool-page[data-th-page="site-content"] #scSectionNav { top: calc(58px + max(env(safe-area-inset-top, 0px), 44px)); }
+}
+
+/* Phone/tablet: the page intro is desktop-only, as on Jobs and the money
+   pages (Phase 3). The hub-sub lines (Settings' summary, Dev Tools' who-
+   can-see-this note, Site Content's) are not intros and stay. */
+@media (max-width: 1023px) {
+  html body.th-tool-page:is([data-th-page="contract-generator"], [data-th-page="route-planner"], [data-th-page="review-request"], [data-th-page="parts-reference"], [data-th-page="dev-tools"]) .hub-header ~ p.tool-sub { display: none; }
+}
+
+/* ---- Client detail: Job detail's back chevron, top-left (Phase 2 item 3) ---- */
+html body.th-tool-page[data-th-page="client-detail"] .hub-header { justify-content: flex-start; }
+html body.th-tool-page[data-th-page="client-detail"] .hub-header-left { flex: 1 1 auto; min-width: 0; }
+html body.th-tool-page[data-th-page="client-detail"] .hub-header-right { flex: 0 0 auto; }
+html body.th-tool-page[data-th-page="client-detail"] .hub-header-back { flex: 0 0 auto; display: flex; margin: 0 -8px 0 -12px; }
+html body.th-tool-page[data-th-page="client-detail"] .hub-header-back > a.help-btn {
+  width: 44px; height: 44px; min-width: 44px; padding: 0; border: 0; border-radius: 12px; background: none; box-shadow: none;
+  color: var(--orange-light); display: inline-flex; align-items: center; justify-content: center; text-decoration: none;
+}
+html body.th-tool-page[data-th-page="client-detail"] .hub-header-back > a.help-btn .th-icon { width: 26px; height: 26px; margin: 0; stroke-width: 2.4; transform: scaleX(-1); }
+html body.th-tool-page[data-th-page="client-detail"] .hub-header-back > a.help-btn:active { background: var(--bg-panel-2); }
+@media (min-width: 1024px) { html body.th-tool-page[data-th-page="client-detail"] .hub-header-back { margin-left: -8px; } }
+
+/* ---- One casing rule (Phase 2 item 7) ----
+   Titles, headings and controls are sentence case, as typed. Card
+   eyebrows, field and stat labels, kickers, counts and the bottom bar
+   keep their tracked caps. Tool names (Route Planner, Appliance Wiki,
+   Dev Tools, Site Content) and the three contract types stay as named. */
+html body.th-tool-page:is([data-th-page="clients"], [data-th-page="client-detail"], [data-th-page="contract-generator"], [data-th-page="route-planner"], [data-th-page="review-request"], [data-th-page="parts-reference"], [data-th-page="settings"], [data-th-page="site-content"], [data-th-page="dev-tools"]) :is(
+  .hub-title, .client-hero-name, .settings-account-name, .th-dt-q-answer, .cms-group-title, .pr-unit-name, .route-map-empty
+) { text-transform: none; letter-spacing: .2px; }
+html body.th-tool-page:is([data-th-page="clients"], [data-th-page="client-detail"], [data-th-page="contract-generator"], [data-th-page="route-planner"], [data-th-page="review-request"], [data-th-page="parts-reference"], [data-th-page="settings"], [data-th-page="site-content"], [data-th-page="dev-tools"]) :is(
+  .tab-btn, .dev-tab-btn, .dev-tab-bar > a, .primary-btn, .secondary-btn, .small-btn, .th-v2-link, .th-v2-add,
+  .client-action, .add-stop-btn, .pr-fixes-add, .ct-type-label
+) { text-transform: none; letter-spacing: .2px; }
+html body.th-tool-page:is([data-th-page="clients"], [data-th-page="review-request"], [data-th-page="dev-tools"]) :is(.tab-btn, .dev-tab-btn, .dev-tab-bar > a) { font-size: 14px; }
+/* The same casing, over page rules that carry an id or more classes than
+   the lists above (measured: each of these still drew caps). */
+html body.th-tool-page[data-th-page="clients"] #clientsTabs .tab-btn,
+html body.th-tool-page[data-th-page="review-request"] #reviewTabs .tab-btn,
+html body.th-tool-page[data-th-page="client-detail"] .client-delete-row .small-btn.danger,
+html body.th-tool-page[data-th-page="contract-generator"] .contract-tabs .contract-tab,
+html body.th-tool-page[data-th-page="contract-generator"] .contract-tabs .ct-type-label,
+html body.th-tool-page[data-th-page="route-planner"] .route-stops-actions :is(.secondary-btn, .add-stop-btn),
+html body.th-tool-page[data-th-page="route-planner"] #openRouteBtn,
+html body.th-tool-page[data-th-page="dev-tools"] .th-dt-q .th-dt-q-action { text-transform: none; letter-spacing: .2px; }
+html body.th-tool-page:is([data-th-page="clients"], [data-th-page="review-request"]) :is(#clientsTabs, #reviewTabs) .tab-btn { font-size: 14px; }
+/* The map's empty line is a sentence, not a label. */
+html body.th-tool-page[data-th-page="route-planner"] .route-map-empty { font-family: var(--font-app); font-size: 14px; letter-spacing: 0; }
+
+/* ---- One primary button: flat, no lip, weight 400 (PR #544 / Phase 3 fix 8) ---- */
+html body.th-tool-page:is([data-th-page="clients"], [data-th-page="client-detail"], [data-th-page="contract-generator"], [data-th-page="route-planner"], [data-th-page="review-request"], [data-th-page="parts-reference"], [data-th-page="settings"], [data-th-page="site-content"], [data-th-page="dev-tools"]) .primary-btn { border: 0; box-shadow: none; font-weight: 400; }
+html body.th-tool-page:is([data-th-page="clients"], [data-th-page="client-detail"], [data-th-page="contract-generator"], [data-th-page="route-planner"], [data-th-page="review-request"], [data-th-page="parts-reference"], [data-th-page="settings"], [data-th-page="site-content"], [data-th-page="dev-tools"]) .primary-btn:active { box-shadow: none; transform: scale(.98); }
+/* ...and over the three page rules that re-add an offset lip with an id or
+   extra classes (Contracts' Generate, Site Content's Publish, Dev Tools'
+   question-banner action). */
+html body.th-tool-page[data-th-page="contract-generator"] .contract-panel > .primary-btn.wide,
+html body.th-tool-page[data-th-page="site-content"] #scDraftPublishBtn,
+html body.th-tool-page[data-th-page="dev-tools"] .th-dt-q .primary-btn.th-dt-q-action { border: 0; box-shadow: none; font-weight: 400; }
+html body.th-tool-page[data-th-page="contract-generator"] .contract-panel > .primary-btn.wide:active,
+html body.th-tool-page[data-th-page="site-content"] #scDraftPublishBtn:active,
+html body.th-tool-page[data-th-page="dev-tools"] .th-dt-q .primary-btn.th-dt-q-action:active { box-shadow: none; transform: scale(.98); }
+
+/* ---- Segmented controls span the width, equal segments (Phase 2 item 6) ----
+   Clients and Reviews already were. The three contract types were 170px
+   cards in a sideways scroller (the third off screen); they are now one
+   row of three equal segments, label over hint. Dev Tools' seven tabs
+   can't share 390px, so they stay a scrolling track with Finance's
+   "more" hint (Phase 3 fix 7). */
+@media (max-width: 1023px) {
+  html body.th-tool-page[data-th-page="contract-generator"] .contract-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: visible; }
+  html body.th-tool-page[data-th-page="contract-generator"] .contract-tab { min-width: 0; width: auto; padding: 10px 8px; justify-content: center; text-align: center; }
+  html body.th-tool-page[data-th-page="contract-generator"] .ct-type-label { font-family: var(--font-app); font-size: 13.5px; font-weight: 600; line-height: 1.2; }
+}
+@media (max-width: 440px) {
+  html body.th-tool-page[data-th-page="dev-tools"] #devTabBar::after {
+    content: '\203A'; position: sticky; right: -20px; z-index: 1; flex: 0 0 36px; align-self: stretch; margin: -10px -20px -10px 0;
+    display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; box-sizing: border-box;
+    font-family: var(--font-app); font-size: 22px; line-height: 1; color: var(--text-dim);
+    background: linear-gradient(to right, transparent, var(--bg) 55%); pointer-events: none;
+  }
+  @supports (animation-timeline: scroll()) {
+    html body.th-tool-page[data-th-page="dev-tools"] #devTabBar::after { animation: th-fin-tabs-hint linear both; animation-timeline: scroll(nearest inline); }
+  }
+}
+@keyframes th-fin-tabs-hint { 0%, 88% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ---- Chips: Jobs' filter chip, on/off (Site Content's section chips) ----
+   Size, type and radius were already Jobs'; the current one is now the
+   same solid orange as every other chip row (Jobs, Clients, Invoices). */
+html body.th-tool-page[data-th-page="site-content"] .th-sc-nav-btn.is-active { background: var(--orange); border-color: var(--orange); color: var(--th-ink-on-orange); }
+html body.th-tool-page[data-th-page="site-content"] .th-sc-nav-btn.is-active .th-sc-dot { background: var(--th-ink-on-orange); }
+
+/* ---- Empty states: say so once, without dead controls ---- */
+/* No clients at all: the search, Add, the filter chips and the summary
+   rule have nothing to act on or count; the empty card carries its own Add a client. A search or filter
+   with no matches keeps them, so it can be cleared (that message's button
+   passes the search term, so it doesn't match here). */
+html body.th-tool-page[data-th-page="clients"] #tab-directory:has(#clientDirList > .cd-empty > button[onclick="openAddClient()"]) :is(.cd-toolbar, #clientDirFilters, #clientDirSummary) { display: none; }
+html body.th-tool-page[data-th-page="clients"] #tab-directory:has(#clientDirList > .cd-empty > button[onclick="openAddClient()"]) { padding-top: 16px; }
+/* A client with nothing on file (a new lead): no "$0.00 / 0 / –" stats
+   grid and no four "No jobs / invoices / quotes / contracts" cards under
+   a History card that already says "Nothing on file yet". The delete
+   zone stays. */
+html body.th-tool-page[data-th-page="client-detail"] #clientContent:has(.client-timeline-empty) .client-stat-row,
+html body.th-tool-page[data-th-page="client-detail"] #clientContent:has(.client-timeline-empty) > .section-block:not(.client-delete-zone):has(> .empty-state-small) { display: none; }
+
+/* ---- 44px touch targets on a phone (Phase 2's coarse-pointer rules) ---- */
+@media (pointer: coarse) {
+  html body.th-tool-page[data-th-page="client-detail"] .client-whats-next-cta { min-height: 44px; display: inline-flex; align-items: center; }
+  /* Inline text links that are the way in (Phase 2's job-card title fix):
+     a taller hit box without moving anything. */
+  html body.th-tool-page[data-th-page="client-detail"] .client-hero a[href^="tel:"]:not(.client-action),
+  html body.th-tool-page[data-th-page="client-detail"] .client-hero a[href^="mailto:"]:not(.client-action),
+  html body.th-tool-page[data-th-page="dev-tools"] a[onclick*="toggleSyncHistory"] { display: inline-block; padding: 14px 0; margin: -14px 0; }
+  html body.th-tool-page[data-th-page="contract-generator"] :is(.voice-dictation-btn, .icon-search-toggle) { min-width: 44px; min-height: 44px; }
+  html body.th-tool-page[data-th-page="parts-reference"] .pr-fixes-add { min-height: 44px; }
+  /* Route stops' drag handle keeps its 28px look; the hit area is 44. */
+  html body.th-tool-page[data-th-page="route-planner"] .stop-drag { position: relative; }
+  html body.th-tool-page[data-th-page="route-planner"] .stop-drag::after { content: ''; position: absolute; top: 0; bottom: 0; left: -8px; right: -8px; }
+  /* The ? info bubbles keep their look; an ::after hit area makes 44. */
+  html body.th-tool-page:is([data-th-page="clients"], [data-th-page="site-content"], [data-th-page="dev-tools"]) .dev-info-bubble { position: relative; }
+  html body.th-tool-page:is([data-th-page="clients"], [data-th-page="site-content"], [data-th-page="dev-tools"]) .dev-info-bubble::after { content: ''; position: absolute; top: 50%; left: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
+  html body.th-tool-page:is([data-th-page="clients"], [data-th-page="site-content"], [data-th-page="dev-tools"]) .dev-panel.is-collapsible > .dev-panel-heading { min-height: 44px; }
+  html body.th-tool-page[data-th-page="dev-tools"] #devStatusSummary { min-height: 44px; box-sizing: border-box; }
+  /* A checkbox's label is its hit area (Phase 3's Finance rule). */
+  html body.th-tool-page[data-th-page="clients"] label:has(> #portalWorkOrderShowClosed) { min-height: 44px; }
+}
+
+/* ==========================================================================
    Phase 2 revision (2026-10-30): Connor's review of PR #543, items 1-12.
    Home, Jobs and Job detail only, except the two pieces of shared chrome
    marked "every tool page" (the status dot and the bottom bar's labels),
