@@ -82,7 +82,11 @@ test('tabbed pages take a #tab deep link and follow a same-document hash change 
   const ig = read('invoice-generator.html');
   assert.match(ig, /function applyGenTabFromHash\(\)/);
   assert.match(ig, /window\.addEventListener\('hashchange', applyGenTabFromHash\)/);
-  assert.match(ig, /if \(tab === 'pos'\) \{\s*const posEmail = document\.getElementById\('posClientEmail'\);\s*if \(posEmail\) posEmail\.focus\(\);/);
+  // #pos opens Quick charge without focusing Client email: on a phone that
+  // raised the keyboard over the keypad (Phase 3 review round 2, 2026-10-31).
+  const hashFn = ig.match(/function applyGenTabFromHash\(\) \{[\s\S]*?\n  \}\n/)[0];
+  assert.match(hashFn, /activateGenTab\(tab\);/);
+  assert.doesNotMatch(hashFn, /\.focus\(/);
   const fin = read('finance.html');
   assert.match(fin, /window\.addEventListener\('hashchange', \(\) => \{\s*const h = \(location\.hash \|\| ''\)\.replace\('#', ''\);\s*if \(TAB_HASHES\[h\]\) activateTab\(h\);/);
   const jt = read('job-tracker.html');

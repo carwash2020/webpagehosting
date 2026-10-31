@@ -52,7 +52,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=50aed916e9">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=0f52cf0c36">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=8060cfc3c2" defer></script>
 <script src="/tools/data-layer.js?v=c595490771" defer></script>
@@ -611,6 +611,14 @@
 <a href="#mainContent" class="skip-link">Skip to main content</a>
 
 <div class="hub-header">
+  <!-- Workspace Phase 3, review round 2 (2026-10-31): Job detail's iOS-style
+       back chevron, shown only while New invoice / New quote is open (CSS,
+       styles-tools.css). It does exactly what the Invoices segment did from
+       a builder: activateGenTab('recent'), back to the list, where the
+       Invoices / Finance / Quick charge switch is visible again. -->
+  <div class="hub-header-back mn-builder-back">
+    <button type="button" class="help-btn" onclick="activateGenTab('recent')" aria-label="Back to Invoices" title="Back to Invoices"><svg class="th-icon" aria-hidden="true"><use href="#icon-chevron" xlink:href="#icon-chevron"></use></svg></button>
+  </div>
   <div class="hub-header-left">
     <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
     <span class="hub-title" id="mainContent">Invoices</span>
@@ -712,8 +720,9 @@
   </div>
   <div class="tool-form-row">
     <div class="form-field">
-      <label for="clientEmail">Client Email <span class="tool-sub" style="font-weight:normal;">(optional -- lets this client view and pay this invoice online)</span></label>
-      <input type="email" id="clientEmail" placeholder="client@example.com">
+      <label for="clientEmail">Client email</label>
+      <span class="label-hint field-caption" id="clientEmailHint">Optional. Lets this client view and pay this invoice online.</span>
+      <input type="email" id="clientEmail" placeholder="client@example.com" aria-describedby="clientEmailHint">
     </div>
   </div>
   <div id="contactsContainer"></div>
@@ -728,8 +737,9 @@
       <input type="text" id="jobDescription" placeholder="GE Range/Stove Repair — Model JB256D M3WW">
     </div>
     <div class="form-field">
-      <label for="invoiceJobRef">Link to Job (optional, enables Job Profitability tracking)</label>
-      <select id="invoiceJobRef" onchange="autofillFromJobRef('invoiceJobRef', 'jobDescription', 'clientName', 'clientAddress')"><option value="">&mdash; None &mdash;</option></select>
+      <label for="invoiceJobRef">Link to job</label>
+      <span class="label-hint field-caption" id="invoiceJobRefHint">Optional. Turns on job profitability tracking.</span>
+      <select id="invoiceJobRef" onchange="autofillFromJobRef('invoiceJobRef', 'jobDescription', 'clientName', 'clientAddress')" aria-describedby="invoiceJobRefHint"><option value="">&mdash; None &mdash;</option></select>
     </div>
   </div>
 </div>
@@ -772,8 +782,9 @@
     <div class="totals-row"><span>Sales Tax</span><span id="taxDisplay">$0.00</span></div>
     <div class="tool-form-row" style="margin-top:10px;">
       <div class="form-field">
-        <label for="discountLabel">Discount label (leave blank for no discount)</label>
-        <input type="text" id="discountLabel" placeholder="First-Time Client Discount">
+        <label for="discountLabel">Discount label</label>
+        <span class="label-hint field-caption" id="discountLabelHint">Leave blank for no discount.</span>
+        <input type="text" id="discountLabel" placeholder="First-Time Client Discount" aria-describedby="discountLabelHint">
       </div>
       <div class="form-field">
         <label for="discountAmount">Discount amount ($)</label>
@@ -840,8 +851,9 @@
   </div>
   <div class="tool-form-row">
     <div class="form-field">
-      <label for="quoteClientEmail">Client Email <span class="tool-sub" style="font-weight:normal;">(optional -- lets this client review and approve this quote online)</span></label>
-      <input type="email" id="quoteClientEmail" placeholder="client@example.com">
+      <label for="quoteClientEmail">Client email</label>
+      <span class="label-hint field-caption" id="quoteClientEmailHint">Optional. Lets this client review and approve this quote online.</span>
+      <input type="email" id="quoteClientEmail" placeholder="client@example.com" aria-describedby="quoteClientEmailHint">
     </div>
   </div>
   <div class="tool-form-row">
@@ -860,8 +872,9 @@
       <input type="text" id="quoteJobDescription" placeholder="GE Range/Stove Repair — Model JB256D M3WW">
     </div>
     <div class="form-field">
-      <label for="quoteJobRef">Link to Job (optional, carries over if converted to an invoice)</label>
-      <select id="quoteJobRef" onchange="autofillFromJobRef('quoteJobRef', 'quoteJobDescription', 'quoteClientName', 'quoteClientAddress')"><option value="">&mdash; None &mdash;</option></select>
+      <label for="quoteJobRef">Link to job</label>
+      <span class="label-hint field-caption" id="quoteJobRefHint">Optional. Carries over if this becomes an invoice.</span>
+      <select id="quoteJobRef" onchange="autofillFromJobRef('quoteJobRef', 'quoteJobDescription', 'quoteClientName', 'quoteClientAddress')" aria-describedby="quoteJobRefHint"><option value="">&mdash; None &mdash;</option></select>
     </div>
   </div>
 </div>
@@ -902,8 +915,9 @@
     <div class="totals-row"><span>Sales Tax</span><span id="quoteTaxDisplay">$0.00</span></div>
     <div class="tool-form-row" style="margin-top:10px;">
       <div class="form-field">
-        <label for="quoteDiscountLabel">Discount label (leave blank for no discount)</label>
-        <input type="text" id="quoteDiscountLabel" placeholder="First-Time Client Discount">
+        <label for="quoteDiscountLabel">Discount label</label>
+        <span class="label-hint field-caption" id="quoteDiscountLabelHint">Leave blank for no discount.</span>
+        <input type="text" id="quoteDiscountLabel" placeholder="First-Time Client Discount" aria-describedby="quoteDiscountLabelHint">
       </div>
       <div class="form-field">
         <label for="quoteDiscountAmount">Discount amount ($)</label>
@@ -970,7 +984,7 @@
      same page as the two other ways of billing one. Markup is verbatim
      from pos.html; Stripe.js loads lazily (ensureStripeJs, below). -->
 <div class="tab-panel" id="tab-pos">
-  <p class="pos-intro">Charge a client's card directly for a quick job &mdash; no invoice, no line items, just an amount and a charge. If they've paid an invoice before, their card is already on file and it's one tap.</p>
+  <p class="pos-intro">No invoice needed. A saved card charges in one tap.</p>
   <div class="pos-card">
     <div class="pos-kicker" aria-hidden="true">Charge a card now</div>
     <div class="pos-field">
@@ -1262,7 +1276,7 @@
     }
     if (!url) {
       if (pdfWindow) pdfWindow.close();
-      showToast('Could not open #' + inv.invoiceNumber + ' -- no saved PDF, and it could not be rebuilt here. Check your connection and try again.', { type: 'error' });
+      showToast('Could not open #' + inv.invoiceNumber + '. There\'s no saved PDF, and it couldn\'t be rebuilt here. Check your connection and try again.', { type: 'error' });
       return;
     }
     if (pdfWindow) pdfWindow.location.href = url;
@@ -1546,7 +1560,7 @@
       });
       const result = await res.json().catch(() => ({}));
       if (result && result.ok && result.skipped) {
-        showToast('Not sent -- this client has turned off invoice/quote emails in their portal Settings.', { type: 'error' });
+        showToast('Not sent. This client has turned off invoice/quote emails in their portal Settings.', { type: 'error' });
       } else if (result && result.ok) {
         showToast('Invoice #' + inv.invoiceNumber + ' resent to ' + inv.clientEmail + '.');
       } else {
@@ -1643,7 +1657,7 @@
       });
       const result = await res.json().catch(() => ({}));
       if (result && result.ok && result.skipped) {
-        showToast('Not sent -- this client has turned off invoice/quote emails in their portal Settings.', { type: 'error' });
+        showToast('Not sent. This client has turned off invoice/quote emails in their portal Settings.', { type: 'error' });
       } else if (result && result.ok) {
         showToast('Estimate #' + q.quoteNumber + ' resent to ' + q.clientEmail + '.');
       } else {
@@ -1732,6 +1746,9 @@
 
   // The v2 Money switch above the tabs (2026-09-29): Invoices is lit for the
   // list and both builders, Quick charge for the POS tab. Presentation only.
+  // The header title follows the open screen too (Phase 3 review round 2,
+  // 2026-10-31: it read "Invoices" over Quick charge).
+  const GEN_TAB_TITLES = { recent: 'Invoices', invoice: 'New invoice', quote: 'New quote', pos: 'Quick charge' };
   function syncMoneySeg(tab) {
     const current = tab === 'pos' ? 'pos' : 'invoices';
     document.querySelectorAll('#moneySeg [data-money-seg]').forEach(el => {
@@ -1739,6 +1756,8 @@
       el.classList.toggle('is-active', on);
       if (el.tagName === 'BUTTON') el.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
+    const title = document.querySelector('.hub-header .hub-title');
+    if (title && GEN_TAB_TITLES[tab]) title.textContent = GEN_TAB_TITLES[tab];
   }
 
   // Same order as the tab strip, which the swipe follows. The list comes
@@ -1755,11 +1774,10 @@
   function applyGenTabFromHash() {
     const tab = (window.location.hash || '').replace('#', '');
     if (!GEN_TAB_ORDER.includes(tab)) return;
+    // #pos used to focus the Client email field here, which on a phone
+    // raised the keyboard over the keypad the moment Quick charge opened
+    // (Phase 3 review round 2, 2026-10-31). The field is a tap away.
     activateGenTab(tab);
-    if (tab === 'pos') {
-      const posEmail = document.getElementById('posClientEmail');
-      if (posEmail) posEmail.focus();
-    }
   }
   (function setupGenSwipe() {
     let touchStartX = 0, touchStartY = 0, touchStartTime = 0, startedInTable = false;
@@ -1859,7 +1877,7 @@
       el.value = fallbackPrefix + new Date().getFullYear() + '-TMP-' + Date.now().toString().slice(-6);
       if (typeof logClientError === 'function') {
         logClientError(
-          `Could not draw a ${rpcName} -- fell back to a temporary local number (${el.value}). ${e.message}`,
+          `Could not draw a ${rpcName}, so this uses a temporary local number (${el.value}). ${e.message}`,
           'invoice-generator.html', null, null, null
         );
       }
@@ -3741,7 +3759,7 @@
     applyQuickLineFromUrl(); // after the quote's starter row exists
     initAppTour();
     if (typeof thPageTip === 'function') {
-      thPageTip('invoices', "Tap a row to Mark Paid, resend it, or open the job -- the numbers up top filter to just what's owed or overdue.", document.getElementById('invoiceSummary'));
+      thPageTip('invoices', "Tap a row to mark it paid, resend it, or open the job. The numbers up top filter to just what's owed or overdue.", document.getElementById('invoiceSummary'));
     }
     populateKnownContactsList();
     populatePriceRefPickers();

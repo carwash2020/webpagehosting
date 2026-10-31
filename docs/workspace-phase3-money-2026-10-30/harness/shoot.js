@@ -16,12 +16,27 @@
 //
 // Needs Playwright (not a dependency of this repo): npm i -g playwright, or
 // PLAYWRIGHT=/path/to/node_modules/playwright.
+//
+// REAL_FONTS=1 (review round 2, 2026-10-31): answer the page's Google Fonts
+// request with the repo's own copies (fonts/pdf/: Anton, Archivo 400/600,
+// Oswald) instead of blocking it, so shots show the real type, not the
+// metric-matched fallbacks. Fallback digits are shorter than Anton's, which
+// made the keypad and the Quick charge amount look lower than they are.
+// Newsreader has no local copy and still falls back. Round 2 also shoots
+// Finance's tabs scrolled to the end and the New invoice captions.
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const fs = require('fs');
 const path = require('path');
 const { installLiveStub } = require('../../workspace-phase2-native-app-2026-10-30/harness/live-stub');
 
 const base = process.argv[2];
+const REAL_FONTS = !!process.env.REAL_FONTS;
+const FONT_DIR = path.join(__dirname, '../../../fonts/pdf/');
+const FONT_FILES = { 'anton.ttf': 'Anton-Regular.ttf', 'archivo4.ttf': 'Archivo-Regular.ttf', 'archivo6.ttf': 'Archivo-SemiBold.ttf', 'oswald.ttf': 'Oswald-Medium.ttf' };
+const FONT_CSS = "@font-face{font-family:'Anton';src:url(https://fonts.gstatic.com/th/anton.ttf)}" +
+  "@font-face{font-family:'Archivo';font-weight:100 500;src:url(https://fonts.gstatic.com/th/archivo4.ttf)}" +
+  "@font-face{font-family:'Archivo';font-weight:501 900;src:url(https://fonts.gstatic.com/th/archivo6.ttf)}" +
+  "@font-face{font-family:'Oswald';font-weight:100 900;src:url(https://fonts.gstatic.com/th/oswald.ttf)}";
 const out = process.argv[3];
 const EMPTY = !!process.env.EMPTY;
 fs.mkdirSync(out, { recursive: true });
@@ -173,6 +188,8 @@ async function newCtx(browser, { width, height, theme, touch }) {
   await ctx.route('**/*', (route) => {
     const u = route.request().url();
     if (u.startsWith(base)) return route.continue();
+    if (REAL_FONTS && /fonts\.googleapis\.com\/css/.test(u)) return route.fulfill({ status: 200, contentType: 'text/css', headers: { 'access-control-allow-origin': '*' }, body: FONT_CSS });
+    if (REAL_FONTS && /fonts\.gstatic\.com\/th\//.test(u)) return route.fulfill({ status: 200, contentType: 'font/ttf', headers: { 'access-control-allow-origin': '*' }, body: fs.readFileSync(FONT_DIR + FONT_FILES[u.split('/').pop()]) });
     if (/supabase\.co/.test(u)) {
       if (/account_roles/.test(u)) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(roleRow) });
       if (/rpc\/internal_mfa_session_status/.test(u)) return route.fulfill({ status: 200, contentType: 'application/json', body: '{"blocked":false}' });
@@ -193,7 +210,7 @@ async function open(ctx, url) {
   page.on('pageerror', (e) => errs.push(String(e)));
   await page.goto(base + url, { waitUntil: 'load' });
   await page.waitForTimeout(3000);
-  await page.evaluate(() => document.querySelectorAll('.th-install-banner, .th-update-card, .onboarding-card, .th-tour, .th-tour-card').forEach((e) => e.remove()));
+  await page.evaluate(() => { document.documentElement.style.scrollBehavior = 'auto'; document.querySelectorAll('.th-install-banner, .th-update-card, .onboarding-card, .th-tour, .th-tour-card').forEach((e) => e.remove()); });
   return { page, errs };
 }
 
@@ -223,6 +240,23 @@ async function open(ctx, url) {
     report.states[name].trouble = await page.evaluate(CHROME_AUDIT);
     await page.screenshot({ path: path.join(out, name + suffix + '-sync-trouble-390-dark.png') });
     await page.evaluate(() => { localStorage.setItem('th_sync_last', JSON.stringify({ ok: true, type: 'push', error: null, time: Date.now() })); window.dispatchEvent(new CustomEvent('th-sync-status')); });
+    await page.close();
+  }
+  // Round 2: Finance's tab track scrolled to its end (the fade, Inventory
+  // clear of it), and the New invoice fields with their captions.
+  if (!EMPTY) {
+    let { page } = await open(ctx, '/tools/finance.html#cost');
+    await page.evaluate(() => { const t = document.querySelector('.tabs.tabs-sticky'); window.scrollTo(0, t.getBoundingClientRect().top + window.scrollY - 300); });
+    await page.waitForTimeout(200);
+    await page.screenshot({ path: path.join(out, 'finance-tabs-390-dark.png') });
+    await page.evaluate(() => { document.querySelector('.tabs.tabs-sticky').scrollLeft = 99999; });
+    await page.waitForTimeout(200);
+    await page.screenshot({ path: path.join(out, 'finance-tabs-end-390-dark.png') });
+    await page.close();
+    ({ page } = await open(ctx, '/tools/invoice-generator.html#invoice'));
+    await page.evaluate(() => { const e = document.getElementById('clientEmail'); window.scrollTo(0, e.getBoundingClientRect().top + window.scrollY - 360); });
+    await page.waitForTimeout(200);
+    await page.screenshot({ path: path.join(out, 'new-invoice-fields-390-dark.png') });
     await page.close();
   }
   await ctx.close();

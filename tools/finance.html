@@ -52,7 +52,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=50aed916e9">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=0f52cf0c36">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=8060cfc3c2" defer></script>
 <script src="/tools/data-layer.js?v=c595490771" defer></script>
@@ -383,7 +383,7 @@
   <div class="form-section">
     <h3>Job Inputs</h3>
     <div class="tool-form-row">
-      <div class="form-field"><label for="costClientName">Client Name (optional &mdash; checks your job history)</label><input type="text" id="costClientName" placeholder="Sarah Miller" oninput="checkClientHistory()"></div>
+      <div class="form-field"><label for="costClientName">Client name</label><span class="label-hint field-caption" id="costClientNameHint">Optional. Checks your job history.</span><input type="text" id="costClientName" aria-describedby="costClientNameHint" placeholder="Sarah Miller" oninput="checkClientHistory()"></div>
     </div>
     <p class="inline-note" id="clientHistoryNote"></p>
     <div class="tool-form-row">
@@ -525,7 +525,7 @@
         </select>
       </div>
       <div class="form-field"><label for="entryDesc">Description</label><input type="text" id="entryDesc" placeholder="Parts for the job"></div>
-      <div class="form-field" id="partNumberField"><label for="entryPartNumber">Part Number (if applicable)</label><input type="text" id="entryPartNumber" placeholder="e.g. WPW10321304"></div>
+      <div class="form-field" id="partNumberField"><label for="entryPartNumber">Part number</label><span class="label-hint field-caption" id="entryPartNumberHint">If it has one.</span><input type="text" id="entryPartNumber" aria-describedby="entryPartNumberHint" placeholder="e.g. WPW10321304"></div>
     </div>
     <div class="tool-form-row">
       <div class="form-field" id="amountField"><label for="entryAmount">Amount ($)</label><input type="number" id="entryAmount" step="0.01" min="0"></div>
@@ -541,8 +541,9 @@
     </div>
     <div class="tool-form-row" id="receiptField">
       <div class="form-field">
-        <label for="entryReceipt">Receipt Photo (required for expenses)</label>
-        <input type="file" id="entryReceipt" accept="image/*">
+        <label for="entryReceipt">Receipt photo</label>
+        <span class="label-hint field-caption" id="entryReceiptHint">Required for expenses.</span>
+        <input type="file" id="entryReceipt" accept="image/*" aria-describedby="entryReceiptHint">
         <div id="receiptPreviewName" class="inline-note"></div>
       </div>
     </div>
@@ -603,7 +604,7 @@
     </div>
     <div class="tool-form-row">
       <div class="form-field"><label for="invQty">Qty on Hand</label><input type="number" id="invQty" step="1" min="0" value="0"></div>
-      <div class="form-field"><label for="invReorderAt">Reorder At <span class="tool-sub" style="font-weight:normal;">(low-stock warning threshold)</span></label><input type="number" id="invReorderAt" step="1" min="0" value="1"></div>
+      <div class="form-field"><label for="invReorderAt">Reorder at</label><span class="label-hint field-caption" id="invReorderAtHint">Low-stock warning threshold.</span><input type="number" id="invReorderAt" aria-describedby="invReorderAtHint" step="1" min="0" value="1"></div>
       <div class="form-field"><label for="invUnitCost">Unit Cost ($)</label><input type="number" id="invUnitCost" step="0.01" min="0"></div>
     </div>
     <div class="tool-form-row">
@@ -1875,7 +1876,7 @@
   document.addEventListener('DOMContentLoaded', function () {
     initAppTour();
     if (typeof thPageTip === 'function') {
-      thPageTip('money', 'This page remembers your last tab -- Expenses needs a photo of the receipt to log one.', document.querySelector('.tabs.tabs-sticky'));
+      thPageTip('money', 'This page remembers your last tab. Logging an expense needs a photo of the receipt.', document.querySelector('.tabs.tabs-sticky'));
     }
     (async function init() {
       try {

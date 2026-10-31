@@ -4355,14 +4355,15 @@ html body.th-tool-page[data-th-page="finance"]:not(.th-money-switch-on) .mn-seg 
 html body.th-tool-page:is([data-th-page="invoice-generator"], [data-th-page="finance"]) :is(
   .mn-new-btn, .add-row-btn, .add-contact-btn, [data-density-toggle]
 ) { text-transform: none; letter-spacing: .2px; }
-html body.th-tool-page[data-th-page="invoice-generator"] .mn-new-btn { font-family: var(--font-app); font-size: 14px; font-weight: 600; }
+html body.th-tool-page[data-th-page="invoice-generator"] .mn-new-btn { font-family: var(--font-app); font-size: 14px; font-weight: 400; }
 
 /* Log expense / Log income are one pair (the Home pair's rule, PR #543
    round 3 item 4): the same 48px box, a 1px border on both, no lip, the
-   same type. Orange fill vs outline still says primary vs secondary. */
+   same type (weight 400, the flat primary from PR #544; review round 2).
+   Orange fill vs outline still says primary vs secondary. */
 html body.th-tool-page[data-th-page="finance"] .fin-spent-actions > :is(.primary-btn, .secondary-btn) {
   height: 48px; min-height: 48px; padding: 0 12px; box-sizing: border-box; border: 1px solid transparent; box-shadow: none; transform: none;
-  font-family: var(--font-app); font-size: 14px; font-weight: 600; line-height: 1.2; letter-spacing: .2px;
+  font-family: var(--font-app); font-size: 14px; font-weight: 400; line-height: 1.2; letter-spacing: .2px;
 }
 html body.th-tool-page[data-th-page="finance"] .fin-spent-actions > .secondary-btn { border-color: var(--border); }
 html body.th-tool-page[data-th-page="finance"] .fin-spent-actions > :is(.primary-btn, .secondary-btn):active { transform: scale(.97); }
@@ -4390,12 +4391,121 @@ html body.th-tool-page[data-th-page="invoice-generator"] #posAmount { font-size:
 
 /* 44px touch targets on a phone (Phase 2's coarse-pointer rule). */
 @media (pointer: coarse) {
-  html body.th-tool-page[data-th-page="invoice-generator"] #invoiceFilters .th-chip { min-height: 44px; min-width: 44px; justify-content: center; }
-  html body.th-tool-page[data-th-page="invoice-generator"] .inv-log-head [data-density-toggle] { min-height: 44px; }
+  html body.th-tool-page[data-th-page="invoice-generator"] #invoiceFilters .th-chip { min-height: 44px; }
   /* The line-item fields (the page's own rule sets 40px and loads later). */
   html body.th-tool-page[data-th-page="invoice-generator"] .line-items-table :is(input, select) { min-height: 44px; }
   html body.th-tool-page[data-th-page="finance"] .small-btn.danger { min-width: 44px; }
   /* A checkbox's label is its hit area: the whole 44px row. */
   html body.th-tool-page[data-th-page="finance"] .checkbox-row { align-items: center; }
   html body.th-tool-page[data-th-page="finance"] .checkbox-row > label { display: inline-flex; align-items: center; min-height: 44px; }
+}
+
+/* ==========================================================================
+   Workspace Phase 3, review round 2 (2026-10-31): Connor's ten fixes from
+   the 390x844 shots. Still chrome only: no rule here changes what a button
+   does or any number on the page.
+   ========================================================================== */
+
+/* Fix 3: Quick charge. The intro is one line; less dead space above the
+   amount (the field was 96px tall around a 64px figure); keypad digits
+   centred in their keys (they sat ~4px low). */
+html body.th-tool-page[data-th-page="invoice-generator"] .pos-intro { margin-bottom: 12px; }
+html body.th-tool-page[data-th-page="invoice-generator"] #posAmount { height: 64px; min-height: 0; padding-top: 0; padding-bottom: 0; line-height: 1; }
+html body.th-tool-page[data-th-page="invoice-generator"] .pos-amount-field { margin-top: -4px; }
+html body.th-tool-page[data-th-page="invoice-generator"] .pos-keypad button {
+  display: flex; align-items: center; justify-content: center; padding: 0; line-height: 1;
+  text-box: trim-both cap alphabetic;
+}
+
+/* Fix 4: one baseline on the Money switch. Finance is an <a> and took the
+   link line-height (22.4px) while the two <button>s used "normal", so its
+   label sat higher. One line-height for all three. */
+html body.th-tool-page:is([data-th-page="invoice-generator"], [data-th-page="finance"]) .mn-seg > :is(a, button) { line-height: 1.2; }
+
+/* Fix 5: the invoice filter chips are Jobs' filter chips (job-tracker.html
+   "#statusFilterGroup .sort-btn", page-scoped, so matched here value for
+   value): Archivo 13.5/600, 14px sides, 38px (44px on touch), panel
+   background, orange when on. "All" has no count, so a 60px floor (Jobs'
+   shortest chip, "All 3", is 61px) keeps it a pill, not a circle. */
+html body.th-tool-page[data-th-page="invoice-generator"] #invoiceFilters { gap: 8px; }
+html body.th-tool-page[data-th-page="invoice-generator"] #invoiceFilters .th-chip {
+  min-height: 38px; min-width: 60px; padding: 0 14px; gap: 4px; justify-content: center; border-radius: 999px;
+  background: var(--bg-panel); border: 1px solid var(--border); color: var(--text);
+  font-family: var(--font-app); font-size: 13.5px; font-weight: 600; letter-spacing: .2px; text-transform: none; white-space: nowrap;
+}
+html body.th-tool-page[data-th-page="invoice-generator"] #invoiceFilters .th-chip.is-active { background: var(--orange); border-color: var(--orange); color: var(--th-ink-on-orange); }
+html body.th-tool-page[data-th-page="invoice-generator"] #invoiceFilters .th-chip-count { font-size: inherit; opacity: .7; }
+@media (pointer: coarse) { html body.th-tool-page[data-th-page="invoice-generator"] #invoiceFilters .th-chip { min-height: 44px; } }
+
+/* Fix 6: Compact view is an icon button beside + New invoice, so the
+   INVOICES row breathes. The shared applyDensityPreference() rewrites the
+   button's text ("Compact view" / "Comfortable view"), so the words stay
+   in the DOM as its accessible name (aria-pressed says which) and only
+   the icon shows. */
+html body.th-tool-page[data-th-page="invoice-generator"] .inv-log-head [data-density-toggle] {
+  position: relative; flex: 0 0 auto; width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 50%;
+  overflow: hidden; white-space: nowrap; text-indent: 100%; color: transparent;
+  background: var(--th-field); border: 1px solid var(--border);
+}
+html body.th-tool-page[data-th-page="invoice-generator"] .inv-log-head [data-density-toggle]::before {
+  content: ''; position: absolute; inset: 0; margin: auto; width: 20px; height: 20px; background: var(--text-dim);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 6h16M4 10h16M4 14h16M4 18h16'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 6h16M4 10h16M4 14h16M4 18h16'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+html body.th-tool-page[data-th-page="invoice-generator"] .inv-log-head [data-density-toggle][aria-pressed="true"] { background: var(--orange-tint-soft); border-color: var(--orange-tint-border); }
+html body.th-tool-page[data-th-page="invoice-generator"] .inv-log-head [data-density-toggle][aria-pressed="true"]::before { background: var(--tone-orange-fg); }
+html body.th-tool-page[data-th-page="invoice-generator"] .inv-log-head { flex-wrap: nowrap; align-items: center; }
+html body.th-tool-page[data-th-page="invoice-generator"] .inv-log-head > h3 { flex: 1 1 auto; min-width: 0; }
+
+/* Fix 7: Finance's five tabs still scroll: sentence-case labels need about
+   437px at 390 against 356 visible (even "Profit" and "Parts" would need
+   ~377), so the cut edge gets a hint instead. It's a sticky fade with a "›" in
+   it at the track's right edge (::before is the sticky-background fix).
+   With the real fonts the cut falls in Inventory's padding, so a fade
+   alone showed nothing; the chevron is what says "more". It fades out as
+   the track reaches its end (scroll-driven, where supported), and at the
+   end it rests in its own space after Inventory, never over it. Phones
+   only: wider than ~440px the five tabs fit and there is nothing to hint. */
+@media (max-width: 440px) {
+  html body.th-tool-page[data-th-page="finance"] .tabs.tabs-sticky::after {
+    content: '\203A'; position: sticky; right: 0; z-index: 1; flex: 0 0 36px; align-self: stretch; margin: -4px -4px -4px 0;
+    display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; box-sizing: border-box;
+    font-family: var(--font-app); font-size: 22px; line-height: 1; color: var(--text-dim);
+    background: linear-gradient(to right, transparent, var(--bg-panel) 55%); pointer-events: none;
+    border-radius: 0 var(--th-radius-track) var(--th-radius-track) 0;
+  }
+  @supports (animation-timeline: scroll()) {
+    html body.th-tool-page[data-th-page="finance"] .tabs.tabs-sticky::after { animation: th-fin-tabs-hint linear both; animation-timeline: scroll(nearest inline); }
+  }
+}
+@keyframes th-fin-tabs-hint { 0%, 88% { opacity: 1; } 100% { opacity: 0; } }
+
+/* Fix 8: one primary button on the money pages, the flat one PR #544 gave
+   Job detail's Next step: no 3px lip, no border, weight 400. Press is a
+   slight scale instead of the lip compressing. */
+html body.th-tool-page:is([data-th-page="invoice-generator"], [data-th-page="finance"]) .primary-btn { border: 0; box-shadow: none; font-weight: 400; }
+html body.th-tool-page:is([data-th-page="invoice-generator"], [data-th-page="finance"]) .primary-btn:active { box-shadow: none; transform: scale(.98); }
+
+/* Fix 9: New invoice / New quote are a screen inside Invoices: a back
+   chevron (Job detail's, PR #543) and the one New invoice | New quote
+   toggle. The Invoices | Finance | Quick charge switch steps aside here;
+   the chevron returns to the list, where it is back. */
+html body.th-tool-page[data-th-page="invoice-generator"] .mn-builder-back { display: none; }
+html body.th-tool-page[data-th-page="invoice-generator"]:has(:is(#tab-invoice, #tab-quote).is-active) .mn-builder-back { display: flex; flex: 0 0 auto; margin: 0 -8px 0 -12px; }
+html body.th-tool-page[data-th-page="invoice-generator"]:has(:is(#tab-invoice, #tab-quote).is-active) #moneySeg { display: none; }
+html body.th-tool-page[data-th-page="invoice-generator"] .hub-header { justify-content: flex-start; }
+html body.th-tool-page[data-th-page="invoice-generator"] .hub-header-left { flex: 1 1 auto; min-width: 0; }
+html body.th-tool-page[data-th-page="invoice-generator"] .hub-header-right { flex: 0 0 auto; }
+html body.th-tool-page[data-th-page="invoice-generator"] .mn-builder-back > .help-btn {
+  width: 44px; height: 44px; min-width: 44px; padding: 0; border: 0; border-radius: 12px; background: none; box-shadow: none;
+  color: var(--orange-light); display: inline-flex; align-items: center; justify-content: center;
+}
+html body.th-tool-page[data-th-page="invoice-generator"] .mn-builder-back > .help-btn .th-icon { width: 26px; height: 26px; margin: 0; stroke-width: 2.4; transform: scaleX(-1); }
+html body.th-tool-page[data-th-page="invoice-generator"] .mn-builder-back > .help-btn:active { background: var(--bg-panel-2); }
+@media (min-width: 1024px) { html body.th-tool-page[data-th-page="invoice-generator"]:has(:is(#tab-invoice, #tab-quote).is-active) .mn-builder-back { margin-left: -8px; } }
+
+/* Fix 10: a long field label is a short label plus a sentence-case caption
+   under it (.label-hint, the suite's hint class, as a block). */
+html body.th-tool-page:is([data-th-page="invoice-generator"], [data-th-page="finance"]) .form-field > .field-caption {
+  display: block; margin: -2px 0 6px; font-size: 12.5px; line-height: 1.35;
 }
