@@ -163,3 +163,37 @@ test('item 15: Job Tracker\'s Contacts tab is Suppliers -- same tab id, hash and
   // The saved record keeps its shape.
   assert.match(jt, /const fields = \{\s*name,\s*role: document\.getElementById\('contactRole'\)\.value\.trim\(\),\s*phone: contactPhoneVal,\s*email: document\.getElementById\('contactEmail'\)\.value\.trim\(\),\s*notes: document\.getElementById\('contactNotes'\)\.value\.trim\(\),\s*\};/);
 });
+
+// ---- Redirects for removed/relocated deep links (rebase onto Phase 4) ----
+// Browser-checked end to end in docs/workspace-redundancy-2026-10-31/
+// harness/verify.js ('redirect' checks); these pin the wiring.
+
+test('redirect: finance.html#cost goes to New quote for an Invoices account, after the role loads and before the Finance gate', () => {
+  const html = read('finance.html');
+  const fn = html.match(/function redirectRetiredFinanceHash\(h\) \{[\s\S]*?\n {2}\}/);
+  assert.ok(fn, 'redirectRetiredFinanceHash() exists');
+  assert.match(fn[0], /h !== 'cost'/);
+  assert.match(fn[0], /canManageInvoices\(\)\) return false/, 'an account without Invoices stays on Finance');
+  assert.match(fn[0], /location\.replace\('\/tools\/invoice-generator\.html#quote'\)/);
+  const sync = html.indexOf('await initSyncOnLoad();');
+  const call = html.indexOf('if (redirectRetiredFinanceHash(', sync);
+  const gate = html.indexOf("canViewFinance === 'function' && !canViewFinance()", sync);
+  assert.ok(sync > 0 && call > sync && call < gate, 'checked after the role loads, before the Finance gate');
+  assert.match(html, /if \(redirectRetiredFinanceHash\(h\)\) return;\s*if \(TAB_HASHES\[h\]\) activateTab\(h\);/, 'same-document hash changes too');
+});
+
+test('redirect: Home #section-gallery / #gallery go to Site Content, which opens the Gallery queue on that hash', () => {
+  assert.match(read('workspace.html'), /location\.hash === '#section-gallery' \|\| window\.location\.hash === '#gallery'\) \{\s*window\.location\.replace\('\/tools\/site-content\.html#gallery'\)/);
+  const sc = read('site-content.html');
+  assert.match(sc, /id="section-gallery"/);
+  assert.match(sc, /if \(h !== '#gallery' && h !== '#section-gallery'\) return;/);
+  assert.match(sc, /jump\('gallery'\)/);
+});
+
+test('redirect: an old Home ?search= link opens Money owed\'s search and drops the stale #section-actionitems', () => {
+  const html = read('workspace.html');
+  assert.match(html, /invoiceSearchWrap'\);\s*if \(wrap\) wrap\.classList\.add\('is-expanded'\)/);
+  assert.match(html, /history\.replaceState\(null, '', location\.pathname \+ location\.search\)/);
+  assert.match(html, /showMoneyCardAfterRender = true;/);
+  assert.match(html, /behavior: 'instant'/);
+});

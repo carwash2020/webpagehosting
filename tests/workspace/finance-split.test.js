@@ -1387,13 +1387,21 @@ test('finance.html still correctly activates a DIFFERENT tab when a real hash is
   assert.equal(window.document.getElementById('tab-cost'), null, 'Cost lookup left (2026-10-31)');
 });
 
-test('an old finance.html#cost or #inventory link (or a device that last used one) opens Expenses, not a blank page', async () => {
+test('an old finance.html#cost (account without Invoices) or #inventory link, or a device that last used one, opens Expenses, not a blank page; #cost with Invoices goes to New quote', async () => {
   const { JSDOM } = require('jsdom');
   const html = fs.readFileSync(FINANCE_PATH, 'utf8');
-  for (const [url, remembered] of [['https://example.com/#cost', null], ['https://example.com/#inventory', null], ['https://example.com/', 'inventory'], ['https://example.com/#income', 'cost']]) {
+  // canInvoice: what canManageInvoices() answers. #cost goes to New quote
+  // (invoice-generator.html#quote) for an account that can open Invoices
+  // (rebase onto Phase 4, 2026-10-31); jsdom can't navigate, so that case
+  // is read from its "Not implemented: navigation" report and the page
+  // stopping before it picks a tab.
+  for (const [url, remembered, canInvoice] of [['https://example.com/#cost', null, false], ['https://example.com/#cost', null, true], ['https://example.com/#inventory', null, true], ['https://example.com/', 'inventory', true], ['https://example.com/#income', 'cost', true]]) {
+    const virtualConsole = new (require('jsdom').VirtualConsole)();
+    const navigations = [];
+    virtualConsole.on('jsdomError', (e) => { if (/navigation/i.test(e.message)) navigations.push(e.message); });
     const dom = new JSDOM(html, {
-      runScripts: 'dangerously', url,
-      beforeParse(window) { window.requireAuth = () => {}; if (remembered) window.localStorage.setItem('th_finance_tab', remembered); },
+      runScripts: 'dangerously', url, virtualConsole,
+      beforeParse(window) { window.requireAuth = () => {}; window.canManageInvoices = () => canInvoice; if (remembered) window.localStorage.setItem('th_finance_tab', remembered); },
     });
     const { window } = dom;
     window.initAppTour = () => {};
@@ -1409,9 +1417,15 @@ test('an old finance.html#cost or #inventory link (or a device that last used on
     window.escapeForInlineHandler = (s) => String(s == null ? '' : s);
     window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
     await new Promise(resolve => setTimeout(resolve, 100));
-    const want = url.endsWith('#income') ? 'tab-income' : 'tab-expenses';
     const active = [...window.document.querySelectorAll('.tab-panel.is-active')].map(p => p.id);
-    assert.deepEqual(active, [want], url + ' (remembered: ' + remembered + ')');
+    if (url.endsWith('#cost') && canInvoice) {
+      assert.ok(navigations.length >= 1, '#cost with Invoices navigates away');
+      assert.deepEqual(active, [], '#cost with Invoices stops before picking a tab');
+    } else {
+      const want = url.endsWith('#income') ? 'tab-income' : 'tab-expenses';
+      assert.deepEqual(active, [want], url + ' (remembered: ' + remembered + ', canInvoice: ' + canInvoice + ')');
+      assert.equal(navigations.length, 0, url + ' stays on Finance');
+    }
     window.close();
   }
 });

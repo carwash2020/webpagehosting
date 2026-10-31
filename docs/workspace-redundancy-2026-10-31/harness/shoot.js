@@ -67,7 +67,7 @@ const STATES = [
   // Item 12: Dev Tools -> Health.
   { name: 'devtools-health', url: '/tools/dev-tools.html', wait: 2500, act: scrollTo('#portalBugReports', 260) },
   // Item 17: Site Content's Gallery queue, opened.
-  { name: 'site-content-gallery', url: '/tools/site-content.html', wait: 2500, act: async (page) => { await page.evaluate(() => { const p = document.getElementById('section-gallery'); if (p && p.classList.contains('is-collapsed')) toggleDevPanel(p.querySelector('.dev-panel-heading')); }); await page.waitForTimeout(1500); await scrollTo('#section-gallery', 80)(page); } },
+  { name: 'site-content-gallery', url: '/tools/site-content.html', wait: 2500, act: async (page) => { await page.evaluate(() => { const p = document.getElementById('section-gallery'); if (p && p.classList.contains('is-collapsed')) toggleDevPanel(p.querySelector('.dev-panel-heading')); }); await page.waitForTimeout(1500); await scrollTo('#section-gallery', 150)(page); } },
 ];
 
 (async () => {

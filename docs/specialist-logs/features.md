@@ -3,6 +3,13 @@
 Started 2026-09-16, alongside the `tripleh-features` skill. See `README.md`
 in this directory for how these logs work.
 
+## 2026-10-31 -- Redundancy pass rebased onto Phase 4: old deep links redirected
+
+- `finance.html#cost` → New quote (`invoice-generator.html#quote`) when the account can manage invoices, else Expenses. It's done by `redirectRetiredFinanceHash()` in finance.html, after the role loads and before the Finance gate.
+- `workspace.html#section-gallery` / `#gallery` → `site-content.html#gallery`, which opens and scrolls to the Gallery queue.
+- `workspace.html?search=` still filters Money owed, and now scrolls there instead of to Needs attention.
+- No data, table, column or storage key changed in the rebase. See `visual.md` for the conflict-by-conflict account.
+
 ## 2026-10-31 -- Workspace redundancy pass: behaviour that changed hands
 
 This was the UI-only consolidation of 19 duplicate screens; the full write-up is in `visual.md` (2026-10-31). Behaviour worth knowing before building on these:

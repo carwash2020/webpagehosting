@@ -92,7 +92,11 @@ function fakeJwt() {
 }
 
 async function newContext(browser, base, opts) {
-  const { width = 390, height = 844, theme = 'dark', touch = true } = opts || {};
+  const { width = 390, height = 844, theme = 'dark', touch = true, role = null } = opts || {};
+  // opts.role (rebase round, 2026-10-31): fields merged over the signed-in
+  // role, e.g. { can_manage_invoices: false } for the #cost redirect's
+  // stay-on-Finance path.
+  const roleRows = role ? [Object.assign({}, roleRow[0], role)] : roleRow;
   const ctx = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: touch ? 2 : 1, colorScheme: theme, isMobile: !!touch, hasTouch: !!touch, serviceWorkers: 'block' });
   await ctx.addInitScript(({ seed, jwt, theme }) => {
     try {
@@ -118,7 +122,7 @@ async function newContext(browser, base, opts) {
     if (REAL_FONTS && /fonts\.googleapis\.com\/css/.test(u)) return route.fulfill({ status: 200, contentType: 'text/css', headers: { 'access-control-allow-origin': '*' }, body: FONT_CSS });
     if (REAL_FONTS && /fonts\.gstatic\.com\/th\//.test(u)) return route.fulfill({ status: 200, contentType: 'font/ttf', headers: { 'access-control-allow-origin': '*' }, body: fs.readFileSync(FONT_DIR + FONT_FILES[u.split('/').pop()]) });
     if (/supabase\.co/.test(u)) {
-      if (/account_roles/.test(u)) return json(route, roleRow);
+      if (/account_roles/.test(u)) return json(route, roleRows);
       if (/rpc\/internal_mfa_session_status/.test(u)) return json(route, { blocked: false });
       if (/\/storage\/v1\/object\/sign\/job-photos\//.test(u) && route.request().method() === 'POST') return json(route, { signedURL: '/object/sign/job-photos/' + u.split('/job-photos/')[1] + '?token=t' });
       if (/\/storage\/v1\/object\/sign\/job-photos\//.test(u)) return route.fulfill({ status: 200, contentType: 'image/webp', headers: { 'access-control-allow-origin': '*' }, body: /c\.webp/.test(u) ? PHOTO : PHOTO2 });

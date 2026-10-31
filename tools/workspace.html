@@ -69,7 +69,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=10f1831b6e">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=d7410af6b7">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=8060cfc3c2" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -82,8 +82,8 @@
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=e67fa5a727" defer></script>
-<script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=791ee017e1" defer></script>
+<script src="/tools/tools-command-palette.js?v=479d6a96e7" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -4474,7 +4474,21 @@
     // copy, without waiting for the pull to finish.
     window.addEventListener('th-role-loaded', () => { try { renderMetrics(); renderInvoicesList(); } catch (e) { reportHomeRenderError('money redraw on role load', e); } });
     const syncStartedAt = Date.now();
+    // Set by handleIncomingSearch() below for an old ?search= link.
+    let showMoneyCardAfterRender = false;
     initSyncOnLoad().then(renderDashboard).catch(renderDashboard).then(() => {
+      // Brings the search and its filtered list (the bottom of the Money
+      // owed card) up under the sticky header. Instant, not the page's
+      // smooth scroll-behavior, which late layout cuts short.
+      if (showMoneyCardAfterRender) {
+        requestAnimationFrame(() => {
+          const target = document.getElementById('invoiceSearchWrap');
+          if (!target) return;
+          const header = document.querySelector('.hub-header');
+          const headerBottom = header && getComputedStyle(header).position === 'sticky' ? header.getBoundingClientRect().bottom : 0;
+          window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - headerBottom - 12, behavior: 'instant' });
+        });
+      }
       const pulled = lastSuccessfulPullTime();
       setHomeFresh(pulled && new Date(pulled).getTime() >= syncStartedAt - 1000 ? 'fresh' : 'stale');
       // Relational tables Phase 2, invoices slice A: after the blob pull,
@@ -4524,6 +4538,20 @@
       if (!input) return;
       input.value = term;
       renderInvoicesList();
+      // The old links carried #section-actionitems (Needs attention), where
+      // this list used to be. It's on the Money owed card now, so show the
+      // search open with the term in it and bring it into view (no focus,
+      // so a phone doesn't pop its keyboard).
+      const wrap = document.getElementById('invoiceSearchWrap');
+      if (wrap) wrap.classList.add('is-expanded');
+      // The stale hash is dropped so the browser's own fragment scroll
+      // doesn't win. The scroll itself waits for the first full render
+      // (showMoneyCardAfterRender, in the initSyncOnLoad chain above):
+      // before that the cards above are skeletons and push it back down.
+      if (location.hash === '#section-actionitems') {
+        try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* ignore */ }
+      }
+      showMoneyCardAfterRender = true;
     })();
     if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => {
       renderDashboard();
@@ -4547,6 +4575,12 @@
     // Settings' own former section, bookmarks) all follow it there directly.
     if (window.location.hash === '#backup') {
       window.location.replace('/tools/dev-tools.html#backup');
+    }
+    // The Gallery queue moved to Site Content (redundancy pass, 2026-10-31),
+    // keeping its section-gallery id. An old #section-gallery / #gallery
+    // link or bookmark follows it there, and Site Content opens the panel.
+    if (window.location.hash === '#section-gallery' || window.location.hash === '#gallery') {
+      window.location.replace('/tools/site-content.html#gallery');
     }
     // Structural item #7, push 1 (2026-08-20): builds the client registry
     // from existing jobs/invoices/quotes/contacts/contracts. Deliberately

@@ -3,6 +3,26 @@
 Started 2026-09-16, alongside the `tripleh-visual` skill. See `README.md` in
 this directory for how these logs work.
 
+## 2026-10-31 -- Workspace redundancy pass (PR #550), rebased onto main after Phase 4 (#547), plus redirects for removed deep links
+
+**Rebase.** #547 squash-merged as `907e562` and #550 was rebased onto it. 30 files conflicted. A script compared each hunk's three sides after normalising `?v=` stamps and `CACHE_NAME`. 27 files were stamps only (taken from main, then `npm run fix-versions`). The 3 real ones:
+- **`runway-dashboard.html`:** Phase 4 recased "Save Month" in the Pull-from-Finance note, and #550 replaced that note with its "From Finance for this month: …" line. Took #550's line. #550's four new copy strings (help, hint, empty state, info sheet) also said "Save Month", so they now match Phase 4's "Save month" button. Code comments and test names were left alone.
+- **README and this log:** both PRs appended an entry, so both are kept.
+
+Git auto-merged `clients.html`, `route-planner.html`, `tools-nav-pwa.js` and `styles-tools.css` with no markers, and I audited each against main:
+- **Nav:** #550's `sidebar: false` filter and Phase 4's `header#mainContent > h1` eyebrow fallback are both present.
+- **`styles-tools.css`:** #550 deletes Phase 3's Finance "›" hint *and its `@keyframes th-fin-tabs-hint`*. Phase 4 reuses that animation name for Dev Tools' tab bar (and Runway inline), so this was a real overlap. It's safe only because Phase 4 carries its own identical `@keyframes` copy (styles-tools.css, and Runway's `<style>`). Don't delete those as "duplicates".
+- **Route Planner:** the only Phase 4 CSS lost is `.route-cost-card` / `.result-row` styling for the removed Cost Analyzer. Removed element wins.
+- **Clients:** only the four portal panels and their JS left. Phase 4's long-name grid and empty-state rules are untouched.
+
+**Redirects** (each in the page's own `location.replace` / hash style, like Home's `#backup` → Dev Tools and Dev Tools' `#nav-content` → Site Content):
+- `finance.html#cost` → `invoice-generator.html#quote`. It's checked after `initSyncOnLoad()`, so an account without Invoices stays on Finance's Expenses. It runs before the Finance gate, so an Invoices-only account gets New quote rather than the blocked overlay. The same-document `hashchange` path is covered too. `#inventory` still opens Expenses, since that tab has no successor.
+- `workspace.html#section-gallery` / `#gallery` → `site-content.html#gallery`. Site Content now opens the Gallery queue on `#gallery` / `#section-gallery` (it waits for the panel to be laid out after sign-in) and scrolls to it.
+- `workspace.html?search=…#section-actionitems` (Ctrl+K's old invoice links) already filtered Money owed, but it scrolled to Needs attention, which no longer holds that list. It now drops the stale hash, opens the search, and after the first full render scrolls the search and list up under the sticky header. **Trap:** Home's `html` has `scroll-behavior: smooth`, and late layout cuts a smooth scroll short (it ended at y≈278), so this uses `behavior: 'instant'`.
+- **No redirect needed:** `route-planner.html` (still exists), `clients.html#portal` (the tab stays for accounts and work orders), `job-tracker.html#contacts` (same hash, now Suppliers). The removed panels and buttons had no URL: `globalSearch`, `lane-money`, the portal panels, `quickExpenseOverlay`, the Runway buttons and the strip buttons were never link targets, per a repo-wide grep including `edge-functions/`, which links these pages only bare.
+
+**Verified:** `verify.js` 84/84. That's the original 76, with the old "#cost opens Expenses" check now redirect checks, 9 redirect checks in all. `common.js` takes an `opts.role` override for the no-Invoices path. Tests are 4676/4676 after the rebase, and the consistency, undefined-vars, links and eslint checks are clean. All 24 pairs were re-shot at 390x844 dark with `REAL_FONTS=1`, against main at `907e562` (Phase 4 chrome on both sides now). `shoot.js`'s gallery offset went to 150 because Phase 4's sticky section chips covered the heading.
+
 ## 2026-10-31 -- Workspace redundancy pass: 19 duplicate screens removed or merged (Connor-approved)
 
 This was one PR off fresh main (8218cb0, after #545 merged), kept separate from the Phase 4 work. It covered all 19 items from the read-only redundancy audit. **UI only.** No localStorage key, Supabase table or column was deleted or changed shape. Where a screen moved, it still reads the same storage. I checked the audit's claims in the code before acting on them, and two were wrong (items 14 and 19, below).

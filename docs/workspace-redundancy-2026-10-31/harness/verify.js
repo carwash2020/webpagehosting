@@ -148,7 +148,7 @@ async function open(browser, url, opts, wait) {
   }
   // Finance (items 11, 16).
   {
-    for (const url of ['/tools/finance.html', '/tools/finance.html#cost', '/tools/finance.html#inventory']) {
+    for (const url of ['/tools/finance.html', '/tools/finance.html#inventory']) {
       const { ctx, page, errors } = await open(browser, url);
       const r = await page.evaluate(() => ({ tabs: [...document.querySelectorAll('.tabs .tab-btn')].map((b) => b.dataset.tab), active: [...document.querySelectorAll('.tab-panel.is-active')].map((p) => p.id), inv: localStorage.getItem('th_inventory'), ref: localStorage.getItem('th_price_reference'), entries: document.querySelectorAll('#entriesTable .dash-list-item, #entriesTable tr, #entriesTable .fin-row').length, scroll: (() => { const t = document.querySelector('.tabs'); return t.scrollWidth - t.clientWidth; })() }));
       check(url === '/tools/finance.html' ? 11 : 16, url + ': tabs Expenses/Income/Profitability, opens on Expenses', JSON.stringify(r.tabs) === '["expenses","income","profitability"]' && JSON.stringify(r.active) === '["tab-expenses"]', JSON.stringify(r.active));
@@ -162,6 +162,36 @@ async function open(browser, url, opts, wait) {
     const q = await open(browser, '/tools/invoice-generator.html#quote');
     check(11, 'New quote\'s "Add From Saved Job Types" still lists th_price_reference', await q.page.evaluate(() => !document.getElementById('quotePriceRefRow').style.display.includes('none') && /Dishwasher install/.test(document.getElementById('quotePriceRefSelect').textContent)));
     await q.ctx.close();
+  }
+  // Redirects for removed/relocated deep links (rebase onto Phase 4, 2026-10-31).
+  {
+    // finance.html#cost (Cost Lookup) -> New quote, for an account with Invoices.
+    const c = await open(browser, '/tools/finance.html#cost', null, 2800);
+    const cr = await c.page.evaluate(() => ({ url: location.pathname + location.hash, quote: !!document.querySelector('.tab-panel.is-active#tab-quote, #tab-quote.is-active, .tab-btn.is-active[data-tab="quote"]'), ref: /Dishwasher install/.test((document.getElementById('quotePriceRefSelect') || {}).textContent || '') }));
+    check('redirect', 'finance.html#cost lands on New quote (invoice-generator.html#quote) with saved job types', cr.url === '/tools/invoice-generator.html#quote' && cr.quote && cr.ref, JSON.stringify(cr));
+    check('redirect', 'finance.html#cost -> New quote: no page errors', c.errors.length === 0, c.errors.join(' | '));
+    await c.ctx.close();
+    // ... but an account without Invoices stays on Finance's Expenses.
+    const n = await open(browser, '/tools/finance.html#cost', { role: { can_manage_invoices: false } }, 2800);
+    const nr = await n.page.evaluate(() => ({ path: location.pathname, active: [...document.querySelectorAll('.tab-panel.is-active')].map((p) => p.id) }));
+    check('redirect', 'finance.html#cost without Invoices access stays on Finance, on Expenses', nr.path === '/tools/finance.html' && JSON.stringify(nr.active) === '["tab-expenses"]', JSON.stringify(nr));
+    await n.ctx.close();
+    // workspace.html#section-gallery / #gallery -> Site Content's Gallery queue, opened.
+    for (const h of ['#section-gallery', '#gallery']) {
+      const g = await open(browser, '/tools/workspace.html' + h, null, 4000);
+      const gr = await g.page.evaluate(() => { const p = document.getElementById('section-gallery'); const r = p && p.getBoundingClientRect(); return { url: location.pathname + location.hash, open: !!p && !p.classList.contains('is-collapsed'), tiles: document.querySelectorAll('#galleryQueueList .gallery-queue-item').length, inView: !!r && r.top < innerHeight && r.bottom > 0 }; });
+      check('redirect', 'workspace.html' + h + ' lands on Site Content with the Gallery queue open, loaded and in view', gr.url === '/tools/site-content.html#gallery' && gr.open && gr.tiles === 2 && gr.inView, JSON.stringify(gr));
+      check('redirect', 'workspace.html' + h + ' -> Site Content: no page errors', g.errors.length === 0, g.errors.join(' | '));
+      await g.ctx.close();
+    }
+    // The old Ctrl+K invoice link (workspace.html?search=…#section-actionitems):
+    // filters Money owed's list, opens its search and scrolls it up under the
+    // sticky header (not to Needs attention, where the old hash pointed).
+    const s = await open(browser, '/tools/workspace.html?search=Greg#section-actionitems', null, 2800);
+    const sr = await s.page.evaluate(() => { const hb = document.querySelector('.hub-header').getBoundingClientRect().bottom; const r = document.getElementById('invoiceSearchWrap').getBoundingClientRect(); return { val: document.getElementById('invoiceSearch').value, open: document.getElementById('invoiceSearchWrap').classList.contains('is-expanded'), hit: /Greg Hall/.test(document.getElementById('invoicesList').textContent), below: Math.round(r.top - hb), hash: location.hash }; });
+    check('redirect', 'old workspace.html?search=…#section-actionitems: Money owed filtered, search open and in view under the header', sr.val === 'Greg' && sr.open && sr.hit && sr.below >= 0 && sr.below < 120 && sr.hash === '', JSON.stringify(sr));
+    check('redirect', 'old ?search= link: no page errors', s.errors.length === 0, s.errors.join(' | '));
+    await s.ctx.close();
   }
   // Invoices (item 13) + smoke.
   {

@@ -6273,5 +6273,6 @@ Connor approved all 19 items from a read-only audit of places the Workspace show
 - **Finance:** the Cost Lookup and Inventory tabs are gone, and Expenses is the default.
 - **Runway:** one shared tax set-aside rate, Save Month pulls Finance's numbers itself, and Reset all data is gone. A Runway-only backup stays, because Dev Tools' full backup is hidden from accounts without full technical access.
 - **Clients:** Portal bug reports and Portal client errors moved to Dev Tools → Health; Portal invoices and Portal quotes are gone (Invoices resends both).
+- **Old links still land:** `finance.html#cost` opens New quote (or Expenses for an account without Invoices), `workspace.html#section-gallery` / `#gallery` opens Site Content's Gallery queue, and the old `workspace.html?search=…#section-actionitems` invoice links scroll to Money owed's filtered list.
 - **Not done (flagged on the PR):** item 14. Clients' Portal work orders panel isn't read-only: it has the client message thread, photos, closed history and CSV export, which Home's Work Requests lane lacks.
 

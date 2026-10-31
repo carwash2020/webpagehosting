@@ -93,7 +93,9 @@ test('tabbed pages take a #tab deep link and follow a same-document hash change 
   assert.match(hashFn, /activateGenTab\(tab\);/);
   assert.doesNotMatch(hashFn, /\.focus\(/);
   const fin = read('finance.html');
-  assert.match(fin, /window\.addEventListener\('hashchange', \(\) => \{\s*const h = \(location\.hash \|\| ''\)\.replace\('#', ''\);\s*if \(TAB_HASHES\[h\]\) activateTab\(h\);/);
+  // The retired #cost hash is sent to New quote first (redundancy pass,
+  // rebased onto Phase 4, 2026-10-31); any real tab hash still switches tabs.
+  assert.match(fin, /window\.addEventListener\('hashchange', \(\) => \{\s*const h = \(location\.hash \|\| ''\)\.replace\('#', ''\);\s*if \(redirectRetiredFinanceHash\(h\)\) return;\s*if \(TAB_HASHES\[h\]\) activateTab\(h\);/);
   const jt = read('job-tracker.html');
   assert.match(jt, /window\.addEventListener\('hashchange', \(\) => \{[\s\S]*?if \(TAB_HASHES\[h\]\) \{ activateTab\(h\); return; \}[\s\S]*?setJobViewMode\('calendar'\);[\s\S]*?toggleFormSection\('jobFormSection', true\)/);
 });

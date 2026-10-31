@@ -53,15 +53,15 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=10f1831b6e">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=d7410af6b7">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=8060cfc3c2" defer></script>
 <script src="/tools/data-layer.js?v=c595490771" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=e67fa5a727" defer></script>
-<script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=791ee017e1" defer></script>
+<script src="/tools/tools-command-palette.js?v=479d6a96e7" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -584,6 +584,16 @@
   // cost and inventory left with their tabs (redundancy pass, 2026-10-31).
   const TAB_HASHES = { profitability: 'profitability', income: 'income', expenses: 'expenses' };
   const FINANCE_TAB_KEY = 'th_finance_tab'; // last tab used on this device (2026-09-22)
+
+  // #cost (Cost Lookup, gone 2026-10-31) -> New quote, for an account that
+  // can open Invoices. Returns true when it navigated away. See the call
+  // after initSyncOnLoad() for why.
+  function redirectRetiredFinanceHash(h) {
+    if (h !== 'cost') return false;
+    if (typeof canManageInvoices === 'function' && !canManageInvoices()) return false;
+    location.replace('/tools/invoice-generator.html#quote');
+    return true;
+  }
 
   function activateTab(tabName) {
     if (!document.getElementById('tab-' + tabName)) return;
@@ -1492,6 +1502,14 @@
         }
       });
       await initSyncOnLoad();
+      // Old #cost link or bookmark (rebase onto Phase 4, 2026-10-31): Cost
+      // Lookup left in the redundancy pass, and pricing a job with tax is
+      // New quote's job now (the command palette's "cost lookup" words
+      // moved there too). Sent on the way Home's old #backup goes to Dev
+      // Tools. Checked once the role is loaded, so an account that can't
+      // open Invoices stays here and lands on Expenses instead. #inventory
+      // has no new home (the tab left outright), so it opens Expenses.
+      if (redirectRetiredFinanceHash((location.hash || '').replace('#', ''))) return;
       // Gated 2026-08-27, alongside the new Employee role -- checked
       // right after initSyncOnLoad() resolves (which is what actually
       // loads the role via loadCurrentUserRole()), before any real
@@ -1525,6 +1543,7 @@
       activateTab(TAB_HASHES[initialHash] ? initialHash : (TAB_HASHES[rememberedTab] ? rememberedTab : 'expenses'));
       window.addEventListener('hashchange', () => {
         const h = (location.hash || '').replace('#', '');
+        if (redirectRetiredFinanceHash(h)) return;
         if (TAB_HASHES[h]) activateTab(h);
       });
 
