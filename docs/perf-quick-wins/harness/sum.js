@@ -1,0 +1,2 @@
+const r=require('./lh-'+process.argv[2]+'.json');const med=a=>{a=[...a].sort((x,y)=>x-y);return a[a.length>>1]};
+for(const [n,v] of Object.entries(r))console.log(n.padEnd(17),'score',med(v.map(x=>x.score)),'FCP',Math.round(med(v.map(x=>x.fcp))),'LCP',Math.round(med(v.map(x=>x.lcp))),'TBT',Math.round(med(v.map(x=>x.tbt))),'CLS',med(v.map(x=>x.cls)).toFixed(3),'KB',Math.round(med(v.map(x=>x.bytes))/1024),'reqs',v[0].reqs);

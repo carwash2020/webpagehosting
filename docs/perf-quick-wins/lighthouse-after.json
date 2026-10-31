@@ -1,0 +1,262 @@
+{
+ "tools-workspace": [
+  {
+   "score": 54,
+   "fcp": 3615.4516,
+   "lcp": 6079.774600000002,
+   "tbt": 139,
+   "cls": 0.28871204478103,
+   "bytes": 738940,
+   "reqs": 52,
+   "url": "http://localhost:8080/tools/workspace.html"
+  },
+  {
+   "score": 69,
+   "fcp": 3011.4269999999997,
+   "lcp": 3761.4269999999997,
+   "tbt": 0,
+   "cls": 0.28738369612692843,
+   "bytes": 267462,
+   "reqs": 49,
+   "url": "http://localhost:8080/tools/workspace.html"
+  },
+  {
+   "score": 66,
+   "fcp": 3305.4513,
+   "lcp": 3905.4513000000006,
+   "tbt": 0,
+   "cls": 0.30262307424256274,
+   "bytes": 267462,
+   "reqs": 49,
+   "url": "http://localhost:8080/tools/workspace.html"
+  },
+  {
+   "score": 73,
+   "fcp": 1360.6615,
+   "lcp": 3911.2486,
+   "tbt": 19,
+   "cls": 0.3030902197216703,
+   "bytes": 267462,
+   "reqs": 49,
+   "url": "http://localhost:8080/tools/workspace.html"
+  },
+  {
+   "score": 68,
+   "fcp": 3005.7991,
+   "lcp": 3906.6295000000005,
+   "tbt": 0,
+   "cls": 0.28765352372927944,
+   "bytes": 267462,
+   "reqs": 49,
+   "url": "http://localhost:8080/tools/workspace.html"
+  }
+ ],
+ "tools-jobs": [
+  {
+   "score": 70,
+   "fcp": 1358.6549999999997,
+   "lcp": 3172.41,
+   "tbt": 37,
+   "cls": 0.6643870406111314,
+   "bytes": 132445,
+   "reqs": 27,
+   "url": "http://localhost:8080/tools/job-tracker.html"
+  },
+  {
+   "score": 66,
+   "fcp": 1354.8994,
+   "lcp": 3755.269,
+   "tbt": 17,
+   "cls": 0.6674579263992788,
+   "bytes": 264532,
+   "reqs": 28,
+   "url": "http://localhost:8080/tools/job-tracker.html"
+  },
+  {
+   "score": 70,
+   "fcp": 1359.2258000000002,
+   "lcp": 3152.4619999999995,
+   "tbt": 13,
+   "cls": 0.6640031798876131,
+   "bytes": 132445,
+   "reqs": 27,
+   "url": "http://localhost:8080/tools/job-tracker.html"
+  },
+  {
+   "score": 79,
+   "fcp": 1353.6927999999998,
+   "lcp": 3192.0235000000002,
+   "tbt": 49,
+   "cls": 0.2733658382117067,
+   "bytes": 132445,
+   "reqs": 27,
+   "url": "http://localhost:8080/tools/job-tracker.html"
+  },
+  {
+   "score": 66,
+   "fcp": 1361.7474,
+   "lcp": 3762.2083000000002,
+   "tbt": 24,
+   "cls": 0.6809345837407075,
+   "bytes": 264532,
+   "reqs": 28,
+   "url": "http://localhost:8080/tools/job-tracker.html"
+  }
+ ],
+ "tools-invoices": [
+  {
+   "score": 71,
+   "fcp": 1356.3518,
+   "lcp": 4207.0796,
+   "tbt": 27,
+   "cls": 0.2945523062249782,
+   "bytes": 381921,
+   "reqs": 37,
+   "url": "http://localhost:8080/tools/invoice-generator.html"
+  },
+  {
+   "score": 90,
+   "fcp": 1356.8286999999998,
+   "lcp": 3609.7266000000004,
+   "tbt": 55,
+   "cls": 0.03915220408441283,
+   "bytes": 249834,
+   "reqs": 36,
+   "url": "http://localhost:8080/tools/invoice-generator.html"
+  },
+  {
+   "score": 79,
+   "fcp": 3033.8929000000003,
+   "lcp": 4233.8929,
+   "tbt": 103,
+   "cls": 0.03915220408441283,
+   "bytes": 381921,
+   "reqs": 37,
+   "url": "http://localhost:8080/tools/invoice-generator.html"
+  },
+  {
+   "score": 85,
+   "fcp": 1355.5313,
+   "lcp": 4284.7338,
+   "tbt": 32.000000000000455,
+   "cls": 0.03915220408441283,
+   "bytes": 381921,
+   "reqs": 37,
+   "url": "http://localhost:8080/tools/invoice-generator.html"
+  },
+  {
+   "score": 85,
+   "fcp": 1388.3792,
+   "lcp": 4238.8052,
+   "tbt": 60,
+   "cls": 0.03915220408441283,
+   "bytes": 381921,
+   "reqs": 37,
+   "url": "http://localhost:8080/tools/invoice-generator.html"
+  }
+ ],
+ "portal-dashboard": [
+  {
+   "score": 89,
+   "fcp": 2709.2238,
+   "lcp": 3131.0040000000004,
+   "tbt": 0,
+   "cls": 0,
+   "bytes": 132425,
+   "reqs": 21,
+   "url": "http://localhost:8080/portal/dashboard.html"
+  },
+  {
+   "score": 90,
+   "fcp": 2555.8511000000003,
+   "lcp": 3022.1703,
+   "tbt": 0,
+   "cls": 0,
+   "bytes": 132425,
+   "reqs": 21,
+   "url": "http://localhost:8080/portal/dashboard.html"
+  },
+  {
+   "score": 90,
+   "fcp": 2553.4644,
+   "lcp": 3117.604,
+   "tbt": 0,
+   "cls": 0,
+   "bytes": 132425,
+   "reqs": 21,
+   "url": "http://localhost:8080/portal/dashboard.html"
+  },
+  {
+   "score": 90,
+   "fcp": 2557.2763999999997,
+   "lcp": 3115.8755,
+   "tbt": 3,
+   "cls": 0,
+   "bytes": 132425,
+   "reqs": 21,
+   "url": "http://localhost:8080/portal/dashboard.html"
+  },
+  {
+   "score": 90,
+   "fcp": 2553.9903,
+   "lcp": 3108.0644999999995,
+   "tbt": 1,
+   "cls": 0,
+   "bytes": 132425,
+   "reqs": 21,
+   "url": "http://localhost:8080/portal/dashboard.html"
+  }
+ ],
+ "portal-jobs": [
+  {
+   "score": 89,
+   "fcp": 2706.233,
+   "lcp": 3129.261,
+   "tbt": 0,
+   "cls": 0,
+   "bytes": 133235,
+   "reqs": 28,
+   "url": "http://localhost:8080/portal/jobs.html"
+  },
+  {
+   "score": 89,
+   "fcp": 2708.9389,
+   "lcp": 3138.8485,
+   "tbt": 0,
+   "cls": 0,
+   "bytes": 133235,
+   "reqs": 28,
+   "url": "http://localhost:8080/portal/jobs.html"
+  },
+  {
+   "score": 93,
+   "fcp": 2584.4682,
+   "lcp": 2584.4682,
+   "tbt": 1,
+   "cls": 0,
+   "bytes": 133235,
+   "reqs": 28,
+   "url": "http://localhost:8080/portal/jobs.html"
+  },
+  {
+   "score": 92,
+   "fcp": 2556.418,
+   "lcp": 2706.6414999999997,
+   "tbt": 1,
+   "cls": 0,
+   "bytes": 133235,
+   "reqs": 28,
+   "url": "http://localhost:8080/portal/jobs.html"
+  },
+  {
+   "score": 90,
+   "fcp": 2553.3799,
+   "lcp": 3080.9428336038864,
+   "tbt": 3,
+   "cls": 0,
+   "bytes": 133235,
+   "reqs": 28,
+   "url": "http://localhost:8080/portal/jobs.html"
+  }
+ ]
+}
