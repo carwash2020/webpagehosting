@@ -110,11 +110,33 @@
   // seconds after the page has loaded (so it doesn't compete with the
   // page's own data requests on a slow phone connection), still well
   // before anyone can pick invoices, sign and reach the card step.
-  window.addEventListener('load', function () {
-    setTimeout(function () {
+  // A fast Pay tap can still beat that timer (or the download can be slow
+  // or blocked), so the pay sheet asks loadStripeJs() for it rather than
+  // assuming it is there (2026-10-31). One shared tag: a tap while the
+  // timed load is in flight waits on that same request, and a tap before
+  // the timer starts it early. A failed load removes the tag and forgets
+  // the promise, so the next call retries.
+  var stripeJsPromise = null;
+  function loadStripeJs() {
+    if (typeof Stripe === 'function') return Promise.resolve();
+    if (stripeJsPromise) return stripeJsPromise;
+    stripeJsPromise = new Promise(function (resolve, reject) {
       var s = document.createElement('script');
+      function fail() {
+        s.remove();
+        stripeJsPromise = null;
+        reject(new Error('Stripe.js did not load'));
+      }
+      s.onload = function () { if (typeof Stripe === 'function') resolve(); else fail(); };
+      s.onerror = fail;
       s.src = 'https://js.stripe.com/v3/';
       document.head.appendChild(s);
+    });
+    return stripeJsPromise;
+  }
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      loadStripeJs().catch(function () { /* the pay sheet retries on its own */ });
     }, 3000);
   });
 </script>
@@ -887,6 +909,7 @@
   async function startPayment(invoiceId, signerName, signatureImage) {
     openPaymentModal();
     document.getElementById('paymentModalBody').innerHTML = '<div class="empty-state">Loading...</div>';
+    loadStripeJs().catch(() => { /* mountPaymentUI() shows the retry */ });
 
     const { data: { session } } = await client.auth.getSession();
     const res = await fetch(
@@ -976,6 +999,7 @@
   async function startBulkPayment(invoiceIds, signerName, signatureImage) {
     openPaymentModal();
     document.getElementById('paymentModalBody').innerHTML = '<div class="empty-state">Loading...</div>';
+    loadStripeJs().catch(() => { /* mountPaymentUI() shows the retry */ });
 
     const { data: { session } } = await client.auth.getSession();
     const res = await fetch(
@@ -1051,6 +1075,34 @@
   // button, and re-render on success. The webhook (stripe-webhook)
   // is what actually knows how many invoices this PaymentIntent covers.
   function mountPaymentUI(clientSecret) {
+    // Stripe.js may not be here yet (2026-10-31): #549 starts it 3s after
+    // load, and a fast tap, a slow phone or an ad blocker can beat it.
+    // Calling Stripe() blind threw "Stripe is not defined" and left the
+    // sheet on "Loading..." for good. Wait for it with an honest message,
+    // or offer a retry. The PaymentIntent already exists, so a retry
+    // reuses this clientSecret -- nothing new is created or charged.
+    if (typeof Stripe !== 'function') {
+      const body = document.getElementById('paymentModalBody');
+      body.innerHTML = '<div class="empty-state" role="status">Loading the secure card form...</div>';
+      const waiting = body.firstElementChild;
+      const stillWaiting = () => waiting.isConnected && document.getElementById('paymentModal').classList.contains('is-open');
+      let timer = null;
+      const timedOut = new Promise((resolve, reject) => {
+        timer = setTimeout(() => reject(new Error('Stripe.js load timed out')), 20000);
+      });
+      Promise.race([loadStripeJs(), timedOut]).then(() => {
+        clearTimeout(timer);
+        if (stillWaiting()) mountPaymentUI(clientSecret);
+      }, (err) => {
+        clearTimeout(timer);
+        if (!stillWaiting()) return;
+        if (typeof logPortalClientError === 'function') logPortalClientError('Pay sheet: ' + err.message, 'stripe-js-load');
+        body.innerHTML = '<div class="empty-state" role="alert">The secure card form didn\'t load. Check your connection (or any ad blocker) and try again.' +
+          '<button type="button" class="btn orange pay-sheet-cta" id="paymentStripeRetryBtn" style="width:100%; justify-content:center; margin-top:14px;">Try again</button></div>';
+        document.getElementById('paymentStripeRetryBtn').addEventListener('click', () => mountPaymentUI(clientSecret));
+      });
+      return;
+    }
     if (!stripeInstance) stripeInstance = Stripe(STRIPE_PUBLISHABLE_KEY);
     elementsInstance = stripeInstance.elements({ clientSecret });
     // v2 sheet, step 2 of 2: the Stripe Payment Element (saved card or a
