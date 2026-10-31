@@ -5,9 +5,11 @@ needing to actually get oriented, not just skim.
 
 ## Read these, in this order
 
-1. **`README.md`** (repo root) -- file structure, what's shared vs.
-   tool-only, the sync architecture, the booking system, deployment.
-   Start here regardless of what you're about to work on.
+1. **`README.md`** (repo root) -- what the project is, how to run the
+   checks, and how it deploys. Then **`docs/REFERENCE.md`** -- file
+   structure, what's shared vs. tool-only, the sync architecture, the
+   booking system, deployment pitfalls. Start here regardless of what
+   you're about to work on.
 2. **`DISASTER_RECOVERY.md`** (repo root) -- the deep detail behind
    almost everything mentioned in the README: exact mechanisms, real
    incidents and how they were actually found and fixed, step-by-step
@@ -38,9 +40,9 @@ Pages deployment:
    which affected seven tables well outside the portal itself.
 
 They share this repo and some genuinely shared files (see "Shared
-files" in the README), but know which of the three you're actually
-working on before you start. The file structure sections in the
-README tell you which files belong to which.
+files" in `docs/REFERENCE.md`), but know which of the three you're actually
+working on before you start. The file structure sections in
+`docs/REFERENCE.md` tell you which files belong to which.
 
 ## Before shipping any change
 

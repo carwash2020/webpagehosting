@@ -24,8 +24,8 @@ Dev Tools -> Session & Sync -> Graveyard. See "Graveyard" in
 almost all of Triple H's business data -- jobs, invoices, contracts,
 clients, expenses, income, and more -- as one JSON blob, keyed by
 top-level field name. Kept in sync across devices by a union merge,
-not a plain overwrite. See "Cross-device sync" in the main
-`README.md`.
+not a plain overwrite. See "Cross-device sync" in
+`docs/REFERENCE.md`.
 
 **Union merge** -- the specific way two devices' copies of the same
 synced data get reconciled: take everything present on *either* side,
@@ -39,7 +39,7 @@ marking a specific point in this repo's history with a detailed
 message summarizing what changed and why, meant to be read later as a
 snapshot of "what was true at this point," not a release version in
 the usual sense (there's no versioning scheme here -- see "Deploying
-changes" in the main `README.md`).
+changes" in `docs/REFERENCE.md`).
 
 **Backfill** (`thBackfillClients` and similar) -- a function that
 scans existing data (jobs, invoices) for a client name that isn't yet
@@ -87,8 +87,8 @@ browsers to fetch a new copy when the file's content actually changes
 rather than serving a stale cached version. As of 2026-08-26, this
 value is a real content hash, checked automatically
 (`npm run check-consistency`) and correctable in one command
-(`npm run fix-versions`) -- see "Cache-busting" in the main
-`README.md` for the full history of why this needed rebuilding twice.
+(`npm run fix-versions`) -- see "Cache-busting" in
+`docs/REFERENCE.md` for the full history of why this needed rebuilding twice.
 
 **Advisor** -- Supabase's own built-in database linter, covering both
 security and performance issues. Run directly (not just trusted from
