@@ -2,6 +2,7 @@
   "name": "Triple H Enterprises - Client Portal",
   "short_name": "Triple H",
   "description": "View and pay invoices, approve estimates, and request work from Triple H Enterprises.",
+  "id": "/portal/home.html",
   "start_url": "/portal/home.html",
   "scope": "/portal/",
   "display": "standalone",
@@ -10,6 +11,13 @@
   "theme_color": "#0a0a0a",
   "icons": [
     { "src": "/images/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/images/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+    { "src": "/images/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/images/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/images/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Invoices", "short_name": "Invoices", "description": "See and pay your invoices", "url": "/portal/dashboard.html", "icons": [{ "src": "/images/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Request work", "short_name": "Request", "description": "Ask Triple H for a visit", "url": "/portal/work-orders.html", "icons": [{ "src": "/images/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Visits", "short_name": "Visits", "description": "Your visits, warranties and check-ups", "url": "/portal/jobs.html", "icons": [{ "src": "/images/icon-192.png", "sizes": "192x192" }] }
   ]
 }

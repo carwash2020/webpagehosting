@@ -112,18 +112,40 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=d7410af6b7">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous"></script>
 <script src="/signature-pad.js?v=f95f8e1d28"></script>
-<script src="/portal/portal-app.js?v=202609300100"></script>
+<script src="/portal/portal-app.js?v=202610310100"></script>
 <script>
   // Stripe.js is only needed once a client opens the card sheet, never to
   // paint the page -- so it no longer blocks parsing. It starts a few
   // seconds after the page has loaded (so it doesn't compete with the
   // page's own data requests on a slow phone connection), still well
   // before anyone can pick invoices, sign and reach the card step.
-  window.addEventListener('load', function () {
-    setTimeout(function () {
+  // A fast Add-card tap can still beat that timer (or the download can be
+  // slow or blocked), so the card form asks loadStripeJs() for it rather
+  // than assuming it is there (2026-10-31). One shared tag: a tap while the
+  // timed load is in flight waits on that same request, and a tap before
+  // the timer starts it early. A failed load removes the tag and forgets
+  // the promise, so the next call retries. Same loader as dashboard.html.
+  var stripeJsPromise = null;
+  function loadStripeJs() {
+    if (typeof Stripe === 'function') return Promise.resolve();
+    if (stripeJsPromise) return stripeJsPromise;
+    stripeJsPromise = new Promise(function (resolve, reject) {
       var s = document.createElement('script');
+      function fail() {
+        s.remove();
+        stripeJsPromise = null;
+        reject(new Error('Stripe.js did not load'));
+      }
+      s.onload = function () { if (typeof Stripe === 'function') resolve(); else fail(); };
+      s.onerror = fail;
       s.src = 'https://js.stripe.com/v3/';
       document.head.appendChild(s);
+    });
+    return stripeJsPromise;
+  }
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      loadStripeJs().catch(function () { /* the card form retries on its own */ });
     }, 3000);
   });
 </script>
@@ -361,7 +383,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=7564929584">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=2c6fd305e8">
 </head>
 <body class="portal-page">
 
@@ -514,7 +536,7 @@
           <label for="detailPhone">Phone</label>
           <input type="tel" id="detailPhone" placeholder="(555) 555-5555" autocomplete="tel">
         </div>
-        <button class="btn blue set-action" id="saveDetailsBtn">Save Details</button>
+        <button class="btn blue set-action" id="saveDetailsBtn">Save details</button>
         <div class="set-msg" id="detailsMsg" style="display:none;"></div>
       </div>
     </div>
@@ -924,7 +946,7 @@
       updated_at: new Date().toISOString(),
     });
     btn.disabled = false;
-    btn.textContent = 'Save Details';
+    btn.textContent = 'Save details';
 
     if (error) {
       showDetailsMsg("Couldn't save your details just now. Please try again.", true);
@@ -1046,7 +1068,7 @@
         : '';
       body.innerHTML =
         '<div class="set-row" style="align-items:flex-start;"><span class="set-row-val" id="referralLinkText" style="word-break:break-all; font-size:13px;">' + escapeHtml(link) + '</span></div>' +
-        '<button class="btn blue" style="width:100%; justify-content:center; margin-top:10px;" id="copyReferralLinkBtn">Copy Link</button>' +
+        '<button class="btn blue" style="width:100%; justify-content:center; margin-top:10px;" id="copyReferralLinkBtn">Copy link</button>' +
         '<a href="sms:?body=' + smsBody + '" class="btn secondary-btn" style="width:100%; justify-content:center; margin-top:8px; text-decoration:none;">Text to a Friend</a>' +
         usageNote;
       document.getElementById('copyReferralLinkBtn').addEventListener('click', function () {
@@ -1178,6 +1200,7 @@
     const btn = document.getElementById('addCardAuthContinueBtn');
     btn.disabled = true;
     btn.textContent = 'Loading...';
+    loadStripeJs().catch(() => { /* mountAddCardSetupUI() shows the retry */ });
     try {
       const res = await fetch('https://csvfqdjuobylgafgolho.supabase.co/functions/v1/manage-saved-card', {
         method: 'POST',
@@ -1204,6 +1227,32 @@
   }
 
   function mountAddCardSetupUI(clientSecret) {
+    // Stripe.js may not be here yet (2026-10-31): #549 starts it 3s after
+    // load. Calling Stripe() blind threw "Stripe is not defined", which the
+    // caller reported as "Couldn't reach the server". Wait for it, or offer
+    // a retry that reuses this clientSecret (the SetupIntent already exists).
+    if (typeof Stripe !== 'function') {
+      const area = document.getElementById('addCardArea');
+      area.innerHTML = '<p class="set-msg" role="status">Loading the secure card form...</p>';
+      const waiting = area.firstElementChild;
+      let timer = null;
+      const timedOut = new Promise((resolve, reject) => {
+        timer = setTimeout(() => reject(new Error('Stripe.js load timed out')), 20000);
+      });
+      Promise.race([loadStripeJs(), timedOut]).then(() => {
+        clearTimeout(timer);
+        if (waiting.isConnected) mountAddCardSetupUI(clientSecret);
+      }, (err) => {
+        clearTimeout(timer);
+        if (!waiting.isConnected) return;
+        if (typeof logPortalClientError === 'function') logPortalClientError('Add card: ' + err.message, 'stripe-js-load');
+        area.innerHTML = '<p class="set-msg is-error" role="alert">The secure card form didn\'t load. Check your connection (or any ad blocker) and try again.</p>' +
+          '<button class="btn blue" id="addCardStripeRetryBtn" style="width:100%; justify-content:center; margin-top:14px;">Try again</button>' +
+          '<button class="small-btn" style="margin-top:8px;" onclick="cancelAddCard()">Cancel</button>';
+        document.getElementById('addCardStripeRetryBtn').addEventListener('click', () => mountAddCardSetupUI(clientSecret));
+      });
+      return;
+    }
     if (!stripeInstance) stripeInstance = Stripe(STRIPE_PUBLISHABLE_KEY);
     elementsInstance = stripeInstance.elements({ clientSecret });
     document.getElementById('addCardArea').innerHTML = `

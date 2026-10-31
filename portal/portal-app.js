@@ -47,7 +47,7 @@ function initOfflinePortalIndicator() {
     banner.id = 'offlinePortalBanner';
     banner.className = 'offline-banner';
     banner.setAttribute('role', 'status');
-    banner.textContent = "You're offline -- showing saved data";
+    banner.textContent = "You're offline. Showing saved data.";
     document.body.appendChild(banner);
   }
 
@@ -84,7 +84,11 @@ if (document.readyState === 'loading') {
 // Only arms when window.scrollY is already 0 -- pulling down while
 // mid-scroll should scroll the page normally, not hijack the
 // gesture, which is the actual native convention this is copying.
+// The page's own refresh, remembered so the header's "Try again" banner
+// (portalMountStatus, below) re-runs exactly what a pull-to-refresh does.
+var portalPageRefresh = null;
 function initPortalPullToRefresh(onRefresh) {
+  portalPageRefresh = onRefresh;
   const REFRESH_THRESHOLD = 70;
   const MAX_PULL = 100;
 
@@ -1445,10 +1449,28 @@ function portalInitialsFor(nameOrEmail) {
   const letters = parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : (parts[0] || '').slice(0, 2);
   return letters.toUpperCase().replace(/[^A-Z0-9]/g, '');
 }
+// Same initials on every page (2026-10-31 redesign). Home knows the
+// client's saved name ("Kim Reyes" -> KR); the other pages only know the
+// email (kim@... -> KI), so the avatar used to change letters between
+// tabs. The name-based initials are remembered on this device, keyed by
+// the signed-in email (the page has already written it into
+// #clientEmailDisplay), and reused where only the email is known. Two
+// letters of display only; nothing is sent anywhere.
+function portalInitialsKey() {
+  const el = document.getElementById('clientEmailDisplay');
+  const email = el ? String(el.textContent || '').trim().toLowerCase() : '';
+  return email ? 'th_portal_initials_' + email : '';
+}
 function portalSetHeaderInitials(nameOrEmail) {
   const btn = document.querySelector('.portal-header .portal-icon-btn[aria-label="Settings"]');
   if (!btn) return;
-  const initials = portalInitialsFor(nameOrEmail);
+  let initials = portalInitialsFor(nameOrEmail);
+  const key = portalInitialsKey();
+  if (key) {
+    const raw = String(nameOrEmail || '').trim();
+    if (raw && !raw.includes('@') && initials) portalStoreSet(portalSafeStore('localStorage'), key, initials);
+    else if (raw.includes('@')) initials = portalStoreGet(portalSafeStore('localStorage'), key) || initials;
+  }
   let span = btn.querySelector('.portal-avatar-initials');
   if (!span) {
     span = document.createElement('span');
@@ -1458,6 +1480,114 @@ function portalSetHeaderInitials(nameOrEmail) {
   }
   span.textContent = initials;
   btn.classList.toggle('has-initials', !!initials);
+}
+
+// ---------- Status dot + banner (2026-10-31 portal redesign) ----------
+// The portal's version of the Workspace's header sync dot and #thSyncNote
+// banner (tools-nav-pwa.js: mountStatusDot / thSyncTrouble). The portal
+// has no background sync to watch, so the dot reports what the client is
+// actually looking at, read only from what the page already shows:
+//   - grey, pulsing: the page is still loading (skeleton placeholders);
+//   - grey: offline (the existing #offlinePortalBanner says so in words);
+//   - red: a list failed to load (the page's own "Couldn't load ..."
+//     card, .empty-state.is-error), plus one banner under the header with
+//     a "Try again" that runs the page's own pull-to-refresh function;
+//   - green: everything on the page loaded.
+// Presentation only: it never fetches, never changes a page's data and
+// never touches a page's own load code. Pages opt in by having the v2 app
+// bar (.portal-appbar); the sign-in pages don't, so nothing mounts there.
+function portalStatusState() {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return 'offline';
+  const visible = (el) => !!(el && el.getClientRects().length);
+  if ([].some.call(document.querySelectorAll('.empty-state.is-error'), visible)) return 'trouble';
+  if ([].some.call(document.querySelectorAll('.skeleton-card, .skeleton-line'), visible)) return 'loading';
+  return 'ok';
+}
+var PORTAL_STATUS_LABELS = {
+  ok: 'Up to date',
+  loading: 'Loading',
+  offline: 'Offline. Showing saved data.',
+  trouble: "Couldn't load everything. Tap to try again.",
+};
+function portalRetryLoad() {
+  if (typeof portalPageRefresh === 'function') {
+    try { return Promise.resolve(portalPageRefresh()); } catch (e) { /* fall through to a reload */ }
+  }
+  window.location.reload();
+  return Promise.resolve();
+}
+function portalMountStatus() {
+  const bar = document.querySelector('body.portal-page .portal-appbar');
+  const title = bar && bar.querySelector('.portal-title');
+  if (!title || document.getElementById('portalStatus')) return;
+  // A status image normally; a button only while there is something to
+  // retry (the Workspace dot's .is-retryable), so keyboard users never land
+  // on a control that does nothing.
+  const dot = document.createElement('span');
+  dot.id = 'portalStatus';
+  dot.className = 'portal-status';
+  title.insertAdjacentElement('afterend', dot);
+
+  const note = document.createElement('div');
+  note.id = 'portalSyncNote';
+  note.className = 'portal-sync-note';
+  note.setAttribute('role', 'status');
+  note.setAttribute('aria-live', 'polite');
+  bar.insertAdjacentElement('afterend', note);
+
+  let shown = '';
+  function render() {
+    const state = portalStatusState();
+    if (state === shown) return;
+    shown = state;
+    dot.className = 'portal-status is-' + state;
+    dot.setAttribute('aria-label', PORTAL_STATUS_LABELS[state]);
+    dot.title = PORTAL_STATUS_LABELS[state];
+    if (state === 'trouble') {
+      dot.setAttribute('role', 'button');
+      dot.tabIndex = 0;
+    } else {
+      dot.setAttribute('role', 'img');
+      dot.removeAttribute('tabindex');
+    }
+    if (state === 'trouble') {
+      note.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v6"/><circle cx="12" cy="16.75" r=".6"/></svg>' +
+        '<span>Couldn’t reach Triple H just now, so part of this page didn’t load.</span>' +
+        '<button type="button" class="portal-sync-retry">Try again</button>';
+      note.querySelector('.portal-sync-retry').addEventListener('click', retry);
+    } else {
+      note.textContent = '';
+    }
+  }
+  let busy = false;
+  function retry() {
+    if (busy || shown !== 'trouble') return;
+    busy = true;
+    note.classList.add('is-busy');
+    portalRetryLoad().then(() => { busy = false; note.classList.remove('is-busy'); render(); }, () => { busy = false; note.classList.remove('is-busy'); });
+  }
+  dot.addEventListener('click', retry);
+  dot.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); retry(); }
+  });
+
+  let queued = false;
+  const schedule = () => {
+    if (queued) return;
+    queued = true;
+    (window.requestAnimationFrame || setTimeout)(() => { queued = false; render(); });
+  };
+  if (typeof MutationObserver === 'function') {
+    new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+  }
+  window.addEventListener('online', schedule);
+  window.addEventListener('offline', schedule);
+  render();
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', portalMountStatus);
+} else {
+  portalMountStatus();
 }
 
 // Estimates tab dot (pending estimates), the same idea as the Invoices

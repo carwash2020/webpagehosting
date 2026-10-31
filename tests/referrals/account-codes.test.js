@@ -145,6 +145,6 @@ test('portal settings.html shows a usage count and share options (copy + SMS) on
   const fnBody = PORTAL_SETTINGS.slice(PORTAL_SETTINGS.indexOf('async function loadReferralLink'));
   const tryBlock = fnBody.slice(0, fnBody.indexOf('} catch'));
   assert.match(tryBlock, /usage_count/);
-  assert.match(tryBlock, /Copy Link/);
+  assert.match(tryBlock, /Copy link/);
   assert.match(tryBlock, /sms:\?body=/);
 });

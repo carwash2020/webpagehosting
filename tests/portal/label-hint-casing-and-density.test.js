@@ -123,9 +123,9 @@ test('the home stat cards pluralize off their own count', () => {
 // ---- 3. a default action on the help card ----
 
 test('"Request Work" is the primary action on the Need Something card', () => {
-  assert.match(HOME, /<a href="\/portal\/work-orders\.html" class="primary">Request Work<\/a>/);
+  assert.match(HOME, /<a href="\/portal\/work-orders\.html" class="primary">Request work<\/a>/);
   assert.match(HOME, /<a href="tel:\+14354141667">Call/, 'Call stays secondary');
-  assert.match(HOME, /<a href="sms:\+14354141667">Text Us<\/a>/, 'Text stays secondary');
+  assert.match(HOME, /<a href="sms:\+14354141667">Text us<\/a>/, 'Text stays secondary');
 });
 
 test('the primary rule lives where it can actually win the cascade', () => {
