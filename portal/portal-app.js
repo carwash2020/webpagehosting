@@ -544,8 +544,16 @@ const PORTAL_ERROR_LOG_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3Mi
 let portalErrorLogCount = 0;
 const PORTAL_ERROR_LOG_MAX_PER_PAGE = 10;
 
+// Safari/WebKit rejects with "Skipping view transition because
+// document visibility state has become hidden" whenever a page
+// transition is in flight as the tab backgrounds. Harmless, not a bug.
+function isIgnorablePortalError(message) {
+  return /Skipping view transition/i.test(String(message == null ? '' : message));
+}
+
 function logPortalClientError(message, source, lineno, colno, stack) {
   try {
+    if (isIgnorablePortalError(message)) return;
     if (portalErrorLogCount >= PORTAL_ERROR_LOG_MAX_PER_PAGE) return;
     portalErrorLogCount++;
 
