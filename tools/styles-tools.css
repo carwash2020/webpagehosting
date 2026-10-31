@@ -4509,3 +4509,44 @@ html body.th-tool-page[data-th-page="invoice-generator"] .mn-builder-back > .hel
 html body.th-tool-page:is([data-th-page="invoice-generator"], [data-th-page="finance"]) .form-field > .field-caption {
   display: block; margin: -2px 0 6px; font-size: 12.5px; line-height: 1.35;
 }
+
+/* ---- Workspace Phase 3, review round 3 (2026-10-31): Connor's 4 fixes ---- */
+/* Fix 1: on a phone, Quick charge's Charge button clears the bottom bar
+   (and its raised + hex) without a scroll once a saved card is found.
+   Keys 56 -> 45px (over the 44px touch floor), and the card's gaps,
+   padding, label lines and field heights are tightened. Measured at 390x844 in verify.js. */
+@media (max-width: 600px) {
+  html body.th-tool-page[data-th-page="invoice-generator"] .pos-intro { margin-bottom: 8px; }
+  html body.th-tool-page[data-th-page="invoice-generator"] .pos-card { gap: 8px; padding: 14px 16px 16px; }
+  html body.th-tool-page[data-th-page="invoice-generator"] .pos-field label { margin-bottom: 4px; line-height: 1.25; }
+  html body.th-tool-page[data-th-page="invoice-generator"] .pos-field input[type="email"],
+  html body.th-tool-page[data-th-page="invoice-generator"] .pos-field input[type="text"] { min-height: 44px; padding-top: 10px; padding-bottom: 10px; }
+  html body.th-tool-page[data-th-page="invoice-generator"] .pos-keypad { gap: 5px; }
+  html body.th-tool-page[data-th-page="invoice-generator"] .pos-keypad button { min-height: 45px; }
+  html body.th-tool-page[data-th-page="invoice-generator"] .pos-saved-card-box { padding: 8px 14px; margin-bottom: 6px; }
+  html body.th-tool-page[data-th-page="invoice-generator"] #posChargeArea .primary-btn { min-height: 52px; }
+}
+
+/* Fix 2: on a phone the four filter chips fill one row, so "Paid" is never
+   cut off. They start from 10px sides and a 6px gap and grow to share the
+   row, which leaves room for two-digit counts. Font, size, weight, height,
+   radius and colours stay Jobs' (round 2, fix 5). */
+@media (max-width: 600px) {
+  html body.th-tool-page[data-th-page="invoice-generator"] #invoiceFilters { gap: 6px; }
+  html body.th-tool-page[data-th-page="invoice-generator"] #invoiceFilters .th-chip { flex: 1 1 auto; padding: 0 10px; }
+}
+
+/* Fix 3: a temporary invoice / estimate number (the -TMP- fallback used when
+   the next number in sequence can't be fetched) reads muted, in the suite's
+   hint colour, with a caption under its label. Colour only: the field keeps
+   16px so iOS doesn't zoom on focus. syncTempNumberNote() sets the class. */
+html body.th-tool-page[data-th-page="invoice-generator"] .form-field > input.is-temp-number { color: var(--text-dim); }
+html body.th-tool-page[data-th-page="invoice-generator"] .form-field > .field-caption[hidden] { display: none; }
+
+/* Fix 4: the New quote notice is the suite's orange Tip card (.th-page-tip's
+   tint, border, radius and body type), not a one-off blue card. Blue is
+   kept for status pills and badges (.th-tone-blue). */
+html body.th-tool-page[data-th-page="invoice-generator"] .quote-banner {
+  background: rgba(255,128,0,.1); border: 1px solid rgba(255,128,0,.3); border-radius: 18px;
+  padding: 14px 16px; color: var(--text); font-size: 14.5px; line-height: 1.45;
+}

@@ -52,7 +52,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=0f52cf0c36">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=8d60300947">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=8060cfc3c2" defer></script>
 <script src="/tools/data-layer.js?v=c595490771" defer></script>
@@ -660,6 +660,7 @@
   <div class="tool-form-row">
     <div class="form-field">
       <label for="invoiceNumber">Invoice Number</label>
+      <span class="label-hint field-caption" id="invoiceNumberTempNote" hidden>Temporary number. Couldn't load the next one.</span>
       <input type="text" id="invoiceNumber" value="" oninput="checkDuplicateInvoiceNumber()">
       <div id="duplicateInvoiceWarning" style="display:none; color: var(--orange-light); font-size: 13px; margin-top: 6px; padding: 8px 10px; background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); border-radius: 6px;"></div>
     </div>
@@ -832,6 +833,7 @@
   <div class="tool-form-row">
     <div class="form-field">
       <label for="quoteNumber">Estimate Number</label>
+      <span class="label-hint field-caption" id="quoteNumberTempNote" hidden>Temporary number. Couldn't load the next one.</span>
       <input type="text" id="quoteNumber" value="">
     </div>
     <div class="form-field">
@@ -1883,7 +1885,26 @@
       }
     }
     if (typeof checkDuplicateInvoiceNumber === 'function' && fieldId === 'invoiceNumber') checkDuplicateInvoiceNumber();
+    syncTempNumberNote(el);
   }
+
+  // Presentation only (review round 3, 2026-10-31): a -TMP- fallback number
+  // reads muted, with a caption saying why. It doesn't touch the value, so
+  // the number saved is exactly what's in the field, as before.
+  function syncTempNumberNote(el) {
+    if (!el) return;
+    const note = document.getElementById(el.id + 'TempNote');
+    const temp = /-TMP-/.test(el.value);
+    el.classList.toggle('is-temp-number', temp);
+    if (!note) return;
+    note.hidden = !temp;
+    if (temp) el.setAttribute('aria-describedby', note.id);
+    else if (el.getAttribute('aria-describedby') === note.id) el.removeAttribute('aria-describedby');
+  }
+  ['invoiceNumber', 'quoteNumber'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', () => syncTempNumberNote(el));
+  });
 
   assignNextNumber('invoiceNumber', 'next_invoice_number', 'INV-');
   assignNextNumber('quoteNumber', 'next_quote_number', 'EST-');

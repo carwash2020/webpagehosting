@@ -3,6 +3,23 @@
 Started 2026-09-16, alongside the `tripleh-visual` skill. See `README.md` in
 this directory for how these logs work.
 
+## 2026-10-31 -- Workspace Phase 3, review round 3: Connor's 4 fixes on PR #545
+
+Four small items from Connor's look at round 2's 390x844 shots. Still **chrome only**. `verify.js` is now 62 checks (57 + 5), and its `FINGERPRINT` is still byte-identical to main's (866621a) and to round 2's, including the Quick charge wiring and all 26 builder handlers. #544 wasn't merged, so I made no rebase. All rules are in `styles-tools.css` ("review round 3").
+
+- **1. Charge button above the fold.** The empty state never showed a Charge button: it only renders into `#posChargeArea` once an email finds a saved card. That's the state to measure, so `shoot.js` now answers the `mode:"check"` lookup with a saved Visa. Before: Charge 827-883 against a bottom bar at 759, whose + hex rises to 751. Phone-only (≤600px) trims:
+  - keys 56 → 45px (the 44 floor holds), keypad gap 8 → 5;
+  - card gap 14 → 8 and padding 20 → 14/16; intro margin 14 → 8;
+  - field labels at line-height 1.25 with 4px under them; email/description fields 48 → 44;
+  - the saved-card box padding 14 → 8 with a 6px margin; Charge 56 → 52.
+
+  After: Charge at **693.9-745.9**, 5px above the hex and 13px above the bar, at scroll 0. These are the same with real fonts and fallbacks. "Use a different card instead" is still under the bar; it's the secondary path. A first pass with only the keys at 46 and lighter gap trims still left the button 22px under the bar.
+- **2. Chips.** It was option (a). Four chips needed 329px in a 328px track, so "Paid" lost about 1px plus its edge. A 2px gap trim alone fits today, but a two-digit count overflows again. On a phone the chips now start from 10px sides and a 6px gap and `flex: 1 1 auto` to share the row. They fill it exactly and still fit with "Unpaid 12 / Overdue 10" (`verify` stresses this). Font, size, weight, height, radius and colours are still Jobs'. Round 2's chip-vs-Jobs check now leaves out side padding.
+- **3. The TMP number. Its premise was wrong.** `INV-2026-TMP-…` isn't a placeholder replaced at save. It's `assignNextNumber()`'s **offline fallback**, used when the `next_invoice_number` sequence RPC fails. Save uses whatever is in the field, and nothing swaps it later. The harness answers every RPC with `[]`, so every shot shows it. In production a normal load shows the real sequence number. So "Final number set when saved" would be false. The caption reads "Temporary number. Couldn't load the next one." and shows **only** while the value contains `-TMP-`. The input goes `--text-dim` (`.label-hint`'s colour) with no size change, so iOS doesn't zoom. `syncTempNumberNote()` is presentation only: one call after the value is set and an `input` listener. The value and the generation are untouched. Only `assignNextNumber` ever sets these two fields (checked), so nothing else needs a resync.
+- **4. Blue card → orange. There's no blue info convention.** `.quote-banner` is the only blue notice card in the suite. Elsewhere blue is status only: `.th-pill.is-paid`, `.badge-status`, `.th-ring--blue`, Jobs' calendar selection. `.th-tone-blue`'s own comment scopes it to "a pill/icon-tile/row-accent", with orange as "the suite's long-standing default", and no page uses it. The shared `.th-note` callout defaults to orange. Home/Jobs/Job detail notices are all the orange `.th-page-tip`. So `.quote-banner` takes `.th-page-tip`'s tint, border, 18px radius and body type. Its class stays `.quote-banner`: `verify`'s `go()` and the tip code treat `.th-page-tip` as the dismissible one-time tip. (The repo is a shallow clone, so the banner's 09-29 restyle couldn't be traced further.)
+
+**Trap:** in Playwright, `goto` to the same page with a different `#hash` is a same-document navigation, not a reload. Typed values survive, and that looked like a draft restore. Use a query string per load.
+
 ## 2026-10-31 -- Workspace Phase 3, review round 2: Connor's 10 fixes on PR #545
 
 Ten items from Connor's look at round 1's 390x844 shots, all on the same branch. Still **chrome only**: `verify.js` is now 57 checks (39 + 18), and its `FINGERPRINT` is byte-identical to main's. It now also covers the Quick charge wiring (the saved-card lookup request, each charge button's `onclick`, and which function a tap reaches, behind spies) and all 26 builder button handlers. PR #544 wasn't merged yet, so I made no rebase.

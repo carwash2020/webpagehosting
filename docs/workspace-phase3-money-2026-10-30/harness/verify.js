@@ -25,6 +25,14 @@
 // FINGERPRINT gained the Quick charge wiring (the saved-card lookup request,
 // the charge buttons' onclicks, which function each tap reaches, behind
 // spies so nothing is charged) and every builder button's onclick.
+//
+// Review round 3 (2026-10-31, Connor's four fixes) added: Quick charge's
+// Charge button clears the bottom bar and its + hex with no scroll once a
+// saved card is found (keys still >=44px); the four invoice chips fit one
+// 390px row, even with two-digit counts; a -TMP- fallback number reads
+// muted with its caption, and a real number (or a typed one) doesn't; the
+// New quote notice is the orange Tip card. Round 2's chip-vs-Jobs check now
+// leaves out side padding, which is 10px on a phone so the row fits.
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const { installLiveStub } = require('../../workspace-phase2-native-app-2026-10-30/harness/live-stub');
 
@@ -61,6 +69,7 @@ const seed = {
     Object.keys(seed).forEach((k) => localStorage.setItem(k, JSON.stringify(seed[k])));
   }, seed);
   let emptyRelational = false;
+  let rpcNumber = null; // round 3: answer next_invoice_number / next_quote_number with a real number
   const posCalls = [];
   await ctx.route('**/*', (r) => {
     const u = r.request().url();
@@ -69,6 +78,7 @@ const seed = {
       // Quick charge's saved-card lookup (mode "check" only; nothing here
       // ever charges). Recorded so main and the branch can be compared.
       if (/\/functions\/v1\/create-pos-charge/.test(u)) { posCalls.push(r.request().postData()); return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, has_saved_card: true, brand: 'visa', last4: '4242' }) }); }
+      if (rpcNumber && /\/rpc\/next_(invoice|quote)_number/.test(u)) return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify((/quote/.test(u) ? 'EST-' : 'INV-') + rpcNumber) });
       if (/account_roles/.test(u)) return r.fulfill({ status: 200, contentType: 'application/json', body: '[{"email":"connor@triplehenterprisesllc.biz","role_name":"Owner","can_manage_invoices":true,"can_view_finance":true}]' });
       if (/\/rest\/v1\/invoices\?/.test(u) && r.request().method() === 'GET') return r.fulfill({ status: 200, contentType: 'application/json', body: emptyRelational ? '[]' : JSON.stringify(rows) });
       return r.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
@@ -130,8 +140,19 @@ const seed = {
   const bl = await p.evaluate(SEG_BASELINES);
   chrome('round 2 fix 4: Invoices / Finance / Quick charge labels share one baseline', bl.length === 3 && new Set(bl).size === 1, bl);
   // Round 2, fix 5: the chips are Jobs' chips (font, size, weight, height, padding), "All" a pill not a circle.
-  const CHIP_STYLE = (sel) => [...document.querySelectorAll(sel)].filter((x) => x.offsetParent).map((x) => { const s = getComputedStyle(x); const r = x.getBoundingClientRect(); return { t: x.textContent.trim(), w: Math.round(r.width), h: Math.round(r.height), k: [s.fontFamily, s.fontSize, s.fontWeight, s.letterSpacing, s.paddingLeft, s.borderRadius, s.backgroundColor, s.color].join('|') }; });
+  // (Round 3: side padding left out of the key; on a phone the invoice chips
+  // start at 10px and grow to fill the row, see round 3 fix 2.)
+  const CHIP_STYLE = (sel) => [...document.querySelectorAll(sel)].filter((x) => x.offsetParent).map((x) => { const s = getComputedStyle(x); const r = x.getBoundingClientRect(); return { t: x.textContent.trim(), w: Math.round(r.width), h: Math.round(r.height), k: [s.fontFamily, s.fontSize, s.fontWeight, s.letterSpacing, s.borderRadius, s.backgroundColor, s.color].join('|') }; });
   const invChips = await p.evaluate(CHIP_STYLE, '#invoiceFilters .th-chip:not(.is-active)');
+  // Round 3, fix 2: all four chips fully inside the 390px row, no sideways
+  // scroll, and still so with two-digit counts (counts set, then restored).
+  const CHIP_ROW = () => { const c = document.getElementById('invoiceFilters'); const r = c.getBoundingClientRect(); return { sw: c.scrollWidth, cw: c.clientWidth, right: Math.round(r.right), chips: [...c.children].map((x) => { const b = x.getBoundingClientRect(); return [x.textContent.trim().replace(/\s+/g, ' '), Math.round(b.left), Math.round(b.right), Math.round(b.height)]; }) }; };
+  if (CHROME) {
+    const row1 = await p.evaluate(CHIP_ROW);
+    const row2 = await p.evaluate((f) => { const u = document.getElementById('invoiceUnpaidCount'); const o = document.getElementById('invoiceOverdueCount'); const keep = [u.textContent, o.textContent]; u.textContent = '12'; o.textContent = '10'; const m = (0, eval)('(' + f + ')')(); u.textContent = keep[0]; o.textContent = keep[1]; return m; }, CHIP_ROW.toString());
+    const fits = (m) => m.chips.length === 4 && m.sw <= m.cw && m.chips.every((x) => x[2] <= m.right && x[3] >= 44);
+    ok('round 3 fix 2: All / Unpaid / Overdue / Paid all fully visible in one 390px row, no sideways scroll (also with two-digit counts)', fits(row1) && fits(row2) && /Paid/.test(row1.chips[3][0]), { now: row1, twoDigit: row2 });
+  }
   const allChip = await p.evaluate(() => { const r = document.querySelector('#invoiceFilters .th-chip[data-filter="all"]').getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height) }; });
   // Round 2, fix 6: Compact view is a 44px icon button; its words are still its accessible name; it still toggles density.
   const dens = await p.evaluate(() => { const b = document.querySelector('.inv-log-head [data-density-toggle]'); const r = b.getBoundingClientRect(); const h = document.querySelector('.inv-log-head > h3').getBoundingClientRect(); const n = document.querySelector('.inv-log-head > .mn-new-btn').getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), name: b.textContent.trim(), color: getComputedStyle(b).color, icon: getComputedStyle(b, '::before').maskImage || getComputedStyle(b, '::before').webkitMaskImage, rowTops: [Math.round(h.top + h.height / 2), Math.round(r.top + r.height / 2), Math.round(n.top + n.height / 2)], gapToNew: Math.round(n.left - r.right) }; });
@@ -217,6 +238,12 @@ const seed = {
   await p.fill('#posClientEmail', 'maria@example.com'); await p.waitForTimeout(1200);
   fp.posLookup = posCalls.slice();
   fp.posSaved = await p.evaluate(() => [...document.querySelectorAll('#posChargeArea button')].map((x) => x.textContent.trim() + ' -> ' + x.getAttribute('onclick')));
+  // Round 3, fix 1: with a saved card found, the Charge button is on screen
+  // without a scroll, clear of the bottom bar's top edge and its raised + hex.
+  if (CHROME) {
+    const qcPos = await p.evaluate(async () => { document.activeElement.blur(); window.scrollTo(0, 0); await new Promise((r) => setTimeout(r, 150)); const b = document.getElementById('posChargeSavedBtn').getBoundingClientRect(); const nav = document.querySelector('.th-bottom-nav').getBoundingClientRect(); const hex = document.querySelector('.th-bottom-nav .th-bn-create-disc').getBoundingClientRect(); const keys = [...document.querySelectorAll('#posKeypad button')].map((k) => Math.round(k.getBoundingClientRect().height)); return { vh: innerHeight, scrollY: window.scrollY, btnTop: Math.round(b.top * 10) / 10, btnBottom: Math.round(b.bottom * 10) / 10, navTop: Math.round(nav.top * 10) / 10, hexTop: Math.round(hex.top * 10) / 10, keyMin: Math.min(...keys) }; });
+    ok('round 3 fix 1: Quick charge at 390x844: Charge Saved Card fully above the bottom bar and its + hex at scroll 0; keypad keys still >=44px', qcPos.scrollY === 0 && qcPos.btnTop > 0 && qcPos.btnBottom <= qcPos.navTop && qcPos.btnBottom <= qcPos.hexTop && qcPos.keyMin >= 44, qcPos);
+  }
   fp.posSavedTap = await p.evaluate(() => { const o = window.chargeSavedCard; let hit = 0; window.chargeSavedCard = () => { hit++; }; document.getElementById('posChargeSavedBtn').click(); window.chargeSavedCard = o; return hit; });
   await p.evaluate(() => [...document.querySelectorAll('#posChargeArea button')].find((x) => /different card/.test(x.textContent)).click()); await p.waitForTimeout(300);
   fp.posNew = await p.evaluate(() => [...document.querySelectorAll('#posChargeArea button')].map((x) => x.textContent.trim() + ' -> ' + x.getAttribute('onclick')));
@@ -306,6 +333,30 @@ const seed = {
     ok('round 2 fix 8: every visible primary button on both money pages is flat, weight 400 (' + all.reduce((n, x) => n + x.primN, 0) + ' checked)', all.every((x) => x.prim.length === 0), Object.fromEntries(Object.entries(sweeps).map(([k, v]) => [k, v.prim])));
     ok('round 2 fix 10: no " -- " in any visible copy (incl. the page tips)', all.every((x) => x.dashes.length === 0), Object.fromEntries(Object.entries(sweeps).map(([k, v]) => [k, v.dashes])));
     ok('round 2 fix 10: no field label carries a long parenthetical; captions are sentence case (' + all.reduce((n, x) => n + x.capsN, 0) + ' captions)', all.every((x) => x.longLabels.length === 0 && x.capsBad === 0) && all.reduce((n, x) => n + x.capsN, 0) >= 8, Object.fromEntries(Object.entries(sweeps).map(([k, v]) => [k, v.longLabels])));
+    // Round 3, fix 3: a -TMP- fallback number (the next number couldn't be
+    // fetched; this harness answers the RPC with nothing) reads muted with
+    // its caption; typing a real one clears both; a number the RPC does
+    // return is never muted. The value itself is never touched.
+    const TEMP = (id) => { const i = document.getElementById(id); const n = document.getElementById(id + 'TempNote'); const d = document.createElement('i'); d.style.color = 'var(--text-dim)'; document.body.appendChild(d); const dim = getComputedStyle(d).color; d.remove(); const r = n.getBoundingClientRect(); return { v: i.value, muted: i.classList.contains('is-temp-number') && getComputedStyle(i).color === dim, fs: getComputedStyle(i).fontSize, note: !n.hidden && r.height > 0, noteText: n.textContent, desc: i.getAttribute('aria-describedby') }; };
+    const temps = {};
+    for (const [tab, id] of [['invoice', 'invoiceNumber'], ['quote', 'quoteNumber']]) {
+      // (A query string per load: a hash-only goto is the same document, no reload.)
+      await p.goto(base + '/tools/invoice-generator.html?r3=' + tab + '#' + tab, { waitUntil: 'load' }); await p.waitForTimeout(2500);
+      const t0 = await p.evaluate(TEMP, id);
+      await p.fill('#' + id, (tab === 'quote' ? 'EST-' : 'INV-') + '2000'); await p.waitForTimeout(150);
+      const t1 = await p.evaluate(TEMP, id);
+      temps[tab] = { t0, t1 };
+    }
+    ok('round 3 fix 3: a -TMP- number reads muted (hint colour, still 16px) with "Temporary number" caption linked by aria-describedby; typing a real one clears both', Object.values(temps).every(({ t0, t1 }) => /-TMP-/.test(t0.v) && t0.muted && t0.fs === '16px' && t0.note && /^Temporary number\./.test(t0.noteText) && /TempNote$/.test(t0.desc || '') && !t1.muted && !t1.note && !t1.desc), temps);
+    rpcNumber = '3001';
+    await p.goto(base + '/tools/invoice-generator.html?r3=real#quote', { waitUntil: 'load' }); await p.waitForTimeout(2500);
+    const real = await p.evaluate((f) => ['invoiceNumber', 'quoteNumber'].map((id) => (0, eval)('(' + f + ')')(id)), TEMP.toString());
+    rpcNumber = null;
+    ok('round 3 fix 3: a number drawn from the sequence shows as before: not muted, no caption', real[0].v === 'INV-3001' && real[1].v === 'EST-3001' && real.every((x) => !x.muted && !x.note), real);
+    // Round 3, fix 4: the New quote notice is the orange Tip card (same
+    // tint, border, radius and text colour as .th-page-tip), not blue.
+    const qb = await p.evaluate(() => { const k = (el) => { const s = getComputedStyle(el); return { bg: s.backgroundColor, bc: s.borderTopColor, r: s.borderTopLeftRadius }; }; const tip = document.createElement('div'); tip.className = 'th-page-tip'; document.querySelector('#tab-quote').prepend(tip); const t = k(tip); tip.remove(); const b = document.querySelector('#tab-quote .quote-banner'); const tx = document.createElement('p'); tx.className = 'th-page-tip-body'; document.body.appendChild(tx); const tc = getComputedStyle(tx).color; tx.remove(); return { banner: k(b), tip: t, color: getComputedStyle(b).color, tipText: tc, shown: !!b.offsetParent }; });
+    ok('round 3 fix 4: the New quote notice matches the orange Tip card (tint, border, radius, text colour)', qb.shown && qb.banner.bg === qb.tip.bg && qb.banner.bc === qb.tip.bc && qb.banner.r === qb.tip.r && qb.color === qb.tipText && /255, 128, 0/.test(qb.banner.bg), qb);
     // Fix 2: the #pos deep link opens Quick charge with nothing focused (no keyboard).
     await p.goto(base + '/tools/invoice-generator.html#pos', { waitUntil: 'load' }); await p.waitForTimeout(2500);
     const foc = await p.evaluate(() => ({ tab: document.getElementById('tab-pos').classList.contains('is-active'), active: document.activeElement ? (document.activeElement.id || document.activeElement.tagName) : null, title: document.querySelector('.hub-header .hub-title').textContent }));

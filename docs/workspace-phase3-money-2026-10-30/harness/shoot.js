@@ -24,6 +24,12 @@
 // made the keypad and the Quick charge amount look lower than they are.
 // Newsreader has no local copy and still falls back. Round 2 also shoots
 // Finance's tabs scrolled to the end and the New invoice captions.
+//
+// Review round 3 (2026-10-31): the saved-card lookup (mode "check" only,
+// nothing is charged) answers with a saved Visa, so Quick charge can be shot
+// the way Connor sees it after typing an email, with the Charge button's
+// position vs. the bottom bar written to report.json (round3.quickCharge).
+// Also shoots the invoice chip row.
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 const fs = require('fs');
 const path = require('path');
@@ -191,6 +197,7 @@ async function newCtx(browser, { width, height, theme, touch }) {
     if (REAL_FONTS && /fonts\.googleapis\.com\/css/.test(u)) return route.fulfill({ status: 200, contentType: 'text/css', headers: { 'access-control-allow-origin': '*' }, body: FONT_CSS });
     if (REAL_FONTS && /fonts\.gstatic\.com\/th\//.test(u)) return route.fulfill({ status: 200, contentType: 'font/ttf', headers: { 'access-control-allow-origin': '*' }, body: fs.readFileSync(FONT_DIR + FONT_FILES[u.split('/').pop()]) });
     if (/supabase\.co/.test(u)) {
+      if (/\/functions\/v1\/create-pos-charge/.test(u) && /"mode":"check"/.test(route.request().postData() || '')) return route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true,"has_saved_card":true,"brand":"visa","last4":"4242"}' });
       if (/account_roles/.test(u)) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(roleRow) });
       if (/rpc\/internal_mfa_session_status/.test(u)) return route.fulfill({ status: 200, contentType: 'application/json', body: '{"blocked":false}' });
       // The invoice list reads the relational `invoices` table first
@@ -257,6 +264,22 @@ async function open(ctx, url) {
     await page.evaluate(() => { const e = document.getElementById('clientEmail'); window.scrollTo(0, e.getBoundingClientRect().top + window.scrollY - 360); });
     await page.waitForTimeout(200);
     await page.screenshot({ path: path.join(out, 'new-invoice-fields-390-dark.png') });
+    await page.close();
+    // Round 3: Quick charge with a saved card found (an amount typed on the
+    // keypad, email filled, scroll 0), and the chip row on the list.
+    ({ page } = await open(ctx, '/tools/invoice-generator.html#pos'));
+    for (const k of ['1', '8', '5']) await page.click('#posKeypad button:text-is("' + k + '")');
+    await page.fill('#posClientEmail', 'maria@example.com'); await page.waitForTimeout(1500);
+    await page.evaluate(() => { document.activeElement.blur(); window.scrollTo(0, 0); });
+    await page.waitForTimeout(200);
+    report.round3 = { quickCharge: await page.evaluate(() => { const r = (s) => { const b = document.querySelector(s).getBoundingClientRect(); return { top: Math.round(b.top * 10) / 10, bottom: Math.round(b.bottom * 10) / 10, h: Math.round(b.height * 10) / 10 }; }; return { vh: innerHeight, scrollY: window.scrollY, charge: r('#posChargeSavedBtn'), navTop: r('.th-bottom-nav').top, hexTop: r('.th-bottom-nav .th-bn-create-disc').top, key: r('#posKeypad button'), card: r('.pos-card') }; }) };
+    await page.screenshot({ path: path.join(out, 'quick-charge-saved-card-390-dark.png') });
+    await page.close();
+    ({ page } = await open(ctx, '/tools/invoice-generator.html'));
+    await page.evaluate(() => { const c = document.getElementById('invoiceFilters'); window.scrollTo(0, c.getBoundingClientRect().top + window.scrollY - 330); });
+    await page.waitForTimeout(200);
+    report.round3.chips = await page.evaluate(() => { const c = document.getElementById('invoiceFilters'); return { sw: c.scrollWidth, cw: c.clientWidth, chips: [...c.children].map((x) => { const b = x.getBoundingClientRect(); return [x.textContent.trim().replace(/\s+/g, ' '), Math.round(b.left), Math.round(b.right)]; }) }; });
+    await page.screenshot({ path: path.join(out, 'invoices-chips-390-dark.png') });
     await page.close();
   }
   await ctx.close();
