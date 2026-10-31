@@ -12,14 +12,16 @@ The harness is in `harness/` (`stub-server.js` + `lh.js`; needs `lighthouse`,
 
 | Page | Score before -> after | FCP (ms) | LCP (ms) | Transfer (KB) |
 |---|---|---|---|---|
-| tools/workspace | 66 -> 68 | 3305 -> 3011 | 3907 -> 3907 | 261 -> 261 |
-| tools/job-tracker (jobs) | 59 -> 70 | 3305 -> 1359 | 3757 -> 3192 | 258 -> 129 |
-| tools/invoice-generator (invoices) | 79 -> 85 | 3306 -> 1357 | 4206 -> 4234 | 373 -> 373 |
-| portal/dashboard (invoices) | 85 -> 90 | 3158 -> 2556 | 3458 -> 3116 | 218 -> 129 |
-| portal/jobs | 92 -> 90 | 2556 -> 2584 | 2712 -> 3081 | 130 -> 130 |
+| tools/workspace | 66 -> 66 | 3307 -> 3307 | 3906 -> 3907 | 261 -> 261 |
+| tools/job-tracker (jobs) | 59 -> 67 | 3306 -> 1355 | 3905 -> 3609 | 258 -> 258 |
+| tools/invoice-generator (invoices) | 79 -> 82 | 3310 -> 1385 | 4210 -> 4208 | 372 -> 372 |
+| portal/dashboard (invoices) | 85 -> 90 | 3157 -> 2557 | 3456 -> 3106 | 218 -> 129 |
+| portal/jobs | 91 -> 92 | 2560 -> 2556 | 2932 -> 2708 | 130 -> 130 |
+
+Measured against `main` at 907e562 (Phase 4 included) vs this branch.
 
 Run-to-run noise is real: portal/jobs LCP is bimodal (~2.7s / ~3.1s) in the
-untouched baseline too, so that row is "no change", not a regression. Raw
+untouched baseline too, so that row is "no change" either way. Raw
 runs: `lighthouse-before.json`, `lighthouse-after.json`.
 
 390x844 screenshots (`before/`, `after/`) are byte-identical for all five pages.
