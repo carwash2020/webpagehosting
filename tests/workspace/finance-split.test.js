@@ -40,10 +40,17 @@ const PDF_LAYOUT_SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'js', 'p
   // them actually need once it's running as this window's own script.
   + '\nwindow.PDF_COLORS = PDF_COLORS; window.pdfLoadImageAsDataURL = pdfLoadImageAsDataURL; window.drawPdfHeader = drawPdfHeader; window.drawPdfLineItemsTable = drawPdfLineItemsTable; window.drawPdfTotalsBlock = drawPdfTotalsBlock; window.drawPdfTotalHighlight = drawPdfTotalHighlight; window.drawPdfFooter = drawPdfFooter; window.pdfWrapAndDraw = pdfWrapAndDraw;';
 
-const MOVED_FUNCTIONS = [
-  'renderJobProfitability', 'checkClientHistory', 'saveTaxSettings', 'loadTaxSettings',
+// Cost lookup's functions (checkClientHistory, saveTaxSettings,
+// loadTaxSettings, calculateCost, the price-reference list) left with that
+// tab in the redundancy pass (2026-10-31); COST_LOOKUP_FUNCTIONS below
+// checks they're gone from both pages.
+const COST_LOOKUP_FUNCTIONS = [
+  'checkClientHistory', 'saveTaxSettings', 'loadTaxSettings',
   'calculateCost', 'loadPriceReferences', 'savePriceReferences', 'savePriceReference',
   'loadPriceReference', 'deletePriceReference', 'renderPriceReferences',
+];
+const MOVED_FUNCTIONS = [
+  'renderJobProfitability',
   'loadIncomeEntries', 'saveIncomeEntries', 'populateIncomeJobRefOptions',
   'addIncomeEntry', 'editIncomeEntry', 'cancelIncomeEntryEdit', 'deleteIncomeEntry',
   'clearAllIncome', 'backfillLegacyInvoicesIntoIncomeLog', 'renderIncomeEntries',
@@ -59,6 +66,14 @@ test('every moved function is defined in finance.html', () => {
     !new RegExp('function ' + name + '\\(').test(src)
   );
   assert.deepEqual(missing, [], 'these functions should exist in finance.html but do not: ' + missing.join(', '));
+});
+
+test('Cost lookup\'s functions are gone from finance.html (and never came back to job-tracker.html) since the tab left, 2026-10-31', () => {
+  for (const file of [FINANCE_PATH, JOB_TRACKER_PATH]) {
+    const src = fs.readFileSync(file, 'utf8');
+    const present = COST_LOOKUP_FUNCTIONS.filter(name => new RegExp('function ' + name + '\\(').test(src));
+    assert.deepEqual(present, [], path.basename(file));
+  }
 });
 
 test('none of the moved functions are defined in job-tracker.html anymore', () => {
@@ -122,13 +137,12 @@ test('job-tracker.html\'s tab bar only has Jobs, Contacts, and Notes as in-page 
   assert.match(src, /href="\/tools\/finance\.html"/, 'should have a real link to the new Finance page');
 });
 
-test('finance.html has all 5 tabs and none of the Jobs/Contacts/Notes tabs', () => {
+test('finance.html has its 3 tabs, Expenses first, and none of the Jobs/Contacts/Notes tabs', () => {
   const src = fs.readFileSync(FINANCE_PATH, 'utf8');
   const tabButtons = [...src.matchAll(/data-tab="(\w+)"/g)].map(m => m[1]);
-  // 'inventory' added for parts-on-hand tracking (closing a real audit
-  // gap: Appliance Wiki only ever tracked WHAT part fixes what, never
-  // what's actually in stock).
-  assert.deepEqual(tabButtons, ['cost', 'profitability', 'income', 'expenses', 'inventory']);
+  // Cost lookup and Inventory left in the redundancy pass (2026-10-31);
+  // Expenses, now the default, leads.
+  assert.deepEqual(tabButtons, ['expenses', 'income', 'profitability']);
 });
 
 test('job-detail.html\'s Expenses link points at finance.html, not the old job-tracker.html location', () => {
@@ -988,11 +1002,34 @@ test('Finance is no longer styled as a tab -- it\'s visually distinct from the r
   assert.match(src, /Pricing, income, and expenses are on Finance/, 'a clearly-distinct link to Finance should still exist nearby');
 });
 
-test('the "Log Expense" quick action opens the instant modal, not a navigation to Finance (2026-08-20 usability fix)', () => {
+// Log Expense from Job Tracker (redundancy pass, 2026-10-31). The
+// 2026-08-20 quick-expense pop-up was a full second copy of Finance's
+// Expenses form. Connor approved folding it into Finance: the job's ⋯
+// sheet now opens finance.html?job=<id>#expenses -- the same door Job
+// detail's Expense button and + New use -- and Finance's own form is the
+// only place an expense is entered. The rules the pop-up tests pinned
+// (receipt required, the exact th_expense_log record shape, mileage from
+// the stored rate) are pinned on Finance's form here instead.
+
+test('the "Log Expense" action on a job opens Finance\'s Expenses form for that job, behind Finance\'s own permission; the pop-up copy of the form is gone', () => {
   const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
-  assert.match(src, /label: 'Log Expense'/);
-  assert.match(src, /onClick: \(\) => showQuickExpenseModal\(jobId, job\.title\)/);
-  assert.doesNotMatch(src, /finance\.html\?job=' \+ jobId \+ '#expenses'/, 'this quick action should no longer navigate away at all');
+  assert.match(src, /if \(typeof canViewFinance !== 'function' \|\| canViewFinance\(\)\) \{\s*actions\.push\(\{ label: 'Log Expense', icon: 'camera', onClick: \(\) => \{ location\.href = '\/tools\/finance\.html\?job=' \+ encodeURIComponent\(jobId\) \+ '#expenses'; \} \}\);/);
+  assert.doesNotMatch(src, /id="quickExpenseOverlay"|function showQuickExpenseModal|function submitQuickExpense|QUICK_EXPENSE_TUTORIAL/);
+  // Job detail's Expense button: the same destination.
+  const jd = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'job-detail.html'), 'utf8');
+  assert.match(jd, /'\/tools\/finance\.html\?job=' \+ encodeURIComponent\(j\.id\) \+ '#expenses'/);
+});
+
+test('Finance\'s Expenses form -- now the only expense form -- keeps the receipt-required rule and writes the same th_expense_log record shape the pop-up did', () => {
+  const fin = fs.readFileSync(FINANCE_PATH, 'utf8');
+  const fn = fin.match(/async function addExpense\(\)[\s\S]*?\n  \}\n/);
+  assert.ok(fn, 'addExpense not found');
+  assert.match(fn[0], /if \(type === 'expense' && !receiptFile && !existingReceiptPath\) \{\s*await showAlert\('A receipt photo is required to log an expense\./);
+  for (const field of ['id:', 'date, type, desc', 'vendor:', 'payment:', 'jobRefId:', 'jobRefTitle', 'receiptPath:', 'partNumber:', 'entry.createdBy', 'entry.lastEditedBy', 'entry.miles', 'entry.amount']) {
+    assert.ok(fn[0].includes(field), 'missing field: ' + field);
+  }
+  assert.match(fn[0], /entry\.amount = Math\.round\(entry\.miles \* getMileageRate\(\) \* 100\) \/ 100;/, 'mileage priced from the stored per-mile rate');
+  assert.match(fn[0], /await uploadReceipt\(receiptFile, entry\.id\)/);
 });
 
 test('job-detail.html\'s Expenses section has a "+" link to log a new expense for this specific job, while Invoices/Quotes stay read-only', () => {
@@ -1098,9 +1135,9 @@ test('finance.html\'s DOMContentLoaded init actually runs to completion and rend
   // rendered CONTENT, not just exist as empty containers. An empty
   // laborResult/entriesTable/priceRefList is exactly the symptom the
   // user's screenshots showed.
-  assert.ok(window.document.getElementById('laborResult').textContent.length > 0, 'Cost Lookup calculator should have computed and displayed a real value');
+  // (Cost lookup's laborResult and priceRefList left with that tab, 2026-10-31.)
   assert.ok(window.document.getElementById('entriesTable').innerHTML.length > 0, 'Expenses table should have rendered (even if just an empty-state message)');
-  assert.ok(window.document.getElementById('priceRefList').innerHTML.length > 0, 'Price references should have rendered');
+  assert.ok(window.document.getElementById('incomeTable').innerHTML.length > 0, 'Income table should have rendered (even if just an empty-state message)');
 });
 
 // Redesign round (2026-08-20): swapped Routes for Finance in the
@@ -1126,7 +1163,11 @@ test('the bottom nav has Finance instead of Routes, and Route Planner is still r
   // (SIDEBAR_DESTS) carry it instead -- still reachable, one tap.
   assert.match(navSrc, /href: '\/tools\/route-planner\.html',\s+icon: 'map',\s+label: 'Route Planner'/, 'Route Planner must still be linked from somewhere, or it becomes unreachable');
   const wsSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'workspace.html'), 'utf8');
-  assert.match(wsSrc, /id="todayRouteLink"/, 'and the dashboard hero offers Route today directly');
+  // Redundancy pass (2026-10-31): the Next Job card's own Route today
+  // left; Today's route's Route all is the one dashboard link to the
+  // day's route (same buildTodayRouteUrl()).
+  assert.doesNotMatch(wsSrc, /id="todayRouteLink"/);
+  assert.match(wsSrc, /id="todayRouteAll"/, 'and the dashboard offers the day\'s route directly, on Today\'s route');
 });
 
 test('finance.html uses the shared .tabs class (not the old, unstyled tab-row) and gets the sticky modifier', () => {
@@ -1156,11 +1197,15 @@ test('the old combined "Business Health" sub-tab system is gone -- restructured 
   assert.doesNotMatch(src, /id="section-documents"/);
   assert.doesNotMatch(src, /id="body-documents"/);
   assert.match(src, /id="secureDocsList"/, 'the real Documents content must still exist, just inside the merged Compliance section');
-  // 'backup' left the dashboard for settings.html on 2026-09-21.
-  for (const key of ['gallery', 'compliance', 'analytics']) {
+  // 'backup' left the dashboard for settings.html on 2026-09-21; 'gallery'
+  // moved to Site Content in the redundancy pass (2026-10-31).
+  for (const key of ['compliance', 'analytics']) {
     assert.match(src, new RegExp('id="section-' + key + '"'));
     assert.match(src, new RegExp('id="body-' + key + '"'));
   }
+  assert.doesNotMatch(src, /id="section-gallery"/);
+  const siteContent = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'site-content.html'), 'utf8');
+  assert.match(siteContent, /id="galleryQueueList"/, 'the Gallery queue lives on Site Content now');
 });
 
 test('.tabs-sticky positions below the already-sticky header, matching the proven .jump-nav pattern exactly (not top:0, which would overlap the header)', () => {
@@ -1220,10 +1265,12 @@ test('applyCollapseState is fully generic and needs no changes to handle these s
   const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'workspace.html'), 'utf8');
   const defaultCollapseMatch = src.match(/const DEFAULT_COLLAPSE = \{([^}]*)\}/);
   assert.ok(defaultCollapseMatch, 'DEFAULT_COLLAPSE not found');
-  // 'backup' left this list on 2026-09-21 when Backup & Restore moved to settings.html.
-  for (const key of ['gallery', 'compliance', 'analytics']) {
+  // 'backup' left this list on 2026-09-21 when Backup & Restore moved to
+  // settings.html; 'gallery' on 2026-10-31 when the queue moved to Site Content.
+  for (const key of ['compliance', 'analytics']) {
     assert.match(defaultCollapseMatch[1], new RegExp(key + ':\\s*true'));
   }
+  assert.doesNotMatch(defaultCollapseMatch[1], /gallery/);
 });
 
 test('the compliance status badge moved with its own section (same element id, just relocated), so the existing JS that populates it needed zero changes', () => {
@@ -1254,98 +1301,9 @@ test('the jump-nav no longer points at the removed combined section', () => {
   assert.doesNotMatch(src, /href="#section-businesshealth"/);
 });
 
-// Real usability fix (2026-08-20), responding directly to feedback that
-// the app got harder to use after the structural splits. The biggest
-// single source of friction: logging an expense against a job used to
-// be one tab click before Push 4 split Job Tracker and Finance apart,
-// and even with the earlier "Log Expense" quick-action shortcut, it was
-// still a real page navigation. This closes that gap for real: a
-// standalone modal, built without touching finance.html's own,
-// recently-fixed Expenses-tab logic at all, so getting this feature
-// right couldn't risk re-breaking what was just fixed there.
-
-test('showQuickExpenseModal, closeQuickExpenseModal, and submitQuickExpense all exist and the quick action calls the right one', () => {
-  const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
-  assert.match(src, /function showQuickExpenseModal\(jobId, jobTitle\)/);
-  assert.match(src, /function closeQuickExpenseModal\(\)/);
-  assert.match(src, /async function submitQuickExpense\(\)/);
-});
-
-test('submitQuickExpense enforces the same receipt-required rule finance.html\'s own Expenses tab uses, not a relaxed version', () => {
-  const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
-  const fn = src.match(/async function submitQuickExpense\(\)[\s\S]*?\n  \}\n/);
-  assert.ok(fn, 'submitQuickExpense not found');
-  assert.match(fn[0], /if \(!receiptFile\)/);
-  assert.match(fn[0], /required to log an expense/);
-});
-
-test('submitQuickExpense builds a record matching finance.html\'s exact field shape (now including type/vendor/partNumber/miles), and reuses the already-shared uploadReceipt/thRead/thWrite rather than duplicating that logic', () => {
-  const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
-  const fn = src.match(/async function submitQuickExpense\(\)[\s\S]*?\n  \}\n/);
-  for (const field of ['id:', 'date,', 'type,', 'desc,', 'vendor,', 'payment,', 'jobRefId:', 'jobRefTitle:', 'receiptPath,', 'partNumber,', 'amount,', 'miles,', 'createdBy:', 'lastEditedBy:']) {
-    assert.match(fn[0], new RegExp(field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), 'missing field: ' + field);
-  }
-  assert.match(fn[0], /await uploadReceipt\(receiptFile, entryId\)/);
-  assert.match(fn[0], /thRead\(TH_KEYS\.expenses, \[\]\)/);
-  assert.match(fn[0], /thWrite\(TH_KEYS\.expenses, entries\)/);
-});
-
-test('the end-to-end flow actually works: open the modal, fill it out, submit, and the expense lands in the real storage key finance.html reads from', async () => {
-  const { JSDOM } = require('jsdom');
-  const html = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
-  const dom = new JSDOM(html, {
-    runScripts: 'dangerously', url: 'https://example.com/',
-    beforeParse(window) { window.requireAuth = () => {}; },
-  });
-  const { window } = dom;
-  window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
-  window.showToast = () => {};
-  window.showConfirm = () => Promise.resolve(true);
-  let alertMsg = null;
-  window.showAlert = async (msg) => { alertMsg = msg; };
-  window.initSyncOnLoad = () => Promise.resolve();
-  window.getCurrentUserEmail = () => 'connor@triplehenterprisesllc.biz';
-  window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
-  window.thRead = (key, fallback) => { try { const v = JSON.parse(window.localStorage.getItem(key)); return v === null ? fallback : v; } catch (e) { return fallback; } };
-  window.thWrite = (key, val) => { window.localStorage.setItem(key, JSON.stringify(val)); };
-  window.attachLongPress = () => {};
-  window.wireSearchClear = () => {};
-  window.attachVoiceDictation = () => {};
-  window.personDot = () => '';
-  window.escapeHtml = (s) => String(s == null ? '' : s);
-      window.escapeForInlineHandler = (s) => String(s == null ? '' : s);
-  window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
-  window.todayDateStrBusinessTz = () => { const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const m = {}; p.forEach(x => { m[x.type] = x.value; }); return `${m.year}-${m.month}-${m.day}`; };
-  window.uploadReceipt = async (file, id) => ({ ok: true, path: 'expense-' + id + '/fake.jpg' });
-  window.localStorage.setItem('th_tracker_jobs', JSON.stringify([{ id: 555, title: 'End-to-end Test Job' }]));
-
-  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
-  await new Promise(resolve => setTimeout(resolve, 50));
-
-  // Case 1: missing receipt should block the save with the right message.
-  window.showQuickExpenseModal(555, 'End-to-end Test Job');
-  window.document.getElementById('quickExpenseDesc').value = 'Part';
-  window.document.getElementById('quickExpenseAmount').value = '25';
-  await window.submitQuickExpense();
-  assert.match(alertMsg || '', /receipt photo is required/);
-  assert.ok(window.document.getElementById('quickExpenseOverlay').classList.contains('is-open'), 'modal should stay open when the save is blocked');
-
-  // Case 2: a real submission should actually save correctly and close the modal.
-  Object.defineProperty(window.document.getElementById('quickExpenseReceipt'), 'files', {
-    value: [{ type: 'image/jpeg', name: 'receipt.jpg' }], configurable: true,
-  });
-  await window.submitQuickExpense();
-
-  const saved = JSON.parse(window.localStorage.getItem('th_expense_log') || '[]');
-  assert.equal(saved.length, 1);
-  assert.equal(saved[0].desc, 'Part');
-  assert.equal(saved[0].amount, 25);
-  assert.equal(saved[0].jobRefId, '555');
-  assert.equal(saved[0].jobRefTitle, 'End-to-end Test Job');
-  assert.equal(saved[0].type, 'expense');
-  assert.ok(saved[0].receiptPath.length > 0);
-  assert.equal(window.document.getElementById('quickExpenseOverlay').classList.contains('is-open'), false, 'modal should close after a successful save');
-});
+// (The 2026-08-20 Job Tracker quick-expense pop-up these notes used to
+// introduce was folded into Finance's own form on 2026-10-31; see the
+// Log Expense tests above.)
 
 // CRITICAL BUG FIX (2026-08-20), found from a direct follow-up report
 // that Finance "still isn't working right" after the earlier
@@ -1372,7 +1330,7 @@ test('the end-to-end flow actually works: open the modal, fill it out, submit, a
 // synchronized in two separate places is exactly the kind of fragile
 // coupling that caused this bug on finance.html in the first place.
 
-test('finance.html shows its default tab (Cost Lookup) on a completely normal, hash-less page load -- not just that nothing throws', async () => {
+test('finance.html shows its default tab (Expenses, since Cost Lookup left on 2026-10-31) on a completely normal, hash-less page load -- not just that nothing throws', async () => {
   const { JSDOM } = require('jsdom');
   const html = fs.readFileSync(FINANCE_PATH, 'utf8');
   const dom = new JSDOM(html, {
@@ -1395,9 +1353,9 @@ test('finance.html shows its default tab (Cost Lookup) on a completely normal, h
   window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
   await new Promise(resolve => setTimeout(resolve, 100));
 
-  assert.ok(window.document.getElementById('tab-cost').classList.contains('is-active'),
+  assert.ok(window.document.getElementById('tab-expenses').classList.contains('is-active'),
     'the default tab panel must actually be visible on a normal visit -- this is the exact bug that made the page look broken even after content was computed correctly');
-  for (const id of ['tab-profitability', 'tab-income', 'tab-expenses']) {
+  for (const id of ['tab-profitability', 'tab-income']) {
     assert.equal(window.document.getElementById(id).classList.contains('is-active'), false, id + ' should NOT be active by default');
   }
 });
@@ -1426,7 +1384,36 @@ test('finance.html still correctly activates a DIFFERENT tab when a real hash is
   await new Promise(resolve => setTimeout(resolve, 100));
 
   assert.ok(window.document.getElementById('tab-expenses').classList.contains('is-active'));
-  assert.equal(window.document.getElementById('tab-cost').classList.contains('is-active'), false);
+  assert.equal(window.document.getElementById('tab-cost'), null, 'Cost lookup left (2026-10-31)');
+});
+
+test('an old finance.html#cost or #inventory link (or a device that last used one) opens Expenses, not a blank page', async () => {
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(FINANCE_PATH, 'utf8');
+  for (const [url, remembered] of [['https://example.com/#cost', null], ['https://example.com/#inventory', null], ['https://example.com/', 'inventory'], ['https://example.com/#income', 'cost']]) {
+    const dom = new JSDOM(html, {
+      runScripts: 'dangerously', url,
+      beforeParse(window) { window.requireAuth = () => {}; if (remembered) window.localStorage.setItem('th_finance_tab', remembered); },
+    });
+    const { window } = dom;
+    window.initAppTour = () => {};
+    window.showToast = () => {};
+    window.showConfirm = () => Promise.resolve(true);
+    window.initSyncOnLoad = () => Promise.resolve();
+    window.getCurrentUserEmail = () => null;
+    window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
+    window.thRead = (key, fallback) => fallback;
+    window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
+    window.todayDateStrBusinessTz = () => '2026-10-31';
+    window.escapeHtml = (s) => String(s == null ? '' : s);
+    window.escapeForInlineHandler = (s) => String(s == null ? '' : s);
+    window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const want = url.endsWith('#income') ? 'tab-income' : 'tab-expenses';
+    const active = [...window.document.querySelectorAll('.tab-panel.is-active')].map(p => p.id);
+    assert.deepEqual(active, [want], url + ' (remembered: ' + remembered + ')');
+    window.close();
+  }
 });
 
 test('job-tracker.html shows its default tab (Jobs) on a normal, hash-less load, and still respects a real hash when present', async () => {
@@ -1469,8 +1456,9 @@ test('job-tracker.html shows its default tab (Jobs) on a normal, hash-less load,
 test('both pages use the unconditional activateTab(...) fallback pattern now, not the fragile conditional-only version', () => {
   const finSrc = fs.readFileSync(FINANCE_PATH, 'utf8');
   const jtSrc = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
-  // Finance gained per-device tab memory on 2026-09-22: hash > remembered > cost, still one unconditional call.
-  assert.match(finSrc, /activateTab\(TAB_HASHES\[initialHash\] \? initialHash : \(TAB_HASHES\[rememberedTab\] \? rememberedTab : 'cost'\)\)/);
+  // Finance gained per-device tab memory on 2026-09-22: hash > remembered > default, still one unconditional call.
+  // The default is Expenses since Cost lookup left (2026-10-31).
+  assert.match(finSrc, /activateTab\(TAB_HASHES\[initialHash\] \? initialHash : \(TAB_HASHES\[rememberedTab\] \? rememberedTab : 'expenses'\)\)/);
   assert.match(jtSrc, /activateTab\(TAB_HASHES\[initialHash\] \? initialHash : 'jobs'\)/);
   assert.doesNotMatch(finSrc, /if \(TAB_HASHES\[initialHash\]\) activateTab\(initialHash\);/);
   assert.doesNotMatch(jtSrc, /if \(TAB_HASHES\[initialHash\]\) activateTab\(initialHash\);/);
@@ -1695,155 +1683,6 @@ test('selecting Mileage as the expense type actually shows the Miles field and h
   window.document.getElementById('entryType').dispatchEvent(new window.Event('change'));
   assert.equal(window.document.getElementById('milesField').style.display, 'none');
   assert.notEqual(window.document.getElementById('amountField').style.display, 'none');
-});
-
-// Popup fleshed out with full field parity + first-time tutorial
-// (2026-08-20), per explicit direction: add the missing fields (vendor,
-// part number, mileage) so the popup can fully replace the Finance form
-// for this, plus a guided walkthrough on first use.
-
-test('the quick-expense popup has a working type toggle matching finance.html\'s own field-visibility fix (Amount/Miles/Part Number/Receipt)', () => {
-  const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
-  const fn = src.match(/function toggleQuickExpenseTypeFields\(\)[\s\S]*?\n  \}\n/);
-  assert.ok(fn, 'toggleQuickExpenseTypeFields not found');
-  for (const id of ['quickExpenseAmountField', 'quickExpenseMilesField', 'quickExpensePartNumberField', 'quickExpenseReceiptField']) {
-    assert.match(fn[0], new RegExp(id));
-  }
-});
-
-test('the tutorial system exists: 5 steps, a seen-flag key, show/advance/skip functions, and only shows automatically on first open', () => {
-  const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
-  assert.match(src, /QUICK_EXPENSE_TUTORIAL_SEEN_KEY = 'th_quickexpense_tutorial_seen'/);
-  const stepsMatch = src.match(/QUICK_EXPENSE_TUTORIAL_STEPS = \[([\s\S]*?)\n  \];/);
-  assert.ok(stepsMatch, 'tutorial steps array not found');
-  const stepCount = [...stepsMatch[1].matchAll(/\{ title:/g)].length;
-  assert.equal(stepCount, 5);
-  assert.match(src, /function showQuickExpenseTutorial\(\)/);
-  assert.match(src, /function advanceQuickExpenseTutorial\(\)/);
-  assert.match(src, /function skipQuickExpenseTutorial\(\)/);
-  const showModal = src.match(/function showQuickExpenseModal\(jobId, jobTitle\)[\s\S]*?\n  \}\n/);
-  assert.match(showModal[0], /localStorage\.getItem\(QUICK_EXPENSE_TUTORIAL_SEEN_KEY\)/, 'must check the seen-flag before deciding whether to show the tutorial');
-});
-
-test('the full tutorial lifecycle actually works end to end: shows on first open, completing it sets the seen flag, and it does NOT show again on a second open', async () => {
-  const { JSDOM } = require('jsdom');
-  const html = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
-  const dom = new JSDOM(html, {
-    runScripts: 'dangerously', url: 'https://example.com/',
-    beforeParse(window) { window.requireAuth = () => {}; },
-  });
-  const { window } = dom;
-  window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
-  window.showToast = () => {};
-  window.showConfirm = () => Promise.resolve(true);
-  window.initSyncOnLoad = () => Promise.resolve();
-  window.getCurrentUserEmail = () => null;
-  window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
-  window.thRead = (key, fallback) => fallback;
-  window.thWrite = () => {};
-  window.attachLongPress = () => {};
-  window.wireSearchClear = () => {};
-  window.attachVoiceDictation = () => {};
-  window.todayDateStrBusinessTz = () => { const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const m = {}; p.forEach(x => { m[x.type] = x.value; }); return `${m.year}-${m.month}-${m.day}`; };
-  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
-  await new Promise(resolve => setTimeout(resolve, 50));
-
-  window.showQuickExpenseModal(1, 'Job');
-  assert.notEqual(window.document.getElementById('quickExpenseTutorial').style.display, 'none', 'tutorial should show on first open');
-  assert.equal(window.document.getElementById('quickExpenseFormView').style.display, 'none');
-
-  for (let i = 0; i < 4; i++) window.advanceQuickExpenseTutorial();
-  window.advanceQuickExpenseTutorial(); // final "Got it" click
-  assert.notEqual(window.document.getElementById('quickExpenseFormView').style.display, 'none', 'form should show after completing the tutorial');
-  assert.equal(window.localStorage.getItem('th_quickexpense_tutorial_seen'), '1');
-
-  window.closeQuickExpenseModal();
-  window.showQuickExpenseModal(1, 'Job');
-  assert.equal(window.document.getElementById('quickExpenseTutorial').style.display, 'none', 'tutorial should NOT show on a second open');
-});
-
-test('a real mileage entry saves correctly: no receipt required, amount computed from miles times the stored mileage rate, partNumber blanked', async () => {
-  const { JSDOM } = require('jsdom');
-  const html = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
-  const dom = new JSDOM(html, {
-    runScripts: 'dangerously', url: 'https://example.com/',
-    beforeParse(window) { window.requireAuth = () => {}; },
-  });
-  const { window } = dom;
-  window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
-  window.showToast = () => {};
-  window.showConfirm = () => Promise.resolve(true);
-  window.initSyncOnLoad = () => Promise.resolve();
-  window.getCurrentUserEmail = () => null;
-  window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
-  window.thRead = (key, fallback) => { try { const v = JSON.parse(window.localStorage.getItem(key)); return v === null ? fallback : v; } catch (e) { return fallback; } };
-  window.thWrite = (key, val) => { window.localStorage.setItem(key, JSON.stringify(val)); };
-  window.attachLongPress = () => {};
-  window.wireSearchClear = () => {};
-  window.attachVoiceDictation = () => {};
-  window.todayDateStrBusinessTz = () => { const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const m = {}; p.forEach(x => { m[x.type] = x.value; }); return `${m.year}-${m.month}-${m.day}`; };
-  window.localStorage.setItem('th_mileage_rate', '0.67');
-  window.localStorage.setItem('th_quickexpense_tutorial_seen', '1');
-  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
-  await new Promise(resolve => setTimeout(resolve, 50));
-
-  window.showQuickExpenseModal(1, 'Job');
-  window.document.getElementById('quickExpenseType').value = 'mileage';
-  window.toggleQuickExpenseTypeFields();
-  window.document.getElementById('quickExpenseDesc').value = 'Supplier run';
-  window.document.getElementById('quickExpenseMiles').value = '10';
-  await window.submitQuickExpense();
-
-  const saved = JSON.parse(window.localStorage.getItem('th_expense_log') || '[]');
-  assert.equal(saved.length, 1);
-  assert.equal(saved[0].type, 'mileage');
-  assert.equal(saved[0].miles, 10);
-  assert.equal(saved[0].amount, 6.7);
-  assert.equal(saved[0].receiptPath, '');
-  assert.equal(saved[0].partNumber, '');
-});
-
-test('a real expense entry with vendor and part number saves both correctly', async () => {
-  const { JSDOM } = require('jsdom');
-  const html = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
-  const dom = new JSDOM(html, {
-    runScripts: 'dangerously', url: 'https://example.com/',
-    beforeParse(window) { window.requireAuth = () => {}; },
-  });
-  const { window } = dom;
-  window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
-  window.showToast = () => {};
-  window.showConfirm = () => Promise.resolve(true);
-  window.initSyncOnLoad = () => Promise.resolve();
-  window.getCurrentUserEmail = () => null;
-  window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
-  window.thRead = (key, fallback) => { try { const v = JSON.parse(window.localStorage.getItem(key)); return v === null ? fallback : v; } catch (e) { return fallback; } };
-  window.thWrite = (key, val) => { window.localStorage.setItem(key, JSON.stringify(val)); };
-  window.attachLongPress = () => {};
-  window.wireSearchClear = () => {};
-  window.attachVoiceDictation = () => {};
-  window.todayDateStrBusinessTz = () => { const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const m = {}; p.forEach(x => { m[x.type] = x.value; }); return `${m.year}-${m.month}-${m.day}`; };
-  window.uploadReceipt = async (file, id) => ({ ok: true, path: 'expense-' + id + '/r.jpg' });
-  window.localStorage.setItem('th_quickexpense_tutorial_seen', '1');
-  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
-  await new Promise(resolve => setTimeout(resolve, 50));
-
-  window.showQuickExpenseModal(1, 'Job');
-  window.document.getElementById('quickExpenseDesc').value = 'New capacitor';
-  window.document.getElementById('quickExpenseAmount').value = '45.99';
-  window.document.getElementById('quickExpenseVendor').value = 'Grainger';
-  window.document.getElementById('quickExpensePartNumber').value = 'CAP-4400';
-  Object.defineProperty(window.document.getElementById('quickExpenseReceipt'), 'files', {
-    value: [{ type: 'image/jpeg', name: 'r.jpg' }], configurable: true,
-  });
-  await window.submitQuickExpense();
-
-  const saved = JSON.parse(window.localStorage.getItem('th_expense_log') || '[]');
-  assert.equal(saved.length, 1);
-  assert.equal(saved[0].vendor, 'Grainger');
-  assert.equal(saved[0].partNumber, 'CAP-4400');
-  assert.equal(saved[0].amount, 45.99);
-  assert.ok(saved[0].receiptPath.length > 0);
 });
 
 // CRITICAL BUG FIXES (2026-08-20), found from a direct report: "invoices

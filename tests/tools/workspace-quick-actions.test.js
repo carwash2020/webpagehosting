@@ -84,18 +84,26 @@ test('dashboard overdue Money Owed card lists overdue invoices with the same Mar
   assert.match(fn, /isOverdue\(i\)/);
 });
 
-test('dashboard home pins New job, Create invoice, Find client, and Calendar directly under the Today hero (Calendar replaced Today\'s schedule on 2026-09-21 -- the hero IS the schedule, and Calendar left the bottom bar when it became a Job Tracker view)', () => {
+test('dashboard home pins Find client and Calendar directly under the Today hero -- New job / Create invoice / Quick charge / Log expense left for + New (redundancy pass, 2026-10-31)', () => {
   const strip = WORKSPACE.match(/<nav class="dash-primary-strip"[\s\S]*?<\/nav>/);
   assert.ok(strip, 'expected #dashPrimaryStrip');
-  assert.match(strip[0], /href="\/tools\/job-tracker\.html#add-job"/);
-  assert.match(strip[0], /href="\/tools\/invoice-generator\.html#invoice"/, 'the form -- Invoices opens on its list since 2026-09-22');
   assert.match(strip[0], /onclick="focusFindClient\(\)"/);
   assert.match(strip[0], /href="\/tools\/job-tracker\.html#calendar"/);
-  assert.match(strip[0], />New job</);
-  assert.match(strip[0], />Create invoice</);
   assert.match(strip[0], />Find client</);
   assert.match(strip[0], />Calendar</);
+  assert.equal((strip[0].match(/class="dash-primary-action"/g) || []).length, 2);
+  for (const gone of ['#add-job', 'invoice-generator.html#invoice', 'invoice-generator.html#pos', 'finance.html#expenses']) {
+    assert.ok(!strip[0].includes(gone), gone + ' is in + New now, not the strip');
+  }
   assert.doesNotMatch(strip[0], /Today's schedule/);
+  // Each one that left is in the + New sheet, behind the same permission
+  // its strip button carried (data-tile-perm), so nobody gains or loses
+  // access by the move.
+  const NAV = fs.readFileSync(repo('tools', 'tools-nav-pwa.js'), 'utf8');
+  assert.match(NAV, /\{ label: 'Job',\s+hint: [^}]*href: '\/tools\/job-tracker\.html#add-job' \}/);
+  assert.match(NAV, /\{ label: 'Invoice',\s+hint: [^}]*href: '\/tools\/invoice-generator\.html#invoice', perm: 'canManageInvoices' \}/);
+  assert.match(NAV, /\{ label: 'Quick charge', hint: [^}]*href: '\/tools\/invoice-generator\.html#pos', perm: 'canManageInvoices' \}/);
+  assert.match(NAV, /\{ label: 'Expense',\s+hint: [^}]*href: '\/tools\/finance\.html#expenses', perm: 'canViewFinance' \}/);
 
   const heroAt = WORKSPACE.indexOf('id="todayHero"');
   const stripAt = WORKSPACE.indexOf('id="dashPrimaryStrip"');
@@ -103,11 +111,10 @@ test('dashboard home pins New job, Create invoice, Find client, and Calendar dir
   assert.ok(heroAt > 0 && stripAt > heroAt && inboxAt > stripAt, 'the daily strip must sit between the hero and Needs attention');
 });
 
-test('Create invoice on the strip is still finance-gated; Find client expands the existing global search', () => {
-  assert.match(WORKSPACE, /href="\/tools\/invoice-generator\.html#invoice" data-tile-perm="can_manage_invoices"/);
+test('Find client opens the shared search (Ctrl+K) -- Home\'s own search box is gone (redundancy pass, 2026-10-31)', () => {
   const fn = extractFn(WORKSPACE, 'focusFindClient');
-  assert.match(fn, /toggleIconSearch\('globalSearchWrap', true\)/);
-  assert.match(fn, /getElementById\('globalSearch'\)/);
+  assert.match(fn, /window\.openCommandPalette\(\)/);
+  assert.doesNotMatch(WORKSPACE, /id="globalSearch"|id="globalSearchWrap"|function renderGlobalSearch/);
 });
 
 test('the tile grid is gone (2026-09-21), and every destination it used to link is still in the shared nav lists', () => {

@@ -188,10 +188,16 @@
   // reachable only through Dev Tools > Content. hideUntilAllowed: shown
   // only to accounts with the Site content permission (see
   // hideRestrictedNavLinks() above).
+  // sidebar: false (redundancy pass, 2026-10-31) keeps a destination out of
+  // the desktop sidebar's list while leaving it everywhere else this list
+  // feeds -- the More drawer, here-marks, the page's own tab. Route
+  // Planner is the one: Today's route on the Dashboard opens the day's
+  // route, so the planner (typing in stops by hand, reordering, the map)
+  // is a More / Search destination, not a primary slot.
   var SIDEBAR_DESTS = [
     { group: 'Work',   href: '/tools/workspace.html',          icon: 'home',     label: 'Dashboard' },
     { group: 'Work',   href: '/tools/job-tracker.html',        icon: 'wrench',   label: 'Job Tracker' },
-    { group: 'Work',   href: '/tools/route-planner.html',      icon: 'map',      label: 'Route Planner' },
+    { group: 'Work',   href: '/tools/route-planner.html',      icon: 'map',      label: 'Route Planner', sidebar: false },
     { group: 'Work',   href: '/tools/clients.html',            icon: 'users',    label: 'Clients' },
     { group: 'Money',  href: '/tools/invoice-generator.html',  icon: 'receipt',  label: 'Invoices' },
     { group: 'Money',  href: '/tools/finance.html',            icon: 'dollar',   label: 'Finance' },
@@ -742,7 +748,7 @@
         '<span>Search</span><kbd class="th-sidebar-search-kbd">⌘K</kbd>' +
       '</button>' +
       '<div class="th-sidebar-links">' +
-      destLinksHtml(SIDEBAR_DESTS) +
+      destLinksHtml(SIDEBAR_DESTS.filter(function (d) { return d.sidebar !== false; })) +
       '</div>' +
       // Account chip (v2, 2026-09-28): who is signed in, at the foot of the
       // rail, opening Settings. Filled from the stored session and the role

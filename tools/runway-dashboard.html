@@ -1626,11 +1626,11 @@
       <h4>Bills &amp; Expenses</h4>
       <p>Add each bill. If it's the same amount every time, mark it Fixed. If it changes (like a power bill), mark it Variable and log the real amount each month.</p>
       <h4>Business Dashboard</h4>
-      <p>Pick a month and tap "Pull from Finance" to fill in Revenue, Expenses, and Fuel automatically from what you've already logged there.</p>
+      <p>Pick a month, add Other Expenses, Owner Draws and Cash in the business account, and Save month. Revenue, Expenses and Fuel come straight from Finance for that month. Month over Month and Year over Year compare what you've saved.</p>
       <h4>Runway Summary</h4>
       <p>Your emergency fund progress, how much the business is currently supplementing your income, a rough estimate of when the business alone could cover your bills, and a Safe Draw Calculator.</p>
       <h4>Syncing</h4>
-      <p>Everything here syncs automatically with your other Triple H tools. Backup &amp; Restore at the bottom is a separate, no-setup safety net.</p>
+      <p>Everything here syncs automatically with your other Triple H tools. Backup at the bottom of Runway Summary is a separate, no-setup safety net for this page's own numbers.</p>
     </div>
   </div>
 </div>
@@ -1769,14 +1769,15 @@
         <div><label for="biz-month-select">Month</label><select id="biz-month-select"></select></div>
         <div><label for="biz-year-select">Year</label><select id="biz-year-select"></select></div>
       </div>
+      <!-- Redundancy pass (2026-10-31): no "Pull from Finance" button and
+           no Revenue / Business Expenses / Fuel boxes to fill. Finance and
+           the Dashboard's Business Snapshot already keep those live, so
+           Save month takes them straight from Finance for the month picked
+           (pullMonthFromJobTracker(), the same sums the button used) and
+           this line shows what it will record. What's only here stays:
+           Other Expenses, Owner Draws, and Cash in the business account. -->
+      <div class="note" id="bizFinanceNote" aria-live="polite"></div>
       <div class="form-grid">
-        <div class="full"><button class="action-btn" id="pullMonthBtn">Pull from Finance</button></div>
-      </div>
-      <div class="note" id="pullDiagnosticNote" style="margin-top:-4px;"></div>
-      <div class="form-grid">
-        <div><label for="biz-revenue">Revenue <span class="col-hint" id="revSourceHint"></span></label><input type="number" inputmode="decimal" id="biz-revenue" placeholder="0"></div>
-        <div><label for="biz-expenses">Business Expenses <span class="col-hint" id="expSourceHint"></span></label><input type="number" inputmode="decimal" id="biz-expenses" placeholder="0"></div>
-        <div><label for="biz-fuel">Fuel / Mileage <span class="col-hint" id="fuelSourceHint"></span></label><input type="number" inputmode="decimal" id="biz-fuel" placeholder="0"></div>
         <div><label for="biz-other">Other Expenses</label><input type="number" inputmode="decimal" id="biz-other" placeholder="0"></div>
         <div><label for="biz-draws">Owner Draws</label><input type="number" inputmode="decimal" id="biz-draws" placeholder="0"></div>
         <div class="full"><label for="biz-cash">Cash in Business Account</label><input type="number" inputmode="decimal" id="biz-cash" placeholder="0"></div>
@@ -1800,7 +1801,7 @@
     <div class="card">
       <div class="card-header"><h3>Tax Set-Aside <button class="help-btn" onclick="openCardInfo('taxSetAside')" aria-label="What is this?" title="What is this?">?</button></h3></div>
       <div class="form-grid">
-        <div class="full"><label for="taxSetAsideRate">Set-Aside Rate (%)</label><input type="number" id="taxSetAsideRate" min="0" max="60" step="1" inputmode="decimal"></div>
+        <div class="full"><label for="taxSetAsideRate">Set-Aside Rate (%)</label><span class="col-hint" id="taxSetAsideRateHint">The same rate as the Dashboard&rsquo;s Est. Tax Set-Aside &mdash; change it in either place.</span><input type="number" id="taxSetAsideRate" min="0" max="100" step="1" inputmode="decimal" aria-describedby="taxSetAsideRateHint"></div>
       </div>
       <div class="note" id="taxDueDateNote" style="border-top:1px solid var(--border-soft); padding-top:10px; margin-bottom:12px;"></div>
       <div class="grand-totals" id="taxSetAsideStats"></div>
@@ -1821,7 +1822,7 @@
       <div class="empty-state" id="noMonthsNote" style="display:none;">
         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/><circle cx="8" cy="14" r="1.2" fill="currentColor" stroke="none"/></svg>
         <div class="empty-title">No months logged yet</div>
-        <div class="empty-sub">Pick a month above and tap "Pull from Finance" to bring in your first one.</div>
+        <div class="empty-sub">Pick a month above and tap Save month to log your first one.</div>
       </div>
     </div>
   </div>
@@ -1938,16 +1939,19 @@
     </div>
 
     <div class="card">
-      <div class="card-header"><h3>Data Management <button class="help-btn" onclick="openCardInfo('backupRestore')" aria-label="What is this?" title="What is this?">?</button></h3></div>
+      <!-- Runway backup (redundancy pass, 2026-10-31). Dev Tools' full
+           backup already includes every rd_ key, but its panel is shown
+           only to accounts with full technical Dev Tools access, which a
+           Runway account (can_view_runway) need not have -- so this page
+           keeps its own Download / Restore of just its own data. "Reset all
+           data" is gone: it was a wipe, not a backup. -->
+      <div class="card-header"><h3>Backup <button class="help-btn" onclick="openCardInfo('backupRestore')" aria-label="What is this?" title="What is this?">?</button></h3></div>
       <div class="top-actions">
         <button class="ghost-btn" id="exportBackupBtn">Download Backup File</button>
         <button class="ghost-btn" id="restoreBackupBtn">Restore from File</button>
       </div>
       <input type="file" id="restoreFileInput" aria-label="Backup file to restore" accept="application/json" style="display:none;">
       <div class="note" id="backupNote"></div>
-      <div class="top-actions" style="margin-top:10px;">
-        <button class="ghost-btn" id="resetAllBtn">Reset all data</button>
-      </div>
     </div>
   </div>
 </main>
@@ -2172,8 +2176,8 @@ const CARD_INFO = {
   },
   businessMonth: {
     title: 'Add / Update a Month',
-    body: `<p>Pick a month, tap "Pull from Finance," and Revenue, Business Expenses, and Fuel fill in automatically from what you've already logged there \u2014 Revenue now includes both invoices and any manual income entries logged in Finance's Income tab.</p>
-      <p>Everything's still editable after it fills in. Other Expenses, Owner Draws, and Cash aren't tracked anywhere else, so those three always need to be typed in by hand.</p>`,
+    body: `<p>Pick a month and Save month. Revenue, Business Expenses and Fuel are taken from Finance for that month \u2014 Revenue includes invoices and any income logged in Finance's Income tab \u2014 and the line above the boxes shows what will be saved.</p>
+      <p>Other Expenses, Owner Draws, and Cash aren't tracked anywhere else, so those three are typed in here. Saving a month again replaces it, with Finance's numbers as they are then.</p>`,
   },
   emergencyFund: {
     title: 'Emergency Fund',
@@ -2211,9 +2215,9 @@ const CARD_INFO = {
       <p>Set how many months of bills you want to keep sitting in the business as a buffer, and this tells you what's left over that's safe to take out.</p>`,
   },
   backupRestore: {
-    title: 'Data Management',
-    body: `<p>Download Backup File saves everything on this page as one file \u2014 a safety net separate from the automatic cloud sync.</p>
-      <p>Worth doing before clearing your browser data or switching devices. Reset all data below wipes everything on this device and starts over.</p>`,
+    title: 'Backup',
+    body: `<p>Download Backup File saves everything on this page as one file \u2014 a safety net separate from the automatic cloud sync. Restore from File puts a saved one back.</p>
+      <p>Worth doing before clearing your browser data or switching devices. (Dev Tools' full backup covers this page too, for an account that can open it.)</p>`,
   },
   pdfReport: {
     title: 'PDF Report',
@@ -2238,7 +2242,8 @@ const CARD_INFO = {
   taxSetAside: {
     title: 'Tax Set-Aside',
     body: `<p>A rough estimate of what to set aside for taxes, based on a percentage of your <strong>revenue</strong> \u2014 not profit, since taxes are owed on what came in.</p>
-      <p>Shows the next IRS quarterly estimated-tax due date and how many days away it is, plus your latest month and a running total for the year. This is a planning estimate, not tax advice \u2014 talk to an accountant for your actual number.</p>`,
+      <p>Shows the next IRS quarterly estimated-tax due date and how many days away it is, plus your latest month and a running total for the year. This is a planning estimate, not tax advice \u2014 talk to an accountant for your actual number.</p>
+      <p>The rate is the Dashboard's Est. Tax Set-Aside rate \u2014 one setting, changed in either place. (The Dashboard applies it to net profit; this card applies it to revenue.)</p>`,
   },
   yoyComparison: {
     title: 'Year over Year',
@@ -2376,8 +2381,9 @@ async function loadAll(){
     };
   }catch(e){ budgetSettings = { savingsPct: 20, taxSetAsideRate: 25 }; }
   document.getElementById('settingSavingsPct').value = budgetSettings.savingsPct;
-  document.getElementById('taxSetAsideRate').value = budgetSettings.taxSetAsideRate;
+  document.getElementById('taxSetAsideRate').value = sharedSetAsideRate();
   populateMonthYearSelects();
+  renderBizFinanceNote();
 
   try{
     const mo = await window.storage.get('business-months');
@@ -2404,6 +2410,20 @@ async function loadAll(){
   renderRunway();
 }
 
+// One tax set-aside rate (redundancy pass, 2026-10-31): the Dashboard's
+// "Est. Tax Set-Aside" rate, th_setaside_rate, read the same way
+// workspace.html's loadSetAsideRate() reads it (25 when never set). This
+// page used to keep its own rate in rd_budget-settings, so the two could
+// disagree; that old field is left as it was in storage (savingsPct and
+// anything else in rd_budget-settings is untouched) but nothing reads it.
+const SHARED_SETASIDE_KEY = 'th_setaside_rate';
+function sharedSetAsideRate(){
+  try {
+    const stored = localStorage.getItem(SHARED_SETASIDE_KEY);
+    const n = stored !== null ? parseFloat(stored) : NaN;
+    return isNaN(n) ? 25 : n;
+  } catch(e){ return 25; }
+}
 async function saveBudgetSettings(){ try{ await window.storage.set('budget-settings', JSON.stringify(budgetSettings)); if(typeof scheduleSync === 'function') scheduleSync(); }catch(e){ console.error(e); } }
 document.getElementById('settingSavingsPct').addEventListener('change', async (e) => {
   budgetSettings.savingsPct = Number(e.target.value) || 0;
@@ -2413,8 +2433,10 @@ document.getElementById('settingSavingsPct').addEventListener('change', async (e
   showToast('Savings target saved.');
 });
 document.getElementById('taxSetAsideRate').addEventListener('change', async (e) => {
-  budgetSettings.taxSetAsideRate = Number(e.target.value) || 0;
-  await saveBudgetSettings();
+  // Same write as the Dashboard's saveSetAsideRate().
+  const val = parseFloat(e.target.value) || 0;
+  try { localStorage.setItem(SHARED_SETASIDE_KEY, val); } catch(err) { /* storage blocked */ }
+  if(typeof scheduleSync === 'function') scheduleSync();
   renderMonths();
   renderPersonalTotals();
   showToast('Tax set-aside rate saved.');
@@ -3055,7 +3077,7 @@ function renderYoY(sorted){
 function latestTaxSetAside(){
   const sorted = [...months].sort((a,b)=> a.month.localeCompare(b.month));
   if(sorted.length === 0) return { amount: 0, month: null };
-  const rate = (Number(budgetSettings.taxSetAsideRate) || 0) / 100;
+  const rate = (Number(sharedSetAsideRate()) || 0) / 100;
   const latest = sorted[sorted.length - 1];
   return { amount: (Number(latest.revenue)||0) * rate, month: latest.month };
 }
@@ -3095,7 +3117,7 @@ function renderTaxSetAside(sorted){
   const statsEl = document.getElementById('taxSetAsideStats');
   const noteEl = document.getElementById('taxSetAsideNote');
   const dueEl = document.getElementById('taxDueDateNote');
-  const rate = (Number(budgetSettings.taxSetAsideRate) || 0) / 100;
+  const rate = (Number(sharedSetAsideRate()) || 0) / 100;
 
   const q = currentQuarterlyTaxInfo();
   const periodRev = periodRevenue(sorted, q.start, q.end);
@@ -3118,7 +3140,7 @@ function renderTaxSetAside(sorted){
     <div class="stat-box"><div class="label">Set Aside for ${escapeHtml(latest.month)}</div><div class="value">${fmt(latestSetAside)}</div></div>
     <div class="stat-box blue"><div class="label">${escapeHtml(currentYear)} Year-to-Date</div><div class="value">${fmt(ytdSetAside)}</div></div>
   `;
-  noteEl.textContent = `Based on ${budgetSettings.taxSetAsideRate}% of revenue, not profit -- taxes are owed on what came in, and this doesn't replace real advice from an accountant.`;
+  noteEl.textContent = `Based on ${sharedSetAsideRate()}% of revenue, not profit -- taxes are owed on what came in, and this doesn't replace real advice from an accountant.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -3225,47 +3247,39 @@ function getBizMonthValue(){
   return `${y}-${m}`;
 }
 
-document.getElementById('pullMonthBtn').addEventListener('click', () => {
+// What Save Month will record from Finance for the month picked -- the
+// same pullMonthFromJobTracker() sums the old "Pull from Finance" button
+// filled in (redundancy pass, 2026-10-31), shown as one line instead of
+// three editable boxes.
+function renderBizFinanceNote(){
+  const note = document.getElementById('bizFinanceNote');
+  if(!note) return;
   const monthVal = getBizMonthValue();
-  const note = document.getElementById('bizFormNote');
-  const diag = document.getElementById('pullDiagnosticNote');
-  diag.textContent = '';
-
-  if(!monthVal){ note.textContent = 'Pick a month first.'; note.style.color = 'var(--red)'; return; }
-
+  if(!monthVal){ note.textContent = ''; return; }
   const pulled = pullMonthFromJobTracker(monthVal);
-  document.getElementById('biz-revenue').value = pulled.revenue || '';
-  document.getElementById('biz-expenses').value = pulled.expenses || '';
-  document.getElementById('biz-fuel').value = pulled.fuel || '';
-
-  document.getElementById('revSourceHint').textContent = `(${pulled.invoiceCount} income entr${pulled.invoiceCount===1?'y':'ies'})`;
-  document.getElementById('expSourceHint').textContent = `(${pulled.expenseCount} entr${pulled.expenseCount===1?'y':'ies'})`;
-  document.getElementById('fuelSourceHint').textContent = `(${pulled.mileageCount} entr${pulled.mileageCount===1?'y':'ies'})`;
-
   if(pulled.totalInvoicesEverLogged === 0 && pulled.totalExpensesEverLogged === 0){
-    diag.textContent = `Finance doesn't have any income or expenses logged on this device yet. If you know you've logged some, try "Refresh synced data now" on the Workspace page, then reload this page.`;
-    diag.style.color = 'var(--red)';
-  } else if(pulled.invoiceCount === 0 && pulled.expenseCount === 0 && pulled.mileageCount === 0){
-    diag.textContent = `Nothing logged in Finance for this specific month \u2014 that's likely correct, not a bug. Double check you picked the right month.`;
-    diag.style.color = 'var(--text-dim)';
-  } else {
-    diag.textContent = '';
+    note.textContent = `Finance doesn't have any income or expenses logged on this device yet, so this month saves Revenue, Expenses and Fuel as $0. If you know you've logged some, try "Refresh synced data now" on the Workspace page, then reload this page.`;
+    note.style.color = 'var(--red)';
+    return;
   }
-
-  note.textContent = 'Pulled from Finance \u2014 review the numbers, then Save month. Other Expenses, Draws, and Cash still need filling in by hand.';
+  note.textContent = 'From Finance for this month: Revenue ' + fmt(pulled.revenue) + ' (' + pulled.invoiceCount + ' income entr' + (pulled.invoiceCount === 1 ? 'y' : 'ies') + ')' +
+    ' \u00b7 Expenses ' + fmt(pulled.expenses) + ' \u00b7 Fuel / mileage ' + fmt(pulled.fuel) + '.';
   note.style.color = 'var(--text-dim)';
-});
+}
+['biz-month-select', 'biz-year-select'].forEach(id => document.getElementById(id).addEventListener('change', renderBizFinanceNote));
 
 document.getElementById('addMonthBtn').addEventListener('click', async () => {
   const monthVal = getBizMonthValue();
   const note = document.getElementById('bizFormNote');
   if(!monthVal){ note.textContent = 'Pick a month first.'; note.style.color = 'var(--red)'; return; }
   const isUpdatingExisting = months.some(m => m.month === monthVal);
+  // Revenue / Expenses / Fuel straight from Finance (see renderBizFinanceNote).
+  const pulled = pullMonthFromJobTracker(monthVal);
   const entry = {
     month: monthVal,
-    revenue: Number(document.getElementById('biz-revenue').value)||0,
-    expenses: Number(document.getElementById('biz-expenses').value)||0,
-    fuel: Number(document.getElementById('biz-fuel').value)||0,
+    revenue: Number(pulled.revenue)||0,
+    expenses: Number(pulled.expenses)||0,
+    fuel: Number(pulled.fuel)||0,
     other: Number(document.getElementById('biz-other').value)||0,
     draws: Number(document.getElementById('biz-draws').value)||0,
     cash: Number(document.getElementById('biz-cash').value)||0,
@@ -3273,9 +3287,7 @@ document.getElementById('addMonthBtn').addEventListener('click', async () => {
   months = months.filter(m => m.month !== monthVal);
   months.push(entry);
   await saveMonths();
-  ['biz-revenue','biz-expenses','biz-fuel','biz-other','biz-draws','biz-cash'].forEach(id => document.getElementById(id).value = '');
-  ['revSourceHint','expSourceHint','fuelSourceHint'].forEach(id => document.getElementById(id).textContent = '');
-  document.getElementById('pullDiagnosticNote').textContent = '';
+  ['biz-other','biz-draws','biz-cash'].forEach(id => document.getElementById(id).value = '');
   note.textContent = '';
   justAddedMonthKey = isUpdatingExisting ? null : monthVal;
   renderMonths();
@@ -3387,7 +3399,7 @@ function renderRunwayTiles(){
   const tile = (label, value, sub, cls) => `<div class="rw-tile"><span class="rw-tile-label">${label}</span><span class="rw-tile-value">${value}</span><span class="rw-tile-sub ${cls || ''}">${sub}</span></div>`;
   const tax = latestTaxSetAside();
   const out = [tile('Tax set-aside', tax.month ? fmt(tax.amount) : '—',
-    tax.month ? escapeHtml(tax.month) + ' &middot; ' + escapeHtml(String(budgetSettings.taxSetAsideRate)) + '% of revenue' : 'Log a business month')];
+    tax.month ? escapeHtml(tax.month) + ' &middot; ' + escapeHtml(String(sharedSetAsideRate())) + '% of revenue' : 'Log a business month')];
   if(sorted.length >= 2){
     const curr = sorted[sorted.length - 1], prev = sorted[sorted.length - 2];
     const d = computeNetProfit(curr) - computeNetProfit(prev);
@@ -4130,7 +4142,10 @@ document.getElementById('restoreFileInput').addEventListener('change', async (e)
       taxSetAsideRate: (data.budgetSettings && data.budgetSettings.taxSetAsideRate !== undefined) ? Number(data.budgetSettings.taxSetAsideRate) : 25,
     };
     document.getElementById('settingSavingsPct').value = budgetSettings.savingsPct;
-    document.getElementById('taxSetAsideRate').value = budgetSettings.taxSetAsideRate;
+    // The set-aside rate is the Dashboard's shared one now (2026-10-31);
+    // a backup's own copy is restored into rd_budget-settings as before
+    // but doesn't change the shared rate.
+    document.getElementById('taxSetAsideRate').value = sharedSetAsideRate();
     months = Array.isArray(data.businessMonths) ? data.businessMonths : [];
     efBalance = Number(data.emergencyFund && data.emergencyFund.balance) || 0;
     debts = Array.isArray(data.debts) ? data.debts : [];
@@ -4175,21 +4190,7 @@ function updateJobTrackerBadge(status){
 }
 
 
-document.getElementById('resetAllBtn').addEventListener('click', async () => {
-  if(!(await showConfirm('Reset ALL data — personal expenses, personal income, business months, and emergency fund? This cannot be undone.', { danger: true, confirmText: 'Reset' }))) return;
-  expenses = [];
-  income = [];
-  months = [];
-  efBalance = 0;
-  await saveExpenses();
-  await saveIncome();
-  await saveMonths();
-  await saveEF();
-  renderPersonal();
-  renderIncome();
-  renderMonths();
-  renderRunway();
-});
+// "Reset all data" left with the old Data Management card (2026-10-31).
 
 loadAll();
 document.addEventListener('DOMContentLoaded', async () => {

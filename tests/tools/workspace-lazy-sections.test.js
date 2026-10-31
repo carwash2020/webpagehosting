@@ -22,12 +22,15 @@ function extractFn(html, name) {
   return html.slice(start, i);
 }
 
-test('a closed gallery drawer refreshes the chip count without building the photo queue', () => {
-  const fn = extractFn(WORKSPACE, 'renderDashboard');
-  assert.match(fn, /dashSectionClosed\('gallery'\)\) refreshGalleryChip\(\)/);
-  assert.match(fn, /loadAndRenderGalleryQueue\(\)/);
-  assert.match(WORKSPACE, /async function refreshGalleryChip\(\)/);
-  assert.doesNotMatch(extractFn(WORKSPACE, 'refreshGalleryChip'), /getSignedJobPhotoUrls/);
+test('a closed gallery panel refreshes the chip count without building the photo queue (on Site Content since the 2026-10-31 redundancy pass)', () => {
+  const SITE_CONTENT = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'site-content.html'), 'utf8');
+  const init = extractFn(SITE_CONTENT, 'initGalleryQueue');
+  assert.match(init, /if \(!loadIfOpen\(\)\) refreshGalleryChip\(\);/);
+  assert.match(init, /panel\.classList\.contains\('is-collapsed'\)/);
+  assert.match(init, /loadAndRenderGalleryQueue\(\)/);
+  assert.match(SITE_CONTENT, /async function refreshGalleryChip\(\)/);
+  assert.doesNotMatch(extractFn(SITE_CONTENT, 'refreshGalleryChip'), /getSignedJobPhotoUrls/);
+  assert.doesNotMatch(WORKSPACE, /refreshGalleryChip|loadAndRenderGalleryQueue/);
 });
 
 test('analytics charts and the compliance document list are skipped while those drawers are closed', () => {
@@ -41,14 +44,16 @@ test('analytics charts and the compliance document list are skipped while those 
 test('opening a drawer paints that section, and action-item lists still update their counts before skipping markup', () => {
   const toggle = extractFn(WORKSPACE, 'toggleSection');
   assert.match(toggle, /renderOpenedSection\(key\)/);
-  const invoices = extractFn(WORKSPACE, 'renderInvoicesList');
-  const countAt = invoices.indexOf('actionItemCounts.unpaid');
-  const skipAt = invoices.indexOf("dashSectionClosed('actionitems')");
+  // The income list left Needs attention for the Money owed card (2026-10-31),
+  // so Follow-ups carries this contract's check now.
+  const followups = extractFn(WORKSPACE, 'renderFollowups');
+  const countAt = followups.indexOf('actionItemCounts.followups');
+  const skipAt = followups.indexOf("dashSectionClosed('actionitems')");
   assert.ok(countAt >= 0 && skipAt > countAt);
 });
 
-test('Find a client starts open on the dashboard', () => {
-  assert.match(WORKSPACE, /id="globalSearchWrap"[^>]*class="icon-search is-expanded"|class="icon-search is-expanded" id="globalSearchWrap"/);
+test('Home\'s own "Find a client" search box is gone -- the shared search covers it (redundancy pass, 2026-10-31)', () => {
+  assert.doesNotMatch(WORKSPACE, /id="globalSearchWrap"|id="globalSearch"/);
 });
 
 test('sidebar and More sheet share grouped short labels without dropping a destination', () => {

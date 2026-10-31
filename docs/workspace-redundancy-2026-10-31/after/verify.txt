@@ -1,0 +1,78 @@
+PASS  [1] Rest of Today gone from the DOM
+PASS  [2] one route button: Route all on Today's route (a Maps link), none on Next Job
+PASS  [18] Next Job card has no "1 of N"; the summary line has no "stops left"
+PASS  [18] the count stays on the Jobs ring and Today's route
+PASS  [6] no Home search box
+PASS  [7] daily strip is Find client + Calendar only
+PASS  [8] no Income lane; Money owed lists all 7 unpaid once (6 + 1 folded) with one Mark paid each
+PASS  [8] Ready to invoice is on the Money owed card; the income list shows history only
+PASS  [10] no Mileage tile in Business Snapshot
+PASS  [17] no Gallery Queue on Home
+PASS  [8] Mark paid on Money owed marks the invoice paid
+PASS  [6] Find client opens Ctrl+K search
+PASS  [7] + New has Job / Invoice / Quick charge / Expense
+PASS  [smoke] Home: no page errors
+PASS  [3] Ctrl+K: Route Planner is not in the before-you-type list
+PASS  [11] Ctrl+K: no Cost lookup / Inventory entries
+PASS  [3] Ctrl+K: typing "route" finds Route Planner
+PASS  [6] Ctrl+K invoice results open the Invoices list, not Home's old search box
+PASS  [6] an old workspace.html?search= link filters Money owed's income list
+PASS  [3] desktop sidebar: no Route Planner; More drawer: still there
+PASS  [4] Cost Analyzer card gone; stops and live-sync badge still there
+PASS  [smoke] Route Planner: no page errors
+PASS  [5] Log Expense is on the job sheet; the pop-up form is gone
+PASS  [5] Log Expense opens finance.html?job=102#expenses
+PASS  [5] Finance lands on Expenses with the job picked
+PASS  [smoke] Jobs: no page errors
+PASS  [15] Suppliers tab: label, form, and existing entries all listed
+PASS  [11] /tools/finance.html: tabs Expenses/Income/Profitability, opens on Expenses
+PASS  [16] th_inventory and th_price_reference are still stored (no data removed)
+PASS  [11] the three tabs fit at 390 without a scrolling track
+PASS  [smoke] Finance: no page errors
+PASS  [16] /tools/finance.html#cost: tabs Expenses/Income/Profitability, opens on Expenses
+PASS  [16] /tools/finance.html#inventory: tabs Expenses/Income/Profitability, opens on Expenses
+PASS  [11] New quote's "Add From Saved Job Types" still lists th_price_reference
+PASS  [13] Invoices list renders and has Resend for invoices and quotes
+PASS  [smoke] Invoices: no page errors
+PASS  [9] Runway shows the Dashboard's rate (th_setaside_rate = 25), not its old 30
+PASS  [9] no Pull from Finance / Revenue box; Draws, Cash, Other, MoM, YoY stay
+PASS  [9] Save Month's from-Finance line is shown
+PASS  [9] changing it writes th_setaside_rate and leaves rd_budget-settings alone
+PASS  [19] Runway-only Download/Restore kept, Reset all data gone
+PASS  [smoke] Runway: no page errors
+PASS  [9] the Dashboard reads the same rate back
+PASS  [12] Clients' Portal tab has no bug reports / client errors
+PASS  [13] Clients' Portal tab has no Portal invoices / quotes
+PASS  [14] (not done, flagged) Portal work orders panel still on Clients
+PASS  [smoke] Clients: no page errors
+PASS  [smoke] Client detail: no page errors
+PASS  [smoke] Job detail: no page errors, and its Expense link still goes to Finance
+PASS  [12] Dev Tools -> Health shows the portal bug reports and client errors
+PASS  [smoke] Dev Tools: no page errors
+PASS  [17] Site Content: collapsed Gallery queue shows its count
+PASS  [17] Site Content: opened, it renders the before/after slider and tiles, and the photos load
+PASS  [smoke] Site Content: no page errors
+PASS  [smoke] no sideways scroll at 390: /tools/workspace.html
+PASS  [smoke] no sideways scroll at 390: /tools/job-tracker.html
+PASS  [smoke] no sideways scroll at 390: /tools/job-detail.html?id=101
+PASS  [smoke] no sideways scroll at 390: /tools/invoice-generator.html
+PASS  [smoke] no sideways scroll at 390: /tools/finance.html
+PASS  [smoke] no sideways scroll at 390: /tools/clients.html
+PASS  [smoke] no sideways scroll at 390: /tools/client-detail.html?name=Maria%20Lopez
+PASS  [smoke] no sideways scroll at 390: /tools/route-planner.html
+PASS  [smoke] no sideways scroll at 390: /tools/runway-dashboard.html
+PASS  [smoke] no sideways scroll at 390: /tools/site-content.html
+PASS  [smoke] no sideways scroll at 390: /tools/dev-tools.html
+PASS  [smoke] no sideways scroll at 1280: /tools/workspace.html
+PASS  [smoke] no sideways scroll at 1280: /tools/job-tracker.html
+PASS  [smoke] no sideways scroll at 1280: /tools/job-detail.html?id=101
+PASS  [smoke] no sideways scroll at 1280: /tools/invoice-generator.html
+PASS  [smoke] no sideways scroll at 1280: /tools/finance.html
+PASS  [smoke] no sideways scroll at 1280: /tools/clients.html
+PASS  [smoke] no sideways scroll at 1280: /tools/client-detail.html?name=Maria%20Lopez
+PASS  [smoke] no sideways scroll at 1280: /tools/route-planner.html
+PASS  [smoke] no sideways scroll at 1280: /tools/runway-dashboard.html
+PASS  [smoke] no sideways scroll at 1280: /tools/site-content.html
+PASS  [smoke] no sideways scroll at 1280: /tools/dev-tools.html
+
+76/76 checks passed

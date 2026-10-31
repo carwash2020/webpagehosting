@@ -1,0 +1,94 @@
+{
+  "home": {
+    "errors": [],
+    "overflow": 0
+  },
+  "home-route": {
+    "errors": [],
+    "overflow": 0
+  },
+  "home-money": {
+    "errors": [],
+    "overflow": 0
+  },
+  "home-money-lower": {
+    "errors": [],
+    "overflow": 0
+  },
+  "home-needs": {
+    "errors": [],
+    "overflow": 0
+  },
+  "home-insights": {
+    "errors": [],
+    "overflow": 0
+  },
+  "home-business": {
+    "errors": [],
+    "overflow": 0
+  },
+  "palette": {
+    "errors": [],
+    "overflow": 0
+  },
+  "more-drawer": {
+    "errors": [],
+    "overflow": 0
+  },
+  "route-planner": {
+    "errors": [],
+    "overflow": 0
+  },
+  "route-planner-bottom": {
+    "errors": [],
+    "overflow": 0
+  },
+  "jobs-sheet": {
+    "errors": [],
+    "overflow": 0
+  },
+  "jobs-suppliers": {
+    "errors": [],
+    "overflow": 0
+  },
+  "finance": {
+    "errors": [],
+    "overflow": 0
+  },
+  "new-quote": {
+    "errors": [],
+    "overflow": 0
+  },
+  "invoices": {
+    "errors": [],
+    "overflow": 0
+  },
+  "runway-business": {
+    "errors": [],
+    "overflow": 0
+  },
+  "runway-taxrate": {
+    "errors": [],
+    "overflow": 0
+  },
+  "runway-backup": {
+    "errors": [],
+    "overflow": 0
+  },
+  "clients-portal": {
+    "errors": [],
+    "overflow": 0
+  },
+  "clients-portal-lower": {
+    "errors": [],
+    "overflow": 0
+  },
+  "devtools-health": {
+    "errors": [],
+    "overflow": 0
+  },
+  "site-content-gallery": {
+    "errors": [],
+    "overflow": 0
+  }
+}

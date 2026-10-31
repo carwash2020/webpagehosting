@@ -112,10 +112,12 @@ test('A4: the linked row and dot styles cover the desktop key selector too', () 
 });
 
 test('A5: every field the scan flagged has a label tied to it', () => {
+  // Finance's Cost lookup fields (hours, rate, parts, taxRate) and Route
+  // Planner's Cost Analyzer fields (tripDistance, tripFuelRate,
+  // tripTaxRate) left with their cards in the redundancy pass
+  // (2026-10-31); checked as gone below.
   const FIELDS = {
-    'finance.html': ['hours', 'rate', 'parts', 'taxRate'],
     'contract-generator.html': ['pwo_clientName', 'pwo_phone', 'pwo_serviceAddress', 'pwo_contactPicker', 'pwo_email', 'pwo_workOrderDate', 'pwo_description'],
-    'route-planner.html': ['tripDistance', 'tripFuelRate', 'tripTaxRate'],
     'runway-dashboard.html': ['settingSavingsPct'],
     'workspace.html': ['secureDocFile', 'secureDocCategory'],
     'parts-reference.html': ['prTypeFilterSelect'],
@@ -129,6 +131,10 @@ test('A5: every field the scan flagged has a label tied to it', () => {
       assert.ok(label, `${page}: label[for=${id}]`);
       assert.ok(label.textContent.trim().length > 2, `${page}: #${id} label has visible text`);
     }
+  }
+  for (const [page, ids] of [['finance.html', ['hours', 'rate', 'parts', 'taxRate']], ['route-planner.html', ['tripDistance', 'tripFuelRate', 'tripTaxRate']]]) {
+    const doc = new JSDOM(read('tools', page)).window.document;
+    for (const id of ids) assert.equal(doc.getElementById(id), null, `${page} #${id} left with its card`);
   }
 });
 

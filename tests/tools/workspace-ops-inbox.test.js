@@ -27,11 +27,14 @@ function extractFn(src, name) {
   return src.slice(start, i);
 }
 
-test('Action Items is grouped into four priority lanes, and every existing list id still exists', () => {
+test('Action Items is grouped into three priority lanes, and every existing list id still exists (the Income lane\'s lists moved to the Money owed card, 2026-10-31)', () => {
   assert.match(WORKSPACE, /class="ops-inbox"/);
-  for (const lane of ['lane-respond', 'lane-soon', 'lane-follow', 'lane-money']) {
+  for (const lane of ['lane-respond', 'lane-soon', 'lane-follow']) {
     assert.match(WORKSPACE, new RegExp('id="' + lane + '"'), `expected ${lane}`);
   }
+  assert.doesNotMatch(WORKSPACE, /id="lane-money"|id="laneMoneyCount"/);
+  const inbox = WORKSPACE.slice(WORKSPACE.indexOf('id="section-actionitems"'), WORKSPACE.indexOf('id="todayMoney"'));
+  assert.doesNotMatch(inbox, /id="invoicesList"/, 'unpaid invoices are listed once, on Money owed');
   for (const id of ['workRequestsList', 'leadsList', 'bookingsList', 'upcomingJobs', 'followupsList', 'invoicesList', 'invoiceSearch']) {
     assert.match(WORKSPACE, new RegExp('id="' + id + '"'), `expected #${id} to still exist — no backend change`);
   }
@@ -42,9 +45,9 @@ test('lane counts reuse actionItemCounts rather than a second calculation of the
   assert.match(fn, /setOpsLaneCount\('laneRespondCount', 'lane-respond', actionItemCounts\.workrequests \+ actionItemCounts\.leads \+ actionItemCounts\.applicants \+ actionItemCounts\.bookings\)/);
   assert.match(fn, /setOpsLaneCount\('laneSoonCount', 'lane-soon', actionItemCounts\.duesoon\)/);
   assert.match(fn, /setOpsLaneCount\('laneFollowCount', 'lane-follow', actionItemCounts\.followups\)/);
-  // The Income lane also counts finished jobs nobody billed (Ready to
-  // invoice, 2026-09-22 rework part 5).
-  assert.match(fn, /setOpsLaneCount\('laneMoneyCount', 'lane-money', actionItemCounts\.unpaid \+ actionItemCounts\.toinvoice\)/);
+  // The Income lane (and its count) left for the Money owed card in the
+  // redundancy pass, 2026-10-31.
+  assert.doesNotMatch(fn, /laneMoneyCount/);
 });
 
 test('unread styling is driven by data that already exists (handled / submitted / overdue), not a new backend', () => {

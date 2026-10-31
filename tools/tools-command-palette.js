@@ -49,21 +49,23 @@
   var ACTIONS = [
     { title: 'New job', meta: 'Jobs \u203a Add a Job', href: '/tools/job-tracker.html#add-job', keywords: 'add create book schedule' },
     { title: 'Calendar', meta: 'Jobs \u203a Calendar view', href: '/tools/job-tracker.html#calendar', keywords: 'month schedule bookings' },
-    { title: 'Contacts', meta: 'Jobs \u203a Contacts tab', href: '/tools/job-tracker.html#contacts', keywords: 'address book supplier vendor phone history' },
+    { title: 'Suppliers', meta: 'Jobs \u203a Suppliers tab', href: '/tools/job-tracker.html#contacts', keywords: 'contacts address book supplier vendor phone history' },
     { title: 'Notes', meta: 'Jobs \u203a Notes tab', href: '/tools/job-tracker.html#notes', keywords: 'notepad memo' },
     { title: 'Clients', meta: 'Your client list: who owes you, next and last job, call or text', href: '/tools/clients.html#directory', keywords: 'customer directory people owes balance phone' },
     { title: 'Add a client', meta: 'Clients \u203a new client', href: '/tools/clients.html#new', keywords: 'new customer create person' },
-    { title: 'Client portal admin', meta: 'Clients \u203a Portal: accounts, invites, referral credit, work orders', href: '/tools/clients.html#portal', keywords: 'portal invite referral work order bug', perm: 'canManageInvoices' },
+    { title: 'Client portal admin', meta: 'Clients \u203a Portal: accounts, invites, referral credit, work orders', href: '/tools/clients.html#portal', keywords: 'portal invite referral work order', perm: 'canManageInvoices' },
     { title: 'Create invoice', meta: 'Invoices \u203a New invoice tab', href: '/tools/invoice-generator.html#invoice', keywords: 'bill send pdf', perm: 'canManageInvoices' },
-    { title: 'New quote / estimate', meta: 'Invoices \u203a New quote tab', href: '/tools/invoice-generator.html#quote', keywords: 'price bid proposal', perm: 'canManageInvoices' },
+    { title: 'New quote / estimate', meta: 'Invoices \u203a New quote tab', href: '/tools/invoice-generator.html#quote', keywords: 'price bid proposal cost lookup calculator tax', perm: 'canManageInvoices' },
     { title: 'Quick charge', meta: 'Invoices \u203a charge a card on the spot, no invoice', href: '/tools/invoice-generator.html#pos', keywords: 'pos pay payment card stripe', perm: 'canManageInvoices' },
     { title: 'Invoices', meta: 'Who owes you, what is overdue, every invoice and quote', href: '/tools/invoice-generator.html#recent', keywords: 'log history paid unpaid overdue owed recent quotes', perm: 'canManageInvoices' },
     { title: 'Log expense', meta: 'Finance \u203a Expenses tab', href: '/tools/finance.html#expenses', keywords: 'receipt cost part mileage fuel', perm: 'canViewFinance' },
     { title: 'Log income', meta: 'Finance \u203a Income tab', href: '/tools/finance.html#income', keywords: 'payment paid revenue', perm: 'canViewFinance' },
     { title: 'Profitability', meta: 'Finance \u203a what each job made', href: '/tools/finance.html#profitability', keywords: 'profit margin', perm: 'canViewFinance' },
-    { title: 'Cost lookup', meta: 'Finance \u203a price a job with tax', href: '/tools/finance.html#cost', keywords: 'quote estimate calculator tax', perm: 'canViewFinance' },
-    { title: 'Inventory', meta: 'Finance \u203a Inventory tab', href: '/tools/finance.html#inventory', keywords: 'parts stock truck', perm: 'canViewFinance' },
-    { title: 'Plan a route', meta: 'Route Planner', href: '/tools/route-planner.html', keywords: 'directions maps drive stops mileage' },
+    // Cost lookup and Inventory left with their Finance tabs (redundancy
+    // pass, 2026-10-31): pricing a job is New quote's job, and nothing read
+    // the inventory list. Plan a route shows once you type (typedOnly):
+    // Route Planner is a More / Search destination now, not a top item.
+    { title: 'Plan a route', meta: 'Route Planner', href: '/tools/route-planner.html', keywords: 'directions maps drive stops mileage', typedOnly: true },
     { title: 'New contract', meta: 'Contract Generator', href: '/tools/contract-generator.html', keywords: 'work order agreement sign', perm: 'canManageContracts' },
     { title: 'Send review request', meta: 'Review Request Sender', href: '/tools/review-request.html', keywords: 'google yelp text qr', perm: 'canManageReviews' },
     { title: 'Look up a part', meta: 'Appliance Wiki', href: '/tools/parts-reference.html', keywords: 'manual model brand appliance wiki' },
@@ -75,7 +77,7 @@
   function actionItems(term) {
     return ACTIONS.filter(function (a) {
       if (a.perm && !allowed(a.perm)) return false;
-      if (!term) return true;
+      if (!term) return !a.typedOnly;
       return (a.title + ' ' + a.meta + ' ' + (a.keywords || '')).toLowerCase().indexOf(term) > -1;
     }).map(function (a) { return { title: a.title, meta: a.meta, href: a.href }; });
   }
@@ -197,7 +199,7 @@
       toItem: function (c) { return { title: c.name, meta: c.phone || c.email || '', href: '/tools/job-tracker.html?search=' + encodeURIComponent(c.name) + '#contacts' }; } },
     { label: 'Invoices', load: loadInvoices,
       match: function (i, term) { return (i.clientName || '').toLowerCase().indexOf(term) > -1; },
-      toItem: function (i) { return { title: i.clientName, meta: '#' + (i.invoiceNumber || '—') + ' · ' + money(i.total), href: '/tools/workspace.html?search=' + encodeURIComponent(i.clientName) + '#section-actionitems' }; } },
+      toItem: function (i) { return { title: i.clientName, meta: '#' + (i.invoiceNumber || '—') + ' · ' + money(i.total), href: '/tools/invoice-generator.html?search=' + encodeURIComponent(i.clientName) + '#recent' }; } },
     { label: 'Contracts', load: loadContracts,
       match: function (e, term) { return ((e.fields && e.fields.clientName) || '').toLowerCase().indexOf(term) > -1; },
       toItem: function (e) { return { title: e.fields.clientName, meta: CONTRACT_TYPE_LABELS[e.type] || e.type, href: '/tools/contract-generator.html?search=' + encodeURIComponent(e.fields.clientName) }; } },

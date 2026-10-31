@@ -41,7 +41,13 @@ test('every record type sent to the Graveyard can be labelled and restored in De
     const src = fs.readFileSync(path.join(TOOLS, f), 'utf8');
     for (const m of src.matchAll(/thAddToGraveyard\('([a-zA-Z]+)'/g)) types.add(m[1]);
   }
-  assert.ok(types.has('inventory') && types.has('job'));
+  assert.ok(types.has('job'));
+  // Inventory and saved job types (priceReference) have no delete button
+  // since their Finance tabs left (redundancy pass, 2026-10-31), but
+  // entries already in the Graveyard must still be labelled and
+  // restorable -- the data was kept, so Dev Tools keeps handling it.
+  types.add('inventory');
+  types.add('priceReference');
   types.delete('prIssue'); // restored by its own branch in restoreFromGraveyard (it lives inside a unit)
   const noConfig = [...types].filter(t => !cfg.includes('\n    ' + t + ': { dataKey:'));
   const noTitle = [...types].filter(t => !new RegExp('\\b' + t + ": '").test(titles));

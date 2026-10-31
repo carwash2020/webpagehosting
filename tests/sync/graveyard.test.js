@@ -112,7 +112,8 @@ test('every delete function that touches the graveyard actually calls thAddToGra
     { file: 'finance.html', fnPattern: /async function clearAllExpenses\(\)[\s\S]*?\n  \}/ },
     { file: 'finance.html', fnPattern: /async function deleteIncomeEntry\(id\)[\s\S]*?\n  \}/ },
     { file: 'finance.html', fnPattern: /async function clearAllIncome\(\)[\s\S]*?\n  \}/ },
-    { file: 'finance.html', fnPattern: /function deletePriceReference\(id\)[\s\S]*?\n  \}/ },
+    // finance.html's deletePriceReference left with the Cost lookup tab
+    // (redundancy pass, 2026-10-31); nothing deletes a saved job type now.
     { file: 'contract-generator.html', fnPattern: /async function deleteContractLogEntry\(id\)[\s\S]*?\n  \}/ },
     { file: 'invoice-generator.html', fnPattern: /async function deleteInvoiceLogEntry\(id\)[\s\S]*?\n  \}/ },
     { file: 'invoice-generator.html', fnPattern: /async function deleteQuoteLogEntry\(id\)[\s\S]*?\n  \}/ },

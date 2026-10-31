@@ -87,7 +87,9 @@ test('the Clients tool has a Portal accounts panel, wired up and initialised', (
   // between the two (a real, new call added the same day), rather
   // than requiring these two specific calls to be the exact next
   // line after each other.
-  assert.match(CLIENTS, /renderPortalBugReports\(\);[\s\S]*?renderPortalAccounts\(\);/);
+  // (Portal bug reports, which used to open this sequence, moved to Dev
+  // Tools -> Health in the 2026-10-31 redundancy pass.)
+  assert.match(CLIENTS, /renderClientDuplicates\(\);[\s\S]*?renderPortalAccounts\(\);/);
 });
 
 test('the Portal accounts panel is visible with no owner-hiding, so Steve can actually use it', () => {

@@ -589,7 +589,11 @@
 
   <!-- v2 §8.15 question banner (2026-09-29): the tab's question, its
        answer from what the panels below already rendered, one action. -->
-  <div class="th-dt-q" data-dt-q="health" data-th-tone="idle">
+  <!-- dev-owner-hidden (2026-10-31): Health is technical except for the
+       client portal's bug reports / errors, which moved here from Clients
+       and stay visible to an Owner. This banner and the full check behind
+       it are for full technical access only, as every other Health panel. -->
+  <div class="th-dt-q dev-owner-hidden" data-dt-q="health" data-th-tone="idle">
     <span class="th-dt-q-icon" aria-hidden="true"><svg class="th-icon"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg></span>
     <div class="th-dt-q-main">
       <p class="th-dt-q-kicker">Is anything broken right now?</p>
@@ -599,7 +603,7 @@
     <button class="secondary-btn th-dt-q-action" id="fullHealthCheckBtn" onclick="runFullHealthCheck()">Run full health check</button>
   </div>
 
-  <div class="dev-health-run">
+  <div class="dev-health-run dev-owner-hidden">
     <div class="dev-health-run-row">
       <span class="dev-health-run-note">Consistency check, service worker, Supabase, latest deploy, and cron health in one pass.</span>
     </div>
@@ -643,6 +647,26 @@
     </div>
     <div id="clientErrorLog"></div>
     <button class="secondary-btn" style="margin-top:12px;" onclick="clearClientErrorLog()">Clear log</button>
+  </div>
+
+  <!-- The client portal's own error logs (redundancy pass, 2026-10-31;
+       they were on Clients -> Portal). Beside the internal tools' Client
+       errors above. Not dev-owner-hidden: an Owner account that could see
+       them on Clients still sees them here. -->
+  <div class="dev-panel">
+    <div class="dev-panel-heading">
+      <h2>Portal bug reports</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('portalbugreports')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div id="portalBugReports"></div>
+  </div>
+
+  <div class="dev-panel">
+    <div class="dev-panel-heading">
+      <h2>Portal client errors</h2>
+      <button class="dev-info-bubble" onclick="openDevInfo('portalclienterrors')" aria-label="What does this do?" title="What does this do?">?</button>
+    </div>
+    <div id="portalClientErrors"></div>
   </div>
 
   </div>
@@ -1892,6 +1916,100 @@
       if (confirmed) await doClear();
     } else if (window.confirm('Unregister the service worker and clear all caches?')) {
       await doClear();
+    }
+  }
+
+  // Portal bug reports + Portal client errors (moved from clients.html's
+  // Portal tab in the redundancy pass, 2026-10-31, unchanged).
+  async function renderPortalBugReports() {
+    const el = document.getElementById('portalBugReports');
+    el.innerHTML = '<p class="tool-sub">Loading...</p>';
+    try {
+      const res = await fetchWithTimeout(
+        SUPABASE_URL + '/rest/v1/portal_bug_reports?select=*&order=created_at.desc&limit=50',
+        8000,
+        { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
+      );
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const reports = await res.json();
+      if (!reports.length) {
+        el.innerHTML = '<p class="tool-sub">No bug reports submitted from the client portal.</p>';
+        return;
+      }
+      el.innerHTML = reports.map(r => {
+        const when = new Date(r.created_at).toLocaleString();
+        const who = r.client_email ? escapeHtml(r.client_email) : 'Not signed in';
+        const statusClass = r.resolved ? 'pass' : 'fail';
+        const statusLabel = r.resolved ? 'Resolved' : 'Open';
+        const resolveBtn = r.resolved ? '' :
+          '<button class="secondary-btn" style="margin-top:8px;" onclick="resolveBugReport(' + r.id + ')">Mark resolved</button>';
+        return '<div class="dev-check-row" style="align-items:flex-start;"><div>' +
+          '<div>' + escapeHtml(r.message) + '</div>' +
+          '<div class="dev-check-detail">' + who + ' on ' + escapeHtml(r.page_url) + '. ' + when + '</div>' +
+          resolveBtn +
+          '</div><span class="dev-check-status ' + statusClass + '">' + statusLabel + '</span></div>';
+      }).join('');
+    } catch (e) {
+      el.innerHTML = '<p class="error-state">Could not load bug reports: ' + escapeHtml(e.message || String(e)) + '</p>';
+    }
+  }
+
+  async function resolveBugReport(id) {
+    try {
+      const res = await fetchWithTimeout(
+        SUPABASE_URL + '/rest/v1/portal_bug_reports?id=eq.' + id,
+        8000,
+        {
+          method: 'PATCH',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + getAuthToken(),
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ resolved: true, resolved_at: new Date().toISOString() }),
+        }
+      );
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      renderPortalBugReports();
+    } catch (e) {
+      showToast('Could not mark resolved: ' + (e.message || String(e)), { type: 'error' });
+    }
+  }
+
+  // Portal client errors (2026-09-05) -- read-only, no resolve action:
+  // unlike bug reports (a client's own report of something they
+  // noticed, which can genuinely be marked done once addressed),
+  // there's no single moment an automatically-caught JS error is
+  // "resolved" from this panel's own point of view -- that happens by
+  // actually fixing the underlying bug and shipping it, the same way
+  // the internal tools' own Client errors panel already works.
+  async function renderPortalClientErrors() {
+    const el = document.getElementById('portalClientErrors');
+    el.innerHTML = '<p class="tool-sub">Loading...</p>';
+    try {
+      const res = await fetchWithTimeout(
+        SUPABASE_URL + '/rest/v1/portal_client_errors?select=*&order=created_at.desc&limit=50',
+        8000,
+        { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
+      );
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const errors = await res.json();
+      if (!errors.length) {
+        el.innerHTML = '<p class="tool-sub">No client-side errors captured from the portal.</p>';
+        return;
+      }
+      el.innerHTML = errors.map(e => {
+        const when = new Date(e.created_at).toLocaleString();
+        const who = e.client_email ? escapeHtml(e.client_email) : 'Not signed in';
+        const location = [e.source, e.line != null ? ('line ' + e.line) : null].filter(Boolean).join(', ');
+        return '<div class="dev-check-row" style="align-items:flex-start;"><div>' +
+          '<div>' + escapeHtml(e.message) + '</div>' +
+          '<div class="dev-check-detail">' + who + ' on ' + escapeHtml(e.page_url) +
+          (location ? ' (' + escapeHtml(location) + ')' : '') + '. ' + when + '</div>' +
+          '</div><span class="dev-check-status fail">Error</span></div>';
+      }).join('');
+    } catch (e) {
+      el.innerHTML = '<p class="error-state">Could not load portal client errors: ' + escapeHtml(e.message || String(e)) + '</p>';
     }
   }
 
@@ -3994,9 +4112,12 @@
       renderClientErrorLog();
       renderSyncConflictLog();
       renderCronHealth();
-      // Portal init calls removed (2026-09-03) -- renderPortalBugReports/
-      // Accounts/Invoices/WorkOrders and renderEmailList now live on
-      // their own /tools/clients.html, which has its own init.
+      // Portal init calls removed (2026-09-03) -- Accounts/WorkOrders and
+      // renderEmailList live on /tools/clients.html, which has its own
+      // init. The portal's bug reports and client errors came back here
+      // (Health, 2026-10-31).
+      renderPortalBugReports();
+      renderPortalClientErrors();
       renderKnownIssues();
       renderFlaggedItems();
       // The Graveyard used to be left for an "on demand" render that

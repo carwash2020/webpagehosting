@@ -84,7 +84,8 @@ const CASES = [
   { file: 'tools/site-content.html', pattern: /data-cms-part="custom" value="' \+ escapeAttr\(parsed\.text \|\| ''\) \+ '"/, label: 'Site Content custom hours value=' },
   { file: 'tools/workspace.html', pattern: /title="\$\{escapeAttr\(vendor\)\}"/, label: 'Top Vendors title=' },
   { file: 'tools/workspace.html', pattern: /title="\$\{escapeAttr\(client\)\}"/, label: 'Top Clients title=' },
-  { file: 'tools/workspace.html', pattern: /alt="\$\{escapeAttr\(p\.public_caption \|\| ''\)\}"/, label: 'Gallery queue photo alt=' },
+  // The Gallery queue moved from the Dashboard to Site Content (2026-10-31).
+  { file: 'tools/site-content.html', pattern: /alt="\$\{escapeAttr\(p\.public_caption \|\| ''\)\}"/, label: 'Gallery queue photo alt=' },
   { file: 'tools/workspace.html', pattern: /href="tel:' \+ escapeAttr\(job\.phone\) \+ '"/, label: "Today's next job phone href=" },
   { file: 'tools/job-detail.html', pattern: /href="tel:' \+ escapeAttr\(j\.phone\) \+ '"/, label: 'Job Detail phone href=' },
   { file: 'tools/client-detail.html', pattern: /href="tel:' \+ escapeAttr\(c\.phone\) \+ '"/, label: 'Client Detail phone href=' },

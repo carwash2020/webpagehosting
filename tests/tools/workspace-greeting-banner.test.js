@@ -69,12 +69,13 @@ function runGreetingBanner({ hour, jobs, firstName }) {
   return els;
 }
 
-test('the banner sits right after the search box and before the Today hero', () => {
-  const searchAt = WORKSPACE.indexOf('class="global-search-block"');
+test('the banner sits right after the Today / Insights switch and before the Today hero (the search box that sat between left in the 2026-10-31 redundancy pass)', () => {
+  const switchAt = WORKSPACE.indexOf('id="dashViewSwitch"');
   const bannerAt = WORKSPACE.indexOf('id="greetingBanner"');
   const todayAt = WORKSPACE.indexOf('id="todayHero"');
-  assert.ok(searchAt > 0 && bannerAt > 0 && todayAt > 0);
-  assert.ok(searchAt < bannerAt && bannerAt < todayAt);
+  assert.ok(switchAt > 0 && bannerAt > 0 && todayAt > 0);
+  assert.ok(switchAt < bannerAt && bannerAt < todayAt);
+  assert.equal(WORKSPACE.indexOf('class="global-search-block"'), -1);
 });
 
 test('renderDashboard renders the greeting banner before the Today hero, every render', () => {

@@ -3,6 +3,14 @@
 Started 2026-09-16, alongside the `tripleh-features` skill. See `README.md`
 in this directory for how these logs work.
 
+## 2026-10-31 -- Workspace redundancy pass: behaviour that changed hands
+
+This was the UI-only consolidation of 19 duplicate screens; the full write-up is in `visual.md` (2026-10-31). Behaviour worth knowing before building on these:
+- **Runway's tax set-aside rate is the Dashboard's** (`th_setaside_rate`). Runway no longer reads `rd_budget-settings.taxSetAsideRate`, which is kept as it was. Save Month records revenue/expenses/fuel from Finance (`pullMonthFromJobTracker()`); there's no Pull button or editable boxes.
+- **Job Tracker's Log Expense** opens `finance.html?job=<id>#expenses` (needs `canViewFinance`); Finance's `addExpense()` is the only expense form.
+- **Job Tracker's Contacts tab is Suppliers.** Same storage, hash and record shape; clients are added on Clients.
+- **Open gaps (new features, not built):** creating or deleting a saved job type (`th_price_reference`) has no UI since Cost Lookup left; the Invoices list doesn't show whether an invoice reached the portal ("never sent").
+
 ## 2026-09-18 -- refrigerator and dishwasher repair in St. George
 
 Washer/dryer St. George already existed (`washer-dryer-repair-st-george-ut.html`),

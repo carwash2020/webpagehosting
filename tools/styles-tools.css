@@ -4646,28 +4646,9 @@ html body.th-tool-page[data-th-page="invoice-generator"] .inv-log-head [data-den
 html body.th-tool-page[data-th-page="invoice-generator"] .inv-log-head { flex-wrap: nowrap; align-items: center; }
 html body.th-tool-page[data-th-page="invoice-generator"] .inv-log-head > h3 { flex: 1 1 auto; min-width: 0; }
 
-/* Fix 7: Finance's five tabs still scroll: sentence-case labels need about
-   437px at 390 against 356 visible (even "Profit" and "Parts" would need
-   ~377), so the cut edge gets a hint instead. It's a sticky fade with a "›" in
-   it at the track's right edge (::before is the sticky-background fix).
-   With the real fonts the cut falls in Inventory's padding, so a fade
-   alone showed nothing; the chevron is what says "more". It fades out as
-   the track reaches its end (scroll-driven, where supported), and at the
-   end it rests in its own space after Inventory, never over it. Phones
-   only: wider than ~440px the five tabs fit and there is nothing to hint. */
-@media (max-width: 440px) {
-  html body.th-tool-page[data-th-page="finance"] .tabs.tabs-sticky::after {
-    content: '\203A'; position: sticky; right: 0; z-index: 1; flex: 0 0 36px; align-self: stretch; margin: -4px -4px -4px 0;
-    display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; box-sizing: border-box;
-    font-family: var(--font-app); font-size: 22px; line-height: 1; color: var(--text-dim);
-    background: linear-gradient(to right, transparent, var(--bg-panel) 55%); pointer-events: none;
-    border-radius: 0 var(--th-radius-track) var(--th-radius-track) 0;
-  }
-  @supports (animation-timeline: scroll()) {
-    html body.th-tool-page[data-th-page="finance"] .tabs.tabs-sticky::after { animation: th-fin-tabs-hint linear both; animation-timeline: scroll(nearest inline); }
-  }
-}
-@keyframes th-fin-tabs-hint { 0%, 88% { opacity: 1; } 100% { opacity: 0; } }
+/* Fix 7 (Finance's scrolling-tabs fade and "›") was removed in the
+   redundancy pass (2026-10-31): with Cost lookup and Inventory gone the
+   three tabs fit at 390, so there is nothing to hint (finance.html). */
 
 /* Fix 8: one primary button on the money pages, the flat one PR #544 gave
    Job detail's Next step: no 3px lip, no border, weight 400. Press is a

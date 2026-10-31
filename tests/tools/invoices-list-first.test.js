@@ -59,8 +59,12 @@ test('a link that brings something to invoice still lands on the form: ?jobRef= 
   const q = init.indexOf('const queryTab = genTabFromQuery();');
   assert.ok(q > 0 && q < init.indexOf('applyJobRefFromUrl();') && init.indexOf('applyJobRefFromUrl();') < init.indexOf('applyGenTabFromHash();'));
   assert.match(init, /if \(queryTab\) activateGenTab\(queryTab\);/);
-  // The Dashboard's Create invoice means the form, not the list.
-  assert.match(WS, /<a class="dash-primary-action" href="\/tools\/invoice-generator\.html#invoice" data-tile-perm="can_manage_invoices">Create invoice<\/a>/);
+  // "Create an invoice" means the form, not the list. The Dashboard strip's
+  // own Create invoice left in the redundancy pass (2026-10-31); + New's
+  // Invoice is that door now, on every page.
+  const NAV = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'tools-nav-pwa.js'), 'utf8');
+  assert.match(NAV, /\{ label: 'Invoice',\s+hint: [^}]*href: '\/tools\/invoice-generator\.html#invoice', perm: 'canManageInvoices' \}/);
+  assert.doesNotMatch(WS, /class="dash-primary-action" href="\/tools\/invoice-generator\.html#invoice"/);
 });
 
 function stateFns() {

@@ -33,7 +33,9 @@ const panelTitles = el => Array.from(el.querySelectorAll('.dev-panel h2')).map(h
 // The whole intended layout, tab by tab, section by section, in order.
 const EXPECTED = {
   health: {
-    'Live status': ['Uptime monitoring', 'Cron health', 'Client errors'],
+    // Portal bug reports / client errors moved here from Clients -> Portal
+    // (redundancy pass, 2026-10-31).
+    'Live status': ['Uptime monitoring', 'Cron health', 'Client errors', 'Portal bug reports', 'Portal client errors'],
     'Run a check': ['Live consistency check', 'Advisor health'],
   },
   data: {
@@ -74,11 +76,11 @@ test('every tab holds exactly its intended sections and panels, in order', () =>
   assert.deepEqual(panelTitles(access), ['Account permissions']);
 });
 
-test('all 32 panels still exist, each exactly once, and each sits inside a tab', () => {
+test('all 34 panels still exist, each exactly once, and each sits inside a tab (32, plus the two portal logs from Clients, 2026-10-31)', () => {
   const window = load(true);
   const all = panelTitles(window.document);
-  assert.equal(all.length, 32);
-  assert.equal(new Set(all).size, 32, 'a panel title appears twice');
+  assert.equal(all.length, 34);
+  assert.equal(new Set(all).size, 34, 'a panel title appears twice');
   window.document.querySelectorAll('.dev-panel').forEach(p => {
     assert.ok(p.closest('.dev-tab-panel'), '"' + p.querySelector('h2').textContent + '" is outside every tab');
   });
@@ -147,7 +149,11 @@ test('no section is left as an empty subheading: a section with no visible panel
   owner.applyOwnerRestrictedView();
   owner.initDevToolsTabs();
   const shown = Array.from(owner.document.querySelectorAll('.dev-section')).filter(s => s.style.display !== 'none');
-  assert.deepEqual(shown.map(s => s.querySelector('.dev-section-title').textContent), ["What's stored"]);
+  // Live status shows for an Owner since the portal logs moved there
+  // (2026-10-31) -- with only those two panels in it.
+  assert.deepEqual(shown.map(s => s.querySelector('.dev-section-title').textContent), ['Live status', "What's stored"]);
+  const live = shown[0];
+  assert.deepEqual(Array.from(live.querySelectorAll('.dev-panel')).filter(p => p.style.display !== 'none').map(p => p.querySelector('h2').textContent), ['Portal bug reports', 'Portal client errors']);
 
   const dev = load(true);
   dev.applyOwnerRestrictedView();
