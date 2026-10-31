@@ -11,7 +11,8 @@
 // Touch-ups after #543 add: Add a job and Templates sharing one row on
 // Jobs (and Templates still opening, folding back, "+ New template" and
 // its ? still wired), and Mark done being flat (no lip), same type as
-// Start the clock, still on markJobDoneHere().
+// Start the clock, still on markJobDoneHere(). PR #544 review adds the
+// Templates tile's hex badge matching Add a job's.
 //
 //   SUPABASE_UMD=/path/to/supabase.js node docs/workspace-phase2-native-app-2026-10-30/harness/verify.js http://localhost:8543
 // (SUPABASE_UMD: see live-stub.js. Without it the "healthy" check expects
@@ -98,9 +99,24 @@ const { installLiveStub } = require('./live-stub');
   });
   ok('jobs: Add a job and Templates share one row (same top/height, side by side), name still "Recurring job templates" for a screen reader',
     row.trig[0] === row.tpl[0] && Math.abs(row.trig[3] - row.tpl[3]) <= 2 && row.tpl[1] > row.trig[1] + row.trig[2] && row.leadHidden && /^Recurring job templates/.test(row.a11yName) && !row.clipped && row.midTapToggles, row);
+  // PR #544 review (Connor): the collapsed Templates tile carries the same
+  // hex badge as Add a job (size, clip, fill, glyph colour, inset, gap to
+  // the label), its glyph is the sprite's icon-repeat, and it's decorative.
+  const tplBadge = await p.evaluate(() => {
+    const t = document.querySelector('#tab-jobs > .th-sheet-trigger'); const s = document.getElementById('templatesFormSection');
+    const ti = t.querySelector('.th-sheet-trigger-icon'); const si = s.querySelector('.jt-tpl-icon');
+    if (!ti || !si) return { missing: true };
+    const g = (el) => { const r = el.getBoundingClientRect(); const cs = getComputedStyle(el); const svg = el.querySelector('svg').getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), clip: cs.clipPath, bg: cs.backgroundColor, color: cs.color, glyph: [Math.round(svg.width), Math.round(svg.height)], inset: Math.round(r.left - el.closest('.th-sheet-trigger, .form-section').getBoundingClientRect().left) }; };
+    const tl = t.querySelector('.th-sheet-trigger-label').getBoundingClientRect(); const sl = s.querySelector('.jt-tpl-word').getBoundingClientRect();
+    const use = si.querySelector('use'); const id = (use.getAttribute('href') || '').slice(1);
+    return { add: g(ti), tpl: g(si), gapAdd: Math.round(tl.left - ti.getBoundingClientRect().right), gapTpl: Math.round(sl.left - si.getBoundingClientRect().right), href: id, symbol: !!document.getElementById(id), hidden: si.getAttribute('aria-hidden') === 'true' };
+  });
+  const same = (a, b) => a && b && a.w === b.w && a.h === b.h && a.clip === b.clip && a.bg === b.bg && a.color === b.color && a.glyph.join() === b.glyph.join() && Math.abs(a.inset - b.inset) <= 1;
   await p.click('#templatesFormSection .form-section-header .collapse-chevron'); await p.waitForTimeout(500);
-  const open = await p.evaluate(() => { const s = document.getElementById('templatesFormSection'); const r = s.getBoundingClientRect(); const t = document.querySelector('#tab-jobs > .th-sheet-trigger').getBoundingClientRect(); return { collapsed: s.classList.contains('is-collapsed'), w: Math.round(r.width), trigW: Math.round(t.width), below: r.top >= t.bottom - 1, newBtn: !!s.querySelector('button[onclick="addTemplatePrompt()"]').offsetParent, leadShown: s.querySelector('.jt-tpl-lead').getBoundingClientRect().width > 1 }; });
+  const open = await p.evaluate(() => { const s = document.getElementById('templatesFormSection'); const r = s.getBoundingClientRect(); const t = document.querySelector('#tab-jobs > .th-sheet-trigger').getBoundingClientRect(); return { collapsed: s.classList.contains('is-collapsed'), w: Math.round(r.width), trigW: Math.round(t.width), below: r.top >= t.bottom - 1, newBtn: !!s.querySelector('button[onclick="addTemplatePrompt()"]').offsetParent, badgeGone: !s.querySelector('.jt-tpl-icon').getBoundingClientRect().width, leadShown: s.querySelector('.jt-tpl-lead').getBoundingClientRect().width > 1 }; });
   ok('jobs: tapping Templates opens its card full width under a full-width Add a job (same as before)', !open.collapsed && open.w >= 360 && open.trigW >= 360 && open.below && open.newBtn && open.leadShown, open);
+  ok('jobs: collapsed Templates has the same hex badge as Add a job (size, hex, fill, glyph, inset, gap), icon-repeat from the sprite, aria-hidden; gone on the open card',
+    !tplBadge.missing && same(tplBadge.add, tplBadge.tpl) && Math.abs(tplBadge.gapAdd - tplBadge.gapTpl) <= 1 && tplBadge.href === 'icon-repeat' && tplBadge.symbol && tplBadge.hidden && open.badgeGone, Object.assign({}, tplBadge, { badgeGone: open.badgeGone }));
   const newTpl = await p.evaluate(() => { let n = 0; const orig = window.addTemplatePrompt; window.addTemplatePrompt = () => { n++; }; document.querySelector('#templatesFormSection button[onclick="addTemplatePrompt()"]').click(); window.addTemplatePrompt = orig; return n; });
   ok('jobs: "+ New template" still calls addTemplatePrompt()', newTpl === 1);
   await p.click('#templatesFormSection .form-section-header .help-btn'); await p.waitForTimeout(400);

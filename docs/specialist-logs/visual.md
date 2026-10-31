@@ -18,6 +18,8 @@ These are two follow-ups Connor asked for after #543 merged. Both were measured 
 
 **Not fully certain:** "Templates" alone is a shorter label than before. The ? explains it once the card is open. Screenshots still use fallback fonts.
 
+**2026-10-31 follow-up (Connor's review nit):** the collapsed Templates tile now has the same 32px orange hex badge as Add a job, so the two read as a pair. The badge is an `aria-hidden` `.th-sheet-trigger-icon.jt-tpl-icon` span in the templates `<h3>`, reusing the shared rule, and the glyph is a new `icon-repeat` symbol in the `tools-nav-pwa.js` sprite. The sprite had no repeat/recurring icon, and `icon-calendar` would have clashed with the Calendar view. The badge shows only on the collapsed ≤1023px tile (not on the open card, and not on a computer), and the tile's left inset is now 8px to match. The first-card tops are unchanged (358/475). verify.js has 66 checks; the new one compares both badges' size, clip, fill, glyph, inset and gap.
+
 ## 2026-10-30 -- Workspace Phase 2, review round 3: Connor's 5 polish items on PR #543
 
 These are five items from Connor's look at round 2's 390x844 shots. All were fixed on the same branch and checked on the rendered page with the harness. `verify.js` is now 58 checks, up from 26.
