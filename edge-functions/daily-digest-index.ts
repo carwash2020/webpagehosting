@@ -356,7 +356,10 @@ function renderDigest(d: Digest, opts: { date: string; tz: string; quiet: boolea
   const tomorrow = addDays(date, 1);
   const blocks: { title: string; html: string; text: string }[] = [];
   const add = (title: string, html: string, text: string) => blocks.push({ title, html, text });
-  const strip = (h: string) => h.replace(/<\/li>/g, "\n").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/^\s+/gm, "").trim();
+  // Plain-text part: ONE pass that drops tags and decodes our few entities, so decoded
+  // text is never re-scanned (avoids double-unescaping and re-formed tags).
+  const ENT: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', mdash: "-", middot: "|" };
+  const strip = (h: string) => h.replace(/<[^>]*>|&(amp|lt|gt|quot|mdash|middot);/g, (_m: string, e?: string) => (e ? ENT[e] : "")).replace(/^[ \t]+/gm, "").trim();
 
   const actions = actionItems(d);
   const anyOk = d.jobs.ok || d.overdue.ok || d.payments.ok || d.quotes.ok;
@@ -436,7 +439,7 @@ function renderDigest(d: Digest, opts: { date: string; tz: string; quiet: boolea
     + `<tr><td style="padding:18px 24px;font:12px/1.5 Arial,sans-serif;color:${C.mute}">Times shown in Mountain Time. <a href="${SITE}/portal/" style="color:${C.brand}">Open the portal</a> to act on anything above. Sent to the owners only.</td></tr>`
     + `</table></td></tr></table></body></html>`;
 
-  const text = [`Triple H - ${title} - ${dow}`, ...blocks.map((b) => `\n${b.title.toUpperCase()}\n${strip(b.html.replace(/<br>/g, "\n").replace(/<li/g, "\n- <li"))}`)].join("\n");
+  const text = [`Triple H - ${title} - ${dow}`, ...blocks.map((b) => `\n${b.title.toUpperCase()}\n${strip(b.html.replace(/<br>|<\/div>|<\/ul>/g, "\n").replace(/<li/g, "\n- <li"))}`)].join("\n");
   const subject = `Triple H ${quiet ? "quiet day" : "digest"}: ${new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" }).format(new Date(date + "T00:00:00Z"))}`
     + (actions.length ? ` (${actions.length} to review)` : "");
   return { html, text, subject };

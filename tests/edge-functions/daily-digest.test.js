@@ -206,3 +206,12 @@ test('logs contain no client names, emails, or key values', async () => {
   const all = logs.join('\n');
   assert.doesNotMatch(all, /Maria|Gonzales|owner1@|sk_test|re_test|service-role-key/);
 });
+
+test('plain-text part has no HTML tags or entities, and keeps line breaks', async () => {
+  const s = sampleState();
+  const { call } = loadDigest(s);
+  const { body } = await call({ dry_run: true });
+  assert.doesNotMatch(body.text, /<[a-z\/]|&[a-z]+;/i);
+  assert.match(body.text, /Available \$1,284\.50 \| Pending \$605\.00/);
+  assert.match(body.text, /3:00 PM MDT\n1 job\(s\) skipped/);
+});
