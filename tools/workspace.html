@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=417378cc58"></script>
+<script src="/tools/auth.js?v=0b420b4211"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -937,6 +937,25 @@
   body.th-tool-page[data-th-page="workspace"] .week-stats.is-four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   body.th-tool-page[data-th-page="workspace"] .week-stat-value { font-size: 22px; font-weight: 400; }
 
+  /* The shift button in the greeting banner (2026-10-31): the one bold
+     element on Home. The row's text is plain weight so the button carries it. */
+  body.th-tool-page[data-th-page="workspace"] .shift-banner { width: 100%; }
+  body.th-tool-page[data-th-page="workspace"] .shift-banner:empty { display: none; }
+  body.th-tool-page[data-th-page="workspace"] .shift-banner .shift-now { margin: 10px 0 0; }
+  body.th-tool-page[data-th-page="workspace"] .shift-banner .shift-now-text { font-weight: 400; font-size: 14px; }
+  body.th-tool-page[data-th-page="workspace"] .shift-banner .shift-now-sub { font-weight: 400; }
+  body.th-tool-page[data-th-page="workspace"] .shift-banner .shift-now > button { font-weight: 700; }
+  /* Stripe balance, top of the money card: Finance roles only. Same type
+     scale as Your week's figures, no capital-letter labels, nothing bold. */
+  body.th-tool-page[data-th-page="workspace"] .stripe-balance { margin: 0 0 14px; padding: 0 0 14px; border-bottom: 1px solid var(--border); }
+  body.th-tool-page[data-th-page="workspace"] .stripe-balance[hidden] { display: none; }
+  body.th-tool-page[data-th-page="workspace"] .stripe-balance-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  body.th-tool-page[data-th-page="workspace"] .stripe-balance-title { font-size: 13px; font-weight: 400; color: var(--text); }
+  body.th-tool-page[data-th-page="workspace"] .stripe-balance-figures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  body.th-tool-page[data-th-page="workspace"] .stripe-balance-value { font-family: var(--font-display); font-size: 22px; font-weight: 400; color: var(--white); font-variant-numeric: tabular-nums; line-height: 1.15; overflow-wrap: anywhere; }
+  body.th-tool-page[data-th-page="workspace"] .stripe-balance-label { margin-top: 2px; font-size: 12.5px; color: var(--text); }
+  body.th-tool-page[data-th-page="workspace"] .stripe-balance-note { grid-column: 1 / -1; font-size: 12.5px; color: var(--text-dim); }
+
   /* ---- Business: an Anton header with an orange rule, two cards ---- */
   body.th-tool-page[data-th-page="workspace"] .dash-group-label { margin: 8px 0 var(--ws-gap); font-size: 22px; }
   body.th-tool-page[data-th-page="workspace"] .dash-group-label::after { background: var(--orange-tint-border); opacity: 1; }
@@ -1254,6 +1273,10 @@
     <p class="greeting-banner-greeting" id="greetingBannerGreeting"><span class="skeleton-line"></span></p>
     <p class="greeting-banner-date" id="greetingBannerDate"></p>
     <p class="today-summary-line" id="todaySummaryLine"><span class="skeleton-line"></span></p>
+    <!-- Start my day / End my day (2026-10-31): the shift button lives up
+         here, the screen's one bold element, instead of down in Your week.
+         Filled by renderShiftBanner() (called from renderWeekCard()). -->
+    <div class="shift-banner" id="shiftBanner"></div>
   </div>
   <div class="greeting-banner-stat">
     <p class="greeting-banner-number" id="greetingBannerNumber"><span class="skeleton-line"></span></p>
@@ -1383,6 +1406,9 @@
      history. Same ids, same render functions, same data.
      renderTodayMoney() fills #todayMoneyBody; #todayMoneyMore is static. -->
 <div class="today-money" id="todayMoney">
+  <!-- Stripe balance (2026-10-31): Finance roles only, read-only. Filled by
+       renderStripeBalance() from the stripe-balance edge function. -->
+  <div class="stripe-balance" id="stripeBalance" hidden></div>
   <div id="todayMoneyBody"><div class="today-money-label">Money Owed</div><div class="skeleton-line w-100"></div><div class="skeleton-line w-100"></div></div>
   <div class="today-money-more ops-lane" data-lane="money" id="todayMoneyMore">
     <!-- Ready to invoice (2026-09-22, Workspace rework part 5): finished
@@ -3655,6 +3681,36 @@
     const local = String(email || '').split('@')[0].split(/[._-]+/)[0];
     return local ? local.charAt(0).toUpperCase() + local.slice(1) : email;
   }
+  // The shift button, up in the greeting banner (2026-10-31): the one bold
+  // element on Home. Same three states as before (Fix it / End my day /
+  // Start my day), same sheet; only the place changed. s is the person's
+  // thShiftWeekSummary() (null when there is no signed-in person yet).
+  function renderShiftBanner(s, now, day, t) {
+    const el = document.getElementById('shiftBanner');
+    if (!el) return;
+    let status = '';
+    if (s && s.needsEnd.length) {
+      status = '<div class="shift-now is-due"><span class="shift-dot" aria-hidden="true"></span><span class="shift-now-text">Your shift from ' + escapeHtml(day(s.needsEnd[0].start)) + ' needs an end time' +
+        '<span class="shift-now-sub">It isn\u2019t counting until you say when you finished.</span></span>' +
+        '<button type="button" class="primary-btn" data-shift-open>Fix it</button></div>';
+    } else if (s && s.onShift) {
+      const soFar = typeof thClockDuration === 'function' ? thClockDuration(now - new Date(s.since).getTime()) + ' so far' : '';
+      status = '<div class="shift-now is-on"><span class="shift-dot" aria-hidden="true"></span><span class="shift-now-text">On shift since ' + escapeHtml(t(s.since)) +
+        '<span class="shift-now-sub">' + soFar + '</span></span>' +
+        '<button type="button" class="primary-btn" data-shift-open>End my day</button></div>';
+    } else if (s) {
+      status = '<div class="shift-now is-off"><span class="shift-dot" aria-hidden="true"></span><span class="shift-now-text">Not clocked in</span>' +
+        '<button type="button" class="primary-btn" data-shift-open>Start my day</button></div>';
+    }
+    el.innerHTML = status;
+    if (!el.dataset.shiftWired) {
+      el.dataset.shiftWired = '1';
+      el.addEventListener('click', (e) => {
+        if (e.target.closest('[data-shift-open]') && typeof thOpenShiftSheet === 'function') thOpenShiftSheet();
+      });
+    }
+  }
+
   function renderWeekCard() {
     const el = document.getElementById('weekCard');
     if (!el || typeof thWeekSummary !== 'function') return;
@@ -3672,20 +3728,7 @@
     const t = (iso) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
     const day = (iso) => new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
-    let status = '';
-    if (s && s.needsEnd.length) {
-      status = '<div class="shift-now is-due"><span class="shift-dot" aria-hidden="true"></span><span class="shift-now-text">Your shift from ' + escapeHtml(day(s.needsEnd[0].start)) + ' needs an end time' +
-        '<span class="shift-now-sub">It isn\u2019t counting until you say when you finished.</span></span>' +
-        '<button type="button" class="primary-btn" data-shift-open>Fix it</button></div>';
-    } else if (s && s.onShift) {
-      const soFar = typeof thClockDuration === 'function' ? thClockDuration(now - new Date(s.since).getTime()) + ' so far' : '';
-      status = '<div class="shift-now is-on"><span class="shift-dot" aria-hidden="true"></span><span class="shift-now-text">On shift since ' + escapeHtml(t(s.since)) +
-        '<span class="shift-now-sub">' + soFar + '</span></span>' +
-        '<button type="button" class="secondary-btn" data-shift-open>End my day</button></div>';
-    } else if (s) {
-      status = '<div class="shift-now is-off"><span class="shift-dot" aria-hidden="true"></span><span class="shift-now-text">Not clocked in</span>' +
-        '<button type="button" class="primary-btn" data-shift-open>Start my day</button></div>';
-    }
+    renderShiftBanner(s, now, day, t);
 
     // Worked behind on the clock, once there's a shift this week to show.
     const both = !!s && s.days.some(d => d.hours > 0);
@@ -3743,7 +3786,6 @@
     el.classList.toggle('has-worked', both);
     el.innerHTML =
       '<div class="week-head"><span class="week-label" id="weekCardLabel">Your week</span><span class="week-range">' + range + '</span><a class="th-v2-link week-insights-link" href="#insights">Insights &rsaquo;</a></div>' +
-      status +
       '<div class="week-body">' +
         '<div class="week-chart">' +
           '<div class="week-bars" role="img" aria-label="' + escapeAttr(said) + '">' + bars + '</div>' +
@@ -3753,12 +3795,6 @@
       '</div>' +
       (team && teamOpen ? team.replace('<details class="shift-team-wrap">', '<details class="shift-team-wrap" open>') : team) +
       (nothingYet ? '<div class="week-hint">' + (s ? 'Tap Start my day to count your whole day, and start the clock on a job to time it.' : 'Start the clock on a job and your hours fill in here.') + '</div>' : '');
-    if (!el.dataset.shiftWired) {
-      el.dataset.shiftWired = '1';
-      el.addEventListener('click', (e) => {
-        if (e.target.closest('[data-shift-open]') && typeof thOpenShiftSheet === 'function') thOpenShiftSheet();
-      });
-    }
     // Today's bar grows while a clock or a shift runs; nothing ticks otherwise.
     const ticking = w.running || !!(s && s.onShift);
     if (ticking && !weekCardTick) weekCardTick = setInterval(renderWeekCard, 60000);
@@ -3792,6 +3828,57 @@
       (state === 'unconfirmed' ? 'Couldn\u2019t confirm access' : 'Checking access') + '</span></div>';
   }
 
+  // Stripe balance (2026-10-31): read-only, Finance roles only. The
+  // stripe-balance edge function checks the role and two-factor itself;
+  // hiding the card here is only for tidiness. Fetched once per five
+  // minutes at most, never while the tab is hidden.
+  const STRIPE_BALANCE_TTL_MS = 5 * 60 * 1000;
+  const stripeBalance = { at: 0, data: null, error: '', loading: false };
+  function loadStripeBalance() {
+    if (stripeBalance.loading || typeof fetch !== 'function' || typeof getAuthToken !== 'function') return;
+    if (document.hidden || (stripeBalance.at && Date.now() - stripeBalance.at < STRIPE_BALANCE_TTL_MS)) return;
+    stripeBalance.loading = true;
+    fetch(SUPABASE_URL + '/functions/v1/stripe-balance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() },
+      body: '{}',
+    }).then(res => res.json().then(body => ({ ok: res.ok && body && body.ok, body })))
+      .then(r => {
+        if (r.ok) { stripeBalance.data = r.body; stripeBalance.error = ''; }
+        else { stripeBalance.data = null; stripeBalance.error = (r.body && r.body.code === 'not_configured') ? 'Not set up yet' : 'Couldn\u2019t load'; }
+      })
+      .catch(() => { stripeBalance.data = null; stripeBalance.error = 'Couldn\u2019t load'; })
+      .finally(() => { stripeBalance.loading = false; stripeBalance.at = Date.now(); renderStripeBalance(); });
+  }
+  function stripeAmount(cents, currency) {
+    return money((Number(cents) || 0) / 100) + (currency && currency !== 'usd' ? ' ' + String(currency).toUpperCase() : '');
+  }
+  function renderStripeBalance() {
+    const el = document.getElementById('stripeBalance');
+    if (!el) return;
+    const allowed = typeof canViewFinance === 'function' && canViewFinance() && document.body.getAttribute('data-home-money') === 'shown';
+    if (!allowed) { el.hidden = true; el.innerHTML = ''; return; }
+    el.hidden = false;
+    const d = stripeBalance.data;
+    const figure = (value, label) => '<div class="stripe-balance-figure"><div class="stripe-balance-value">' + value + '</div><div class="stripe-balance-label">' + label + '</div></div>';
+    let body;
+    if (d) {
+      const p = d.next_payout;
+      const when = p && p.arrival_date ? new Date(p.arrival_date * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+      const upcoming = p && (p.status === 'pending' || p.status === 'in_transit');
+      body = figure(stripeAmount(d.available, d.currency), 'Available') +
+        figure(stripeAmount(d.pending, d.currency), 'Pending') +
+        figure(p ? stripeAmount(p.amount, p.currency) : '\u2013', p ? (upcoming ? 'Next payout' : 'Last payout') + (when ? ', ' + escapeHtml(when) : '') : 'No payouts yet');
+    } else if (stripeBalance.error) {
+      body = '<div class="stripe-balance-note">' + escapeHtml(stripeBalance.error) + '</div>';
+    } else {
+      body = '<div class="skeleton-line w-100"></div>';
+    }
+    el.innerHTML = '<div class="stripe-balance-head"><span class="stripe-balance-title">Stripe balance</span><a class="th-v2-link" href="/tools/finance.html">Open Finance</a></div>' +
+      '<div class="stripe-balance-figures">' + body + '</div>';
+    loadStripeBalance();
+  }
+
   function renderTodayMoney(owed) {
     const card = document.getElementById('todayMoney');
     if (!card) return;
@@ -3800,6 +3887,7 @@
     // history -- the old Income lane) is filled by renderInvoicesList().
     const el = document.getElementById('todayMoneyBody') || card;
     const moneyState = applyHomeMoneyState();
+    renderStripeBalance();
     if (moneyState !== 'shown') {
       card.classList.remove('is-warning');
       el.innerHTML = moneyState === 'hidden' ? '' : homeMoneyLockHtml(moneyState);

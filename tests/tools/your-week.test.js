@@ -90,7 +90,7 @@ function renderWith(summary, perms) {
   });
   ctx.thWeekSummary = () => summary;
   if (perms) Object.assign(ctx, perms);
-  vm.runInContext('var weekCardTick = null;' + extractFn(WS, 'renderWeekCard') + ';this.f = renderWeekCard;', ctx);
+  vm.runInContext('var weekCardTick = null;' + extractFn(WS, 'renderShiftBanner') + extractFn(WS, 'renderWeekCard') + ';this.f = renderWeekCard;', ctx);
   ctx.f();
   return { html: el.innerHTML, intervals };
 }

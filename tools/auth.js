@@ -439,6 +439,32 @@ let _cachedRoleInfo = null; // { roleName, canManageRoles, description } once lo
 // deliberately NOT written into the module-level _cachedRoleInfo/dispatched
 // as th-role-loaded, since that cache represents "the currently signed-in
 // account", which isn't true yet at this point in the flow.
+// Is the signed-in account on the internal team at all (has an
+// account_roles row)? true / false / null, where null means "couldn't
+// tell" (offline, server error) and must never be treated as "client".
+// Used right after sign-in to send clients to the portal and staff to
+// the Workspace (2026-10-31). Call it only after the sign-in is fully
+// done, two-factor included: a password-only (aal1) session for an
+// account that has an authenticator is refused by the database and reads
+// as zero rows, which would wrongly look like a client.
+async function isInternalAccount(overrideAccessToken, overrideEmail) {
+  try {
+    if (!overrideAccessToken) await ensureFreshToken();
+    const email = overrideEmail || getCurrentUserEmail();
+    const token = overrideAccessToken || getAuthToken();
+    if (!email || !token) return null;
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/account_roles?select=email`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    const rows = await res.json();
+    if (!Array.isArray(rows)) return null;
+    return rows.some(r => (r.email || '').toLowerCase() === email.toLowerCase());
+  } catch (e) {
+    return null;
+  }
+}
+
 async function loadCurrentUserRole(overrideAccessToken, overrideEmail) {
   const usingOverride = !!overrideAccessToken;
   try {
