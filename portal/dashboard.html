@@ -183,6 +183,7 @@
   .invoice-status { font-size: 12px; padding: 3px 10px; border-radius: 20px; font-weight: 600; display: inline-block; }
   .invoice-status.is-paid { background: rgba(76,175,120,0.15); color: #4caf78; }
   .invoice-status.is-unpaid { background: rgba(255,167,38,0.15); color: #ffa726; }
+  .invoice-status.is-refunded { background: rgba(160,160,170,0.16); color: var(--text-dim); }
   .empty-state { text-align: center; color: var(--text-dim); padding: 60px 20px; }
   .empty-state-icon { width: 56px; height: 56px; margin: 0 auto 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
   .empty-state-icon svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -640,6 +641,20 @@
   // description, falling back to the number), then number · invoiced
   // date, the Anton amount and its status pill, then Pay now (orange,
   // the one primary action) and Download PDF / Receipt.
+  // Refund state (2026-10-31): stripe-webhook now records refunds from
+  // Stripe as refund_status ('none' | 'partial' | 'full') and
+  // refunded_amount on the invoice. A refund doesn't un-pay the invoice;
+  // the card just says so.
+  function invoiceStatusPill(inv) {
+    if (inv.paid && inv.refund_status === 'full') return '<span class="invoice-status is-refunded">Refunded</span>';
+    return `<span class="invoice-status ${inv.paid ? 'is-paid' : 'is-unpaid'}">${inv.paid ? 'Paid' : 'Unpaid'}</span>`;
+  }
+  function invoiceRefundLine(inv) {
+    if (inv.refund_status !== 'partial' && inv.refund_status !== 'full') return '';
+    const amount = Number(inv.refunded_amount) || 0;
+    return amount > 0 ? `<div class="invoice-desc invoice-refunded">${formatCurrency(amount)} refunded</div>` : '';
+  }
+
   function renderInvoiceCard(inv) {
     const title = inv.description || inv.invoice_number;
     return `
@@ -651,8 +666,9 @@
           </div>
           <div class="invoice-card-amount">
             <div class="invoice-total">${formatCurrency(inv.total)}</div>
-            <span class="invoice-status ${inv.paid ? 'is-paid' : 'is-unpaid'}">${inv.paid ? 'Paid' : 'Unpaid'}</span>
+            ${invoiceStatusPill(inv)}
             ${inv.paid && inv.paid_at ? `<div class="invoice-desc invoice-paid-on">Paid ${formatDate(inv.paid_at.slice(0, 10))}</div>` : ''}
+            ${invoiceRefundLine(inv)}
           </div>
         </div>
         ${renderLineItemsTable(inv.line_items)}

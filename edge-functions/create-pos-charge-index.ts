@@ -49,6 +49,58 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 // No other resource needs any access at all for this function to
 // work -- Charges, Invoices, Subscriptions, etc. are all unused here.
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_POS_SECRET_KEY");
+
+// Idempotency-Key on every Stripe POST (Stripe hardening, 2026-10-31;
+// docs/stripe-hardening-2026-10-31/README.md). Stripe returns the SAME
+// object for a repeated key within 24h instead of creating a second one, so
+// a double tap, two tabs, or a retried network call can't create a second
+// customer or PaymentIntent. stripePost() also retries a dropped connection
+// or a 5xx/409 once or twice WITH THE SAME KEY, which is only safe because
+// of the key. Duplicated in create-payment-intent, create-bulk-payment-intent,
+// create-pos-charge and manage-saved-card (no shared modules across
+// separately deployed Edge Functions).
+async function sha256Hex(s: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// One Stripe Customer per email, whichever function gets there first.
+async function customerIdempotencyKey(email: string): Promise<string> {
+  return `cust-v1-${await sha256Hex(email.trim().toLowerCase())}`;
+}
+
+async function stripePost(path: string, params: URLSearchParams, idempotencyKey: string): Promise<Response> {
+  const send = () => fetch(`https://api.stripe.com/v1/${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Idempotency-Key": idempotencyKey,
+    },
+    body: params,
+  });
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const res = await send();
+      if ((res.status >= 500 || res.status === 409) && attempt < 2) {
+        await new Promise((r) => setTimeout(r, 300 * 3 ** attempt));
+        continue;
+      }
+      return res;
+    } catch (err) {
+      if (attempt >= 2) throw err;
+      await new Promise((r) => setTimeout(r, 300 * 3 ** attempt));
+    }
+  }
+}
+
+// A page-generated id for one charge attempt, resent unchanged if the page
+// retries that same attempt (see tools/invoice-generator.html). Letters,
+// digits and dashes only.
+function validRequestId(v: unknown): string | null {
+  return typeof v === "string" && /^[A-Za-z0-9-]{16,64}$/.test(v) ? v : null;
+}
+
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const LEAD_EMAIL_FROM = Deno.env.get("LEAD_EMAIL_FROM") || "";
 const LOGO_URL = "https://www.triplehenterprisesllc.biz/images/logo-signature-email.png";
@@ -98,11 +150,7 @@ async function getOrCreateStripeCustomer(email: string): Promise<string> {
     const rows = await lookupRes.json();
     if (rows.length) return rows[0].stripe_customer_id;
   }
-  const customerRes = await fetch("https://api.stripe.com/v1/customers", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}`, "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ email }),
-  });
+  const customerRes = await stripePost("customers", new URLSearchParams({ email }), await customerIdempotencyKey(email));
   if (!customerRes.ok) throw new Error(`Stripe customer creation failed: ${(await customerRes.text()).slice(0, 300)}`);
   const customer = await customerRes.json();
   await fetch(`${SUPABASE_URL}/rest/v1/stripe_customers?on_conflict=client_email`, {
@@ -195,6 +243,32 @@ async function sendPosReceiptEmail(clientEmail: string, description: string, amo
     // or block a charge that already genuinely succeeded. The charge
     // and the income log entry are the real record either way.
     console.error("sendPosReceiptEmail failed:", err);
+  }
+}
+
+// Atomic "first one to log this sale" claim, shared with stripe-webhook
+// (whose stripe_record_event inserts the same primary key). true = this
+// call won and should log the income and send the receipt. A failed
+// request counts as not won: a missing income-log line is visible and
+// fixable by hand; a doubled one inflates Finance silently.
+async function claimPosCharge(paymentIntentId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/stripe_pos_charges_logged?on_conflict=payment_intent_id`, {
+      method: "POST",
+      headers: {
+        apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
+        "Content-Type": "application/json", Prefer: "resolution=ignore-duplicates,return=representation",
+      },
+      body: JSON.stringify({ payment_intent_id: paymentIntentId }),
+    });
+    if (!res.ok) {
+      console.error(`Could not claim POS charge ${paymentIntentId}: HTTP ${res.status}`);
+      return false;
+    }
+    return (await res.json()).length > 0;
+  } catch (err) {
+    console.error(`Could not claim POS charge ${paymentIntentId}:`, err);
+    return false;
   }
 }
 
@@ -360,7 +434,7 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: "STRIPE_POS_SECRET_KEY secret is not set." }, 500);
     }
 
-    const { mode, client_email, amount, description, signer_name, signature_image } = await req.json();
+    const { mode, client_email, amount, description, signer_name, signature_image, request_id } = await req.json();
 
     if (typeof client_email !== "string" || !client_email.includes("@")) {
       return json({ ok: false, error: "A real client email is required." }, 400);
@@ -387,39 +461,46 @@ Deno.serve(async (req: Request) => {
       const cards = await listSavedCards(customerId);
       if (!cards.length) return json({ ok: false, error: "No saved card on file for this email." }, 400);
 
-      const piRes = await fetch("https://api.stripe.com/v1/payment_intents", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}`, "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          amount: String(amountCents),
-          currency: "usd",
-          customer: customerId,
-          payment_method: cards[0].id,
-          off_session: "true",
-          confirm: "true",
-          description: description || "POS sale",
-          "metadata[pos_charge]": "true",
-          "metadata[internal_account]": claims.email,
-        }),
-      });
+      // Charges the card immediately, so this is the call that most needs
+      // an Idempotency-Key. The page sends one request_id per charge
+      // attempt and resends it if the first try's answer never arrived
+      // (dropped signal, a second tap), so Stripe returns the first charge
+      // instead of making another. An old cached page with no request_id
+      // gets a one-off key: no worse than before.
+      const requestId = validRequestId(request_id);
+      if (!requestId) console.warn("create-pos-charge charge_saved called without a request_id; using a one-off idempotency key");
+      const piRes = await stripePost("payment_intents", new URLSearchParams({
+        amount: String(amountCents),
+        currency: "usd",
+        customer: customerId,
+        payment_method: cards[0].id,
+        off_session: "true",
+        confirm: "true",
+        description: description || "POS sale",
+        "metadata[pos_charge]": "true",
+        // Same receipt fields as the new-card path, so stripe-webhook can
+        // log this sale identically if its delivery gets there first.
+        "metadata[pos_client_email]": normalizedEmail,
+        "metadata[pos_description]": description || "POS sale",
+        "metadata[pos_amount]": String(amount),
+        "metadata[internal_account]": claims.email,
+      }), `pos-saved-v1-${requestId || crypto.randomUUID()}`);
       const pi = await piRes.json();
       if (!piRes.ok || pi.status !== "succeeded") {
-        // A real, specific decline reason (Stripe's own message), not a
-        // generic failure -- an off-session charge can be declined for
-        // reasons a client paying their own invoice never hits (the
-        // card issuer requiring fresh authentication for an unattended
-        // charge, for instance), and Connor needs to know which.
         const reason = pi?.error?.message || pi?.last_payment_error?.message || "Charge was not approved.";
         return json({ ok: false, error: reason }, 402);
       }
-      // Resolved synchronously -- the real outcome is already known, so
-      // income is logged right here rather than waiting on the webhook
-      // (which stripe-webhook still receives, but its own pos_charge
-      // handling is idempotent on this same PaymentIntent id, so it
-      // safely no-ops rather than double-logging).
-      await logPosIncomeToWorkspaceSync(description, amount, normalizedEmail, claims.email, pi.id);
-      await sendPosReceiptEmail(normalizedEmail, description, amount);
-      return json({ ok: true, charged: true });
+      // stripe-webhook ALSO receives payment_intent.succeeded for this
+      // charge. Both now claim the PaymentIntent in stripe_pos_charges_logged
+      // (primary key) and only the winner logs the income and sends the
+      // receipt. Before 2026-10-31 this path logged without claiming, so the
+      // webhook's claim always succeeded and the sale could be logged twice.
+      // A replayed request (same request_id) finds it already claimed too.
+      if (await claimPosCharge(pi.id)) {
+        await logPosIncomeToWorkspaceSync(description, amount, normalizedEmail, claims.email, pi.id);
+        await sendPosReceiptEmail(normalizedEmail, description, amount);
+      }
+      return json({ ok: true, charged: true, replayed: piRes.headers.get("Idempotent-Replayed") === "true" || undefined });
     }
 
     // mode === 'new_card' (or unrecognized -- defaults to the safest,
@@ -453,23 +534,19 @@ Deno.serve(async (req: Request) => {
     await recordCardAuthorization(normalizedEmail, signer_name.trim(), authorizationText, amount, description, claims.email, signature_image);
 
     const customerId = await getOrCreateStripeCustomer(normalizedEmail);
-    const piRes = await fetch("https://api.stripe.com/v1/payment_intents", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}`, "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        amount: String(amountCents),
-        currency: "usd",
-        customer: customerId,
-        "automatic_payment_methods[enabled]": "true",
-        setup_future_usage: "off_session",
-        description: description || "POS sale",
-        "metadata[pos_charge]": "true",
-        "metadata[pos_client_email]": normalizedEmail,
-        "metadata[pos_description]": description || "POS sale",
-        "metadata[pos_amount]": String(amount),
-        "metadata[internal_account]": claims.email,
-      }),
-    });
+    const piRes = await stripePost("payment_intents", new URLSearchParams({
+      amount: String(amountCents),
+      currency: "usd",
+      customer: customerId,
+      "automatic_payment_methods[enabled]": "true",
+      setup_future_usage: "off_session",
+      description: description || "POS sale",
+      "metadata[pos_charge]": "true",
+      "metadata[pos_client_email]": normalizedEmail,
+      "metadata[pos_description]": description || "POS sale",
+      "metadata[pos_amount]": String(amount),
+      "metadata[internal_account]": claims.email,
+    }), `pos-new-v1-${validRequestId(request_id) || crypto.randomUUID()}`);
     if (!piRes.ok) {
       const errBody = await piRes.text();
       return json({ ok: false, error: `Stripe error: ${errBody.slice(0, 300)}` }, 502);

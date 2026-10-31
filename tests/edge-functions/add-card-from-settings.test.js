@@ -24,7 +24,8 @@ test('create_setup_intent requires a signature before creating anything, matchin
 
 test('the authorization is recorded before the SetupIntent is created', () => {
   const recordIdx = MANAGE_CARD.indexOf('await recordCardAuthorization(claims.email, signer_name.trim(), authorizationText, signature_image);');
-  const setupIdx = MANAGE_CARD.indexOf('await fetch("https://api.stripe.com/v1/setup_intents"');
+  // Stripe POSTs go through stripePost() with an Idempotency-Key since 2026-10-31.
+  const setupIdx = MANAGE_CARD.indexOf('await stripePost("setup_intents"');
   assert.ok(recordIdx !== -1 && setupIdx !== -1);
   assert.ok(recordIdx < setupIdx);
 });
@@ -42,7 +43,7 @@ test('a failure to save the authorization blocks card setup, matching the same p
 
 test('a SetupIntent is used, not a PaymentIntent -- this must never charge anything, only save a payment method', () => {
   const block = MANAGE_CARD.match(/if \(mode === "create_setup_intent"\) \{[\s\S]*?\n    \}\n/);
-  assert.match(block[0], /https:\/\/api\.stripe\.com\/v1\/setup_intents/);
+  assert.match(block[0], /stripePost\("setup_intents"/);
   assert.doesNotMatch(block[0], /payment_intents/);
 });
 

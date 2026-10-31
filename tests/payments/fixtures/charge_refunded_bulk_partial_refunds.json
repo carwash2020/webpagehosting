@@ -1,0 +1,14 @@
+[
+  {
+    "id": "re_bulk",
+    "object": "refund",
+    "amount": 3000,
+    "charge": "ch_bulk",
+    "created": 1793462690,
+    "currency": "usd",
+    "metadata": {},
+    "payment_intent": "pi_bulk",
+    "reason": "requested_by_customer",
+    "status": "succeeded"
+  }
+]

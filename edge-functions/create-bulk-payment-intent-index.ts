@@ -25,6 +25,51 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
 
+// Idempotency-Key on every Stripe POST (Stripe hardening, 2026-10-31;
+// docs/stripe-hardening-2026-10-31/README.md). Stripe returns the SAME
+// object for a repeated key within 24h instead of creating a second one, so
+// a double tap, two tabs, or a retried network call can't create a second
+// customer or PaymentIntent. stripePost() also retries a dropped connection
+// or a 5xx/409 once or twice WITH THE SAME KEY, which is only safe because
+// of the key. Duplicated in create-payment-intent, create-bulk-payment-intent,
+// create-pos-charge and manage-saved-card (no shared modules across
+// separately deployed Edge Functions).
+async function sha256Hex(s: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// One Stripe Customer per email, whichever function gets there first.
+async function customerIdempotencyKey(email: string): Promise<string> {
+  return `cust-v1-${await sha256Hex(email.trim().toLowerCase())}`;
+}
+
+async function stripePost(path: string, params: URLSearchParams, idempotencyKey: string): Promise<Response> {
+  const send = () => fetch(`https://api.stripe.com/v1/${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Idempotency-Key": idempotencyKey,
+    },
+    body: params,
+  });
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const res = await send();
+      if ((res.status >= 500 || res.status === 409) && attempt < 2) {
+        await new Promise((r) => setTimeout(r, 300 * 3 ** attempt));
+        continue;
+      }
+      return res;
+    } catch (err) {
+      if (attempt >= 2) throw err;
+      await new Promise((r) => setTimeout(r, 300 * 3 ** attempt));
+    }
+  }
+}
+
+
 const ALLOWED_ORIGIN = "https://www.triplehenterprisesllc.biz";
 const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
@@ -55,11 +100,7 @@ async function getOrCreateStripeCustomer(email: string): Promise<string> {
     const rows = await lookupRes.json();
     if (rows.length) return rows[0].stripe_customer_id;
   }
-  const customerRes = await fetch("https://api.stripe.com/v1/customers", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}`, "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ email }),
-  });
+  const customerRes = await stripePost("customers", new URLSearchParams({ email }), await customerIdempotencyKey(email));
   if (!customerRes.ok) {
     throw new Error(`Stripe customer creation failed: ${(await customerRes.text()).slice(0, 300)}`);
   }
@@ -264,24 +305,23 @@ Deno.serve(async (req: Request) => {
       return json({ ok: true, client_secret: sharedPi.client_secret, reused: true });
     }
 
-    const piRes = await fetch("https://api.stripe.com/v1/payment_intents", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({
-        amount: String(amountCents),
-        currency: "usd",
-        customer: stripeCustomerId,
-        "automatic_payment_methods[enabled]": "true",
-        setup_future_usage: "off_session",
-        // Comma-separated list, the bulk-pay counterpart to
-        // create-payment-intent's singular client_portal_invoice_id --
-        // stripe-webhook checks for both metadata shapes.
-        "metadata[client_portal_invoice_ids]": invoice_ids.join(","),
-      }),
-    });
+    // Same idea as create-payment-intent's key, over the whole batch. The
+    // ids go into the key AND the metadata in sorted order, so the same
+    // batch tapped twice (in whatever order the page sent it) is the same
+    // request to Stripe.
+    const sortedIds = sortedIdList(invoice_ids);
+    const piIdempotencyKey = `pi-bulk-v1-${await sha256Hex(JSON.stringify([sortedIds, amountCents, stripeCustomerId, [...earlierIds].sort()]))}`;
+    const piRes = await stripePost("payment_intents", new URLSearchParams({
+      amount: String(amountCents),
+      currency: "usd",
+      customer: stripeCustomerId,
+      "automatic_payment_methods[enabled]": "true",
+      setup_future_usage: "off_session",
+      // Comma-separated list, the bulk-pay counterpart to
+      // create-payment-intent's singular client_portal_invoice_id --
+      // stripe-webhook checks for both metadata shapes.
+      "metadata[client_portal_invoice_ids]": sortedIds,
+    }), piIdempotencyKey);
 
     if (!piRes.ok) {
       const errBody = await piRes.text();

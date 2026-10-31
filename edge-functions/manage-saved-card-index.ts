@@ -49,6 +49,58 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_CLIENT_CARDS_SECRET_KEY");
 
+// Idempotency-Key on every Stripe POST (Stripe hardening, 2026-10-31;
+// docs/stripe-hardening-2026-10-31/README.md). Stripe returns the SAME
+// object for a repeated key within 24h instead of creating a second one, so
+// a double tap, two tabs, or a retried network call can't create a second
+// customer or PaymentIntent. stripePost() also retries a dropped connection
+// or a 5xx/409 once or twice WITH THE SAME KEY, which is only safe because
+// of the key. Duplicated in create-payment-intent, create-bulk-payment-intent,
+// create-pos-charge and manage-saved-card (no shared modules across
+// separately deployed Edge Functions).
+async function sha256Hex(s: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// One Stripe Customer per email, whichever function gets there first.
+async function customerIdempotencyKey(email: string): Promise<string> {
+  return `cust-v1-${await sha256Hex(email.trim().toLowerCase())}`;
+}
+
+// A page-generated id for one charge attempt, resent unchanged if the page
+// retries that same attempt (see tools/invoice-generator.html). Letters,
+// digits and dashes only.
+function validRequestId(v: unknown): string | null {
+  return typeof v === "string" && /^[A-Za-z0-9-]{16,64}$/.test(v) ? v : null;
+}
+
+async function stripePost(path: string, params: URLSearchParams, idempotencyKey: string): Promise<Response> {
+  const send = () => fetch(`https://api.stripe.com/v1/${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Idempotency-Key": idempotencyKey,
+    },
+    body: params,
+  });
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const res = await send();
+      if ((res.status >= 500 || res.status === 409) && attempt < 2) {
+        await new Promise((r) => setTimeout(r, 300 * 3 ** attempt));
+        continue;
+      }
+      return res;
+    } catch (err) {
+      if (attempt >= 2) throw err;
+      await new Promise((r) => setTimeout(r, 300 * 3 ** attempt));
+    }
+  }
+}
+
+
 const ALLOWED_ORIGIN = "https://www.triplehenterprisesllc.biz";
 const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
@@ -86,11 +138,7 @@ async function findExistingStripeCustomerId(email: string): Promise<string | nul
 async function getOrCreateStripeCustomer(email: string): Promise<string> {
   const existing = await findExistingStripeCustomerId(email);
   if (existing) return existing;
-  const customerRes = await fetch("https://api.stripe.com/v1/customers", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}`, "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ email }),
-  });
+  const customerRes = await stripePost("customers", new URLSearchParams({ email }), await customerIdempotencyKey(email));
   if (!customerRes.ok) {
     throw new Error(`Stripe customer creation failed: ${(await customerRes.text()).slice(0, 300)}`);
   }
@@ -154,7 +202,7 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: "STRIPE_CLIENT_CARDS_SECRET_KEY secret is not set." }, 500);
     }
 
-    const { mode, payment_method_id, signer_name, signature_image } = await req.json();
+    const { mode, payment_method_id, signer_name, signature_image, request_id } = await req.json();
     const customerId = await findExistingStripeCustomerId(claims.email.toLowerCase());
 
     if (mode === "list") {
@@ -205,10 +253,7 @@ Deno.serve(async (req: Request) => {
         return json({ ok: false, error: "That card doesn't belong to this account." }, 403);
       }
 
-      const detachRes = await fetch(`https://api.stripe.com/v1/payment_methods/${payment_method_id}/detach`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` },
-      });
+      const detachRes = await stripePost(`payment_methods/${payment_method_id}/detach`, new URLSearchParams(), `pm-detach-v1-${payment_method_id}`);
       if (!detachRes.ok) {
         const errBody = await detachRes.text();
         return json({ ok: false, error: `Stripe error: ${errBody.slice(0, 300)}` }, 502);
@@ -234,14 +279,14 @@ Deno.serve(async (req: Request) => {
       await recordCardAuthorization(claims.email, signer_name.trim(), authorizationText, signature_image);
 
       const setupCustomerId = customerId || await getOrCreateStripeCustomer(claims.email.toLowerCase());
-      const setupRes = await fetch("https://api.stripe.com/v1/setup_intents", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}`, "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          customer: setupCustomerId,
-          "automatic_payment_methods[enabled]": "true",
-        }),
-      });
+      // A SetupIntent never charges, so the key only needs to cover this
+      // one request and its retries: the page's request_id when it sends
+      // one, else a fresh id.
+      const setupKey = `seti-v1-${setupCustomerId}-${validRequestId(request_id) || crypto.randomUUID()}`;
+      const setupRes = await stripePost("setup_intents", new URLSearchParams({
+        customer: setupCustomerId,
+        "automatic_payment_methods[enabled]": "true",
+      }), setupKey);
       if (!setupRes.ok) {
         const errBody = await setupRes.text();
         return json({ ok: false, error: `Stripe error: ${errBody.slice(0, 300)}` }, 502);

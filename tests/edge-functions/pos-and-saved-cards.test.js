@@ -80,7 +80,7 @@ test('"check" mode never creates a Stripe Customer, only looks up an existing on
 });
 
 test('"charge_saved" mode confirms off-session and synchronously, with a real decline reason surfaced on failure', () => {
-  const blockMatch = POS_CHARGE.match(/if \(mode === "charge_saved"\) \{[\s\S]*?return json\(\{ ok: true, charged: true \}\);\s*\n    \}/);
+  const blockMatch = POS_CHARGE.match(/if \(mode === "charge_saved"\) \{[\s\S]*?return json\(\{ ok: true, charged: true[^\n]*\}\);\s*\n    \}/);
   assert.ok(blockMatch, 'expected to isolate the charge_saved branch');
   const body = blockMatch[0];
   assert.match(body, /off_session: "true",/);
@@ -111,24 +111,27 @@ test('a synchronously-confirmed charge_saved charge is logged with its own Payme
   assert.match(POS_CHARGE, /await logPosIncomeToWorkspaceSync\(description, amount, normalizedEmail, claims\.email, pi\.id\);/);
 });
 
+// Since 2026-10-31 the webhook's database work happens in
+// stripe_record_event() (sql/payments/01_...). The pos_charge check and the
+// atomic claim moved there with it; behaviour is replayed end to end in
+// tests/payments/stripe-webhook-replay.test.js.
+const LEDGER_SQL = fs.readFileSync(repo('sql', 'payments', '01_stripe_event_ledger_payments_refunds.sql'), 'utf8');
 test('the webhook checks for pos_charge metadata BEFORE any invoice lookup, and is idempotent on the same PaymentIntent id', () => {
-  const piIdx = WEBHOOK.indexOf('const pi = event.data.object');
-  const posIdx = WEBHOOK.indexOf('pi.metadata?.pos_charge === "true"');
-  const invoiceLookupIdx = WEBHOOK.indexOf('client_portal_invoices?stripe_payment_intent_id=eq.');
-  assert.ok(piIdx !== -1 && posIdx !== -1 && invoiceLookupIdx !== -1);
-  assert.ok(piIdx < posIdx && posIdx < invoiceLookupIdx, 'pos_charge must be checked before the invoice lookup, which a POS sale has none of');
-  // Idempotency is enforced via an atomic claim against a real
-  // Postgres unique constraint (stripe_pos_charges_logged.payment_intent_id),
-  // not a JS scan of the income log array -- see
-  // tests/edge-functions/pos-idempotency-race-fix.test.js for full
-  // coverage of that mechanism.
-  assert.match(WEBHOOK, /stripe_pos_charges_logged\?on_conflict=payment_intent_id/);
-  assert.match(WEBHOOK, /const wonTheRace = claimRows\.length > 0;/);
+  const fn = LEDGER_SQL.match(/create or replace function public\.stripe_apply_pi_succeeded[\s\S]*?\n\$\$;/);
+  assert.ok(fn, 'expected to isolate stripe_apply_pi_succeeded()');
+  const posIdx = fn[0].indexOf("if (v_meta ->> 'pos_charge') = 'true' then");
+  const invoiceLookupIdx = fn[0].indexOf('v_all := public.stripe_portal_invoice_ids_for_pi(');
+  assert.ok(posIdx !== -1 && invoiceLookupIdx !== -1);
+  assert.ok(posIdx < invoiceLookupIdx, 'pos_charge must be checked before the invoice lookup, which a POS sale has none of');
+  // Idempotency is still an atomic claim against the real primary key
+  // (stripe_pos_charges_logged.payment_intent_id), not a JS scan.
+  assert.match(fn[0], /insert into public\.stripe_pos_charges_logged \(payment_intent_id\) values \(p_pi ->> 'id'\)\s*\n\s*on conflict \(payment_intent_id\) do nothing;/);
+  assert.match(fn[0], /get diagnostics v_pos_first = row_count;/);
 });
 
 test('the webhook logs a POS sale using the same th_income_log shape logInvoiceToIncomeLog() already writes', () => {
-  const posBlockMatch = WEBHOOK.match(/if \(pi\.metadata\?\.pos_charge === "true"\) \{[\s\S]*?\n  \}\n/);
-  assert.ok(posBlockMatch, 'expected to isolate the pos_charge webhook branch');
+  const posBlockMatch = WEBHOOK.match(/async function logPosIncome\(pi: Stripe\.PaymentIntent\) \{[\s\S]*?\n\}\n/);
+  assert.ok(posBlockMatch, 'expected to isolate the webhook\'s POS income-log function');
   const body = posBlockMatch[0];
   for (const field of ['date:', 'desc:', 'amount:', 'source:', 'payment:', 'origin: "pos",']) {
     assert.match(body, new RegExp(field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `missing field: ${field}`);
@@ -239,7 +242,7 @@ test('POS explains itself in the Invoice Generator help modal (the dashboard til
 // ---- POS receipt email (2026-09-03) ----
 
 test('a synchronously-confirmed charge_saved sends a receipt to the client right after logging income', () => {
-  const chargeSavedBlock = POS_CHARGE.match(/if \(mode === "charge_saved"\) \{[\s\S]*?return json\(\{ ok: true, charged: true \}\);\s*\n    \}/);
+  const chargeSavedBlock = POS_CHARGE.match(/if \(mode === "charge_saved"\) \{[\s\S]*?return json\(\{ ok: true, charged: true[^\n]*\}\);\s*\n    \}/);
   assert.ok(chargeSavedBlock);
   const body = chargeSavedBlock[0];
   const logIdx = body.indexOf('logPosIncomeToWorkspaceSync');
@@ -249,10 +252,10 @@ test('a synchronously-confirmed charge_saved sends a receipt to the client right
 });
 
 test('the webhook only sends a receipt alongside a genuinely new income log entry, guarded by the same idempotency check', () => {
-  const posBlockMatch = WEBHOOK.match(/if \(pi\.metadata\?\.pos_charge === "true"\) \{[\s\S]*?\n  \}\n/);
+  const posBlockMatch = WEBHOOK.match(/if \(result\.action === "pos_charge"\) \{[\s\S]*?\n  \}\n/);
   assert.ok(posBlockMatch);
   const body = posBlockMatch[0];
-  const wonTheRaceIdx = body.indexOf('if (wonTheRace) {');
+  const wonTheRaceIdx = body.indexOf('if (result.pos_first) {');
   const sendReceiptIdx = body.indexOf('await sendPosReceiptEmail(');
   assert.ok(wonTheRaceIdx !== -1 && sendReceiptIdx !== -1);
   assert.ok(wonTheRaceIdx < sendReceiptIdx, 'the receipt send must be inside the wonTheRace guard');

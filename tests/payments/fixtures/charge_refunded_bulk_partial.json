@@ -1,0 +1,34 @@
+{
+  "id": "evt_1ChargeRefundedBulk",
+  "object": "event",
+  "api_version": "2024-06-20",
+  "created": 1793462700,
+  "livemode": true,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  },
+  "type": "charge.refunded",
+  "data": {
+    "object": {
+      "id": "ch_bulk",
+      "object": "charge",
+      "amount": 10000,
+      "amount_captured": 10000,
+      "amount_refunded": 3000,
+      "captured": true,
+      "created": 1793462350,
+      "currency": "usd",
+      "customer": "cus_pat",
+      "disputed": false,
+      "livemode": true,
+      "metadata": {},
+      "paid": true,
+      "payment_intent": "pi_bulk",
+      "receipt_url": "https://pay.stripe.com/receipts/redacted/ch_bulk",
+      "refunded": false,
+      "status": "succeeded"
+    }
+  }
+}

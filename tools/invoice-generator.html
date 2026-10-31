@@ -4164,6 +4164,25 @@
     return { email, amount, description };
   }
 
+  // One request_id per charge attempt (Stripe hardening, 2026-10-31).
+  // create-pos-charge sends it to Stripe as the Idempotency-Key, so if the
+  // first try's answer never arrives (dropped signal) and the button is
+  // tapped again, Stripe returns the first charge instead of charging the
+  // card twice. The id is kept while the email, amount and description stay
+  // the same and the outcome is unknown, and replaced once the server gives
+  // a definite answer (charged, declined or rejected) or the fields change.
+  const posRequestIds = {};
+  function posRequestId(mode, fields) {
+    const sig = [fields.email.toLowerCase(), fields.amount, fields.description].join('|');
+    const current = posRequestIds[mode];
+    if (current && current.sig === sig) return current.id;
+    const id = 'pos-' + (window.crypto && crypto.randomUUID ? crypto.randomUUID()
+      : Date.now().toString(16) + '-' + Math.random().toString(16).slice(2, 14));
+    posRequestIds[mode] = { sig, id };
+    return id;
+  }
+  function forgetPosRequestId(mode) { delete posRequestIds[mode]; }
+
   async function chargeSavedCard() {
     const fields = readAmountAndDescription();
     if (!fields) return;
@@ -4180,9 +4199,12 @@
           'apikey': SUPABASE_ANON_KEY,
           'Authorization': 'Bearer ' + getAuthToken(),
         },
-        body: JSON.stringify({ mode: 'charge_saved', client_email: fields.email, amount: fields.amount, description: fields.description }),
+        body: JSON.stringify({ mode: 'charge_saved', client_email: fields.email, amount: fields.amount, description: fields.description, request_id: posRequestId('charge_saved', fields) }),
       });
       const result = await res.json();
+      // A definite answer: the next tap is a new attempt. A 5xx keeps the
+      // id, since the charge may have gone through before the error.
+      if (result.ok || res.status < 500) forgetPosRequestId('charge_saved');
       if (!result.ok) {
         showError(result.error || 'The charge was not approved.');
         btn.disabled = false;
@@ -4225,10 +4247,11 @@
           'apikey': SUPABASE_ANON_KEY,
           'Authorization': 'Bearer ' + getAuthToken(),
         },
-        body: JSON.stringify({ mode: 'new_card', client_email: fields.email, amount: fields.amount, description: fields.description, signer_name: signerName, signature_image: signatureImage }),
+        body: JSON.stringify({ mode: 'new_card', client_email: fields.email, amount: fields.amount, description: fields.description, signer_name: signerName, signature_image: signatureImage, request_id: posRequestId('new_card', fields) }),
       });
       const result = await res.json();
       if (!result.ok) {
+        if (res.status < 500) forgetPosRequestId('new_card');
         showError(result.error || 'Something went wrong.');
         btn.disabled = false;
         btn.textContent = 'Enter Card & Charge';
@@ -4280,6 +4303,9 @@
   }
 
   function showSuccess(amount) {
+    // The sale is done: an identical one right after is a new charge.
+    forgetPosRequestId('charge_saved');
+    forgetPosRequestId('new_card');
     // The highest-frequency real "money in hand" moment in this whole
     // suite -- a card charge actually completing -- was silent, unlike
     // this same file's mark-paid/invoice-logged/estimate-logged moments,
@@ -4305,6 +4331,8 @@
     showError('');
     savedCardInfo = null;
     lastCheckedEmail = null;
+    forgetPosRequestId('charge_saved');
+    forgetPosRequestId('new_card');
   }
 
   // Quick-charge keypad (2026-09-29, app redesign v2 §8.5). Writes into the

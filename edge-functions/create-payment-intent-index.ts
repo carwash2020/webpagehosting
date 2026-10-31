@@ -7,15 +7,10 @@
 // frontend needs to actually collect and confirm the card payment.
 //
 // Required secret (Supabase dashboard -> Edge Functions -> Secrets):
-//   STRIPE_SECRET_KEY -- the TEST MODE secret key (sk_test_...) while
-//   the payment flow is being proven end to end. The Stripe account
-//   itself is fully verified and live-capable as of 2026-09-02;
-//   test mode is a deliberate choice for the build, not a
-//   restriction. Swapping this one secret to the live sk_live_... key
-//   (together with STRIPE_WEBHOOK_SIGNING_SECRET, which is per-mode)
-//   is the entire cutover -- nothing in this function needs to change.
-//   The frontend's publishable key in portal/dashboard.html swaps at
-//   the same time.
+//   STRIPE_SECRET_KEY -- the live secret key. (It was test mode while the
+//   flow was built; all Stripe keys were verified LIVE on 2026-10-31,
+//   matching the pk_live_ publishable key in portal/dashboard.html.
+//   STRIPE_WEBHOOK_SIGNING_SECRET is per mode and must match.)
 // (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are auto-provided by Supabase.)
 //
 // Updated 2026-09-03: every payment now goes through a real Stripe
@@ -35,6 +30,51 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
 
+// Idempotency-Key on every Stripe POST (Stripe hardening, 2026-10-31;
+// docs/stripe-hardening-2026-10-31/README.md). Stripe returns the SAME
+// object for a repeated key within 24h instead of creating a second one, so
+// a double tap, two tabs, or a retried network call can't create a second
+// customer or PaymentIntent. stripePost() also retries a dropped connection
+// or a 5xx/409 once or twice WITH THE SAME KEY, which is only safe because
+// of the key. Duplicated in create-payment-intent, create-bulk-payment-intent,
+// create-pos-charge and manage-saved-card (no shared modules across
+// separately deployed Edge Functions).
+async function sha256Hex(s: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// One Stripe Customer per email, whichever function gets there first.
+async function customerIdempotencyKey(email: string): Promise<string> {
+  return `cust-v1-${await sha256Hex(email.trim().toLowerCase())}`;
+}
+
+async function stripePost(path: string, params: URLSearchParams, idempotencyKey: string): Promise<Response> {
+  const send = () => fetch(`https://api.stripe.com/v1/${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Idempotency-Key": idempotencyKey,
+    },
+    body: params,
+  });
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const res = await send();
+      if ((res.status >= 500 || res.status === 409) && attempt < 2) {
+        await new Promise((r) => setTimeout(r, 300 * 3 ** attempt));
+        continue;
+      }
+      return res;
+    } catch (err) {
+      if (attempt >= 2) throw err;
+      await new Promise((r) => setTimeout(r, 300 * 3 ** attempt));
+    }
+  }
+}
+
+
 // Finds this email's existing Stripe Customer, or creates a new one
 // and records the mapping. Shared logic duplicated (not imported)
 // across create-payment-intent, create-bulk-payment-intent, and
@@ -53,11 +93,7 @@ async function getOrCreateStripeCustomer(email: string): Promise<string> {
     if (rows.length) return rows[0].stripe_customer_id;
   }
 
-  const customerRes = await fetch("https://api.stripe.com/v1/customers", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}`, "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ email }),
-  });
+  const customerRes = await stripePost("customers", new URLSearchParams({ email }), await customerIdempotencyKey(email));
   if (!customerRes.ok) {
     throw new Error(`Stripe customer creation failed: ${(await customerRes.text()).slice(0, 300)}`);
   }
@@ -306,21 +342,20 @@ Deno.serve(async (req: Request) => {
       return json({ ok: true, client_secret: earlierPi.client_secret, reused: true });
     }
 
-    const piRes = await fetch("https://api.stripe.com/v1/payment_intents", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({
-        amount: String(amountCents),
-        currency: "usd",
-        customer: stripeCustomerId,
-        "automatic_payment_methods[enabled]": "true",
-        setup_future_usage: "off_session",
-        "metadata[client_portal_invoice_id]": String(invoice.id),
-      }),
-    });
+    // The key names everything that makes this PaymentIntent distinct: the
+    // invoice, the amount, the customer, and the PaymentIntent the invoice
+    // already pointed at (so a new one is still made after the earlier one
+    // was canceled or fully refunded). Two calls racing for the same invoice
+    // get the same PaymentIntent back from Stripe.
+    const piIdempotencyKey = `pi-inv-v1-${invoice.id}-${amountCents}-${stripeCustomerId}-${invoice.stripe_payment_intent_id || "none"}`;
+    const piRes = await stripePost("payment_intents", new URLSearchParams({
+      amount: String(amountCents),
+      currency: "usd",
+      customer: stripeCustomerId,
+      "automatic_payment_methods[enabled]": "true",
+      setup_future_usage: "off_session",
+      "metadata[client_portal_invoice_id]": String(invoice.id),
+    }), piIdempotencyKey);
 
     if (!piRes.ok) {
       const errBody = await piRes.text();

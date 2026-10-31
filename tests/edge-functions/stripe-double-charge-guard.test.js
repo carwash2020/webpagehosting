@@ -78,6 +78,8 @@ function load(name, state) {
     fetch, Response, Request, Headers, URL, URLSearchParams, atob, btoa,
     console: { log() {}, error() {}, warn() {} },
     Intl, Date, JSON, Math, Promise, Set, Map, Number, String, Array, Object, parseInt, isNaN, encodeURIComponent, decodeURIComponent,
+    // Deno provides these; the Idempotency-Key helpers (2026-10-31) hash with Web Crypto.
+    crypto: globalThis.crypto, TextEncoder, Uint8Array, setTimeout,
   });
   vm.runInContext(src, context, { filename: `${name}-index.ts` });
   const call = async (body, token = jwtFor(CLIENT)) => {

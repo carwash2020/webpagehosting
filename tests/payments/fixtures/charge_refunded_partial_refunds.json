@@ -1,0 +1,14 @@
+[
+  {
+    "id": "re_partial",
+    "object": "refund",
+    "amount": 5000,
+    "charge": "ch_single",
+    "created": 1793462500,
+    "currency": "usd",
+    "metadata": {},
+    "payment_intent": "pi_single",
+    "reason": "requested_by_customer",
+    "status": "succeeded"
+  }
+]
