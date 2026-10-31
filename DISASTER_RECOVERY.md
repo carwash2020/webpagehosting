@@ -725,7 +725,7 @@ zero call sites, would only have worked if the bucket were public.
 ## Automated jobs added 2026-08-15
 
 Three new `pg_cron` jobs and 4 new GitHub Actions workflows -- see the
-"Automated jobs" section of `README.md` for the full list of what each
+"Automated jobs" section of `docs/REFERENCE.md` for the full list of what each
 one does. Two things worth knowing if any of them ever misbehave:
 
 - **`archive-old-notification-log` retention is 3700 days, not

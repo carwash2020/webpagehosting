@@ -10,6 +10,11 @@ UI needed.
   throughout this codebase that don't mean the obvious thing on first
   read (tombstone, graveyard, checkpoint tag, backfill, padded_range,
   and more).
+- **[REFERENCE.md](REFERENCE.md)** -- what every file is for, plus how
+  sync, booking, automation and cache-busting work, and the "Do not
+  delete" list (moved out of the root `README.md` on 2026-10-31).
+- **[CHANGELOG.md](CHANGELOG.md)** -- the dated "What changed" history,
+  newest at the bottom (also moved out of the root `README.md`).
 - **[GETTING-STARTED.md](GETTING-STARTED.md)** -- for anyone (human or
   AI) opening this repo for the first time: what to read, in what
   order, and how to verify a change is actually safe before shipping
