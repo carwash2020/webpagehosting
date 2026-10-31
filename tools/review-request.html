@@ -61,11 +61,11 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=8d60300947">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=10f1831b6e">
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=71b69d70b3" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=e67fa5a727" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <script src="/tools/qrcode-lib.js?v=202608160400" defer></script>
@@ -309,7 +309,7 @@
   body.th-tool-page[data-th-page="review-request"] .review-qr-actions .secondary-btn { flex: 0 1 auto; padding: 0 18px; }
 </style>
 </head>
-<body data-th-page="review-request">
+<body data-th-page="review-request" data-th-sync-banner>
 
 <div id="roleBlockedOverlay" class="role-blocked-overlay" data-rb role="alert">
   <div class="th-rb-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
@@ -336,7 +336,7 @@
 <p class="tool-sub">Internal tool &mdash; fill in the job details after finishing, tap Send. Nothing here is ever sent to a server &mdash; the message itself is built right in this browser tab, and opens your phone's own messaging app to actually send it. A short local log of who's been sent a request is kept on this device, purely to warn you before an accidental double-send.</p>
 
 <div class="tabs tabs-sticky" id="reviewTabs">
-  <button class="tab-btn is-active" data-tab="send" onclick="activateReviewTab('send')">Send Request</button>
+  <button class="tab-btn is-active" data-tab="send" onclick="activateReviewTab('send')">Send request</button>
   <button class="tab-btn" data-tab="google" onclick="activateReviewTab('google')">Google QR</button>
   <button class="tab-btn" data-tab="yelp" onclick="activateReviewTab('yelp')">Yelp QR</button>
 </div>
@@ -402,21 +402,21 @@
   <div class="message-preview-wrap"><div class="message-preview-stamp" id="messagePreviewStamp" aria-hidden="true">Text Message</div><div class="message-preview" id="messagePreview"></div></div>
   <div id="duplicateWarning" style="display:none; color: var(--orange-light); font-size: 13px; margin-bottom: 12px; padding: 10px 12px; background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); border-radius: 6px;"></div>
   <div class="btn-row review-send-row">
-    <a class="primary-btn" id="sendLink" href="#" onclick="logSentRequest('sms')">Open Text Message</a>
+    <a class="primary-btn" id="sendLink" href="#" onclick="logSentRequest('sms')">Open text message</a>
     <button class="secondary-btn" onclick="copyReviewLink('google', this)"><svg class="th-icon" aria-hidden="true"><use href="#icon-link" xlink:href="#icon-link"></use></svg> Copy link</button>
   </div>
   <div class="btn-row review-more-row">
-    <button class="secondary-btn" onclick="shuffleMessage()"><svg class="th-icon" aria-hidden="true"><use href="#icon-shuffle" xlink:href="#icon-shuffle"></use></svg> Try Another</button>
-    <button class="secondary-btn" onclick="copyMessage()">Copy Message</button>
+    <button class="secondary-btn" onclick="shuffleMessage()"><svg class="th-icon" aria-hidden="true"><use href="#icon-shuffle" xlink:href="#icon-shuffle"></use></svg> Try another</button>
+    <button class="secondary-btn" onclick="copyMessage()">Copy message</button>
   </div>
   <div class="copy-confirm" id="copyConfirm">Copied! Paste it in if the text app doesn't fill it in automatically.</div>
-  <div style="display:flex; align-items:center; gap:6px; margin-top:4px;"><button class="help-btn" onclick="openCardInfo('sendButton')" aria-label="What does Open Text Message do?" title="What does Open Text Message do?">?</button><span class="fallback-note" style="margin:0;">What "Open Text Message" does</span></div>
+  <div style="display:flex; align-items:center; gap:6px; margin-top:4px;"><button class="help-btn" onclick="openCardInfo('sendButton')" aria-label="What does Open text message do?" title="What does Open text message do?">?</button><span class="fallback-note" style="margin:0;">What "Open text message" does</span></div>
 
   <div style="border-top: 1px solid var(--border); margin-top: 18px; padding-top: 16px;">
     <div style="font-size: 13px; color: var(--text-dim); margin-bottom: 10px;">Some customers respond better to a request sent a day or two later, once they've had a chance to actually enjoy the finished work &mdash; rather than right this second.</div>
     <div class="btn-row">
-      <button class="secondary-btn" onclick="scheduleReminder(1)">Remind Me Tomorrow</button>
-      <button class="secondary-btn" onclick="scheduleReminder(2)">Remind Me in 2 Days</button>
+      <button class="secondary-btn" onclick="scheduleReminder(1)">Remind me tomorrow</button>
+      <button class="secondary-btn" onclick="scheduleReminder(2)">Remind me in 2 days</button>
     </div>
   </div>
 </div>
@@ -488,10 +488,10 @@
       <p>Use this right after finishing a job, while it's fresh.</p>
       <ul>
         <li>Customer name and job description are both optional &mdash; the message reads naturally either way.</li>
-        <li>Enter the customer's phone number, then tap <strong>Open Text Message</strong> &mdash; it opens your phone's messaging app with the message pre-filled on most phones.</li>
-        <li>If your phone doesn't pre-fill it, tap <strong>Copy Message</strong> first and paste it in.</li>
-        <li>Not feeling one of the six phrasings? Tap <strong>Try Another</strong> to shuffle to a different one.</li>
-        <li><strong>Remind Me Tomorrow / in 2 Days</strong> clears the form and holds onto these details locally, surfacing them at the top of this page once that date arrives &mdash; useful if you'd rather not ask for a review the second you walk out the door. This only shows up if you happen to open this page again on or after that date; it does not send an actual phone notification on its own.</li>
+        <li>Enter the customer's phone number, then tap <strong>Open text message</strong> &mdash; it opens your phone's messaging app with the message pre-filled on most phones.</li>
+        <li>If your phone doesn't pre-fill it, tap <strong>Copy message</strong> first and paste it in.</li>
+        <li>Not feeling one of the six phrasings? Tap <strong>Try another</strong> to shuffle to a different one.</li>
+        <li><strong>Remind me tomorrow / in 2 days</strong> clears the form and holds onto these details locally, surfacing them at the top of this page once that date arrives &mdash; useful if you'd rather not ask for a review the second you walk out the door. This only shows up if you happen to open this page again on or after that date; it does not send an actual phone notification on its own.</li>
         <li>A short local log of who's been sent a request lives on this device, purely to warn you if you're about to send to the same number again within 30 days &mdash; it never leaves this browser or gets sent anywhere.</li>
       </ul>
     </div>
@@ -542,9 +542,9 @@
 
   const CARD_INFO = {
     sendButton: {
-      title: 'Open Text Message',
-      body: `<p>Tapping "Open Text Message" opens your phone's messaging app addressed to this number.</p>
-        <p>Most phones pre-fill the message text automatically &mdash; if yours doesn't, just tap Copy Message first and paste it in.</p>`,
+      title: 'Open text message',
+      body: `<p>Tapping "Open text message" opens your phone's messaging app addressed to this number.</p>
+        <p>Most phones pre-fill the message text automatically &mdash; if yours doesn't, just tap Copy message first and paste it in.</p>`,
     },
   };
   function openCardInfo(key) {

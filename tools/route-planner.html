@@ -65,7 +65,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=8d60300947">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=10f1831b6e">
 <!-- Real embedded map (2026-09-07), replacing "link-outs only": Leaflet
      + free OpenStreetMap tiles, no API key/cost. Both the JS and the
      CSS's integrity hash were computed directly from `npm install
@@ -79,7 +79,7 @@
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=71b69d70b3" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=e67fa5a727" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
@@ -345,11 +345,11 @@
   <div class="route-stops-head"><span class="route-stops-title">Stops</span><span class="route-stops-count" id="routeStopsCount"></span></div>
   <div id="stopsContainer"></div>
   <div class="route-stops-actions" style="display:flex; gap:10px; flex-wrap:wrap;">
-    <button class="add-stop-btn" onclick="addStop('', true)">+ Add Stop</button>
-    <button class="secondary-btn" onclick="pullTodaysJobs()">Pull Today's Jobs</button>
+    <button class="add-stop-btn" onclick="addStop('', true)">+ Add stop</button>
+    <button class="secondary-btn" onclick="pullTodaysJobs()">Pull today's jobs</button>
   </div>
   <p class="warning-note" id="tooManyWarning">Google Maps allows up to 10 stops per route &mdash; remove one before opening the full route.</p>
-  <a class="primary-btn block" id="openRouteBtn" href="#" target="_blank" rel="noopener">Open Full Route in Google Maps</a>
+  <a class="primary-btn block" id="openRouteBtn" href="#" target="_blank" rel="noopener">Open full route in Google Maps</a>
 </div>
 
 <div class="route-map-wrap">
@@ -383,8 +383,8 @@
     <div class="help-modal-body">
       <p>Type in today's job addresses in the order you plan to visit them.</p>
       <ul>
-        <li>Use <strong>+ Add Stop</strong> for more addresses, or the &uarr;/&darr; arrows to reorder, &times; to remove.</li>
-        <li>Tap <strong>Open Full Route in Google Maps</strong> to open the whole route as one set of driving directions, starting from wherever you are.</li>
+        <li>Use <strong>+ Add stop</strong> for more addresses, or the &uarr;/&darr; arrows to reorder, &times; to remove.</li>
+        <li>Tap <strong>Open full route in Google Maps</strong> to open the whole route as one set of driving directions, starting from wherever you are.</li>
         <li>Google Maps caps routes at 10 stops &mdash; if you hit that, use the individual "Open this stop" links below the form instead.</li>
         <li>A real map fills in below the stop list showing where each stop actually is, numbered in visiting order &mdash; it takes a couple seconds per stop to locate them, so give it a moment after typing. A stop it can't find (usually a typo) is called out by name rather than silently dropped.</li>
         <li><strong>Cost Analyzer</strong> &mdash; type in the one-way distance for today's trip and it estimates round-trip fuel cost, shows your flat $25/free-within-15-miles policy for reference, and adds sales tax on top so you can see a full suggested charge. The cost-per-mile field is shared with Finance's Expenses tab, so updating it here updates it there too.</li>

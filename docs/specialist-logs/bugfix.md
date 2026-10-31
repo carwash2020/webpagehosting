@@ -3,6 +3,10 @@
 Started 2026-09-16, alongside the `tripleh-bugfix` skill. See `README.md` in
 this directory for how these logs work.
 
+## 2026-10-31 (from the visual lane, Workspace Phase 4, not fixed) -- Appliance Wiki push failures never reach the shared sync banner
+
+`scheduleWikiSync()` in `tools/sync.js` calls `pushWikiSync()` and only toasts on failure (`warnIfSyncFailed`); unlike `pushSync()`, nothing records the result in `th_sync_last` (`recordSyncStatus`). The shared `thSyncTrouble()` banner (now mounted on the Wiki too, Phase 4) therefore shows main-data backup trouble on the Wiki but can never show a Wiki-only push failure. Whether a Wiki failure should feed the same signal is a behaviour decision, so it was left alone.
+
 ## 2026-09-28 -- Portal "update available" banner on nearly every open: the tools fix, ported
 
 Reported directly: "the portal needs the same fix for updates we did for the

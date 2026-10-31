@@ -65,7 +65,7 @@ test('F12: review-request.html\'s button row uses the shared .primary-btn/.secon
     [...reviewRequest.matchAll(/class="secondary-btn"/g)].length >= 4,
     'expected the former .action-btn.btn-copy buttons to be renamed to .secondary-btn'
   );
-  assert.match(reviewRequest, /class="primary-btn"[^>]*>\s*Open Text Message/s);
+  assert.match(reviewRequest, /class="primary-btn"[^>]*>\s*Open text message/s);
 });
 
 test('F12: the public-site marketing .btn.blue class no longer appears anywhere in the tools suite (role-blocked overlays and save/confirm buttons alike)', () => {

@@ -52,14 +52,14 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=8d60300947">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=10f1831b6e">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=8060cfc3c2" defer></script>
 <script src="/tools/data-layer.js?v=c595490771" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=71b69d70b3" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=e67fa5a727" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <!-- U15/W18 fix (High-Impact Upgrades, Master Audit, 2026-09-08): the
@@ -316,7 +316,7 @@
       <div class="form-field"><label for="pwo_totalPrice">Total Estimated Price</label><input type="text" id="pwo_totalPrice" placeholder="$0.00"></div>
     </div>
   </div>
-  <button class="primary-btn wide" onclick="generateAndLog('pwo')">Generate PDF &amp; Save</button>
+  <button class="primary-btn wide" onclick="generateAndLog('pwo')">Generate PDF &amp; save</button>
 </div>
 
 <!-- ===================== SHORT-TERM PROJECT AGREEMENT ===================== -->
@@ -367,7 +367,7 @@
       <div class="form-field"><label for="stpa_balance">Balance (due upon completion)</label><input type="text" id="stpa_balance" placeholder="$0.00"></div>
     </div>
   </div>
-  <button class="primary-btn wide" onclick="generateAndLog('stpa')">Generate PDF &amp; Save</button>
+  <button class="primary-btn wide" onclick="generateAndLog('stpa')">Generate PDF &amp; save</button>
 </div>
 
 <!-- ===================== LONG-TERM SERVICE AGREEMENT ===================== -->
@@ -415,7 +415,7 @@
       <div class="form-field"><label for="ltsa_billingFrequency">Billing Frequency</label><input type="text" id="ltsa_billingFrequency"></div>
     </div>
   </div>
-  <button class="primary-btn wide" onclick="generateAndLog('ltsa')">Generate PDF &amp; Save</button>
+  <button class="primary-btn wide" onclick="generateAndLog('ltsa')">Generate PDF &amp; save</button>
 </div>
 
 <div class="form-section is-collapsed" id="signatureFormSection" data-th-inline>
@@ -464,7 +464,7 @@
     <div class="help-modal-body">
       <p>Pick the tab matching the kind of job: a <strong>Per-Job Work Order</strong> for a one-time job signed before work begins, a <strong>Short-Term Project</strong> agreement for something spanning more than one visit, or a <strong>Long-Term Service</strong> agreement for a recurring relationship (like monthly maintenance).</p>
       <p>The "existing contact" dropdown pulls from Job Tracker's Contacts and autofills name, phone, and email &mdash; it doesn't have an address on file, so that still needs typing in each time. You can also just ignore it and type everything manually.</p>
-      <p>"Generate PDF &amp; Save" downloads a filled-in PDF ready to email or text to the client, and adds it to the Recent Contracts list below so you can find it again later. Signing itself happens outside this tool &mdash; print it and sign in person, or send it however you'd send any other PDF and have the client sign by hand or their own way.</p>
+      <p>"Generate PDF &amp; save" downloads a filled-in PDF ready to email or text to the client, and adds it to the Recent Contracts list below so you can find it again later. Signing itself happens outside this tool &mdash; print it and sign in person, or send it however you'd send any other PDF and have the client sign by hand or their own way.</p>
       <p><strong>Re-downloading:</strong> the list below doesn't store the PDF file itself, just the information you entered &mdash; tapping "Re-download" regenerates an identical PDF from that saved information, which keeps things lighter than storing every PDF as a separate file.</p>
       <p><strong>Not attorney-reviewed.</strong> These are plain-language templates for general small-business use. Get a licensed Utah attorney to review them before relying on them with a real client &mdash; this note is for you only and is not printed on the client&rsquo;s copy.</p>
     </div>

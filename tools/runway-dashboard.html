@@ -47,7 +47,7 @@
      reachable only by the browser back button. Loaded in the same
      position (after tools-dialogs.js, before tools-tour.js) as every
      other tool page for consistency. -->
-<script src="/tools/tools-nav-pwa.js?v=71b69d70b3" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=e67fa5a727" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <script>
@@ -1519,6 +1519,76 @@
   body.th-tool-page .cat-add-btn { width: 36px; height: 36px; border-radius: 50%; border-color: var(--border); color: var(--tone-orange-fg); font-size: 18px; }
   @media (pointer: coarse) { body.th-tool-page .cat-add-btn { width: 44px; height: 44px; } }
   body.th-tool-page table.month-table tr.th-has-row-menu td:last-child { text-align: right; }
+
+  /* ==== Workspace Phase 4 (2026-10-31): the shared Phase 2/3 chrome, mirrored
+     (this page loads no shared stylesheet; same values as styles-tools.css) ==== */
+  /* One-row header: the title, its dot and the round buttons on one line.
+     The ? and the intro move off the phone header, as on every hub page
+     (help is in More); the title is sentence case, as named. */
+  body.th-tool-page header#mainContent h1 { text-transform: none; letter-spacing: .2px; }
+  @media (max-width: 1023px) {
+    body.th-tool-page header#mainContent { padding-top: 8px; }
+    body.th-tool-page header#mainContent h1 { flex-wrap: nowrap; min-height: 44px; margin: 0; padding-right: 160px; white-space: nowrap; }
+    body.th-tool-page header#mainContent h1 > .help-btn { display: none; }
+    body.th-tool-page header#mainContent p { display: none; }
+    body.th-tool-page .th-hdr-actions.is-floating { top: 8px; }
+  }
+  /* Tabs and action buttons: sentence case (Phase 2 item 7). The four tabs
+     can't share 390px, so they keep scrolling with Finance's "more" hint
+     (Phase 3 fix 7). */
+  body.th-tool-page .rw-tab-btn, body.th-tool-page button.action-btn, body.th-tool-page button.ghost-btn { text-transform: none; letter-spacing: .2px; }
+  body.th-tool-page .rw-tab-btn { font-size: 14px; }
+  body.th-tool-page :is(#openAddIncomeBtn, #openAddExpenseBtn, #openAddDebtBtn) { text-transform: none; letter-spacing: .2px; }
+  @media (max-width: 600px) {
+    body.th-tool-page .tabs::after {
+      content: '\203A'; position: sticky; right: 0; z-index: 1; flex: 0 0 36px; align-self: stretch;
+      display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; box-sizing: border-box;
+      font-family: var(--font-app); font-size: 22px; line-height: 1; color: var(--text-dim);
+      background: linear-gradient(to right, transparent, var(--bg) 55%); pointer-events: none;
+    }
+    @supports (animation-timeline: scroll()) {
+      body.th-tool-page .tabs::after { animation: th-fin-tabs-hint linear both; animation-timeline: scroll(nearest inline); }
+    }
+  }
+  @keyframes th-fin-tabs-hint { 0%, 88% { opacity: 1; } 100% { opacity: 0; } }
+  /* One primary: flat, no lip, weight 400 (PR #544). */
+  body.th-tool-page .primary-btn, body.th-tool-page button.action-btn { box-shadow: none; font-weight: 400; }
+  body.th-tool-page .primary-btn:active, body.th-tool-page button.action-btn:active { box-shadow: none; transform: scale(.98); }
+  /* The bottom bar's "New" is grey like the other labels, on their baseline
+     (PR #543 round 3 item 3 and item 11). */
+  body.th-tool-page .th-bottom-nav .th-bn-create { color: var(--text-dim); line-height: 1.6; }
+  body.th-tool-page .th-bottom-nav .th-bn-create-label { line-height: inherit; }
+
+  /* ---- Phase 4 review (Connor #2): the section kicker over the title, as on
+     every hub page (injectHeaderKicker() in the shell; the label is the
+     page's nav group). Same values as styles-tools.css' .th-kicker. ---- */
+  body.th-tool-page header#mainContent .th-kicker {
+    display: block; min-width: 0;
+    font-family: var(--font-ui); font-size: 11.5px; font-weight: 500; line-height: 1.25;
+    letter-spacing: 1.4px; text-transform: uppercase; color: var(--text-dim);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  body.th-tool-page header#mainContent .th-kicker:empty { display: none; }
+  @media (max-width: 1023px) {
+    body.th-tool-page header#mainContent.th-has-kicker { padding-top: 10px; padding-bottom: 8px; }
+    body.th-tool-page header#mainContent.th-has-kicker h1 { min-height: 0; line-height: 1.1; }
+  }
+
+  /* ---- Phase 4 review (Connor #3): with no income yet, Safe to spend's
+     "Add your income below to see this" is a muted helper line (the page's
+     own .note look), not a big orange headline. The stats are cleared only
+     in that state, so this keys off them; the text itself is unchanged. ---- */
+  body.th-tool-page .rw-safe-card:has(#safeToSpendStats:empty) #safeToSpendHeadline {
+    font-family: var(--font-app); font-size: 12px; line-height: 1.5; color: var(--text-dim);
+    text-shadow: none; letter-spacing: 0; margin: 8px 0 0;
+  }
+  body.th-tool-page .th-bn-create-disc { margin-top: -21px; margin-bottom: -3px; }
+  /* 44px touch targets on a phone. */
+  @media (pointer: coarse) {
+    body.th-tool-page .card-header .help-btn, body.th-tool-page h3 .help-btn { position: relative; }
+    body.th-tool-page .card-header .help-btn::after, body.th-tool-page h3 .help-btn::after { content: ''; position: absolute; top: 50%; left: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
+    body.th-tool-page button.ghost-btn { min-height: 44px; }
+  }
 </style>
 </head>
 <body class="th-has-sidebar" data-th-page="runway-dashboard">
@@ -1575,10 +1645,10 @@
 </header>
 
 <div class="tabs">
-  <button class="rw-tab-btn is-active" data-tab="personal">Personal Budget</button>
-  <button class="rw-tab-btn" data-tab="business">Business Dashboard</button>
-  <button class="rw-tab-btn" data-tab="networth">Net Worth</button>
-  <button class="rw-tab-btn" data-tab="runway">Runway Summary</button>
+  <button class="rw-tab-btn is-active" data-tab="personal">Personal budget</button>
+  <button class="rw-tab-btn" data-tab="business">Business dashboard</button>
+  <button class="rw-tab-btn" data-tab="networth">Net worth</button>
+  <button class="rw-tab-btn" data-tab="runway">Runway summary</button>
 </div>
 
 <main>
@@ -1613,7 +1683,7 @@
       <div class="card-header"><h3>Personal Income <button class="help-btn" onclick="openCardInfo('personalIncome')" aria-label="What is this?" title="What is this?">?</button></h3></div>
       <div id="incomeList"></div>
       <div class="top-actions">
-        <button class="action-btn" id="openAddIncomeBtn">+ Add Income Source</button>
+        <button class="action-btn" id="openAddIncomeBtn">+ Add income source</button>
       </div>
     </div>
 
@@ -1634,13 +1704,13 @@
         <div><label for="inc-amount">Amount (after tax)</label><input type="number" inputmode="decimal" id="inc-amount" placeholder="0"></div>
       </div>
       <div class="form-actions">
-        <button class="action-btn" id="saveIncomeBtn" style="width:auto;flex:1;">Save Income</button>
+        <button class="action-btn" id="saveIncomeBtn" style="width:auto;flex:1;">Save income</button>
         <button class="ghost-btn" id="cancelIncomeBtn" style="flex:0 0 auto;">Cancel</button>
       </div>
     </div>
 
     <div class="top-actions">
-      <button class="action-btn" id="openAddExpenseBtn">+ Add Expense</button>
+      <button class="action-btn" id="openAddExpenseBtn">+ Add expense</button>
     </div>
 
     <div class="card form-card" id="expenseFormCard">
@@ -1680,7 +1750,7 @@
       </div>
       <div class="col-hint" id="expTypeHint">Amount is per the frequency you pick above — it's converted to a monthly figure automatically.</div>
       <div class="form-actions">
-        <button class="action-btn" id="saveExpenseBtn" style="width:auto;flex:1;">Save Expense</button>
+        <button class="action-btn" id="saveExpenseBtn" style="width:auto;flex:1;">Save expense</button>
         <button class="ghost-btn" id="cancelExpenseBtn" style="flex:0 0 auto;">Cancel</button>
       </div>
     </div>
@@ -1710,7 +1780,7 @@
         <div><label for="biz-draws">Owner Draws</label><input type="number" inputmode="decimal" id="biz-draws" placeholder="0"></div>
         <div class="full"><label for="biz-cash">Cash in Business Account</label><input type="number" inputmode="decimal" id="biz-cash" placeholder="0"></div>
       </div>
-      <button class="action-btn" id="addMonthBtn">Save Month</button>
+      <button class="action-btn" id="addMonthBtn">Save month</button>
       <div class="note" id="bizFormNote"></div>
     </div>
 
@@ -1777,7 +1847,7 @@
       <div class="card-header"><h3>Debts <button class="help-btn" onclick="openCardInfo('debts')" aria-label="What is this?" title="What is this?">?</button></h3></div>
       <div id="debtsList"></div>
       <div class="top-actions">
-        <button class="action-btn" id="openAddDebtBtn">+ Add Debt</button>
+        <button class="action-btn" id="openAddDebtBtn">+ Add debt</button>
       </div>
     </div>
 
@@ -1789,7 +1859,7 @@
         <div><label for="debt-minpayment">Minimum Payment (optional)</label><input type="number" inputmode="decimal" id="debt-minpayment" placeholder="0"></div>
       </div>
       <div class="form-actions">
-        <button class="action-btn" id="saveDebtBtn" style="width:auto;flex:1;">Save Debt</button>
+        <button class="action-btn" id="saveDebtBtn" style="width:auto;flex:1;">Save debt</button>
         <button class="ghost-btn" id="cancelDebtBtn" style="flex:0 0 auto;">Cancel</button>
       </div>
     </div>
@@ -1862,7 +1932,7 @@
 
     <div class="card">
       <div class="card-header"><h3>PDF Report <button class="help-btn" onclick="openCardInfo('pdfReport')" aria-label="What is this?" title="What is this?">?</button></h3></div>
-      <button class="action-btn" id="downloadPdfBtn">Download PDF Report</button>
+      <button class="action-btn" id="downloadPdfBtn">Download PDF report</button>
       <div class="note" id="pdfReportNote"></div>
     </div>
 
@@ -2701,7 +2771,7 @@ function renderPersonal(){
     container.innerHTML = `<div class="card"><div class="empty-state">
       <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2h12v20l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5-2 1.5z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>
       <div class="empty-title">Nothing here yet</div>
-      <div class="empty-sub">Tap "+ Add Expense" above \u2014 pick a category, name it, and it shows up right here.</div>
+      <div class="empty-sub">Tap "+ Add expense" above \u2014 pick a category, name it, and it shows up right here.</div>
     </div></div>`;
     renderPersonalTotals();
     return;
@@ -3181,7 +3251,7 @@ document.getElementById('pullMonthBtn').addEventListener('click', () => {
     diag.textContent = '';
   }
 
-  note.textContent = 'Pulled from Finance \u2014 review the numbers, then Save Month. Other Expenses, Draws, and Cash still need filling in by hand.';
+  note.textContent = 'Pulled from Finance \u2014 review the numbers, then Save month. Other Expenses, Draws, and Cash still need filling in by hand.';
   note.style.color = 'var(--text-dim)';
 });
 
