@@ -3,7 +3,17 @@
 Started 2026-09-16, alongside the `tripleh-bugfix` skill. See `README.md` in
 this directory for how these logs work.
 
-## 2026-10-31 (from the visual lane, portal redesign, not fixed) -- Portal Invoices: a fast tap on Pay hits "Stripe is not defined"
+## 2026-10-31 (from the visual lane, portal redesign) -- Portal Invoices: a fast tap on Pay hits "Stripe is not defined" -- FIXED in #554
+
+**Fixed in [#554](https://github.com/carwash2020/webpagehosting/pull/554).**
+- **Scope.** Settings > Add card had the same root cause in `mountAddCardSetupUI()`. It sits in a try/catch, so it showed "Couldn't reach the server" instead of hanging. Both are fixed.
+- **Loader.** The #549 timer is kept. It and the Pay / Pay all / Add card taps now share one deduplicating `loadStripeJs()` promise, the same shape as `ensureStripeJs()` in `tools/invoice-generator.html`.
+- **Mount functions.** They mount at once when `Stripe` exists. Otherwise they wait, capped at 20s, or show an inline Try again that reuses the same client secret.
+- **Regression test.** `tests/portal/stripe-load-race.test.js` fails 8/11 on the pre-fix pages.
+- **Gotcha for tests.** jsdom with `runScripts: 'outside-only'` never fetches an injected `<script src>`. The tag just sits there, which is exactly the "not arrived yet" state. Set `window.Stripe` and dispatch `load`/`error` on the tag to drive it.
+- **Gotcha for tests.** `tests/edge-functions/add-card-from-settings.test.js` pins the literal `s.src = …; document.head.appendChild(s);` text, so keep that shape when editing the loader.
+
+Original report:
 
 Since #549, `portal/dashboard.html` only injects `https://js.stripe.com/v3/` 3 seconds after `window` `load`. `mountPaymentUI()` calls `Stripe(...)` with no check that the script has arrived. A client who opens Invoices and gets through Pay → name → signature → Continue within ~3s of load (or on a slow connection where Stripe.js is still downloading) gets a `ReferenceError` and the sheet sticks on "Loading..."; the error is logged to `portal_client_errors`. Reproduced on main (1742407) with the portal redesign harness (`docs/portal-redesign-2026-10-31/harness/`, tap Pay ~1.8s after load). Likely fix: have `mountPaymentUI()` (or the Pay tap) start/await the Stripe.js load if `window.Stripe` is missing. It's payment logic, so the redesign PR left it alone.
 
