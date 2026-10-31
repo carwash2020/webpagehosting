@@ -69,7 +69,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=d7410af6b7">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=f212452f48">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=11d0839316" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -1157,6 +1157,14 @@
   /* Redundancy pass (2026-10-31): Route today left this row (Today's
      route has Route all), so Open job is the row's one button, full width. */
   html body.th-tool-page[data-th-page="workspace"] .today-next-links > .primary-btn { flex: 1 1 auto; }
+  /* Cross-surface pass (2026-10-31): with no partner left, Open job is the
+     suite's one flat primary (Oswald 400, no border, no lip, a press
+     scale), like every other primary in the Workspace and the portal. */
+  html body.th-tool-page[data-th-page="workspace"] .today-next-links > .primary-btn {
+    border: 0; font-family: var(--font-ui); font-size: 14.5px; font-weight: 400; letter-spacing: .2px;
+  }
+  html body.th-tool-page[data-th-page="workspace"] .today-next-links > .primary-btn:active { transform: scale(.98); }
+  @media (prefers-reduced-motion: reduce) { html body.th-tool-page[data-th-page="workspace"] .today-next-links > .primary-btn:active { transform: none; } }
   html body.th-tool-page[data-th-page="workspace"] .today-next-links .today-next-link-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
 </head>
@@ -1645,7 +1653,7 @@
     <div class="help-modal-body">
       <p>This is the home base for the whole business &mdash; bookmark this one page. It's built to answer "what do I need to do right now" without a tap, top to bottom:</p>
       <ul>
-        <li><strong>Next Job</strong> &mdash; whatever's next on today's schedule, sorted by priority, with a tap-to-call phone number, a tap-to-open-Maps address, and a straight line into that job's own page.</li>
+        <li><strong>Next Job</strong> &mdash; whatever's next on today's schedule, sorted by priority, with a tap-to-call phone number and a straight line into that job's own page (directions are there).</li>
         <li><strong>Today's route</strong> &mdash; every job on today's schedule in order, done ones ticked, with <strong>Route all</strong>: one link that opens the whole day's stops as a Google Maps route.</li>
         <li><strong>Money Owed</strong> &mdash; Current and Overdue, split apart so a client who's simply not due yet never gets lumped in with one who needs a follow-up call. Every unpaid invoice is listed right there (overdue first) with a one-tap <strong>Mark paid</strong> &mdash; confirm, and it's recorded as paid in full. Under them: <strong>Ready to invoice</strong> &mdash; jobs finished in the last 60 days with no invoice and no payment logged, oldest first, each with an <strong>Invoice</strong> button (the &middot;&middot;&middot; covers &ldquo;paid another way&rdquo; and &ldquo;no charge&rdquo;) &mdash; and a search over every invoice and logged payment, with the paid ones folded away.</li>
         <li><strong>Your week</strong> &mdash; the scoreboard under the daily actions. At the top, <strong>Start my day</strong> when you begin work and <strong>End my day</strong> when you're done (or use the clock button at the top of any page). Then a bar for each day, Monday to Sunday: the green part is the hours you worked &mdash; driving, estimates and the time between jobs included &mdash; and the orange part inside it is the time on a job's clock. Under the bars: hours worked, hours on the clock, jobs done and billed, with last week's number under each. Billed means invoices dated this week plus income you logged by hand; it shows only to accounts that can see finance, and so does <strong>Everyone this week</strong>, everyone's hours. Forgot to clock out? A shift left open more than 14 hours stops counting until you say when you finished &mdash; it suggests when your last job clock stopped. The shift and the job clock are separate: neither starts or stops the other.</li>
@@ -3645,9 +3653,11 @@
       ? '<a class="secondary-btn today-clock-btn" href="sms:' + escapeAttr(String(job.phone).replace(/[^\d+]/g, '')) + '" data-text-job="' + escapeAttr(job.id) + '" data-text-kind="onmyway"><svg class="th-icon" aria-hidden="true"><use href="#icon-message" xlink:href="#icon-message"></use></svg>On my way</a>'
       : '';
     // v2 (2026-09-28): the Up next card -- status pill, the job as an
-    // Anton headline over the client and the address, and a 4-up grid of
-    // what you do next (On my way, Navigate, Call, the clock). Open job
-    // sits under it.
+    // Anton headline over the client and the address, and a grid of what
+    // you do next (On my way, Call, the clock). Open job sits under it.
+    // Cross-surface pass (2026-10-31): no Navigate cell and no Maps link on
+    // the address here. Directions for one job live only in Job detail
+    // (its Directions quick action); Home keeps Today's route's Route all.
     // Redundancy pass (2026-10-31): no "\u00b7 1 of N" -- it was always "1 of"
     // the same remaining-jobs count the summary line gave, and the Jobs
     // ring and Today's route already count the day. The day's route
@@ -3655,20 +3665,18 @@
     const heroStatus = job.status === 'in-progress' ? ['Working', 'is-orange'] : ['Booked', 'is-blue'];
     const heroIcon = (n) => '<svg class="th-icon" aria-hidden="true"><use href="#icon-' + n + '" xlink:href="#icon-' + n + '"></use></svg>';
     const heroPhone = job.phone ? String(job.phone).replace(/[^\d+]/g, '') : '';
-    const heroNav = job.address ? '<a class="today-next-cell" href="' + escapeAttr('https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(job.address)) + '" target="_blank" rel="noopener">' + heroIcon('navigate') + 'Navigate</a>' : '';
     const heroCall = heroPhone ? '<a class="today-next-cell" href="tel:' + escapeAttr(heroPhone) + '">' + heroIcon('phone') + 'Call</a>' : '';
     nextEl.innerHTML = `
       <div class="today-next-job-label">${clockOn ? 'On the clock' : 'Next Job'}<span class="th-v2-pill ${heroStatus[1]} today-next-status">${heroStatus[0]}</span></div>
       <p class="today-next-job-title"><span class="badge badge-${job.priority}">${job.priority}</span> ${escapeHtml(job.title)}</p>
       <div class="today-next-job-meta">
         ${job.client ? '<span class="today-next-client">' + escapeHtml(job.client) + '</span>' : ''}
-        ${job.address ? '<a href="https://maps.google.com/?q=' + encodeURIComponent(job.address) + '" target="_blank" rel="noopener">' + escapeHtml(job.address) + '</a>' : 'No address on file'}<br>
+        ${job.address ? '<span class="today-next-address">' + escapeHtml(job.address) + '</span>' : 'No address on file'}<br>
         ${job.phone ? '<a href="tel:' + escapeAttr(job.phone) + '">' + escapeHtml(job.phone) + '</a>' : 'No phone on file'}
       </div>
       <div class="today-next-job-actions">
         <div class="today-next-grid">
         ${onMyWayBtn}
-        ${heroNav}
         ${heroCall}
         ${clockBtn}
         </div>

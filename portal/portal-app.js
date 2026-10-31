@@ -1446,39 +1446,36 @@ if (document.readyState === 'loading') {
 }
 
 // The header's round account button: the client's initials instead of
-// the gear, once a page knows a name or email. The link itself (the
+// the gear, once a page knows who is signed in. The link itself (the
 // existing Settings icon button) is untouched; the gear stays in the
 // markup and shows again if no initials are set.
-function portalInitialsFor(nameOrEmail) {
-  const raw = String(nameOrEmail || '').trim();
-  if (!raw) return '';
-  const base = raw.includes('@') ? raw.split('@')[0].replace(/[._-]+/g, ' ') : raw;
+//
+// One rule, one source (cross-surface pass, 2026-10-31). The avatar used
+// to change letters between tabs (KR on Home and Settings, KI elsewhere):
+// Home and Settings read the saved name from client_profiles.display_name,
+// while Invoices, Visits, Estimates, Contracts and Requests only passed the
+// sign-in email, and Settings' profile card had its own one-letter rule.
+// #553 papered over it with a per-device cache of Home's letters, which
+// missed any device or session that hadn't opened Home first, and kept
+// stale letters after a name change. Now every page and the Settings card
+// call portalInitialsFor(displayName, email), and pages that don't load
+// the profile themselves read the same display_name via
+// portalLoadHeaderInitials(). Display only; nothing is written.
+function portalInitialsFor(displayName, email) {
+  let base = String(displayName || '').trim();
+  // A "name" that is really an email isn't a name.
+  if (!base || base.includes('@')) {
+    base = String(email || displayName || '').trim();
+    base = base.includes('@') ? base.split('@')[0].replace(/[._+-]+/g, ' ') : base;
+  }
   const parts = base.split(/\s+/).filter(Boolean);
   const letters = parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : (parts[0] || '').slice(0, 2);
   return letters.toUpperCase().replace(/[^A-Z0-9]/g, '');
 }
-// Same initials on every page (2026-10-31 redesign). Home knows the
-// client's saved name ("Kim Reyes" -> KR); the other pages only know the
-// email (kim@... -> KI), so the avatar used to change letters between
-// tabs. The name-based initials are remembered on this device, keyed by
-// the signed-in email (the page has already written it into
-// #clientEmailDisplay), and reused where only the email is known. Two
-// letters of display only; nothing is sent anywhere.
-function portalInitialsKey() {
-  const el = document.getElementById('clientEmailDisplay');
-  const email = el ? String(el.textContent || '').trim().toLowerCase() : '';
-  return email ? 'th_portal_initials_' + email : '';
-}
-function portalSetHeaderInitials(nameOrEmail) {
+function portalSetHeaderInitials(email, displayName) {
   const btn = document.querySelector('.portal-header .portal-icon-btn[aria-label="Settings"]');
   if (!btn) return;
-  let initials = portalInitialsFor(nameOrEmail);
-  const key = portalInitialsKey();
-  if (key) {
-    const raw = String(nameOrEmail || '').trim();
-    if (raw && !raw.includes('@') && initials) portalStoreSet(portalSafeStore('localStorage'), key, initials);
-    else if (raw.includes('@')) initials = portalStoreGet(portalSafeStore('localStorage'), key) || initials;
-  }
+  const initials = portalInitialsFor(displayName, email);
   let span = btn.querySelector('.portal-avatar-initials');
   if (!span) {
     span = document.createElement('span');
@@ -1488,6 +1485,18 @@ function portalSetHeaderInitials(nameOrEmail) {
   }
   span.textContent = initials;
   btn.classList.toggle('has-initials', !!initials);
+}
+// For pages that don't otherwise load the client's profile: the same
+// client_profiles.display_name read Home and Settings make (filtered by
+// email explicitly, as Home's is). The gear shows until it answers; a
+// failed or empty read falls back to the email rule, never throws.
+async function portalLoadHeaderInitials(client, email) {
+  let name = '';
+  try {
+    const res = await client.from('client_profiles').select('display_name').eq('client_email', email).maybeSingle();
+    name = (res && !res.error && res.data && res.data.display_name) || '';
+  } catch (e) { /* fall back to the email's letters */ }
+  portalSetHeaderInitials(email, name);
 }
 
 // ---------- Status dot + banner (2026-10-31 portal redesign) ----------

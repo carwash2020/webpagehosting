@@ -5916,3 +5916,13 @@ Connor approved all 19 items from a read-only audit of places the Workspace show
 `stripe-webhook` used to act only on `payment_intent.succeeded`, so a refund in Stripe never reached the invoices. Now one Postgres function, `stripe_record_event()`, records every event in a new `stripe_events` ledger (unique event id) and applies it in one transaction. It handles payments, refunds (full and partial), failed and canceled payments, and disputes, and writes both `client_portal_invoices` and `public.invoices`. New tables: `payments`, `payment_allocations`, `refunds`, `payment_disputes`. New view `invoice_payment_status` gives the net paid per invoice. Every Stripe POST in the four payment-creating functions now sends an `Idempotency-Key`; the POS saved-card charge is keyed on a per-attempt id from the page. A refund doesn't un-pay an invoice (that would trigger payment-reminder emails); the portal shows **Refunded** / "$X refunded" instead.
 
 **Merging this applies and deploys nothing.** Apply the migration first (just before merging, since the daily backup now expects the new tables), then deploy the five functions, then add the new webhook events in the Stripe dashboard: `docs/stripe-hardening-2026-10-31/README.md`. SQL: `sql/payments/01_stripe_event_ledger_payments_refunds.sql` (additive, re-runnable). Tests: `tests/payments/` (sample-event replay through the SQL and through the real webhook source). Details: `docs/specialist-logs/security.md`.
+
+## What changed, 2026-10-31 -- cross-surface consistency pass: Workspace + portal
+
+A final look-only pass over the Workspace tools and the client portal, measured side by side at 390x844. **Chrome only: no data, payment, PDF, auth or messaging logic changed, and nothing moved, so no redirects were needed.**
+
+- **Workspace Home:** the Next Job card no longer has a Navigate button or a Maps link on the address. Directions for one job live only in Job detail. Today's route keeps Route all.
+- **Portal avatar:** every page shows the same initials (KR, never KI on some tabs). Each page now reads the client's saved name the same way, instead of reusing letters Home cached on the device. Settings' profile card uses the same rule.
+- **Matched to the Workspace:** portal status pills (sentence case, Archivo 12px), Contracts' back chevron (a bare orange chevron at the left edge), the header buttons' fill, and the header kicker and title metrics. Home's Start my day, Upload and Open job are the flat primary every other page uses.
+
+Screenshots and harness: `docs/cross-surface-consistency-2026-10-31/`. Details: `docs/specialist-logs/visual.md`.

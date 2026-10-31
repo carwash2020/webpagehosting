@@ -258,6 +258,15 @@ async function runFlow(browser, base, name) {
     check('avatar initials match across pages (Home KR = Invoices)', home === 'KR' && inv === 'KR', { home, inv });
     await env.ctx.close();
   }
+  // Cross-surface pass (2026-10-31): the same letters with Home never
+  // opened (a fresh device or session) -- each page reads the saved name
+  // itself, so the old per-device cache can't be what makes them match.
+  for (const pg of ['dashboard', 'jobs', 'quotes', 'work-orders', 'contracts']) {
+    const env = await open(browser, b.base, '/portal/' + pg + '.html');
+    const got = await text(env.page, '.portal-avatar-initials');
+    check(pg + ': avatar initials are KR on a fresh session (Home never opened)', got === 'KR', got);
+    await env.ctx.close();
+  }
 
   // Contracts: the title gets the card's width at 390.
   {
