@@ -59,7 +59,7 @@
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=3791c46d1a" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=71b69d70b3" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <!-- U16 fix (High-Impact Upgrades, 2026-09-07): jsPDF for the new
      "Generate Job Sheet" button, same version/CDN as invoice-generator.html
@@ -394,6 +394,16 @@
      clock (the other main action in this area). Same button, same handler. */
   body.th-tool-page[data-th-page="job-detail"] .job-next-actions:has(> [data-mark-done]) { align-self: stretch; }
   body.th-tool-page[data-th-page="job-detail"] .job-next-actions .job-next-btn[data-mark-done] { display: flex; flex: 1 1 100%; width: 100%; justify-content: center; margin-left: 0; margin-right: 0; }
+  /* Workspace touch-ups (2026-10-30), after PR #543: no lip on the Next
+     step's primary button. The shared "body .primary-btn" rule gives every
+     primary a 3px orange-dark lip (box-shadow) and weight 700; Home's Open
+     job lost that lip in round 3, so Mark done (and the other primaries
+     this card shows: Send a reminder, invoice links) do the same here: flat
+     orange, no lip, and Start the clock's weight. Press feedback is a
+     slight scale instead of the lip compressing. Style only: the button,
+     its data-mark-done attribute and markJobDoneHere() are unchanged. */
+  body.th-tool-page[data-th-page="job-detail"] .job-next-btn.primary-btn { border: 0; box-shadow: none; font-weight: 400; }
+  body.th-tool-page[data-th-page="job-detail"] .job-next-btn.primary-btn:active { box-shadow: none; transform: scale(.98); }
 </style>
 </head>
 <body data-th-page="job-detail">

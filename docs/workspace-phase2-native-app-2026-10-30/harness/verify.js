@@ -8,6 +8,11 @@
 // detail's one "⋯" header button and the three actions behind it, the title
 // fitting, the bottom bar's New label colour and tap, Mark done's width and
 // tap, and Home's Open job / Route today pair.
+// Touch-ups after #543 add: Add a job and Templates sharing one row on
+// Jobs (and Templates still opening, folding back, "+ New template" and
+// its ? still wired), and Mark done being flat (no lip), same type as
+// Start the clock, still on markJobDoneHere(). PR #544 review adds the
+// Templates tile's hex badge matching Add a job's.
 //
 //   SUPABASE_UMD=/path/to/supabase.js node docs/workspace-phase2-native-app-2026-10-30/harness/verify.js http://localhost:8543
 // (SUPABASE_UMD: see live-stub.js. Without it the "healthy" check expects
@@ -33,12 +38,16 @@ const { installLiveStub } = require('./live-stub');
   await ctx.route('**/*', (r) => { const u = r.request().url(); if (u.startsWith(base)) return r.continue(); if (/supabase\.co/.test(u)) return r.fulfill({ status: 200, contentType: 'application/json', body: /account_roles/.test(u) ? '[{"email":"connor@triplehenterprisesllc.biz","role_name":"Owner","can_manage_invoices":true,"can_view_finance":true,"can_manage_reviews":true}]' : '[]' }); return r.abort(); });
   const live = await installLiveStub(ctx);
   const results = [];
+  process.on('exit', () => { if (!results.printed) console.log(results.join('\n')); });
   const ok = (name, cond, extra) => results.push((cond ? 'PASS ' : 'FAIL ') + name + (extra ? ' ' + JSON.stringify(extra) : ''));
   const p = await ctx.newPage();
   const errs = []; p.on('pageerror', (e) => errs.push(String(e)));
 
   // ---- Jobs: hit areas ----
   await p.goto(base + '/tools/job-tracker.html', { waitUntil: 'load' }); await p.waitForTimeout(3000);
+  // Touch-ups after #543: on a phone the ? shows once the Templates card is
+  // open (the collapsed tile is half width), so open it for this check.
+  await p.evaluate(() => toggleFormSection('templatesFormSection', true)); await p.waitForTimeout(500);
   const helpHit = await p.evaluate(() => {
     const hb = document.querySelector('#templatesFormSection .form-section-header .help-btn');
     hb.scrollIntoView({ block: 'center', behavior: 'instant' });
@@ -46,6 +55,7 @@ const { installLiveStub } = require('./live-stub');
     return ['top', 'left', 'bottom'].map((s) => { const x = s === 'left' ? r.left - 5 : r.left + r.width / 2; const y = s === 'top' ? r.top - 5 : s === 'bottom' ? r.bottom + 5 : r.top + r.height / 2; const h = document.elementFromPoint(x, y); return s + ':' + !!(h && h.closest('.help-btn')); });
   });
   ok('jobs: templates ? 44px hit area (5px outside, 3 sides)', helpHit.every((x) => x.endsWith('true')), helpHit);
+  await p.evaluate(() => toggleFormSection('templatesFormSection')); await p.waitForTimeout(500);
   const hits = await p.evaluate(() => {
     document.documentElement.style.scrollBehavior = 'auto';
     document.querySelector('.job-card-title > a').scrollIntoView({ block: 'center', behavior: 'instant' });
@@ -74,6 +84,48 @@ const { installLiveStub } = require('./live-stub');
   });
   ok('jobs: red (trouble) status dot hit area 4px outside its box', troubleHit);
   ok('jobs: job title link hit at top/bottom of padded box', hits.titleTop && hits.titleBottom);
+
+  // ---- Touch-ups after #543: Add a job + Templates share one row ----
+  const row = await p.evaluate(() => {
+    window.scrollTo(0, 0);
+    const t = document.querySelector('#tab-jobs > .th-sheet-trigger').getBoundingClientRect();
+    const s = document.getElementById('templatesFormSection'); const r = s.getBoundingClientRect();
+    const h3 = s.querySelector('.form-section-header h3');
+    const vis = (h3.querySelector('.jt-tpl-word').textContent || '');
+    const lead = h3.querySelector('.jt-tpl-lead').getBoundingClientRect();
+    const card = document.querySelector('#jobsList .job-card').getBoundingClientRect();
+    const mid = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return { midTapToggles: !!(mid && mid.closest('.form-section-header')) && !(mid.closest('.help-btn')), trig: [Math.round(t.top), Math.round(t.left), Math.round(t.width), Math.round(t.height)], tpl: [Math.round(r.top), Math.round(r.left), Math.round(r.width), Math.round(r.height)], visWord: vis, leadHidden: lead.width <= 1, a11yName: h3.textContent.replace(/\?/g, '').replace(/\s+/g, ' ').trim(), cardTop: Math.round(card.top), clipped: h3.scrollWidth > h3.clientWidth + 1 };
+  });
+  ok('jobs: Add a job and Templates share one row (same top/height, side by side), name still "Recurring job templates" for a screen reader',
+    row.trig[0] === row.tpl[0] && Math.abs(row.trig[3] - row.tpl[3]) <= 2 && row.tpl[1] > row.trig[1] + row.trig[2] && row.leadHidden && /^Recurring job templates/.test(row.a11yName) && !row.clipped && row.midTapToggles, row);
+  // PR #544 review (Connor): the collapsed Templates tile carries the same
+  // hex badge as Add a job (size, clip, fill, glyph colour, inset, gap to
+  // the label), its glyph is the sprite's icon-repeat, and it's decorative.
+  const tplBadge = await p.evaluate(() => {
+    const t = document.querySelector('#tab-jobs > .th-sheet-trigger'); const s = document.getElementById('templatesFormSection');
+    const ti = t.querySelector('.th-sheet-trigger-icon'); const si = s.querySelector('.jt-tpl-icon');
+    if (!ti || !si) return { missing: true };
+    const g = (el) => { const r = el.getBoundingClientRect(); const cs = getComputedStyle(el); const svg = el.querySelector('svg').getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), clip: cs.clipPath, bg: cs.backgroundColor, color: cs.color, glyph: [Math.round(svg.width), Math.round(svg.height)], inset: Math.round(r.left - el.closest('.th-sheet-trigger, .form-section').getBoundingClientRect().left) }; };
+    const tl = t.querySelector('.th-sheet-trigger-label').getBoundingClientRect(); const sl = s.querySelector('.jt-tpl-word').getBoundingClientRect();
+    const use = si.querySelector('use'); const id = (use.getAttribute('href') || '').slice(1);
+    return { add: g(ti), tpl: g(si), gapAdd: Math.round(tl.left - ti.getBoundingClientRect().right), gapTpl: Math.round(sl.left - si.getBoundingClientRect().right), href: id, symbol: !!document.getElementById(id), hidden: si.getAttribute('aria-hidden') === 'true' };
+  });
+  const same = (a, b) => a && b && a.w === b.w && a.h === b.h && a.clip === b.clip && a.bg === b.bg && a.color === b.color && a.glyph.join() === b.glyph.join() && Math.abs(a.inset - b.inset) <= 1;
+  await p.click('#templatesFormSection .form-section-header .collapse-chevron'); await p.waitForTimeout(500);
+  const open = await p.evaluate(() => { const s = document.getElementById('templatesFormSection'); const r = s.getBoundingClientRect(); const t = document.querySelector('#tab-jobs > .th-sheet-trigger').getBoundingClientRect(); return { collapsed: s.classList.contains('is-collapsed'), w: Math.round(r.width), trigW: Math.round(t.width), below: r.top >= t.bottom - 1, newBtn: !!s.querySelector('button[onclick="addTemplatePrompt()"]').offsetParent, badgeGone: !s.querySelector('.jt-tpl-icon').getBoundingClientRect().width, leadShown: s.querySelector('.jt-tpl-lead').getBoundingClientRect().width > 1 }; });
+  ok('jobs: tapping Templates opens its card full width under a full-width Add a job (same as before)', !open.collapsed && open.w >= 360 && open.trigW >= 360 && open.below && open.newBtn && open.leadShown, open);
+  ok('jobs: collapsed Templates has the same hex badge as Add a job (size, hex, fill, glyph, inset, gap), icon-repeat from the sprite, aria-hidden; gone on the open card',
+    !tplBadge.missing && same(tplBadge.add, tplBadge.tpl) && Math.abs(tplBadge.gapAdd - tplBadge.gapTpl) <= 1 && tplBadge.href === 'icon-repeat' && tplBadge.symbol && tplBadge.hidden && open.badgeGone, Object.assign({}, tplBadge, { badgeGone: open.badgeGone }));
+  const newTpl = await p.evaluate(() => { let n = 0; const orig = window.addTemplatePrompt; window.addTemplatePrompt = () => { n++; }; document.querySelector('#templatesFormSection button[onclick="addTemplatePrompt()"]').click(); window.addTemplatePrompt = orig; return n; });
+  ok('jobs: "+ New template" still calls addTemplatePrompt()', newTpl === 1);
+  await p.click('#templatesFormSection .form-section-header .help-btn'); await p.waitForTimeout(400);
+  const info = await p.evaluate(() => { const o = document.getElementById('helpModalOverlay'); const res = { open: !!(o && o.classList.contains('is-open')), text: o ? o.textContent.replace(/\s+/g, ' ').trim().slice(0, 60) : null, stillOpen: !document.getElementById('templatesFormSection').classList.contains('is-collapsed') }; if (typeof closeHelpModal === 'function') closeHelpModal(); return res; });
+  await p.waitForTimeout(300);
+  ok('jobs: the Templates ? (on the open card) opens its info without toggling the card', info.open && /templat/i.test(info.text) && info.stillOpen, info);
+  await p.click('#templatesFormSection .form-section-header .collapse-chevron'); await p.waitForTimeout(500);
+  ok('jobs: tapping Templates again folds it back into the shared row', await p.evaluate(() => { const s = document.getElementById('templatesFormSection'); const t = document.querySelector('#tab-jobs > .th-sheet-trigger'); return s.classList.contains('is-collapsed') && Math.round(s.getBoundingClientRect().top) === Math.round(t.getBoundingClientRect().top); }));
+
 
   // ---- Jobs: behavior smoke ----
   await p.click('.th-sheet-trigger[aria-controls="jobFormSection"]');
@@ -193,6 +245,11 @@ const { installLiveStub } = require('./live-stub');
   // ---- Round 3, item 5: Mark done is full width ----
   const md = await p.evaluate(() => { const b = document.querySelector('[data-mark-done]'); const card = document.querySelector('.job-next'); const cs = getComputedStyle(card); const r = b.getBoundingClientRect(); const c = card.getBoundingClientRect(); const ck = document.querySelector('.job-clock-btn').getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), inner: Math.round(c.width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 2), clockW: Math.round(ck.width) }; });
   ok('detail: Mark done spans its card (like Start the clock), 48px tall', Math.abs(md.w - md.inner) <= 2 && Math.abs(md.w - md.clockW) <= 6 && md.h >= 44, md);
+  // Touch-ups after #543: no orange lip, same type as Start the clock, and
+  // still wired to the same handler (data-mark-done -> markJobDoneHere).
+  const lip = await p.evaluate(() => { const b = getComputedStyle(document.querySelector('[data-mark-done]')); const c = getComputedStyle(document.querySelector('.job-clock-btn')); return { shadow: b.boxShadow, bb: b.borderBottomWidth, ff: b.fontFamily === c.fontFamily, fs: b.fontSize === c.fontSize, fw: b.fontWeight + '/' + c.fontWeight, h: b.height + '/' + c.height }; });
+  ok('detail: Mark done is flat (no lip/bottom border), same font, weight and height as Start the clock', lip.shadow === 'none' && lip.bb === '0px' && lip.ff && lip.fs && lip.fw.split('/')[0] === lip.fw.split('/')[1] && lip.h.split('/')[0] === lip.h.split('/')[1], lip);
+  ok('detail: Mark done still handled by markJobDoneHere() via data-mark-done', await p.evaluate(() => typeof markJobDoneHere === 'function' && document.querySelector('[data-mark-done]').getAttribute('data-mark-done') === '101'));
 
   // ---- Round 3, item 3: the New tab ----
   const nv = await p.evaluate(() => { const c = document.querySelector('.th-bottom-nav .th-bn-create'); const inactive = [...document.querySelectorAll('.th-bottom-nav a:not(.is-active)')].map((a) => getComputedStyle(a).color); return { create: getComputedStyle(c).color, label: getComputedStyle(c.querySelector('.th-bn-create-label')).color, inactive: [...new Set(inactive)], disc: getComputedStyle(c.querySelector('.th-bn-create-disc')).backgroundColor }; });
@@ -242,6 +299,6 @@ const { installLiveStub } = require('./live-stub');
   await p.waitForTimeout(500);
   ok('home: Insights view switch still works', await p.evaluate(() => document.body.getAttribute('data-dash-view') === 'insights' || location.hash === '#insights'));
   ok('no page errors', errs.length === 0, errs.slice(0, 3));
-  console.log(results.join('\n'));
+  console.log(results.join('\n')); results.printed = true;
   await b.close();
 })().catch((e) => { console.error(e); process.exit(1); });

@@ -1982,6 +1982,8 @@ if (typeof document !== 'undefined') {
     '<symbol id="icon-mail" viewBox="0 0 24 24"><rect x="3.5" y="5.5" width="17" height="13" rx="2"/><polyline points="4 7.5 12 13 20 7.5"/></symbol>' +
     // Job clock (2026-09-23, rework part 9).
     '<symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><polyline points="12 7.5 12 12 15.2 14"/></symbol>' +
+    // Recurring job templates (2026-10-31, PR #544 review): two arrows chasing round a loop.
+    '<symbol id="icon-repeat" viewBox="0 0 24 24"><polyline points="16.5 3.5 19.5 6.5 16.5 9.5"/><path d="M4.5 11.5v-1a4 4 0 0 1 4-4h11"/><polyline points="7.5 20.5 4.5 17.5 7.5 14.5"/><path d="M19.5 12.5v1a4 4 0 0 1-4 4h-11"/></symbol>' +
     '<symbol id="icon-play" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M8 5.2v13.6a.9.9 0 0 0 1.37.77l10.6-6.8a.9.9 0 0 0 0-1.54L9.37 4.43A.9.9 0 0 0 8 5.2z"/></symbol>' +
     '<symbol id="icon-stop" viewBox="0 0 24 24"><rect fill="currentColor" stroke="none" x="6" y="6" width="12" height="12" rx="2.5"/></symbol>' +
     '<symbol id="icon-mic" viewBox="0 0 24 24"><path d="M12 15a3.5 3.5 0 0 0 3.5-3.5V6a3.5 3.5 0 0 0-7 0v5.5A3.5 3.5 0 0 0 12 15z"/><path d="M6 11.5a6 6 0 0 0 12 0"/><line x1="12" y1="17.5" x2="12" y2="21"/><line x1="8.5" y1="21" x2="15.5" y2="21"/></symbol>' +

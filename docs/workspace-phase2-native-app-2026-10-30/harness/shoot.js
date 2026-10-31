@@ -7,6 +7,10 @@
 // plus one invoice in localStorage. Also writes report.json: tap targets
 // under 44px, horizontal overflow, the lit tab, page errors.
 //
+// Touch-ups after #543: report.json also records each page's first job
+// card top (meta.firstJobCardTop), and jobs-templates-open shows the
+// Templates half of the shared Add a job / Templates row opened.
+//
 // Review round 3: with SUPABASE_UMD set (see live-stub.js) the pages load
 // the real supabase-js and the Realtime join is answered locally, so the
 // header dot is green (healthy) in the main shots. Without it the dot is
@@ -135,7 +139,8 @@ const TARGET_AUDIT = () => {
       const over=[];document.querySelectorAll('body *').forEach(el=>{const r=el.getBoundingClientRect();if(r.right>392&&r.width>0){let q=el.parentElement,clip=false;while(q&&q!==document.body){if(/(auto|hidden|scroll|clip)/.test(getComputedStyle(q).overflowX)){clip=true;break}q=q.parentElement}if(!clip)over.push(el.tagName+'#'+el.id+'.'+(typeof el.className==='string'?el.className.slice(0,50):'')+' r='+Math.round(r.right))}});
       const dot = document.getElementById('realtimeDot');
       const ht = document.querySelector('.hub-title');
-      return { url: location.pathname, activeTab: act, scrollW: document.documentElement.scrollWidth, over: over.slice(0,10),
+      const fc = document.querySelector('#jobsList .job-card');
+      return { url: location.pathname, activeTab: act, firstJobCardTop: fc ? Math.round(fc.getBoundingClientRect().top) : null, scrollW: document.documentElement.scrollWidth, over: over.slice(0,10),
         dot: dot && { cls: dot.className, bg: getComputedStyle(dot).backgroundColor, trouble: !!dot.closest('.th-status.is-trouble') },
         title: ht && { text: ht.textContent.trim(), clipped: ht.scrollWidth > ht.clientWidth, w: Math.round(ht.getBoundingClientRect().width) } };
     });
@@ -153,6 +158,11 @@ const TARGET_AUDIT = () => {
     await page.screenshot({ path: path.join(out, 'jobs-repeat-visit-390-dark.png') });
     await page.click('#jobViewBtn'); await page.waitForTimeout(600);
     await page.screenshot({ path: path.join(out, 'jobs-view-sheet-390-dark.png') });
+    await page.keyboard.press('Escape'); await page.waitForTimeout(400);
+    // Touch-ups after #543: the Templates half of the shared row, opened.
+    await page.click('#templatesFormSection .form-section-header .collapse-chevron'); await page.waitForTimeout(600);
+    await page.screenshot({ path: path.join(out, 'jobs-templates-open-390-dark.png') });
+    await page.click('#templatesFormSection .form-section-header .collapse-chevron'); await page.waitForTimeout(600);
     await page.keyboard.press('Escape'); await page.waitForTimeout(400);
     await page.evaluate(() => { localStorage.setItem('th_sync_last', JSON.stringify({ ok: false, type: 'push', error: 'http-503', time: Date.now() })); window.dispatchEvent(new CustomEvent('th-sync-status')); });
     await page.waitForTimeout(300);
