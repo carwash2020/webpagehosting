@@ -47,7 +47,7 @@
      reachable only by the browser back button. Loaded in the same
      position (after tools-dialogs.js, before tools-tour.js) as every
      other tool page for consistency. -->
-<script src="/tools/tools-nav-pwa.js?v=a650260a33" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=e67fa5a727" defer></script>
 <script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <script>
@@ -1558,6 +1558,30 @@
      (PR #543 round 3 item 3 and item 11). */
   body.th-tool-page .th-bottom-nav .th-bn-create { color: var(--text-dim); line-height: 1.6; }
   body.th-tool-page .th-bottom-nav .th-bn-create-label { line-height: inherit; }
+
+  /* ---- Phase 4 review (Connor #2): the section kicker over the title, as on
+     every hub page (injectHeaderKicker() in the shell; the label is the
+     page's nav group). Same values as styles-tools.css' .th-kicker. ---- */
+  body.th-tool-page header#mainContent .th-kicker {
+    display: block; min-width: 0;
+    font-family: var(--font-ui); font-size: 11.5px; font-weight: 500; line-height: 1.25;
+    letter-spacing: 1.4px; text-transform: uppercase; color: var(--text-dim);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  body.th-tool-page header#mainContent .th-kicker:empty { display: none; }
+  @media (max-width: 1023px) {
+    body.th-tool-page header#mainContent.th-has-kicker { padding-top: 10px; padding-bottom: 8px; }
+    body.th-tool-page header#mainContent.th-has-kicker h1 { min-height: 0; line-height: 1.1; }
+  }
+
+  /* ---- Phase 4 review (Connor #3): with no income yet, Safe to spend's
+     "Add your income below to see this" is a muted helper line (the page's
+     own .note look), not a big orange headline. The stats are cleared only
+     in that state, so this keys off them; the text itself is unchanged. ---- */
+  body.th-tool-page .rw-safe-card:has(#safeToSpendStats:empty) #safeToSpendHeadline {
+    font-family: var(--font-app); font-size: 12px; line-height: 1.5; color: var(--text-dim);
+    text-shadow: none; letter-spacing: 0; margin: 8px 0 0;
+  }
   body.th-tool-page .th-bn-create-disc { margin-top: -21px; margin-bottom: -3px; }
   /* 44px touch targets on a phone. */
   @media (pointer: coarse) {

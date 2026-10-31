@@ -16,6 +16,8 @@
 //     downloaded. The traces are run on BOTH bases and must be identical:
 //     chrome-only work changes none of them.
 //  2. CHECKS (this branch): the Phase 2/3 checklist, measured.
+//  3. REVIEW ROUND (this branch): Connor's six fixes on PR #547, measured
+//     on the rendered page (reviewRound() below).
 // The FINGERPRINT (shoot.js: every id / onclick / href / data-tab, and
 // every number shown) is compared too; the only allowed differences are
 // listed in ALLOWED_WIRING below, each a deliberate chrome change.
@@ -284,6 +286,106 @@ async function checks(browser) {
     await page.close();
     await c.close();
   }
+  await reviewRound(browser);
+}
+
+// ---- 3. Connor's review round on PR #547 (six chrome fixes) ----------------
+async function reviewRound(browser) {
+  const ctx = await H.newCtx(browser, { width: 390, height: 844, theme: 'dark', touch: true });
+  let page;
+  // #1 Site Content: back is the top-left chevron (Client/Job detail's), to Dev Tools.
+  ({ page } = await H.open(ctx, st('site-content')));
+  const sc = await page.evaluate(() => {
+    const a = document.querySelector('.hub-header-back > a.help-btn'); const b = a.getBoundingClientRect(); const t = document.querySelector('.hub-title').getBoundingClientRect();
+    const s = getComputedStyle(a);
+    const rightBack = [...document.querySelectorAll('.hub-header-right a[href="/tools/dev-tools.html"]')].filter((x) => x.offsetParent).length;
+    return { href: a.getAttribute('href'), label: a.getAttribute('aria-label'), left: Math.round(b.left), leftOfTitle: b.right <= t.left, w: b.width, h: b.height, bg: s.backgroundColor, border: s.borderTopWidth, color: s.color, chevron: !!a.querySelector('use[href="#icon-chevron"]'), rightBack };
+  });
+  const cdPage = (await H.open(ctx, st('client-detail'))).page;
+  const cd = await cdPage.evaluate(() => { const a = document.querySelector('.hub-header-back > a.help-btn'); const b = a.getBoundingClientRect(); const s = getComputedStyle(a); return { left: Math.round(b.left), top: Math.round(b.top), w: b.width, h: b.height, bg: s.backgroundColor, border: s.borderTopWidth, color: s.color }; });
+  await cdPage.close();
+  check('site-content (#1): back is the top-left chevron to Dev Tools, same look as Client detail; no right-side back button',
+    sc.href === '/tools/dev-tools.html' && sc.label === 'Back to Dev Tools' && sc.chevron && sc.leftOfTitle && sc.left === cd.left && sc.w === cd.w && sc.h === cd.h && sc.bg === cd.bg && sc.border === cd.border && sc.color === cd.color && sc.rightBack === 0,
+    JSON.stringify({ sc, cd }));
+  await page.click('.hub-header-back > a.help-btn'); await page.waitForURL(/dev-tools\.html/, { timeout: 5000 }).catch(() => {});
+  check('site-content (#1): tapping the chevron goes back to Dev Tools', /\/tools\/dev-tools\.html/.test(page.url()), page.url());
+  await page.close();
+
+  // #2 Runway: the section kicker, measured against a hub page's.
+  const set = (await H.open(ctx, st('settings'))).page;
+  const ref = await set.evaluate(() => { const k = document.querySelector('.hub-header .th-kicker'); const s = getComputedStyle(k); return { top: Math.round(k.getBoundingClientRect().top), font: s.fontFamily.split(',')[0] + ' ' + s.fontSize + ' ' + s.fontWeight + ' ' + s.letterSpacing + ' ' + s.textTransform }; });
+  await set.close();
+  ({ page } = await H.open(ctx, st('runway-dashboard')));
+  const rw = await page.evaluate(() => {
+    const h = document.querySelector('header#mainContent'); const k = h.querySelector('.th-kicker'); if (!k || !k.offsetParent) return null;
+    const s = getComputedStyle(k); const t = h.querySelector('h1').getBoundingClientRect(); const kr = k.getBoundingClientRect();
+    const dot = document.querySelector('header#mainContent .th-status, header#mainContent .realtime-badge'); const btn = document.querySelector('.th-hdr-actions .th-hdr-btn');
+    return { text: k.textContent, top: Math.round(kr.top), above: kr.bottom <= t.top + 1, font: s.fontFamily.split(',')[0] + ' ' + s.fontSize + ' ' + s.fontWeight + ' ' + s.letterSpacing + ' ' + s.textTransform, hdrH: Math.round(h.getBoundingClientRect().height), dotClear: !dot || !btn || dot.getBoundingClientRect().right <= btn.getBoundingClientRect().left };
+  });
+  check('runway-dashboard (#2): section kicker over the title (its nav group, as the shell labels every page), same type and top as hub pages; dot clear of the buttons',
+    rw && rw.text === 'Money' && rw.above && rw.top === ref.top && rw.font.replace(/^"|"$/g, '') === ref.font.replace(/^"|"$/g, '') && rw.hdrH <= 70 && rw.dotClear, JSON.stringify({ rw, ref }));
+  // #3 Safe to spend with no income: a muted helper line, the page's .note look.
+  const safe = await page.evaluate(() => { const e = document.getElementById('safeToSpendHeadline'); const n = document.getElementById('safeToSpendNote'); const s = getComputedStyle(e); const ns = getComputedStyle(n); const b = getComputedStyle(document.body); return { text: e.textContent, fs: s.fontSize, ff: s.fontFamily.split(',')[0], color: s.color, noteFs: ns.fontSize, noteFf: ns.fontFamily.split(',')[0], noteColor: ns.color, shadow: s.textShadow, h: Math.round(e.getBoundingClientRect().height) }; });
+  check('runway-dashboard (#3): no-income "Add your income below to see this" is a muted helper (the .note font, size and colour), not a big orange headline',
+    safe.text === 'Add your income below to see this' && safe.fs === safe.noteFs && safe.ff === safe.noteFf && safe.color === safe.noteColor && safe.shadow === 'none' && safe.h <= 40, JSON.stringify(safe));
+  await page.close();
+
+  // #4 Clients: long names show in full; the amount chip sits under them.
+  ({ page } = await H.open(ctx, st('clients')));
+  const rows = await page.evaluate(() => [...document.querySelectorAll('#clientDirList .th-row')].map((r) => {
+    const t = r.querySelector('.th-row-title'); const p = r.querySelector('.th-pill'); const tr = t.getBoundingClientRect(); const rr = r.getBoundingClientRect();
+    const btns = [...r.querySelectorAll(':scope > a.th-icon-btn, :scope > button')].filter((b) => b.offsetParent).map((b) => { const x = b.getBoundingClientRect(); return [Math.round(x.width), Math.round(x.height), x.right <= rr.right + 0.5]; });
+    return { name: t.textContent, full: t.scrollWidth <= t.clientWidth + 1 && t.scrollHeight <= t.clientHeight + 1 && getComputedStyle(t).textOverflow !== 'ellipsis', lines: Math.round(tr.height / parseFloat(getComputedStyle(t).lineHeight)), pillUnder: !p || p.getBoundingClientRect().top >= r.querySelector('.th-row-main').getBoundingClientRect().bottom - 0.5, pillLeftAligned: !p || Math.abs(p.getBoundingClientRect().left - tr.left) < 1, btns };
+  }));
+  const longRow = rows.find((r) => /Red Cliffs Senior Living Community Association/.test(r.name));
+  check('clients (#4): every name shows in full (incl. a 47-char name), the amount chip sits under the name, Call and the menu stay 44px in the row',
+    rows.length === 5 && longRow && longRow.lines >= 2 && rows.every((r) => r.full && r.pillUnder && r.pillLeftAligned && r.btns.every((b) => b[0] >= 44 && b[1] >= 44 && b[2])),
+    JSON.stringify(rows));
+  const tipWithClients = await page.evaluate(() => { const t = document.querySelector('#tab-directory .th-page-tip'); return !!t && !!t.offsetParent; });
+  check('clients (#5): with clients, the Owes-you tip still shows', tipWithClients);
+  await page.close();
+  await ctx.close();
+
+  // #5 Clients with no clients: no tip; Add a client is the orange primary.
+  const ec = await H.newCtx(browser, { width: 390, height: 844, theme: 'dark', touch: true });
+  ({ page } = await H.open(ec, st('clients')));
+  await page.evaluate(() => { ['th_clients', 'th_tracker_jobs', 'th_invoices', 'th_quotes', 'th_contracts'].forEach((k) => localStorage.setItem(k, '[]')); localStorage.removeItem('th_tip_clients'); });
+  await page.reload(); await page.waitForTimeout(2500);
+  const em = await page.evaluate(() => {
+    const tip = document.querySelector('.th-page-tip'); const b = document.querySelector('.cd-empty > button[onclick="openAddClient()"]'); const s = getComputedStyle(b);
+    const orange = getComputedStyle(document.documentElement).getPropertyValue('--orange').trim();
+    const probe = document.createElement('i'); probe.style.color = orange; document.body.appendChild(probe); const orangeRgb = getComputedStyle(probe).color; probe.remove();
+    return { tipInDom: !!tip, tipShown: !!tip && !!tip.offsetParent, tipSeen: localStorage.getItem('th_tip_clients'), primary: b.classList.contains('primary-btn'), bg: s.backgroundColor, orangeRgb, shadow: s.boxShadow, h: Math.round(b.getBoundingClientRect().height) };
+  });
+  check('clients (#5, no clients): the Owes-you tip is hidden (and not marked seen); Add a client is the orange primary, flat, >=44px',
+    !em.tipShown && !em.tipSeen && em.primary && em.bg === em.orangeRgb && em.shadow === 'none' && em.h >= 44, JSON.stringify(em));
+  await page.close();
+  await ec.close();
+
+  // #6 Wiki: the brand is a plain label with the full name, even long ones.
+  const wc = await H.newCtx(browser, { width: 390, height: 844, theme: 'dark', touch: true });
+  ({ page } = await H.open(wc, st('parts-reference')));
+  const before = await page.evaluate(() => [...document.querySelectorAll('.pr-fix-row')].slice(0, 3).map((r) => r.querySelector('.pr-fix-brand').textContent));
+  await page.evaluate(() => {
+    const key = Object.keys(localStorage).find((k) => { try { const v = JSON.parse(localStorage.getItem(k)); return Array.isArray(v) && v[0] && Array.isArray(v[0].issues); } catch (e) { return false; } });
+    const units = JSON.parse(localStorage.getItem(key));
+    const ids = [...new Set([...document.querySelectorAll('[data-pr-fix-unit]')].map((e) => e.dataset.prFixUnit))];
+    units.find((u) => String(u.id) === ids[0]).brand = 'White-Westinghouse';
+    units.find((u) => String(u.id) === ids[1]).brand = 'Fisher & Paykel Commercial Appliance Group';
+    localStorage.setItem(key, JSON.stringify(units));
+  });
+  await page.reload(); await page.waitForTimeout(2500);
+  const wk = await page.evaluate(() => [...document.querySelectorAll('.pr-fix-row')].slice(0, 4).map((r) => {
+    const b = r.querySelector('.pr-fix-brand'); const br = b.getBoundingClientRect(); const rr = r.getBoundingClientRect(); const s = getComputedStyle(b);
+    return { text: b.textContent, inMain: !!b.closest('.pr-fix-main'), full: b.scrollWidth <= b.clientWidth + 1 && s.textOverflow !== 'ellipsis', inside: br.left >= rr.left - 0.5 && br.right <= rr.right + 0.5, tt: s.textTransform, bg: s.backgroundColor, w: Math.round(br.width) };
+  }));
+  check('parts-reference (#6): brand is a plain label with the full name (Kenmore, White-Westinghouse, a 42-char typed brand), never cut, inside the row',
+    before[0] && before[0].length > 4 && wk.length >= 2 && wk[0].text === 'White-Westinghouse' && wk[1].text === 'Fisher & Paykel Commercial Appliance Group' && wk.every((r) => r.inMain && r.full && r.inside && r.tt === 'none' && /rgba\(0, 0, 0, 0\)|transparent/.test(r.bg)),
+    JSON.stringify({ before, wk }));
+  const ov = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  check('parts-reference (#6): long brands cause no horizontal scroll', ov <= 0, String(ov));
+  await page.close();
+  await wc.close();
 }
 
 (async () => {

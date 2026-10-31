@@ -4201,18 +4201,19 @@ body.th-tool-page .th-v2-rule-head::after { content: ''; flex: 1; height: var(--
   html body.th-tool-page:is([data-th-page="contract-generator"], [data-th-page="route-planner"], [data-th-page="review-request"], [data-th-page="parts-reference"], [data-th-page="dev-tools"]) .hub-header ~ p.tool-sub { display: none; }
 }
 
-/* ---- Client detail: Job detail's back chevron, top-left (Phase 2 item 3) ---- */
-html body.th-tool-page[data-th-page="client-detail"] .hub-header { justify-content: flex-start; }
-html body.th-tool-page[data-th-page="client-detail"] .hub-header-left { flex: 1 1 auto; min-width: 0; }
-html body.th-tool-page[data-th-page="client-detail"] .hub-header-right { flex: 0 0 auto; }
-html body.th-tool-page[data-th-page="client-detail"] .hub-header-back { flex: 0 0 auto; display: flex; margin: 0 -8px 0 -12px; }
-html body.th-tool-page[data-th-page="client-detail"] .hub-header-back > a.help-btn {
+/* ---- Client detail and Site Content: Job detail's back chevron, top-left
+   (Phase 2 item 3; Site Content added in the Phase 4 review, Connor #1) ---- */
+html body.th-tool-page:is([data-th-page="client-detail"], [data-th-page="site-content"]) .hub-header { justify-content: flex-start; }
+html body.th-tool-page:is([data-th-page="client-detail"], [data-th-page="site-content"]) .hub-header-left { flex: 1 1 auto; min-width: 0; }
+html body.th-tool-page:is([data-th-page="client-detail"], [data-th-page="site-content"]) .hub-header-right { flex: 0 0 auto; }
+html body.th-tool-page:is([data-th-page="client-detail"], [data-th-page="site-content"]) .hub-header-back { flex: 0 0 auto; display: flex; margin: 0 -8px 0 -12px; }
+html body.th-tool-page:is([data-th-page="client-detail"], [data-th-page="site-content"]) .hub-header-back > a.help-btn {
   width: 44px; height: 44px; min-width: 44px; padding: 0; border: 0; border-radius: 12px; background: none; box-shadow: none;
   color: var(--orange-light); display: inline-flex; align-items: center; justify-content: center; text-decoration: none;
 }
-html body.th-tool-page[data-th-page="client-detail"] .hub-header-back > a.help-btn .th-icon { width: 26px; height: 26px; margin: 0; stroke-width: 2.4; transform: scaleX(-1); }
-html body.th-tool-page[data-th-page="client-detail"] .hub-header-back > a.help-btn:active { background: var(--bg-panel-2); }
-@media (min-width: 1024px) { html body.th-tool-page[data-th-page="client-detail"] .hub-header-back { margin-left: -8px; } }
+html body.th-tool-page:is([data-th-page="client-detail"], [data-th-page="site-content"]) .hub-header-back > a.help-btn .th-icon { width: 26px; height: 26px; margin: 0; stroke-width: 2.4; transform: scaleX(-1); }
+html body.th-tool-page:is([data-th-page="client-detail"], [data-th-page="site-content"]) .hub-header-back > a.help-btn:active { background: var(--bg-panel-2); }
+@media (min-width: 1024px) { html body.th-tool-page:is([data-th-page="client-detail"], [data-th-page="site-content"]) .hub-header-back { margin-left: -8px; } }
 
 /* ---- One casing rule (Phase 2 item 7) ----
    Titles, headings and controls are sentence case, as typed. Card
@@ -4291,6 +4292,25 @@ html body.th-tool-page[data-th-page="site-content"] .th-sc-nav-btn.is-active .th
    passes the search term, so it doesn't match here). */
 html body.th-tool-page[data-th-page="clients"] #tab-directory:has(#clientDirList > .cd-empty > button[onclick="openAddClient()"]) :is(.cd-toolbar, #clientDirFilters, #clientDirSummary) { display: none; }
 html body.th-tool-page[data-th-page="clients"] #tab-directory:has(#clientDirList > .cd-empty > button[onclick="openAddClient()"]) { padding-top: 16px; }
+/* Phase 4 review (Connor #5): the "use Owes you" tip points at a chip
+   that is hidden here, so it waits until there's a client (it isn't
+   marked seen, so it shows then). Add a client is the page's one orange
+   primary in this state (class="primary-btn" in clients.html). */
+html body.th-tool-page[data-th-page="clients"] #tab-directory:has(#clientDirList > .cd-empty > button[onclick="openAddClient()"]) .th-page-tip { display: none; }
+html body.th-tool-page[data-th-page="clients"] #clientDirList > .cd-empty > .primary-btn { margin-top: 14px; width: auto; min-width: 180px; padding: 0 24px; }
+
+/* Phase 4 review (Connor #4): a long name ("Preferred Property Management")
+   was cut to "Prefe…" because the amount chip, Call and the ⋯ sat beside
+   it on one line. As on Invoices' rows (the amount and pill stack in their
+   own column), the chip now drops under the name and job line, and the
+   name wraps instead of ellipsizing, so it's always shown in full.
+   Layout only: the same elements in the same link. */
+html body.th-tool-page[data-th-page="clients"] #clientDirList .th-row-link {
+  display: grid; grid-template-columns: 44px minmax(0, 1fr); column-gap: 12px; row-gap: 6px; align-items: center;
+}
+html body.th-tool-page[data-th-page="clients"] #clientDirList .th-row-link:has(> .th-pill) > .th-row-avatar { grid-row: 1 / span 2; }
+html body.th-tool-page[data-th-page="clients"] #clientDirList .th-row-link > .th-pill { grid-column: 2; justify-self: start; }
+html body.th-tool-page[data-th-page="clients"] #clientDirList .th-row-title { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
 /* A client with nothing on file (a new lead): no "$0.00 / 0 / –" stats
    grid and no four "No jobs / invoices / quotes / contracts" cards under
    a History card that already says "Nothing on file yet". The delete

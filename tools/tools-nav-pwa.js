@@ -780,8 +780,10 @@
   // Header kicker (v2, 2026-09-28): a small Oswald line over the page title
   // -- the section the page belongs to (Work / Money / Insights / Office),
   // or whatever the page sets with thSetHeaderKicker() (Home shows the date).
+  // Runway (no shared .hub-header) gets the same kicker over its own h1
+  // (Workspace Phase 4 review, item 2); its page CSS mirrors .th-kicker.
   function injectHeaderKicker() {
-    var title = document.querySelector('.hub-header .hub-title');
+    var title = document.querySelector('.hub-header .hub-title') || document.querySelector('header#mainContent > h1');
     if (!title || title.parentNode.querySelector('.th-kicker')) return;
     var own = SIDEBAR_DESTS.filter(function (d) { return String(d.href).split('#')[0] === path; })[0];
     var kicker = document.createElement('span');

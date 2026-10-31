@@ -50,6 +50,9 @@ const clients = EMPTY ? [] : [
   { id: 'c_maria', name: 'Maria Lopez', phone: '435-555-0101', email: 'maria@example.com', address: '123 Red Cliffs Dr, St. George, UT', createdAt: addDays(-200) + 'T10:00:00Z', source: 'created' },
   { id: 'c_greg', name: 'Greg Hall', phone: '435-555-0104', email: '', address: '410 Telegraph St, Washington, UT', createdAt: addDays(-90) + 'T10:00:00Z', source: 'created' },
   { id: 'c_ppm', name: 'Preferred Property Management', phone: '435-555-0190', email: 'ops@example.com', address: '1 Bluff St, St. George, UT', createdAt: addDays(-300) + 'T10:00:00Z', source: 'created' },
+  // Review round (Connor #4): a genuinely long name with an overdue balance,
+  // so the row has the name, the due chip, Call and the menu all at once.
+  { id: 'c_long', name: 'Red Cliffs Senior Living Community Association', phone: '435-555-0142', email: 'office@example.com', address: '900 S Bluff St, St. George, UT', createdAt: addDays(-150) + 'T10:00:00Z', source: 'created' },
   { id: 'c_lead', name: 'Dana Whitfield', phone: '435-555-0177', email: '', address: '', createdAt: addDays(-2) + 'T10:00:00Z', source: 'created' },
 ];
 const jobs = EMPTY ? [] : [
@@ -62,6 +65,7 @@ const items = (d, amt) => [{ description: d, qty: 1, rate: amt, amount: amt }];
 const invoices = EMPTY ? [] : [
   { id: now - 1000, invoiceNumber: 'INV-1046', clientName: 'Maria Lopez', clientEmail: 'maria@example.com', total: 312.5, subtotal: 290, tax: 22.5, date: addDays(-1), terms: 'Net 15', paid: false, jobRefId: '101', lineItems: items('Dryer thermal fuse + labor', 290) },
   { id: now - 2000, invoiceNumber: 'INV-1045', clientName: 'Preferred Property Management', clientEmail: 'ops@example.com', total: 1180, subtotal: 1100, tax: 80, date: addDays(-40), terms: 'Net 15', paid: false, lineItems: items('Unit turn: 4 appliances', 1100) },
+  { id: now - 2500, invoiceNumber: 'INV-1043', clientName: 'Red Cliffs Senior Living Community Association', clientEmail: 'office@example.com', total: 2465, subtotal: 2300, tax: 165, date: addDays(-35), terms: 'Net 15', paid: false, lineItems: items('Laundry room: 3 commercial dryers', 2300) },
   { id: now - 3000, invoiceNumber: 'INV-1044', clientName: 'Greg Hall', total: 285, subtotal: 265, tax: 20, date: addDays(-20), terms: 'Net 30', paid: true, paidAmount: 285, lineItems: items('Ice maker valve', 265) },
 ];
 const quotes = EMPTY ? [] : [
