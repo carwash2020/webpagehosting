@@ -112,7 +112,7 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=d7410af6b7">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous"></script>
 <script src="/signature-pad.js?v=f95f8e1d28"></script>
-<script src="/portal/portal-app.js?v=202609300100"></script>
+<script src="/portal/portal-app.js?v=202610310100"></script>
 <script>
   // Stripe.js is only needed once a client opens the card sheet, never to
   // paint the page -- so it no longer blocks parsing. It starts a few
@@ -361,7 +361,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=7564929584">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=2c6fd305e8">
 </head>
 <body class="portal-page">
 
@@ -514,7 +514,7 @@
           <label for="detailPhone">Phone</label>
           <input type="tel" id="detailPhone" placeholder="(555) 555-5555" autocomplete="tel">
         </div>
-        <button class="btn blue set-action" id="saveDetailsBtn">Save Details</button>
+        <button class="btn blue set-action" id="saveDetailsBtn">Save details</button>
         <div class="set-msg" id="detailsMsg" style="display:none;"></div>
       </div>
     </div>
@@ -924,7 +924,7 @@
       updated_at: new Date().toISOString(),
     });
     btn.disabled = false;
-    btn.textContent = 'Save Details';
+    btn.textContent = 'Save details';
 
     if (error) {
       showDetailsMsg("Couldn't save your details just now. Please try again.", true);
@@ -1046,7 +1046,7 @@
         : '';
       body.innerHTML =
         '<div class="set-row" style="align-items:flex-start;"><span class="set-row-val" id="referralLinkText" style="word-break:break-all; font-size:13px;">' + escapeHtml(link) + '</span></div>' +
-        '<button class="btn blue" style="width:100%; justify-content:center; margin-top:10px;" id="copyReferralLinkBtn">Copy Link</button>' +
+        '<button class="btn blue" style="width:100%; justify-content:center; margin-top:10px;" id="copyReferralLinkBtn">Copy link</button>' +
         '<a href="sms:?body=' + smsBody + '" class="btn secondary-btn" style="width:100%; justify-content:center; margin-top:8px; text-decoration:none;">Text to a Friend</a>' +
         usageNote;
       document.getElementById('copyReferralLinkBtn').addEventListener('click', function () {

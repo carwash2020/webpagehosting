@@ -117,7 +117,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=d7410af6b7">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous"></script>
-<script src="/portal/portal-app.js?v=202609300100"></script>
+<script src="/portal/portal-app.js?v=202610310100"></script>
 <!-- Shared business-hours data (2026-09-04) -- see business-hours.js's
      own header comment for the full reasoning. -->
 <script src="/js/business-hours.js?v=e0e3b29210"></script>
@@ -425,7 +425,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=7564929584">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=2c6fd305e8">
 </head>
 <body class="portal-page">
 
@@ -575,7 +575,7 @@
     <div class="wo-photo-row" id="woPhotoRow">
       <button type="button" class="wo-photo-add" id="woPhotoAddBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-        <span>Add Photo</span>
+        <span>Add photo</span>
       </button>
     </div>
     <div class="wo-photo-error" id="woPhotoError" style="display:none;"></div>
@@ -597,7 +597,7 @@
 
   <div class="wo-error" id="woError" style="display:none;"></div>
 
-  <button class="btn orange wo-submit-btn" style="width:100%; justify-content:center; margin-top:6px;" id="woSubmitBtn">Send Request</button>
+  <button class="btn orange wo-submit-btn" style="width:100%; justify-content:center; margin-top:6px;" id="woSubmitBtn">Send request</button>
   <div class="portal-nav-clearance" aria-hidden="true"></div>
 </div>
 </div>
@@ -949,7 +949,7 @@
         errorEl.textContent = "Couldn't upload your photos just now. Please try again, or send the request without them.";
         errorEl.style.display = 'block';
         btn.disabled = false;
-        btn.textContent = 'Send Request';
+        btn.textContent = 'Send request';
         return;
       }
     }
@@ -980,7 +980,7 @@
       errorEl.textContent = "Couldn't send that just now. Please try again, or call us at (435) 414-1667.";
       errorEl.style.display = 'block';
       btn.disabled = false;
-      btn.textContent = 'Send Request';
+      btn.textContent = 'Send request';
       return;
     }
 
@@ -994,7 +994,7 @@
     clearWoPreferredSlot();
     document.getElementById('successMessage').style.display = 'block';
     btn.disabled = false;
-    btn.textContent = 'Send Request';
+    btn.textContent = 'Send request';
     window.scrollTo({ top: 0, behavior: 'smooth' });
     renderMyRequests();
     // The form was just cleared -- refill contact details for the next one.

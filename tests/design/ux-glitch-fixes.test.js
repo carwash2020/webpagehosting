@@ -76,7 +76,7 @@ test('Cookie Preferences links go to privacy.html#cookies and still reopen the b
 });
 
 test('Request Work Send Request sits above a spacer, and body padding clears the fixed tab bar', () => {
-  assert.match(WO, /id="woSubmitBtn">Send Request<\/button>\s*<div class="portal-nav-clearance" aria-hidden="true"><\/div>/);
+  assert.match(WO, /id="woSubmitBtn">Send request<\/button>\s*<div class="portal-nav-clearance" aria-hidden="true"><\/div>/);
   assert.match(APP_CSS, /body\.portal-page \{[\s\S]*?padding-bottom: calc\(96px \+ env\(safe-area-inset-bottom, 0px\)\);/);
   assert.match(APP_CSS, /\.portal-nav-clearance \{[\s\S]*?height: 16px;/);
   const standalone = POLISH.match(/@media \(display-mode: standalone\) \{[\s\S]*?\n\}/);

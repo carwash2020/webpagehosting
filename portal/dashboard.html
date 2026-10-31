@@ -103,7 +103,7 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=d7410af6b7">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous"></script>
 <script src="/signature-pad.js?v=f95f8e1d28"></script>
-<script src="/portal/portal-app.js?v=202609300100"></script>
+<script src="/portal/portal-app.js?v=202610310100"></script>
 <script>
   // Stripe.js is only needed once a client opens the card sheet, never to
   // paint the page -- so it no longer blocks parsing. It starts a few
@@ -313,7 +313,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=7564929584">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=2c6fd305e8">
 </head>
 <body class="portal-page">
 
@@ -658,7 +658,7 @@
         ${renderLineItemsTable(inv.line_items)}
         <div class="invoice-card-actions">
           ${!inv.paid ? `<button class="btn orange" onclick="startPayment(${inv.id})">Pay now</button>` : ''}
-          <button class="btn secondary-btn" onclick="downloadInvoicePDF(${inv.id})">${inv.paid ? 'Download Receipt' : 'Download PDF'}</button>
+          <button class="btn secondary-btn" onclick="downloadInvoicePDF(${inv.id})">${inv.paid ? 'Download receipt' : 'Download PDF'}</button>
         </div>
       </div>
     `;
@@ -709,7 +709,7 @@
     portalApplyNavInvoiceDot(invoices.filter(inv => !inv.paid).length);
     if (!invoices.length) {
       hidePayFirst();
-      listEl.innerHTML = `<div class="empty-state is-neutral"><div class="empty-state-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9.5 9h5M9.5 13h5"/></svg></div><p class="empty-state-title">No invoices on file yet.</p><p class="empty-state-sub">When we invoice you, it will show up here so you can pay online.</p><a href="/portal/work-orders.html" class="btn orange empty-state-cta">Request Work</a></div>`;
+      listEl.innerHTML = `<div class="empty-state is-neutral"><div class="empty-state-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9.5 9h5M9.5 13h5"/></svg></div><p class="empty-state-title">No invoices on file yet.</p><p class="empty-state-sub">When we invoice you, it will show up here so you can pay online.</p><a href="/portal/work-orders.html" class="btn orange empty-state-cta">Request work</a></div>`;
       document.getElementById('invoiceSummary').style.display = 'none';
       document.getElementById('invoiceChartCard').style.display = 'none';
       return;
@@ -750,7 +750,7 @@
       html += `<div class="invoice-section-title">Paid</div>` + paid.map(renderInvoiceCard).join('');
     }
     if (!outstanding.length && !paid.length) {
-      html = `<div class="empty-state is-neutral"><div class="empty-state-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9.5 9h5M9.5 13h5"/></svg></div><p class="empty-state-title">No invoices on file yet.</p><p class="empty-state-sub">When we invoice you, it will show up here so you can pay online.</p><a href="/portal/work-orders.html" class="btn orange empty-state-cta">Request Work</a></div>`;
+      html = `<div class="empty-state is-neutral"><div class="empty-state-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z"/><path d="M9.5 9h5M9.5 13h5"/></svg></div><p class="empty-state-title">No invoices on file yet.</p><p class="empty-state-sub">When we invoice you, it will show up here so you can pay online.</p><a href="/portal/work-orders.html" class="btn orange empty-state-cta">Request work</a></div>`;
     }
     listEl.innerHTML = html;
     portalScrollToHash();

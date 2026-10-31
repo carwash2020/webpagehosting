@@ -2368,3 +2368,168 @@ body.portal-page .settings-pane-title:focus { outline: none; box-shadow: none; }
 @media (min-width: 700px) {
   body.portal-page .wo-photo-row { grid-template-columns: repeat(4, minmax(0, 120px)); }
 }
+
+/* ==========================================================
+   28. Native app pass (2026-10-31): the Workspace Phase 2/3/4
+   checklist applied to the signed-in portal pages
+   ==========================================================
+   Chrome only, all under body.portal-page, so login.html and
+   set-password.html (bare <body>, rebuilt in #551) and /tools/ are not
+   matched. Same decisions as the Workspace suite (docs/specialist-logs/
+   visual.md, 2026-10-30/31): a one-row sticky header with the safe-area
+   floor only in the installed app; a status dot after the title and one
+   banner under the header when something didn't load; titles and
+   controls in sentence case, while small tracked eyebrows, section
+   labels, field labels, pills and the tab-bar labels keep their caps; one
+   flat primary (no lip, weight 400); 44px touch targets. */
+
+/* 28a. The header: one sticky row, under the status bar only when installed. */
+@media (max-width: 1023px) {
+  body.portal-page { padding-top: 0; }
+  body.portal-page .portal-appbar {
+    position: sticky; top: 0; z-index: 80;
+    box-sizing: border-box; min-height: 62px;
+    margin: 0 -16px 18px; padding: 8px 16px 8px;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    -webkit-backdrop-filter: saturate(1.4) blur(14px);
+    backdrop-filter: saturate(1.4) blur(14px);
+  }
+  /* A target or a card scrolled to the top lands under the header, not behind it. */
+  body.portal-page [id] { scroll-margin-top: 76px; }
+}
+@media (max-width: 1023px) and (display-mode: standalone) {
+  body.portal-page { padding-top: 0; }
+  /* The Workspace's floor: iOS can report env() = 0 in a black-translucent
+     standalone app, so never less than 44px under the status bar. */
+  body.portal-page .portal-appbar {
+    padding-top: calc(max(env(safe-area-inset-top, 0px), 44px) + 6px);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  body.portal-page [id] { scroll-margin-top: calc(max(env(safe-area-inset-top, 0px), 44px) + 70px); }
+}
+body.portal-page .portal-appbar .portal-header-left { min-width: 0; flex: 1 1 auto; }
+body.portal-page .portal-appbar .portal-header-left > div { min-width: 0; flex: 1 1 auto; }
+body.portal-page .portal-appbar .portal-header-actions { flex-shrink: 0; }
+
+/* 28b. Status dot (portalMountStatus in portal-app.js) and its banner. */
+body.portal-page .portal-appbar .portal-title {
+  display: inline-block; vertical-align: middle; max-width: calc(100% - 22px);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+body.portal-page .portal-status {
+  position: relative; display: inline-block; vertical-align: middle;
+  width: 10px; height: 10px; min-width: 0; min-height: 0; margin: 0 0 0 9px; padding: 0;
+  border: 0; border-radius: 50%; background: var(--status-idle);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-idle) 24%, transparent);
+  cursor: default; -webkit-tap-highlight-color: transparent;
+}
+body.portal-page .portal-status.is-ok {
+  background: var(--status-live); box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-live) 24%, transparent);
+}
+body.portal-page .portal-status.is-trouble {
+  background: var(--status-error); box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-error) 28%, transparent);
+  cursor: pointer;
+}
+/* A 44px hit area while it does something (Try again), without growing the dot. */
+body.portal-page .portal-status.is-trouble::after { content: ''; position: absolute; inset: -17px; }
+body.portal-page .portal-status.is-loading { animation: portal-status-wait 1.4s ease-in-out infinite; }
+@keyframes portal-status-wait { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { body.portal-page .portal-status.is-loading { animation: none; } }
+
+body.portal-page .portal-sync-note:empty { display: none; }
+body.portal-page .portal-sync-note {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px;
+  margin: 0 0 16px; padding: 12px 14px;
+  background: var(--tone-red-bg); border: 1px solid color-mix(in srgb, var(--status-error) 35%, transparent);
+  border-radius: var(--portal-radius-tile, 18px); color: var(--text); font-size: 14px; line-height: 1.45;
+}
+body.portal-page .portal-sync-note > svg {
+  flex-shrink: 0; width: 18px; height: 18px;
+  fill: none; stroke: var(--tone-red-fg); stroke-width: 1.9; stroke-linecap: round;
+}
+body.portal-page .portal-sync-note > span { flex: 1 1 200px; min-width: 0; }
+body.portal-page .portal-sync-retry {
+  min-height: 44px; padding: 0 18px; border-radius: 999px; cursor: pointer;
+  background: var(--bg-panel-3); border: 1px solid var(--border); color: var(--text);
+  font-family: var(--font-ui); font-size: 14px; font-weight: 500; letter-spacing: .2px;
+}
+body.portal-page .portal-sync-note.is-busy .portal-sync-retry { opacity: .55; pointer-events: none; }
+
+/* 28c. Sentence case: titles and controls (eyebrows/labels/pills keep caps).
+   Written as html body.portal-page :is(...): :is() takes its most specific
+   argument, so the whole list out-ranks the v2 rules that uppercase a
+   button through a parent (.quote-actions .btn, .contract-actions .btn) or
+   a compound (.btn.orange) -- the Workspace's specificity trap, again. */
+html body.portal-page :is(
+  .portal-appbar .portal-title, .home-greeting, .next-appt-title, .report-bug-title,
+  .pay-step-title, .pay-done-title, .quote-title, .checkup-title, .wo-success-title,
+  .wo-form-heading, .contract-title, .settings-profile .settings-link-title,
+  .settings-pane-title, .biometric-lock-title
+) { text-transform: none; }
+
+html body.portal-page :is(
+  .btn, .btn.orange, .secondary-btn, .small-btn,
+  .quote-actions .btn, .contract-actions .btn, .invoice-card-actions .btn, .pay-first-actions .btn,
+  .pay-sheet-cta, .schedule-cta, .schedule-confirm-btn, .checkup-schedule-btn,
+  .next-appt-actions .next-appt-action, .attention-item-action, .help-actions a,
+  .wo-submit-btn, .wo-urgency-btn, .portal-reply-notice-open, #signOutBtnSettings,
+  .settings-back, .settings-panes .btn.blue, .biometric-lock-box .btn, .empty-state-cta
+) { text-transform: none; letter-spacing: .2px; }
+
+/* 28d. One flat primary everywhere: no lip, weight 400, a press scale. */
+html body.portal-page :is(
+  .btn.orange, .pay-first-actions .btn, .pay-sheet-cta, .quote-approve-btn, .contract-sign-btn,
+  .schedule-cta, .schedule-confirm-btn, .checkup-schedule-btn, .wo-submit-btn,
+  .settings-panes .btn.blue, .biometric-lock-box .btn, .help-actions a.primary
+) { box-shadow: none; border: 0; font-weight: 400; }
+@media (hover:hover){
+  html body.portal-page :is(.btn.orange, .settings-panes .btn.blue, .pay-first-actions .btn):hover { box-shadow: none; transform: none; filter: brightness(1.06); }
+}
+html body.portal-page :is(.btn.orange, .settings-panes .btn.blue, .pay-first-actions .btn):active:not(:disabled),
+html body.portal-page .help-actions a.primary:active { box-shadow: none; transform: scale(.98); }
+@media (prefers-reduced-motion: reduce) {
+  html body.portal-page :is(.btn.orange, .settings-panes .btn.blue, .pay-first-actions .btn):active:not(:disabled),
+  html body.portal-page .help-actions a.primary:active { transform: none; }
+}
+
+/* 28e. Touch targets (44px) the audit found under it. */
+/* Invoices / Estimates: the line-item "View details" disclosure (32px). */
+body.portal-page details.line-item-details > summary {
+  display: inline-flex; align-items: center; min-height: 44px;
+}
+/* Home: "Change" on an upcoming visit was a 14px blue inline link. The
+   portal's links are orange (the owner's rule: "we don't use the blue").
+   Padding grows the hit box to 44px without moving the line. */
+body.portal-page .upcoming-row-meta .upcoming-row-change {
+  color: var(--orange-light); display: inline-block; padding: 15px 2px; margin: -15px -2px;
+}
+/* Home's help row: Request work full width, Call and Text side by side,
+   so "Call (435) 414-1667" stays on one line at 390. */
+@media (max-width: 1199px) {
+  body.portal-page .help-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  body.portal-page .help-actions a.primary { grid-column: 1 / -1; }
+  body.portal-page .help-actions a { min-height: 48px; display: flex; align-items: center; justify-content: center; text-align: center; white-space: nowrap; }
+}
+
+/* 28f. The unread badge on the Request hex: the badge is appended after
+   the "Request" label, so portal-app.css's label rule
+   (.portal-nav a.portal-nav-request span:last-child, grey) matched it too
+   and its digit read grey on orange (about 2:1). */
+html body.portal-page .portal-nav a .portal-nav-badge,
+html body.portal-page .portal-nav a.portal-nav-request .portal-nav-badge { color: #0a0a0a; }
+
+/* 28g. Contracts: the "Needs your signature" pill squeezed the title into
+   a ~155px column (five Anton lines at 390). On a phone the pill sits
+   on its own line above the title instead. */
+@media (max-width: 600px) {
+  body.portal-page .contract-card-top { flex-direction: column-reverse; align-items: flex-start; gap: 8px; }
+  body.portal-page .contract-card-head { width: 100%; }
+}
+
+/* 28h. Empty states: the neutral icon was the old blue; orange, as everywhere else. */
+body.portal-page .empty-state.is-neutral .empty-state-icon {
+  background: color-mix(in srgb, var(--orange) 14%, transparent); color: var(--orange-light);
+}
+/* Home: a failed account load filled one 190px tile of the card grid. */
+body.portal-page .home-cards > .empty-state { grid-column: 1 / -1; }
