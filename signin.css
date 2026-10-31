@@ -466,7 +466,10 @@ body.th-signin .th-step-progress .seg { background: #3a352f; }
 body.th-signin .th-step-progress .seg.is-filled { background: var(--si-orange); }
 
 /* ---- 2FA code boxes ------------------------------------------------------ */
-body.th-signin .th-code-boxes { gap: 8px; }
+/* Room on both sides so the 3px focus ring + outline on the first/last box
+   never touches the screen edge (it did at 390px). */
+body.th-signin .th-code-boxes-wrap { padding: 0 6px; }
+body.th-signin .th-code-boxes { gap: 6px; }
 body.th-signin .th-code-box {
   height: 64px;
   border-radius: 12px;

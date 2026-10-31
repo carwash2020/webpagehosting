@@ -158,6 +158,19 @@ test('both 2FA steps offer "Trust this device for 30 days"', () => {
   assert.match(TOOLS_LOGIN, /persistSession\(\{\s*access_token: result\.access_token,[\s\S]*?\}, pendingRememberMe\);/, 'tools: the verified session is stored with the trust choice');
 });
 
+test('Trust helper copy does not promise to skip the code; headings match on both screens', () => {
+  for (const [name, html] of Object.entries(PAGES)) {
+    assert.match(html, /Stay signed in here for 30 days\. Leave off on a shared computer\./, name);
+    assert.ok(!/aren't asked for a code/.test(html), `${name} must not say the code is skipped`);
+  }
+  assert.match(PORTAL_LOGIN, /id="pageTitle">Sign in<\/h1>/);
+  assert.match(TOOLS_LOGIN, /id="loginTitle">Sign in<\/h1>/);
+});
+
+test('code boxes keep breathing room from the screen edge (focus ring included)', () => {
+  assert.match(CSS, /body\.th-signin \.th-code-boxes-wrap \{ padding: 0 6px; \}/);
+});
+
 test('2FA is not weakened: no client flag lets a device skip the code', () => {
   // Trust only chooses WHERE the verified session lives. The password step still hands over to the code step whenever a factor exists.
   assert.match(PORTAL_LOGIN, /aal\.nextLevel === 'aal2' && aal\.currentLevel !== 'aal2'/);
