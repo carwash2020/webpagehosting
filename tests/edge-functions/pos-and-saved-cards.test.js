@@ -221,7 +221,9 @@ test('POS is the Quick charge tab inside Invoices (2026-09-21), so it rides the 
   // The invoice list leads the strip since 2026-09-22 (Workspace rework part 4).
   assert.match(POS_PAGE, /GEN_TAB_ORDER = \['recent', 'invoice', 'quote', 'pos'\]/);
   assert.ok(!fs.existsSync(repo('tools', 'pos.html')), 'pos.html should no longer exist');
-  assert.match(POS_PAGE, /function applyGenTabFromHash\(\)[\s\S]*?if \(tab === 'pos'\)/, 'the #pos deep link must open the tab (and focus the email field)');
+  // No autofocus on Client email any more (Phase 3 review round 2,
+  // 2026-10-31): on a phone it raised the keyboard over the keypad.
+  assert.match(POS_PAGE, /function applyGenTabFromHash\(\) \{[\s\S]*?activateGenTab\(tab\);\n  \}/, 'the #pos deep link must open the tab');
   assert.match(NAV, /'\/tools\/invoice-generator\.html': function \(\) \{ return typeof canManageInvoices === 'function' && canManageInvoices\(\); \}/);
   // clients.html left the nav's permission map on 2026-09-22 (it opens on
   // the client list now; its own Portal tab carries the canManageInvoices gate).

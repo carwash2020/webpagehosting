@@ -18,10 +18,10 @@ const DATA_LAYER = fs.readFileSync(repo('tools', 'data-layer.js'), 'utf8');
 // ---- Labor / Mileage quick-add ----
 
 test('both invoices and quotes have Add Labor and Add Mileage buttons', () => {
-  assert.match(INVOICE_GEN, /onclick="addLaborLineItem\('addLineItem'\)">\+ Add Labor</);
-  assert.match(INVOICE_GEN, /onclick="addMileageLineItem\('addLineItem'\)">\+ Add Mileage</);
-  assert.match(INVOICE_GEN, /onclick="addLaborLineItem\('addQuoteLineItem'\)">\+ Add Labor</);
-  assert.match(INVOICE_GEN, /onclick="addMileageLineItem\('addQuoteLineItem'\)">\+ Add Mileage</);
+  assert.match(INVOICE_GEN, /onclick="addLaborLineItem\('addLineItem'\)">\+ Add labor</);
+  assert.match(INVOICE_GEN, /onclick="addMileageLineItem\('addLineItem'\)">\+ Add mileage</);
+  assert.match(INVOICE_GEN, /onclick="addLaborLineItem\('addQuoteLineItem'\)">\+ Add labor</);
+  assert.match(INVOICE_GEN, /onclick="addMileageLineItem\('addQuoteLineItem'\)">\+ Add mileage</);
 });
 
 test('Labor defaults to taxable, matching this business\'s own labor-is-taxed setup; Mileage defaults to not taxable', () => {

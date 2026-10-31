@@ -3,6 +3,76 @@
 Started 2026-09-16, alongside the `tripleh-visual` skill. See `README.md` in
 this directory for how these logs work.
 
+## 2026-10-31 -- Workspace Phase 3, review round 3: Connor's 4 fixes on PR #545
+
+Four small items from Connor's look at round 2's 390x844 shots. Still **chrome only**. `verify.js` is now 62 checks (57 + 5), and its `FINGERPRINT` is still byte-identical to main's (866621a) and to round 2's, including the Quick charge wiring and all 26 builder handlers. #544 wasn't merged, so I made no rebase. All rules are in `styles-tools.css` ("review round 3").
+
+- **1. Charge button above the fold.** The empty state never showed a Charge button: it only renders into `#posChargeArea` once an email finds a saved card. That's the state to measure, so `shoot.js` now answers the `mode:"check"` lookup with a saved Visa. Before: Charge 827-883 against a bottom bar at 759, whose + hex rises to 751. Phone-only (≤600px) trims:
+  - keys 56 → 45px (the 44 floor holds), keypad gap 8 → 5;
+  - card gap 14 → 8 and padding 20 → 14/16; intro margin 14 → 8;
+  - field labels at line-height 1.25 with 4px under them; email/description fields 48 → 44;
+  - the saved-card box padding 14 → 8 with a 6px margin; Charge 56 → 52.
+
+  After: Charge at **693.9-745.9**, 5px above the hex and 13px above the bar, at scroll 0. These are the same with real fonts and fallbacks. "Use a different card instead" is still under the bar; it's the secondary path. A first pass with only the keys at 46 and lighter gap trims still left the button 22px under the bar.
+- **2. Chips.** It was option (a). Four chips needed 329px in a 328px track, so "Paid" lost about 1px plus its edge. A 2px gap trim alone fits today, but a two-digit count overflows again. On a phone the chips now start from 10px sides and a 6px gap and `flex: 1 1 auto` to share the row. They fill it exactly and still fit with "Unpaid 12 / Overdue 10" (`verify` stresses this). Font, size, weight, height, radius and colours are still Jobs'. Round 2's chip-vs-Jobs check now leaves out side padding.
+- **3. The TMP number. Its premise was wrong.** `INV-2026-TMP-…` isn't a placeholder replaced at save. It's `assignNextNumber()`'s **offline fallback**, used when the `next_invoice_number` sequence RPC fails. Save uses whatever is in the field, and nothing swaps it later. The harness answers every RPC with `[]`, so every shot shows it. In production a normal load shows the real sequence number. So "Final number set when saved" would be false. The caption reads "Temporary number. Couldn't load the next one." and shows **only** while the value contains `-TMP-`. The input goes `--text-dim` (`.label-hint`'s colour) with no size change, so iOS doesn't zoom. `syncTempNumberNote()` is presentation only: one call after the value is set and an `input` listener. The value and the generation are untouched. Only `assignNextNumber` ever sets these two fields (checked), so nothing else needs a resync.
+- **4. Blue card → orange. There's no blue info convention.** `.quote-banner` is the only blue notice card in the suite. Elsewhere blue is status only: `.th-pill.is-paid`, `.badge-status`, `.th-ring--blue`, Jobs' calendar selection. `.th-tone-blue`'s own comment scopes it to "a pill/icon-tile/row-accent", with orange as "the suite's long-standing default", and no page uses it. The shared `.th-note` callout defaults to orange. Home/Jobs/Job detail notices are all the orange `.th-page-tip`. So `.quote-banner` takes `.th-page-tip`'s tint, border, 18px radius and body type. Its class stays `.quote-banner`: `verify`'s `go()` and the tip code treat `.th-page-tip` as the dismissible one-time tip. (The repo is a shallow clone, so the banner's 09-29 restyle couldn't be traced further.)
+
+**Trap:** in Playwright, `goto` to the same page with a different `#hash` is a same-document navigation, not a reload. Typed values survive, and that looked like a draft restore. Use a query string per load.
+
+## 2026-10-31 -- Workspace Phase 3, review round 2: Connor's 10 fixes on PR #545
+
+Ten items from Connor's look at round 1's 390x844 shots, all on the same branch. Still **chrome only**: `verify.js` is now 57 checks (39 + 18), and its `FINGERPRINT` is byte-identical to main's. It now also covers the Quick charge wiring (the saved-card lookup request, each charge button's `onclick`, and which function a tap reaches, behind spies) and all 26 builder button handlers. PR #544 wasn't merged yet, so I made no rebase.
+
+- **1. Title follows the tab.** `syncMoneySeg()` (presentation only) also sets `.hub-title`: Invoices / New invoice / New quote / Quick charge. The status dot is the title's *sibling* (`mountStatusDot` inserts after it), so the `textContent` swap is safe.
+- **2. No autofocus.** `applyGenTabFromHash()` focused `#posClientEmail` on `#pos`, which raised the keyboard over the keypad. The branch is removed. Two tests pinned it: `workspace-ia-round4` (now asserts *no* `.focus(`) and one assertion in `pos-and-saved-cards` that used the `if (tab === 'pos')` branch as a marker for "the deep link opens the tab". It now pins `activateGenTab(tab)`; no payment assertion changed.
+- **3. Quick charge.**
+  - The intro is one line: "No invoice needed. A saved card charges in one tap."
+  - `#posAmount` is now 64px tall (it was 96 around a 64px figure).
+  - Keypad keys are flex-centred with `line-height: 1` and `text-box: trim-both cap alphabetic`.
+  - **Trap:** the harness's fallback Anton has shorter digits on the same metrics, so the keypad and the amount *look* low in fallback shots. With real Anton the digits are centred. Hence `REAL_FONTS=1` in `shoot.js`: it serves `fonts/pdf/` Anton, Archivo and Oswald in place of the blocked Google Fonts request.
+- **4. Baseline.** Finance is an `<a>`: it took a 22.4px link line-height, while the `<button>`s had `normal`. One `line-height: 1.2` on `.mn-seg > :is(a, button)`; the measured baselines are 101.38 / 101.38 / 101.38.
+- **5. Chips = Jobs' chips.** Jobs' are page-scoped (`#statusFilterGroup .sort-btn` in job-tracker.html), and the invoice chips' `.th-chip` class is read by `setInvoiceFilter`'s selector and a test. So the class stays, and its values are matched one for one: Archivo 13.5/600, 14px sides, 38/44px, panel background, `--text`. `verify` compares the computed styles against the Jobs page itself. "All" has no count, so a 60px floor (Jobs' shortest chip is 61) keeps it a pill.
+- **6. Compact view, icon only.** `applyDensityPreference()` (shared) rewrites the button's `textContent`, so an SVG inside it would be wiped. The words stay as its accessible name, hidden by image replacement (`text-indent` plus transparent colour). A `::before` mask draws the icon, tinted orange when pressed. Jobs' precedent (hide it on a phone, since density lives in Settings) would take it off this page, so I didn't use it.
+- **7. Finance tabs.** Five sentence-case labels can't fit 390 even shortened ("Profitability" alone is ~85px of a ~68px share), so the track keeps scrolling and gets a fade. It's a `position: sticky; right: 0` `::after` inside the flex scroll track (`::before` is the sticky-background ghosting fix). At the end of the scroll it rests in its own 32px after Inventory, so the last tab is never faded.
+- **8. One primary.** Every `.primary-btn` on both pages uses #544's Job detail rule: no lip, no border, weight 400, and a scale on press. The Log pair and `+ New invoice` are 400 too. `verify` sweeps every visible primary on six states.
+- **9. Builder = a screen inside Invoices.** A `.hub-header-back` chevron (Job detail's, PR #543) calls `activateGenTab('recent')`, which is exactly what the hidden Invoices segment did. It only shows while `#tab-invoice` / `#tab-quote` is active (CSS `:has`), and `#moneySeg` hides there. Every route back to Finance or Quick charge still exists: back → the list (switch visible), the bottom bar, swipe, and the sidebar on a computer. The draft is kept, as before. I did the full version, not the de-emphasis fallback.
+- **10. Copy.**
+  - Every user-facing ` -- ` outside the PDF functions is fixed: two tips, three toasts and the number-fallback toast.
+  - The five inside `generatePDF()` / `generateQuotePDF()` are left alone per the constraint (developer `logClientError` strings aren't UI).
+  - Long all-caps parenthetical labels are now a short label plus `<span class="label-hint field-caption">` under it, with `aria-describedby`. There are ten of them, and the existing `.label-hint` sentence-case reset is reused.
+
+**Left alone:** the INVOICES card eyebrow stays caps (Phase 2's eyebrow rule; Connor flagged casing separately). There is no left-edge fade on Finance's track, because `::before` is taken. The "Charge Saved Card" / "Enter Card & Charge" labels live in the charge functions.
+
+## 2026-10-30 -- Workspace Phase 3 ("the money pages"): a gap audit of Invoices and Finance
+
+Phase 2's native-app checklist, applied to `tools/invoice-generator.html` (Invoices: the list, New invoice, New quote, Quick charge) and `tools/finance.html` (Cost lookup, Profitability, Income, Expenses, Inventory). As in Phase 2, I audited the rendered pages first and fixed only real gaps. **Chrome only.** Not touched: `js/pdf-layout.js`, `generatePDF` / `generateQuotePDF` / `rebuildInvoicePdf`, any total/tax/line-item math, sending (email, portal, reminders), and the Stripe Quick charge flow. Harness: `docs/workspace-phase3-money-2026-10-30/harness/`. `shoot.js` and `verify.js` build on Phase 2's and require its `live-stub.js` (not a copy). They stub `/rest/v1/invoices` too: the list reads the relational cache first, so seeding `th_invoices` alone renders "No invoices generated yet".
+
+**Already done (W3 09-28 + v2 package 3 09-29), so not redone:**
+- W3's "not in this package" list was built by v2 package 3 the next day: the Invoices / Finance / Quick charge `.th-v2-seg` (`#moneySeg`), the row ⋯ sheets, Spent this month, and the keypad.
+- The shell header (kicker, title, dot, shift/Search/More) was already one row on both pages. Bottom bar, safe areas, sheets, reduced motion and PWA tags were already shared.
+- 44px: the Money segments, tab buttons, `.mn-new-btn`, keypad and row ⋯ were already 44px under `(pointer: coarse)`.
+- Invoices already had the dot and the shared `#thSyncNote` banner. Phase 2's component is on every page with a `.realtime-badge`.
+
+**Real gaps, fixed:**
+- **Phase 2's header, casing and segment rules were scoped to its three pages** (`:is([data-th-page="workspace"|"job-tracker"|"job-detail"])`). The money pages still had the old 108-110px header (body padding plus the 44px floor in a browser tab), all-caps titles, segments and buttons, and a shrink-wrapped 299px switch (segments 84/79/118). I added `invoice-generator` and `finance` to Phase 2's own header and casing lists (no new rules). The sticky-tab offsets are Jobs' values (62px browser, `60px + floor` standalone), measured: the tabs land on the header's bottom edge at 62. The header is now one 62px row at top 0, and the switch is 366px with three 116px segments. The builder's New invoice | New quote strip is full width (2 x 176). Finance's five tabs stay a scrolling track, because five sentence-case labels don't fit 390px.
+- **Finance had no status dot and no sync banner.** It has no `.realtime-badge`, so `mountStatusDot()` returned early, and it called `startRealtimeSync(…, function () {})`. A failed backup on Finance showed nothing. Fix: the badge in its own `<p class="hub-sub">` after the header (Job detail's pattern; `finance-desc-and-route-overflow.test.js` pins the `.tool-sub` text as child-free), an `updateRealtimeBadge()` like the other pages', passed to the existing call, plus the 5-line base `.realtime-badge` / `.realtime-dot` CSS every badge page carries locally. **Trap:** without that base CSS the badge is an inline span, and the shared `.th-status` rules draw a tiny square. Verified through the shell's own events: green when healthy, grey when the websocket drops, red plus banner on backup failure, retry on tap, and clear on recovery.
+- **Casing source strings** exposed by dropping `text-transform`: "Cost lookup", "Add entry" / "Update entry" / "Add part" / "Update part" (markup plus Finance's edit/cancel label literals), "+ Add labor" / "+ Add mileage" (`labor-mileage-and-registry-link.test.js` pin updated), "Download estimate PDF". Card eyebrows ("INVOICE DETAILS", "SPENT THIS MONTH", the stat labels, field labels) keep caps, per Phase 2's rule.
+- **Pair buttons:** Log expense (orange lip, Archivo 700) next to Log income (border, .8px tracking) got the Home-pair rule: 48px, a 1px border on both, no lip, Archivo 600 14px. A lone primary keeps its lip, as Job detail's Mark done does.
+- **Empty states:**
+  - Spent this month with nothing logged showed "$0" over an empty grey bar and "0 entries". Those now hide (`:has(.fin-spent-empty)`), and the card's own "Nothing logged in October yet." stands alone.
+  - No invoices: the search, filter chips, Compact view and the header's + New invoice hide (`:has(> #invoiceLogList > .inv-empty)`), leaving one message and one New invoice. A filter or search with no matches keeps them, so it can be cleared.
+  - No quotes: the quote search hides. Keyed to the inbox icon, so a search miss keeps it.
+- **Quick charge's amount was 16px on phones.** The shared no-zoom rule `body.th-tool-page input:not(…):not(…):not(…)` outranks the page's 64px rule at ≤760px (three `:not()`s), so an empty charge read as a 64px "$" beside a tiny "0.00". Pinned with `#posAmount`. It was the same on main.
+- **44px (coarse):** the filter chips (36px, "All" 42px wide), Compact view (39), line-item fields (40; the page's rule loads later, so the fix mirrors its `.line-items-table` selector with the `html` prefix), inventory Delete (40 wide), and Finance's checkbox labels as 44px rows.
+- Intro paragraphs are desktop-only on a phone, like Jobs' `.jt-intro`. A lone Finance segment is hidden for accounts without both Money pages.
+
+**Verified:** `verify.js` passes 39/39. Its `FINGERPRINT` line holds every money number the pages compute: tiles, rows per filter and search, the row sheet, invoice and quote subtotal/tax/total, the six Cost lookup results, the keypad and Spent. It is byte-identical on main and this branch. Phase 2's `verify.js` is still 58/58. No horizontal scroll at 390/820/1280, light and dark, seeded and empty, and no page errors.
+
+**Left alone on purpose:** the Quick charge buttons "Charge Saved Card" / "Enter Card & Charge" (their label literals live inside the Stripe charge functions). "Mark Paid" / "Mark Unpaid" in the row sheet and desktop row (render functions with pinned markup). Finance's three native checkboxes stay 20px; their labels are the 44px hit rows. On a computer the full-width switch spans the content column, as Phase 2's Jobs tabs do.
+
+Screenshots (390x844 dark unless named; before = main at 866621a): `docs/workspace-phase3-money-2026-10-30/`.
+
 ## 2026-10-30 -- Workspace touch-ups after PR #543: Mark done lip, Jobs page density
 
 These are two follow-ups Connor asked for after #543 merged. Both were measured with the #543 harness (`verify.js` now runs 65 checks, up from 58). Shots are in `docs/workspace-touchups-2026-10-30/`.
