@@ -92,7 +92,7 @@ test('invoice-generator.html: startNewCardCharge requires a drawn signature (not
 });
 
 test('invoice-generator.html: the drawn signature is sent to create-pos-charge as signature_image', () => {
-  assert.match(INVOICE_GEN, /body: JSON\.stringify\(\{ mode: 'new_card', client_email: fields\.email, amount: fields\.amount, description: fields\.description, signer_name: signerName, signature_image: signatureImage \}\)/);
+  assert.match(INVOICE_GEN, /body: JSON\.stringify\(\{ mode: 'new_card', client_email: fields\.email, amount: fields\.amount, description: fields\.description, signer_name: signerName, signature_image: signatureImage, request_id: posRequestId\('new_card', fields\) \}\)/);
 });
 
 // ---- portal/dashboard.html: single + bulk invoice payment signature ----

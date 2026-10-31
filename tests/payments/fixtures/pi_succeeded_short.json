@@ -1,0 +1,39 @@
+{
+  "id": "evt_1PiShort",
+  "object": "event",
+  "api_version": "2024-06-20",
+  "created": 1793462420,
+  "livemode": true,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  },
+  "type": "payment_intent.succeeded",
+  "data": {
+    "object": {
+      "id": "pi_short",
+      "object": "payment_intent",
+      "amount": 10000,
+      "amount_capturable": 0,
+      "amount_received": 10000,
+      "capture_method": "automatic",
+      "client_secret": "pi_short_secret_redacted",
+      "confirmation_method": "automatic",
+      "created": 1793462340,
+      "currency": "usd",
+      "customer": "cus_pat",
+      "description": null,
+      "last_payment_error": null,
+      "latest_charge": "ch_short",
+      "livemode": true,
+      "metadata": {
+        "client_portal_invoice_id": "1"
+      },
+      "payment_method": "pm_card_visa",
+      "receipt_email": null,
+      "setup_future_usage": "off_session",
+      "status": "succeeded"
+    }
+  }
+}

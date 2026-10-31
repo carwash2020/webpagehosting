@@ -1,9 +1,10 @@
 // Supabase Edge Function: stripe-webhook
 //
-// Receives payment_intent.succeeded events from Stripe once a client
-// actually completes a payment, and marks the corresponding invoice(s)
-// paid in both client_portal_invoices and the internal th_invoices
-// log (so Connor/Steve see it as paid too, not just the portal).
+// Receives Stripe events, records each one in the stripe_events ledger,
+// and applies it: payments succeeded / failed / canceled, refunds (full and
+// partial), and disputes. Invoices are marked paid in client_portal_invoices
+// and public.invoices, and the internal th_invoices log is updated too, so
+// Connor/Steve see it as paid, not just the portal.
 //
 // Deployed with verify_jwt: false -- Stripe itself can't send a
 // Supabase JWT, so the ONLY thing authenticating an incoming request
@@ -17,27 +18,49 @@
 // original bytes Stripe sent, and parsing then re-serializing JSON
 // can subtly change them enough to break verification.
 //
-// Updated 2026-09-02 ("Pay All Outstanding"): a single PaymentIntent
-// can now cover MULTIPLE invoices (create-bulk-payment-intent writes
-// the same stripe_payment_intent_id onto every invoice in the batch).
-// The lookup-by-payment-intent-id below already naturally returns every
-// matching row, not just one -- this just needed to stop assuming
-// rows[0] was the only one and loop over all of them instead. The
-// metadata fallback checks BOTH the singular (client_portal_invoice_id,
-// one invoice) and plural (client_portal_invoice_ids, comma-separated
-// list, bulk) shapes.
+// Rebuilt 2026-10-31 (Stripe hardening, docs/stripe-hardening-2026-10-31):
+// every database write now happens inside ONE Postgres function,
+// stripe_record_event(event, refunds)
+// (sql/payments/01_stripe_event_ledger_payments_refunds.sql). In one
+// transaction it:
+//   1. inserts the event into stripe_events (unique event_id). An event
+//      already processed returns { duplicate: true } and nothing else runs.
+//   2. applies it to payments / payment_allocations / refunds /
+//      payment_disputes, client_portal_invoices and public.invoices.
+//   3. marks the ledger row processed, or, if anything failed, rolls the
+//      changes back, keeps the ledger row with its error, and returns
+//      { error }. This function then answers 500 so Stripe retries.
+// Before this, public.invoices was a separate best-effort PATCH after the
+// portal write: if it failed, the webhook still returned 200, Stripe never
+// retried, and the two tables drifted.
 //
-// Updated 2026-09-25 (security audit finding #7): an invoice is only
-// marked paid when the amount Stripe received matches what it still owes.
-// A short payment (a page left open from before the invoice was raised)
-// is left unpaid and staff get a push. See the amount check below.
+// What this function still does itself, after the database has recorded
+// the event (so a redelivered event never repeats them):
+//   - charge.refunded: fetches the charge's refund list from Stripe (read
+//     only; API 2024-06-20 doesn't embed it) and passes it in.
+//   - staff push: amount mismatch (paid short / overpaid), new dispute.
+//   - POS: income-log entry + receipt email, only when this delivery won
+//     the stripe_pos_charges_logged claim (now made inside the RPC).
+//   - the workspace_sync th_invoices blob (best effort, as before).
+//
+// Refunds do NOT un-pay an invoice: send-payment-reminder emails any
+// client whose invoice shows less paid than its total. A refund sets
+// refunded_amount / refund_status instead, the portal shows "Refunded",
+// and invoice_payment_status has the true net. See the SQL file's header.
+//
+// Kept from before: the amount check (security audit 2026-09-25, finding
+// #7) -- a short payment leaves the invoice unpaid and alerts staff; an
+// overpayment marks it paid and alerts. It now runs inside the RPC.
+//
+// Events to send to this endpoint (Stripe dashboard -> Developers ->
+// Webhooks -> this endpoint -> events): see the list in
+// docs/stripe-hardening-2026-10-31/README.md. Anything else that arrives
+// is recorded in the ledger as "ignored" and answered 200.
 //
 // Required secrets (Supabase dashboard -> Edge Functions -> Secrets):
-//   STRIPE_SECRET_KEY -- same test-mode key create-payment-intent uses.
-//   STRIPE_WEBHOOK_SIGNING_SECRET -- a SEPARATE secret from the API
-//     key, starting with whsec_..., shown once when the webhook
-//     endpoint is registered in the Stripe dashboard (Developers ->
-//     Webhooks -> Add endpoint, pointing at this function's own URL).
+//   STRIPE_SECRET_KEY -- the live key (verified live 2026-10-31); used
+//     here only to read a charge's refunds.
+//   STRIPE_WEBHOOK_SIGNING_SECRET -- whsec_..., per endpoint and per mode.
 // (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are auto-provided by Supabase.)
 //
 // NOTE (recorded 2026-09-02, when this file was first backed up into
@@ -150,6 +173,138 @@ async function sendPosReceiptEmail(clientEmail: string, description: string, amo
   }
 }
 
+// Staff push for a new dispute: money is already held back by Stripe and
+// there's a response deadline. Same channel as the amount alert above.
+async function sendDisputeAlert(r: any) {
+  const due = r.evidence_due_by
+    ? new Intl.DateTimeFormat("en-US", { timeZone: "America/Denver", month: "short", day: "numeric" }).format(new Date(r.evidence_due_by))
+    : "soon";
+  const body = `A client disputed a ${money(Number(r.amount_cents) || 0)} card payment (${r.client_email || "unknown client"}, reason: ${r.reason || "unknown"}). ` +
+    `Stripe is holding the funds. Respond in the Stripe dashboard by ${due}.`;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/Send-Push`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+      body: JSON.stringify({ type: "stripe-reconciliation-alert", title: "Payment disputed", body }),
+    });
+    if (!res.ok) console.error(`Dispute alert for ${r.dispute_id} failed: HTTP ${res.status}`);
+  } catch (err) {
+    console.error(`Dispute alert for ${r.dispute_id} failed:`, err);
+  }
+}
+
+// The database half of this webhook. Returns the RPC's JSON, or null if
+// the call itself failed (the function isn't deployed yet, the database is
+// unreachable): the caller answers 500 so Stripe retries.
+async function recordEvent(event: Stripe.Event, refunds: unknown[] | null): Promise<any | null> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/stripe_record_event`, {
+      method: "POST",
+      headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_event: event, p_refunds: refunds }),
+    });
+    if (!res.ok) {
+      console.error(`stripe_record_event failed for ${event.id}: HTTP ${res.status} ${(await res.text().catch(() => "")).slice(0, 300)}`);
+      return null;
+    }
+    return await res.json();
+  } catch (err) {
+    console.error(`stripe_record_event failed for ${event.id}:`, err);
+    return null;
+  }
+}
+
+// POS income-log entry for a charge this delivery claimed first. Unchanged
+// from before apart from moving into its own function.
+async function logPosIncome(pi: Stripe.PaymentIntent) {
+  const syncRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026&select=data`,
+    { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+  );
+  if (!syncRes.ok) {
+    console.error(`Failed to read workspace_sync for POS charge ${pi.id}: ${await syncRes.text().catch(() => "")}`);
+    return;
+  }
+  const syncRows = await syncRes.json();
+  if (!syncRows.length) return;
+  const blob = syncRows[0].data;
+  const incomeLog = JSON.parse(blob.th_income_log || "[]");
+  // toISOString() is always UTC -- the business runs on America/Denver
+  // time, so a POS sale after ~6pm local would silently log against
+  // tomorrow's date in Finance. Same fix already applied to
+  // create-pos-charge-index.ts's own income-log entry.
+  const whParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Denver", year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(new Date());
+  const whDateMap: Record<string, string> = {};
+  whParts.forEach((p) => { whDateMap[p.type] = p.value; });
+  incomeLog.push({
+    id: Date.now(),
+    date: `${whDateMap.year}-${whDateMap.month}-${whDateMap.day}`,
+    desc: pi.metadata?.pos_description || pi.description || "POS sale",
+    amount: pi.metadata?.pos_amount ? Number(pi.metadata.pos_amount) : pi.amount / 100,
+    source: pi.metadata?.pos_client_email || "",
+    payment: "Stripe (POS)",
+    jobRefId: "",
+    jobRefTitle: "",
+    origin: "pos",
+    stripePaymentIntentId: pi.id,
+    createdBy: pi.metadata?.internal_account || "",
+    lastEditedBy: pi.metadata?.internal_account || "",
+  });
+  blob.th_income_log = JSON.stringify(incomeLog);
+  const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026`, {
+    method: "PATCH",
+    headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ data: blob, updated_at: new Date().toISOString() }),
+  });
+  if (!patchRes.ok) console.error(`Failed to log POS income for ${pi.id}: ${await patchRes.text().catch(() => "")}`);
+}
+
+// Mark the invoices this payment just paid as paid in the workspace_sync
+// th_invoices blob too, so Connor/Steve's own invoice log matches.
+// Best effort, as before: the database already has the payment, and
+// failing the webhook here would make Stripe redeliver an event the ledger
+// will now (correctly) skip as a duplicate anyway.
+async function markPaidInWorkspaceBlob(piId: string, marked: any[]) {
+  const syncRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026&select=data`,
+    { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+  );
+  if (!syncRes.ok) {
+    console.error(`Failed to read workspace_sync for PaymentIntent ${piId}: ${await syncRes.text().catch(() => "")}`);
+    return;
+  }
+  const syncRows = await syncRes.json();
+  if (!syncRows.length) return;
+  const blob = syncRows[0].data;
+  const invoices = JSON.parse(blob.th_invoices || "[]");
+  const portalTotal = new Map(marked.map((inv: any) => [inv.source_invoice_id, Number(inv.total) || 0]));
+  let changed = false;
+  invoices.forEach((inv: any) => {
+    if (!portalTotal.has(inv.id)) return;
+    // Paid in full means paidAmount = total, the same as Mark paid in the
+    // app (workspace.html togglePaid, invoice-generator.html). Setting only
+    // `paid` flipped back to unpaid on the next sync, because every device
+    // recomputes `paid` from paidAmount (sync.js deriveInvoicePaid).
+    const total = Number(inv.total ?? portalTotal.get(inv.id)) || 0;
+    const paidCents = Math.round((Number(inv.paidAmount) || 0) * 100);
+    const fullyRecorded = inv.paid === true && inv.paidAmount != null && paidCents >= Math.round(total * 100);
+    if (fullyRecorded) return;
+    inv.paid = true;
+    inv.paidAmount = total;
+    changed = true;
+  });
+  if (!changed) return;
+  blob.th_invoices = JSON.stringify(invoices);
+  const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026`, {
+    method: "PATCH",
+    headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ data: blob, updated_at: new Date().toISOString() }),
+  });
+  if (!patchRes.ok) console.error(`Failed to mark workspace_sync th_invoices paid for ${piId}: ${await patchRes.text().catch(() => "")}`);
+}
+
 Deno.serve(async (req: Request) => {
   if (!STRIPE_SECRET_KEY || !WEBHOOK_SECRET) {
     return new Response("STRIPE_SECRET_KEY or STRIPE_WEBHOOK_SIGNING_SECRET secret is not set yet.", { status: 500 });
@@ -171,288 +326,76 @@ Deno.serve(async (req: Request) => {
     return new Response(`Webhook signature verification failed: ${err.message}`, { status: 400 });
   }
 
-  // Only the one event type this function actually needs to act on --
-  // Stripe sends many event types to the same endpoint by default;
-  // anything else is acknowledged (200) so Stripe doesn't keep
-  // retrying it, but otherwise ignored.
-  if (event.type !== "payment_intent.succeeded") {
-    return new Response(JSON.stringify({ received: true, ignored: event.type }), { status: 200 });
+  // charge.refunded: the RPC needs every refund on the charge. API
+  // 2024-06-20 doesn't embed them, so read them (a GET; nothing in Stripe
+  // changes). If this fails, answer 500 and let Stripe retry rather than
+  // record a refund total we can't itemize.
+  let refunds: unknown[] | null = null;
+  if (event.type === "charge.refunded") {
+    const charge = event.data.object as Stripe.Charge;
+    const embedded = (charge as any).refunds;
+    if (embedded && Array.isArray(embedded.data) && !embedded.has_more) {
+      refunds = embedded.data;
+    } else {
+      try {
+        refunds = [];
+        for await (const refund of stripe.refunds.list({ charge: charge.id, limit: 100 })) refunds.push(refund);
+      } catch (err: any) {
+        console.error(`Could not list refunds for ${charge.id}: ${err.message}`);
+        return new Response(JSON.stringify({ received: false, error: "Could not read the charge's refunds" }), { status: 500 });
+      }
+    }
   }
 
-  const pi = event.data.object as Stripe.PaymentIntent;
+  // Ledger + database changes, in one transaction (see the header).
+  const result = await recordEvent(event, refunds);
+  if (!result || result.error) {
+    if (result?.error) console.error(`Stripe event ${event.id} (${event.type}) failed: ${String(result.error).slice(0, 300)}`);
+    return new Response(JSON.stringify({ received: false, event_id: event.id, error: "Could not record the event" }), { status: 500 });
+  }
+  if (result.duplicate) {
+    return new Response(JSON.stringify({ received: true, event_id: event.id, duplicate: true }), { status: 200 });
+  }
 
-  // POS charge (2026-09-03), checked BEFORE any invoice lookup -- a
-  // POS sale has no invoice at all, by design, so trying to match one
-  // first would just waste a query on every POS event. Idempotent on
-  // this PaymentIntent's own id: create-pos-charge's 'charge_saved'
-  // path already knows its own outcome synchronously and logs income
-  // directly, without waiting for this webhook -- but Stripe still
-  // sends payment_intent.succeeded for that charge too, so this must
-  // never log it a second time. The 'new_card' path has no synchronous
-  // outcome at all (Stripe Elements confirms client-side, later,
-  // after create-pos-charge already returned), so THIS is the only
-  // place that charge ever gets logged.
-  if (pi.metadata?.pos_charge === "true") {
-    // Real fix for a real race (closes a gap found in a full-repo
-    // audit): this used to be a plain check-then-act against the
-    // workspace_sync blob's own th_income_log array -- read the blob,
-    // scan the array in JS for this payment_intent_id, append only if
-    // absent. Two near-simultaneous webhook deliveries for the same
-    // event could both pass that scan before either write landed,
-    // double-logging the income and sending two receipt emails for one
-    // charge. A JSON array has no unique constraint of its own, so
-    // nothing could ever make that check atomic -- this table's real
-    // Postgres primary key is what makes the decision atomic instead:
-    // only one concurrent INSERT for the same payment_intent_id can
-    // ever win, and PostgREST's on_conflict=do-nothing (via the
-    // resolution=ignore-duplicates Prefer header) makes the loser a
-    // normal 201-with-no-row response rather than a 409 to handle.
-    const claimRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/stripe_pos_charges_logged?on_conflict=payment_intent_id`,
-      {
-        method: "POST",
-        headers: {
-          apikey: SERVICE_ROLE_KEY,
-          Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
-          "Content-Type": "application/json",
-          Prefer: "resolution=ignore-duplicates,return=representation",
-        },
-        body: JSON.stringify({ payment_intent_id: pi.id }),
-      },
-    );
-    const claimRows = claimRes.ok ? await claimRes.json() : [];
-    const wonTheRace = claimRows.length > 0;
-
-    if (wonTheRace) {
-      const syncRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026&select=data`,
-        { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+  // Side effects, once per event (a redelivery is a duplicate above).
+  if (result.action === "pos_charge") {
+    const pi = event.data.object as Stripe.PaymentIntent;
+    // Only the delivery that won the stripe_pos_charges_logged claim logs
+    // the income and sends the receipt. create-pos-charge's charge_saved
+    // path claims the same row first, so its own synchronous log wins and
+    // this one does nothing.
+    if (result.pos_first) {
+      await logPosIncome(pi);
+      await sendPosReceiptEmail(
+        pi.metadata?.pos_client_email || "",
+        pi.metadata?.pos_description || pi.description || "",
+        pi.metadata?.pos_amount ? Number(pi.metadata.pos_amount) : pi.amount / 100,
       );
-      const syncRows = await syncRes.json();
-      if (syncRows.length) {
-        const blob = syncRows[0].data;
-        const incomeLog = JSON.parse(blob.th_income_log || "[]");
-        // toISOString() is always UTC -- the business runs on America/Denver
-        // time, so a POS sale after ~6pm local would silently log against
-        // tomorrow's date in Finance. Same fix already applied to
-        // create-pos-charge-index.ts's own income-log entry.
-        const whParts = new Intl.DateTimeFormat("en-US", {
-          timeZone: "America/Denver", year: "numeric", month: "2-digit", day: "2-digit",
-        }).formatToParts(new Date());
-        const whDateMap: Record<string, string> = {};
-        whParts.forEach((p) => { whDateMap[p.type] = p.value; });
-        incomeLog.push({
-          id: Date.now(),
-          date: `${whDateMap.year}-${whDateMap.month}-${whDateMap.day}`,
-          desc: pi.metadata?.pos_description || pi.description || "POS sale",
-          amount: pi.metadata?.pos_amount ? Number(pi.metadata.pos_amount) : pi.amount / 100,
-          source: pi.metadata?.pos_client_email || "",
-          payment: "Stripe (POS)",
-          jobRefId: "",
-          jobRefTitle: "",
-          origin: "pos",
-          stripePaymentIntentId: pi.id,
-          createdBy: pi.metadata?.internal_account || "",
-          lastEditedBy: pi.metadata?.internal_account || "",
-        });
-        blob.th_income_log = JSON.stringify(incomeLog);
-        await fetch(`${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026`, {
-          method: "PATCH",
-          headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ data: blob, updated_at: new Date().toISOString() }),
-        });
-        // Only sent alongside a genuinely NEW log entry -- the same
-        // idempotency guard that stops a double income entry also
-        // stops a double receipt email for the exact same charge.
-        await sendPosReceiptEmail(
-          pi.metadata?.pos_client_email || "",
-          pi.metadata?.pos_description || pi.description || "",
-          pi.metadata?.pos_amount ? Number(pi.metadata.pos_amount) : pi.amount / 100,
-        );
-      }
     }
     return new Response(JSON.stringify({ received: true, pos_charge: true }), { status: 200 });
   }
 
-  // Looked up by the PaymentIntent id first (set by create-payment-intent
-  // or create-bulk-payment-intent when the intent was originally
-  // created) -- naturally returns every invoice sharing this
-  // PaymentIntent id, whether that's one (single-invoice pay) or
-  // several (Pay All Outstanding). Metadata is the belt-and-suspenders
-  // fallback if that earlier write ever failed for some reason, not
-  // the primary lookup.
-  let invoiceRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/client_portal_invoices?stripe_payment_intent_id=eq.${pi.id}&select=id,source_invoice_id,paid,total,invoice_number,client_email`,
-    { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
-  );
-  let rows = await invoiceRes.json();
-  if (!rows.length) {
-    const singleId = pi.metadata?.client_portal_invoice_id;
-    const idsCsv = pi.metadata?.client_portal_invoice_ids;
-    const fallbackIds = idsCsv ? idsCsv.split(",") : (singleId ? [singleId] : []);
-    if (fallbackIds.length) {
-      invoiceRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/client_portal_invoices?id=in.(${fallbackIds.join(",")})&select=id,source_invoice_id,paid,total,invoice_number,client_email`,
-        { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
-      );
-      rows = await invoiceRes.json();
+  if (result.action === "invoice_payment") {
+    const pi = event.data.object as Stripe.PaymentIntent;
+    if (result.warning) console.error(`payment_intent.succeeded for ${pi.id}: ${result.warning}`);
+    if (result.amount_mismatch) {
+      const invoices = Array.isArray(result.invoices) ? result.invoices : [];
+      await sendAmountMismatchAlert(pi.id, invoices, Number(result.received_cents), Number(result.owed_cents), result.amount_mismatch === "underpaid");
     }
-  }
-  if (!rows.length) {
-    // Acknowledge with 200 regardless -- returning an error here would
-    // make Stripe retry this same event repeatedly, which won't ever
-    // resolve genuinely missing invoices. Logged so this is still
-    // visible for manual follow-up rather than silently lost.
-    console.error(`payment_intent.succeeded for ${pi.id} but no matching invoice(s) found`);
-    return new Response(JSON.stringify({ received: true, warning: "no matching invoice" }), { status: 200 });
-  }
-
-  // Stripe can and does redeliver the same event more than once by
-  // design -- filtering to only the not-yet-paid rows makes
-  // reprocessing a harmless no-op instead of a duplicate side effect,
-  // and means a redelivered event after a PARTIAL earlier failure
-  // (some invoices marked, some not) correctly finishes the rest
-  // rather than skipping everything because at least one was already done.
-  const unpaidRows = rows.filter((inv: any) => !inv.paid);
-  if (!unpaidRows.length) {
-    return new Response(JSON.stringify({ received: true, already_processed: true }), { status: 200 });
+    const marked = Array.isArray(result.invoices_marked_paid) ? result.invoices_marked_paid : [];
+    if (marked.length) await markPaidInWorkspaceBlob(pi.id, marked);
+    return new Response(JSON.stringify({
+      received: true,
+      invoices_marked_paid: marked.length,
+      amount_mismatch: result.amount_mismatch || undefined,
+      already_processed: result.already_processed || undefined,
+      warning: result.warning || undefined,
+    }), { status: 200 });
   }
 
-  const unpaidIds = unpaidRows.map((inv: any) => inv.id);
-
-  // Amount check (security audit 2026-09-23, finding #7). A PaymentIntent
-  // is created for the invoice's total at the time "Pay" was tapped. If
-  // the invoice is raised afterwards, the page that was already open can
-  // still pay the old, smaller amount. Without this check the invoice
-  // would be marked paid in full. The expected amount is worked out
-  // exactly as create-payment-intent / create-bulk-payment-intent do it,
-  // so a legitimate payment always matches to the cent.
-  // - Paid short: left unpaid, staff alerted. reconcile-stripe-payments
-  //   also flags it daily for the week after the payment.
-  // - Overpaid: the invoice is covered, so it's marked paid, but staff
-  //   are alerted to refund the extra rather than it passing silently.
-  const owedCents = Math.round(unpaidRows.reduce((sum: number, inv: any) => sum + Number(inv.total), 0) * 100);
-  const receivedCents = pi.amount_received;
-  if (receivedCents !== owedCents) {
-    // Written as "not more than" so a missing or malformed amount is held too.
-    const underpaid = !(receivedCents > owedCents);
-    await sendAmountMismatchAlert(pi.id, unpaidRows, receivedCents, owedCents, underpaid);
-    if (underpaid) {
-      console.error(`PaymentIntent ${pi.id} received ${receivedCents} cents but invoice(s) ${unpaidIds.join(",")} owe ${owedCents}; left unpaid`);
-      return new Response(JSON.stringify({ received: true, amount_mismatch: true, invoices_marked_paid: 0 }), { status: 200 });
-    }
+  if (result.action === "dispute" && result.first_seen) {
+    await sendDisputeAlert(result);
   }
 
-  const paidAt = new Date().toISOString();
-
-  // Mark paid in the client-facing table -- this is what the client
-  // actually sees reflected back on their next dashboard load. One
-  // PATCH covering every unpaid id in this PaymentIntent, not a loop.
-  const invoicePatchRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/client_portal_invoices?id=in.(${unpaidIds.join(",")})`,
-    {
-      method: "PATCH",
-      headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ paid: true, paid_at: paidAt }),
-    },
-  );
-
-  // A non-2xx here must NOT fall through to the 200 at the end of this
-  // handler: Stripe treats any non-2xx response as delivery failure and
-  // retries the event for several days, which is exactly the safety net
-  // this needs -- a customer who genuinely paid must never be left
-  // showing "unpaid" forever with nothing left to retry the write. Only
-  // the two early-return cases above (no matching invoice; already
-  // processed) are genuinely nothing-to-do and get a real 200.
-  if (!invoicePatchRes.ok) {
-    const errText = await invoicePatchRes.text();
-    console.error(`Failed to mark client_portal_invoices paid for PaymentIntent ${pi.id}: ${errText.slice(0, 300)}`);
-    return new Response(JSON.stringify({ received: false, error: "Failed to mark invoice(s) paid" }), { status: 500 });
-  }
-
-  // And in public.invoices, the relational copy the Recent list and the
-  // calendar read. Before 2026-10-01 a card payment reached it only when a
-  // device happened to re-mirror that invoice. One PATCH per invoice,
-  // since each has its own total. Best-effort like the blob write below:
-  // the client-facing row is already paid, so a failure here is logged,
-  // never retried by failing the webhook.
-  for (const row of unpaidRows) {
-    if (row.source_invoice_id == null) continue;
-    const relRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/invoices?id=eq.${encodeURIComponent(String(row.source_invoice_id))}`,
-      {
-        method: "PATCH",
-        headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-        body: JSON.stringify({ paid: true, paid_amount: Number(row.total) || 0, updated_at: paidAt }),
-      },
-    ).catch((e) => ({ ok: false, text: async () => String(e) }) as any);
-    if (!relRes.ok) {
-      console.error(`Failed to mark public.invoices ${row.source_invoice_id} paid for PaymentIntent ${pi.id}: ${await relRes.text().catch(() => "")}`);
-    }
-  }
-
-  // Also mark paid in workspace_sync's th_invoices, so Connor/Steve's
-  // own invoice log reflects this too, not just the portal --
-  // workspace_sync stores one row per sync "code" as a single JSON
-  // blob (confirmed against the real schema before writing this, not
-  // assumed), so this reads the current blob, updates every matching
-  // invoice entry within its th_invoices array (could be more than one
-  // now, with Pay All Outstanding), and writes the whole blob back ONCE
-  // -- not once per invoice, to avoid multiple concurrent read-modify-
-  // write cycles racing each other within this same webhook call.
-  const syncRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026&select=data`,
-    { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
-  );
-  if (!syncRes.ok) {
-    // Secondary, internal-log-only write -- the client-facing table
-    // above already succeeded, so this never fails the whole webhook
-    // (Stripe would otherwise keep retrying an event that's already
-    // fully handled from the client's perspective). Logged so a mismatch
-    // between the portal and Steve/Connor's own invoice log is at least
-    // visible for manual reconciliation, instead of silently vanishing.
-    console.error(`Failed to read workspace_sync for PaymentIntent ${pi.id}: ${await syncRes.text().catch(() => "")}`);
-    return new Response(JSON.stringify({ received: true, invoices_marked_paid: unpaidIds.length, workspace_sync_warning: "Could not read workspace_sync" }), { status: 200 });
-  }
-  const syncRows = await syncRes.json();
-  if (syncRows.length) {
-    const blob = syncRows[0].data;
-    const invoices = JSON.parse(blob.th_invoices || "[]");
-    const sourceIds = new Set(unpaidRows.map((inv: any) => inv.source_invoice_id));
-    const portalTotal = new Map(unpaidRows.map((inv: any) => [inv.source_invoice_id, Number(inv.total) || 0]));
-    let changed = false;
-    invoices.forEach((inv: any) => {
-      if (!sourceIds.has(inv.id)) return;
-      // Paid in full means paidAmount = total, the same as Mark paid in the
-      // app (workspace.html togglePaid, invoice-generator.html). This used
-      // to set only `paid`, and every device recomputes `paid` from
-      // paidAmount on sync (sync.js deriveInvoicePaid), so an invoice that
-      // had ever been marked unpaid (paidAmount 0) flipped back to unpaid
-      // after a real card payment (found in the Item 1 inventory, 2026-10-01).
-      const total = Number(inv.total ?? portalTotal.get(inv.id)) || 0;
-      const paidCents = Math.round((Number(inv.paidAmount) || 0) * 100);
-      const fullyRecorded = inv.paid === true && inv.paidAmount != null && paidCents >= Math.round(total * 100);
-      if (fullyRecorded) return;
-      inv.paid = true;
-      inv.paidAmount = total;
-      changed = true;
-    });
-    if (changed) {
-      blob.th_invoices = JSON.stringify(invoices);
-      const workspaceSyncPatchRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026`,
-        {
-          method: "PATCH",
-          headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ data: blob, updated_at: paidAt }),
-        },
-      );
-      if (!workspaceSyncPatchRes.ok) {
-        console.error(`Failed to mark workspace_sync th_invoices paid for PaymentIntent ${pi.id}: ${await workspaceSyncPatchRes.text().catch(() => "")}`);
-      }
-    }
-  }
-
-
-  return new Response(JSON.stringify({ received: true, invoices_marked_paid: unpaidIds.length }), { status: 200 });
+  return new Response(JSON.stringify({ received: true, event_id: event.id, action: result.action }), { status: 200 });
 });

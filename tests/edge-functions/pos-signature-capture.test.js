@@ -36,7 +36,7 @@ test('the authorization is recorded BEFORE the Stripe customer is created or a c
 });
 
 test('charge_saved does NOT require a fresh signature every time -- that would defeat its one-tap purpose', () => {
-  const chargeSavedBlock = POS_CHARGE.match(/if \(mode === "charge_saved"\) \{[\s\S]*?return json\(\{ ok: true, charged: true \}\);\s*\n    \}/);
+  const chargeSavedBlock = POS_CHARGE.match(/if \(mode === "charge_saved"\) \{[\s\S]*?return json\(\{ ok: true, charged: true, replayed: [^\n]*\}\);\s*\n    \}/);
   assert.ok(chargeSavedBlock);
   assert.doesNotMatch(chargeSavedBlock[0], /signer_name|recordCardAuthorization/);
 });

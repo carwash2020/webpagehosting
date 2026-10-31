@@ -22,9 +22,25 @@ const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const WEBHOOK = fs.readFileSync(repo('edge-functions', 'stripe-webhook-index.ts'), 'utf8');
 const SQL = fs.readFileSync(repo('sql', 'infra', 'add_stripe_pos_charge_idempotency.sql'), 'utf8');
 
+// Since 2026-10-31 (Stripe hardening) the claim is made inside
+// stripe_record_event() -> stripe_apply_pi_succeeded() in
+// sql/payments/01_stripe_event_ledger_payments_refunds.sql, and the
+// webhook acts on its pos_first result. create-pos-charge's charge_saved
+// path now claims the same row too (it used to log without claiming, so
+// the webhook's claim always won and could log the sale twice).
+const LEDGER_SQL = fs.readFileSync(repo('sql', 'payments', '01_stripe_event_ledger_payments_refunds.sql'), 'utf8');
+const POS_CHARGE = fs.readFileSync(repo('edge-functions', 'create-pos-charge-index.ts'), 'utf8');
+
+function sqlPosBlock() {
+  const fn = LEDGER_SQL.match(/create or replace function public\.stripe_apply_pi_succeeded[\s\S]*?\n\$\$;/);
+  assert.ok(fn, 'expected to isolate stripe_apply_pi_succeeded()');
+  const block = fn[0].match(/if \(v_meta ->> 'pos_charge'\) = 'true' then[\s\S]*?end if;/);
+  assert.ok(block, 'expected to isolate its POS branch');
+  return block[0];
+}
 function posBlock() {
-  const match = WEBHOOK.match(/if \(pi\.metadata\?\.pos_charge === "true"\) \{[\s\S]*?\n  \}\n\n  \/\/ Looked up by the PaymentIntent id first/);
-  assert.ok(match, 'expected to isolate the POS-charge branch');
+  const match = WEBHOOK.match(/if \(result\.action === "pos_charge"\) \{[\s\S]*?\n  \}\n/);
+  assert.ok(match, 'expected to isolate the webhook POS branch');
   return match[0];
 }
 
@@ -48,44 +64,44 @@ test('the select policy restricts reads to internal accounts, matching the rest 
   assert.match(SQL, /create policy "internal accounts can view pos charge idempotency records"\s*\n\s*on stripe_pos_charges_logged for select\s*\n\s*to authenticated\s*\n\s*using \(exists \(select 1 from account_roles where email = \(select auth\.email\(\)\)\)\);/);
 });
 
-// ---- edge function ----
+// ---- claim (SQL) + webhook + create-pos-charge ----
 
-test('the POS branch claims the payment_intent_id via an atomic on_conflict insert instead of scanning th_income_log', () => {
-  const block = posBlock();
-  assert.match(block, /stripe_pos_charges_logged\?on_conflict=payment_intent_id/);
-  assert.doesNotMatch(block, /JSON\.parse\(blob\.th_income_log[\s\S]{0,80}\)\s*\n\s*const alreadyLogged/);
+test('the POS claim is an atomic insert on the payment_intent_id primary key, never a scan of th_income_log', () => {
+  const block = sqlPosBlock();
+  assert.match(block, /insert into public\.stripe_pos_charges_logged \(payment_intent_id\) values \(p_pi ->> 'id'\)\s*\n\s*on conflict \(payment_intent_id\) do nothing;/);
+  assert.doesNotMatch(WEBHOOK, /const alreadyLogged/);
 });
 
-test('the claim insert uses ignore-duplicates so the losing request gets a normal empty response, not a 409 to handle', () => {
-  const block = posBlock();
-  assert.match(block, /Prefer: "resolution=ignore-duplicates,return=representation",/);
+test('the claim carries only the PaymentIntent id', () => {
+  assert.match(sqlPosBlock(), /\(payment_intent_id\) values \(p_pi ->> 'id'\)/);
 });
 
-test('the claim insert body carries only the PaymentIntent id', () => {
-  const block = posBlock();
-  assert.match(block, /body: JSON\.stringify\(\{ payment_intent_id: pi\.id \}\),/);
+test('winning the race is decided from whether the insert actually inserted a row', () => {
+  const block = sqlPosBlock();
+  assert.match(block, /get diagnostics v_pos_first = row_count;/);
+  assert.match(block, /'pos_first', v_pos_first/);
 });
 
-test('winning the race is decided from whether the insert actually returned a row', () => {
-  const block = posBlock();
-  assert.match(block, /const claimRows = claimRes\.ok \? await claimRes\.json\(\) : \[\];/);
-  assert.match(block, /const wonTheRace = claimRows\.length > 0;/);
+test('the income-log read-modify-write only happens when this delivery won the race', () => {
+  assert.match(posBlock(), /if \(result\.pos_first\) \{\s*\n\s*await logPosIncome\(pi\);/);
 });
 
-test('the income-log read-modify-write only happens when this request won the race', () => {
+test('the receipt email is only sent inside the pos_first branch, so a losing duplicate delivery never re-sends it', () => {
   const block = posBlock();
-  assert.match(block, /if \(wonTheRace\) \{\s*\n\s*const syncRes = await fetch\(/);
-});
-
-test('the receipt email is only sent inside the wonTheRace branch, so a losing duplicate delivery never re-sends it', () => {
-  const block = posBlock();
-  const wonIdx = block.indexOf('if (wonTheRace) {');
+  const wonIdx = block.indexOf('if (result.pos_first) {');
   const emailIdx = block.indexOf('await sendPosReceiptEmail(');
   assert.ok(wonIdx !== -1 && emailIdx !== -1);
-  assert.ok(wonIdx < emailIdx, 'sendPosReceiptEmail must be inside the wonTheRace branch');
+  assert.ok(wonIdx < emailIdx, 'sendPosReceiptEmail must be inside the pos_first branch');
 });
 
-test('the POS branch still always returns 200 to Stripe, whether or not this request won the race', () => {
-  const block = posBlock();
-  assert.match(block, /return new Response\(JSON\.stringify\(\{ received: true, pos_charge: true \}\), \{ status: 200 \}\);/);
+test('the POS branch still always returns 200 to Stripe, whether or not this delivery won the race', () => {
+  assert.match(posBlock(), /return new Response\(JSON\.stringify\(\{ received: true, pos_charge: true \}\), \{ status: 200 \}\);/);
+});
+
+test('create-pos-charge charge_saved claims the same row before logging, so it and the webhook never both log one sale', () => {
+  const fn = POS_CHARGE.match(/async function claimPosCharge\([\s\S]*?\n\}\n/);
+  assert.ok(fn, 'expected claimPosCharge()');
+  assert.match(fn[0], /stripe_pos_charges_logged\?on_conflict=payment_intent_id/);
+  assert.match(fn[0], /Prefer: "resolution=ignore-duplicates,return=representation"/);
+  assert.match(POS_CHARGE, /if \(await claimPosCharge\(pi\.id\)\) \{\s*\n\s*await logPosIncomeToWorkspaceSync\([^)]*\);\s*\n\s*await sendPosReceiptEmail\(/);
 });

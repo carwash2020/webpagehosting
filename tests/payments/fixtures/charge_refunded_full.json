@@ -1,0 +1,34 @@
+{
+  "id": "evt_1ChargeRefundedFull",
+  "object": "event",
+  "api_version": "2024-06-20",
+  "created": 1793462600,
+  "livemode": true,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  },
+  "type": "charge.refunded",
+  "data": {
+    "object": {
+      "id": "ch_single",
+      "object": "charge",
+      "amount": 15000,
+      "amount_captured": 15000,
+      "amount_refunded": 15000,
+      "captured": true,
+      "created": 1793462350,
+      "currency": "usd",
+      "customer": "cus_pat",
+      "disputed": false,
+      "livemode": true,
+      "metadata": {},
+      "paid": true,
+      "payment_intent": "pi_single",
+      "receipt_url": "https://pay.stripe.com/receipts/redacted/ch_single",
+      "refunded": true,
+      "status": "succeeded"
+    }
+  }
+}

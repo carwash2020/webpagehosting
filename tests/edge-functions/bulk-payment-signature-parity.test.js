@@ -34,7 +34,8 @@ test('a missing signature returns a distinct needs_signature flag, not a generic
 
 test('the authorization is recorded before the PaymentIntent is created, and describes the batch, not a single invoice', () => {
   const recordIdx = BULK.indexOf('await recordCardAuthorization(');
-  const piCreateIdx = BULK.indexOf('await fetch("https://api.stripe.com/v1/payment_intents"');
+  // Stripe POSTs go through stripePost() with an Idempotency-Key since 2026-10-31.
+  const piCreateIdx = BULK.indexOf('await stripePost("payment_intents"');
   assert.ok(recordIdx !== -1 && piCreateIdx !== -1);
   assert.ok(recordIdx < piCreateIdx);
   assert.match(BULK, /`\$\{invoiceCount\} invoices \(IDs: \$\{invoice_ids\.join\(", "\)\}\)`/);

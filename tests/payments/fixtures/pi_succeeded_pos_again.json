@@ -1,0 +1,42 @@
+{
+  "id": "evt_1PiPosSucceededAgain",
+  "object": "event",
+  "api_version": "2024-06-20",
+  "created": 1793462431,
+  "livemode": true,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  },
+  "type": "payment_intent.succeeded",
+  "data": {
+    "object": {
+      "id": "pi_pos",
+      "object": "payment_intent",
+      "amount": 2500,
+      "amount_capturable": 0,
+      "amount_received": 2500,
+      "capture_method": "automatic",
+      "client_secret": "pi_pos_secret_redacted",
+      "confirmation_method": "automatic",
+      "created": 1793462340,
+      "currency": "usd",
+      "customer": "cus_pat",
+      "description": "Service call",
+      "last_payment_error": null,
+      "latest_charge": "ch_pos",
+      "livemode": true,
+      "metadata": {
+        "pos_charge": "true",
+        "pos_client_email": "walkin@example.com",
+        "pos_description": "Service call",
+        "pos_amount": "25"
+      },
+      "payment_method": "pm_card_visa",
+      "receipt_email": null,
+      "setup_future_usage": "off_session",
+      "status": "succeeded"
+    }
+  }
+}

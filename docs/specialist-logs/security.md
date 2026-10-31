@@ -1488,6 +1488,31 @@ Net effect: an internal account signed into `/portal/login.html` with its own cr
 - **Fixed in this PR (UI).** Both now show only when the role is confirmed and has any finance-domain permission, the same rule Business Snapshot used. The figures are left out of the DOM otherwise, and a CSS lock on `body[data-home-money]` is the second layer. A role that hasn't loaded, or couldn't be confirmed, now fails closed. That includes "Your week", whose `canFinance` treated a null role as allowed.
 - **Not fixed, and a question for this lane.** Every staff device still holds the whole `workspace_sync` blob in localStorage, invoices included, because one shared row syncs to everyone. So an Employee who opens devtools can still read the figures the UI now hides. Closing that means per-role sync (a separate employee blob, or relational tables with RLS for invoices), which is a design decision, not a patch.
 
+## 2026-10-31 -- Stripe: refunds never reached invoices; no event ledger; no idempotency keys
+
+From the read-only Stripe audit of 2026-10-30. All keys were verified live on 2026-10-31, which closes the audit's possible live-pk/test-sk mismatch.
+
+**Risks, in the order I weighed them:**
+1. **Double charge from the POS saved-card path.** `charge_saved` confirms off-session immediately. A dropped response followed by a second tap charged the card twice, because no Stripe POST anywhere sent an `Idempotency-Key`. Real money from a real client, triggered by an ordinary bad-signal moment in a driveway. Highest priority. The page now sends a per-attempt `request_id`, reused while the outcome is unknown, and the function sends it as the key. A replay returns the first charge.
+2. **Refunds and disputes invisible.** Refunds left invoices "paid" with no trace, and nobody was told about a dispute until Stripe's email. Not a data leak, but a books-integrity problem and a missed-deadline risk on disputes (evidence is due in about 7 days).
+3. **Drift between invoice tables.** `public.invoices` was a best-effort PATCH after the portal write. A failure there still returned 200, so Stripe never retried. Everything now happens in one transaction behind a unique-event-id ledger; on failure the webhook returns 500 and Stripe retries.
+4. **POS double income log (found while fixing 1).** `charge_saved` logged income without claiming `stripe_pos_charges_logged`, so the webhook's own claim always succeeded and could log the same sale again. Both paths now claim first.
+5. **Duplicate Stripe Customers on a race.** The customer key is `cust-v1-<sha256(email)>`, shared by all four functions.
+
+**Risk-acceptance calls:**
+- **A refund does NOT set `paid = false` or lower `paid_amount`.** `send-payment-reminder` would start emailing the refunded client to pay. A partial refund is usually a goodwill discount, and a reminder for it would be wrong and embarrassing. Truth lives in `refund_status`, `refunded_amount` and `invoice_payment_status`. Flagged as an owner call in the docs.
+- **The new tables are staff-only, with no client SELECT policy,** although the audit's sketch had one. The portal only needs the two denormalised columns on its own `client_portal_invoices` rows. Not exposing payment, decline and dispute rows to clients is least privilege for no lost feature.
+- **The ledger stores full event payloads, which include client emails.** It's needed to audit and replay. Internal-only read, same tenant, MFA-gated through `current_user_has_any_role()`.
+- **The workspace_sync blob writes stay best effort.** They're whole-blob read-modify-writes; making them retry on every redelivery would add collision risk to the one shared blob.
+- **The webhook fails closed (500) if the migration isn't applied yet.** Stripe retries for about 3 days, so the deploy order (migration first) is documented rather than coded around.
+
+**Verified (in CI, not live):**
+- 30 PGlite tests run the real migration and replay the sample events. They cover RLS and grants: a client, another tenant's staff and anon read nothing; nobody but `service_role` can write or call the RPC. They also cover running the migration twice and the backfill.
+- 12 tests run the real `stripe-webhook-index.ts` against PGlite: signature rejection, duplicate delivery, RPC missing, Stripe API outage, and a DB failure followed by a successful retry.
+- 11 tests run the four payment-creating handlers against a Stripe fake that enforces idempotency.
+- Live schema shapes (column types, nullability, existing policies, null tenant_ids) were read with SELECTs only.
+- **Not done:** `get_advisors` after applying, which is step 2 of the turn-on in `docs/stripe-hardening-2026-10-31/README.md`. Nothing was applied, deployed, or sent to Stripe or Resend.
+
 <!-- Add new entries above this line -->
 
 ## 2026-10-04 -- Two-factor setup could lock an account out

@@ -38,7 +38,8 @@ test('findExistingStripeCustomerId never creates a customer just to check', () =
 
 test('the authorization is recorded before the PaymentIntent is ever created', () => {
   const recordIdx = PAYMENT_INTENT.indexOf('await recordCardAuthorization(');
-  const piCreateIdx = PAYMENT_INTENT.indexOf('await fetch("https://api.stripe.com/v1/payment_intents"');
+  // Stripe POSTs go through stripePost() with an Idempotency-Key since 2026-10-31.
+  const piCreateIdx = PAYMENT_INTENT.indexOf('await stripePost("payment_intents"');
   assert.ok(recordIdx !== -1 && piCreateIdx !== -1);
   assert.ok(recordIdx < piCreateIdx);
 });

@@ -16,8 +16,17 @@
 // staff alerted; exact -> marked paid, no alert, as before.
 //
 // These run the real handler with a stubbed Deno, fetch and Stripe SDK.
-// The fake Supabase honors select=, the way PostgREST does, so a lookup
-// that forgets to read `total` fails here too.
+//
+// Ported 2026-10-31 (Stripe hardening): the webhook no longer reads and
+// PATCHes the invoice tables over REST. It makes one call,
+// /rest/v1/rpc/stripe_record_event, and the amount check, the portal and
+// public.invoices writes all happen inside that SQL function
+// (sql/payments/01_stripe_event_ledger_payments_refunds.sql). The fake
+// Supabase below runs that call against the REAL SQL in PGlite, seeded from
+// `state.invoices`, and copies the results back into `state` afterwards. So
+// every behaviour pinned here (exact amounts, rounding parity with the
+// create functions, paid short, overpaid, paidAmount in the Invoice Log) is
+// still checked end to end, now through the real SQL.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -27,6 +36,44 @@ const vm = require('vm');
 const { stripTypeScriptTypes } = require('module');
 
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
+const harness = require('../payments/stripe-db-harness');
+const { after } = require('node:test');
+after(harness.closeAll);
+
+// The database half: lazily builds PGlite with the real migration, seeds the
+// portal rows (and a public.invoices row per source_invoice_id), runs
+// stripe_record_event as service_role, then mirrors paid / paid_at back
+// into state.invoices and the public.invoices rows that changed into
+// state.relational (same shape the old per-invoice PATCH assertions used).
+async function runRecordEvent(state, body) {
+  if (!state.db) {
+    state.db = await harness.buildDb({ seed: false });
+    for (const r of state.invoices) {
+      await state.db.query(`insert into invoices (id, invoice_number, client_email, total, paid, paid_amount)
+        values ($1, $2, $3, $4, $5, $6) on conflict (id) do nothing`,
+        [r.source_invoice_id, r.invoice_number, r.client_email, r.total, !!r.paid, r.paid ? r.total : 0]);
+      await state.db.query(`insert into client_portal_invoices (id, source_invoice_id, client_email, invoice_number, total, paid, paid_at, stripe_payment_intent_id)
+        values ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [r.id, r.source_invoice_id, r.client_email, r.invoice_number, r.total, !!r.paid, r.paid_at, r.stripe_payment_intent_id]);
+    }
+  }
+  const before = new Map((await state.db.query('select id, paid from invoices')).rows.map((r) => [Number(r.id), r.paid]));
+  const { p_event, p_refunds } = JSON.parse(body);
+  const rows = await harness.as(state.db, { role: 'service_role' }, 'select public.stripe_record_event($1::jsonb, $2::jsonb) as r',
+    [JSON.stringify(p_event), p_refunds ? JSON.stringify(p_refunds) : null]);
+  if (rows.error) throw rows.error;
+  for (const r of state.invoices) {
+    const db = (await state.db.query('select paid, paid_at from client_portal_invoices where id = $1', [r.id])).rows[0];
+    r.paid = db.paid;
+    r.paid_at = db.paid_at ? db.paid_at.toISOString() : null;
+  }
+  for (const r of (await state.db.query('select id, paid, paid_amount, updated_at from invoices order by id')).rows) {
+    if (r.paid && !before.get(Number(r.id))) {
+      (state.relational = state.relational || []).push({ id: `eq.${r.id}`, paid: r.paid, paid_amount: Number(r.paid_amount), updated_at: r.updated_at.toISOString() });
+    }
+  }
+  return rows[0].r;
+}
 
 const CLIENT = 'client@example.com';
 const SERVICE_KEY = 'service-role-key-for-tests';
@@ -45,6 +92,7 @@ function j(body, status = 200) {
 
 // state.invoices: client_portal_invoices rows. state.workspace: the
 // th_invoices array inside the workspace_sync blob.
+let eventSeq = 0;
 function loadWebhook(state) {
   const raw = fs.readFileSync(repo('edge-functions', 'stripe-webhook-index.ts'), 'utf8');
   const src = stripTypeScriptTypes(raw).replace(/^import Stripe from "npm:stripe@latest";$/m, '');
@@ -58,6 +106,10 @@ function loadWebhook(state) {
     const parsed = new URL(u);
     const select = parsed.searchParams.get('select');
 
+    if (parsed.pathname === '/rest/v1/rpc/stripe_record_event' && method === 'POST') {
+      if (state.relationalFails) return j({ message: 'boom' }, 500);
+      return j(await runRecordEvent(state, init.body));
+    }
     if (parsed.pathname === '/rest/v1/client_portal_invoices' && method === 'GET') {
       const byPi = parsed.searchParams.get('stripe_payment_intent_id');
       const byIds = parsed.searchParams.get('id');
@@ -123,6 +175,8 @@ function loadWebhook(state) {
     fetch, Response, Request, Headers, URL, URLSearchParams, atob, btoa,
     console: { log() {}, error() {}, warn() {} },
     Intl, Date, JSON, Math, Promise, Set, Map, Number, String, Array, Object, parseInt, isNaN, encodeURIComponent, decodeURIComponent,
+    // Deno provides these; the Idempotency-Key helpers (2026-10-31) hash with Web Crypto.
+    crypto: globalThis.crypto, TextEncoder, Uint8Array, setTimeout,
   });
   vm.runInContext(src, context, { filename: 'stripe-webhook-index.ts' });
 
@@ -130,7 +184,7 @@ function loadWebhook(state) {
     const res = await handler(new Request('https://example.supabase.co/functions/v1/stripe-webhook', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Stripe-Signature': signature },
-      body: JSON.stringify({ id: 'evt_1', type, data: { object: pi } }),
+      body: JSON.stringify({ id: `evt_${++eventSeq}`, type, created: 1793462400, livemode: false, data: { object: pi } }),
     }));
     const text = await res.text();
     let body;
@@ -209,6 +263,8 @@ function loadCreator(name, invoices) {
     fetch, Response, Request, Headers, URL, URLSearchParams, atob, btoa,
     console: { log() {}, error() {}, warn() {} },
     Intl, Date, JSON, Math, Promise, Set, Map, Number, String, Array, Object, parseInt, isNaN, encodeURIComponent, decodeURIComponent,
+    // Deno provides these; the Idempotency-Key helpers (2026-10-31) hash with Web Crypto.
+    crypto: globalThis.crypto, TextEncoder, Uint8Array, setTimeout,
   });
   vm.runInContext(src, context, { filename: `${name}-index.ts` });
   const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
@@ -255,7 +311,7 @@ test('stale page, same PaymentIntent: invoice raised from $100 to $150 after Pay
   const f = loadWebhook(state);
   const r = await f.deliver(pi({ amount: 10000, amount_received: 10000 }));
   assert.equal(r.status, 200, 'acknowledged, so Stripe does not retry an event a retry cannot fix');
-  assert.equal(r.body.amount_mismatch, true);
+  assert.equal(r.body.amount_mismatch, 'underpaid');
   assert.equal(r.body.invoices_marked_paid, 0);
   assert.equal(state.invoices[0].paid, false);
   assert.equal(f.invoicePatches().length, 0);
@@ -277,10 +333,12 @@ test('stale tab, superseded PaymentIntent: found through metadata, paid short ->
   const f = loadWebhook(state);
   const r = await f.deliver(pi({ id: 'pi_old', amount: 10000, amount_received: 10000 }));
   assert.equal(r.status, 200);
-  assert.equal(r.body.amount_mismatch, true);
+  assert.equal(r.body.amount_mismatch, 'underpaid');
   assert.equal(state.invoices[0].paid, false);
   assert.equal(f.invoicePatches().length, 0);
-  assert.ok(f.calls.some((c) => c.url.includes('client_portal_invoices?id=in.(7)')), 'reached the invoice through the metadata fallback');
+  // Reached through the metadata fallback (the stored PI id is pi_new):
+  // the alert names the invoice, which only that lookup could find.
+  assert.match(f.pushes()[0].body, /#INV-1007/);
   assert.equal(f.pushes().length, 1);
   assert.match(f.pushes()[0].body, /pi_old received \$100\.00/);
 });
@@ -320,7 +378,7 @@ for (const [label, flag] of [['returns an error', 'pushFails'], ['throws', 'push
     const f = loadWebhook(state);
     const r = await f.deliver(pi({ amount: 10000, amount_received: 10000 }));
     assert.equal(r.status, 200);
-    assert.equal(r.body.amount_mismatch, true);
+    assert.equal(r.body.amount_mismatch, 'underpaid');
     assert.equal(state.invoices[0].paid, false);
     assert.equal(f.invoicePatches().length, 0);
   });
@@ -446,7 +504,7 @@ test('an entry already fully recorded is left alone (no needless blob write)', a
   assert.equal(f.workspacePatches().length, 0);
 });
 
-test('public.invoices is marked paid with its amount, one PATCH per invoice', async () => {
+test('public.invoices is marked paid with its amount, in the same transaction as the portal', async () => {
   const state = {
     invoices: [
       invoice({ id: 7, source_invoice_id: 1007, total: 50, stripe_payment_intent_id: 'pi_bulk' }),
@@ -462,13 +520,19 @@ test('public.invoices is marked paid with its amount, one PATCH per invoice', as
   assert.deepEqual(state.workspace.map((i) => i.paidAmount), [50, 75.5]);
 });
 
-test('a failed public.invoices write is logged, not fatal: the portal and Invoice Log are still paid', async () => {
+// Changed on purpose 2026-10-31: this used to be logged and answered 200,
+// so Stripe never retried and public.invoices drifted from the portal (the
+// Stripe audit's risk #3). Now the portal and public.invoices are written
+// in one transaction; if the database call fails, nothing is marked paid,
+// the webhook answers 500, and Stripe retries the event.
+test('a failed database write answers 500 so Stripe retries, and marks nothing paid anywhere', async () => {
   const state = { invoices: [invoice()], workspace: [{ id: 1007, total: 150, paid: false }], relationalFails: true };
   const f = loadWebhook(state);
   const r = await f.deliver(pi());
-  assert.equal(r.status, 200);
-  assert.equal(state.invoices[0].paid, true);
-  assert.equal(state.workspace[0].paidAmount, 150);
+  assert.equal(r.status, 500);
+  assert.equal(state.invoices[0].paid, false);
+  assert.equal(state.workspace[0].paid, false);
+  assert.equal(f.workspacePatches().length, 0);
 });
 
 test('a short payment still marks nothing paid anywhere, public.invoices included', async () => {
