@@ -52,7 +52,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=45a37ea5ee">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=50aed916e9">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=8060cfc3c2" defer></script>
 <script src="/tools/data-layer.js?v=c595490771" defer></script>
@@ -80,6 +80,15 @@
   }
   .tool-title { font-family:var(--font-ui); font-weight:700; font-size:28px; color:var(--white); margin-bottom:6px; }
   .tool-sub { color: var(--text-dim); margin-bottom: 24px; }
+  /* The live-sync badge's base look, as on every other synced tool page
+     (Workspace Phase 3); the shell's .th-status rules turn it into the
+     header dot. */
+  .realtime-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-dim); }
+  .realtime-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
+  .realtime-dot.is-live { background: var(--status-live); }
+  .realtime-dot.is-connecting { background: var(--orange-light); }
+  .realtime-dot.is-error { background: var(--status-error); }
+  .hub-sub { margin: 4px 0 0; }
   .results-box { margin-top: 8px; }
   .result-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 15px; }
   .result-row.final { font-weight: 700; font-size: 19px; border-bottom: none; padding-top: 16px; }
@@ -329,6 +338,11 @@
     <a href="/tools/workspace.html" class="help-btn" aria-label="Back to Workspace" title="Back to Workspace" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
   </div>
 </div>
+<!-- Workspace Phase 3 (2026-10-30): the shared status dot. The shell moves
+     this badge into the header (mountStatusDot) and adds the shared sync
+     banner under it, the same as every other synced tool page; this page
+     had neither, so a failed backup here showed nothing. -->
+<p class="hub-sub"><span class="realtime-badge" id="realtimeBadge" onclick="retryLiveSync()" title="Live sync" style="margin-left:0;"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span></p>
 
 <p class="tool-sub">Quote a job, track what it actually cost, and log income and expenses.</p>
 
@@ -357,7 +371,7 @@
 </div>
 
 <div class="tabs tabs-sticky">
-  <button class="tab-btn is-active" data-tab="cost">Cost Lookup</button>
+  <button class="tab-btn is-active" data-tab="cost">Cost lookup</button>
   <button class="tab-btn" data-tab="profitability">Profitability</button>
   <button class="tab-btn" data-tab="income">Income</button>
   <button class="tab-btn" data-tab="expenses">Expenses</button>
@@ -436,7 +450,7 @@
 <div class="tab-panel" id="tab-income">
   <div class="form-section is-collapsed" id="incomeFormSection">
     <div class="form-section-header" onclick="toggleFormSection('incomeFormSection')">
-      <h3>Add Entry <button class="help-btn" onclick="event.stopPropagation(); openCardInfo('incomeEntry')" aria-label="What is this?" title="What is this?">?</button></h3>
+      <h3>Add entry <button class="help-btn" onclick="event.stopPropagation(); openCardInfo('incomeEntry')" aria-label="What is this?" title="What is this?">?</button></h3>
       <span class="collapse-chevron">&#9660;</span>
     </div>
     <div class="form-section-body">
@@ -462,7 +476,7 @@
       <div class="form-field"><label for="incomeAmount">Amount ($)</label><input type="number" id="incomeAmount" step="0.01" min="0"></div>
     </div>
     <div class="edit-mode-note" id="incomeEditNote" style="display:none;"></div>
-    <button class="primary-btn" id="addIncomeEntryBtn" onclick="addIncomeEntry()" style="margin-top:10px;">Add Entry</button>
+    <button class="primary-btn" id="addIncomeEntryBtn" onclick="addIncomeEntry()" style="margin-top:10px;">Add entry</button>
     <button class="secondary-btn" id="cancelIncomeEditBtn" style="display:none;" onclick="cancelIncomeEntryEdit()">Cancel</button>
     </div>
   </div>
@@ -485,7 +499,7 @@
 <div class="tab-panel" id="tab-expenses">
   <div class="form-section is-collapsed" id="expenseFormSection">
     <div class="form-section-header" onclick="toggleFormSection('expenseFormSection')">
-      <h3>Add Entry</h3>
+      <h3>Add entry</h3>
       <span class="collapse-chevron">&#9660;</span>
     </div>
     <div class="form-section-body">
@@ -533,7 +547,7 @@
       </div>
     </div>
     <div class="edit-mode-note" id="expenseEditNote" style="display:none;"></div>
-    <button class="primary-btn" id="addEntryBtn" onclick="addExpense()" style="margin-top:10px;">Add Entry</button>
+    <button class="primary-btn" id="addEntryBtn" onclick="addExpense()" style="margin-top:10px;">Add entry</button>
     <button class="secondary-btn" id="cancelExpenseEditBtn" style="display:none;" onclick="cancelExpenseEdit()">Cancel</button>
     </div>
   </div>
@@ -579,7 +593,7 @@
 <div class="tab-panel" id="tab-inventory">
   <div class="form-section is-collapsed" id="inventoryFormSection">
     <div class="form-section-header" onclick="toggleFormSection('inventoryFormSection')">
-      <h3>Add Part</h3>
+      <h3>Add part</h3>
       <span class="collapse-chevron">&#9660;</span>
     </div>
     <div class="form-section-body">
@@ -596,7 +610,7 @@
       <div class="form-field"><label for="invSupplier">Supplier</label><input type="text" id="invSupplier" placeholder="e.g. Home Depot, PartSelect"></div>
     </div>
     <div class="edit-mode-note" id="inventoryEditNote" style="display:none;"></div>
-    <button class="primary-btn" id="addInventoryBtn" onclick="addInventoryItem()" style="margin-top:10px;">Add Part</button>
+    <button class="primary-btn" id="addInventoryBtn" onclick="addInventoryItem()" style="margin-top:10px;">Add part</button>
     <button class="secondary-btn" id="cancelInventoryEditBtn" style="display:none;" onclick="cancelInventoryEdit()">Cancel</button>
     </div>
   </div>
@@ -647,6 +661,32 @@
   function openCardInfo(key) {
     const info = CARD_INFO[key];
     if (info) openInfoModal(info.title, info.body);
+  }
+
+  // The header status dot's words (Workspace Phase 3, 2026-10-30): the same
+  // states as every other synced tool page's updateRealtimeBadge(). Its
+  // colour is the shell's call (tools-nav-pwa.js): red only for real sync
+  // trouble, never for a dropped live-update connection alone.
+  function updateRealtimeBadge(status) {
+    const dot = document.getElementById('realtimeDot');
+    const text = document.getElementById('realtimeText');
+    const badge = document.getElementById('realtimeBadge');
+    if (!dot || !text) return;
+    dot.className = 'realtime-dot';
+    if (status === 'SUBSCRIBED') {
+      dot.classList.add('is-live');
+      text.textContent = 'Live sync active';
+    } else if (status === 'unavailable') {
+      dot.classList.add('is-error');
+      text.textContent = 'Live sync unavailable';
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED' || status === 'timeout') {
+      dot.classList.add('is-error');
+      text.textContent = 'Live sync disconnected';
+    } else {
+      dot.classList.add('is-connecting');
+      text.textContent = 'Live sync: connecting...';
+    }
+    if (badge) badge.classList.toggle('is-retryable', dot.classList.contains('is-error'));
   }
 
   const TAB_HASHES = { cost: 'cost', profitability: 'profitability', income: 'income', expenses: 'expenses', inventory: 'inventory' };
@@ -961,7 +1001,7 @@
     document.getElementById('incomeDesc').value = entry.desc || '';
     document.getElementById('incomeAmount').value = entry.amount || '';
 
-    document.getElementById('addIncomeEntryBtn').textContent = 'Update Entry';
+    document.getElementById('addIncomeEntryBtn').textContent = 'Update entry';
     document.getElementById('cancelIncomeEditBtn').style.display = '';
     const note = document.getElementById('incomeEditNote');
     note.textContent = 'Editing this income entry \u2014 saving will update it instead of creating a new one.';
@@ -971,7 +1011,7 @@
 
   function cancelIncomeEntryEdit() {
     editingIncomeEntryId = null;
-    document.getElementById('addIncomeEntryBtn').textContent = 'Add Entry';
+    document.getElementById('addIncomeEntryBtn').textContent = 'Add entry';
     document.getElementById('cancelIncomeEditBtn').style.display = 'none';
     document.getElementById('incomeEditNote').style.display = 'none';
     document.getElementById('incomeFormSection').classList.add('is-collapsed');
@@ -1325,7 +1365,7 @@
     // so the receipt field just stays empty -- addExpense() knows to keep
     // the existing receiptPath untouched unless a new file is chosen here.
 
-    document.getElementById('addEntryBtn').textContent = 'Update Entry';
+    document.getElementById('addEntryBtn').textContent = 'Update entry';
     document.getElementById('cancelExpenseEditBtn').style.display = '';
     const note = document.getElementById('expenseEditNote');
     note.textContent = entry.receiptPath
@@ -1337,7 +1377,7 @@
 
   function cancelExpenseEdit() {
     editingExpenseId = null;
-    document.getElementById('addEntryBtn').textContent = 'Add Entry';
+    document.getElementById('addEntryBtn').textContent = 'Add entry';
     document.getElementById('cancelExpenseEditBtn').style.display = 'none';
     document.getElementById('expenseEditNote').style.display = 'none';
     document.getElementById('expenseFormSection').classList.add('is-collapsed');
@@ -1501,7 +1541,7 @@
     document.getElementById('invReorderAt').value = item.reorderAt;
     document.getElementById('invUnitCost').value = item.unitCost || '';
     document.getElementById('invSupplier').value = item.supplier || '';
-    document.getElementById('addInventoryBtn').textContent = 'Update Part';
+    document.getElementById('addInventoryBtn').textContent = 'Update part';
     document.getElementById('cancelInventoryEditBtn').style.display = '';
     document.getElementById('inventoryEditNote').style.display = '';
     document.getElementById('inventoryEditNote').textContent = 'Editing this part.';
@@ -1509,7 +1549,7 @@
 
   function cancelInventoryEdit() {
     editingInventoryId = null;
-    document.getElementById('addInventoryBtn').textContent = 'Add Part';
+    document.getElementById('addInventoryBtn').textContent = 'Add part';
     document.getElementById('cancelInventoryEditBtn').style.display = 'none';
     document.getElementById('inventoryEditNote').style.display = 'none';
     document.getElementById('inventoryFormSection').classList.add('is-collapsed');
@@ -1979,7 +2019,7 @@
           renderPriceReferences();
           if (document.getElementById('tab-profitability')?.classList.contains('is-active')) renderJobProfitability();
           if (document.getElementById('tab-inventory')?.classList.contains('is-active')) renderInventory();
-        }, function () {});
+        }, updateRealtimeBadge);
       }
       // Separate relational-table realtime channel (Phase 2) -- a real
       // invoice write on another device (invoice-generator.html,

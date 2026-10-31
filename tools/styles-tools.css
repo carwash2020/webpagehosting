@@ -4170,15 +4170,17 @@ body.th-tool-page .th-v2-rule-head::after { content: ''; flex: 1; height: var(--
    the bar goes and the bar's own margin drops to 6px. Phone/tablet only;
    the desktop bar is fixed and unchanged. */
 @media (max-width: 1023px) {
-  html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"]) { padding-top: 0; }
+  html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"], [data-th-page="invoice-generator"], [data-th-page="finance"]) { padding-top: 0; }
 }
 @media (max-width: 1023px) and (display-mode: browser) {
-  html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"]) .hub-header { padding-top: 8px; padding-bottom: 8px; }
+  html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"], [data-th-page="invoice-generator"], [data-th-page="finance"]) .hub-header { padding-top: 8px; padding-bottom: 8px; }
   html body.th-tool-page[data-th-page="job-tracker"] .tabs.tabs-sticky { top: 62px; }
+  html body.th-tool-page:is([data-th-page="invoice-generator"], [data-th-page="finance"]) .tabs.tabs-sticky { top: 62px; }
 }
 @media (max-width: 1023px) and (display-mode: standalone) {
-  html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"]) .hub-header { padding-top: calc(6px + max(env(safe-area-inset-top, 0px), 44px)); padding-bottom: 8px; }
+  html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"], [data-th-page="invoice-generator"], [data-th-page="finance"]) .hub-header { padding-top: calc(6px + max(env(safe-area-inset-top, 0px), 44px)); padding-bottom: 8px; }
   html body.th-tool-page[data-th-page="job-tracker"] .tabs.tabs-sticky { top: calc(60px + max(env(safe-area-inset-top, 0px), 44px)); }
+  html body.th-tool-page:is([data-th-page="invoice-generator"], [data-th-page="finance"]) .tabs.tabs-sticky { top: calc(60px + max(env(safe-area-inset-top, 0px), 44px)); }
 }
 
 /* ---- Item 2: one header layout -- title left, round buttons right ----
@@ -4247,16 +4249,16 @@ html body.th-tool-page[data-th-page="job-tracker"] .tabs > .tab-btn { flex: 1 1 
    tracked eyebrow labels that sit over a heading or under an icon (the
    date kicker, "Next step", "Tip", section labels, ring/step captions,
    the bottom bar), which is the iOS grouped-list convention. */
-html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"]) :is(
+html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"], [data-th-page="invoice-generator"], [data-th-page="finance"]) :is(
   .hub-title, .greeting-banner-greeting, .today-next-job-title, .job-hero-title, .dash-group-label, .th-v2-rule-head
 ) { text-transform: none; letter-spacing: .2px; }
-html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"]) :is(
+html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"], [data-th-page="invoice-generator"], [data-th-page="finance"]) :is(
   .th-v2-seg > a, .th-v2-seg > button, .tab-btn, .sort-btn, .th-sheet-trigger, .primary-btn, .secondary-btn, .small-btn,
   .paid-toggle-btn, .dash-primary-action, .today-next-cell, .job-next-btn, .th-v2-link, .th-v2-add,
   .job-card-actions .job-done-btn, .quick-actions-btn, #templatesFormSection .form-section-header h3
 ) { text-transform: none; letter-spacing: .2px; }
-html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"]) :is(.th-v2-seg > a, .th-v2-seg > button, .tab-btn, .sort-btn) { font-size: 14px; }
-html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"]) :is(.th-sheet-trigger, #templatesFormSection .form-section-header h3) { font-size: 15px; font-weight: 600; }
+html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"], [data-th-page="invoice-generator"], [data-th-page="finance"]) :is(.th-v2-seg > a, .th-v2-seg > button, .tab-btn, .sort-btn) { font-size: 14px; }
+html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker"], [data-th-page="job-detail"], [data-th-page="invoice-generator"], [data-th-page="finance"]) :is(.th-sheet-trigger, #templatesFormSection .form-section-header h3) { font-size: 15px; font-weight: 600; }
 
 /* One priority badge on all three pages (Home's next job, the Jobs cards,
    Job detail's header): a tone pill, the word capitalised -- "High". */
@@ -4317,3 +4319,83 @@ body.th-tool-page .th-status.is-trouble .realtime-badge { cursor: pointer; }
    The orange hexagon is emphasis enough; an orange label read as the
    current tab. The disc keeps its own orange fill. */
 body.th-tool-page .th-bottom-nav .th-bn-create { color: var(--text-dim); }
+
+/* ==========================================================================
+   Workspace Phase 3 (2026-10-30): the money pages, Invoices
+   (invoice-generator.html) and Finance (finance.html), get Phase 2's native
+   app treatment. The header, casing and sticky-tab rules are Phase 2's own
+   (their :is() lists above now include these two pages); this block is
+   the money-page pieces. Same "html body.th-tool-page[...]" prefix as
+   Phase 2, so these win over each page's own v2 block. Chrome only: no
+   rule here changes what any button does or any number on the page.
+   ========================================================================== */
+
+/* Phone/tablet: the page intro is desktop-only, as on Jobs (.jt-intro).
+   (On Invoices the live-sync badge started inside it; the shell has moved
+   it into the header by the time this applies.) */
+@media (max-width: 1023px) {
+  html body.th-tool-page:is([data-th-page="invoice-generator"], [data-th-page="finance"]) .hub-header ~ p.tool-sub { display: none; }
+}
+
+/* Invoices | Finance | Quick charge spans the width, equal segments (Phase 2
+   item 6). The builder's New invoice | New quote strip too. Finance's five
+   tabs stay a scrolling track: five labels don't fit a 390px row. */
+html body.th-tool-page:is([data-th-page="invoice-generator"], [data-th-page="finance"]) .mn-seg { display: flex; width: 100%; max-width: none; }
+html body.th-tool-page:is([data-th-page="invoice-generator"], [data-th-page="finance"]) .mn-seg > :is(a, button) {
+  flex: 1 1 0; min-width: 0; padding-left: 8px; padding-right: 8px; justify-content: center; text-align: center;
+}
+html body.th-tool-page[data-th-page="invoice-generator"] .tabs,
+html body.th-tool-page[data-th-page="invoice-generator"] .tabs.tabs-sticky { display: flex; width: 100%; max-width: none; }
+html body.th-tool-page[data-th-page="invoice-generator"] .tabs > .tab-btn { flex: 1 1 0; min-width: 0; padding-left: 8px; padding-right: 8px; }
+/* Without the other Money page, Finance's switch is one lone segment:
+   nothing to switch to, so it isn't drawn. */
+html body.th-tool-page[data-th-page="finance"]:not(.th-money-switch-on) .mn-seg { display: none; }
+
+/* Casing (Phase 2 item 7) for the money pages' own controls. */
+html body.th-tool-page:is([data-th-page="invoice-generator"], [data-th-page="finance"]) :is(
+  .mn-new-btn, .add-row-btn, .add-contact-btn, [data-density-toggle]
+) { text-transform: none; letter-spacing: .2px; }
+html body.th-tool-page[data-th-page="invoice-generator"] .mn-new-btn { font-family: var(--font-app); font-size: 14px; font-weight: 600; }
+
+/* Log expense / Log income are one pair (the Home pair's rule, PR #543
+   round 3 item 4): the same 48px box, a 1px border on both, no lip, the
+   same type. Orange fill vs outline still says primary vs secondary. */
+html body.th-tool-page[data-th-page="finance"] .fin-spent-actions > :is(.primary-btn, .secondary-btn) {
+  height: 48px; min-height: 48px; padding: 0 12px; box-sizing: border-box; border: 1px solid transparent; box-shadow: none; transform: none;
+  font-family: var(--font-app); font-size: 14px; font-weight: 600; line-height: 1.2; letter-spacing: .2px;
+}
+html body.th-tool-page[data-th-page="finance"] .fin-spent-actions > .secondary-btn { border-color: var(--border); }
+html body.th-tool-page[data-th-page="finance"] .fin-spent-actions > :is(.primary-btn, .secondary-btn):active { transform: scale(.97); }
+
+/* Empty states: say so once, without dead controls. */
+/* Spent this month with nothing logged: no "$0" over an empty bar, no
+   "0 entries"; the card's own "Nothing logged in <month> yet." line and
+   the two Log buttons. */
+html body.th-tool-page[data-th-page="finance"] .fin-spent:has(.fin-spent-empty) :is(.fin-spent-total, .fin-spent-bar, .fin-spent-month) { display: none; }
+/* No invoices at all: the search, the filter chips, Compact view and the
+   header's + New invoice have nothing to act on (the empty state carries
+   its own New invoice button). A filter or search with no matches keeps
+   them, so it can be cleared. */
+html body.th-tool-page[data-th-page="invoice-generator"] .form-section:has(> #invoiceLogList > .inv-empty) :is(.inv-log-tools, [data-density-toggle], .inv-log-head > .mn-new-btn) { display: none; }
+/* No quotes at all (the inbox empty state, not a search miss): no search box. */
+html body.th-tool-page[data-th-page="invoice-generator"] .mn-quotes:has(> #quoteLogList > .empty-state-small use[href="#icon-inbox"]) .inv-log-tools { display: none; }
+
+/* Quick charge's amount: the page draws it in 64px Anton beside a 64px
+   "$", but on a phone the shared no-zoom rule (body.th-tool-page input
+   :not(...):not(...):not(...) -- three :not()s outrank the page's rule)
+   shrank it to 16px, so the empty field read as a big "$" and a tiny
+   "0.00". The id keeps it 64px (well over the 16px no-zoom floor). The
+   field, its value and the keypad are unchanged. */
+html body.th-tool-page[data-th-page="invoice-generator"] #posAmount { font-size: 64px; }
+
+/* 44px touch targets on a phone (Phase 2's coarse-pointer rule). */
+@media (pointer: coarse) {
+  html body.th-tool-page[data-th-page="invoice-generator"] #invoiceFilters .th-chip { min-height: 44px; min-width: 44px; justify-content: center; }
+  html body.th-tool-page[data-th-page="invoice-generator"] .inv-log-head [data-density-toggle] { min-height: 44px; }
+  /* The line-item fields (the page's own rule sets 40px and loads later). */
+  html body.th-tool-page[data-th-page="invoice-generator"] .line-items-table :is(input, select) { min-height: 44px; }
+  html body.th-tool-page[data-th-page="finance"] .small-btn.danger { min-width: 44px; }
+  /* A checkbox's label is its hit area: the whole 44px row. */
+  html body.th-tool-page[data-th-page="finance"] .checkbox-row { align-items: center; }
+  html body.th-tool-page[data-th-page="finance"] .checkbox-row > label { display: inline-flex; align-items: center; min-height: 44px; }
+}

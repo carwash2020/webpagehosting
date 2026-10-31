@@ -52,7 +52,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=45a37ea5ee">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=50aed916e9">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=8060cfc3c2" defer></script>
 <script src="/tools/data-layer.js?v=c595490771" defer></script>
@@ -756,8 +756,8 @@
     <button type="button" class="add-row-btn" style="align-self:flex-end;" onclick="addLineItemFromPriceRef('invoicePriceRefSelect', 'addLineItem')">Add This Line Item</button>
   </div>
   <button type="button" class="add-row-btn" onclick="addLineItem('', '', 1, '', true, '', true)">+ Add line item</button>
-  <button type="button" class="add-row-btn" onclick="addLaborLineItem('addLineItem')">+ Add Labor</button>
-  <button type="button" class="add-row-btn" onclick="addMileageLineItem('addLineItem')">+ Add Mileage</button>
+  <button type="button" class="add-row-btn" onclick="addLaborLineItem('addLineItem')">+ Add labor</button>
+  <button type="button" class="add-row-btn" onclick="addMileageLineItem('addLineItem')">+ Add mileage</button>
   <button type="button" class="secondary-btn" style="margin-left:8px;" onclick="openWikiLookup('jobDescription')">Look Up in Wiki</button>
 
   <div class="totals-box">
@@ -886,8 +886,8 @@
     <button type="button" class="add-row-btn" style="align-self:flex-end;" onclick="addLineItemFromPriceRef('quotePriceRefSelect', 'addQuoteLineItem')">Add This Line Item</button>
   </div>
   <button type="button" class="add-row-btn" onclick="addQuoteLineItem('', '', 1, '', true, '', true)">+ Add line item</button>
-  <button type="button" class="add-row-btn" onclick="addLaborLineItem('addQuoteLineItem')">+ Add Labor</button>
-  <button type="button" class="add-row-btn" onclick="addMileageLineItem('addQuoteLineItem')">+ Add Mileage</button>
+  <button type="button" class="add-row-btn" onclick="addLaborLineItem('addQuoteLineItem')">+ Add labor</button>
+  <button type="button" class="add-row-btn" onclick="addMileageLineItem('addQuoteLineItem')">+ Add mileage</button>
   <button type="button" class="secondary-btn" style="margin-left:8px;" onclick="openWikiLookup('quoteJobDescription')">Look Up in Wiki</button>
 
   <div class="totals-box">
@@ -914,7 +914,7 @@
   </div>
 </div>
 
-<button class="primary-btn wide" onclick="generateQuotePDF()">Download Estimate PDF</button>
+<button class="primary-btn wide" onclick="generateQuotePDF()">Download estimate PDF</button>
 <button class="secondary-btn" style="width:100%; margin-top:12px; padding:14px; font-size:15px;" onclick="convertQuoteToInvoice()">Convert to Invoice &rarr;</button>
 
 </div>
