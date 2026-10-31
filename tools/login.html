@@ -19,7 +19,7 @@
 <meta name="color-scheme" content="dark">
 <meta name="robots" content="noindex, nofollow">
 <title>Sign In | Triple H Enterprises (Internal Tool)</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="manifest" href="/tools/manifest.json">
 <meta name="theme-color" content="#0a0a0a">
 <meta name="mobile-web-app-capable" content="yes">
@@ -299,23 +299,43 @@
   .th-faceid-body { font-size:14.5px; line-height:1.5; color:var(--text-dim); margin:0; }
   .th-faceid-foot { font-size:12.5px; color:var(--text-dim); text-align:center; }
 </style>
+<!-- Sign-in rebuild (2026-10-31): ghost logo, Bricolage Grotesque + Geist, brand orange on ink.
+     Loaded last so it restyles the card above without changing any id, field or auth call. -->
+<link rel="preload" href="/fonts/signin/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/signin/geist-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/signin.css?v=7c38b5ffe5">
+<script src="/signin-ui.js?v=557e91d779"></script>
+<script>
+  // Sign-in must never depend on a cosmetic script. If /signin-ui.js did not
+  // load (offline, stale cache), fall back to plain behaviour: same busy
+  // label, instant redirect, no animation. The real helper replaces this.
+  window.ThSignin = window.ThSignin || {
+    initPasswordToggles: function () {},
+    setInvalid: function () {},
+    shake: function () {},
+    setBusy: function (btn, busy, busyLabel, idleLabel) { if (btn) { btn.disabled = !!busy; btn.textContent = busy ? busyLabel : idleLabel; } },
+    success: function (done) { done(); },
+  };
+</script>
 </head>
-<body data-th-page="login">
+<body data-th-page="login" class="th-signin si">
 
+<!-- Big Triple H logo, ghosted at 8% behind the form. Decorative, so no alt text. -->
+<img class="si-ghost" src="/images/logo-signature-orange.webp?v=202608142300" alt="" aria-hidden="true" width="531" height="488">
+<div class="si-sr" id="siLive" role="status" aria-live="polite"></div>
+<main class="si-main">
 <div class="login-box">
   <div class="th-step-topbar" id="thStepTopbar">
-    <button type="button" class="th-step-back" id="thStepBackBtn" aria-label="Back">&larr;</button>
+    <button type="button" class="th-step-back" id="thStepBackBtn">Back</button>
     <span class="th-step-brand"><img src="/images/logo-signature-orange-176.webp?v=202608142300" alt=""><span>Workspace</span></span>
     <span class="th-step-spacer" aria-hidden="true"></span>
   </div>
   <div class="th-step-progress" id="thStepProgress"><span class="seg" data-seg="1"></span><span class="seg" data-seg="2"></span></div>
 
   <div class="th-brand" id="thBrandBlock">
-    <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises" class="th-brand-logo">
-    <div class="th-brand-tagline">Honesty. Hustle. Helpfulness.</div>
-    <span class="th-app-pill">Workspace</span>
+    <div class="th-brand-tagline">Triple H workspace</div>
   </div>
-  <div class="login-title th-step-title" id="loginTitle">Sign In</div>
+  <h1 class="login-title th-step-title" id="loginTitle">Sign In</h1>
   <div class="login-sub" id="loginSubtitle">Jobs, invoices and money, all in one place.</div>
 
   <form id="loginForm">
@@ -325,15 +345,21 @@
     </div>
     <div class="login-field">
       <label for="loginPassword">Password</label>
-      <input type="password" id="loginPassword" autocomplete="current-password" required>
+      <div class="si-pw" data-si-pw>
+        <input type="password" id="loginPassword" autocomplete="current-password" required>
+        <button type="button" class="si-toggle" aria-label="Show password" aria-pressed="false" aria-controls="loginPassword">Show</button>
+      </div>
     </div>
-    <div class="login-error" id="loginError"></div>
-    <div class="checkbox-row" style="margin-bottom: 18px;">
-      <input type="checkbox" id="rememberMe" checked>
-      <label for="rememberMe">Remember me for 30 days</label>
-    </div>
+    <label class="si-switch" for="rememberMe">
+      <input type="checkbox" id="rememberMe" role="switch" checked>
+      <span class="si-switch-text login-hint">
+        <span class="si-switch-label login-hint">Remember me for 30 days</span>
+        <span class="si-switch-hint login-hint">Off: you're signed out when you close the browser.</span>
+      </span>
+    </label>
+    <div class="login-error" id="loginError" role="alert"></div>
     <button type="submit" class="primary-btn login-btn" id="loginBtn">Sign In</button>
-    <button type="button" id="forgotPasswordLink" style="background:none; border:none; color:var(--text-dim); font-size:14px; min-height:44px; width:100%; margin-top:6px; cursor:pointer; text-decoration:none;">Forgot your password?</button>
+    <button type="button" id="forgotPasswordLink">Forgot your password?</button>
   </form>
 
   <div id="forgotPasswordPanel" style="display:none; text-align:left;">
@@ -343,10 +369,10 @@
       <label for="resetEmail">Email</label>
       <input type="email" id="resetEmail" autocomplete="username">
     </div>
-    <div class="login-error" id="resetError"></div>
+    <div class="login-error" id="resetError" role="alert"></div>
     <div id="resetSuccess" style="display:none;"></div>
     <button type="button" class="primary-btn login-btn" id="sendResetBtn" style="width:100%; justify-content:center;">Send reset link</button>
-    <button type="button" id="cancelResetLink" style="background:none; border:none; color:var(--text-dim); font-size:14px; min-height:44px; margin-top:6px; cursor:pointer; text-decoration:none; width:100%;">Back to sign in</button>
+    <button type="button" id="cancelResetLink">Back to sign in</button>
   </div>
 
   <!-- Link sent (First Impressions handoff, 2026-09-29): shown after a
@@ -359,7 +385,7 @@
     <p class="th-step-body" id="resetLinkSentBody"></p>
     <p class="th-step-body" style="margin-top:-10px;">The link opens a page to choose a new password. It works once.</p>
     <button type="button" class="th-secondary-btn login-btn" id="resetLinkSentBackBtn" style="width:100%; justify-content:center;">Back to sign in</button>
-    <button type="button" id="resetLinkSendAgainLink" style="background:none; border:none; color:var(--text-dim); font-size:14px; min-height:44px; margin-top:6px; cursor:pointer; text-decoration:none; width:100%;">Didn't get it? Send again</button>
+    <button type="button" id="resetLinkSendAgainLink">Didn't get it? Send again</button>
   </div>
 
   <!-- Two-factor challenge (2026-09-22) -- shown only when the account
@@ -387,7 +413,14 @@
     <p class="th-code-hint th-code-only">Paste works too. It checks as soon as the sixth digit is in.</p>
     <input type="text" id="mfaRecoveryCodeInput" aria-label="Recovery code" class="mfa-code-input th-recovery-field th-recovery-only" style="display:none;" placeholder="XXXX-XXXX" autocomplete="off">
     <p class="th-code-hint th-recovery-only" style="display:none;">Using a code removes your old authenticator. You'll set up a new one next.</p>
-    <div class="login-error" id="mfaChallengeError"></div>
+    <label class="si-switch" for="thTrustDevice">
+      <input type="checkbox" id="thTrustDevice" role="switch" checked>
+      <span class="si-switch-text login-hint">
+        <span class="si-switch-label login-hint">Trust this device for 30 days</span>
+        <span class="si-switch-hint login-hint">Stay signed in here so you aren't asked for a code each visit. Leave off on a shared computer.</span>
+      </span>
+    </label>
+    <div class="login-error" id="mfaChallengeError" role="alert"></div>
     <button type="button" class="primary-btn login-btn" id="mfaChallengeSubmitBtn">Verify</button>
     <button type="button" class="mfa-link-btn" id="mfaUseRecoveryCodeLink">Use a recovery code instead</button>
     <button type="button" class="mfa-link-btn" id="mfaChallengeCancelLink">Cancel and sign out</button>
@@ -409,7 +442,7 @@
       </div>
     </div>
     <input type="text" id="mfaEnrollCodeInput" aria-label="6-digit code from your authenticator app" class="mfa-code-input" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" placeholder="123456" maxlength="6">
-    <div class="login-error" id="mfaEnrollError"></div>
+    <div class="login-error" id="mfaEnrollError" role="alert"></div>
     <button type="button" class="primary-btn login-btn" id="mfaEnrollVerifyBtn">Verify &amp; Continue</button>
     <button type="button" class="mfa-link-btn" id="mfaEnrollCancelLink">Cancel and sign out</button>
   </div>
@@ -435,6 +468,7 @@
        sign-in. See finishSignInFlow() above. -->
   <div id="thFaceIdOfferStep" style="display:none;"></div>
 </div>
+</main>
 <div class="th-faceid-scrim" id="thFaceIdScrim" style="display:none;">
   <div class="th-faceid-sheet" role="dialog" aria-modal="true" aria-labelledby="thFaceIdTitle">
     <div class="th-faceid-grabber" aria-hidden="true"></div>
@@ -464,7 +498,9 @@
   function redirectAfterLogin() {
     const params = new URLSearchParams(window.location.search);
     const returnTo = params.get('return');
-    window.location.href = ALLOWED_RETURN_PATHS.has(returnTo) ? returnTo : '/tools/workspace.html';
+    const target = ALLOWED_RETURN_PATHS.has(returnTo) ? returnTo : '/tools/workspace.html';
+    // ~600ms success beat (logo un-ghosts, form settles), then the same redirect as always.
+    ThSignin.success(() => { window.location.href = target; });
   }
 
   // Face ID offer (First Impressions handoff, 2026-09-29) -- after every
@@ -537,6 +573,7 @@
     const isFirst = id === 'loginForm';
     document.getElementById('thBrandBlock').style.display = isFirst ? '' : 'none';
     document.getElementById('loginTitle').style.display = isFirst ? '' : 'none';
+    document.getElementById('loginSubtitle').style.display = isFirst ? '' : 'none';
     document.getElementById('thStepTopbar').classList.toggle('is-shown', !isFirst);
     document.getElementById('thStepProgress').classList.toggle('is-shown', !isFirst);
     if (!isFirst) {
@@ -571,19 +608,28 @@
     const btn = document.getElementById('loginBtn');
     const errorEl = document.getElementById('loginError');
     errorEl.textContent = '';
-    btn.disabled = true;
-    btn.textContent = 'Signing In...';
+    const emailInput = document.getElementById('loginEmail');
+    const passwordInput = document.getElementById('loginPassword');
+    ThSignin.setInvalid([emailInput, passwordInput], errorEl, false);
+    ThSignin.setBusy(btn, true, 'Signing In...', 'Sign In');
 
-    const email = document.getElementById('loginEmail').value.trim();
-    const password = document.getElementById('loginPassword').value;
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
     const rememberMe = document.getElementById('rememberMe').checked;
     const result = await signIn(email, password, rememberMe, { skipPersist: true });
 
-    btn.disabled = false;
-    btn.textContent = 'Sign In';
+    ThSignin.setBusy(btn, false, '', 'Sign In');
 
     if (!result.ok) {
-      errorEl.textContent = result.error;
+      // Supabase says "Invalid login credentials"; say it the way the portal does.
+      const wrongEntry = /invalid login|invalid credentials|invalid email or password/i.test(result.error || '');
+      errorEl.textContent = wrongEntry ? 'Incorrect email or password.' : result.error;
+      if (wrongEntry) {
+        ThSignin.setInvalid([emailInput, passwordInput], errorEl, true);
+        ThSignin.shake(document.getElementById('loginPassword').closest('.login-field'));
+        passwordInput.focus();
+        passwordInput.select();
+      }
       return;
     }
 
@@ -608,6 +654,8 @@
       document.getElementById('mfaChallengeError').textContent = '';
       document.getElementById('mfaUseRecoveryCodeLink').textContent = 'Use a recovery code instead';
       document.getElementById('mfaChallengeView').classList.remove('is-recovery');
+      // The trust switch on the code step starts from Remember me.
+      document.getElementById('thTrustDevice').checked = rememberMe;
       paintCodeBoxes();
       showStep('mfaChallengeView');
       document.getElementById('mfaChallengeCodeInput').focus();
@@ -661,6 +709,7 @@
     wrap.classList.remove('is-shaking');
     void wrap.offsetWidth;
     wrap.classList.add('is-shaking');
+    wrap.classList.add('is-invalid'); // red boxes until the next keystroke
     document.getElementById('mfaChallengeCodeInput').value = '';
     paintCodeBoxes();
     document.getElementById('mfaChallengeCodeInput').focus();
@@ -672,7 +721,15 @@
   // convenience for that shape: no separate tap on Verify once the code is
   // fully typed or pasted in. Not applied to the recovery-code input, which
   // is a different (and variable) length/format.
+  ['loginEmail', 'loginPassword'].forEach((id) => {
+    document.getElementById(id).addEventListener('input', () => {
+      ThSignin.setInvalid([document.getElementById('loginEmail'), document.getElementById('loginPassword')], null, false);
+    });
+  });
+  ThSignin.initPasswordToggles();
+
   document.getElementById('mfaChallengeCodeInput').addEventListener('input', (e) => {
+    document.getElementById('thCodeBoxesWrap').classList.remove('is-invalid');
     e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
     paintCodeBoxes();
     if (/^\d{6}$/.test(e.target.value)) document.getElementById('mfaChallengeSubmitBtn').click();
@@ -682,6 +739,11 @@
     const btn = document.getElementById('mfaChallengeSubmitBtn');
     const errorEl = document.getElementById('mfaChallengeError');
     errorEl.textContent = '';
+    document.getElementById('thCodeBoxesWrap').classList.remove('is-invalid');
+    // "Trust this device for 30 days": on = the verified session is kept 30 days
+    // on this device, off = it ends when the browser closes. Only chooses where
+    // the session is stored; the code is still checked by Supabase as before.
+    pendingRememberMe = document.getElementById('thTrustDevice').checked;
 
     if (pendingRecoveryMode) {
       const code = document.getElementById('mfaRecoveryCodeInput').value.trim();

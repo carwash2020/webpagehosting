@@ -1,0 +1,536 @@
+/* ==========================================================================
+   Triple H sign-in (client portal + employee tools) -- shared stylesheet.
+
+   Loaded LAST on portal/login.html and tools/login.html, after the legacy
+   inline <style> blocks and portal-polish.css, so it can restyle the card
+   without touching a single id, field or auth call. Everything is scoped to
+   body.th-signin.
+
+   Brand: orange #F26B1D on dark ink. Type: Bricolage Grotesque (display) +
+   Geist (body), both self-hosted from /fonts/signin (OFL, see the .txt
+   files beside them). No Inter, no purple, no arrows on buttons.
+
+   Contrast (measured, WCAG 2.2 AA):
+     ink text #F6F1EA on #0B0A09 ........ ~17:1
+     dim text #B3AA9F on #0B0A09 ........ ~8.6:1 (still >= 7:1 over the ghost logo)
+     orange #F26B1D text on ink ......... ~6.5:1
+     ink label on orange button ......... ~6.5:1  (white on orange would be ~3:1)
+     field border #8A8176 on ink ........ ~4.9:1  (non-text, needs 3:1)
+     error #FF8A7A on ink ............... ~9:1
+   ========================================================================== */
+
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("/fonts/signin/bricolage-grotesque-latin-wght-normal.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist";
+  src: url("/fonts/signin/geist-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+html:has(body.th-signin) { color-scheme: dark !important; background-color: #0b0a09 !important; }
+
+body.th-signin {
+  --si-ink: #0b0a09;
+  --si-ink-2: #15120f;
+  --si-field: rgba(11, 10, 9, 0.8);
+  --si-line: #8a8176;
+  --si-text: #f6f1ea;
+  --si-dim: #b3aa9f;
+  --si-orange: #f26b1d;
+  --si-orange-hi: #ff8540;
+  --si-orange-lo: #d95a10;
+  --si-err: #ff8a7a;
+  --si-ok: #5bd68a;
+  --si-display: "Bricolage Grotesque", "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+  --si-body: "Geist", "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+  --si-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --si-success-ms: 600ms;
+}
+
+body.th-signin.si[class] {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(20px, env(safe-area-inset-top, 0px)) 20px max(20px, env(safe-area-inset-bottom, 0px));
+  background:
+    radial-gradient(900px 560px at 50% -8%, rgba(242, 107, 29, 0.13), transparent 62%),
+    var(--si-ink);
+  color: var(--si-text);
+  font-family: var(--si-body);
+  overflow-x: hidden;
+}
+
+/* ---- The ghost logo ----------------------------------------------------- */
+body.th-signin .si-ghost {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(96vw, 780px);
+  height: auto;
+  max-height: 92vh;
+  object-fit: contain;
+  opacity: 0.08;
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+  transform: scale(1);
+  transition:
+    opacity var(--si-success-ms) var(--si-ease),
+    transform var(--si-success-ms) var(--si-ease),
+    filter var(--si-success-ms) var(--si-ease);
+}
+body.th-signin .si-main { position: relative; z-index: 1; width: 100%; display: flex; justify-content: center; }
+
+/* ---- The form: no card, it sits straight on the ghost ------------------- */
+body.th-signin.si[class] .login-box {
+  position: relative;
+  max-width: 420px;
+  width: 100%;
+  padding: 8px 0;
+  margin: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  text-align: left;
+  animation: none;
+  transition:
+    transform var(--si-success-ms) var(--si-ease),
+    opacity var(--si-success-ms) var(--si-ease);
+}
+
+/* Legacy chrome we no longer show: the old hex mark and the small logos
+   (the big ghost logo is the brand now). */
+body.th-signin .login-hex,
+body.th-signin .login-logo,
+body.th-signin .th-brand-logo { display: none !important; }
+
+body.th-signin .si-kicker,
+body.th-signin .login-kicker,
+body.th-signin .th-brand-tagline {
+  font-family: var(--si-body);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--si-orange);
+  margin: 0 0 10px;
+}
+body.th-signin .th-brand { align-items: flex-start; gap: 8px; margin: 0 0 6px; text-align: left; }
+body.th-signin .th-app-pill { display: none; }
+
+body.th-signin.si[class] .login-box .login-title,
+body.th-signin.si[class] .login-box .th-step-title,
+body.th-signin.si[class] .login-box .report-bug-title,
+body.th-signin.si[class] .login-box .mfa-step-title,
+body.th-signin.si[class] .th-faceid-title {
+  font-family: var(--si-display);
+  font-weight: 700;
+  font-size: clamp(34px, 8.6vw, 46px);
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+  text-transform: none;
+  color: var(--si-text);
+  margin: 0 0 10px;
+}
+body.th-signin.si[class] .login-box .mfa-step-title,
+body.th-signin.si[class] .login-box .report-bug-title { font-size: clamp(30px, 7.6vw, 38px); }
+
+body.th-signin.si[class] .login-box .login-sub,
+body.th-signin.si[class] .login-box .th-step-body,
+body.th-signin.si[class] .login-box .mfa-step-sub,
+body.th-signin.si[class] .login-box .report-bug-sub,
+body.th-signin .th-faceid-body {
+  font-family: var(--si-body);
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--si-dim);
+  margin: 0 0 24px;
+}
+
+/* ---- Fields -------------------------------------------------------------- */
+body.th-signin.si[class] .login-box .login-field { margin: 0 0 18px; text-align: left; }
+body.th-signin.si[class] .login-box .login-field label {
+  display: block;
+  font-family: var(--si-body);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--si-text);
+  margin: 0 0 8px;
+}
+body.th-signin.si[class] .login-box .login-field input,
+body.th-signin.si[class] .login-box .mfa-code-input,
+body.th-signin.si[class] .login-box .report-bug-modal textarea {
+  width: 100%;
+  min-height: 56px;
+  padding: 14px 16px;
+  box-sizing: border-box;
+  background: var(--si-field);
+  color: var(--si-text);
+  border: 1.5px solid var(--si-line);
+  border-radius: 14px;
+  font-family: var(--si-body);
+  font-size: 18px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+body.th-signin.si[class] .login-box .report-bug-modal textarea { min-height: 150px; }
+body.th-signin .login-box ::placeholder { color: #968d82; opacity: 1; }
+body.th-signin .login-box input:focus,
+body.th-signin .login-box textarea:focus {
+  outline: 3px solid var(--si-orange-hi);
+  outline-offset: 2px;
+  border-color: var(--si-orange);
+}
+body.th-signin .login-box input[aria-invalid="true"] { border-color: var(--si-err); }
+body.th-signin .login-box input[aria-invalid="true"]:focus { outline-color: var(--si-err); }
+
+/* Password + Show/Hide button */
+body.th-signin .si-pw { position: relative; }
+body.th-signin.si[class] .login-box .si-pw input { padding-right: 92px; }
+body.th-signin .si-toggle {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 76px;
+  height: 48px;
+  padding: 0 14px;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  color: var(--si-orange-hi);
+  font-family: var(--si-body);
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+}
+@media (hover: hover) { body.th-signin .si-toggle:hover { background: rgba(242, 107, 29, 0.14); } }
+body.th-signin .si-toggle:focus-visible { outline: 3px solid var(--si-orange-hi); outline-offset: 0; }
+
+/* Messages */
+body.th-signin.si[class] .login-box .login-error,
+body.th-signin.si[class] .login-box .report-bug-error {
+  color: var(--si-err);
+  font-family: var(--si-body);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.4;
+  margin: 0 0 14px;
+  min-height: 0;
+}
+body.th-signin.si[class] .login-box .login-error:empty,
+body.th-signin.si[class] .login-box .report-bug-error:empty { display: none; }
+body.th-signin.si[class] .login-box .login-success,
+body.th-signin.si[class] .login-box .report-bug-success { color: var(--si-ok); font-size: 17px; line-height: 1.5; }
+
+/* ---- Switch (Remember me / Trust this device) ---------------------------- */
+body.th-signin .si-switch {
+  /* styles.css uppercases every <label>; these carry sentences. */
+  text-transform: none;
+  letter-spacing: normal;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  min-height: 56px;
+  margin: 0 0 20px;
+  padding: 4px 0;
+  cursor: pointer;
+}
+body.th-signin .si-switch input {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 0 0 auto;
+  position: relative;
+  width: 56px;
+  height: 32px;
+  margin: 12px 0 0;
+  padding: 0;
+  border: 1.5px solid var(--si-line);
+  border-radius: 999px;
+  background: #26221e;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+body.th-signin .si-switch input::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+  background: var(--si-text);
+  transition: transform 0.2s var(--si-ease), background 0.2s ease;
+}
+body.th-signin .si-switch input:checked { background: var(--si-orange); border-color: var(--si-orange); }
+body.th-signin .si-switch input:checked::after { transform: translateX(24px); background: var(--si-ink); }
+body.th-signin .si-switch input:focus-visible { outline: 3px solid var(--si-orange-hi); outline-offset: 3px; }
+body.th-signin .si-switch .si-switch-text { display: block; padding-top: 10px; }
+body.th-signin .si-switch .si-switch-label { display: block; font-family: var(--si-body); font-weight: 600; font-size: 17px; line-height: 1.3; color: var(--si-text); cursor: pointer; }
+body.th-signin .si-switch .si-switch-hint { display: block; font-weight: 400; font-family: var(--si-body); text-transform: none; letter-spacing: normal; margin-top: 2px; font-size: 14.5px; line-height: 1.4; color: var(--si-dim); }
+
+/* ---- Steps that used to be overlays (report a problem, 2FA code) --------
+   portal-polish.css still gives .report-bug-modal an opaque card, a scrim
+   and an orange-ruled error box. Here a step is just the next screen of the
+   same form, sitting on the ghost logo. */
+body.th-signin.si[class] .login-box .report-bug-overlay { background: none; }
+body.th-signin.si[class] .login-box .report-bug-modal {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  max-width: none;
+  animation: none;
+}
+body.th-signin.si[class] .login-box .report-bug-error:not(:empty),
+body.th-signin.si[class] .login-box .report-bug-success:not(:empty),
+body.th-signin.si[class] .login-box .login-error:not(:empty) {
+  border: 0;
+  border-radius: 0;
+  background: none;
+  padding: 0;
+}
+/* The switch is an <input>, so the generic "inputs inside the 2FA modal are
+   big code fields" rules would inflate it. Pin its size. */
+body.th-signin.si[class] .login-box .si-switch input[type="checkbox"] {
+  width: 56px;
+  min-width: 56px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  margin: 12px 0 0;
+  letter-spacing: 0;
+  border: 1.5px solid var(--si-line);
+  border-radius: 999px;
+  background: #26221e;
+}
+body.th-signin.si[class] .login-box .si-switch input[type="checkbox"]:checked { background: var(--si-orange); border-color: var(--si-orange); }
+
+/* ---- Buttons ------------------------------------------------------------- */
+body.th-signin.si[class] .login-box .login-btn,
+body.th-signin.si[class] .login-box .report-bug-actions button,
+body.th-signin.si[class] .login-box .mfa-link-btn + .login-btn,
+body.th-signin.si[class] .th-faceid-sheet .login-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 58px;
+  padding: 0 22px;
+  border-radius: 14px;
+  font-family: var(--si-body);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+}
+/* Primary */
+body.th-signin.si[class] .login-box .primary-btn.login-btn,
+body.th-signin.si[class] .login-box .btn.orange,
+body.th-signin.si[class] .th-faceid-sheet .primary-btn.login-btn {
+  background: var(--si-orange);
+  color: var(--si-ink);
+  border: 0;
+  box-shadow: none;
+}
+@media (hover: hover) {
+  body.th-signin.si[class] .login-box .primary-btn.login-btn:hover:not(:disabled),
+  body.th-signin.si[class] .login-box .btn.orange:hover:not(:disabled) { background: var(--si-orange-hi); }
+}
+body.th-signin.si[class] .login-box .primary-btn.login-btn:active:not(:disabled),
+body.th-signin.si[class] .login-box .btn.orange:active:not(:disabled) { transform: translateY(1px); background: var(--si-orange-lo); box-shadow: none; }
+/* Secondary */
+body.th-signin.si[class] .login-box .secondary-btn,
+body.th-signin.si[class] .login-box .th-secondary-btn,
+body.th-signin.si[class] .th-faceid-sheet .th-secondary-btn {
+  background: transparent;
+  color: var(--si-text);
+  border: 1.5px solid var(--si-line);
+  box-shadow: none;
+}
+@media (hover: hover) {
+  body.th-signin.si[class] .login-box .secondary-btn:hover:not(:disabled),
+  body.th-signin.si[class] .login-box .th-secondary-btn:hover:not(:disabled) { background: rgba(246, 241, 234, 0.08); }
+}
+body.th-signin .login-box .login-btn:focus-visible,
+body.th-signin .login-box .btn:focus-visible,
+body.th-signin .th-faceid-sheet button:focus-visible { outline: 3px solid var(--si-text); outline-offset: 3px; }
+body.th-signin .login-box button:disabled { opacity: 0.75; cursor: progress; }
+body.th-signin .login-box .report-bug-actions { gap: 12px; }
+
+/* styles.css gives every .btn a hover "sheen" in ::before; it is not part of
+   this design, and the spinner below needs that pseudo-element to itself. */
+body.th-signin .login-box .btn::before { content: none; }
+@media (hover: hover) {
+  body.th-signin .login-box .btn:hover { transform: none; }
+}
+
+/* Loading: spinner + label while a request is in flight */
+body.th-signin .login-box button[aria-busy="true"]::before {
+  content: "";
+  position: static;
+  transform: none;
+  background: none;
+  transition: none;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  border: 3px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: si-spin 0.7s linear infinite;
+}
+@keyframes si-spin { to { transform: rotate(360deg); } }
+
+/* Text links (Forgot password, Report a problem, Back to sign in...) */
+body.th-signin.si[class] .login-box .forgot-link,
+body.th-signin.si[class] .login-box .mfa-link-btn,
+body.th-signin.si[class] .login-box .report-bug-link,
+body.th-signin.si[class] .login-box #forgotPasswordLink,
+body.th-signin.si[class] .login-box #cancelResetLink,
+body.th-signin.si[class] .login-box #resetLinkSendAgainLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 52px;
+  margin: 6px 0 0;
+  padding: 0 12px;
+  background: none;
+  border: 0;
+  border-radius: 12px;
+  font-family: var(--si-body);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--si-text);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 1.5px;
+  cursor: pointer;
+}
+@media (hover: hover) {
+  body.th-signin .login-box .forgot-link:hover,
+  body.th-signin .login-box .mfa-link-btn:hover,
+  body.th-signin .login-box .report-bug-link:hover,
+  body.th-signin .login-box #forgotPasswordLink:hover,
+  body.th-signin .login-box #cancelResetLink:hover,
+  body.th-signin .login-box #resetLinkSendAgainLink:hover { color: var(--si-orange-hi); }
+}
+body.th-signin .login-box .forgot-link:focus-visible,
+body.th-signin .login-box .mfa-link-btn:focus-visible,
+body.th-signin .login-box .report-bug-link:focus-visible,
+body.th-signin .login-box #forgotPasswordLink:focus-visible,
+body.th-signin .login-box #cancelResetLink:focus-visible,
+body.th-signin .login-box #resetLinkSendAgainLink:focus-visible { outline: 3px solid var(--si-orange-hi); outline-offset: 2px; }
+body.th-signin.si[class] .login-box .report-bug-link { font-weight: 500; color: var(--si-dim); }
+
+body.th-signin.si[class] .login-box .login-foot,
+body.th-signin.si[class] .login-box .login-foot a { font-size: 14px; line-height: 1.5; color: var(--si-dim); text-align: center; }
+body.th-signin .login-box .login-foot a { text-decoration: underline; text-underline-offset: 3px; }
+body.th-signin.si[class] .login-box .login-nosignup { margin: 20px 0 0; }
+
+/* ---- Step chrome: Back (text, no arrow) ---------------------------------- */
+body.th-signin .th-step-topbar { margin: 0 0 18px; }
+body.th-signin.si[class] .login-box .th-step-back {
+  width: auto;
+  min-width: 76px;
+  height: 48px;
+  padding: 0 18px;
+  border-radius: 12px;
+  background: transparent;
+  border: 1.5px solid var(--si-line);
+  color: var(--si-text);
+  font-family: var(--si-body);
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+}
+body.th-signin .th-step-back:focus-visible { outline: 3px solid var(--si-orange-hi); outline-offset: 2px; }
+body.th-signin .th-step-brand span { font-family: var(--si-body); font-size: 13px; color: var(--si-dim); }
+body.th-signin .th-step-progress .seg { background: #3a352f; }
+body.th-signin .th-step-progress .seg.is-filled { background: var(--si-orange); }
+
+/* ---- 2FA code boxes ------------------------------------------------------ */
+body.th-signin .th-code-boxes { gap: 8px; }
+body.th-signin .th-code-box {
+  height: 64px;
+  border-radius: 12px;
+  background: var(--si-field);
+  border: 1.5px solid var(--si-line);
+  font-family: var(--si-display);
+  font-weight: 700;
+  font-size: 30px;
+  color: var(--si-text);
+}
+body.th-signin .th-code-box.is-current { border-color: var(--si-orange); box-shadow: 0 0 0 3px rgba(242, 107, 29, 0.35); }
+body.th-signin .th-code-boxes-wrap:focus-within .th-code-box.is-current { outline: 3px solid var(--si-orange-hi); outline-offset: 2px; }
+body.th-signin .th-code-boxes-wrap.is-invalid .th-code-box { border-color: var(--si-err); }
+body.th-signin .th-code-hint { font-size: 15px; color: var(--si-dim); margin: 0 0 16px; }
+body.th-signin .th-code-boxes-wrap.is-shaking .th-code-boxes,
+body.th-signin .si-shake { animation: si-shake 0.34s var(--si-ease); }
+@keyframes si-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-7px); }
+  40% { transform: translateX(7px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+body.th-signin .mfa-recovery-codes-list { background: var(--si-field); border-radius: 12px; color: var(--si-text); }
+body.th-signin .th-success-tile { border-radius: 16px; }
+
+/* Face ID sheet */
+body.th-signin .th-faceid-sheet { background: var(--si-ink-2); border-top-color: var(--si-line); }
+body.th-signin .th-faceid-body, body.th-signin .th-faceid-foot { color: var(--si-dim); }
+
+/* Screen-reader-only live region */
+body.th-signin .si-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* ---- Success: ~600ms. Logo un-ghosts, the form settles. ----------------- */
+body.th-signin.is-success .si-ghost { opacity: 1; transform: scale(1.03); filter: drop-shadow(0 18px 60px rgba(242, 107, 29, 0.35)); }
+body.th-signin.is-success.si[class] .login-box { transform: translateY(14px) scale(0.985); opacity: 0.12; pointer-events: none; }
+
+/* ---- Wide screens: a little more air ------------------------------------- */
+@media (min-width: 900px) {
+  body.th-signin.si[class] .login-box { max-width: 440px; }
+  body.th-signin .si-ghost { width: min(62vw, 860px); }
+}
+@media (max-width: 400px) {
+  body.th-signin.si[class] { padding-left: 16px; padding-right: 16px; }
+}
+
+/* ---- Reduced motion: state changes are instant, nothing moves ------------ */
+@media (prefers-reduced-motion: reduce) {
+  body.th-signin .si-ghost,
+  body.th-signin.si[class] .login-box,
+  body.th-signin .si-switch input,
+  body.th-signin .si-switch input::after,
+  body.th-signin.si[class] .login-box .login-btn { transition: none; animation: none; }
+  body.th-signin .th-code-boxes-wrap.is-shaking .th-code-boxes,
+  body.th-signin .si-shake { animation: none; }
+  body.th-signin .login-box button[aria-busy="true"]::before { animation: none; border-right-color: currentColor; opacity: 0.6; }
+  body.th-signin.is-success .si-ghost { transform: none; }
+  body.th-signin.is-success.si[class] .login-box { transform: none; }
+}
+
+/* Windows high-contrast / forced colors: keep controls visible */
+@media (forced-colors: active) {
+  body.th-signin .si-switch input { border-color: ButtonText; }
+  body.th-signin .si-switch input:checked { background: Highlight; }
+  body.th-signin .si-ghost { forced-color-adjust: none; }
+}

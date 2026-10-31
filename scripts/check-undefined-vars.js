@@ -72,6 +72,8 @@ const SHARED_SCRIPT_FILES = [
   'tools/dev-tools-shared.js',
   'tools/qrcode-lib.js',
   'tools/push-notifications.js',
+  // Sign-in helpers shared by portal/login.html and tools/login.html (2026-10-31).
+  'signin-ui.js',
   // Public, root-level shared file (2026-09-03) -- booking.html and
   // portal/work-orders.html both load this for the real business
   // hours and timezone-safe date math, so it needs to be on this list
