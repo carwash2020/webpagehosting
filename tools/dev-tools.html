@@ -1587,6 +1587,10 @@
 
       const deployStatusEl = document.querySelector('#deployStatus .dev-check-status');
       if (deployStatusEl && deployStatusEl.classList.contains('fail')) issues.push('Latest deploy did not pass (see Deploy History)');
+      document.querySelectorAll('#deployStatus .dev-other-failure').forEach(row => {
+        const label = row.querySelector('div > div');
+        if (label) issues.push(label.textContent + ' (see Deploy History)');
+      });
 
       const cronAlertRows = document.querySelectorAll('#cronHealthResults .dev-issue-row').length;
       if (cronAlertRows > 0) issues.push(cronAlertRows + ' open cron alert' + (cronAlertRows === 1 ? '' : 's') + ' (see Cron Health)');
@@ -3826,32 +3830,58 @@
     }
   }
 
-  // Pulls recent workflow runs from GitHub's public API -- no auth
-  // needed since this is a public repo. Top summary shows the single
-  // most recent run (unchanged from before); the history list below
-  // shows the last 8 across all workflows so a pattern (e.g. "this
-  // started failing consistently a few runs back") is visible without
-  // leaving this page.
+  // Pulls recent workflow runs on main from GitHub's public API -- no
+  // auth needed since this is a public repo. "Deploy" means only the
+  // two workflows that decide whether the site is live and healthy:
+  // "pages build and deployment" and "Tests and consistency check". Any
+  // other workflow that failed (e.g. the nightly backup) gets its own
+  // line ("Backup failed") instead of being reported as a failed deploy.
+  // The history list below still shows the last 8 runs of everything.
+  const DEPLOY_WORKFLOWS = ['pages build and deployment', 'Tests and consistency check'];
+
+  function workflowLabel(name) {
+    return /^Backup/i.test(name || '') ? 'Backup' : (name || 'Workflow');
+  }
+
+  // Pure: splits runs (newest first) into the latest deploy run and the
+  // latest failed run of each non-deploy workflow.
+  function summarizeDeployRuns(runs) {
+    const deployRun = runs.find(r => DEPLOY_WORKFLOWS.indexOf(r.name) !== -1) || null;
+    const seen = {};
+    const otherFailures = [];
+    runs.forEach(r => {
+      if (DEPLOY_WORKFLOWS.indexOf(r.name) !== -1 || seen[r.name]) return;
+      seen[r.name] = true;
+      if (r.conclusion === 'failure' || r.conclusion === 'timed_out') otherFailures.push(r);
+    });
+    return { deployRun: deployRun, otherFailures: otherFailures };
+  }
+
   async function renderDeployStatus() {
     const el = document.getElementById('deployStatus');
     const historyEl = document.getElementById('deployHistoryList');
     el.innerHTML = '<p class="tool-sub">Loading...</p>';
     try {
-      const res = await fetchWithTimeout('https://api.github.com/repos/carwash2020/webpagehosting/actions/runs?per_page=8', 6000);
+      const res = await fetchWithTimeout('https://api.github.com/repos/carwash2020/webpagehosting/actions/runs?branch=main&per_page=30', 6000);
       const data = await res.json();
       const runs = data.workflow_runs || [];
-      const run = runs[0];
-      if (!run) { el.innerHTML = '<p class="tool-sub">No runs found.</p>'; return; }
+      const summary = summarizeDeployRuns(runs);
+      const run = summary.deployRun;
+      if (!run) { el.innerHTML = '<p class="tool-sub">No deploy runs found.</p>'; return; }
       const ok = run.conclusion === 'success';
       const when = new Date(run.updated_at).toLocaleString();
       el.innerHTML =
         '<div class="dev-check-row"><div><div>' + escapeHtml(run.name || run.display_title || 'workflow') + '</div>' +
         '<div class="dev-check-detail">' + when + '</div></div>' +
-        '<span class="dev-check-status ' + (ok ? 'pass' : 'fail') + '">' + (run.conclusion ? run.conclusion.toUpperCase() : (run.status || '').toUpperCase()) + '</span></div>';
+        '<span class="dev-check-status ' + (ok ? 'pass' : 'fail') + '">' + (run.conclusion ? run.conclusion.toUpperCase() : (run.status || '').toUpperCase()) + '</span></div>' +
+        summary.otherFailures.map(r =>
+          '<div class="dev-check-row dev-other-failure"><div><div>' + escapeHtml(workflowLabel(r.name)) + ' failed</div>' +
+          '<div class="dev-check-detail">' + new Date(r.updated_at).toLocaleString() + '</div></div></div>'
+        ).join('');
 
       if (historyEl) {
         historyEl.innerHTML = '<h3 style="margin:0 0 8px; font-size:14px; color:var(--text-dim);">Last 8 runs</h3>' +
-          runs.map(r => {
+          runs.slice(0, 8).map(r => {
             const rOk = r.conclusion === 'success';
             const state = r.conclusion ? r.conclusion.toUpperCase() : (r.status || '').toUpperCase();
             return '<div style="padding:6px 0; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:12.5px;">' +

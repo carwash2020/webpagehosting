@@ -79,10 +79,15 @@ def check_config(config, live):
     if missing:
         fail("Not in scripts/backup-tables.json, so not backed up: " + ", ".join(missing)
              + ". Add each to 'tables' (back it up) or 'excluded' (with the reason).")
+    # A configured table the database doesn't have (renamed, dropped, or a
+    # migration that hasn't been applied yet) is skipped with a warning
+    # instead of failing the whole backup. Everything that IS live still
+    # gets backed up; the warning keeps the stale entry visible.
     gone = [t for t in named if t not in live]
-    if gone:
-        fail("In scripts/backup-tables.json but not in the live database: " + ", ".join(gone)
-             + ". Remove or rename the entry.")
+    for table in gone:
+        print(f"::warning::{table} is in scripts/backup-tables.json ({named[table]}) but not in the live database -- skipped. "
+              "Apply its migration, or remove/rename the entry.")
+    return set(gone)
 
 
 def total_from_content_range(value):
@@ -124,12 +129,14 @@ def main():
 
     with open(CONFIG_PATH, encoding="utf-8") as f:
         config = json.load(f)
-    check_config(config, live_tables(base_url, headers))
+    skipped = check_config(config, live_tables(base_url, headers))
 
     # Fetch everything first, then write, so a failure part-way leaves
     # yesterday's files untouched instead of a half-updated set.
     fetched = {}
     for table, order in config["tables"].items():
+        if table in skipped:
+            continue
         fetched[table] = fetch_table(base_url, headers, table, order)
         print(f"{table}: {len(fetched[table])} row(s)")
 

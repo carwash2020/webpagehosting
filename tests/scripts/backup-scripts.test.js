@@ -135,12 +135,22 @@ test('backup-tables.py stops, writing nothing, when a live table is not in the c
   } finally { fake.server.close(); }
 });
 
-test('backup-tables.py stops on a config entry the database no longer has', async () => {
-  const fake = await fakeRest({ live: ALL_NAMED.filter((t) => t !== 'referrals'), rows: {} });
+test('backup-tables.py skips a configured table the database does not have, warns, and backs up the rest', async () => {
+  const missing = ['referrals', 'th_leads'];
+  const rows = {};
+  for (const t of Object.keys(CONFIG.tables)) rows[t] = [{ id: 1 }];
+  const fake = await fakeRest({ live: ALL_NAMED.filter((t) => !missing.includes(t)), rows });
+  const dest = tmpdir();
   try {
-    const r = await run('backup-tables.py', [tmpdir()], fake.url);
-    assert.equal(r.code, 1);
-    assert.match(r.out, /not in the live database: referrals/);
+    const r = await run('backup-tables.py', [dest], fake.url);
+    assert.equal(r.code, 0, r.out);
+    for (const t of missing) {
+      assert.match(r.out, new RegExp('::warning::' + t + ' is in scripts/backup-tables\\.json'));
+      assert.ok(!fs.existsSync(path.join(dest, t + '.json')), t + ' must not be written');
+      assert.ok(!fake.calls.some((c) => c.table === t), t + ' must not be requested');
+    }
+    assert.ok(fs.existsSync(path.join(dest, 'jobs.json')), 'live tables are still backed up');
+    assert.doesNotMatch(r.out, /::error::/);
   } finally { fake.server.close(); }
 });
 
