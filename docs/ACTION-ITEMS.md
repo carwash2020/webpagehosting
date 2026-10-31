@@ -333,6 +333,18 @@ click a setting by hand.
     exists so a future session doesn't "helpfully" restore it on its
     own, and so it's easy to find exactly what to undo when asked.
 
+21. **Daily end-of-day digest email (built 2026-10-31, ships DISABLED)**
+    -- merging sends nothing. To turn it on: (1) run
+    `sql/infra/add_daily_digest.sql`; (2) deploy
+    `edge-functions/daily-digest-index.ts` as `daily-digest` with
+    verify_jwt on; (3) set the two recipient emails and flip
+    `enabled` in `digest_settings`; (4) run a `{"dry_run":true}` call to
+    check the content; (5) apply `sql/infra/add_daily_digest_cron.sql`.
+    Full steps and the confirm-before-enabling list (Stripe key
+    mode, from-address domain, recipient addresses) in
+    `docs/daily-digest/README.md`. TODO: recipient addresses were not
+    given, so none are stored anywhere in the repo.
+
 <!-- Add new manual action items above this line -->
 
 ## SEO action items (need a human, outside of code)

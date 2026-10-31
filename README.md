@@ -6256,3 +6256,9 @@ Two small follow-ups to the merged Workspace Phase 2 (#543), both measured at 39
 2. **Jobs: Add a job and Templates share one row on a phone/tablet**, the two-column layout the page already used on a computer. Collapsed, the templates card reads "Templates" (screen readers still get "Recurring job templates") and its ? waits for the open card. Opening it restores the old full-width stacked layout. The first job card now sits at 358px on a repeat visit (was 440) and 475px on a first visit with the tip (was 541).
 
 Screenshots: `docs/workspace-touchups-2026-10-30/`. `verify.js` runs 65 checks, up from 58. Details: `docs/specialist-logs/visual.md`.
+
+## What changed, 2026-10-31 -- end-of-day email digest (built, DISABLED by default)
+
+New edge function `daily-digest` (`edge-functions/daily-digest-index.ts`) emails Connor and Steve one summary after the working day: action items, Stripe balance and next payout, today's payments/refunds/failures, today's and tomorrow's jobs and appointments, quotes and invoices sent/approved/paid, and overdue invoices. It sends through Resend, runs hourly from pg_cron, and sends only inside the 8 PM America/Denver window (DST-safe, with a 3-hour retry window). Recipients live in a new `digest_settings` row, not in code. `digest_runs` (unique per local date) makes the send idempotent.
+
+**Merging this sends nothing.** The migration seeds `enabled = false` and no recipients, and nothing is applied, deployed or scheduled by the merge. Turn-on steps: `docs/daily-digest/README.md`. Sample email (sample data): `docs/daily-digest/sample-email.png`. Tests: `tests/edge-functions/daily-digest.test.js`. Details: `docs/specialist-logs/features.md`.
