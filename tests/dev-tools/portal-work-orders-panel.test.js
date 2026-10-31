@@ -30,11 +30,9 @@ test('the Clients tool has a work orders panel alongside accounts, invoices, and
 });
 
 test('the work orders panel renders on page load with the other Clients panels', () => {
-  // renderPortalQuotes() (2026-09-22, the Portal quotes panel) now sits
-  // between these two -- still fine, this just confirms work orders is
-  // in the same init sequence, not that it's the very next call after
-  // invoices specifically.
-  assert.match(CLIENTS, /renderPortalInvoices\(\);[\s\S]*?renderPortalWorkOrders\(\);/);
+  // Portal invoices / quotes left this sequence (redundancy pass,
+  // 2026-10-31); work orders stays, after Portal accounts.
+  assert.match(CLIENTS, /renderPortalAccounts\(\);[\s\S]*?renderPortalWorkOrders\(\);/);
 });
 
 test('the work orders panel is read-only visibility -- status is not advanced from here', () => {
@@ -79,9 +77,11 @@ test('the photo viewer strips the bucket prefix stored paths carry, rather than 
   assert.match(fnMatch[0], /fullPath\.replace\(\/\^work-order-photos\\\/\/, ''\)/);
 });
 
-test('the invoice PDF viewer opens its tab synchronously, before any await -- the same Safari popup fix', () => {
-  const fnMatch = CLIENTS.match(/async function viewArchivedInvoicePdf\(portalRowId, btnEl\)[\s\S]*?\n  \}\n/);
-  assert.ok(fnMatch, 'expected to isolate viewArchivedInvoicePdf()');
+test('the invoice PDF viewer opens its tab synchronously, before any await -- the same Safari popup fix (on the Invoices list since Clients\' Portal invoices panel left, 2026-10-31)', () => {
+  const INVOICES = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'invoice-generator.html'), 'utf8');
+  assert.doesNotMatch(CLIENTS, /function viewArchivedInvoicePdf/);
+  const fnMatch = INVOICES.match(/async function viewInvoicePdf\(id\)[\s\S]*?\n  \}\n/);
+  assert.ok(fnMatch, 'expected to isolate viewInvoicePdf()');
   const body = fnMatch[0];
   const openIdx = body.indexOf("window.open('', '_blank')");
   // A real await STATEMENT, not the word "await" inside a code comment

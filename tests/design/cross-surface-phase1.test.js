@@ -70,7 +70,8 @@ test('tool pages do not use a bare <header> for sub-headings (styles.css makes e
     if (ALLOW[page]) src = src.replace(ALLOW[page], '');
     assert.doesNotMatch(src, /<header[\s>]/, `tools/${page} has a <header>; use a <div> (or reset the public header styles for it)`);
   }
-  assert.equal((read('tools/workspace.html').match(/<div class="ops-lane-header">/g) || []).length, 4);
+  // Three lanes since the Income lane moved onto the Money owed card (2026-10-31).
+  assert.equal((read('tools/workspace.html').match(/<div class="ops-lane-header">/g) || []).length, 3);
 });
 
 test('portal .small-btn is at least 44px tall on phones, and that rule comes after the 38px default', () => {

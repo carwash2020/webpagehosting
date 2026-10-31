@@ -53,15 +53,15 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=10f1831b6e">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=d7410af6b7">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=8060cfc3c2" defer></script>
 <script src="/tools/data-layer.js?v=c595490771" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=e67fa5a727" defer></script>
-<script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=791ee017e1" defer></script>
+<script src="/tools/tools-command-palette.js?v=479d6a96e7" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -138,21 +138,20 @@
      two tables by container id, not the shared .table-scroll class,
      so no other page's table is affected. */
   @media (max-width: 1023px) {
-    #incomeTable table, #entriesTable table, #inventoryTable table { min-width: 0; }
-    #incomeTable thead, #entriesTable thead, #inventoryTable thead { display: none; }
+    #incomeTable table, #entriesTable table { min-width: 0; }
+    #incomeTable thead, #entriesTable thead { display: none; }
     #incomeTable table, #incomeTable tbody, #incomeTable tr,
-    #entriesTable table, #entriesTable tbody, #entriesTable tr,
-    #inventoryTable table, #inventoryTable tbody, #inventoryTable tr { display: block; width: 100%; }
-    #incomeTable tr, #entriesTable tr, #inventoryTable tr {
+    #entriesTable table, #entriesTable tbody, #entriesTable tr { display: block; width: 100%; }
+    #incomeTable tr, #entriesTable tr {
       background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 8px;
       padding: 4px 12px; margin-bottom: 10px;
     }
-    #incomeTable td, #entriesTable td, #inventoryTable td {
+    #incomeTable td, #entriesTable td {
       display: flex; align-items: center; justify-content: space-between; gap: 10px;
       padding: 8px 0; border-bottom: 1px solid var(--border); text-align: right;
     }
-    #incomeTable td:last-child, #entriesTable td:last-child, #inventoryTable td:last-child { border-bottom: none; justify-content: flex-end; padding-top: 4px; }
-    #incomeTable td[data-label]::before, #entriesTable td[data-label]::before, #inventoryTable td[data-label]::before {
+    #incomeTable td:last-child, #entriesTable td:last-child { border-bottom: none; justify-content: flex-end; padding-top: 4px; }
+    #incomeTable td[data-label]::before, #entriesTable td[data-label]::before {
       content: attr(data-label); flex: 0 0 auto; color: var(--text-dim); font-size: 12px;
       text-transform: uppercase; text-align: left;
     }
@@ -171,24 +170,15 @@
     box-shadow: inset 0 var(--th-rule) 0 var(--orange);
   }
   body.th-tool-page[data-th-page="finance"] .totals-row-money { border-top: var(--th-rule) solid var(--border); }
-  body.th-tool-page[data-th-page="finance"] .price-ref-list > * { border-radius: 999px; }
   @media (min-width: 1100px) {
-    body.th-tool-page[data-th-page="finance"] #tab-cost.is-active {
-      display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 20px; align-items: start;
-    }
-    body.th-tool-page[data-th-page="finance"] #tab-cost > * { min-width: 0; }
-    body.th-tool-page[data-th-page="finance"] #tab-cost > .form-section:nth-child(3) { grid-column: 2; grid-row: 1 / span 2; position: sticky; top: 130px; }
     body.th-tool-page[data-th-page="finance"] #tab-income.is-active,
-    body.th-tool-page[data-th-page="finance"] #tab-expenses.is-active,
-    body.th-tool-page[data-th-page="finance"] #tab-inventory.is-active {
+    body.th-tool-page[data-th-page="finance"] #tab-expenses.is-active {
       display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 12px; align-items: start;
     }
     body.th-tool-page[data-th-page="finance"] #tab-income > *,
-    body.th-tool-page[data-th-page="finance"] #tab-expenses > *,
-    body.th-tool-page[data-th-page="finance"] #tab-inventory > * { grid-column: 1 / -1; min-width: 0; }
+    body.th-tool-page[data-th-page="finance"] #tab-expenses > * { grid-column: 1 / -1; min-width: 0; }
     body.th-tool-page[data-th-page="finance"] #tab-income > .th-sheet-trigger,
-    body.th-tool-page[data-th-page="finance"] #tab-expenses > .th-sheet-trigger,
-    body.th-tool-page[data-th-page="finance"] #tab-inventory > .th-sheet-trigger { grid-column: 1; }
+    body.th-tool-page[data-th-page="finance"] #tab-expenses > .th-sheet-trigger { grid-column: 1; }
   }
 
   /* ==========================================================================
@@ -235,15 +225,18 @@
     body.th-tool-page[data-th-page="finance"] .fin-spent-actions { grid-column: 1 / -1; }
   }
 
-  /* ---- The five tabs as one segmented track ---- */
+  /* ---- The tabs as one segmented track ----
+     Three tabs since Cost lookup and Inventory left (redundancy pass,
+     2026-10-31): they fit at 390, so the track spans the width with equal
+     segments, like Jobs' and the Money switch, instead of scrolling. */
   body.th-tool-page[data-th-page="finance"] .tabs, body.th-tool-page[data-th-page="finance"] .tabs.tabs-sticky {
-    display: inline-flex; width: auto; max-width: 100%; gap: 4px; padding: 4px; margin: 0 0 16px; overflow-x: auto; scrollbar-width: none;
+    display: flex; width: 100%; max-width: 100%; box-sizing: border-box; gap: 4px; padding: 4px; margin: 0 0 16px; overflow-x: auto; scrollbar-width: none;
     background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-track); box-shadow: none;
   }
   body.th-tool-page[data-th-page="finance"] .tabs::-webkit-scrollbar { display: none; }
   body.th-tool-page[data-th-page="finance"] .tabs.tabs-sticky::before { border-radius: inherit; background: var(--bg-panel); }
   body.th-tool-page[data-th-page="finance"] .tab-btn {
-    flex: 0 0 auto; min-height: 38px; padding: 0 14px; border-radius: var(--th-radius-seg); box-shadow: none; background: none; white-space: nowrap;
+    flex: 1 1 0; min-width: max-content; min-height: 38px; padding: 0 14px; border-radius: var(--th-radius-seg); box-shadow: none; background: none; white-space: nowrap;
     font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: .8px; color: var(--text-dim);
   }
   body.th-tool-page[data-th-page="finance"] .tab-btn.is-active { background: var(--text); color: var(--bg); box-shadow: none; }
@@ -273,7 +266,7 @@
   body.th-tool-page[data-th-page="finance"] .fin-log .totals-row-money { border-top: 1px solid var(--th-hairline); margin-top: 6px; padding-top: 10px; display: flex; flex-wrap: wrap; gap: 6px 18px; }
   body.th-tool-page[data-th-page="finance"] .totals-row-money strong { background: none; -webkit-text-fill-color: currentColor; color: var(--text); font-size: 15px; }
   body.th-tool-page[data-th-page="finance"] .fin-log .table-scroll { border: 0; background: none; }
-  body.th-tool-page[data-th-page="finance"] #entriesTable th, body.th-tool-page[data-th-page="finance"] #incomeTable th, body.th-tool-page[data-th-page="finance"] #inventoryTable th {
+  body.th-tool-page[data-th-page="finance"] #entriesTable th, body.th-tool-page[data-th-page="finance"] #incomeTable th {
     font-family: var(--font-ui); font-weight: 500; font-size: 11.5px; letter-spacing: 1.2px; color: var(--text-dim);
   }
   body.th-tool-page[data-th-page="finance"] #entriesTable td, body.th-tool-page[data-th-page="finance"] #incomeTable td { border-bottom-color: var(--th-hairline); }
@@ -311,8 +304,6 @@
     body.th-tool-page[data-th-page="finance"] #incomeTable td:nth-child(2)::before,
     body.th-tool-page[data-th-page="finance"] #incomeTable td:nth-child(7)::before,
     body.th-tool-page[data-th-page="finance"] #incomeTable td:nth-child(4)::before { display: none; }
-    body.th-tool-page[data-th-page="finance"] #inventoryTable tr { background: var(--th-field); border-radius: 14px; }
-    body.th-tool-page[data-th-page="finance"] #inventoryTable td { border-bottom-color: var(--th-hairline); }
   }
 </style>
 </head>
@@ -372,71 +363,20 @@
 </div>
 
 <div class="tabs tabs-sticky">
-  <button class="tab-btn is-active" data-tab="cost">Cost lookup</button>
-  <button class="tab-btn" data-tab="profitability">Profitability</button>
+  <button class="tab-btn is-active" data-tab="expenses">Expenses</button>
   <button class="tab-btn" data-tab="income">Income</button>
-  <button class="tab-btn" data-tab="expenses">Expenses</button>
-  <button class="tab-btn" data-tab="inventory">Inventory</button>
+  <button class="tab-btn" data-tab="profitability">Profitability</button>
 </div>
 
-<!-- COST LOOKUP TAB -->
-<div class="tab-panel" id="tab-cost">
-  <div class="form-section">
-    <h3>Job Inputs</h3>
-    <div class="tool-form-row">
-      <div class="form-field"><label for="costClientName">Client name</label><span class="label-hint field-caption" id="costClientNameHint">Optional. Checks your job history.</span><input type="text" id="costClientName" aria-describedby="costClientNameHint" placeholder="Sarah Miller" oninput="checkClientHistory()"></div>
-    </div>
-    <p class="inline-note" id="clientHistoryNote"></p>
-    <div class="tool-form-row">
-      <div class="form-field"><label for="hours">Labor hours</label><input type="number" id="hours" value="1" min="0" step="0.25" oninput="calculateCost()"></div>
-      <div class="form-field"><label for="rate">Hourly rate ($)</label><input type="number" id="rate" value="75" min="0" step="1" oninput="calculateCost()"></div>
-    </div>
-    <div class="tool-form-row">
-      <div class="form-field"><label for="parts">Parts/materials cost ($)</label><input type="number" id="parts" value="0" min="0" step="0.01" oninput="calculateCost()"></div>
-    </div>
-    <div class="checkbox-row">
-      <input type="checkbox" id="firstTimeClient" onchange="calculateCost()">
-      <label for="firstTimeClient">First-time client &mdash; apply discount</label>
-    </div>
-    <div class="tool-form-row" id="discountRow">
-      <div class="form-field" style="max-width:220px;"><label for="discount">First-time discount ($)</label><input type="number" id="discount" value="15" min="0" step="1" oninput="calculateCost()"></div>
-    </div>
-  </div>
-
-  <div class="form-section">
-    <h3>Sales Tax <button class="help-btn" onclick="openCardInfo('salesTax')" aria-label="What is this?" title="What is this?">?</button></h3>
-    <div class="tool-form-row">
-      <div class="form-field" style="max-width:220px;"><label for="taxRate">Sales tax rate (%)</label><input type="number" id="taxRate" value="6.75" min="0" step="0.01" onchange="saveTaxSettings(); calculateCost();" oninput="calculateCost()"></div>
-    </div>
-    <div class="checkbox-row">
-      <input type="checkbox" id="taxLabor" checked onchange="saveTaxSettings(); calculateCost();">
-      <label for="taxLabor">Tax labor</label>
-    </div>
-    <div class="checkbox-row">
-      <input type="checkbox" id="taxParts" checked onchange="saveTaxSettings(); calculateCost();">
-      <label for="taxParts">Tax parts/materials</label>
-    </div>
-  </div>
-
-  <div class="form-section">
-    <h3>Results</h3>
-    <div class="results-box">
-      <div class="result-row"><span class="result-label">Labor</span><span id="laborResult">$0.00</span></div>
-      <div class="result-row"><span class="result-label">Parts/materials</span><span id="partsResult">$0.00</span></div>
-      <div class="result-row"><span class="result-label">Subtotal (before tax)</span><span id="subtotalResult">$0.00</span></div>
-      <div class="result-row"><span class="result-label">Sales tax</span><span id="taxResult">$0.00</span></div>
-      <div class="result-row final" id="standardFinalRow"><span class="result-label final">Standard total (with tax)</span><span id="standardResult">$0.00</span></div>
-      <div class="result-row final" id="discountedFinalRow"><span class="result-label final">First-time client price (with tax)</span><span id="discountedResult">$0.00</span></div>
-    </div>
-  </div>
-
-  <div class="form-section">
-    <h3>Price Reference</h3>
-    <p style="color:var(--text-dim); font-size: 13px; margin: -6px 0 12px;">Save common job types here once, then tap one anytime to instantly load its hours/rate back into the calculator above.</p>
-    <div class="price-ref-list" id="priceRefList"></div>
-    <button class="secondary-btn" style="margin-top:14px;" onclick="savePriceReference()">+ Save Current as Reference</button>
-  </div>
-</div>
+<!-- Cost lookup and Inventory tabs (redundancy pass, 2026-10-31).
+     Cost lookup was a calculator that saved nothing but its "Save Current
+     as Reference" job types (th_price_reference) -- pricing a job is New
+     quote's work, and its "Add From Saved Job Types" picker still reads
+     every saved job type. Inventory (th_inventory) had nothing else reading
+     it. Both tabs' screens are gone; their data, its sync, tombstones and
+     Dev Tools' deleted-items view are untouched. Expenses is the default
+     tab now, and an old #cost / #inventory link (or a device that last
+     used one) opens it. -->
 
 <!-- PROFITABILITY TAB -->
 <div class="tab-panel" id="tab-profitability">
@@ -584,51 +524,6 @@
   </div>
 </div>
 
-<!-- INVENTORY TAB -->
-<!-- Closes a real audit gap: Appliance Wiki (tools/parts-reference.html)
-     only ever tracks WHAT part fixes what and its typical cost -- it's
-     reference data, deliberately not stock tracking (see that page's
-     own scope notes). This is the separate, actual on-hand-quantity
-     tracker the audit found missing. Lives here rather than in the
-     Wiki since it's fundamentally a money/stock-level concern like
-     Expenses and Cost Lookup, not a repair-reference concern. -->
-<div class="tab-panel" id="tab-inventory">
-  <div class="form-section is-collapsed" id="inventoryFormSection">
-    <div class="form-section-header" onclick="toggleFormSection('inventoryFormSection')">
-      <h3>Add part</h3>
-      <span class="collapse-chevron">&#9660;</span>
-    </div>
-    <div class="form-section-body">
-    <div class="tool-form-row">
-      <div class="form-field"><label for="invPartName">Part Name</label><input type="text" id="invPartName" placeholder="Dishwasher door latch"></div>
-      <div class="form-field"><label for="invPartNumber">Part Number</label><input type="text" id="invPartNumber" placeholder="e.g. WPW10321304"></div>
-    </div>
-    <div class="tool-form-row">
-      <div class="form-field"><label for="invQty">Qty on Hand</label><input type="number" id="invQty" step="1" min="0" value="0"></div>
-      <div class="form-field"><label for="invReorderAt">Reorder at</label><span class="label-hint field-caption" id="invReorderAtHint">Low-stock warning threshold.</span><input type="number" id="invReorderAt" aria-describedby="invReorderAtHint" step="1" min="0" value="1"></div>
-      <div class="form-field"><label for="invUnitCost">Unit Cost ($)</label><input type="number" id="invUnitCost" step="0.01" min="0"></div>
-    </div>
-    <div class="tool-form-row">
-      <div class="form-field"><label for="invSupplier">Supplier</label><input type="text" id="invSupplier" placeholder="e.g. Home Depot, PartSelect"></div>
-    </div>
-    <div class="edit-mode-note" id="inventoryEditNote" style="display:none;"></div>
-    <button class="primary-btn" id="addInventoryBtn" onclick="addInventoryItem()" style="margin-top:10px;">Add part</button>
-    <button class="secondary-btn" id="cancelInventoryEditBtn" style="display:none;" onclick="cancelInventoryEdit()">Cancel</button>
-    </div>
-  </div>
-
-  <div class="form-section">
-    <h3>On Hand</h3>
-    <div class="tool-form-row">
-      <div class="form-field"><input type="text" id="inventorySearch" aria-label="Search parts on hand" placeholder="Search parts..." oninput="renderInventory()"></div>
-    </div>
-    <div class="table-scroll">
-      <div id="inventoryTable"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div><div class="skeleton-line w-40"></div></div>
-    </div>
-  </div>
-</div>
-
-
 <script>
   // Moved here (2026-08-21) from job-tracker.html, found by the new
   // automated button-handler check: 3 real "?" help buttons on this
@@ -639,11 +534,6 @@
   // itself stayed behind, confirmed completely unused there once
   // their buttons moved here.
   const CARD_INFO = {
-    salesTax: {
-      title: 'Sales Tax',
-      body: `<p>Utah taxes repair labor on things like appliances, but labor on items permanently attached to real property is often exempt &mdash; parts are usually taxed either way.</p>
-        <p>This is genuinely job-specific and not tax advice; confirm your situation with the Utah State Tax Commission or your accountant. Check whichever applies to this job.</p>`,
-    },
     incomeEntry: {
       title: 'Add Entry',
       body: `<p>For income that doesn't go through a formal invoice &mdash; cash jobs, tips, anything paid outside Invoice Generator.</p>
@@ -652,7 +542,7 @@
     mileageRate: {
       title: 'Mileage Rate',
       body: `<p>The IRS standard mileage rate changes at least yearly (occasionally mid-year, as in 2026) &mdash; update the rate above if it changes rather than trusting an old number.</p>
-        <p>Shown value is the official rate for the second half of 2026 (July&ndash;December). This same rate is also used by the Route Planner's cost analyzer.</p>`,
+        <p>Shown value is the official rate for the second half of 2026 (July&ndash;December). Job Tracker's and the invoice's mileage use it too.</p>`,
     },
     partCostTrend: {
       title: 'Part Cost Trend',
@@ -691,8 +581,19 @@
     if (badge) badge.classList.toggle('is-retryable', dot.classList.contains('is-error'));
   }
 
-  const TAB_HASHES = { cost: 'cost', profitability: 'profitability', income: 'income', expenses: 'expenses', inventory: 'inventory' };
+  // cost and inventory left with their tabs (redundancy pass, 2026-10-31).
+  const TAB_HASHES = { profitability: 'profitability', income: 'income', expenses: 'expenses' };
   const FINANCE_TAB_KEY = 'th_finance_tab'; // last tab used on this device (2026-09-22)
+
+  // #cost (Cost Lookup, gone 2026-10-31) -> New quote, for an account that
+  // can open Invoices. Returns true when it navigated away. See the call
+  // after initSyncOnLoad() for why.
+  function redirectRetiredFinanceHash(h) {
+    if (h !== 'cost') return false;
+    if (typeof canManageInvoices === 'function' && !canManageInvoices()) return false;
+    location.replace('/tools/invoice-generator.html#quote');
+    return true;
+  }
 
   function activateTab(tabName) {
     if (!document.getElementById('tab-' + tabName)) return;
@@ -701,7 +602,6 @@
     if (tabName === 'expenses') populateJobRefOptions();
     if (tabName === 'income') populateIncomeJobRefOptions();
     if (tabName === 'profitability') renderJobProfitability();
-    if (tabName === 'inventory') renderInventory();
     try { localStorage.setItem(FINANCE_TAB_KEY, tabName); } catch (e) { /* storage blocked */ }
   }
 
@@ -763,163 +663,12 @@
     container.innerHTML = rows;
   }
 
-  // First-time discount check (fixed 2026-10-01): thClientHistory() in
-  // data-layer.js normalizes the name and counts jobs AND invoices, by the
-  // client card's id as well as by name, so a returning client typed with
-  // extra spaces or whose old work was saved under another spelling isn't
-  // treated as new. A name that only resembles someone on file is a hint,
-  // not a decision.
-  function checkClientHistory() {
-    const typed = document.getElementById('costClientName').value.trim();
-    const note = document.getElementById('clientHistoryNote');
-    if (!typed) { note.textContent = ''; return; }
-    const h = thClientHistory(typed);
-    document.getElementById('firstTimeClient').checked = !h.returning;
-    if (h.returning) {
-      const parts = [];
-      if (h.jobs) parts.push(h.jobs + ' prior job' + (h.jobs === 1 ? '' : 's'));
-      if (h.invoices) parts.push(h.invoices + ' invoice' + (h.invoices === 1 ? '' : 's'));
-      note.textContent = 'Returning client' + (h.client ? ' (' + h.client.name + ')' : '') + ' — ' + parts.join(' and ') + ' found.';
-    } else if (h.similar.length) {
-      note.textContent = 'No prior work found for this exact name, but ' + h.similar.join(', ') +
-        (h.similar.length === 1 ? ' is' : ' are') + ' on file. If that\'s the same person, uncheck the first-time box below.';
-    } else {
-      note.textContent = 'No prior jobs or invoices found for this name — treated as a first-time client (you can still uncheck the box below).';
-    }
-    calculateCost();
-  }
-
-  // Bug fix (2026-08-20): these three were used by saveTaxSettings/
-  // loadTaxSettings below but never declared anywhere in this file --
-  // missed during Push 4's extraction from job-tracker.html (a bare
-  // module-level constant near a function, the same class of bug found
-  // and fixed for DEV_INFO/FIELD_INFO in Push 13, just not caught here
-  // at the time). Real keys confirmed against sync.js's SYNC_DATA_KEYS
-  // before adding these, not guessed. This has been throwing a
-  // ReferenceError on every single page load since Push 4 -- and
-  // because loadTaxSettings() runs early in the async init sequence,
-  // the throw silently aborted everything after it in that same
-  // function: calculateCost(), populateJobRefOptions(),
-  // renderExpenses(), renderIncomeEntries(), renderPriceReferences(),
-  // and the tab-activation logic never ran. That's exactly why every
-  // tab rendered its header and buttons but no actual content.
-  const TAX_RATE_KEY = 'th_tax_rate';
-  const TAX_LABOR_KEY = 'th_tax_labor';
-  const TAX_PARTS_KEY = 'th_tax_parts';
-
-  function saveTaxSettings() {
-    localStorage.setItem(TAX_RATE_KEY, document.getElementById('taxRate').value);
-    localStorage.setItem(TAX_LABOR_KEY, document.getElementById('taxLabor').checked ? '1' : '0');
-    localStorage.setItem(TAX_PARTS_KEY, document.getElementById('taxParts').checked ? '1' : '0');
-    if (typeof scheduleSync === 'function') scheduleSync();
-  }
-
-  function loadTaxSettings() {
-    const rate = localStorage.getItem(TAX_RATE_KEY);
-    const labor = localStorage.getItem(TAX_LABOR_KEY);
-    const parts = localStorage.getItem(TAX_PARTS_KEY);
-    if (rate !== null) document.getElementById('taxRate').value = rate;
-    if (labor !== null) document.getElementById('taxLabor').checked = labor === '1';
-    if (parts !== null) document.getElementById('taxParts').checked = parts === '1';
-  }
-
-  function calculateCost() {
-    // Clamped to non-negative -- the inputs' min="0" attribute is only
-    // an HTML hint (nothing here enforces it), and there was previously
-    // no clamp at all: a negative value silently produced a negative
-    // labor/parts cost, and (via savePriceReference() below) could get
-    // saved as a reusable price reference that later feeds a real
-    // invoice calculation.
-    const hours = Math.max(0, parseFloat(document.getElementById('hours').value) || 0);
-    const rate = Math.max(0, parseFloat(document.getElementById('rate').value) || 0);
-    const parts = Math.max(0, parseFloat(document.getElementById('parts').value) || 0);
-    const discount = Math.max(0, parseFloat(document.getElementById('discount').value) || 0);
-    const isFirstTime = document.getElementById('firstTimeClient').checked;
-    const taxRate = Math.min(100, Math.max(0, parseFloat(document.getElementById('taxRate').value) || 0));
-    const taxLabor = document.getElementById('taxLabor').checked;
-    const taxParts = document.getElementById('taxParts').checked;
-
-    const labor = hours * rate;
-    const subtotal = labor + parts;
-    const taxableAmount = (taxLabor ? labor : 0) + (taxParts ? parts : 0);
-    const tax = taxableAmount * (taxRate / 100);
-    const standardTotal = subtotal + tax;
-    // Discount is applied to the final (tax-included) price -- a flat
-    // dollar-off-the-bill discount, not a pre-tax price adjustment. This
-    // keeps the tax math simple and matches how a flat discount usually
-    // works in practice for a small job like this.
-    const discountedTotal = Math.max(0, standardTotal - discount);
-
-    document.getElementById('laborResult').textContent = money(labor);
-    document.getElementById('partsResult').textContent = money(parts);
-    document.getElementById('subtotalResult').textContent = money(subtotal);
-    document.getElementById('taxResult').textContent = money(tax);
-    document.getElementById('standardResult').textContent = money(standardTotal);
-    document.getElementById('discountedResult').textContent = money(discountedTotal);
-
-    document.getElementById('discountRow').style.display = isFirstTime ? '' : 'none';
-    document.getElementById('discountedFinalRow').classList.toggle('is-hidden', !isFirstTime);
-    document.getElementById('standardFinalRow').classList.toggle('final', !isFirstTime);
-  }
-
-  // Bug fix (2026-08-20): STORAGE_KEYS was used below but never declared
-  // anywhere in this file -- same class of bug as TAX_RATE_KEY above,
-  // missed during Push 4's extraction from job-tracker.html. Confirmed
-  // against job-tracker.html's own STORAGE_KEYS.priceRef value before
-  // adding this, not guessed.
-  const STORAGE_KEYS = { priceRef: 'th_price_reference' };
-
-  function loadPriceReferences() { try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.priceRef) || '[]'); } catch (e) { return []; } }
-
-  function savePriceReferences(list) { localStorage.setItem(STORAGE_KEYS.priceRef, JSON.stringify(list)); scheduleSync(); }
-
-  // Styled dialog (showPromptForm(), tools-dialogs.js) instead of a
-  // native prompt() -- the one spot on this page that still popped the
-  // browser's own unstyled dialog next to an otherwise dark-themed app.
-  async function savePriceReference() {
-    const values = await showPromptForm('Name this job type', [
-      { id: 'label', label: 'Job type (e.g. "Dishwasher install", "Drywall patch - small")' },
-    ], { validate: (v) => (!v.label ? 'Enter a name for this job type.' : null) });
-    if (!values) return; // cancelled
-
-    const hours = Math.max(0, parseFloat(document.getElementById('hours').value) || 0);
-    const rate = Math.max(0, parseFloat(document.getElementById('rate').value) || 0);
-    const list = loadPriceReferences();
-    list.push({ id: Date.now(), label: values.label, hours, rate });
-    savePriceReferences(list);
-    renderPriceReferences();
-  }
-
-  function loadPriceReference(id) {
-    const ref = loadPriceReferences().find(r => r.id === id);
-    if (!ref) return;
-    document.getElementById('hours').value = ref.hours;
-    document.getElementById('rate').value = ref.rate;
-    calculateCost();
-  }
-
-  function deletePriceReference(id) {
-    const target = loadPriceReferences().find(r => r.id === id);
-    savePriceReferences(loadPriceReferences().filter(r => r.id !== id));
-    if (typeof thAddPriceRefTombstone === 'function') thAddPriceRefTombstone(id);
-    if (target && typeof thAddToGraveyard === 'function') thAddToGraveyard('priceReference', target);
-    renderPriceReferences();
-  }
-
-  function renderPriceReferences() {
-    const list = loadPriceReferences();
-    const container = document.getElementById('priceRefList');
-    if (list.length === 0) {
-      container.innerHTML = '<div class="inline-note">No saved job types yet &mdash; use the button below after entering hours/rate above.</div>';
-      return;
-    }
-    container.innerHTML = list.map(r => `
-      <div class="price-ref-chip" onclick="loadPriceReference(${r.id})">
-        <span>${escapeHtml(r.label)}</span>
-        <span class="chip-price">${money(r.hours * r.rate)}</span>
-        <button class="chip-remove" onclick="event.stopPropagation(); deletePriceReference(${r.id})" aria-label="Remove">&times;</button>
-      </div>`).join('');
-  }
+  // Cost lookup's calculator, its sales-tax settings and the saved job
+  // types (price references) list left with the tab in the redundancy
+  // pass (2026-10-31). The data stays where it was: th_price_reference
+  // (read by New invoice / New quote's "Add From Saved Job Types"), and
+  // th_tax_rate (New invoice / quote's own sales-tax field) with
+  // th_tax_labor / th_tax_parts.
 
   // Bug fix (2026-08-20): same class of bug as TAX_RATE_KEY above --
   // used below but never declared. Confirmed against sync.js's
@@ -1479,161 +1228,10 @@
       ${rows}`;
   }
 
-  // ---------- Inventory (parts on hand) ----------
-  // Closes a real audit gap: Appliance Wiki (tools/parts-reference.html)
-  // deliberately only tracks WHAT part fixes what, never stock levels --
-  // this is the separate, actual on-hand-quantity tracker. Same
-  // tombstone/graveyard/undo-toast pattern as Expenses above, and the
-  // same createdBy/lastEditedBy attribution as every other record type.
-  const INVENTORY_STORAGE_KEY = 'th_inventory';
-  function loadInventory() { try { return JSON.parse(localStorage.getItem(INVENTORY_STORAGE_KEY) || '[]'); } catch (e) { return []; } }
-  function saveInventory(list) { localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(list)); if (typeof scheduleSync === 'function') scheduleSync(); }
-
-  let editingInventoryId = null;
-  let justAddedInventoryId = null;
-  const pendingDeleteInventoryIds = new Map();
-
-  function addInventoryItem() {
-    const name = document.getElementById('invPartName').value.trim();
-    if (!name) { showToast('Enter a part name first.', { type: 'error' }); return; }
-
-    const wasEditing = !!editingInventoryId;
-    const existing = wasEditing ? loadInventory().find(p => p.id === editingInventoryId) : null;
-    const currentUser = (typeof getCurrentUserEmail === 'function') ? getCurrentUserEmail() : null;
-
-    const item = {
-      id: wasEditing ? editingInventoryId : Date.now(),
-      name,
-      partNumber: document.getElementById('invPartNumber').value.trim(),
-      qty: parseInt(document.getElementById('invQty').value, 10) || 0,
-      reorderAt: parseInt(document.getElementById('invReorderAt').value, 10) || 0,
-      unitCost: parseFloat(document.getElementById('invUnitCost').value) || 0,
-      supplier: document.getElementById('invSupplier').value.trim(),
-      createdBy: existing ? existing.createdBy : currentUser,
-      lastEditedBy: currentUser,
-    };
-
-    const list = loadInventory();
-    if (wasEditing) {
-      const idx = list.findIndex(p => p.id === editingInventoryId);
-      if (idx > -1) list[idx] = item; else list.push(item);
-    } else {
-      list.push(item);
-    }
-    saveInventory(list);
-
-    ['invPartName', 'invPartNumber', 'invSupplier'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('invQty').value = '0';
-    document.getElementById('invReorderAt').value = '1';
-    document.getElementById('invUnitCost').value = '';
-    cancelInventoryEdit();
-    justAddedInventoryId = wasEditing ? null : item.id;
-    renderInventory();
-    showToast(wasEditing ? 'Part updated.' : 'Part added.');
-  }
-
-  function editInventoryItem(id) {
-    const item = loadInventory().find(p => p.id === id);
-    if (!item) return;
-    editingInventoryId = id;
-    toggleFormSection('inventoryFormSection', true);
-    document.getElementById('invPartName').value = item.name || '';
-    document.getElementById('invPartNumber').value = item.partNumber || '';
-    document.getElementById('invQty').value = item.qty;
-    document.getElementById('invReorderAt').value = item.reorderAt;
-    document.getElementById('invUnitCost').value = item.unitCost || '';
-    document.getElementById('invSupplier').value = item.supplier || '';
-    document.getElementById('addInventoryBtn').textContent = 'Update part';
-    document.getElementById('cancelInventoryEditBtn').style.display = '';
-    document.getElementById('inventoryEditNote').style.display = '';
-    document.getElementById('inventoryEditNote').textContent = 'Editing this part.';
-  }
-
-  function cancelInventoryEdit() {
-    editingInventoryId = null;
-    document.getElementById('addInventoryBtn').textContent = 'Add part';
-    document.getElementById('cancelInventoryEditBtn').style.display = 'none';
-    document.getElementById('inventoryEditNote').style.display = 'none';
-    document.getElementById('inventoryFormSection').classList.add('is-collapsed');
-  }
-
-  async function deleteInventoryItem(id) {
-    const confirmed = await showConfirm('Delete this part from inventory?', { danger: true, confirmText: 'Delete' });
-    if (!confirmed) return;
-    if (editingInventoryId === id) cancelInventoryEdit();
-    const row = document.querySelector('[data-inventory-id="' + id + '"]');
-    await new Promise(resolve => animateRowExit(row, resolve));
-
-    const timer = setTimeout(() => {
-      pendingDeleteInventoryIds.delete(id);
-      const list = loadInventory();
-      const item = list.find(p => p.id === id);
-      if (item && typeof thAddToGraveyard === 'function') thAddToGraveyard('inventory', item);
-      saveInventory(list.filter(p => p.id !== id));
-      if (typeof thAddInventoryTombstone === 'function') thAddInventoryTombstone(id);
-      renderInventory();
-    }, 6000);
-
-    pendingDeleteInventoryIds.set(id, timer);
-    renderInventory();
-    showUndoToast('Part removed.', () => {
-      clearTimeout(pendingDeleteInventoryIds.get(id));
-      pendingDeleteInventoryIds.delete(id);
-      renderInventory();
-    });
-  }
-
-  function renderInventory() {
-    const searchTerm = (document.getElementById('inventorySearch')?.value || '').trim().toLowerCase();
-    let list = [...loadInventory()];
-    if (pendingDeleteInventoryIds.size > 0) list = list.filter(p => !pendingDeleteInventoryIds.has(p.id));
-    if (searchTerm) {
-      list = list.filter(p =>
-        (p.name || '').toLowerCase().includes(searchTerm) ||
-        (p.partNumber || '').toLowerCase().includes(searchTerm) ||
-        (p.supplier || '').toLowerCase().includes(searchTerm)
-      );
-    }
-    // Low stock first -- the whole point of a reorder threshold is
-    // surfacing what needs attention without having to scan the list.
-    list.sort((a, b) => {
-      const aLow = a.qty <= a.reorderAt ? 0 : 1;
-      const bLow = b.qty <= b.reorderAt ? 0 : 1;
-      if (aLow !== bLow) return aLow - bLow;
-      return (a.name || '').localeCompare(b.name || '');
-    });
-
-    const container = document.getElementById('inventoryTable');
-    if (!container) return;
-    if (list.length === 0) {
-      container.innerHTML = searchTerm
-        ? '<div class="empty-state">No parts match that search.</div>'
-        : '<div class="empty-state">No parts logged yet &mdash; add your first one above.</div>';
-      return;
-    }
-
-    const rows = list.map(item => {
-      const isLow = item.qty <= item.reorderAt;
-      return `
-      <tr class="${item.id === justAddedInventoryId ? 'list-row-enter' : ''}" data-inventory-id="${item.id}">
-        <td data-label="Part">${personDot(item.lastEditedBy, 'Last edited by')}${escapeHtml(item.name)}${item.partNumber ? `<div style="color:var(--text-dim); font-size:11.5px; margin-top:2px;">Part #: ${escapeHtml(item.partNumber)}</div>` : ''}</td>
-        <td data-label="Qty">${isLow ? `<span class="badge" style="background:rgba(224,82,82,0.15); color:#e0807a;" title="At or below reorder threshold of ${item.reorderAt}">${item.qty} — Reorder</span>` : item.qty}</td>
-        <td data-label="Unit Cost">${item.unitCost ? '$' + item.unitCost.toFixed(2) : '—'}</td>
-        <td data-label="Supplier">${escapeHtml(item.supplier || '—')}</td>
-        <td>
-          <button class="small-btn" onclick="editInventoryItem(${item.id})" aria-label="Edit part" title="Edit part">Edit</button>
-          <button class="small-btn danger" onclick="deleteInventoryItem(${item.id})" aria-label="Delete part" title="Delete part">&times;</button>
-        </td>
-      </tr>`;
-    }).join('');
-    justAddedInventoryId = null;
-
-    container.innerHTML = `
-      <table>
-        <thead><tr><th>Part</th><th>Qty</th><th>Unit Cost</th><th>Supplier</th><th></th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>`;
-  }
+  // Inventory (th_inventory) left with its tab in the redundancy pass
+  // (2026-10-31). Nothing else read it; the stored list, its sync, its
+  // tombstones (thAddInventoryTombstone) and Dev Tools' deleted-items view
+  // are untouched.
 
   // Bug fix (2026-08-20): same class of bug as TAX_RATE_KEY above -- used
   // in 3 places below but never declared. Confirmed the exact original
@@ -1890,12 +1488,11 @@
       // and pull-to-refresh would never get wired up at all for that
       // page load if it were placed after the await like it originally
       // was -- the render callback closes over renderExpenses/
-      // renderIncomeEntries/renderPriceReferences by reference, so
+      // renderIncomeEntries by reference, so
       // defining it here before those functions run doesn't matter;
       // they're only actually called later, when the user pulls.
       if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => {
-        renderExpenses(); renderIncomeEntries(); renderPriceReferences();
-        if (document.getElementById('tab-inventory')?.classList.contains('is-active')) renderInventory();
+        renderExpenses(); renderIncomeEntries();
         if (document.getElementById('tab-profitability')?.classList.contains('is-active')) {
           if (typeof refreshRelationalInvoicesCache === 'function') {
             refreshRelationalInvoicesCache().then(renderJobProfitability).catch(renderJobProfitability);
@@ -1905,6 +1502,14 @@
         }
       });
       await initSyncOnLoad();
+      // Old #cost link or bookmark (rebase onto Phase 4, 2026-10-31): Cost
+      // Lookup left in the redundancy pass, and pricing a job with tax is
+      // New quote's job now (the command palette's "cost lookup" words
+      // moved there too). Sent on the way Home's old #backup goes to Dev
+      // Tools. Checked once the role is loaded, so an account that can't
+      // open Invoices stays here and lands on Expenses instead. #inventory
+      // has no new home (the tab left outright), so it opens Expenses.
+      if (redirectRetiredFinanceHash((location.hash || '').replace('#', ''))) return;
       // Gated 2026-08-27, alongside the new Employee role -- checked
       // right after initSyncOnLoad() resolves (which is what actually
       // loads the role via loadCurrentUserRole()), before any real
@@ -1915,16 +1520,13 @@
         document.getElementById('roleBlockedOverlay').classList.add('is-shown');
         return;
       }
-      loadTaxSettings();
       document.getElementById('entryDate').value = todayDateStrBusinessTz();
       document.getElementById('incomeDate').value = todayDateStrBusinessTz();
       loadMileageRate();
-      calculateCost();
       populateJobRefOptions();
       populateIncomeJobRefOptions();
       renderExpenses();
       renderIncomeEntries();
-      renderPriceReferences();
       initExpenseRowLongPress();
       initIncomeRowLongPress();
       if (typeof initFinanceRowMenus === 'function') initFinanceRowMenus();
@@ -1932,14 +1534,16 @@
       // Initial tab (2026-09-22): an explicit #hash wins (the command
       // palette, the dashboard, and the tour link straight to a tab), then
       // the tab used last on this device (someone who lives in Expenses
-      // stops paying a tap every visit), then Cost Lookup as before. Also
-      // follows a same-document hash change.
+      // stops paying a tap every visit), then Expenses (Cost Lookup was the
+      // default until it left, 2026-10-31). Also follows a same-document
+      // hash change.
       const initialHash = (location.hash || '').replace('#', '');
       let rememberedTab = null;
       try { rememberedTab = localStorage.getItem(FINANCE_TAB_KEY); } catch (e) { rememberedTab = null; }
-      activateTab(TAB_HASHES[initialHash] ? initialHash : (TAB_HASHES[rememberedTab] ? rememberedTab : 'cost'));
+      activateTab(TAB_HASHES[initialHash] ? initialHash : (TAB_HASHES[rememberedTab] ? rememberedTab : 'expenses'));
       window.addEventListener('hashchange', () => {
         const h = (location.hash || '').replace('#', '');
+        if (redirectRetiredFinanceHash(h)) return;
         if (TAB_HASHES[h]) activateTab(h);
       });
 
@@ -2012,15 +1616,11 @@
       if (typeof startRealtimeSync === 'function') {
         startRealtimeSync(async () => {
           loadMileageRate();
-          loadTaxSettings();
-          calculateCost();
           populateJobRefOptions();
           populateIncomeJobRefOptions();
           renderExpenses();
           renderIncomeEntries();
-          renderPriceReferences();
           if (document.getElementById('tab-profitability')?.classList.contains('is-active')) renderJobProfitability();
-          if (document.getElementById('tab-inventory')?.classList.contains('is-active')) renderInventory();
         }, updateRealtimeBadge);
       }
       // Separate relational-table realtime channel (Phase 2) -- a real

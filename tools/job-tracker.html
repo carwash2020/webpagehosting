@@ -53,15 +53,15 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=10f1831b6e">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=d7410af6b7">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=8060cfc3c2" defer></script>
 <script src="/tools/data-layer.js?v=c595490771" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=e67fa5a727" defer></script>
-<script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=791ee017e1" defer></script>
+<script src="/tools/tools-command-palette.js?v=479d6a96e7" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -714,6 +714,10 @@
     color: var(--orange-light); font-family: var(--font-ui); font-size: 13px; letter-spacing: .8px; text-transform: uppercase;
   }
 
+  /* Suppliers tab's one-line purpose note (2026-10-31): the Clients link
+     is the way to add a client, so it reads as a link. */
+  body.th-tool-page[data-th-page="job-tracker"] .jt-suppliers-note { margin: 0 2px 12px; }
+  body.th-tool-page[data-th-page="job-tracker"] .jt-suppliers-note a { color: var(--orange-light); text-decoration: none; font-weight: 600; }
   /* ---- Contacts: one card, ruled rows ---- */
   body.th-tool-page[data-th-page="job-tracker"] #contactsList:not(:empty) { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl); padding: 4px 18px; }
   body.th-tool-page[data-th-page="job-tracker"] #contactsList .contact-card { margin: 0; padding: 11px 0; background: none; border: 0; border-top: 1px solid var(--th-hairline); border-radius: 0; box-shadow: none; }
@@ -873,7 +877,7 @@
     <a href="/tools/workspace.html" class="help-btn" aria-label="Back to Workspace" title="Back to Workspace" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
   </div>
 </div>
-<p class="tool-sub jt-intro">Jobs as a list, board, or calendar, plus contacts and notes. Pricing, income, and expenses are on Finance <a href="/tools/finance.html" style="color:var(--orange-light);">&rarr;</a>.
+<p class="tool-sub jt-intro">Jobs as a list, board, or calendar, plus suppliers and notes. Pricing, income, and expenses are on Finance <a href="/tools/finance.html" style="color:var(--orange-light);">&rarr;</a>.
   <span class="realtime-badge" id="realtimeBadge" onclick="retryLiveSync()" title="Live sync"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span>
 </p>
 <!-- Sync status in plain words (Phase 2 revision, 2026-10-30): a small
@@ -883,7 +887,7 @@
 
 <div class="tabs tabs-sticky">
   <button class="tab-btn is-active" data-tab="jobs">Jobs</button>
-  <button class="tab-btn" data-tab="contacts">Contacts</button>
+  <button class="tab-btn" data-tab="contacts">Suppliers</button>
   <button class="tab-btn" data-tab="notes">Notes</button>
 </div>
 
@@ -1103,16 +1107,24 @@
 </div>
 
 <!-- CONTACTS TAB -->
+<!-- Suppliers (redundancy pass, 2026-10-31; this tab was "Contacts").
+     Anyone entered here already lands in the Clients list on its own, so
+     a general "add a person" form duplicated Clients -> Add. The tab is
+     for suppliers and vendors now: the form, labels and copy say so, and
+     a client has their own Add on Clients. Same tab id and #contacts hash,
+     same th_tracker_contacts records in the same shape; nothing already
+     saved here is hidden or changed. -->
 <div class="tab-panel" id="tab-contacts">
+  <p class="tool-sub jt-suppliers-note">Parts houses, vendors, the people you buy from. Adding a client? Use <a href="/tools/clients.html#new">Clients &rsaquo; Add</a>.</p>
   <div class="form-section is-collapsed" id="contactFormSection">
     <div class="form-section-header" onclick="toggleFormSection('contactFormSection')">
-      <h3>Add a Contact</h3>
+      <h3>Add a supplier</h3>
       <span class="collapse-chevron">&#9660;</span>
     </div>
     <div class="form-section-body">
     <div class="tool-form-row">
-      <div class="form-field"><label for="contactName">Name</label><input type="text" id="contactName" placeholder="Ray Bice"></div>
-      <div class="form-field"><label for="contactRole">Role / Company</label><input type="text" id="contactRole" placeholder="Glamour Works - Supplier"></div>
+      <div class="form-field"><label for="contactName">Contact name</label><input type="text" id="contactName" placeholder="Ray Bice"></div>
+      <div class="form-field"><label for="contactRole">Company / what they supply</label><input type="text" id="contactRole" placeholder="Glamour Works - appliance parts"></div>
     </div>
     <div class="tool-form-row">
       <div class="form-field"><label for="contactPhone">Phone</label><input type="tel" id="contactPhone" placeholder="(435) 674-7477"></div>
@@ -1122,13 +1134,13 @@
       <div class="form-field"><label for="contactNotes">Notes</label><input type="text" id="contactNotes" placeholder="Anything worth remembering"></div>
     </div>
     <div class="edit-mode-note" id="contactEditNote" style="display:none;"></div>
-    <button class="primary-btn" id="addContactBtn" onclick="addContact()">Add Contact</button>
+    <button class="primary-btn" id="addContactBtn" onclick="addContact()">Add supplier</button>
     <button class="secondary-btn" id="cancelContactEditBtn" style="display:none;" onclick="cancelContactEdit()">Cancel</button>
     </div>
   </div>
   <div class="icon-search" id="contactSearchWrap">
-    <button class="icon-search-toggle" onclick="toggleIconSearch('contactSearchWrap')" aria-label="Search contacts" title="Search contacts"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg></button>
-    <input type="text" id="contactSearch" class="icon-search-input" placeholder="Search contacts by name, phone, or email..." oninput="debouncedCall('contactSearch', renderContacts)" aria-label="Search contacts">
+    <button class="icon-search-toggle" onclick="toggleIconSearch('contactSearchWrap')" aria-label="Search suppliers" title="Search suppliers"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg></button>
+    <input type="text" id="contactSearch" class="icon-search-input" placeholder="Search suppliers by name, phone, or email..." oninput="debouncedCall('contactSearch', renderContacts)" aria-label="Search suppliers">
   </div>
   <div id="contactsList"></div>
 </div>
@@ -1165,7 +1177,7 @@
       <ul>
         <li><strong>Jobs</strong> &mdash; the main list, grouped by when (Overdue, Today, Tomorrow, Next 7 days, Later), with search and status filters. On a phone each card shows what you need in the truck: <strong>Done</strong>, a <strong>Call</strong> button, <strong>Directions</strong>, and <strong>&middot;&middot;&middot;</strong> for everything else (start it, photos, create an invoice, send the confirmation email, log an expense, edit, delete) &mdash; long-press a card for the same list. Tap the title to open the job's own page. Swipe a card left for a quick Done. Marking a job done asks what's next: <strong>Create invoice</strong> (the form opens filled from the job) or a review request. A finished job nobody has billed wears an orange <strong>To invoice</strong> pill, and the <strong>To invoice</strong> filter lists them all, until it's invoiced, paid another way, or marked <strong>No charge</strong> from its &middot;&middot;&middot; (a warranty callback, a favor). Filed under "Done," a job shows where its money is (Invoiced, Overdue, Paid) and its profit margin once it's linked to an invoice. On a real desktop screen, this same list also shows as a sortable table &mdash; click any column header to sort by it, click again to reverse. "Photos" attaches before/after pictures; tap the <svg class="th-icon" aria-hidden="true"><use href="#icon-star" xlink:href="#icon-star"></use></svg> star on any photo to queue it for the public website's gallery.</li>
         <li><strong>List / Board / Calendar</strong> &mdash; the same jobs three ways, remembered per device. <strong>Board</strong> puts Not Started, In Progress, and Done side by side. <strong>Calendar</strong> is a month view of every dated job (plus online bookings you haven't added yet, in purple) &mdash; tap a day to see what's scheduled, then <strong>Add to Phone</strong> to drop a job into your phone's own calendar app as a one-time export.</li>
-        <li><strong>Contacts</strong> &mdash; a quick address book for vendors, suppliers, or recurring clients. Tap "History" on any contact to see their past jobs and lifetime spend (matched by exact name against Jobs and Invoices).</li>
+        <li><strong>Suppliers</strong> &mdash; an address book for the parts houses and vendors you buy from. Clients have their own list on <strong>Clients</strong> (anyone on a job lands there by themselves; <strong>Add</strong> covers anyone new). Anyone saved here before keeps their entry, and "History" still shows their past jobs and lifetime spend (matched by exact name against Jobs and Invoices).</li>
         <li><strong>Notes</strong> &mdash; keep as many separate, named notes as you want. Search by title or content, click one on the left to open it, or start a new one. Saves automatically as you type.</li>
       </ul>
       <p>Set up Cloud Sync once on the Workspace page's "?" help, and this data follows you to any device using the same sync code. The small dot next to the sync status shows whether live updates are connected &mdash; green means changes on another device show up here automatically, no refresh needed.</p>
@@ -1173,79 +1185,16 @@
   </div>
 </div>
 
-<!-- Item: quick expense logging without leaving this page (2026-08-20,
-     fleshed out further same day) -- built as its own standalone modal
-     (matching help-modal-overlay's look, not its shared JS) so the
-     receipt-required business rule and the exact th_expense_log record
-     shape both stay correct without touching finance.html's own,
-     recently-fixed Expenses-tab save logic at all. Now covers the full
-     field set (type, vendor, part number, miles) to fully match that
-     page's own form, plus a first-time guided tutorial. -->
-<div class="help-modal-overlay" id="quickExpenseOverlay" onclick="if(event.target===this) closeQuickExpenseModal()">
-  <div class="help-modal">
-    <button class="help-modal-close" onclick="closeQuickExpenseModal()" aria-label="Close">&times;</button>
-
-    <!-- Tutorial view: shown automatically the first time this modal
-         opens on a given device (th_quickexpense_tutorial_seen), and
-         re-openable any time via the "How this works" link in the real
-         form below. -->
-    <div id="quickExpenseTutorial">
-      <h3 id="quickExpenseTutorialTitle"></h3>
-      <div class="help-modal-body">
-        <p id="quickExpenseTutorialBody" style="min-height:110px;"></p>
-        <div id="quickExpenseTutorialDots" style="display:flex; gap:6px; justify-content:center; margin:16px 0;"></div>
-        <div style="display:flex; gap:10px;">
-          <button class="secondary-btn" id="quickExpenseTutorialSkip" onclick="skipQuickExpenseTutorial()" style="flex:1;">Skip</button>
-          <button class="primary-btn" id="quickExpenseTutorialNext" onclick="advanceQuickExpenseTutorial()" style="flex:1;">Next</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Real form view -->
-    <div id="quickExpenseFormView" style="display:none;">
-      <h3>Log Expense<span id="quickExpenseJobLabel" style="display:block; font-size:13px; color:var(--text-dim); font-weight:400; margin-top:4px;"></span></h3>
-      <div class="help-modal-body">
-        <div class="tool-form-row">
-          <div class="form-field"><label for="quickExpenseType">Type</label>
-            <select id="quickExpenseType" onchange="toggleQuickExpenseTypeFields()">
-              <option value="expense">Expense</option>
-              <option value="mileage">Mileage</option>
-            </select>
-          </div>
-          <div class="form-field"><label for="quickExpenseDate">Date</label><input type="date" id="quickExpenseDate"></div>
-        </div>
-        <div class="form-field"><label for="quickExpenseDesc">Description</label><input type="text" id="quickExpenseDesc" placeholder="e.g. Replacement thermostat"></div>
-        <div class="tool-form-row">
-          <div class="form-field" id="quickExpenseAmountField"><label for="quickExpenseAmount">Amount</label><input type="number" inputmode="decimal" id="quickExpenseAmount" placeholder="0.00"></div>
-          <div class="form-field" id="quickExpenseMilesField" style="display:none;"><label for="quickExpenseMiles">Miles</label><input type="number" inputmode="decimal" id="quickExpenseMiles" placeholder="0"></div>
-          <div class="form-field"><label for="quickExpensePayment">Payment</label>
-            <select id="quickExpensePayment">
-              <option value="cash">Cash</option>
-              <option value="card">Card</option>
-              <option value="check">Check</option>
-              <option value="venmo">Venmo</option>
-              <option value="cashapp">Cash App</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-        </div>
-        <div class="tool-form-row">
-          <div class="form-field"><label for="quickExpenseVendor">Vendor / Store (optional)</label><input type="text" id="quickExpenseVendor" placeholder="Home Depot"></div>
-          <div class="form-field" id="quickExpensePartNumberField"><label for="quickExpensePartNumber">Part Number (optional)</label><input type="text" id="quickExpensePartNumber" placeholder="e.g. WPW10321304"></div>
-        </div>
-        <div class="form-field" id="quickExpenseReceiptField"><label for="quickExpenseReceipt">Receipt photo (required)</label><input type="file" id="quickExpenseReceipt" accept="image/*"></div>
-        <div class="save-indicator" id="quickExpenseSaveIndicator"></div>
-        <button class="primary-btn wide" id="quickExpenseSaveBtn" onclick="submitQuickExpense()" style="margin-top:14px;">Save Expense</button>
-        <p class="tool-sub" style="margin-top:10px; margin-bottom:0;"><a href="#" onclick="showQuickExpenseTutorial(); return false;" style="color:var(--blue-light);">How this works</a> &middot; or use the full <a href="/tools/finance.html#expenses" style="color:var(--blue-light);">Expenses page</a> instead.</p>
-    </div>
-  </div>
-</div>
+<!-- Log expense (redundancy pass, 2026-10-31): the job's ⋯ sheet opens
+     Finance's own Expenses form for this job (finance.html?job=<id>#expenses),
+     the same door Job detail's Expense button and + New use. The pop-up
+     copy of that form that lived here (with its own first-run tutorial)
+     is gone; expenses are still th_expense_log entries in exactly the
+     shape Finance writes, since Finance is now the only form. -->
 
 <script>
   const STORAGE_KEYS = { jobs: 'th_tracker_jobs', contacts: 'th_tracker_contacts', notes: 'th_tracker_notes_v2', priceRef: 'th_price_reference' };
-  const EXPENSE_STORAGE_KEY = 'th_expense_log';
   const INCOME_STORAGE_KEY = 'th_income_log';
-  const RATE_STORAGE_KEY = 'th_mileage_rate';
   const OLD_NOTES_KEY = 'th_tracker_notes'; // legacy single-note key, read once for migration only
 
   const CARD_INFO = {
@@ -1672,157 +1621,6 @@
     document.getElementById('jobFormSection').classList.add('is-collapsed');
   }
 
-  const QUICK_EXPENSE_TUTORIAL_SEEN_KEY = 'th_quickexpense_tutorial_seen';
-  const QUICK_EXPENSE_TUTORIAL_STEPS = [
-    { title: 'Log an expense in seconds', body: "No need to leave your job list. Long-press any job, tap \u201cLog Expense,\u201d and this pops up with that job already linked \u2014 nothing else to pick." },
-    { title: 'Expense or Mileage', body: 'Switch the Type at the top. Expense wants a dollar amount and a receipt photo. Mileage just wants the miles \u2014 the dollar amount gets calculated for you automatically from your mileage rate.' },
-    { title: 'The receipt rule', body: "A receipt photo is required for a real Expense entry \u2014 no exceptions, even here. Mileage entries don't need one." },
-    { title: "Vendor and Part Number are optional", body: "Fill them in if you've got them handy, or just skip straight to Save \u2014 the description and amount are all that's really required." },
-    { title: "That's the whole thing", body: 'Save it, and it shows up instantly on the Finance page too \u2014 same entry, same place, this is just a faster way in.' },
-  ];
-  let quickExpenseTutorialStep = 0;
-
-  function renderQuickExpenseTutorialStep() {
-    const step = QUICK_EXPENSE_TUTORIAL_STEPS[quickExpenseTutorialStep];
-    document.getElementById('quickExpenseTutorialTitle').textContent = step.title;
-    document.getElementById('quickExpenseTutorialBody').textContent = step.body;
-    document.getElementById('quickExpenseTutorialDots').innerHTML = QUICK_EXPENSE_TUTORIAL_STEPS.map((s, i) =>
-      '<span style="width:7px; height:7px; border-radius:50%; background:' + (i === quickExpenseTutorialStep ? 'var(--orange-light)' : 'var(--border)') + ';"></span>'
-    ).join('');
-    const isLast = quickExpenseTutorialStep === QUICK_EXPENSE_TUTORIAL_STEPS.length - 1;
-    document.getElementById('quickExpenseTutorialNext').textContent = isLast ? "Got it, let's log one" : 'Next';
-    document.getElementById('quickExpenseTutorialSkip').style.display = isLast ? 'none' : '';
-  }
-
-  function showQuickExpenseTutorial() {
-    quickExpenseTutorialStep = 0;
-    renderQuickExpenseTutorialStep();
-    document.getElementById('quickExpenseTutorial').style.display = '';
-    document.getElementById('quickExpenseFormView').style.display = 'none';
-  }
-
-  function advanceQuickExpenseTutorial() {
-    if (quickExpenseTutorialStep < QUICK_EXPENSE_TUTORIAL_STEPS.length - 1) {
-      quickExpenseTutorialStep++;
-      renderQuickExpenseTutorialStep();
-    } else {
-      skipQuickExpenseTutorial();
-    }
-  }
-
-  function skipQuickExpenseTutorial() {
-    localStorage.setItem(QUICK_EXPENSE_TUTORIAL_SEEN_KEY, '1');
-    document.getElementById('quickExpenseTutorial').style.display = 'none';
-    document.getElementById('quickExpenseFormView').style.display = '';
-  }
-
-  function toggleQuickExpenseTypeFields() {
-    const isMileage = document.getElementById('quickExpenseType').value === 'mileage';
-    document.getElementById('quickExpenseAmountField').style.display = isMileage ? 'none' : '';
-    document.getElementById('quickExpenseMilesField').style.display = isMileage ? '' : 'none';
-    document.getElementById('quickExpensePartNumberField').style.display = isMileage ? 'none' : '';
-    document.getElementById('quickExpenseReceiptField').style.display = isMileage ? 'none' : '';
-  }
-
-  function showQuickExpenseModal(jobId, jobTitle) {
-    document.getElementById('quickExpenseOverlay').dataset.jobId = jobId;
-    document.getElementById('quickExpenseJobLabel').textContent = jobTitle;
-    document.getElementById('quickExpenseType').value = 'expense';
-    toggleQuickExpenseTypeFields();
-    document.getElementById('quickExpenseDate').value = todayDateStrBusinessTz();
-    document.getElementById('quickExpenseDesc').value = '';
-    document.getElementById('quickExpenseAmount').value = '';
-    document.getElementById('quickExpenseMiles').value = '';
-    document.getElementById('quickExpenseVendor').value = '';
-    document.getElementById('quickExpensePartNumber').value = '';
-    document.getElementById('quickExpensePayment').value = 'cash';
-    document.getElementById('quickExpenseReceipt').value = '';
-    document.getElementById('quickExpenseSaveIndicator').textContent = '';
-    document.getElementById('quickExpenseOverlay').classList.add('is-open');
-    if (localStorage.getItem(QUICK_EXPENSE_TUTORIAL_SEEN_KEY)) {
-      document.getElementById('quickExpenseTutorial').style.display = 'none';
-      document.getElementById('quickExpenseFormView').style.display = '';
-    } else {
-      showQuickExpenseTutorial();
-    }
-  }
-
-  function closeQuickExpenseModal() {
-    document.getElementById('quickExpenseOverlay').classList.remove('is-open');
-  }
-
-  async function submitQuickExpense() {
-    const overlay = document.getElementById('quickExpenseOverlay');
-    const jobId = overlay.dataset.jobId;
-    const type = document.getElementById('quickExpenseType').value;
-    const date = document.getElementById('quickExpenseDate').value || todayDateStrBusinessTz();
-    const desc = document.getElementById('quickExpenseDesc').value.trim();
-    const vendor = document.getElementById('quickExpenseVendor').value.trim();
-    const partNumber = type === 'mileage' ? '' : document.getElementById('quickExpensePartNumber').value.trim();
-    const payment = document.getElementById('quickExpensePayment').value;
-    const receiptFile = document.getElementById('quickExpenseReceipt').files[0];
-    const indicator = document.getElementById('quickExpenseSaveIndicator');
-
-    if (!desc) { await showAlert('A description is required.'); return; }
-
-    let amount, miles;
-    if (type === 'mileage') {
-      miles = parseFloat(document.getElementById('quickExpenseMiles').value) || 0;
-      if (miles <= 0) { await showAlert('Enter a number of miles greater than zero.'); return; }
-      // Same source finance.html's own getMileageRate() reads -- that
-      // function reads it from a DOM element that only exists on that
-      // page's own form, so this reads the same underlying stored value
-      // directly instead.
-      const mileageRate = parseFloat(localStorage.getItem('th_mileage_rate')) || 0;
-      amount = Math.round(miles * mileageRate * 100) / 100;
-    } else {
-      amount = parseFloat(document.getElementById('quickExpenseAmount').value) || 0;
-      miles = 0;
-      if (amount <= 0) { await showAlert('Enter an amount greater than zero.'); return; }
-      // Same rule finance.html's own Expenses tab enforces -- a receipt
-      // is required for a real expense, not optional here just because
-      // this is the quick version. Mileage entries don't need one,
-      // matching that page's own rule too.
-      if (!receiptFile) { await showAlert('A receipt photo is required to log an expense. Take or choose a photo of the receipt first.'); return; }
-      if (!receiptFile.type.startsWith('image/')) { await showAlert('Please choose an image file for the receipt.'); return; }
-    }
-
-    const saveBtn = document.getElementById('quickExpenseSaveBtn');
-    saveBtn.disabled = true;
-    const entryId = Date.now();
-    let receiptPath = '';
-    if (receiptFile && type !== 'mileage') {
-      indicator.textContent = 'Uploading receipt...';
-      const uploadResult = await uploadReceipt(receiptFile, entryId);
-      indicator.textContent = '';
-      if (!uploadResult.ok) {
-        saveBtn.disabled = false;
-        const msg = uploadResult.error === 'too-large'
-          ? 'That receipt photo is over 8MB \u2014 try a smaller photo or lower camera resolution.'
-          : 'Receipt upload failed: ' + uploadResult.error + (uploadResult.detail ? ' \u2014 ' + uploadResult.detail : '') + '. The expense was NOT saved \u2014 try again.';
-        await showAlert(msg);
-        return;
-      }
-      receiptPath = uploadResult.path;
-    }
-    saveBtn.disabled = false;
-
-    const jobs = thRead(TH_KEYS.jobs, []);
-    const job = jobs.find(j => String(j.id) === String(jobId));
-    const currentUser = (typeof getCurrentUserEmail === 'function') ? getCurrentUserEmail() : null;
-    const entry = {
-      id: entryId, date, type, desc,
-      vendor, payment, jobRefId: jobId || '', jobRefTitle: job ? job.title : '',
-      receiptPath, partNumber, amount, miles,
-      createdBy: currentUser, lastEditedBy: currentUser,
-    };
-    const entries = thRead(TH_KEYS.expenses, []);
-    entries.push(entry);
-    thWrite(TH_KEYS.expenses, entries);
-
-    closeQuickExpenseModal();
-    showToast(type === 'mileage' ? 'Mileage logged.' : 'Expense logged.');
-  }
 
   // A completed job synced to the client portal (client_portal_jobs) has
   // to be removed there too when it's deleted here, or the portal row
@@ -2827,7 +2625,12 @@
     if (stage === 'to-invoice') actions.push({ label: 'No charge (warranty, favor)', icon: 'check-circle', onClick: () => setJobNoCharge(jobId, true) });
     if (stage === 'no-charge') actions.push({ label: 'Needs an invoice after all', icon: 'receipt', onClick: () => setJobNoCharge(jobId, false) });
     if (job.clientEmail && !job.confirmationSentAt) actions.push({ label: 'Send confirmation email', icon: 'mail', onClick: () => sendJobConfirmationEmail(jobId) });
-    actions.push({ label: 'Log Expense', icon: 'camera', onClick: () => showQuickExpenseModal(jobId, job.title) });
+    // Log Expense opens Finance's Expenses form for this job (redundancy
+    // pass, 2026-10-31) -- the same link Job detail's Expense button uses,
+    // and gated the same way: Finance is a finance-permission page.
+    if (typeof canViewFinance !== 'function' || canViewFinance()) {
+      actions.push({ label: 'Log Expense', icon: 'camera', onClick: () => { location.href = '/tools/finance.html?job=' + encodeURIComponent(jobId) + '#expenses'; } });
+    }
     actions.push({ label: 'Edit', icon: 'edit', kind: 'edit', onClick: () => editJob(jobId) });
     actions.push({ label: 'Delete', isDanger: true, icon: 'trash', kind: 'delete', onClick: () => deleteJob(jobId) });
     showQuickActionSheet(escapeHtml(job.title), actions);
@@ -3193,7 +2996,7 @@
     cancelContactEdit();
     justAddedContactId = newId;
     renderContacts();
-    showToast(wasEditing ? 'Contact updated.' : 'Contact added.');
+    showToast(wasEditing ? 'Supplier updated.' : 'Supplier added.');
   }
 
   function editContact(id) {
@@ -3207,24 +3010,24 @@
     document.getElementById('contactEmail').value = contact.email || '';
     document.getElementById('contactNotes').value = contact.notes || '';
 
-    document.getElementById('addContactBtn').textContent = 'Update Contact';
+    document.getElementById('addContactBtn').textContent = 'Update supplier';
     document.getElementById('cancelContactEditBtn').style.display = '';
     const note = document.getElementById('contactEditNote');
-    note.textContent = 'Editing "' + contact.name + '" \u2014 saving will update this contact instead of creating a new one.';
+    note.textContent = 'Editing "' + contact.name + '" \u2014 saving will update this entry instead of creating a new one.';
     note.style.display = '';
     document.getElementById('contactName').scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   function cancelContactEdit() {
     editingContactId = null;
-    document.getElementById('addContactBtn').textContent = 'Add Contact';
+    document.getElementById('addContactBtn').textContent = 'Add supplier';
     document.getElementById('cancelContactEditBtn').style.display = 'none';
     document.getElementById('contactEditNote').style.display = 'none';
     document.getElementById('contactFormSection').classList.add('is-collapsed');
   }
 
   async function deleteContact(id) {
-    const confirmed = await showConfirm('Delete this contact? This cannot be undone.', { danger: true, confirmText: 'Delete' });
+    const confirmed = await showConfirm('Delete this entry? This cannot be undone.', { danger: true, confirmText: 'Delete' });
     if (!confirmed) return;
     if (editingContactId === id) cancelContactEdit();
     const row = document.querySelector('[data-contact-id="' + id + '"]');
@@ -3253,8 +3056,8 @@
     const container = document.getElementById('contactsList');
     if (contacts.length === 0) {
       container.innerHTML = searchTerm
-        ? '<div class="empty-state">No contacts match "' + escapeHtml(searchTerm) + '".</div>'
-        : '<div class="empty-state">No contacts saved yet &mdash; add one above to keep their info handy.</div>';
+        ? '<div class="empty-state">No suppliers match "' + escapeHtml(searchTerm) + '".</div>'
+        : '<div class="empty-state">No suppliers saved yet &mdash; add one above to keep their info handy.</div>';
       return;
     }
     container.innerHTML = contacts.map(c => `

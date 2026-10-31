@@ -66,7 +66,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=10f1831b6e">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=d7410af6b7">
 <!-- Real embedded map (2026-09-07), replacing "link-outs only": Leaflet
      + free OpenStreetMap tiles, no API key/cost. Both the JS and the
      CSS's integrity hash were computed directly from `npm install
@@ -80,8 +80,8 @@
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=e67fa5a727" defer></script>
-<script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=791ee017e1" defer></script>
+<script src="/tools/tools-command-palette.js?v=479d6a96e7" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -151,12 +151,6 @@
   }
   .stop-view-row a { color: var(--blue-light); font-size: 13px; }
   .warning-note { color: var(--orange-light); font-size: 12.5px; margin-top: 10px; display: none; }
-  .results-box { margin-top: 8px; }
-  .result-row { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14.5px; }
-  .result-row.final { font-weight: 700; font-size: 18px; color: var(--orange-light); border-bottom: none; padding-top: 14px; }
-  .result-label { color: var(--text-dim); }
-  .result-label.final { color: var(--white); }
-  .policy-note { color: var(--text-dim); font-size: 12.5px; margin: -6px 0 14px; line-height: 1.5; }
   .realtime-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-dim); margin-left: 10px; }
   .realtime-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
   .realtime-dot.is-live { background: #4caf50; }
@@ -198,8 +192,6 @@
      ========================================================================== */
   /* ---- Route planner: map beside the stops on a computer ---- */
   body.th-tool-page[data-th-page="route-planner"] .route-map-wrap { border: 1px solid var(--border); border-radius: var(--th-radius-card); overflow: hidden; }
-  body.th-tool-page[data-th-page="route-planner"] .results-box { background: var(--bg-panel-2); border: 0; border-radius: var(--th-radius-control); box-shadow: inset 0 var(--th-rule) 0 var(--orange); }
-  body.th-tool-page[data-th-page="route-planner"] .result-row.final { font-family: var(--font-display); font-size: 20px; letter-spacing: .3px; }
   @media (min-width: 1100px) {
     body.th-tool-page[data-th-page="route-planner"] {
       display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); column-gap: 20px; align-content: start; grid-auto-flow: row dense;
@@ -302,28 +294,11 @@
   body.th-tool-page[data-th-page="route-planner"] .stop-view-row span { min-width: 0; overflow-wrap: anywhere; }
   body.th-tool-page[data-th-page="route-planner"] .stop-view-row a { flex-shrink: 0; color: var(--orange-light); font-family: var(--font-ui); font-size: 12.5px; letter-spacing: .6px; text-transform: uppercase; text-decoration: none; }
 
-  /* Trip cost: three field tiles, the rows, the charge under an orange rule. */
-  body.th-tool-page[data-th-page="route-planner"] .route-cost-card { padding: 16px 18px; }
-  body.th-tool-page[data-th-page="route-planner"] .route-cost-card h3 {
-    display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 12px;
-    font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text);
-  }
-  body.th-tool-page[data-th-page="route-planner"] .route-cost-card .tool-form-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: end; }
-  body.th-tool-page[data-th-page="route-planner"] .route-cost-card .form-field { margin: 0; min-width: 0; }
-  body.th-tool-page[data-th-page="route-planner"] .route-cost-card .form-field label { font-family: var(--font-ui); font-size: 11px; letter-spacing: 1.1px; text-transform: uppercase; color: var(--text-dim); }
-  body.th-tool-page[data-th-page="route-planner"] .route-cost-card .form-field input { min-height: 48px; border-radius: 12px; background: var(--th-field); }
-  body.th-tool-page[data-th-page="route-planner"] .results-box { margin-top: 12px; background: none; box-shadow: none; border-radius: 0; padding: 0; }
-  body.th-tool-page[data-th-page="route-planner"] .result-row { padding: 6px 0; border-bottom: 0; font-size: 14.5px; }
-  body.th-tool-page[data-th-page="route-planner"] .result-row > span:last-child { font-weight: 600; color: var(--text); }
-  body.th-tool-page[data-th-page="route-planner"] .result-row.final {
-    margin-top: 8px; padding-top: 12px; align-items: baseline; gap: 12px; border-top: var(--th-rule, 2px) solid var(--orange);
-  }
-  body.th-tool-page[data-th-page="route-planner"] .result-label.final { font-family: var(--font-ui); font-size: 13px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text); }
-  body.th-tool-page[data-th-page="route-planner"] .result-row.final > span:last-child { font-family: var(--font-display); font-weight: 400; font-size: 30px; line-height: 1; color: var(--orange-light); }
-  @media (max-width: 420px) {
-    body.th-tool-page[data-th-page="route-planner"] .route-cost-card .form-field label { font-size: 10.5px; letter-spacing: .6px; }
-  }
-  body.th-tool-page[data-th-page="route-planner"] .route-cost-card { margin-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+  /* Live sync status: its own line under the header (it lived in the Cost
+     Analyzer card's heading until that card left, 2026-10-31) -- Finance's
+     Phase 3 hub-sub pattern. */
+  .hub-sub { margin: 4px 0 0; }
+  .hub-sub .realtime-badge { margin-left: 0; }
 </style>
 </head>
 <body data-th-page="route-planner">
@@ -339,6 +314,7 @@
     <a href="/tools/workspace.html" class="help-btn" aria-label="Back to Workspace" title="Back to Workspace" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
   </div>
 </div>
+<p class="hub-sub"><span class="realtime-badge" id="realtimeBadge" onclick="retryLiveSync()" title="Live sync"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span></p>
 <p class="tool-sub">Type in today's addresses, get one link that opens the whole route in Google Maps &mdash; starting from wherever you are when you tap it.</p>
 
 <div class="form-section route-stops-card">
@@ -361,21 +337,12 @@
 
 <div class="stop-list-view" id="individualLinks"></div>
 
-<div class="form-section route-cost-card">
-  <h3>Cost Analyzer (To &amp; From) <button class="help-btn" onclick="openCardInfo('costAnalyzer')" aria-label="What is this?" title="What is this?">?</button> <span class="realtime-badge" id="realtimeBadge" onclick="retryLiveSync()" title="Live sync"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span></h3>
-  <div class="tool-form-row">
-    <div class="form-field"><label for="tripDistance">One-way distance (miles)</label><input type="number" id="tripDistance" value="0" min="0" step="0.5" oninput="calculateTripCost()"></div>
-    <div class="form-field"><label for="tripFuelRate">Cost per mile ($)</label><input type="number" id="tripFuelRate" value="0.76" min="0" step="0.01" oninput="calculateTripCost(); saveMileageRate();"></div>
-    <div class="form-field"><label for="tripTaxRate">Sales tax rate (%)</label><input type="number" id="tripTaxRate" value="6.75" min="0" step="0.01" oninput="calculateTripCost()"></div>
-  </div>
-  <div class="results-box">
-    <div class="result-row"><span class="result-label">Round-trip distance</span><span id="tripMilesResult">0 mi</span></div>
-    <div class="result-row"><span class="result-label">Estimated fuel cost</span><span id="tripFuelResult">$0.00</span></div>
-    <div class="result-row"><span class="result-label">Flat policy fee (for reference)</span><span id="tripPolicyResult">$0.00</span></div>
-    <div class="result-row"><span class="result-label">Sales tax on suggested charge</span><span id="tripTaxResult">$0.00</span></div>
-    <div class="result-row final"><span class="result-label final">Suggested trip charge, with tax</span><span id="tripTotalResult">$0.00</span></div>
-  </div>
-</div>
+<!-- The Cost Analyzer (trip-charge) card that sat here was removed in the
+     redundancy pass (2026-10-31): its suggested charge used its own sales
+     tax rate, not Finance's, beside a $25 "for reference" fee it didn't
+     add in. Billing a client for the drive is the invoice / quote form's
+     "+ Add mileage"; the per-mile rate (th_mileage_rate) is still kept on
+     Finance's Expenses tab, which this card only shared. -->
 
 <div class="help-modal-overlay" id="helpModalOverlay" onclick="if(event.target===this) closeHelpModal()">
   <div class="help-modal">
@@ -388,8 +355,8 @@
         <li>Tap <strong>Open full route in Google Maps</strong> to open the whole route as one set of driving directions, starting from wherever you are.</li>
         <li>Google Maps caps routes at 10 stops &mdash; if you hit that, use the individual "Open this stop" links below the form instead.</li>
         <li>A real map fills in below the stop list showing where each stop actually is, numbered in visiting order &mdash; it takes a couple seconds per stop to locate them, so give it a moment after typing. A stop it can't find (usually a typo) is called out by name rather than silently dropped.</li>
-        <li><strong>Cost Analyzer</strong> &mdash; type in the one-way distance for today's trip and it estimates round-trip fuel cost, shows your flat $25/free-within-15-miles policy for reference, and adds sales tax on top so you can see a full suggested charge. The cost-per-mile field is shared with Finance's Expenses tab, so updating it here updates it there too.</li>
-        <li>Nothing here is saved between visits &mdash; refreshing the page clears the stop list (the Cost Analyzer's rate defaults do persist, since they're shared with Expenses).</li>
+        <li>Nothing here is saved between visits &mdash; refreshing the page clears the stop list.</li>
+        <li>Billing a client for the drive? Use <strong>+ Add mileage</strong> on the invoice or quote. Your cost per mile lives on Finance's Expenses tab.</li>
       </ul>
     </div>
   </div>
@@ -799,52 +766,6 @@
       : '';
   }
 
-  const CARD_INFO = {
-    costAnalyzer: {
-      title: 'Cost Analyzer',
-      body: `<p>Your posted trip fee policy: free within 15 miles of St. George, $25 flat beyond that.</p>
-        <p>This calculator gives you a fuel-cost-based figure too, so you can compare against the flat policy and decide what to actually charge.</p>`,
-    },
-  };
-  function openCardInfo(key) {
-    const info = CARD_INFO[key];
-    if (info) openInfoModal(info.title, info.body);
-  }
-
-
-  // ---------- Cost Analyzer ----------
-  const RATE_STORAGE_KEY = 'th_mileage_rate';
-
-  function saveMileageRate() {
-    localStorage.setItem(RATE_STORAGE_KEY, document.getElementById('tripFuelRate').value);
-    if (typeof scheduleSync === 'function') scheduleSync();
-  }
-
-  function loadSharedMileageRate() {
-    const saved = localStorage.getItem(RATE_STORAGE_KEY);
-    if (saved) document.getElementById('tripFuelRate').value = saved;
-  }
-
-
-  function calculateTripCost() {
-    const oneWay = parseFloat(document.getElementById('tripDistance').value) || 0;
-    const rate = parseFloat(document.getElementById('tripFuelRate').value) || 0;
-    const taxRate = parseFloat(document.getElementById('tripTaxRate').value) || 0;
-
-    const roundTrip = oneWay * 2;
-    const fuelCost = roundTrip * rate;
-    const policyFee = oneWay <= 15 ? 0 : 25;
-    const suggestedCharge = fuelCost;
-    const tax = suggestedCharge * (taxRate / 100);
-    const total = suggestedCharge + tax;
-
-    document.getElementById('tripMilesResult').textContent = roundTrip.toFixed(1) + ' mi';
-    document.getElementById('tripFuelResult').textContent = money(fuelCost);
-    document.getElementById('tripPolicyResult').textContent = money(policyFee);
-    document.getElementById('tripTaxResult').textContent = money(tax);
-    document.getElementById('tripTotalResult').textContent = money(total);
-  }
-
   function updateRealtimeBadge(status) {
     const dot = document.getElementById('realtimeDot');
     const text = document.getElementById('realtimeText');
@@ -874,23 +795,22 @@
   document.addEventListener('DOMContentLoaded', function () {
     try {
     // Moved here (2026-08-20) from top-level calls earlier in this
-    // script -- calculateTripCost() calls money(), which only exists
-    // in a deferred script, and per the HTML spec every inline script
-    // runs before any deferred one -- calling this at top level meant
-    // it threw deterministically on every real page load, before this
-    // very addEventListener call could even execute. Same root-cause
-    // bug class just found and fixed on invoice-generator.html.
-    loadSharedMileageRate();
-    calculateTripCost();
+    // script: anything that leans on a deferred script (the old Cost
+    // Analyzer's money(), removed 2026-10-31) must wait for
+    // DOMContentLoaded, since every inline script runs before any
+    // deferred one. Same root-cause bug class fixed on
+    // invoice-generator.html.
     initStopDrag();
     addStop();
     addStop();
     initAppTour();
     initSyncOnLoad().then(() => {
-      loadSharedMileageRate();
-      calculateTripCost();
+      // Nothing on this page redraws from synced data (the stop list is
+      // typed in here; Pull Today's Jobs reads the jobs when tapped), so the
+      // change callback has nothing to do -- the subscription is for the
+      // live-sync status the header dot shows.
       if (typeof startRealtimeSync === 'function') {
-        startRealtimeSync(() => { loadSharedMileageRate(); calculateTripCost(); }, updateRealtimeBadge);
+        startRealtimeSync(function () {}, updateRealtimeBadge);
       }
     });
     // Moved outside the .then() above (2026-08-27, real bug found and
@@ -902,7 +822,9 @@
     // Confirmed directly: waited up to 6 real seconds and the indicator
     // still never appeared. This call doesn't depend on the sync
     // having succeeded, so it belongs out here, unconditional.
-    if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => { loadSharedMileageRate(); calculateTripCost(); });
+    // Pull to refresh fetches the latest synced jobs, which Pull Today's
+    // Jobs reads.
+    if (typeof setupPullToRefresh === 'function') setupPullToRefresh(() => (typeof pullSync === 'function' ? pullSync() : undefined));
   } catch (initError) {
     try {
         showInitErrorBanner('Route Planner', initError);

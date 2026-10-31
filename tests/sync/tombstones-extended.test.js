@@ -222,11 +222,11 @@ test('thAddPriceRefTombstone records a tombstone by id, and a stale push does no
   assert.deepEqual(JSON.parse(window.localStorage.getItem('th_price_reference')), []);
 });
 
-test('deletePriceReference (finance.html) actually calls thAddPriceRefTombstone', () => {
+test('price-reference tombstones still hold after Finance\'s Cost lookup (their only delete button) left, 2026-10-31: the helper stays and sync still filters by it', () => {
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'finance.html'), 'utf8');
-  const fnMatch = src.match(/function deletePriceReference\(id\)[\s\S]*?\n  \}/);
-  assert.ok(fnMatch, 'deletePriceReference not found');
-  assert.match(fnMatch[0], /thAddPriceRefTombstone\(/);
+  assert.doesNotMatch(src, /function deletePriceReference\(id\)/, 'no screen deletes a saved job type now');
+  const window = loadDevTools();
+  assert.equal(typeof window.thAddPriceRefTombstone, 'function');
 });
 
 test('thAddTemplateTombstone records a tombstone by id, and a stale push does not resurrect the deleted template', () => {

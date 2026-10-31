@@ -53,7 +53,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=10f1831b6e">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=d7410af6b7">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=8060cfc3c2" defer></script>
 <script src="/tools/data-layer.js?v=c595490771" defer></script>
@@ -61,8 +61,8 @@
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/signature-pad.js?v=f95f8e1d28" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=e67fa5a727" defer></script>
-<script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=791ee017e1" defer></script>
+<script src="/tools/tools-command-palette.js?v=479d6a96e7" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <!-- U15/W18 fix (High-Impact Upgrades, Master Audit, 2026-09-08): the
      masthead/footer/totals-block drawing code below moved into this
@@ -595,6 +595,19 @@
   body.th-tool-page[data-th-page="invoice-generator"] .pos-saved-card-box,
   body.th-tool-page[data-th-page="invoice-generator"] .pos-auth-box { border-radius: 14px; }
   @media (min-width: 1024px) { body.th-tool-page[data-th-page="invoice-generator"] .pos-card, body.th-tool-page[data-th-page="invoice-generator"] .pos-intro { margin-left: 0; } }
+  /* Manage saved job types (redundancy pass item 11 follow-up,
+     2026-10-31): the create/delete half of Finance's old Cost Lookup
+     "Price Reference" list, reusing its .price-ref-chip rows. */
+  .price-ref-manage { margin-top: 4px; }
+  .price-ref-manage-toggle {
+    background: none; border: none; padding: 0; min-height: 44px; cursor: pointer;
+    color: var(--tone-orange-fg, var(--orange-light)); font: inherit; font-size: 13.5px;
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+  .price-ref-manager { padding: 2px 0 6px; }
+  .price-ref-manager .price-ref-chip { cursor: default; }
+  .price-ref-manager .chip-remove { min-width: 36px; min-height: 36px; margin: -6px -6px -6px 0; font-size: 18px; }
+  @media (pointer: coarse) { .price-ref-manager .chip-remove { min-width: 44px; min-height: 44px; margin: -10px -8px -10px -4px; } }
 </style>
 </head>
 <body data-th-page="invoice-generator">
@@ -767,6 +780,13 @@
     </div>
     <button type="button" class="add-row-btn" style="align-self:flex-end;" onclick="addLineItemFromPriceRef('invoicePriceRefSelect', 'addLineItem')">Add This Line Item</button>
   </div>
+  <div class="price-ref-manage">
+    <button type="button" class="price-ref-manage-toggle" id="invoicePriceRefManageToggle" aria-expanded="false" aria-controls="invoicePriceRefManager" onclick="togglePriceRefManager('invoicePriceRefManager', this)">Manage saved job types</button>
+    <div class="price-ref-manager" id="invoicePriceRefManager" hidden>
+      <div class="price-ref-list" data-price-ref-list></div>
+      <button type="button" class="add-row-btn" onclick="createPriceReference()">+ New saved job type</button>
+    </div>
+  </div>
   <button type="button" class="add-row-btn" onclick="addLineItem('', '', 1, '', true, '', true)">+ Add line item</button>
   <button type="button" class="add-row-btn" onclick="addLaborLineItem('addLineItem')">+ Add labor</button>
   <button type="button" class="add-row-btn" onclick="addMileageLineItem('addLineItem')">+ Add mileage</button>
@@ -900,6 +920,13 @@
       </select>
     </div>
     <button type="button" class="add-row-btn" style="align-self:flex-end;" onclick="addLineItemFromPriceRef('quotePriceRefSelect', 'addQuoteLineItem')">Add This Line Item</button>
+  </div>
+  <div class="price-ref-manage">
+    <button type="button" class="price-ref-manage-toggle" id="quotePriceRefManageToggle" aria-expanded="false" aria-controls="quotePriceRefManager" onclick="togglePriceRefManager('quotePriceRefManager', this)">Manage saved job types</button>
+    <div class="price-ref-manager" id="quotePriceRefManager" hidden>
+      <div class="price-ref-list" data-price-ref-list></div>
+      <button type="button" class="add-row-btn" onclick="createPriceReference()">+ New saved job type</button>
+    </div>
   </div>
   <button type="button" class="add-row-btn" onclick="addQuoteLineItem('', '', 1, '', true, '', true)">+ Add line item</button>
   <button type="button" class="add-row-btn" onclick="addLaborLineItem('addQuoteLineItem')">+ Add labor</button>
@@ -1923,8 +1950,8 @@
     },
     priceRefPicker: {
       title: 'Add From Saved Job Types',
-      body: `<p>Pulls from the price references saved in Finance's Cost Lookup tab &mdash; the same label, hours, and rate you've already saved get added as a line item, so you're not retyping something you've billed for before.</p>
-        <p>Only shows up if you actually have any saved job types &mdash; add some in Finance first if this section isn't visible.</p>`,
+      body: `<p>Pulls from your saved job types &mdash; the same label, hours, and rate get added as a line item, so you're not retyping something you've billed for before.</p>
+        <p>Only shows up if you have any saved job types. Tap <strong>Manage saved job types</strong> under it to add a new one or delete one.</p>`,
     },
   };
   function openCardInfo(key) {
@@ -1951,6 +1978,7 @@
       select.innerHTML = '<option value="">Choose a saved job type&hellip;</option>' + refs.map((r, idx) => `
         <option value="${idx}">${escapeHtml(r.label)} (${r.hours}hr @ $${r.rate}/hr)</option>`).join('');
     });
+    if (document.querySelector('[data-price-ref-list]')) renderPriceRefManagers();
   }
   function addLineItemFromPriceRef(selectId, addFnName) {
     const idx = document.getElementById(selectId).value;
@@ -1959,6 +1987,71 @@
     if (!ref) return;
     window[addFnName](ref.label, '', ref.hours || 1, ref.rate || '', true, 'labor', true);
     document.getElementById(selectId).value = '';
+  }
+
+  // ---------- Manage saved job types (redundancy pass item 11
+  // follow-up, 2026-10-31). Finance's Cost Lookup tab held the only
+  // "+ Save Current as Reference" button and the only delete (x) for
+  // th_price_reference; the tab left in the redundancy pass, so the
+  // create/delete half comes back here, next to the picker that reads
+  // the list. Same record shape Cost Lookup wrote -- { id: Date.now(),
+  // label, hours, rate } -- and the same delete path (tombstone so sync's
+  // union merge doesn't resurrect it, plus Dev Tools' deleted-items
+  // graveyard). ----------
+  function savePriceReferencesFromManager(list) {
+    localStorage.setItem('th_price_reference', JSON.stringify(list));
+    if (typeof scheduleSync === 'function') scheduleSync();
+  }
+  function renderPriceRefManagers() {
+    const refs = loadPriceReferencesForPicker();
+    document.querySelectorAll('[data-price-ref-list]').forEach(el => {
+      el.innerHTML = refs.length === 0
+        ? '<div class="inline-note">No saved job types yet.</div>'
+        : refs.map(r => `
+        <div class="price-ref-chip" data-price-ref-id="${escapeAttr(String(r.id))}">
+          <span>${escapeHtml(r.label)}</span>
+          <span class="chip-price">${escapeHtml(String(r.hours))}hr @ $${escapeHtml(String(r.rate))}/hr</span>
+          <button type="button" class="chip-remove" onclick="deletePriceReference(this.closest('[data-price-ref-id]').dataset.priceRefId)" aria-label="Delete saved job type ${escapeAttr(r.label)}">&times;</button>
+        </div>`).join('');
+    });
+  }
+  function togglePriceRefManager(panelId, btn) {
+    const panel = document.getElementById(panelId);
+    const opening = panel.hidden;
+    panel.hidden = !opening;
+    btn.setAttribute('aria-expanded', String(opening));
+    if (opening) renderPriceRefManagers();
+  }
+  async function createPriceReference() {
+    const values = await showPromptForm('New saved job type', [
+      { id: 'label', label: 'Job type (e.g. "Dishwasher install", "Drywall patch - small")' },
+      { id: 'hours', label: 'Labor hours', type: 'number', defaultValue: '1' },
+      { id: 'rate', label: 'Hourly rate ($)', type: 'number', defaultValue: '75' },
+    ], {
+      validate: (v) => {
+        if (!v.label) return 'Enter a name for this job type.';
+        const h = parseFloat(v.hours), r = parseFloat(v.rate);
+        if (isNaN(h) || h < 0 || isNaN(r) || r < 0) return 'Hours and rate need to be numbers, 0 or more.';
+        return null;
+      },
+    });
+    if (!values) return; // cancelled
+    const hours = Math.max(0, parseFloat(values.hours) || 0);
+    const rate = Math.max(0, parseFloat(values.rate) || 0);
+    const list = loadPriceReferencesForPicker();
+    list.push({ id: Date.now(), label: values.label, hours, rate });
+    savePriceReferencesFromManager(list);
+    populatePriceRefPickers(); // re-renders the manager lists too
+    if (typeof showToast === 'function') showToast('Saved job type added.');
+  }
+  function deletePriceReference(id) {
+    const list = loadPriceReferencesForPicker();
+    const target = list.find(r => String(r.id) === String(id));
+    if (!target) return;
+    savePriceReferencesFromManager(list.filter(r => r !== target));
+    if (typeof thAddPriceRefTombstone === 'function') thAddPriceRefTombstone(target.id);
+    if (typeof thAddToGraveyard === 'function') thAddToGraveyard('priceReference', target);
+    populatePriceRefPickers(); // re-renders the manager lists too
   }
 
 
@@ -2373,8 +2466,8 @@
     // increase the total above subtotal+tax while still being labeled
     // "Discount" on a customer-facing invoice.
     const discount = Math.max(0, parseFloat(document.getElementById('discountAmount').value) || 0);
-    // Discount applies to the tax-inclusive total, same precedent as the
-    // Finance's Cost Lookup calculator -- a flat dollar-off-the-bill
+    // Discount applies to the tax-inclusive total, same precedent as
+    // Finance's old Cost Lookup calculator -- a flat dollar-off-the-bill
     // discount, not a pre-tax price adjustment.
     const total = Math.round(Math.max(0, subtotal + tax - discount) * 100) / 100;
     document.getElementById('subtotalDisplay').textContent = money(subtotal);
@@ -4252,7 +4345,8 @@
         <li><strong>New invoice tab</strong> &mdash; fill in <strong>Invoice Details</strong> and <strong>Bill To</strong>, then add each line item (labor, parts, etc.) in the line-items table. Uncheck "Tax?" on any row that's exempt (see the note above the totals for why some rows might not be taxable). Use Download PDF for a branded copy, or Send to Client to email it and post it to their portal.</li>
         <li><strong>New quote tab</strong> &mdash; same idea, before a job starts, including the same tax handling. Download an estimate PDF (clearly labeled as an estimate, not a bill), or tap <strong>Convert to Invoice</strong> once the work's done to copy everything straight over to the New invoice tab instead of re-typing it &mdash; including which rows were marked taxable.</li>
         <li><strong>Quick charge tab</strong> &mdash; for a small job that doesn't need a real invoice: enter the client's email and an amount and charge their card on the spot. If that email has paid an invoice before, their card is already saved (this happens automatically the first time anyone pays an invoice) and you'll see a one-tap Charge button; otherwise you get a normal card form, and that card gets saved for next time too, after the client types their name as an authorization. Every POS sale shows up in your Income log the same way any other payment does, tagged so you can always tell it apart from an invoice &mdash; it never creates an invoice, a quote, or a portal record of any kind.</li>
-        <li>The sales tax rate is shared with Finance's Cost Lookup tab &mdash; change it in either place and it updates everywhere.</li>
+        <li>The sales tax rate is remembered &mdash; change it on one invoice or quote and the next one starts from it.</li>
+        <li><strong>Saved job types</strong> &mdash; under the line items, <strong>Add From Saved Job Types</strong> adds one you use often as a labor line. Tap <strong>Manage saved job types</strong> to add a new one (name, hours, rate) or delete one.</li>
         <li>Everything generated here is saved automatically &mdash; invoices and estimates are logged on this device (and synced, if Cloud Sync is set up), and every invoice also flows into Finance's Income tab. Nothing needs re-entering elsewhere.</li>
       </ul>
     </div>

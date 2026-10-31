@@ -103,9 +103,10 @@ test('B7 (fix): the Income lane, Ready to invoice and their badge counts follow 
   assert.match(fn, /actionItemCounts\.unpaid = moneyShown \? invoicesForDisplay\(\)[^;]*: 0;/);
   assert.match(fn, /if \(moneyShown\) renderReadyToInvoice\(\);\s*else actionItemCounts\.toinvoice = 0;/);
   assert.match(fn, /if \(!moneyShown\) \{\s*const list = document\.getElementById\('invoicesList'\);\s*if \(list\) list\.innerHTML = '';\s*return;/);
-  // Second lock: the CSS removes the lane, Business Snapshot and (for no
-  // access) Money owed unless the state is "shown".
-  assert.match(WS, /:not\(\[data-home-money="shown"\]\) #lane-money,\s*body\.th-tool-page\[data-th-page="workspace"\]:not\(\[data-home-money="shown"\]\) #section-snapshot,\s*body\.th-tool-page\[data-th-page="workspace"\]\[data-home-money="hidden"\] #todayMoney \{ display: none; \}/);
+  // Second lock: the CSS removes Money owed's lower half (the old Income
+  // lane, moved onto the card 2026-10-31), Business Snapshot and (for no
+  // access) Money owed itself unless the state is "shown".
+  assert.match(WS, /:not\(\[data-home-money="shown"\]\) #todayMoneyMore,\s*body\.th-tool-page\[data-th-page="workspace"\]:not\(\[data-home-money="shown"\]\) #section-snapshot,\s*body\.th-tool-page\[data-th-page="workspace"\]\[data-home-money="hidden"\] #todayMoney \{ display: none; \}/);
   assert.match(WS, /<body data-th-page="workspace" data-role-state="pending" data-home-money="pending">/);
   // Your week no longer treats a role that hasn't loaded as finance access.
   assert.match(extractFn(WS, 'renderWeekCard'), /const canFinance = typeof canViewFinance !== 'function' \|\| canViewFinance\(\);/);

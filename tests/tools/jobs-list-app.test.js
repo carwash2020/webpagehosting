@@ -100,22 +100,32 @@ test('openJobActions is the one sheet for a job -- More and long-press both open
   let shown = null;
   const calls = [];
   const jobs = [{ id: 5, title: '<b>Leak</b>', status: 'not-started', clientEmail: 'a@b.c' }, { id: 6, title: 'Done one', status: 'done' }];
+  const loc = {};
+  let financeOk = true;
   const { openJobActions } = run(['openJobActions'], {
     thJobs: { get: (id) => jobs.find((j) => j.id === id) }, escapeHtml: esc,
     showQuickActionSheet: (title, actions) => { shown = { title, labels: Array.from(actions, a => a.label), actions }; },
     setJobStatus: (id, st) => calls.push(['status', id, st]), toggleJobPhotos: () => calls.push(['photos']),
-    sendJobConfirmationEmail: (id) => calls.push(['confirm', id]), showQuickExpenseModal: (id) => calls.push(['expense', id]),
+    sendJobConfirmationEmail: (id) => calls.push(['confirm', id]), canViewFinance: () => financeOk,
     editJob: (id) => calls.push(['edit', id]), deleteJob: (id) => calls.push(['delete', id]),
-    document: { getElementById: () => ({}) }, location: {},
+    document: { getElementById: () => ({}) }, location: loc,
   });
   openJobActions(5);
   assert.equal(shown.title, '&lt;b&gt;Leak&lt;/b&gt;', 'the sheet renders its title as HTML, so it is escaped');
   assert.deepEqual(shown.labels, ['Mark Done', 'Start (In Progress)', 'Open job', 'Photos', 'Create invoice', 'Send confirmation email', 'Log Expense', 'Edit', 'Delete']);
   shown.actions.find(a => a.label === 'Start (In Progress)').onClick();
+  assert.deepEqual(calls, [['status', 5, 'in-progress']]);
+  // Log Expense opens Finance's Expenses form for this job (redundancy
+  // pass, 2026-10-31; it used to open a pop-up copy of that form).
   shown.actions.find(a => a.label === 'Log Expense').onClick();
-  assert.deepEqual(calls, [['status', 5, 'in-progress'], ['expense', 5]]);
+  assert.equal(loc.href, '/tools/finance.html?job=5#expenses');
   openJobActions(6);
   assert.deepEqual(shown.labels, ['Back to Not Started', 'Open job', 'Photos', 'Create invoice', 'Log Expense', 'Edit', 'Delete'], 'a done job: no Mark Done, no confirmation email without an address');
+  // Finance is a finance-permission page, so an account without it isn't
+  // offered a link it can't open (same gate as Job detail's Expense).
+  financeOk = false;
+  openJobActions(6);
+  assert.ok(!shown.labels.includes('Log Expense'));
   assert.match(JT, /attachLongPress\(container, '\.job-card', \(cardEl\) => openJobActions\(Number\(cardEl\.dataset\.jobId\)\)\);/);
 });
 

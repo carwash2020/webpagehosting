@@ -151,8 +151,13 @@ test('Dashboard: Ready to invoice lists the unbilled finished jobs with Invoice 
   assert.match(rows[1].textContent, /Done today/);
   assert.equal(rows[0].querySelector('.rti-invoice-btn').getAttribute('href'), '/tools/invoice-generator.html?jobRef=11');
   assert.equal(w.document.getElementById('readyToInvoiceCount').textContent, '2');
-  assert.equal(w.document.getElementById('laneMoneyCount').textContent, '3', '1 unpaid + 2 to invoice');
-  assert.match(w.document.getElementById('actionItemsHeadingBadge').textContent, /2 to invoice/);
+  // Since the redundancy pass (2026-10-31) Ready to invoice sits on the
+  // Money owed card, not in Needs attention: no lane count, and the
+  // section heading no longer lists it -- the app icon badge still does.
+  assert.equal(w.document.getElementById('laneMoneyCount'), null);
+  assert.doesNotMatch(w.document.getElementById('actionItemsHeadingBadge').textContent, /to invoice/);
+  assert.equal(w.localStorage.getItem('th_app_badge_total'), '3', '1 unpaid + 2 to invoice');
+  assert.ok(w.document.getElementById('todayMoneyMore').contains(group), 'Ready to invoice is on the Money owed card');
   w.close();
 
   const empty = loadDashboard({ th_tracker_jobs: [{ id: 1, status: 'in-progress' }], th_invoices: [], th_income_log: [] });

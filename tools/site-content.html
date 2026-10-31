@@ -35,7 +35,7 @@
 <meta name="color-scheme" content="dark">
 <meta name="robots" content="noindex, nofollow">
 <title>Site Content · Triple H Enterprises</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
@@ -53,14 +53,14 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=10f1831b6e">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=d7410af6b7">
 <script src="/tools/data-layer.js?v=c595490771" defer></script>
 <script src="/tools/dev-tools-shared.js?v=ffcb14381f" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=e67fa5a727" defer></script>
-<script src="/tools/tools-command-palette.js?v=b37229c7b6" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=791ee017e1" defer></script>
+<script src="/tools/tools-command-palette.js?v=479d6a96e7" defer></script>
 <script src="/tools/sync.js?v=8060cfc3c2" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -494,6 +494,28 @@
   body.th-tool-page[data-th-page="site-content"] #contentHistoryList .dev-check-row:first-child { border-top: 0; }
   body.th-tool-page[data-th-page="site-content"] #contentHistoryList .small-btn { border-radius: 999px; min-height: 34px; color: var(--orange-text); }
   @media (pointer: coarse) { body.th-tool-page[data-th-page="site-content"] #contentHistoryList .small-btn { min-height: 44px; } }
+  /* Gallery queue (moved from the Dashboard's Business group in the
+     redundancy pass, 2026-10-31): the photos starred in Job Tracker for
+     the public website, reviewed here with the rest of the site's content.
+     Same rules the Dashboard carried for it, moved as they were. */
+  .gallery-queue-grid { display: flex; flex-wrap: wrap; gap: 14px; }
+  .gallery-queue-item { width: 160px; }
+  .gallery-queue-item img { width: 100%; height: 140px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); display: block; }
+  .gallery-queue-caption { color: var(--white); font-size: 12.5px; margin: 8px 0 4px; }
+  .gallery-queue-meta { color: var(--text-dim); font-size: 11.5px; margin-bottom: 8px; }
+  .ba-slider { position: relative; width: 100%; aspect-ratio: 4/3; border-radius: 10px; overflow: hidden; touch-action: none; cursor: ew-resize; user-select: none; background: var(--bg-panel-3); }
+  .ba-slider img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+  .ba-slider-after { width: 100% !important; }
+  .ba-slider-before-wrap { position: absolute; top: 0; left: 0; height: 100%; overflow: hidden; }
+  .ba-slider-before-wrap img { position: absolute; top: 0; left: 0; height: 100%; max-width: none; }
+  .ba-slider-handle { position: absolute; top: 0; bottom: 0; width: 3px; background: var(--white); transform: translateX(-50%); box-shadow: 0 0 8px rgba(0,0,0,.5); }
+  .ba-slider-handle span { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 30px; height: 30px; border-radius: 50%; background: var(--orange); color: #1a0d02; display: flex; align-items: center; justify-content: center; font-size: 15px; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+  .ba-slider-label { position: absolute; top: 8px; font-size: 10.5px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; padding: 3px 8px; border-radius: 20px; background: rgba(0,0,0,.55); color: var(--white); }
+  .gallery-queue-actions { display: flex; gap: 6px; margin-top: 8px; }
+  .ba-label-before { left: 8px; }
+  .ba-label-after { right: 8px; }
+  body.th-tool-page[data-th-page="site-content"] .gallery-queue-item img { border-radius: 12px; }
+  body.th-tool-page[data-th-page="site-content"] .gallery-queue-grid .small-btn { min-height: 44px; }
 </style>
 </head>
 <body data-th-page="site-content" data-page-pending>
@@ -562,6 +584,7 @@
     <button type="button" class="th-sc-nav-btn" data-sc-jump="contact">Phone + email<span class="th-sc-dot" aria-hidden="true"></span></button>
     <button type="button" class="th-sc-nav-btn" data-sc-jump="faq">FAQ<span class="th-sc-dot" aria-hidden="true"></span></button>
     <button type="button" class="th-sc-nav-btn" data-sc-jump="terms">Terms &amp; Conditions<span class="th-sc-dot" aria-hidden="true"></span></button>
+    <button type="button" class="th-sc-nav-btn" data-sc-jump="gallery">Gallery queue</button>
     <button type="button" class="th-sc-nav-btn" data-sc-jump="history">Edit history</button>
   </nav>
 
@@ -614,6 +637,23 @@
         <button class="secondary-btn th-sc-add" onclick="addTermsItem()">+ Add section</button>
         <button class="primary-btn" id="saveTermsBtn" onclick="saveTermsList()">Review &amp; publish</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Gallery queue (redundancy pass, 2026-10-31; it was the Dashboard's
+       "Gallery Queue" drawer). Photos starred in Job Tracker's Photos for
+       the public website's gallery, with before/after pairs as a slider and
+       Remove to take one back out. Reads th_job_photos through sync.js's
+       fetchFeaturedPhotos(); nothing new is stored. Collapsed, it only
+       fetches the count for the heading; opening it loads the photos. -->
+  <div class="dev-panel dev-panel-wide is-collapsible" data-collapse-key="gallery" id="section-gallery">
+    <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
+      <h2>Gallery queue <span id="galleryHeadingBadge"></span></h2>
+      <span class="dev-collapse-caret">&#9660;</span>
+    </div>
+    <div class="dev-panel-body">
+      <p class="tool-sub" style="margin-bottom:12px;">Photos starred in Job Tracker (Photos, then the star) for the website's gallery. Remove takes one back out of the queue; the photo stays on its job.</p>
+      <div id="galleryQueueList"></div>
     </div>
   </div>
   </div>
@@ -2057,6 +2097,178 @@
   function addTermsItem() { termsItems.push({ id: null, heading: '', body: '' }); renderTermsEditorRows(); }
   async function saveTermsList() { return cmsListPublish('terms'); }
 
+  // Gallery Queue's real count, shown on its own (collapsed) heading so
+  // a photo waiting for review is visible without opening the drawer.
+  // Named for the chip row it used to feed (removed 2026-09-21); kept so
+  // refreshGalleryChip()/loadAndRenderGalleryQueue() call sites are unchanged.
+  function updateGalleryChip(n) {
+    const badge = document.getElementById('galleryHeadingBadge');
+    if (badge) badge.innerHTML = n > 0 ? `<span class="compliance-status-badge is-expiring" style="font-size:11.5px; padding:2px 8px; vertical-align:middle;">${n} waiting</span>` : '';
+  }
+
+  // Closed Gallery drawer: the chip only needs the count. Skip signed
+  // photo URLs and the before/after markup until the drawer opens.
+  async function refreshGalleryChip() {
+    if (typeof fetchFeaturedPhotos !== 'function' || !isSyncConfigured()) {
+      updateGalleryChip(0);
+      return;
+    }
+    const result = await fetchFeaturedPhotos();
+    updateGalleryChip(result.ok ? result.photos.length : 0);
+  }
+
+  async function loadAndRenderGalleryQueue() {
+    const container = document.getElementById('galleryQueueList');
+    if (typeof fetchFeaturedPhotos !== 'function' || !isSyncConfigured()) {
+      container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-link" xlink:href="#icon-link"></use></svg>Cloud sync isn\'t set up yet.</div>';
+      updateGalleryChip(0);
+      return;
+    }
+    const result = await fetchFeaturedPhotos();
+    if (!result.ok) {
+      container.innerHTML = '<div class="empty-state-small is-warning"><svg class="th-icon" aria-hidden="true"><use href="#icon-warning" xlink:href="#icon-warning"></use></svg>Couldn\'t load the queue (' + escapeHtml(result.error) + ').</div>';
+      updateGalleryChip(0);
+      return;
+    }
+    updateGalleryChip(result.photos.length);
+    if (result.photos.length === 0) {
+      container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-camera" xlink:href="#icon-camera"></use></svg>Nothing queued yet &mdash; star a photo in the Job Tracker\'s Photos section to add it here.</div>';
+      return;
+    }
+    const signedUrls = await getSignedJobPhotoUrls(result.photos.map(p => p.storage_path));
+
+    // Item #13 (2026-08-16): before/after comparison slider. th_job_photos
+    // already has a photo_type column ('before'/'after'/'photo') used
+    // elsewhere in Job Tracker's own photo picker -- this groups featured
+    // photos by job_id and, wherever a job has BOTH a starred before and
+    // a starred after shot, renders a draggable split-slider instead of
+    // two flat tiles. Anything without a matching pair (most photos,
+    // realistically) falls back to the existing single-tile treatment
+    // unchanged.
+    const byJob = {};
+    result.photos.forEach((p, i) => {
+      // job_id is nullable in the schema -- grouping every null-job_id
+      // photo under one shared key would risk pairing two unrelated
+      // photos from different (or no) jobs as if they were a real
+      // before/after set. Each null-job_id photo gets its own unique
+      // group key instead, so it can only ever render standalone.
+      const key = p.job_id != null ? p.job_id : 'no-job-' + i;
+      (byJob[key] = byJob[key] || []).push(p);
+    });
+
+    let html = '<div class="gallery-queue-grid">';
+    Object.values(byJob).forEach(jobPhotos => {
+      const before = jobPhotos.find(x => x.photo_type === 'before');
+      const after = jobPhotos.find(x => x.photo_type === 'after');
+      const hasPair = before && after && before.id !== after.id;
+      if (hasPair) {
+        const beforeUrl = signedUrls[before.storage_path] || '';
+        const afterUrl = signedUrls[after.storage_path] || '';
+        html += `
+      <div class="gallery-queue-item ba-slider-item">
+        <div class="ba-slider" data-before="${before.id}" data-after="${after.id}">
+          <img class="ba-slider-after" src="${afterUrl}" alt="After" loading="lazy">
+          <div class="ba-slider-before-wrap" style="width:50%;">
+            <img class="ba-slider-before" src="${beforeUrl}" alt="Before" loading="lazy">
+          </div>
+          <div class="ba-slider-handle" style="left:50%;"><span>&#8596;</span></div>
+          <span class="ba-slider-label ba-label-before">Before</span>
+          <span class="ba-slider-label ba-label-after">After</span>
+        </div>
+        <div class="gallery-queue-caption">${escapeHtml(after.public_caption || before.public_caption || '(no caption)')}</div>
+        <div class="gallery-queue-meta">${escapeHtml(after.job_title || '')}</div>
+        <div class="gallery-queue-actions">
+          <button class="small-btn danger" onclick="unqueueGalleryPhoto(${before.id})">Remove Before</button>
+          <button class="small-btn danger" onclick="unqueueGalleryPhoto(${after.id})">Remove After</button>
+        </div>
+      </div>`;
+      }
+      // Any photo not part of the rendered pair (including every photo
+      // at all, when this job has no valid pair) still gets its own
+      // standalone tile -- a job with before+after+one extra shot never
+      // silently loses that extra photo.
+      jobPhotos.forEach(p => {
+        if (hasPair && (p.id === before.id || p.id === after.id)) return;
+        html += `
+      <div class="gallery-queue-item">
+        <img src="${signedUrls[p.storage_path] || ''}" alt="${escapeAttr(p.public_caption || '')}" loading="lazy">
+        <div class="gallery-queue-caption">${escapeHtml(p.public_caption || '(no caption)')}</div>
+        <div class="gallery-queue-meta">${escapeHtml(p.job_title || '')}</div>
+        <button class="small-btn danger" onclick="unqueueGalleryPhoto(${p.id})">Remove from Queue</button>
+      </div>`;
+      });
+    });
+    html += '</div>';
+    container.innerHTML = html;
+    initBeforeAfterSliders(container);
+  }
+
+  // Pointer-events based (not touch-specific gesture code) so this works
+  // identically with mouse drag and touch drag without device-specific
+  // tuning -- a simple 1D drag is much lower-risk than a full swipe
+  // gesture system.
+  function initBeforeAfterSliders(root) {
+    root.querySelectorAll('.ba-slider').forEach(slider => {
+      if (slider.dataset.wired) return;
+      slider.dataset.wired = '1';
+      const beforeWrap = slider.querySelector('.ba-slider-before-wrap');
+      const beforeImg = slider.querySelector('.ba-slider-before');
+      const handle = slider.querySelector('.ba-slider-handle');
+      let dragging = false;
+
+      function setPosition(clientX) {
+        const rect = slider.getBoundingClientRect();
+        let pct = ((clientX - rect.left) / rect.width) * 100;
+        pct = Math.max(0, Math.min(100, pct));
+        beforeWrap.style.width = pct + '%';
+        // Fixed pixel width matching the FULL slider (not the shrinking
+        // wrapper) -- this is what makes the before image clip/reveal
+        // as the handle moves, instead of squishing/zooming to fit
+        // whatever width the wrapper currently is.
+        beforeImg.style.width = rect.width + 'px';
+        handle.style.left = pct + '%';
+      }
+      slider.addEventListener('pointerdown', (e) => { dragging = true; slider.setPointerCapture(e.pointerId); setPosition(e.clientX); });
+      slider.addEventListener('pointermove', (e) => { if (dragging) setPosition(e.clientX); });
+      slider.addEventListener('pointerup', () => { dragging = false; });
+      slider.addEventListener('pointercancel', () => { dragging = false; });
+
+      // Initial 50/50 split -- without this, the before-image would
+      // render at its natural size (no explicit width set yet) until
+      // the first drag, which can look broken on first paint.
+      const rect = slider.getBoundingClientRect();
+      beforeImg.style.width = rect.width + 'px';
+    });
+  }
+
+  async function unqueueGalleryPhoto(photoId) {
+    const result = await toggleFeaturedPhoto(photoId, false, '');
+    if (!result.ok) { await showAlert('Could not update: ' + result.error); return; }
+    loadAndRenderGalleryQueue();
+  }
+
+  // Lazy, as it was on the Dashboard: a collapsed panel only needs the
+  // count for its heading; the photos (signed URLs, the before/after
+  // markup) load the first time it's opened -- by its heading or by the
+  // Gallery queue jump in the section nav, which both just drop the
+  // panel's is-collapsed class.
+  let galleryQueueLoaded = false;
+  function initGalleryQueue() {
+    const panel = document.getElementById('section-gallery');
+    if (!panel) return;
+    const loadIfOpen = () => {
+      if (panel.classList.contains('is-collapsed') || galleryQueueLoaded) return false;
+      galleryQueueLoaded = true;
+      loadAndRenderGalleryQueue();
+      return true;
+    };
+    if (!loadIfOpen()) refreshGalleryChip();
+    if (!panel.dataset.galleryWired && typeof MutationObserver !== 'undefined') {
+      panel.dataset.galleryWired = '1';
+      new MutationObserver(loadIfOpen).observe(panel, { attributes: true, attributeFilter: ['class'] });
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     const proceed = () => {
       const allowed = typeof canManageSiteContent === 'function' && canManageSiteContent();
@@ -2070,6 +2282,7 @@
       renderFaqEditor();
       renderTermsEditor();
       initCollapsiblePanels();
+      initGalleryQueue();
     };
     if (typeof initSyncOnLoad === 'function') {
       initSyncOnLoad().then(proceed).catch(proceed);
@@ -2150,7 +2363,7 @@
       queued = true;
       setTimeout(() => { queued = false; try { render(); } catch (e) { /* presentation only */ } }, 60);
     }
-    const PANEL_KEYS = { faq: 'faq', terms: 'terms', history: 'contenthistory' };
+    const PANEL_KEYS = { faq: 'faq', terms: 'terms', gallery: 'gallery', history: 'contenthistory' };
     function targetFor(key) {
       if (PANEL_KEYS[key]) return document.querySelector('.dev-panel[data-collapse-key="' + PANEL_KEYS[key] + '"]');
       return document.querySelector('#siteContentForm [data-cms-group="' + key + '"]');
@@ -2209,6 +2422,24 @@
       document.addEventListener('input', schedule, true);
       document.addEventListener('change', schedule, true);
       schedule();
+      // #gallery / #section-gallery: where Home's old Gallery queue links
+      // land now (workspace.html redirects them here, 2026-10-31). Opens
+      // the panel, which loads its photos, and scrolls to it. The page
+      // shows its content only after sign-in and the permission check, so
+      // this waits (up to ~10s) for the panel to be laid out first.
+      const jumpFromHash = () => {
+        const h = location.hash;
+        if (h !== '#gallery' && h !== '#section-gallery') return;
+        let tries = 0;
+        const attempt = () => {
+          const panel = targetFor('gallery');
+          if (panel && panel.offsetParent !== null) { jump('gallery'); return; }
+          if (++tries < 50) setTimeout(attempt, 200);
+        };
+        attempt();
+      };
+      window.addEventListener('hashchange', jumpFromHash);
+      setTimeout(jumpFromHash, 0);
       // FAQ and Terms items: Move up / Move down / Delete behind one ⋯.
       // The sheet clicks each item's own buttons (moveFaqItem,
       // deleteFaqItem, ...), which stay in the DOM.

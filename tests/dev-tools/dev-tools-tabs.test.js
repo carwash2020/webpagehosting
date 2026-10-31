@@ -94,23 +94,34 @@ test('switching tabs actually shows the target panel group and hides the rest, f
   assert.ok(!healthBtn.classList.contains('is-active'), 'health tab button should no longer be marked active after switching away from it');
 });
 
-test('an account without the full-technical permission sees only the Data and Access tab buttons, landing on Data with just Client registry showing', () => {
+test('an account without the full-technical permission sees Health (just the client portal\'s bug reports and errors), Data (just Client registry) and Access, landing on Health', () => {
   // Rewritten 2026-09-24: Client registry moved from Access to Data
-  // (What's stored) in the regroup -- it is a view of client records,
-  // not an access setting. So an Owner now sees two tabs, Data (Client
-  // registry only) and Access (Account permissions), and lands on Data,
-  // the first of them. Health stays entirely technical and hidden.
+  // (What's stored) in the regroup. Rewritten again 2026-10-31: the client
+  // portal's bug reports and client errors moved from Clients -> Portal
+  // to Health -> Live status (redundancy pass), and they are not
+  // dev-owner-hidden -- an Owner could read them on Clients and still can
+  // here. Everything technical on Health (its question banner, the full
+  // check, every other panel) stays hidden from an Owner.
   const window = loadAs(false);
   const tabBtns = Array.from(window.document.querySelectorAll('.dev-tab-btn'));
   const visible = tabBtns.filter(b => b.style.display !== 'none').map(b => b.getAttribute('data-tab'));
-  assert.deepEqual(visible, ['data', 'access']);
+  assert.deepEqual(visible, ['health', 'data', 'access']);
 
-  const dataBtn = tabBtns.find(b => b.getAttribute('data-tab') === 'data');
-  assert.ok(dataBtn.classList.contains('is-active'), 'Data should be the landing tab for an Owner, since it is the first visible tab');
+  const healthBtn = tabBtns.find(b => b.getAttribute('data-tab') === 'health');
+  assert.ok(healthBtn.classList.contains('is-active'), 'Health is the first visible tab, so an Owner lands there');
 
-  tabBtns.filter(b => !['data', 'access'].includes(b.getAttribute('data-tab'))).forEach(btn => {
+  tabBtns.filter(b => !['health', 'data', 'access'].includes(b.getAttribute('data-tab'))).forEach(btn => {
     assert.equal(btn.style.display, 'none', 'tab "' + btn.getAttribute('data-tab') + '" should be hidden for an Owner, since every one of its panels is dev-owner-hidden');
   });
+
+  const shownIn = (tab) => {
+    const el = window.document.querySelector('.dev-tab-panel[data-tab-panel="' + tab + '"]');
+    return Array.from(el.querySelectorAll('.dev-panel')).filter(p => p.style.display !== 'none' && (!p.closest('.dev-section') || p.closest('.dev-section').style.display !== 'none')).map(p => p.querySelector('h2').textContent);
+  };
+  assert.deepEqual(shownIn('health'), ['Portal bug reports', 'Portal client errors']);
+  const health = window.document.querySelector('.dev-tab-panel[data-tab-panel="health"]');
+  assert.equal(health.querySelector('.th-dt-q[data-dt-q="health"]').style.display, 'none', 'no technical health banner for an Owner');
+  assert.equal(health.querySelector('.dev-health-run').style.display, 'none');
 
   // No orphaned subheading: on Data, only the section holding Client
   // registry is shown; its two developer-only neighbours (Appliance Wiki

@@ -130,17 +130,10 @@ test('a failed archive upload never blocks the invoice workflow', () => {
   assert.match(body, /logClientError/, 'a failure should still be logged so it can be found and fixed later');
 });
 
-test('the Clients tool can open an archived invoice PDF via a signed URL, scoped to the invoice-pdfs bucket', () => {
-  const fnMatch = CLIENTS.match(/async function viewArchivedInvoicePdf\(portalRowId, btnEl\)[\s\S]*?\n  \}\n/);
-  assert.ok(fnMatch, 'expected to isolate viewArchivedInvoicePdf()');
-  const body = fnMatch[0];
-  assert.match(body, /storage\/v1\/object\/sign\/invoice-pdfs\//);
-  assert.match(body, /expiresIn: 300/);
-});
-
-test('the Portal invoices panel offers View PDF alongside Resend for every row', () => {
-  const fnMatch = CLIENTS.match(/async function renderPortalInvoices\(\)[\s\S]*?\n  \}\n/);
-  assert.ok(fnMatch, 'expected to isolate renderPortalInvoices()');
-  assert.match(fnMatch[0], /viewArchivedInvoicePdf\(/);
-  assert.match(fnMatch[0], /resendPortalInvoice\(/);
+test('the Invoices list opens an invoice\'s archived PDF via a signed URL, scoped to the invoice-pdfs bucket (Clients\' Portal invoices panel, which used to, left on 2026-10-31)', () => {
+  const INVOICES = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'invoice-generator.html'), 'utf8');
+  assert.doesNotMatch(CLIENTS, /function viewArchivedInvoicePdf|function renderPortalInvoices/);
+  const fnMatch = INVOICES.match(/async function viewInvoicePdf\(id\)[\s\S]*?\n  \}\n/);
+  assert.ok(fnMatch, 'expected to isolate viewInvoicePdf()');
+  assert.match(fnMatch[0], /getSignedStorageUrl\('invoice-pdfs', 'invoices\/' \+ encodeURIComponent\(inv\.invoiceNumber\) \+ '\.pdf', 600\)/);
 });

@@ -109,7 +109,10 @@ function loadClientsPage({ url = 'https://example.com/tools/clients.html', store
     },
   });
   const w = dom.window;
-  for (const fn of ['renderPortalBugReports', 'renderPortalClientErrors', 'renderReferralCredits', 'renderPortalAccounts', 'renderPortalInvoices', 'renderPortalQuotes', 'renderPortalWorkOrders', 'renderEmailList', 'renderPortalJobsForMessages']) {
+  // Portal bug reports / client errors moved to Dev Tools, and Portal
+  // invoices / quotes left (redundancy pass, 2026-10-31): five portal
+  // panels render here now.
+  for (const fn of ['renderReferralCredits', 'renderPortalAccounts', 'renderPortalWorkOrders', 'renderEmailList', 'renderPortalJobsForMessages']) {
     w[fn] = () => portalCalls.push(fn);
   }
   w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
@@ -125,9 +128,9 @@ test('the page opens on the client list, most recent activity first, and the por
   assert.deepEqual(portalCalls, [], 'no portal-admin request just to show the list');
   w.activateClientsTab('portal');
   assert.ok(w.document.getElementById('tab-portal').classList.contains('is-active'));
-  assert.equal(portalCalls.length, 9);
+  assert.equal(portalCalls.length, 5);
   w.activateClientsTab('directory'); w.activateClientsTab('portal');
-  assert.equal(portalCalls.length, 9, 'rendered once, not on every tab switch');
+  assert.equal(portalCalls.length, 5, 'rendered once, not on every tab switch');
   assert.equal(w.localStorage.getItem('th_clients_tab'), 'portal', 'the tab is remembered per device');
 });
 
@@ -199,7 +202,7 @@ test('an empty registry gets a real empty state with an Add button, not a blank 
 test('deep links: #portal opens Portal, ?search= (the Client Registry\'s "View in Clients" link) still lands on Portal with the search filled, #new opens Add a client', async () => {
   let { w, portalCalls } = loadClientsPage({ url: 'https://example.com/tools/clients.html#portal' });
   assert.ok(w.document.getElementById('tab-portal').classList.contains('is-active'));
-  assert.equal(portalCalls.length, 9);
+  assert.equal(portalCalls.length, 5);
   ({ w } = loadClientsPage({ url: 'https://example.com/tools/clients.html?search=bill%40example.com' }));
   assert.ok(w.document.getElementById('tab-portal').classList.contains('is-active'));
   assert.equal(w.document.getElementById('portalAccountSearch').value, 'bill@example.com');

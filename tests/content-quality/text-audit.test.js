@@ -45,16 +45,15 @@ test('the genuinely dead .results-box/.result-row CSS (leftover from when Cost L
   assert.doesNotMatch(src, /\.result-row\s*\{/);
 });
 
-test('runway-dashboard.html\'s "Pull from X" button, its help text, and its empty-state hint all consistently say Finance now, not Job Tracker -- since Revenue/Expenses/Fuel are pulled from data that now lives on Finance', () => {
+test('runway-dashboard.html takes Revenue/Expenses/Fuel straight from Finance on Save Month -- the "Pull from Finance" button and its three snapshot boxes left in the redundancy pass (2026-10-31), and no copy still tells you to tap it', () => {
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'runway-dashboard.html'), 'utf8');
-  const mentions = src.match(/Pull from (Job Tracker|Finance)/g);
-  assert.ok(mentions.length >= 3, 'expected multiple mentions of this button/action');
-  for (const m of mentions) {
-    assert.equal(m, 'Pull from Finance', 'found an inconsistent mention: ' + m);
-  }
-  // The button itself, specifically by its real id, not just any text match.
-  const buttonMatch = src.match(/id="pullMonthBtn">([^<]+)</);
-  assert.equal(buttonMatch[1], 'Pull from Finance');
+  assert.doesNotMatch(src, /id="pullMonthBtn"|id="biz-revenue"|id="biz-expenses"|id="biz-fuel"/);
+  assert.doesNotMatch(src, /tap "Pull from|Pull from Job Tracker/);
+  const save = src.slice(src.indexOf("document.getElementById('addMonthBtn').addEventListener"), src.indexOf("document.getElementById('ef-balance')"));
+  assert.match(save, /const pulled = pullMonthFromJobTracker\(monthVal\);/);
+  assert.match(save, /revenue: Number\(pulled\.revenue\)\|\|0,\s*expenses: Number\(pulled\.expenses\)\|\|0,\s*fuel: Number\(pulled\.fuel\)\|\|0,/);
+  // What's only on this page stays typed in here.
+  for (const id of ['biz-other', 'biz-draws', 'biz-cash']) assert.match(src, new RegExp('id="' + id + '"'));
 });
 
 test('runway-dashboard.html no longer references startJobTrackerSync, a function that does not exist anywhere in this file', () => {
@@ -96,12 +95,13 @@ test('checkButtonHandlers passes cleanly against the real, current codebase -- c
   assert.equal(result.passed, true, result.output);
 });
 
-test('finance.html\'s 3 real help buttons (Sales Tax, Add Entry, Miles) now have a genuinely working openCardInfo(), moved here from job-tracker.html where it was confirmed completely unused', () => {
+test('finance.html\'s real help buttons (Add Entry, Miles) have a genuinely working openCardInfo(), moved here from job-tracker.html where it was confirmed completely unused (Sales Tax left with the Cost lookup tab, 2026-10-31)', () => {
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'finance.html'), 'utf8');
   assert.match(src, /function openCardInfo\(key\)/);
-  for (const key of ['salesTax', 'incomeEntry', 'mileageRate']) {
+  for (const key of ['incomeEntry', 'mileageRate']) {
     assert.match(src, new RegExp(key + ':\\s*\\{'), key + ' entry not found');
   }
+  assert.doesNotMatch(src, /salesTax:\s*\{|openCardInfo\('salesTax'\)/);
 });
 
 test('job-tracker.html only keeps the "templates" entry now -- the other 3 were confirmed unused there and moved to finance.html, not duplicated', () => {
@@ -149,11 +149,10 @@ test('finance.html\'s back link goes to Workspace, matching every other tool pag
   assert.doesNotMatch(src, /Back to Job Tracker/);
 });
 
-test('runway-dashboard.html\'s diagnostic messages (shown when Pull from Finance finds no data) say Finance, not Job Tracker', () => {
+test('runway-dashboard.html\'s diagnostic message (shown when Finance has no data on this device) says Finance, not Job Tracker', () => {
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'runway-dashboard.html'), 'utf8');
   assert.match(src, /Finance doesn't have any income or expenses logged/);
-  assert.match(src, /Nothing logged in Finance for this specific month/);
-  assert.match(src, /Pulled from Finance/);
+  assert.match(src, /From Finance for this month: Revenue/);
   assert.doesNotMatch(src, /doesn't have any income or expenses logged on this device yet.*Job Tracker/s);
 });
 

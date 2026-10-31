@@ -64,6 +64,27 @@ test('injecting the sidebar on a real page produces the correct number of links,
   assert.equal(window.document.body.classList.contains('th-has-sidebar'), true);
 });
 
+test('Route Planner is off the desktop sidebar but still in the More drawer (and Search), not deleted (redundancy pass, 2026-10-31)', () => {
+  const html = fs.readFileSync(path.join(TOOLS_DIR, 'job-tracker.html'), 'utf8');
+  const navSrc = fs.readFileSync(NAV_PWA_PATH, 'utf8');
+  assert.match(navSrc, /href: '\/tools\/route-planner\.html',\s+icon: 'map',\s+label: 'Route Planner', sidebar: false \}/);
+  const dom = new JSDOM(html, {
+    runScripts: 'dangerously', url: 'https://example.com/tools/job-tracker.html',
+    beforeParse(w) { w.requireAuth = () => {}; },
+  });
+  const { window } = dom;
+  const s = window.document.createElement('script');
+  s.textContent = navSrc;
+  window.document.head.appendChild(s);
+  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+  const sidebarHrefs = [...window.document.querySelectorAll('.th-desktop-sidebar .th-sidebar-link')].map(a => a.getAttribute('href'));
+  assert.ok(sidebarHrefs.includes('/tools/clients.html'));
+  assert.ok(!sidebarHrefs.includes('/tools/route-planner.html'), 'not a primary sidebar slot');
+  const moreHrefs = [...window.document.querySelectorAll('.th-more-sheet-link')].map(a => a.getAttribute('href'));
+  assert.ok(moreHrefs.includes('/tools/route-planner.html'), 'still one tap away in More');
+  assert.ok(fs.existsSync(path.join(TOOLS_DIR, 'route-planner.html')), 'the page itself stays');
+});
+
 test('the sidebar coexists with the mobile bottom nav in the DOM -- CSS media queries decide which one is actually visible, not JS branching', () => {
   const html = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
   const navSrc = fs.readFileSync(NAV_PWA_PATH, 'utf8');

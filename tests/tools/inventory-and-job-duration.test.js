@@ -24,10 +24,16 @@ const workspaceHtml = fs.readFileSync(WORKSPACE_PATH, 'utf8');
 
 // ---------- Inventory ----------
 
-test('finance.html has an Inventory tab wired into the shared tab system', () => {
-  assert.match(financeHtml, /<button class="tab-btn" data-tab="inventory">Inventory<\/button>/);
-  assert.match(financeHtml, /<div class="tab-panel" id="tab-inventory">/);
-  assert.match(financeHtml, /inventory: 'inventory'/);
+// Finance's Inventory tab left in the redundancy pass (2026-10-31): nothing
+// else read th_inventory and it saw little use. Only its screen went --
+// the stored list keeps syncing, backing up and taking tombstones, and
+// Dev Tools still restores a deleted part (see the tests below and
+// tests/sync/tombstone-coverage.test.js).
+
+test('finance.html no longer has an Inventory tab, and no page renders th_inventory -- the data itself is untouched', () => {
+  assert.doesNotMatch(financeHtml, /data-tab="inventory"|id="tab-inventory"|id="inventoryTable"|function renderInventory|function saveInventory/);
+  assert.doesNotMatch(financeHtml, /inventory: 'inventory'/);
+  assert.match(financeHtml, /Inventory \(th_inventory\) left with its tab/);
 });
 
 test('th_inventory is registered in sync.js -- the exact bug class already found once for th_parts_reference_units', () => {
@@ -48,26 +54,9 @@ test('th_inventory is included in the Backup/Restore key list (on dev-tools.html
   assert.doesNotMatch(settingsHtml, /ALL_SYNCED_KEYS|fullBackupKeys/, 'Settings no longer owns the backup key list either');
 });
 
-test('a deleted inventory item gets a tombstone, same pattern as every other deletable record type', () => {
+test('inventory tombstones are still kept and honoured by sync, so a part deleted before the tab left stays deleted', () => {
   assert.match(dataLayerSrc, /function thAddInventoryTombstone\(id\)/);
-  assert.match(financeHtml, /if \(typeof thAddInventoryTombstone === 'function'\) thAddInventoryTombstone\(id\);/);
-});
-
-test('low-stock parts (qty at or below reorderAt) sort first and get a visible warning badge', () => {
-  const fnMatch = financeHtml.match(/function renderInventory\(\) \{[\s\S]*?\n  \}\n/);
-  assert.ok(fnMatch, 'expected to isolate renderInventory()');
-  assert.match(fnMatch[0], /const aLow = a\.qty <= a\.reorderAt \? 0 : 1;/);
-  assert.match(fnMatch[0], /Reorder/);
-});
-
-test('inventory writes go through the same localStorage + scheduleSync pattern as every other tab', () => {
-  assert.match(financeHtml, /function saveInventory\(list\) \{ localStorage\.setItem\(INVENTORY_STORAGE_KEY, JSON\.stringify\(list\)\); if \(typeof scheduleSync === 'function'\) scheduleSync\(\); \}/);
-});
-
-test('the inventory table gets the same mobile card-stacking treatment as the Income/Expenses tables, not a sideways scroll', () => {
-  const mediaMatch = financeHtml.match(/@media \(max-width: 1023px\) \{[\s\S]*?\n  \}/);
-  assert.ok(mediaMatch, 'expected to isolate the mobile responsive-table block');
-  assert.match(mediaMatch[0], /#inventoryTable/);
+  assert.match(syncSrc, /th_inventory_tombstones/);
 });
 
 // ---------- Part Cost Trend ----------

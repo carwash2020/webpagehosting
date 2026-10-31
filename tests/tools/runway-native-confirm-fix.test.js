@@ -22,13 +22,18 @@ for (const phrase of [
   'Delete this income source?',
   'Delete this expense?',
   'Delete ALL personal expenses? This cannot be undone.',
-  'Reset ALL data',
 ]) {
   test(`"${phrase}" now goes through showConfirm(), with danger styling`, () => {
     const re = new RegExp('await showConfirm\\(\'' + phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[^\']*\', \\{ danger: true');
     assert.match(RUNWAY, re);
   });
 }
+
+test('"Reset all data" left with the old Data Management card (redundancy pass, 2026-10-31) -- the Runway-only backup keeps Download and Restore', () => {
+  assert.doesNotMatch(RUNWAY, /id="resetAllBtn"|Reset ALL data/);
+  assert.match(RUNWAY, /id="exportBackupBtn"/);
+  assert.match(RUNWAY, /id="restoreBackupBtn"/);
+});
 
 test('the restore-from-backup confirm also uses showConfirm(), not native confirm()', () => {
   assert.match(RUNWAY, /await showConfirm\('Restore from this file\? This replaces everything currently on this device/);

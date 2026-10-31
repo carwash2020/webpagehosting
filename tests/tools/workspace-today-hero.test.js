@@ -36,12 +36,13 @@ function extractFn(html, name) {
   return html.slice(start, i);
 }
 
-test('the old 8-drawer Today section is gone -- replaced by a real hero with next job, money owed, and rest of day', () => {
+test('the old 8-drawer Today section is gone -- replaced by a real hero with next job and money owed (the hidden Rest of Today list left in the 2026-10-31 redundancy pass: Today\'s route shows the whole day)', () => {
   assert.doesNotMatch(WORKSPACE, /id="section-today"|id="todayJobsList"|id="body-today"/);
   assert.match(WORKSPACE, /<div class="today-hero" id="todayHero">/);
   assert.match(WORKSPACE, /id="todayNextJob"/);
   assert.match(WORKSPACE, /id="todayMoney"/);
-  assert.match(WORKSPACE, /id="todayRestOfDay"/);
+  assert.doesNotMatch(WORKSPACE, /id="todayRestOfDay"|class="today-restofday"/);
+  assert.match(WORKSPACE, /id="todayRoute"/, 'the day\'s jobs are on Today\'s route');
 });
 
 test('renderDashboard renders the Today hero (not the old renderTodayJobs) as part of every render', () => {
@@ -50,10 +51,10 @@ test('renderDashboard renders the Today hero (not the old renderTodayJobs) as pa
   assert.doesNotMatch(dashboardFn, /renderTodayJobs\(\)/);
 });
 
-test('the Next Job card only ever shows the single highest-priority job, and Rest of Today shows the remainder in the same order', () => {
+test('the Next Job card only ever shows the single highest-priority job, and no longer builds the hidden Rest of Today list (redundancy pass, 2026-10-31)', () => {
   const fn = extractFn(WORKSPACE, 'renderTodayHero');
   assert.match(fn, /const job = todaysJobs\[0\];/);
-  assert.match(fn, /const rest = todaysJobs\.slice\(1\);/);
+  assert.doesNotMatch(fn, /todaysJobs\.slice\(1\)|todayRestOfDay|restEl/);
 });
 
 test('money owed is computed once (computeMoneyOwed) and shared between Business Snapshot\'s cards and the Today hero, so they can never disagree', () => {
@@ -76,9 +77,11 @@ test('the money-owed card states an actual Current/Overdue split, not a single l
 test('the "everything else" chip row is gone (2026-09-21): the remaining sections sit right below the inbox under one Business label, each still an anchor target', () => {
   assert.doesNotMatch(WORKSPACE, /id="everythingElseChips"/);
   assert.match(WORKSPACE, /<div class="dash-group-label">Business<\/div>/);
-  for (const id of ['section-snapshot', 'section-analytics', 'section-compliance', 'section-gallery']) {
+  for (const id of ['section-snapshot', 'section-analytics', 'section-compliance']) {
     assert.match(WORKSPACE, new RegExp('<div class="section-block" id="' + id + '">'), `expected ${id}`);
   }
+  // The Gallery queue moved to Site Content (redundancy pass, 2026-10-31).
+  assert.doesNotMatch(WORKSPACE, /id="section-gallery"/);
   assert.doesNotMatch(WORKSPACE, /id="section-backup"|id="section-tools"/, 'Backup moved to Settings; the tile grid was retired');
 });
 
@@ -86,9 +89,13 @@ test('the live counts now sit on the section headings themselves -- Needs attent
   const actionItemsFn = extractFn(WORKSPACE, 'updateActionItemsBadge');
   assert.match(actionItemsFn, /actionItemsHeadingBadge/);
   assert.doesNotMatch(actionItemsFn, /chipActionItems/);
-  assert.match(WORKSPACE, /function updateGalleryChip\(n\) \{[\s\S]{0,400}galleryHeadingBadge/);
+  // The Gallery "waiting" badge went with the queue to Site Content
+  // (redundancy pass, 2026-10-31), still on its own heading.
+  const SITE_CONTENT = fs.readFileSync(repo('tools/site-content.html'), 'utf8');
+  assert.match(SITE_CONTENT, /function updateGalleryChip\(n\) \{[\s\S]{0,400}galleryHeadingBadge/);
+  assert.match(SITE_CONTENT, /id="galleryHeadingBadge"/);
+  assert.doesNotMatch(WORKSPACE, /galleryHeadingBadge|updateGalleryChip/);
   assert.doesNotMatch(WORKSPACE, /chipGallery|chipCompliance/);
-  assert.match(WORKSPACE, /id="galleryHeadingBadge"/);
   assert.match(WORKSPACE, /id="complianceHeadingBadge"/);
 });
 
@@ -97,7 +104,8 @@ test('Needs attention (Action Items) defaults to OPEN -- it is the second answer
   assert.ok(match);
   assert.doesNotMatch(match[1], /\btoday:/);
   assert.match(match[1], /actionitems:\s*false/);
-  for (const key of ['snapshot', 'gallery', 'compliance', 'analytics']) assert.match(match[1], new RegExp(key + ':\\s*true'));
+  for (const key of ['snapshot', 'compliance', 'analytics']) assert.match(match[1], new RegExp(key + ':\\s*true'));
+  assert.doesNotMatch(match[1], /gallery/, 'the Gallery queue moved to Site Content (2026-10-31)');
   assert.doesNotMatch(match[1], /backup/);
 });
 

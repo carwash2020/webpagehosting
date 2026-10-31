@@ -34,18 +34,21 @@ function extractFn(src, name) {
   return src.slice(start, i);
 }
 
-test('page order is answer-first: search, greeting band, hero, action strip, Needs attention, then the Business group -- no chip row, tile grid, Backup drawer, or Tools section', () => {
+test('page order is answer-first: greeting band, hero, route, action strip, Needs attention, Money owed, then the Business group -- no search box, chip row, tile grid, Backup drawer, Tools section or Gallery drawer', () => {
   const at = (needle) => { const i = WORKSPACE.indexOf(needle); assert.ok(i >= 0, `missing ${needle}`); return i; };
+  // Redundancy pass (2026-10-31): Home's own search box left (the shared
+  // Ctrl+K search covers the same records) and the Gallery queue moved to
+  // Site Content.
   const order = [
-    'class="global-search-block"', 'id="greetingBanner"', 'id="todayHero"', 'id="dashPrimaryStrip"',
-    'id="section-actionitems"', 'class="dash-group-label"', 'id="section-snapshot"', 'id="section-analytics"',
-    'id="section-compliance"', 'id="section-gallery"', 'id="helpModalOverlay"',
+    'id="greetingBanner"', 'id="todayHero"', 'id="todayRouteCard"', 'id="dashPrimaryStrip"',
+    'id="section-actionitems"', 'id="todayMoney"', 'class="dash-group-label"', 'id="section-snapshot"', 'id="section-analytics"',
+    'id="section-compliance"', 'id="helpModalOverlay"',
   ];
   for (let i = 1; i < order.length; i++) assert.ok(at(order[i - 1]) < at(order[i]), `${order[i - 1]} should come before ${order[i]}`);
-  for (const gone of ['id="everythingElseChips"', 'class="tools-grid"', 'class="tool-tile', 'id="section-backup"', 'id="section-tools"', 'more-tools-details', 'jumpNavMoreBtn']) {
+  for (const gone of ['id="everythingElseChips"', 'class="tools-grid"', 'class="tool-tile', 'id="section-backup"', 'id="section-tools"', 'more-tools-details', 'jumpNavMoreBtn', 'class="global-search-block"', 'id="globalSearch"', 'id="section-gallery"']) {
     assert.doesNotMatch(WORKSPACE, new RegExp(gone.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `${gone} should be gone`);
   }
-  assert.equal((WORKSPACE.match(/<div class="section-block" id=/g) || []).length, 5, 'exactly five section blocks remain');
+  assert.equal((WORKSPACE.match(/<div class="section-block" id=/g) || []).length, 4, 'exactly four section blocks remain');
 });
 
 test('the greeting is one compact band, not a card: same ids, same asserted rules, a fraction of the height', () => {
@@ -80,16 +83,18 @@ test('Route today: a Google Maps directions link through every address on today\
   assert.match(routePlanner, /'https:\/\/www\.google\.com\/maps\/dir\/\?api=1&destination=' \+ encodeURIComponent\(destination\) \+ '&travelmode=driving'/);
 });
 
-test('the Next Job card offers Route today (or Directions for a single stop) and falls back to View in Job Tracker when no address is on file', () => {
-  const fn = extractFn(WORKSPACE, 'renderTodayHero');
-  assert.match(fn, /const routeUrl = buildTodayRouteUrl\(todaysJobs\);/);
-  assert.match(fn, /id="todayRouteLink"/);
-  assert.match(fn, /target="_blank" rel="noopener"/);
-  assert.match(fn, /'Directions' : 'Route today/);
-  assert.match(fn, /View in Job Tracker/);
+test('the day\'s route is one button, Route all on Today\'s route (redundancy pass, 2026-10-31): the Next Job card no longer repeats it as Route today, and has no "1 of N"', () => {
+  const hero = extractFn(WORKSPACE, 'renderTodayHero');
+  assert.doesNotMatch(hero, /buildTodayRouteUrl|todayRouteLink|Route today|View in Job Tracker/);
+  assert.doesNotMatch(hero, /1 of '|today-next-of/);
+  assert.match(hero, /Open job/);
+  const route = extractFn(WORKSPACE, 'renderTodayRoute');
+  assert.match(route, /const routeUrl = buildTodayRouteUrl\(getTodaysJobs\(\)\);/);
+  assert.match(route, /routeAll\.href = routeUrl; routeAll\.hidden = false;/);
+  assert.match(WORKSPACE, /<a class="th-v2-link" id="todayRouteAll" href="\/tools\/route-planner\.html" target="_blank" rel="noopener" hidden>/);
 });
 
-test('Money Owed lists every unpaid invoice -- overdue first, then current by due date -- each with Mark paid and a due label, capped at six with a pointer to the inbox', () => {
+test('Money Owed lists every unpaid invoice -- overdue first, then current by due date -- each with Mark paid and a due label, six shown and the rest folded under "N more unpaid" (the one list since the Income lane left, 2026-10-31)', () => {
   const fn = extractFn(WORKSPACE, 'renderTodayMoney');
   assert.match(fn, /invoicePaymentStatus\(i\) !== 'paid'/);
   assert.match(fn, /overdue: isOverdue\(i\), due: getDueDate\(i\)/);
@@ -98,7 +103,8 @@ test('Money Owed lists every unpaid invoice -- overdue first, then current by du
   assert.match(fn, /'' : 's'\} overdue`/);
   assert.match(fn, /Due today/);
   assert.match(fn, /Due in \$\{days\} day/);
-  assert.match(fn, /more unpaid in Needs attention below/);
+  assert.doesNotMatch(fn, /in Needs attention below/);
+  assert.match(fn, /<details class="today-money-more-unpaid"><summary>\$\{unpaidInvoices\.length - 6\} more unpaid<\/summary>\$\{unpaidInvoices\.slice\(6\)\.map\(unpaidRowHtml\)\.join\(''\)\}<\/details>/);
   assert.match(fn, /invoiceMarkPaidButtonHtml\(i\)/);
 });
 
@@ -137,24 +143,62 @@ test('the Money Owed rows render current invoices unhighlighted and overdue ones
   window.close();
 });
 
-test('the Income lane leads with unpaid invoices and folds paid/received history under one summary line, unless a search asks for it', () => {
+test('Money owed\'s income list (the old Income lane) folds paid/received history under one summary line and lists open invoices only for a search -- the card above already lists them, once (redundancy pass, 2026-10-31)', () => {
   const fn = extractFn(WORKSPACE, 'renderInvoicesList');
   assert.match(fn, /const isOpenItem = it => it\.kind === 'invoice' && invoicePaymentStatus\(it\.raw\) !== 'paid';/);
+  assert.match(fn, /const openItems = searchTerm \? items\.filter\(isOpenItem\) : \[\];/);
   assert.match(fn, /openItems\.concat\(settledItems\)\.slice\(0, 20\)/);
   assert.match(fn, /<details class="income-settled"><summary>\$\{settledCount\} paid or received<\/summary>/);
-  assert.match(fn, /if \(searchTerm \|\| settledCount === 0\)/);
-  assert.match(fn, /Nothing unpaid right now/);
-  // The lazy-loading contract from workspace-lazy-sections.test.js still
-  // holds: the count updates before any markup is skipped.
-  const countAt = fn.indexOf('actionItemCounts.unpaid');
-  const skipAt = fn.indexOf("dashSectionClosed('actionitems')");
-  assert.ok(countAt >= 0 && skipAt > countAt);
+  assert.match(fn, /if \(searchTerm\) \{\s*container\.innerHTML = openHtml \+ settledHtml;/);
+  // It sits on the always-visible Money owed card now, not in the
+  // collapsible Needs attention drawer, so it no longer skips its markup
+  // when that drawer is closed; the count still updates first.
+  assert.doesNotMatch(fn, /dashSectionClosed\('actionitems'\)/);
+  assert.ok(fn.indexOf('actionItemCounts.unpaid') >= 0);
+  assert.match(WORKSPACE, /<div class="today-money" id="todayMoney">[\s\S]*?<div class="today-money-more ops-lane" data-lane="money" id="todayMoneyMore">[\s\S]*?id="readyToInvoiceGroup"[\s\S]*?id="invoiceSearch"[\s\S]*?<div id="invoicesList"><\/div>/);
+});
+
+test('Mark paid on Money owed: one row per unpaid invoice, nothing listed twice (real DOM render, redundancy pass 2026-10-31)', () => {
+  const today = new Date();
+  const iso = (offset) => { const d = new Date(today); d.setDate(d.getDate() + offset); return d.toISOString().slice(0, 10); };
+  const dom = new JSDOM(WORKSPACE, {
+    runScripts: 'dangerously', url: 'https://example.com/tools/workspace.html',
+    beforeParse(w) {
+      w.requireAuth = () => {};
+      w.getCurrentUserRole = () => ({ roleName: 'Owner' });
+      w.canManageInvoices = () => true;
+      w.canViewFinance = () => true;
+      w.money = (n) => '$' + (Number(n) || 0).toFixed(2);
+      w.escapeHtml = (s) => String(s == null ? '' : s);
+      w.escapeAttr = (s) => String(s == null ? '' : s);
+      const rows = [];
+      for (let k = 1; k <= 8; k++) rows.push({ id: k, invoiceNumber: 'INV-' + k, clientName: 'Client ' + k, total: 100, paid: false, paidAmount: 0, date: iso(-k), terms: 'Net 30' });
+      rows.push({ id: 9, invoiceNumber: 'INV-9', clientName: 'Paid Client', total: 50, paid: true, paidAmount: 50, date: iso(-5), terms: 'Net 15' });
+      w.localStorage.setItem('th_invoices', JSON.stringify(rows));
+    },
+  });
+  const { window } = dom;
+  window.renderTodayMoney(window.computeMoneyOwed());
+  window.renderInvoicesList();
+  const doc = window.document;
+  assert.equal(doc.querySelectorAll('#todayOverdueList > .dash-list-item').length, 6, 'six shown');
+  assert.equal(doc.querySelectorAll('#todayOverdueList .today-money-more-unpaid .dash-list-item').length, 2, 'the other two folded, not dropped');
+  assert.equal(doc.querySelectorAll('#todayMoney .paid-toggle-btn:not(.is-remind):not(.is-paid)').length, 8, 'one Mark paid per unpaid invoice, in the whole card');
+  const history = doc.querySelectorAll('#invoicesList .dash-list-item');
+  assert.equal(history.length, 1, 'only the paid invoice, in the history');
+  assert.match(history[0].textContent, /Paid Client/);
+  window.close();
 });
 
 test('the heading badge shows the breakdown on wide screens and only the total on a phone, so the long sentence no longer wraps the heading', () => {
   const fn = extractFn(WORKSPACE, 'updateActionItemsBadge');
   assert.match(fn, /ai-badge-detail/);
-  assert.match(fn, /ai-badge-total[^`]*\$\{total\}/);
+  // Since the redundancy pass (2026-10-31) unpaid / to-invoice live on the
+  // Money owed card: the heading counts only what this section holds, while
+  // the app icon badge (total) still counts them.
+  assert.match(fn, /ai-badge-total[^`]*\$\{total - actionItemCounts\.unpaid - actionItemCounts\.toinvoice\}/);
+  assert.doesNotMatch(fn, /parts\.push\(actionItemCounts\.unpaid/);
+  assert.match(fn, /navigator\.setAppBadge\(total\)/);
   assert.match(WORKSPACE, /\.ai-badge-total \{ display: none; \}/);
   assert.match(WORKSPACE, /@media \(max-width: 720px\) \{\s*\.ai-badge-detail \{ display: none; \}\s*\.ai-badge-total \{ display: inline-block; \}/);
 });
@@ -194,7 +238,8 @@ test('workspace.html\'s 3 tour steps (of the First Impressions handoff\'s 6, 202
 
 test('the help modal describes the new layout and no longer mentions the chip row, the Tools section, or the retired Show on Calendar checkbox', () => {
   const help = WORKSPACE.match(/<div class="help-modal-body">([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>\s*<script>/)[1];
-  assert.match(help, /Route today/);
+  assert.match(help, /Route all/);
+  assert.doesNotMatch(help, /Route today|Rest of Today|Gallery Queue/);
   assert.match(help, /Needs attention/);
   assert.match(help, /Backup &amp; Restore lives in Dev Tools/, 'moved Settings -> Dev Tools on 2026-09-22');
   assert.doesNotMatch(help, /chip row|More tools|Show on Calendar|Today's schedule/);

@@ -36,41 +36,40 @@ function isolateFn(src, name) {
   return m[0];
 }
 
-test('resendPortalInvoice calls send-invoice-notification directly, not sync-invoice-to-portal', () => {
-  const fn = isolateFn(CLIENTS, 'resendPortalInvoice');
-  assert.match(fn, /\/functions\/v1\/send-invoice-notification/);
-  assert.doesNotMatch(fn, /\/functions\/v1\/sync-invoice-to-portal/);
+// Redundancy pass (2026-10-31): Clients' Portal invoices / Portal quotes
+// panels (and resendPortalInvoice / resendPortalQuote) left -- the
+// Invoices list resends both. The fix pinned below moved with them: a
+// resend of an unchanged email calls the notification function directly
+// (not sync-*-to-portal's new-only email path) and reports an opted-out
+// client honestly. tests/tools/resend-invoice-actually-emails.test.js runs
+// the invoice side for real.
+const INVOICES = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'invoice-generator.html'), 'utf8');
+
+test('Clients no longer has Portal invoices / Portal quotes panels or their Resend functions; the portal tables are still read by Client Lookup', () => {
+  assert.doesNotMatch(CLIENTS, /<h2>Portal invoices<\/h2>|<h2>Portal quotes<\/h2>|id="portalInvoices"|id="portalQuotes"/);
+  assert.doesNotMatch(CLIENTS, /async function (resendPortalInvoice|resendPortalQuote|renderPortalInvoices|renderPortalQuotes)\(/);
+  assert.match(CLIENTS, /client_portal_invoices/);
+  assert.match(CLIENTS, /client_portal_quotes/);
 });
 
-test('resendPortalInvoice distinguishes a real send from an opted-out skip, not just result.ok', () => {
-  const fn = isolateFn(CLIENTS, 'resendPortalInvoice');
-  assert.match(fn, /result\.ok && result\.skipped/);
-  assert.match(fn, /Opted out/);
+test('the Invoices list\'s invoice Resend calls send-invoice-notification directly and distinguishes an opted-out skip from a real send', () => {
+  const fn = isolateFn(INVOICES, 'resendInvoiceToClient');
+  assert.match(fn, /\/functions\/v1\/send-invoice-notification/);
+  assert.match(fn, /result && result\.ok && result\.skipped/);
   assert.match(fn, /turned off invoice\/quote emails/i);
 });
 
-test('resendPortalQuote exists and calls send-quote-notification directly', () => {
-  const fn = isolateFn(CLIENTS, 'resendPortalQuote');
+test('the Invoices list\'s quote Resend calls send-quote-notification directly, with the same opted-out handling', () => {
+  const fn = isolateFn(INVOICES, 'resendQuoteToClient');
   assert.match(fn, /\/functions\/v1\/send-quote-notification/);
-  assert.doesNotMatch(fn, /\/functions\/v1\/sync-quote-to-portal/);
-  assert.match(fn, /result\.ok && result\.skipped/);
+  assert.match(fn, /result && result\.ok && result\.skipped/);
 });
 
-test('a Portal quotes panel exists, mirroring Portal invoices (search + list + info bubble)', () => {
-  assert.match(CLIENTS, /<h2>Portal quotes<\/h2>/);
-  assert.match(CLIENTS, /id="portalQuoteSearch"[^>]*oninput="renderPortalQuotes\(\)"/);
-  assert.match(CLIENTS, /<div id="portalQuotes"><\/div>/);
-  assert.match(CLIENTS, /onclick="openDevInfo\('portalquotes'\)"/);
-});
-
-test('renderPortalQuotes() fetches client_portal_quotes and renders a Resend button per row', () => {
-  const fn = isolateFn(CLIENTS, 'renderPortalQuotes');
-  assert.match(fn, /client_portal_quotes\?select=/);
-  assert.match(fn, /resendPortalQuote\(/);
-});
-
-test('renderPortalQuotes() is called on page init alongside renderPortalInvoices()', () => {
-  assert.match(CLIENTS, /renderPortalInvoices\(\);\s*\n\s*renderPortalQuotes\(\);/);
+test('the Invoices list offers Resend on every invoice and quote row (desktop row and the row ⋯ sheet)', () => {
+  assert.match(INVOICES, /<button class="small-btn" onclick="resendInvoiceToClient\(' \+ inv\.id \+ '\)">Resend<\/button>/);
+  assert.match(INVOICES, /<button class="small-btn" onclick="resendQuoteToClient\(\$\{q\.id\}\)">Resend<\/button>/);
+  assert.match(INVOICES, /label: inv\.clientEmail \? 'Resend' : 'Send to an email', onClick: \(\) => resendInvoiceToClient\(id\)/);
+  assert.match(INVOICES, /label: q\.clientEmail \? 'Resend' : 'Send to an email', onClick: \(\) => resendQuoteToClient\(id\)/);
 });
 
 test('DEV_INFO has a portalquotes entry so the info bubble has something to show', () => {

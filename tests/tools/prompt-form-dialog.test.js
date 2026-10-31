@@ -58,10 +58,8 @@ test('toggleFeatureUI\'s caption prompt actually aborts on cancel now (the old d
   assert.doesNotMatch(fn, /caption === null/);
 });
 
-test('savePriceReference/addLicensePrompt use showPromptForm() with real validation', () => {
-  const priceFn = FINANCE.match(/async function savePriceReference\(\)[\s\S]*?\n  \}\n/)[0];
-  assert.match(priceFn, /showPromptForm\('Name this job type'/);
-  assert.match(priceFn, /validate: \(v\) => \(!v\.label/);
+test('addLicensePrompt uses showPromptForm() with real validation (savePriceReference, the other caller, left with Finance\'s Cost lookup tab on 2026-10-31)', () => {
+  assert.doesNotMatch(FINANCE, /async function savePriceReference\(\)/);
 
   const licenseFn = WORKSPACE.match(/async function addLicensePrompt\(\)[\s\S]*?\n  \}\n/)[0];
   assert.match(licenseFn, /showPromptForm\('Add a business license'/);
