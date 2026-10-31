@@ -3,7 +3,13 @@
 Started 2026-09-16, alongside the `tripleh-features` skill. See `README.md`
 in this directory for how these logs work.
 
-## 2026-10-31 -- Redundancy pass rebased onto Phase 4: old deep links redirected
+## 2026-10-31 -- Saved job types: create/delete back, on New invoice / New quote ("Manage saved job types")
+
+- The open gap below ("creating or deleting a saved job type has no UI since Cost Lookup left") is closed. A "Manage saved job types" link under each "Add From Saved Job Types" picker in `invoice-generator.html` opens a chip list with × delete and "+ New saved job type" (name, hours, rate).
+- Functions: `createPriceReference()`, `deletePriceReference(id)`, `renderPriceRefManagers()`, `togglePriceRefManager()`. `populatePriceRefPickers()` now re-renders the panels too.
+- Data is unchanged: `th_price_reference` entries are still `{ id: Date.now(), label, hours, rate }`, exactly what Cost Lookup wrote. Delete still tombstones (`th_price_ref_tombstones`, matched on the record's own `id`) and adds to the graveyard as `priceReference`. No table, column or key changed.
+- Also in this round: a stamp-only rebase onto #549. See `visual.md`.
+
 
 - `finance.html#cost` → New quote (`invoice-generator.html#quote`) when the account can manage invoices, else Expenses. It's done by `redirectRetiredFinanceHash()` in finance.html, after the role loads and before the Finance gate.
 - `workspace.html#section-gallery` / `#gallery` → `site-content.html#gallery`, which opens and scrolls to the Gallery queue.
@@ -16,7 +22,7 @@ This was the UI-only consolidation of 19 duplicate screens; the full write-up is
 - **Runway's tax set-aside rate is the Dashboard's** (`th_setaside_rate`). Runway no longer reads `rd_budget-settings.taxSetAsideRate`, which is kept as it was. Save Month records revenue/expenses/fuel from Finance (`pullMonthFromJobTracker()`); there's no Pull button or editable boxes.
 - **Job Tracker's Log Expense** opens `finance.html?job=<id>#expenses` (needs `canViewFinance`); Finance's `addExpense()` is the only expense form.
 - **Job Tracker's Contacts tab is Suppliers.** Same storage, hash and record shape; clients are added on Clients.
-- **Open gaps (new features, not built):** creating or deleting a saved job type (`th_price_reference`) has no UI since Cost Lookup left; the Invoices list doesn't show whether an invoice reached the portal ("never sent").
+- **Open gaps (new features, not built):** the Invoices list doesn't show whether an invoice reached the portal ("never sent"). (Creating or deleting a saved job type, `th_price_reference`, was an open gap here too. It's back, see the entry above.)
 
 ## 2026-09-18 -- refrigerator and dishwasher repair in St. George
 

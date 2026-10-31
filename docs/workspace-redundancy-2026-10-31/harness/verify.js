@@ -161,6 +161,56 @@ async function open(browser, url, opts, wait) {
     }
     const q = await open(browser, '/tools/invoice-generator.html#quote');
     check(11, 'New quote\'s "Add From Saved Job Types" still lists th_price_reference', await q.page.evaluate(() => !document.getElementById('quotePriceRefRow').style.display.includes('none') && /Dishwasher install/.test(document.getElementById('quotePriceRefSelect').textContent)));
+
+    // Item 11 follow-up (post-#549 round): "Manage saved job types" puts
+    // back Cost Lookup's create/delete for th_price_reference. Driven
+    // through the real taps and the real showPromptForm dialog.
+    const p = q.page;
+    const tog = await p.evaluate(() => { const b = document.getElementById('quotePriceRefManageToggle'); const r = b.getBoundingClientRect(); return { h: r.height, vis: r.height > 0 && getComputedStyle(b).visibility !== 'hidden', text: b.textContent.trim(), exp: b.getAttribute('aria-expanded') }; });
+    check('11+', 'New quote: "Manage saved job types" link under the picker, 44px tall, collapsed', tog.vis && tog.h >= 44 && tog.text === 'Manage saved job types' && tog.exp === 'false', JSON.stringify(tog));
+    await p.click('#quotePriceRefManageToggle');
+    const opened = await p.evaluate(() => ({ hidden: document.getElementById('quotePriceRefManager').hidden, exp: document.getElementById('quotePriceRefManageToggle').getAttribute('aria-expanded'), chips: [...document.querySelectorAll('#quotePriceRefManager .price-ref-chip')].map((c) => c.textContent.replace(/\s+/g, ' ').trim()) }));
+    check('11+', 'opened, it lists the existing saved job type with hours and rate', !opened.hidden && opened.exp === 'true' && opened.chips.length === 1 && /Dishwasher install 2hr @ \$85\/hr/.test(opened.chips[0]), JSON.stringify(opened));
+    await p.click('#quotePriceRefManager .add-row-btn');
+    await p.waitForSelector('#customDialogOverlay.is-open');
+    await p.fill('#customDialogField0', 'Drywall patch - small');
+    await p.fill('#customDialogField1', '1.5');
+    await p.fill('#customDialogField2', '90');
+    await p.click('#customDialogButtons .dialog-btn-primary');
+    await p.waitForTimeout(400);
+    const made = await p.evaluate(() => {
+      const list = JSON.parse(localStorage.getItem('th_price_reference') || '[]');
+      const n = list.find((r) => r.label === 'Drywall patch - small');
+      return { count: list.length, keys: n ? Object.keys(n).sort().join(',') : '', types: n ? [typeof n.id, typeof n.hours, typeof n.rate].join(',') : '', hours: n && n.hours, rate: n && n.rate, quotePick: /Drywall patch - small \(1\.5hr @ \$90\/hr\)/.test(document.getElementById('quotePriceRefSelect').textContent), invPick: /Drywall patch - small/.test(document.getElementById('invoicePriceRefSelect').textContent), chips: document.querySelectorAll('#quotePriceRefManager .price-ref-chip').length, dialogOpen: document.getElementById('customDialogOverlay').classList.contains('is-open') };
+    });
+    check('11+', 'create: stored as { id, label, hours, rate } (numbers), same shape Cost Lookup wrote', made.count === 2 && made.keys === 'hours,id,label,rate' && made.types === 'number,number,number' && made.hours === 1.5 && made.rate === 90 && !made.dialogOpen, JSON.stringify(made));
+    check('11+', 'create: the new job type appears in New quote\'s and New invoice\'s pickers and the manage list', made.quotePick && made.invPick && made.chips === 2, JSON.stringify(made));
+    const added = await p.evaluate(() => {
+      const sel = document.getElementById('quotePriceRefSelect');
+      const opt = [...sel.options].find((o) => /Drywall/.test(o.textContent));
+      sel.value = opt.value;
+      return true;
+    }) && await p.click('#quotePriceRefRow .add-row-btn').then(() => p.evaluate(() => [...document.querySelectorAll('#quoteLineItemsBody tr')].some((tr) => [...tr.querySelectorAll('input')].some((i) => i.value === 'Drywall patch - small'))));
+    check('11+', 'the new job type adds as a quote line item from the picker', added);
+    const newId = await p.evaluate(() => JSON.parse(localStorage.getItem('th_price_reference')).find((r) => r.label === 'Drywall patch - small').id);
+    await p.click('#quotePriceRefManager .price-ref-chip[data-price-ref-id="' + newId + '"] .chip-remove');
+    await p.waitForTimeout(300);
+    const gone = await p.evaluate((id) => ({
+      stored: JSON.parse(localStorage.getItem('th_price_reference')).map((r) => r.label),
+      pick: /Drywall/.test(document.getElementById('quotePriceRefSelect').textContent) || /Drywall/.test(document.getElementById('invoicePriceRefSelect').textContent),
+      chips: [...document.querySelectorAll('#quotePriceRefManager .price-ref-chip')].map((c) => c.textContent),
+      tomb: JSON.parse(localStorage.getItem('th_price_ref_tombstones') || '[]').some((t) => t.id === id),
+      grave: JSON.parse(localStorage.getItem('th_graveyard') || '[]').some((g) => g.recordType === 'priceReference' && g.record && g.record.id === id),
+    }), newId);
+    check('11+', 'delete: gone from storage, both pickers and the manage list', JSON.stringify(gone.stored) === '["Dishwasher install"]' && !gone.pick && gone.chips.length === 1 && !/Drywall/.test(gone.chips.join('')), JSON.stringify(gone));
+    check('11+', 'delete: tombstoned (sync will not bring it back) and kept in Dev Tools\' deleted items', gone.tomb && gone.grave, JSON.stringify(gone));
+    await p.click('#quotePriceRefManager .price-ref-chip .chip-remove');
+    await p.waitForTimeout(300);
+    const empty = await p.evaluate(() => ({ row: document.getElementById('quotePriceRefRow').style.display, link: document.getElementById('quotePriceRefManageToggle').getBoundingClientRect().height, note: (document.querySelector('#quotePriceRefManager .price-ref-list') || {}).textContent.trim() }));
+    check('11+', 'with none left the picker hides but the manage link (and its + New) stays reachable', empty.row === 'none' && empty.link >= 44 && /No saved job types yet/.test(empty.note), JSON.stringify(empty));
+    const ov = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    check('11+', 'manage panel open: no sideways scroll at 390', ov <= 0, 'overflow ' + ov);
+    check('11+', 'manage flow: no page errors', q.errors.length === 0, q.errors.join(' | '));
     await q.ctx.close();
   }
   // Redirects for removed/relocated deep links (rebase onto Phase 4, 2026-10-31).
@@ -250,6 +300,10 @@ async function open(browser, url, opts, wait) {
     const badge = await page.evaluate(() => (document.getElementById('galleryHeadingBadge') || {}).textContent || '');
     await page.evaluate(() => { const p = document.getElementById('section-gallery'); if (p.classList.contains('is-collapsed')) toggleDevPanel(p.querySelector('.dev-panel-heading')); });
     await page.waitForTimeout(1500);
+    // The slider's photos are loading="lazy": bring them on screen the way
+    // a person scrolling to them would, then give them a moment to load.
+    await page.evaluate(() => { const el = document.querySelector('#galleryQueueList .ba-slider'); if (el) el.scrollIntoView({ block: 'center' }); });
+    await page.waitForTimeout(1200);
     const r = await page.evaluate(() => ({ slider: document.querySelectorAll('#galleryQueueList .ba-slider').length, tiles: document.querySelectorAll('#galleryQueueList .gallery-queue-item').length, img: [...document.querySelectorAll('#galleryQueueList .ba-slider img')].every((i) => i.naturalWidth > 0) }));
     check(17, 'Site Content: collapsed Gallery queue shows its count', /3 waiting/.test(badge), badge);
     check(17, 'Site Content: opened, it renders the before/after slider and tiles, and the photos load', r.slider === 1 && r.tiles === 2 && r.img, JSON.stringify(r));

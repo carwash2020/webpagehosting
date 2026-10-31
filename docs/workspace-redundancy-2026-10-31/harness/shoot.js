@@ -55,6 +55,9 @@ const STATES = [
   { name: 'finance', url: '/tools/finance.html' },
   // Item 11: New quote's saved job types picker still reads th_price_reference.
   { name: 'new-quote', url: '/tools/invoice-generator.html#quote', act: scrollTo('#quotePriceRefRow', 200) },
+  // Item 11 follow-up: "Manage saved job types" open under the picker
+  // (create/delete for th_price_reference, Cost Lookup's lost half).
+  { name: 'new-quote-manage', url: '/tools/invoice-generator.html#quote', act: async (page) => { await page.evaluate(() => { const b = document.getElementById('quotePriceRefManageToggle'); if (b) b.click(); }); await page.waitForTimeout(300); await scrollTo('#quotePriceRefRow', 200)(page); } },
   // Item 13: the Invoices list's Resend.
   { name: 'invoices', url: '/tools/invoice-generator.html' },
   // Items 9, 19: Runway.

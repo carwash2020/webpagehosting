@@ -197,3 +197,130 @@ test('redirect: an old Home ?search= link opens Money owed\'s search and drops t
   assert.match(html, /showMoneyCardAfterRender = true;/);
   assert.match(html, /behavior: 'instant'/);
 });
+
+// ---- Item 11 follow-up: "Manage saved job types" on New invoice / New
+// quote puts back Cost Lookup's create + delete for th_price_reference.
+// Runs the page's real picker + manager markup and functions with the real
+// showPromptForm() (tools-dialogs.js) and the real tombstone/graveyard
+// writers (data-layer.js), same approach as resend-quote.test.js. ----
+
+const IG = read('invoice-generator.html');
+const PRICE_REF_JS = IG.slice(IG.indexOf('  function loadPriceReferencesForPicker() {'), IG.indexOf('  async function createPriceReference() {'))
+  + IG.match(/ {2}async function createPriceReference\(\) \{[\s\S]*?\n {2}\}\n {2}function deletePriceReference\(id\) \{[\s\S]*?\n {2}\}\n/)[0];
+const PRICE_REF_HTML = ['invoice', 'quote'].map((k) => IG.match(new RegExp('  <div class="tool-form-row" id="' + k + 'PriceRefRow"[\\s\\S]*?PriceRefManager" hidden>[\\s\\S]*?\\n    </div>\\n  </div>\\n'))[0]).join('');
+
+function loadPriceRefManager(seed) {
+  const dom = new JSDOM('<!doctype html><body>' + PRICE_REF_HTML + '</body>', { url: 'https://example.com/tools/invoice-generator.html', runScripts: 'outside-only' });
+  const w = dom.window;
+  const out = { syncs: 0, toasts: [], added: [] };
+  Object.entries(seed || {}).forEach(([k, v]) => w.localStorage.setItem(k, JSON.stringify(v)));
+  w.eval(read('tools-dialogs.js'));
+  w.eval(read('data-layer.js'));
+  w.scheduleSync = () => { out.syncs++; };
+  w.showToast = (m) => out.toasts.push(m);
+  w.addQuoteLineItem = (...a) => out.added.push(a);
+  w.eval(PRICE_REF_JS + '\nObject.assign(window, { populatePriceRefPickers, togglePriceRefManager, createPriceReference, deletePriceReference, addLineItemFromPriceRef });');
+  w.populatePriceRefPickers();
+  const stored = () => JSON.parse(w.localStorage.getItem('th_price_reference') || '[]');
+  const $ = (s) => w.document.querySelector(s);
+  // jsdom's outside-only mode doesn't run inline on* attributes; run the
+  // button's own onclick text, bound to the button, as a click would.
+  const tap = (sel) => { const b = $(sel); new w.Function(b.getAttribute('onclick')).call(b); };
+  return { w, out, stored, $, tap };
+}
+
+test('item 11 follow-up: a "Manage saved job types" link sits under both pickers, outside the row that hides when the list is empty', () => {
+  const { $ } = loadPriceRefManager({});
+  assert.equal($('#quotePriceRefRow').style.display, 'none', 'no saved types: the picker row hides, as before');
+  for (const k of ['invoice', 'quote']) {
+    const t = $('#' + k + 'PriceRefManageToggle');
+    assert.ok(t && !t.closest('#' + k + 'PriceRefRow'), k + ': link is outside the hidden picker row');
+    assert.equal(t.textContent, 'Manage saved job types');
+    assert.equal(t.getAttribute('aria-controls'), k + 'PriceRefManager');
+    assert.equal($('#' + k + 'PriceRefManager').hidden, true);
+  }
+});
+
+test('item 11 follow-up: create writes { id, label, hours, rate } -- the exact shape Cost Lookup\'s Save Current as Reference wrote -- and the picker lists it', async () => {
+  // The old writer, from main before the redundancy pass (907e562:tools/finance.html):
+  //   list.push({ id: Date.now(), label: values.label, hours, rate });
+  const { w, out, stored, $, tap } = loadPriceRefManager({ th_price_reference: [{ id: 1, label: 'Dishwasher install', hours: 2, rate: 85 }] });
+  tap('#quotePriceRefManageToggle');
+  assert.equal($('#quotePriceRefManager').hidden, false);
+  assert.equal($('#quotePriceRefManageToggle').getAttribute('aria-expanded'), 'true');
+  assert.equal(w.document.querySelectorAll('#quotePriceRefManager .price-ref-chip').length, 1);
+
+  const before = Date.now();
+  const p = w.createPriceReference();
+  assert.equal($('#quotePriceRefManager .add-row-btn').getAttribute('onclick'), 'createPriceReference()');
+  await tick(0);
+  assert.equal($('#customDialogMessage').textContent, 'New saved job type');
+  const f = (i) => $('#customDialogField' + i);
+  assert.equal(f(1).type, 'number');
+  assert.equal(f(2).type, 'number');
+  const save = () => [...w.document.querySelectorAll('#customDialogButtons button')].find((b) => b.textContent === 'Save').click();
+  save(); // no name
+  assert.match($('#customDialogFieldsError').textContent, /Enter a name/);
+  f(0).value = 'Drywall patch - small'; f(1).value = '-1'; save();
+  assert.match($('#customDialogFieldsError').textContent, /0 or more/);
+  f(1).value = '1.5'; f(2).value = '90'; save();
+  await p;
+
+  const list = stored();
+  assert.equal(list.length, 2);
+  const n = list[1];
+  assert.deepEqual(Object.keys(n).sort(), ['hours', 'id', 'label', 'rate']);
+  assert.equal(typeof n.id, 'number');
+  assert.ok(n.id >= before);
+  assert.deepEqual({ label: n.label, hours: n.hours, rate: n.rate }, { label: 'Drywall patch - small', hours: 1.5, rate: 90 });
+  assert.deepEqual(list[0], { id: 1, label: 'Dishwasher install', hours: 2, rate: 85 }, 'existing entries untouched');
+  assert.equal(out.syncs, 1);
+  assert.match($('#quotePriceRefSelect').textContent, /Drywall patch - small \(1\.5hr @ \$90\/hr\)/);
+  assert.match($('#invoicePriceRefSelect').textContent, /Drywall patch - small/);
+  assert.equal(w.document.querySelectorAll('#quotePriceRefManager .price-ref-chip').length, 2);
+  // ... and the picker adds it as a labor line, the same way it always did.
+  $('#quotePriceRefSelect').value = '1';
+  w.addLineItemFromPriceRef('quotePriceRefSelect', 'addQuoteLineItem');
+  assert.deepEqual(out.added[0], ['Drywall patch - small', '', 1.5, 90, true, 'labor', true]);
+});
+
+test('item 11 follow-up: Cancel on the new-job-type dialog saves nothing', async () => {
+  const { w, out, stored, $ } = loadPriceRefManager({});
+  const p = w.createPriceReference();
+  await tick(0);
+  $('#customDialogField0').value = 'Never saved';
+  $('#customDialogCancelAction').click();
+  await p;
+  assert.deepEqual(stored(), []);
+  assert.equal(out.syncs, 0);
+});
+
+test('item 11 follow-up: delete (x) removes it everywhere, tombstones it for sync and keeps it in the deleted-items graveyard, like Cost Lookup did', () => {
+  const seed = [{ id: 1, label: 'Dishwasher install', hours: 2, rate: 85 }, { id: 1790000000000, label: 'Disposal swap', hours: 1, rate: 90 }];
+  const { w, out, stored, $, tap } = loadPriceRefManager({ th_price_reference: seed });
+  w.togglePriceRefManager('quotePriceRefManager', $('#quotePriceRefManageToggle'));
+  tap('#quotePriceRefManager .price-ref-chip[data-price-ref-id="1790000000000"] .chip-remove');
+  assert.deepEqual(stored(), [seed[0]]);
+  assert.ok(out.syncs >= 1, 'queued for sync (the tombstone and graveyard writes queue their own too)');
+  assert.doesNotMatch($('#quotePriceRefSelect').textContent, /Disposal swap/);
+  assert.doesNotMatch($('#invoicePriceRefManager').textContent + $('#quotePriceRefManager').textContent, /Disposal swap/);
+  const tomb = JSON.parse(w.localStorage.getItem('th_price_ref_tombstones'));
+  assert.equal(tomb.length, 1);
+  assert.equal(tomb[0].id, 1790000000000, 'tombstoned with the record\'s own (numeric) id, which sync matches on');
+  const grave = JSON.parse(w.localStorage.getItem('th_graveyard'));
+  assert.equal(grave[0].recordType, 'priceReference');
+  assert.deepEqual(grave[0].record, seed[1]);
+  // Last one gone: the picker hides again, the manage link stays.
+  tap('#quotePriceRefManager .price-ref-chip .chip-remove');
+  assert.deepEqual(stored(), []);
+  assert.equal($('#quotePriceRefRow').style.display, 'none');
+  assert.ok($('#quotePriceRefManageToggle'));
+  assert.match($('#quotePriceRefManager .price-ref-list').textContent, /No saved job types yet/);
+});
+
+test('item 11 follow-up: a saved label is escaped in the manage list (no markup injection)', () => {
+  const { w, $ } = loadPriceRefManager({ th_price_reference: [{ id: 5, label: '<img src=x onerror=alert(1)>', hours: 1, rate: 1 }] });
+  w.togglePriceRefManager('quotePriceRefManager', $('#quotePriceRefManageToggle'));
+  assert.equal(w.document.querySelectorAll('#quotePriceRefManager img').length, 0);
+  assert.match($('#quotePriceRefManager .price-ref-chip').textContent, /<img src=x/);
+});
