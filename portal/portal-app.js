@@ -327,6 +327,85 @@ function portalBiometricLockGate(email, client) {
   });
 }
 
+// ---------------------------------------------------------------------
+// Sign-in session lifetime ("Remember me for 30 days", 2026-10-31).
+//
+// supabase-js stores its session through whatever `storage` object it is
+// given. portalAuthStorage() is that object for every portal page:
+//   - remember ON  (or any session that predates this): localStorage, so
+//     it survives closing the browser. portalSetRemember(true) also stamps
+//     a hard 30-day cutoff, checked on every read, because Supabase has no
+//     per-login refresh-token lifetime.
+//   - remember OFF: sessionStorage, so it ends when the browser closes.
+// Sessions that were already signed in before this shipped sit in
+// localStorage with no cutoff and keep working exactly as before.
+// Password/2FA logic is untouched; this only decides WHERE the session lives.
+var PORTAL_REMEMBER_DAYS = 30;
+var PORTAL_REMEMBER_UNTIL_KEY = 'th_portal_remember_until';
+var PORTAL_SESSION_ONLY_KEY = 'th_portal_session_only';
+
+function portalSafeStore(kind) {
+  try { return window[kind]; } catch (e) { return null; }
+}
+function portalStoreGet(store, key) {
+  try { return store ? store.getItem(key) : null; } catch (e) { return null; }
+}
+function portalStoreSet(store, key, value) {
+  try { if (store) store.setItem(key, value); } catch (e) { /* storage full or blocked */ }
+}
+function portalStoreRemove(store, key) {
+  try { if (store) store.removeItem(key); } catch (e) { /* ignore */ }
+}
+
+// remember === true: keep this device signed in for 30 days.
+// remember === false: end the session when the browser closes.
+// Only flips the mode; the next session write (supabase-js writes one after
+// every sign-in, 2FA verify and token refresh) lands in the right store and
+// deletes the copy in the other one.
+function portalSetRemember(remember) {
+  var local = portalSafeStore('localStorage');
+  var session = portalSafeStore('sessionStorage');
+  if (remember) {
+    portalStoreSet(local, PORTAL_REMEMBER_UNTIL_KEY, String(Date.now() + PORTAL_REMEMBER_DAYS * 24 * 60 * 60 * 1000));
+    portalStoreRemove(session, PORTAL_SESSION_ONLY_KEY);
+  } else {
+    portalStoreRemove(local, PORTAL_REMEMBER_UNTIL_KEY);
+    portalStoreSet(session, PORTAL_SESSION_ONLY_KEY, '1');
+  }
+}
+
+function portalAuthStorage() {
+  var local = portalSafeStore('localStorage');
+  var session = portalSafeStore('sessionStorage');
+  return {
+    getItem: function (key) {
+      var fromSession = portalStoreGet(session, key);
+      if (fromSession !== null) return fromSession;
+      var until = Number(portalStoreGet(local, PORTAL_REMEMBER_UNTIL_KEY));
+      if (until && Date.now() > until) {
+        portalStoreRemove(local, key);
+        portalStoreRemove(local, PORTAL_REMEMBER_UNTIL_KEY);
+        return null;
+      }
+      return portalStoreGet(local, key);
+    },
+    setItem: function (key, value) {
+      var sessionOnly = portalStoreGet(session, PORTAL_SESSION_ONLY_KEY) !== null;
+      if (sessionOnly) {
+        portalStoreSet(session, key, value);
+        portalStoreRemove(local, key);
+      } else {
+        portalStoreSet(local, key, value);
+        portalStoreRemove(session, key);
+      }
+    },
+    removeItem: function (key) {
+      portalStoreRemove(session, key);
+      portalStoreRemove(local, key);
+    },
+  };
+}
+
 // Face ID instead of the 2FA code (2026-09-23), requested directly:
 // "facial recognition AND two factor is way too much. Make it pick
 // facial over two factor... also make two factor optional." Two-factor

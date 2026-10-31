@@ -46,7 +46,7 @@
   listing it in the sitemap / robots index was the outlier. See
   tests/seo/portal-login-noindex.test.js.
 -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://csvfqdjuobylgafgolho.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://csvfqdjuobylgafgolho.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <!-- color-scheme (2026-09-02): tells the browser to use a DARK default
      canvas BEFORE any CSS is parsed. Without it the browser paints its
      own white default first, which showed as a white flash on every
@@ -187,18 +187,37 @@
   .th-code-hint { font-size: 13px; color: var(--text-dim); margin: 0 0 12px; }
 </style>
 <link rel="stylesheet" href="/portal/portal-polish.css?v=7564929584">
+<!-- Sign-in rebuild (2026-10-31): ghost logo, Bricolage Grotesque + Geist, brand orange on ink.
+     Loaded last so it restyles the card above without changing any id, field or auth call. -->
+<link rel="preload" href="/fonts/signin/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/signin/geist-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/signin.css?v=b0eedcc727">
+<script src="/signin-ui.js?v=557e91d779"></script>
+<script>
+  // Sign-in must never depend on a cosmetic script. If /signin-ui.js did not
+  // load (offline, stale cache), fall back to plain behaviour: same busy
+  // label, instant redirect, no animation. The real helper replaces this.
+  window.ThSignin = window.ThSignin || {
+    initPasswordToggles: function () {},
+    setInvalid: function () {},
+    shake: function () {},
+    setBusy: function (btn, busy, busyLabel, idleLabel) { if (btn) { btn.disabled = !!busy; btn.textContent = busy ? busyLabel : idleLabel; } },
+    success: function (done) { done(); },
+  };
+</script>
 </head>
-<body>
+<body class="th-signin si">
 
+<!-- Big Triple H logo, ghosted at 8% behind the form. Decorative, so no alt text. -->
+<img class="si-ghost" src="/images/logo-signature-orange.webp?v=202608142300" alt="" aria-hidden="true" width="531" height="488">
+<div class="si-sr" id="siLive" role="status" aria-live="polite"></div>
+<main class="si-main">
 <div class="login-box">
-  <!-- v2 card (2026-09-28): the brand hex, a kicker and an Anton title.
-       The logo image stays in the markup (hidden by portal-polish.css).
-       Restyle only: every field, id, handler and step below is unchanged. -->
-  <span class="login-hex" aria-hidden="true">HHH</span>
-  <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises" class="login-logo">
+  <!-- Sign-in rebuild (2026-10-31): restyle + Show/Hide, Remember me and the
+       success animation. Every id, field, handler and step is unchanged. -->
   <div class="login-kicker">Triple H client portal</div>
-  <div class="login-title" id="pageTitle">Sign in</div>
-  <div class="login-sub" id="loginSub">See your invoices, estimates and visits, and pay in a tap.</div>
+  <h1 class="login-title" id="pageTitle">Sign in</h1>
+  <p class="login-sub" id="loginSub">See your invoices, estimates and visits, and pay in a tap.</p>
 
   <form id="loginForm">
     <div class="login-field">
@@ -207,21 +226,31 @@
     </div>
     <div class="login-field" id="passwordField">
       <label for="clientPassword">Password</label>
-      <input type="password" id="clientPassword" required autocomplete="current-password">
+      <div class="si-pw" data-si-pw>
+        <input type="password" id="clientPassword" required autocomplete="current-password">
+        <button type="button" class="si-toggle" aria-label="Show password" aria-pressed="false" aria-controls="clientPassword">Show</button>
+      </div>
     </div>
-    <div class="login-error" id="loginError"></div>
-    <div class="login-success" id="loginSuccess" style="display:none;"></div>
+    <label class="si-switch" id="rememberRow" for="rememberMe">
+      <input type="checkbox" id="rememberMe" role="switch" checked>
+      <span class="si-switch-text login-hint">
+        <span class="si-switch-label login-hint">Remember me for 30 days</span>
+        <span class="si-switch-hint login-hint">Off: you're signed out when you close the browser.</span>
+      </span>
+    </label>
+    <div class="login-error" id="loginError" role="alert"></div>
+    <div class="login-success" id="loginSuccess" style="display:none;" role="status"></div>
     <button type="submit" class="btn orange login-btn" id="loginSubmitBtn">Sign In</button>
-    <a class="forgot-link" id="forgotLink">Forgot your password?</a>
+    <button type="button" class="forgot-link" id="forgotLink">Forgot your password?</button>
   </form>
   <p class="login-foot login-nosignup">No sign-up here: your account is created when Triple H sends your first invoice.</p>
-  <p class="login-foot" style="font-size:12px; color:var(--text-dim); margin-top:20px;">By signing in you agree to Triple H Enterprises' <a href="/terms.html" style="color:var(--text-dim); text-decoration:underline;">Terms and Conditions</a> and <a href="/privacy.html" style="color:var(--text-dim); text-decoration:underline;">Privacy Policy</a>.</p>
+  <p class="login-foot" style="margin-top:14px;">By signing in you agree to Triple H Enterprises' <a href="/terms.html">Terms and Conditions</a> and <a href="/privacy.html">Privacy Policy</a>.</p>
   <button type="button" class="report-bug-link" id="reportBugLink">Report a problem</button>
 
 <div class="report-bug-overlay" id="reportBugOverlay" style="display:none;">
   <div class="report-bug-modal">
-    <div class="th-step-topbar"><button type="button" class="th-step-back" id="reportBugBackBtn" aria-label="Back">&larr;</button><span class="th-step-spacer" aria-hidden="true"></span></div>
-    <div class="report-bug-title" id="reportBugTitle">Report a problem</div>
+    <div class="th-step-topbar"><button type="button" class="th-step-back" id="reportBugBackBtn" >Back</button><span class="th-step-spacer" aria-hidden="true"></span></div>
+    <h1 class="report-bug-title" id="reportBugTitle">Report a problem</h1>
     <p class="report-bug-sub" id="reportBugSub">Tell us what happened. We'll take a look.</p>
     <div id="reportBugFormArea">
       <textarea id="reportBugMessage" placeholder="What went wrong?" rows="4" aria-label="Describe what went wrong" style="min-height:150px;"></textarea>
@@ -250,8 +279,7 @@
 -->
 <div class="report-bug-overlay" id="mfaChallengeOverlay" style="display:none;">
   <div class="report-bug-modal mfa-challenge-modal">
-    <div class="th-step-topbar"><span class="th-step-spacer" aria-hidden="true"></span><span class="th-step-spacer" aria-hidden="true"></span></div>
-    <div class="report-bug-title">Enter your code</div>
+    <h1 class="report-bug-title">Enter your code</h1>
     <p class="report-bug-sub">Open your authenticator app and enter the 6-digit code for Triple H.</p>
     <div class="th-code-boxes-wrap" id="portalCodeBoxesWrap">
       <div class="th-code-boxes" id="portalCodeBoxes" aria-hidden="true">
@@ -260,8 +288,15 @@
       </div>
       <input type="text" id="mfaChallengeCodeInput" aria-label="6-digit code from your authenticator app" class="th-code-real-input" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" maxlength="6">
     </div>
-    <p class="th-code-hint">Paste works too. It checks as soon as the sixth digit is in.</p>
-    <div class="report-bug-error" id="mfaChallengeError"></div>
+    <p class="th-code-hint">Paste works too.</p>
+    <label class="si-switch" for="portalTrustDevice">
+      <input type="checkbox" id="portalTrustDevice" role="switch" checked>
+      <span class="si-switch-text login-hint">
+        <span class="si-switch-label login-hint">Trust this device for 30 days</span>
+        <span class="si-switch-hint login-hint">Stay signed in here for 30 days. Leave off on a shared computer.</span>
+      </span>
+    </label>
+    <div class="report-bug-error" id="mfaChallengeError" role="alert"></div>
     <div class="report-bug-actions">
       <button class="btn secondary-btn" id="mfaChallengeCancel" type="button">Sign out</button>
       <button class="btn orange" id="mfaChallengeSubmit" type="button">Verify</button>
@@ -269,13 +304,25 @@
   </div>
 </div>
 </div>
+</main>
 
 <script>
   const { createClient } = supabase;
+  // portalAuthStorage() (portal-app.js) is what makes "Remember me for 30 days"
+  // real: ON keeps the session in localStorage with a 30-day cap, OFF keeps it
+  // in sessionStorage so it ends when the browser closes. Every portal page
+  // creates its client with the same storage.
   const client = createClient(
     'https://csvfqdjuobylgafgolho.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs'
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs',
+    { auth: { storage: portalAuthStorage() } }
   );
+
+  // Runs the ~600ms success animation (logo un-ghosts, form settles), then
+  // goes where every successful sign-in has always gone.
+  function goHomeAfterSignIn() {
+    ThSignin.success(() => window.location.replace('/portal/home.html'));
+  }
 
   let forgotPasswordMode = false;
 
@@ -298,6 +345,9 @@
         const factorId = await verifiedTotpFactorId();
         if (factorId) {
           signingInEmail = email;
+          let sessionOnly = false;
+          try { sessionOnly = sessionStorage.getItem('th_portal_session_only') !== null; } catch (e) { /* ignore */ }
+          document.getElementById('portalTrustDevice').checked = !sessionOnly;
           openMfaChallenge(factorId);
           return;
         }
@@ -328,9 +378,15 @@
     // hypothetical edge case.
     passwordInput.required = !forgotPasswordMode;
     passwordInput.disabled = forgotPasswordMode;
+    document.getElementById('rememberRow').style.display = forgotPasswordMode ? 'none' : '';
+    document.getElementById('pageTitle').textContent = forgotPasswordMode ? 'Reset your password' : 'Sign in';
+    document.getElementById('loginSub').textContent = forgotPasswordMode
+      ? "Enter your email and we'll send you a link to choose a new password."
+      : 'See your invoices, estimates and visits, and pay in a tap.';
     document.getElementById('loginSubmitBtn').textContent = forgotPasswordMode ? 'Send Reset Link' : 'Sign In';
     document.getElementById('forgotLink').textContent = forgotPasswordMode ? 'Back to sign in' : 'Forgot your password?';
     document.getElementById('loginError').textContent = '';
+    ThSignin.setInvalid([document.getElementById('clientEmail'), passwordInput], null, false);
   });
 
   document.getElementById('loginForm').addEventListener('submit', async (e) => {
@@ -341,34 +397,48 @@
     const btn = document.getElementById('loginSubmitBtn');
     errorEl.textContent = '';
     successEl.style.display = 'none';
+    const emailInput = document.getElementById('clientEmail');
+    const passwordInput = document.getElementById('clientPassword');
+    ThSignin.setInvalid([emailInput, passwordInput], errorEl, false);
 
     if (forgotPasswordMode) {
-      btn.disabled = true;
-      btn.textContent = 'Sending...';
+      ThSignin.setBusy(btn, true, 'Sending...', 'Send Reset Link');
       const { error } = await client.auth.resetPasswordForEmail(email, {
         redirectTo: window.location.origin + '/portal/set-password.html',
       });
-      btn.disabled = false;
-      btn.textContent = 'Send Reset Link';
+      ThSignin.setBusy(btn, false, '', 'Send Reset Link');
       if (error) {
         errorEl.textContent = 'Something went wrong. ' + (error.message || 'Please try again.');
         return;
       }
-      document.getElementById('loginForm').querySelectorAll('.login-field, #loginSubmitBtn, #forgotLink').forEach(el => el.style.display = 'none');
+      document.getElementById('loginForm').querySelectorAll('.login-field, .si-switch, #loginSubmitBtn, #forgotLink').forEach(el => el.style.display = 'none');
+      document.getElementById('pageTitle').textContent = 'Check your email';
+      document.getElementById('loginSub').textContent = '';
       successEl.textContent = `If an account exists for ${email}, a reset link is on its way. Check your email.`;
       successEl.style.display = 'block';
       return;
     }
 
-    const password = document.getElementById('clientPassword').value;
-    btn.disabled = true;
-    btn.textContent = 'Signing in...';
+    const password = passwordInput.value;
+    // Decide where this session will live BEFORE it is created: ON = this
+    // device stays signed in for 30 days, OFF = ends when the browser closes.
+    portalSetRemember(document.getElementById('rememberMe').checked);
+    ThSignin.setBusy(btn, true, 'Signing in...', 'Sign In');
     const { error } = await client.auth.signInWithPassword({ email, password });
 
     if (error) {
-      errorEl.textContent = 'Incorrect email or password.';
-      btn.disabled = false;
-      btn.textContent = 'Sign In';
+      // A dropped connection is not a wrong password; say which it is.
+      const offline = error.name === 'AuthRetryableFetchError' || error.status === 0;
+      errorEl.textContent = offline
+        ? "Can't reach the server. Check your connection and try again."
+        : 'Incorrect email or password.';
+      ThSignin.setBusy(btn, false, '', 'Sign In');
+      if (!offline) {
+        ThSignin.setInvalid([emailInput, passwordInput], errorEl, true);
+        ThSignin.shake(document.getElementById('passwordField'));
+        passwordInput.focus();
+        passwordInput.select();
+      }
       return;
     }
 
@@ -381,15 +451,16 @@
     if (aal && aal.nextLevel === 'aal2' && aal.currentLevel !== 'aal2') {
       const factorId = await verifiedTotpFactorId();
       if (factorId) {
-        btn.disabled = false;
-        btn.textContent = 'Sign In';
+        ThSignin.setBusy(btn, false, '', 'Sign In');
         signingInEmail = email;
+        // The trust switch on the code step starts from Remember me.
+        document.getElementById('portalTrustDevice').checked = document.getElementById('rememberMe').checked;
         // Face ID over the code (2026-09-23): on a device where this
         // account has Face ID set up, Face ID is the second step; the
         // code is one tap away if it fails. Anywhere else, the code.
         if (portalIsBiometricLockEnabled(email)) {
           await portalFaceIdInsteadOfCode(email, () => openMfaChallenge(factorId));
-          window.location.replace('/portal/home.html');
+          goHomeAfterSignIn();
           return;
         }
         openMfaChallenge(factorId);
@@ -398,7 +469,7 @@
     }
     // The password was just typed: no Face ID lock straight after it.
     portalMarkSignedIn(email);
-    window.location.replace('/portal/home.html');
+    goHomeAfterSignIn();
   });
 
   // First Impressions handoff (2026-09-29): the step-1 form/footer/link
@@ -409,6 +480,8 @@
     document.getElementById('loginForm').style.display = hidden ? 'none' : '';
     document.querySelectorAll('.login-box > .login-foot').forEach((el) => { el.style.display = hidden ? 'none' : ''; });
     document.getElementById('reportBugLink').style.display = hidden ? 'none' : '';
+    // The sign-in heading belongs to step 1 only; each later step brings its own.
+    ['.login-kicker', '#pageTitle', '#loginSub'].forEach((sel) => { document.querySelector(sel).style.display = hidden ? 'none' : ''; });
   }
   function paintPortalCodeBoxes() {
     const val = document.getElementById('mfaChallengeCodeInput').value || '';
@@ -419,7 +492,19 @@
       box.classList.toggle('is-current', i === Math.min(current, 5) && current < 6);
     });
   }
-  document.getElementById('mfaChallengeCodeInput').addEventListener('input', paintPortalCodeBoxes);
+  document.getElementById('mfaChallengeCodeInput').addEventListener('input', () => {
+    // Typing again clears the wrong-code state.
+    document.getElementById('portalCodeBoxesWrap').classList.remove('is-invalid');
+    document.getElementById('mfaChallengeCodeInput').removeAttribute('aria-invalid');
+    paintPortalCodeBoxes();
+  });
+  // Typing again clears the wrong-password state.
+  ['clientEmail', 'clientPassword'].forEach((id) => {
+    document.getElementById(id).addEventListener('input', () => {
+      ThSignin.setInvalid([document.getElementById('clientEmail'), document.getElementById('clientPassword')], null, false);
+    });
+  });
+  ThSignin.initPasswordToggles();
 
   function openMfaChallenge(factorId) {
     const overlay = document.getElementById('mfaChallengeOverlay');
@@ -442,19 +527,29 @@
         errorEl.textContent = 'Enter the 6-digit code from your authenticator app.';
         return;
       }
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Verifying...';
+      // "Trust this device for 30 days": the verified (aal2) session is kept
+      // 30 days on this device when on, and ends with the browser when off.
+      // This only chooses where the session lives; the code is still checked
+      // by Supabase exactly as before.
+      portalSetRemember(document.getElementById('portalTrustDevice').checked);
+      ThSignin.setBusy(submitBtn, true, 'Verifying...', 'Verify');
       const { error } = await client.auth.mfa.challengeAndVerify({ factorId, code });
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Verify';
+      ThSignin.setBusy(submitBtn, false, '', 'Verify');
       if (error) {
         errorEl.textContent = "That code didn't match. Please try again.";
+        const wrap = document.getElementById('portalCodeBoxesWrap');
+        wrap.classList.add('is-invalid');
+        ThSignin.shake(wrap);
+        codeInput.setAttribute('aria-invalid', 'true');
+        codeInput.value = '';
+        paintPortalCodeBoxes();
+        codeInput.focus();
         return;
       }
       releaseFocusTrap();
       // Password and code just done: no Face ID lock straight after.
       if (signingInEmail) portalMarkSignedIn(signingInEmail);
-      window.location.replace('/portal/home.html');
+      goHomeAfterSignIn();
     }
     async function cancel() {
       // "Sign out" rather than just closing the overlay -- signInWithPassword
