@@ -17,9 +17,23 @@ const ROUTE_PLANNER = read('tools', 'route-planner.html');
 const NAV = read('tools', 'tools-nav-pwa.js');
 const PALETTE = read('tools', 'tools-command-palette.js');
 
-// Strip HTML/JS comments so the history notes that explain the removal
-// don't count as the thing itself.
-const code = (src) => src.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+// Drop HTML/JS comments so the history notes that explain the removal
+// don't count as the thing itself. A plain scan (not a regex replace):
+// this only reads our own source files; it is not a sanitizer.
+function dropBlocks(src, open, close) {
+  let out = '';
+  let i = 0;
+  for (;;) {
+    const a = src.indexOf(open, i);
+    if (a < 0) return out + src.slice(i);
+    out += src.slice(i, a);
+    const b = src.indexOf(close, a + open.length);
+    if (b < 0) return out;
+    i = b + close.length;
+  }
+}
+const code = (src) => dropBlocks(dropBlocks(src, '<!--', '-->'), '/*', '*/')
+  .split('\n').filter((line) => !line.trim().startsWith('//')).join('\n');
 
 test('Home has no map, route or navigation link of any kind', () => {
   const ws = code(WORKSPACE);
