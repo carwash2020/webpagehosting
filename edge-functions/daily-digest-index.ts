@@ -300,7 +300,7 @@ function scheduleFor(d: Digest, which: "today" | "tomorrow", tz: string) {
 function actionItems(d: Digest): string[] {
   const out: string[] = [];
   if (d.overdue.ok && d.overdue.data.count) out.push(`${d.overdue.data.count} overdue invoice${d.overdue.data.count === 1 ? "" : "s"} (${money(d.overdue.data.total)})`);
-  if (d.quotes.ok) for (const x of d.quotes.data.declined) out.push(`Quote ${esc(pick(x, "quote_number") ?? "")} declined by ${esc(shortName(pick(x, "client_name")))}`.replace("  ", " "));
+  if (d.quotes.ok) for (const x of d.quotes.data.declined) out.push(`Quote ${pick(x, "quote_number") ?? ""} declined by ${shortName(pick(x, "client_name"))}`.replace("  ", " "));
   if (d.jobs.ok) {
     if (d.jobs.data.reschedule.length) out.push(`${d.jobs.data.reschedule.length} job reschedule request${d.jobs.data.reschedule.length === 1 ? "" : "s"} waiting`);
     if (d.jobs.data.noClient.length) out.push(`${d.jobs.data.noClient.length} job${d.jobs.data.noClient.length === 1 ? "" : "s"} today with no client attached`);
@@ -342,104 +342,112 @@ function isQuiet(d: Digest): boolean {
 
 const C = { ink: "#1f2933", mute: "#6b7280", line: "#e5e7eb", brand: "#1f4e79", bg: "#f3f4f6", warn: "#b45309", warnBg: "#fef3c7", bad: "#b91c1c" };
 
-function secHtml(title: string, body: string): string {
-  return `<tr><td style="padding:18px 24px 4px"><div style="font:700 13px Arial,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:${C.brand}">${esc(title)}</div>`
-    + `<div style="border-top:1px solid ${C.line};margin-top:6px;padding-top:8px;font:14px/1.5 Arial,sans-serif;color:${C.ink}">${body}</div></td></tr>`;
+// Each section is built as PLAIN text (with **bold** markers); the HTML is generated from it
+// by escaping, and the text part by dropping the markers. No HTML is ever parsed or stripped.
+type Para = { text: string; kind?: "mute" | "bad" };
+type Block = { title: string; paras: Para[]; items: string[]; note?: string };
+
+const fmtHtml = (s: string) => esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+const fmtText = (s: string) => s.replace(/\*\*/g, "");
+
+function blockHtml(b: Block): string {
+  const color = (k?: string) => (k === "mute" ? C.mute : k === "bad" ? C.bad : C.ink);
+  const paras = b.paras.map((p) => `<div style="color:${color(p.kind)}">${fmtHtml(p.text)}</div>`).join("");
+  const items = b.items.length ? `<ul style="margin:0;padding-left:18px">${b.items.map((i) => `<li style="margin:2px 0">${fmtHtml(i)}</li>`).join("")}</ul>` : "";
+  const note = b.note ? `<div style="color:${C.mute};font-size:12px;margin-top:4px">${esc(b.note)}</div>` : "";
+  return `<tr><td style="padding:18px 24px 4px"><div style="font:700 13px Arial,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:${C.brand}">${esc(b.title)}</div>`
+    + `<div style="border-top:1px solid ${C.line};margin-top:6px;padding-top:8px;font:14px/1.5 Arial,sans-serif;color:${C.ink}">${paras}${items}${note}</div></td></tr>`;
 }
 
-const unavailable = `<span style="color:${C.mute}">Unavailable (could not load this section).</span>`;
-const none = (t: string) => `<span style="color:${C.mute}">${esc(t)}</span>`;
-const ul = (items: string[]) => `<ul style="margin:0;padding-left:18px">${items.map((i) => `<li style="margin:2px 0">${i}</li>`).join("")}</ul>`;
+function blockText(b: Block): string {
+  return [b.title.toUpperCase(), ...b.paras.map((p) => fmtText(p.text)), ...b.items.map((i) => `- ${fmtText(i)}`), ...(b.note ? [b.note] : [])].join("\n");
+}
+
+const UNAVAILABLE: Para = { text: "Unavailable (could not load this section).", kind: "mute" };
+const STRIPE_DOWN: Para = { text: "Stripe unavailable.", kind: "mute" };
+const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
 function renderDigest(d: Digest, opts: { date: string; tz: string; quiet: boolean }) {
   const { date, tz, quiet } = opts;
   const tomorrow = addDays(date, 1);
-  const blocks: { title: string; html: string; text: string }[] = [];
-  const add = (title: string, html: string, text: string) => blocks.push({ title, html, text });
-  // Plain-text part: ONE pass that drops tags and decodes our few entities, so decoded
-  // text is never re-scanned (avoids double-unescaping and re-formed tags).
-  const ENT: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', mdash: "-", middot: "|" };
-  const strip = (h: string) => h.replace(/<[^>]*>|&(amp|lt|gt|quot|mdash|middot);/g, (_m: string, e?: string) => (e ? ENT[e] : "")).replace(/^[ \t]+/gm, "").trim();
+  const blocks: Block[] = [];
+  const add = (title: string, paras: Para[], items: string[] = [], note?: string) => blocks.push({ title, paras, items, note });
 
   const actions = actionItems(d);
-  const anyOk = d.jobs.ok || d.overdue.ok || d.payments.ok || d.quotes.ok;
-  if (anyOk) add("Action needed", actions.length ? ul(actions) : none("Nothing needs attention."), "");
+  if (d.jobs.ok || d.overdue.ok || d.payments.ok || d.quotes.ok) {
+    add("Action needed", actions.length ? [] : [{ text: "Nothing needs attention.", kind: "mute" }], actions);
+  }
 
-  // Money
-  let money_html = "";
-  if (d.balance.ok) {
-    const b = d.balance.data;
-    money_html += `Available <b>${cents(b.available)}</b> &middot; Pending <b>${cents(b.pending)}</b>`;
-  } else money_html += `Balance: Stripe unavailable.`;
+  const moneyParas: Para[] = [];
+  if (d.balance.ok) moneyParas.push({ text: `Available **${cents(d.balance.data.available)}** · Pending **${cents(d.balance.data.pending)}**` });
+  else moneyParas.push({ text: "Balance: Stripe unavailable.", kind: "mute" });
   if (d.payouts.ok) {
     const p = d.payouts.data;
-    if (p.upcoming.length) money_html += `<br>Next payout: <b>${cents(p.upcoming[0].amount)}</b> arriving ${esc(p.upcoming[0].arrival)} (${esc(p.upcoming[0].status.replace("_", " "))})`;
+    if (p.upcoming.length) moneyParas.push({ text: `Next payout: **${cents(p.upcoming[0].amount)}** arriving ${p.upcoming[0].arrival} (${p.upcoming[0].status.replace("_", " ")})` });
     else {
-      money_html += `<br>No payout scheduled yet &mdash; the next automatic daily payout is roughly the pending balance becoming available.`;
-      if (p.lastPaid) money_html += ` Last paid payout: ${cents(p.lastPaid.amount)} on ${esc(p.lastPaid.arrival)}.`;
+      moneyParas.push({ text: `No payout scheduled yet — the next automatic daily payout is roughly the pending balance becoming available.${p.lastPaid ? ` Last paid payout: ${cents(p.lastPaid.amount)} on ${p.lastPaid.arrival}.` : ""}` });
     }
-  } else money_html += `<br>Payouts: Stripe unavailable.`;
-  add("Money", money_html, "");
+  } else moneyParas.push({ text: "Payouts: Stripe unavailable.", kind: "mute" });
+  add("Money", moneyParas);
 
   if (d.payments.ok) {
     const p = d.payments.data;
-    add("Payments today", `${p.succeededCount} payment${p.succeededCount === 1 ? "" : "s"} received, <b>${cents(p.succeededTotal)}</b>${p.pos ? ` (${p.pos} at POS)` : ""}`
-      + (p.refunds ? `<br>Refunds: ${p.refunds} (${cents(p.refundTotal)})` : "") + (p.failed ? `<br><span style="color:${C.bad}">Failed: ${p.failed}</span>` : "") + (p.disputes ? `<br><span style="color:${C.bad}">Disputes: ${p.disputes}</span>` : ""), "");
-  } else add("Payments today", "Stripe unavailable.", "");
+    const paras: Para[] = [{ text: `${plural(p.succeededCount, "payment")} received, **${cents(p.succeededTotal)}**${p.pos ? ` (${p.pos} at POS)` : ""}` }];
+    if (p.refunds) paras.push({ text: `Refunds: ${p.refunds} (${cents(p.refundTotal)})` });
+    if (p.failed) paras.push({ text: `Failed: ${p.failed}`, kind: "bad" });
+    if (p.disputes) paras.push({ text: `Disputes: ${p.disputes}`, kind: "bad" });
+    add("Payments today", paras);
+  } else add("Payments today", [STRIPE_DOWN]);
 
   const sched = (which: "today" | "tomorrow", title: string) => {
     const rows = scheduleFor(d, which, tz);
-    if (rows === null) return add(title, unavailable, "");
-    if (!rows.length) return add(title, none(which === "today" ? "Nothing scheduled." : "Nothing scheduled."), "");
+    if (rows === null) return add(title, [UNAVAILABLE]);
+    if (!rows.length) return add(title, [{ text: "Nothing scheduled.", kind: "mute" }]);
     rows.sort((a, b) => (a.sort < b.sort ? -1 : 1));
-    let html = ul(rows.map((r) => `${esc(r.label)}${r.who ? ` &mdash; ${esc(r.who)}` : ""}${r.when ? ` &mdash; ${esc(r.when)}` : ""}`));
-    if (which === "today" && d.jobs.ok && d.jobs.data.unparsed) html += `<div style="color:${C.mute};font-size:12px;margin-top:4px">${d.jobs.data.unparsed} job(s) skipped: date not readable.</div>`;
-    add(title, html, "");
+    const note = which === "today" && d.jobs.ok && d.jobs.data.unparsed ? `${d.jobs.data.unparsed} job(s) skipped: date not readable.` : undefined;
+    add(title, [], rows.map((r) => `${r.label}${r.who ? ` — ${r.who}` : ""}${r.when ? ` — ${r.when}` : ""}`), note);
   };
   sched("today", "Today's jobs & appointments");
   sched("tomorrow", `Tomorrow (${prettyDate(tomorrow).split(",")[0]})`);
 
   if (d.quotes.ok) {
     const q = d.quotes.data;
-    const line = (x: any) => `${esc(pick(x, "quote_number") ?? "Quote")} &mdash; ${esc(shortName(pick(x, "client_name")))}${pick(x, "total") !== null ? ` (${money(pick(x, "total"))})` : ""}`;
-    const parts = [`Sent: <b>${q.sent.length}</b>`, `Approved: <b>${q.approved.length}</b>`, `Declined: <b>${q.declined.length}</b>`];
-    let html = parts.join(" &middot; ");
-    const detail = [...q.sent.map((x: any) => "Sent " + line(x)), ...q.approved.map((x: any) => "Approved " + line(x)), ...q.declined.map((x: any) => "Declined " + line(x))];
-    if (detail.length) html += ul(detail);
-    add("Quotes", html, "");
-  } else add("Quotes", unavailable, "");
+    const line = (x: any) => `${pick(x, "quote_number") ?? "Quote"} — ${shortName(pick(x, "client_name"))}${pick(x, "total") !== null ? ` (${money(pick(x, "total"))})` : ""}`;
+    add("Quotes", [{ text: `Sent: **${q.sent.length}** · Approved: **${q.approved.length}** · Declined: **${q.declined.length}**` }],
+      [...q.sent.map((x: any) => "Sent " + line(x)), ...q.approved.map((x: any) => "Approved " + line(x)), ...q.declined.map((x: any) => "Declined " + line(x))]);
+  } else add("Quotes", [UNAVAILABLE]);
 
   if (d.invoices.ok) {
     const i = d.invoices.data;
-    const line = (x: any) => `${esc(x.invoice_number)} &mdash; ${esc(shortName(x.client_name))} (${money(x.total)})`;
-    let html = `Sent: <b>${i.sent.length}</b> &middot; Paid: <b>${i.paid.length}</b> (${money(i.paid.reduce((s: number, x: any) => s + (Number(x.total) || 0), 0))})`;
-    const detail = [...i.sent.map((x: any) => "Sent " + line(x)), ...i.paid.map((x: any) => "Paid " + line(x))];
-    if (detail.length) html += ul(detail);
-    add("Invoices", html, "");
-  } else add("Invoices", unavailable, "");
+    const line = (x: any) => `${x.invoice_number} — ${shortName(x.client_name)} (${money(x.total)})`;
+    const paidTotal = i.paid.reduce((s: number, x: any) => s + (Number(x.total) || 0), 0);
+    add("Invoices", [{ text: `Sent: **${i.sent.length}** · Paid: **${i.paid.length}** (${money(paidTotal)})` }],
+      [...i.sent.map((x: any) => "Sent " + line(x)), ...i.paid.map((x: any) => "Paid " + line(x))]);
+  } else add("Invoices", [UNAVAILABLE]);
 
   if (d.overdue.ok) {
     const o = d.overdue.data;
-    add("Overdue invoices", o.count
-      ? `<b>${o.count}</b> overdue, <b>${money(o.total)}</b> outstanding. Oldest:` + ul(o.oldest.map((x: any) => `${esc(x.invoice_number)} &mdash; ${esc(shortName(x.client_name))} &mdash; ${money(x.remaining)}, ${x.daysLate} day${x.daysLate === 1 ? "" : "s"} late`))
-      : none("None overdue."), "");
-  } else add("Overdue invoices", unavailable, "");
+    if (!o.count) add("Overdue invoices", [{ text: "None overdue.", kind: "mute" }]);
+    else add("Overdue invoices", [{ text: `**${o.count}** overdue, **${money(o.total)}** outstanding. Oldest:` }],
+      o.oldest.map((x: any) => `${x.invoice_number} — ${shortName(x.client_name)} — ${money(x.remaining)}, ${plural(x.daysLate, "day")} late`));
+  } else add("Overdue invoices", [UNAVAILABLE]);
 
-  const liveBanner = d.balance.ok && !d.balance.data.livemode
-    ? `<tr><td style="padding:10px 24px;background:${C.warnBg};color:${C.warn};font:700 13px Arial,sans-serif">Stripe mode: TEST &mdash; balance and payout figures are not real.</td></tr>` : "";
+  const testMode = d.balance.ok && !d.balance.data.livemode;
+  const testMsg = "Stripe mode: TEST — balance and payout figures are not real.";
+  const banner = testMode ? `<tr><td style="padding:10px 24px;background:${C.warnBg};color:${C.warn};font:700 13px Arial,sans-serif">${esc(testMsg)}</td></tr>` : "";
 
   const dow = prettyDate(date);
   const title = quiet ? "Quiet day" : "End-of-day digest";
   const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Triple H ${esc(title)}</title></head>`
     + `<body style="margin:0;background:${C.bg}"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.bg}"><tr><td align="center" style="padding:16px">`
     + `<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border:1px solid ${C.line};border-radius:8px">`
-    + `<tr><td style="padding:20px 24px;background:${C.brand};color:#fff;border-radius:8px 8px 0 0"><div style="font:700 20px Arial,sans-serif">Triple H &mdash; ${esc(title)}</div><div style="font:14px Arial,sans-serif;opacity:.9">${esc(dow)}</div></td></tr>`
-    + liveBanner
-    + blocks.map((b) => secHtml(b.title, b.html)).join("")
+    + `<tr><td style="padding:20px 24px;background:${C.brand};color:#fff;border-radius:8px 8px 0 0"><div style="font:700 20px Arial,sans-serif">Triple H — ${esc(title)}</div><div style="font:14px Arial,sans-serif;opacity:.9">${esc(dow)}</div></td></tr>`
+    + banner
+    + blocks.map(blockHtml).join("")
     + `<tr><td style="padding:18px 24px;font:12px/1.5 Arial,sans-serif;color:${C.mute}">Times shown in Mountain Time. <a href="${SITE}/portal/" style="color:${C.brand}">Open the portal</a> to act on anything above. Sent to the owners only.</td></tr>`
     + `</table></td></tr></table></body></html>`;
 
-  const text = [`Triple H - ${title} - ${dow}`, ...blocks.map((b) => `\n${b.title.toUpperCase()}\n${strip(b.html.replace(/<br>|<\/div>|<\/ul>/g, "\n").replace(/<li/g, "\n- <li"))}`)].join("\n");
+  const text = [`Triple H - ${title} - ${dow}`, ...(testMode ? [testMsg] : []), ...blocks.map(blockText), `Open the portal: ${SITE}/portal/`].join("\n\n");
   const subject = `Triple H ${quiet ? "quiet day" : "digest"}: ${new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" }).format(new Date(date + "T00:00:00Z"))}`
     + (actions.length ? ` (${actions.length} to review)` : "");
   return { html, text, subject };

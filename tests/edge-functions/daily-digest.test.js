@@ -163,7 +163,7 @@ test('content: dedupes linked work orders, shows MDT time, counts unparseable jo
   const { call } = loadDigest(s);
   const { body } = await call({ dry_run: true });
   assert.equal((body.html.match(/Dishwasher install/g) || []).length, 1, 'work order linked to job 1 not shown twice');
-  assert.match(body.html, /Ice maker not cooling &mdash; 3:00 PM MDT/);
+  assert.match(body.html, /Ice maker not cooling — 3:00 PM MDT/);
   assert.match(body.html, /1 job\(s\) skipped/);
   assert.match(body.html, /Maria G\./);
   assert.doesNotMatch(body.html, /Gonzales/);
@@ -212,6 +212,6 @@ test('plain-text part has no HTML tags or entities, and keeps line breaks', asyn
   const { call } = loadDigest(s);
   const { body } = await call({ dry_run: true });
   assert.doesNotMatch(body.text, /<[a-z\/]|&[a-z]+;/i);
-  assert.match(body.text, /Available \$1,284\.50 \| Pending \$605\.00/);
+  assert.match(body.text, /Available \$1,284\.50 · Pending \$605\.00/);
   assert.match(body.text, /3:00 PM MDT\n1 job\(s\) skipped/);
 });
