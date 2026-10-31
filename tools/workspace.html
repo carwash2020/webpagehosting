@@ -82,7 +82,7 @@
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=791ee017e1" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=d2875d8f24" defer></script>
 <script src="/tools/tools-command-palette.js?v=479d6a96e7" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
@@ -779,31 +779,6 @@
   body.th-tool-page[data-th-page="workspace"] .today-next-links { display: flex; gap: 8px; padding: 12px 18px 14px; border-top: 1px solid var(--border); }
   body.th-tool-page[data-th-page="workspace"] .today-next-links > * { flex: 1 1 0; min-height: 44px; margin: 0; width: auto; display: inline-flex; align-items: center; justify-content: center; text-align: center; font-size: 13px; }
 
-  /* ---- Today's route: a timeline ---- */
-  body.th-tool-page[data-th-page="workspace"] .today-route .th-v2-card-head { margin-bottom: 4px; }
-  body.th-tool-page[data-th-page="workspace"] .today-route-row {
-    display: grid; grid-template-columns: 44px 14px minmax(0, 1fr) auto; column-gap: 12px; align-items: stretch;
-    color: inherit; text-decoration: none; border-radius: 12px; -webkit-tap-highlight-color: transparent;
-  }
-  body.th-tool-page[data-th-page="workspace"] .today-route-row:active { background: var(--bg-panel-2); }
-  body.th-tool-page[data-th-page="workspace"] .today-route-when { display: flex; flex-direction: column; align-items: flex-end; padding-top: 11px; line-height: 1; }
-  body.th-tool-page[data-th-page="workspace"] .today-route-when b { font-family: var(--font-display); font-weight: 400; font-size: 18px; color: var(--text); }
-  body.th-tool-page[data-th-page="workspace"] .today-route-when span { margin-top: 3px; font-size: 11px; color: var(--text-dim); }
-  body.th-tool-page[data-th-page="workspace"] .today-route-rail { position: relative; display: flex; justify-content: center; }
-  body.th-tool-page[data-th-page="workspace"] .today-route-rail::before { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; margin-left: -1px; background: var(--border); }
-  body.th-tool-page[data-th-page="workspace"] .today-route-row:first-child .today-route-rail::before { top: 14px; }
-  body.th-tool-page[data-th-page="workspace"] .today-route-row:last-child .today-route-rail::before { bottom: auto; height: 14px; }
-  body.th-tool-page[data-th-page="workspace"] .today-route-row:only-child .today-route-rail::before { display: none; }
-  body.th-tool-page[data-th-page="workspace"] .today-route-rail i { position: relative; z-index: 1; width: 12px; height: 12px; margin-top: 14px; border-radius: 50%; background: var(--border); }
-  body.th-tool-page[data-th-page="workspace"] .today-route-row.is-done .today-route-rail i { background: var(--tone-green-fg); }
-  body.th-tool-page[data-th-page="workspace"] .today-route-row.is-next .today-route-rail i, body.th-tool-page[data-th-page="workspace"] .today-route-row.is-working .today-route-rail i { background: var(--orange); box-shadow: 0 0 0 3px var(--tone-orange-bg); }
-  body.th-tool-page[data-th-page="workspace"] .today-route-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 10px 0 16px; }
-  body.th-tool-page[data-th-page="workspace"] .today-route-title { font-size: 15.5px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
-  body.th-tool-page[data-th-page="workspace"] .today-route-row.is-done .today-route-title { text-decoration: line-through; color: var(--text-dim); }
-  body.th-tool-page[data-th-page="workspace"] .today-route-meta { font-size: 13px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  body.th-tool-page[data-th-page="workspace"] .today-route-row .th-v2-pill { align-self: center; }
-  body.th-tool-page[data-th-page="workspace"] .today-route .empty-state-small a { color: var(--orange-light); }
-
   /* ---- The daily actions: two compact tiles (Find client, Calendar) ----
      Neither is the day's primary action any more (that was New job, now
      in + New), so both are the same quiet tile. */
@@ -1154,8 +1129,9 @@
     height: 48px; min-height: 48px; padding: 0 12px; box-sizing: border-box; border: 1px solid transparent; box-shadow: none; transform: none;
     font-family: var(--font-app); font-size: 14px; font-weight: 600; line-height: 1.2; min-width: 0; overflow: hidden;
   }
-  /* Redundancy pass (2026-10-31): Route today left this row (Today's
-     route has Route all), so Open job is the row's one button, full width. */
+  /* Redundancy pass (2026-10-31): Route today left this row, so Open job
+     is the row's one button, full width. (The day's route now lives only
+     in Route Planner: cross-surface pass, round 2.) */
   html body.th-tool-page[data-th-page="workspace"] .today-next-links > .primary-btn { flex: 1 1 auto; }
   /* Cross-surface pass (2026-10-31): with no partner left, Open job is the
      suite's one flat primary (Oswald 400, no border, no lip, a press
@@ -1308,7 +1284,7 @@
      on every return to Home. renderDashboard() runs on a failed sync too,
      so none of these can be left behind. -->
 <!-- v2 (2026-09-28): Home is two columns on a computer -- the day's work
-     (Up next, Today's route, the daily actions) and what needs you (the
+     (Up next, the daily actions) and what needs you (the
      inbox, Money owed, Your week) -- and one column in that same order on
      a phone. The wrappers are layout only; every id below is unchanged. -->
 <div class="today-cols" id="todayCols">
@@ -1317,17 +1293,13 @@
   <div class="today-next-job" id="todayNextJob"><div class="skeleton-line w-40"></div><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div></div>
 </div>
 
-<!-- Today's route (v2): every job on today's schedule as a timeline -- done
-     ones ticked, the one you're on lit -- with Route all, the day's one
-     Google Maps route (buildTodayRouteUrl()). renderTodayRoute().
-     Redundancy pass (2026-10-31): the hidden "Rest of Today" list this
-     card replaced on screen is gone, and so is the Next Job card's own
-     "Route today" button -- Route all here is the one way in, and this
-     card's count is the day's job count beside the Jobs ring. -->
-<div class="th-v2-card today-route" id="todayRouteCard">
-  <div class="th-v2-card-head"><span class="th-v2-card-title">Today&rsquo;s route</span><span class="th-v2-card-note" id="todayRouteCount"></span><a class="th-v2-link" id="todayRouteAll" href="/tools/route-planner.html" target="_blank" rel="noopener" hidden><svg class="th-icon" aria-hidden="true"><use href="#icon-navigate" xlink:href="#icon-navigate"></use></svg>Route all</a></div>
-  <div class="today-route-list" id="todayRoute"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div></div>
-</div>
+<!-- Cross-surface pass, round 2 (2026-10-31): Today's route (the day's
+     timeline and its Route all Google Maps link) left Home. Connor's rule:
+     route and navigation live only in Job detail (its Directions) and
+     Route Planner (More / Ctrl+K "route": Pull today's jobs, then Open
+     full route in Google Maps, the same URL Route all built). Today's
+     jobs are still listed under Today on Jobs, the Jobs ring counts them,
+     and Next Job names the first. -->
 
 <!-- Daily actions. Redundancy pass (2026-10-31): New job, Create invoice,
      Quick charge and Log expense left this strip -- the + New sheet (the
@@ -1654,7 +1626,6 @@
       <p>This is the home base for the whole business &mdash; bookmark this one page. It's built to answer "what do I need to do right now" without a tap, top to bottom:</p>
       <ul>
         <li><strong>Next Job</strong> &mdash; whatever's next on today's schedule, sorted by priority, with a tap-to-call phone number and a straight line into that job's own page (directions are there).</li>
-        <li><strong>Today's route</strong> &mdash; every job on today's schedule in order, done ones ticked, with <strong>Route all</strong>: one link that opens the whole day's stops as a Google Maps route.</li>
         <li><strong>Money Owed</strong> &mdash; Current and Overdue, split apart so a client who's simply not due yet never gets lumped in with one who needs a follow-up call. Every unpaid invoice is listed right there (overdue first) with a one-tap <strong>Mark paid</strong> &mdash; confirm, and it's recorded as paid in full. Under them: <strong>Ready to invoice</strong> &mdash; jobs finished in the last 60 days with no invoice and no payment logged, oldest first, each with an <strong>Invoice</strong> button (the &middot;&middot;&middot; covers &ldquo;paid another way&rdquo; and &ldquo;no charge&rdquo;) &mdash; and a search over every invoice and logged payment, with the paid ones folded away.</li>
         <li><strong>Your week</strong> &mdash; the scoreboard under the daily actions. At the top, <strong>Start my day</strong> when you begin work and <strong>End my day</strong> when you're done (or use the clock button at the top of any page). Then a bar for each day, Monday to Sunday: the green part is the hours you worked &mdash; driving, estimates and the time between jobs included &mdash; and the orange part inside it is the time on a job's clock. Under the bars: hours worked, hours on the clock, jobs done and billed, with last week's number under each. Billed means invoices dated this week plus income you logged by hand; it shows only to accounts that can see finance, and so does <strong>Everyone this week</strong>, everyone's hours. Forgot to clock out? A shift left open more than 14 hours stops counting until you say when you finished &mdash; it suggests when your last job clock stopped. The shift and the job clock are separate: neither starts or stops the other.</li>
         <li><strong>Texts that write themselves</strong> &mdash; <strong>On my way</strong> on Next Job, the <strong>Text</strong> button on a job, or <strong>Text</strong> in its sheet on Jobs. You get the texts that job calls for, already written with the client's name: On my way or Running late (pick 10, 20, 30 or 45 minutes), Confirm the visit, a quick Parts run, All done. Edit it if you like and <strong>Send</strong>: it opens your own Messages. The job remembers the last one (&ldquo;On my way sent 12 min ago&rdquo;).</li>
@@ -1670,7 +1641,7 @@
       <p><strong>A typical day, start to finish:</strong></p>
       <ol style="padding-left: 20px; margin: 8px 0 16px;">
         <li>Open the Dashboard: Next Job, Money Owed, and Needs attention are the first screen.</li>
-        <li>Heading out? Tap <strong>Route all</strong> on Today's route for the whole day's driving in Google Maps.</li>
+        <li>Heading out? Open a job for its <strong>Directions</strong>, or <strong>Route Planner</strong> (the grid button at the top right, or search &ldquo;route&rdquo;) and tap <strong>Pull today's jobs</strong>, then <strong>Open full route in Google Maps</strong> for the whole day's driving.</li>
         <li>New job comes in? Tap the orange <strong>+</strong> and <strong>Job</strong> &mdash; that opens Job Tracker with the add form ready. Use the microphone icon next to Notes to dictate instead of typing. Every dated job shows on the Calendar view automatically.</li>
         <li>On site, tap <strong>Done</strong> on the job's card or table row (or use the status dropdown for In Progress). Attach photos with the Photos button. Marking a job done asks what's next: <strong>Create invoice</strong> (the form opens filled from the job) or a pre-filled review request.</li>
         <li>Forgot to invoice one? It waits in <strong>Ready to invoice</strong> on the Money Owed card until it's billed, paid another way, or marked no charge.</li>
@@ -3581,34 +3552,6 @@
     return todaysJobs;
   }
 
-  // Route today (2026-09-21): the same Google Maps directions URL shape
-  // Route Planner's buildRouteUrl() builds (last stop is the destination,
-  // the rest are waypoints, driving), from the addresses on today's
-  // active jobs in the hero's own priority order. De-duplicated so two
-  // jobs at one address are one stop; capped at Google's 10-stop limit.
-  // Turns Dashboard -> More -> Route Planner -> Pull Today's Jobs ->
-  // Open Full Route (4 taps) into one tap on the card.
-  function todayRouteAddresses(jobs) {
-    const seen = new Set();
-    const out = [];
-    (jobs || []).forEach(j => {
-      const addr = (j.address || '').trim();
-      if (!addr || seen.has(addr.toLowerCase())) return;
-      seen.add(addr.toLowerCase());
-      out.push(addr);
-    });
-    return out.slice(0, 10);
-  }
-  function buildTodayRouteUrl(jobs) {
-    const stops = todayRouteAddresses(jobs);
-    if (stops.length === 0) return null;
-    const destination = stops[stops.length - 1];
-    const waypoints = stops.slice(0, -1);
-    let url = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(destination) + '&travelmode=driving';
-    if (waypoints.length > 0) url += '&waypoints=' + waypoints.map(encodeURIComponent).join('|');
-    return url;
-  }
-
   function renderTodayHero() {
     const heroEl = document.getElementById('todayHero');
     const nextEl = document.getElementById('todayNextJob');
@@ -3657,11 +3600,12 @@
     // you do next (On my way, Call, the clock). Open job sits under it.
     // Cross-surface pass (2026-10-31): no Navigate cell and no Maps link on
     // the address here. Directions for one job live only in Job detail
-    // (its Directions quick action); Home keeps Today's route's Route all.
+    // (its Directions quick action). Round 2: Today's route left Home too;
+    // the day's route is Route Planner's Pull today's jobs.
     // Redundancy pass (2026-10-31): no "\u00b7 1 of N" -- it was always "1 of"
     // the same remaining-jobs count the summary line gave, and the Jobs
-    // ring and Today's route already count the day. The day's route
-    // button left this card too: Today's route's Route all is that link.
+    // ring already counts the day. The day's route button left this card
+    // too (and, in round 2, Home: it's Route Planner's now).
     const heroStatus = job.status === 'in-progress' ? ['Working', 'is-orange'] : ['Booked', 'is-blue'];
     const heroIcon = (n) => '<svg class="th-icon" aria-hidden="true"><use href="#icon-' + n + '" xlink:href="#icon-' + n + '"></use></svg>';
     const heroPhone = job.phone ? String(job.phone).replace(/[^\d+]/g, '') : '';
@@ -3932,7 +3876,7 @@
 
   // =====================================================================
   // v2 (2026-09-28, Workspace app redesign v2 §8.1-8.2): Today's summary
-  // rings and line, Today's route, Insights' charts, the Today / Insights
+  // rings and line, Insights' charts, the Today / Insights
   // view switch, and the row ⋯ menus. Presentation only: every number is
   // read from the same jobs / clock / invoices the cards above already
   // use, and every menu action clicks an existing button.
@@ -4037,8 +3981,7 @@
 
   // "2 people are waiting on a reply." -- the inbox's count, under the
   // greeting. Redundancy pass (2026-10-31): it no longer opens with
-  // "3 stops left today, first: ..." -- the Jobs ring and Today's route
-  // count the day, and the Next Job card names the first one. With
+  // "3 stops left today, first: ..." -- the Jobs ring counts the day, and the Next Job card names the first one. With
   // nothing left today it still says so, since the Next Job card hides
   // itself then and this is the one place that tells you.
   function renderTodaySummaryLine() {
@@ -4050,38 +3993,6 @@
     if (left.length === 0) parts.push('Nothing left on today’s schedule.');
     if (waiting > 0) parts.push(waiting + (waiting === 1 ? ' person is' : ' people are') + ' waiting on a reply.');
     el.textContent = parts.join(' ');
-  }
-
-  // Today's route: a timeline of every job on today's schedule.
-  function renderTodayRoute() {
-    const list = document.getElementById('todayRoute');
-    if (!list) return;
-    const all = todayScheduleV2();
-    const count = document.getElementById('todayRouteCount');
-    if (count) count.textContent = all.length ? all.length + ' stop' + (all.length === 1 ? '' : 's') : '';
-    const routeAll = document.getElementById('todayRouteAll');
-    const routeUrl = buildTodayRouteUrl(getTodaysJobs());
-    if (routeAll) {
-      if (routeUrl) { routeAll.href = routeUrl; routeAll.hidden = false; } else routeAll.hidden = true;
-    }
-    if (!all.length) {
-      list.innerHTML = '<div class="empty-state-small is-good"><svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg>Nothing on the schedule for today. <a href="/tools/job-tracker.html#add-job">Add a job</a></div>';
-      return;
-    }
-    const firstOpen = all.findIndex(j => j.status !== 'done');
-    const TONE = { done: ['Done', 'is-green'], 'in-progress': ['Working', 'is-orange'], 'not-started': ['Booked', 'is-blue'] };
-    list.innerHTML = all.map((j, i) => {
-      const tone = TONE[j.status] || TONE['not-started'];
-      const street = String(j.address || '').split(',')[0].trim();
-      const cls = (j.status === 'done' ? ' is-done' : '') + (i === firstOpen ? ' is-next' : '') + (j.status === 'in-progress' ? ' is-working' : '');
-      return '<a class="today-route-row' + cls + '" href="/tools/job-detail.html?id=' + encodeURIComponent(j.id) + '">' +
-        '<span class="today-route-when"><b>' + (i + 1) + '</b><span>' + (j.status === 'done' ? 'done' : 'stop') + '</span></span>' +
-        '<span class="today-route-rail" aria-hidden="true"><i></i></span>' +
-        '<span class="today-route-main"><span class="today-route-title">' + escapeHtml(j.title || 'Job') + '</span>' +
-          '<span class="today-route-meta">' + escapeHtml([j.client, street].filter(Boolean).join(' · ') || 'No address on file') + '</span></span>' +
-        '<span class="th-v2-pill ' + tone[1] + '">' + tone[0] + '</span>' +
-      '</a>';
-    }).join('');
   }
 
   // Insights: revenue by week (12 bars, this week orange) and the job-status
@@ -4123,7 +4034,6 @@
   function renderTodayV2() {
     renderTodayRings();
     renderTodaySummaryLine();
-    renderTodayRoute();
     if (currentDashView === 'insights') renderInsightsCharts();
   }
 

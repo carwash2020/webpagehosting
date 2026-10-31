@@ -3,6 +3,26 @@
 Started 2026-09-16, alongside the `tripleh-visual` skill. See `README.md` in
 this directory for how these logs work.
 
+## 2026-10-31 -- Cross-surface pass, round 2: rebased onto #552, and Today's route off Home too
+
+**Rebase.** #552 (Stripe hardening) merged first. Its overlap with this PR was `docs/CHANGELOG.md` (adjacent entries, so I kept both, main's first), `portal/dashboard.html` and `tools/invoice-generator.html` (both auto-merged cleanly), and both service workers' `CACHE_NAME` lines (only the fingerprints differed). I took main's side for the stamps and ran `npm run fix-versions`. I normalised the workspace cache to v432 (main is v431) after repeated fix-versions runs pushed it further; the portal cache is v205.
+
+**Connor's rule now: route and Navigate live only in Job detail, and nothing route- or navigation-related stays on Home.** Round 1 left Today's route and its Route all link alone as out of scope. They're now gone: the markup, the `.today-route*` CSS, `renderTodayRoute()`, and `todayRouteAddresses()` / `buildTodayRouteUrl()`, which nothing else used. The help text and `docs/REFERENCE.md` were updated too. `todayScheduleV2()` stays because the Jobs ring uses it.
+
+**Where the capability lives now: a pure removal, no gap in function.**
+- **The day's route:** Route Planner's **Pull today's jobs** loads today's not-done jobs with an address (the same filter as `getTodaysJobs()`). **Open full route in Google Maps** then builds the URL Route all built (`maps/dir/?api=1&destination=…&waypoints=…&travelmode=driving`). One small difference: Route Planner refuses more than 10 stops with a warning, where Home silently cut the list at 10.
+- **The day's timeline** (numbered stops with done/working/booked pills): today's jobs are under Today on Jobs. The Jobs ring keeps the count, and Next Job names the first stop.
+- **Discoverability caveat:** on a phone, Route Planner is in More (the grid button). On a computer, the More button is hidden and #550 set `sidebar: false` because "Today's route on the Dashboard opens the day's route". So on desktop it's now Ctrl+K "route" only. I left #550's approved sidebar decision alone and flagged it. Dropping `sidebar: false` is the one-line fix if Connor wants it back.
+
+**Desktop layout:** Home's left column is now Next Job plus the two daily tiles, so at 1280 it ends well above the right column (Needs attention, Money owed). It isn't broken, just unbalanced. Left as is; a candidate for a later rebalance.
+
+**Tests and harnesses:**
+- **Tests:** new `tests/tools/home-no-route-or-navigate.test.js` pins both rounds. It checks that Home has no Maps URL, navigate icon, Navigate, Today's route or Route Planner link once comments are stripped, that Job detail's Directions line is byte-pinned, and that Route Planner's pull/open and its More / Ctrl+K entries are still there. The old pins in `dashboard-today-first`, `workspace-today-hero` and `finance-split` now assert absence.
+- **Redundancy harness:** check 2 is now "no route on Home". It gained two `route` checks: Route Planner's pull builds a three-stop Maps route, and Job detail's Directions still points at the job's address. That makes 96/96. **Trap:** `await page.evaluate(() => pullTodaysJobs())` hangs forever, because it awaits a `showAlert` dialog. Also, the stub answers the relational `jobs` table with `[]`, so the check forces the documented localStorage fallback.
+- **Measure harness:** `measure.js` gained the `workspace-below-hero` and `route-planner` states.
+
+**Trap:** a comment naming Connor in `tools-nav-pwa.js` fails `text-audit.test.js` (the nav file must never name a person).
+
 ## 2026-10-31 -- Cross-surface consistency pass: Workspace + portal, measured side by side
 
 This was one PR off fresh main, rebased onto #554 after it merged. **Chrome only.** Not touched: data, payments (#554's `loadStripeJs` / `mountPaymentUI` / `mountAddCardSetupUI`), PDF, auth or messaging. Harness: `docs/cross-surface-consistency-2026-10-31/harness/measure.js`. It renders tool pages through the redundancy pass's stubs and portal pages through #553's, from one checkout. It prints each element category's distinct computed-style signatures per surface, so a mismatch shows as two lines instead of one.

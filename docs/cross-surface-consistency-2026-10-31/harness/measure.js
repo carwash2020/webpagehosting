@@ -35,6 +35,11 @@ const TOOLS = [
   // day) and Secure documents (Upload) primaries.
   ['workspace-week', '/tools/workspace.html', '[data-shift-open]'],
   ['workspace-upload', '/tools/workspace.html', '#secureDocUploadBtn'],
+  // Round 2: just under Next Job, where Today's route (and Route all) sat
+  // on main; the daily actions exist on both, so both shots line up. And
+  // Route Planner, now the one place the whole day's route lives.
+  ['workspace-below-hero', '/tools/workspace.html', '#dashPrimaryStrip'],
+  ['route-planner', '/tools/route-planner.html'],
 ];
 const PORTAL = ['home', 'dashboard', 'jobs', 'quotes', 'work-orders', 'contracts', 'settings', 'home-attention', 'jobs-history'];
 const PORTAL_SCROLL = { 'home-attention': ['home', '.attention-title'], 'jobs-history': ['jobs', '.job-status-pill'] };

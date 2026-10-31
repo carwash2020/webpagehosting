@@ -191,9 +191,13 @@
   // sidebar: false (redundancy pass, 2026-10-31) keeps a destination out of
   // the desktop sidebar's list while leaving it everywhere else this list
   // feeds -- the More drawer, here-marks, the page's own tab. Route
-  // Planner is the one: Today's route on the Dashboard opens the day's
-  // route, so the planner (typing in stops by hand, reordering, the map)
-  // is a More / Search destination, not a primary slot.
+  // Planner is the one: a More / Search destination, not a primary slot.
+  // Since the cross-surface pass (2026-10-31, round 2) it is also the only
+  // place the whole day's route lives (Pull today's jobs -> Open full
+  // route); Home no longer has Today's route (the approved rule:
+  // route and navigation stay off Home). On a computer the More button is
+  // hidden, so there it's Search ("route") only: drop sidebar: false here
+  // if that proves too hidden.
   var SIDEBAR_DESTS = [
     { group: 'Work',   href: '/tools/workspace.html',          icon: 'home',     label: 'Dashboard' },
     { group: 'Work',   href: '/tools/job-tracker.html',        icon: 'wrench',   label: 'Job Tracker' },
