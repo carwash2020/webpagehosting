@@ -147,7 +147,7 @@ test('login.html: after the password, a Face ID device gets Face ID instead of t
   const faceIdIdx = submit.indexOf('portalFaceIdInsteadOfCode(');
   const aalIdx = submit.indexOf('getAuthenticatorAssuranceLevel()');
   assert.ok(aalIdx > 0 && faceIdIdx > aalIdx, 'only for an account the assurance check says owes a second step');
-  assert.match(submit, /\/\/ The password was just typed: no Face ID lock straight after it\.\s*portalMarkSignedIn\(email\);\s*goHomeAfterSignIn\(\);/);
+  assert.match(submit, /\/\/ The password was just typed: no Face ID lock straight after it\.\s*portalMarkSignedIn\(email\);\s*signingInEmail = email;\s*goHomeAfterSignIn\(\);/);
 });
 
 test('login.html: a signed-in session that still owes the code stays for the code on load -- refreshing no longer skips it', () => {
@@ -156,7 +156,7 @@ test('login.html: a signed-in session that still owes the code stays for the cod
   assert.match(onLoad, /const wantsCode = new URLSearchParams\(window\.location\.search\)\.get\('step'\) === 'code' \|\| !portalIsBiometricLockEnabled\(email\);/);
   assert.match(onLoad, /openMfaChallenge\(factorId\);\s*return;/);
   assert.ok(onLoad.indexOf('openMfaChallenge(') < onLoad.indexOf("window.location.replace('/portal/home.html')"), 'the code comes before any redirect');
-  assert.match(onLoad, /await client\.auth\.signOut\(\{ scope: 'local' \}\);\s*return;\s*\}\s*\}\s*window\.location\.replace/, 'no factor to ask for: stay on the form, never bounce back to home.html (which would send it straight back here)');
+  assert.match(onLoad, /await client\.auth\.signOut\(\{ scope: 'local' \}\);\s*return;\s*\}\s*\}\s*(?:\/\/[^\n]*\n\s*)*signingInEmail = email;\s*if \(await portalAccountIsStaff\(\)\) \{ await sendStaffToWorkspace\(false\); return; \}\s*window\.location\.replace/, 'no factor to ask for: stay on the form, never bounce back to home.html (which would send it straight back here)');
   const verify = LOGIN.slice(LOGIN.indexOf('async function verify()'), LOGIN.indexOf('async function cancel()'));
   assert.match(verify, /if \(signingInEmail\) portalMarkSignedIn\(signingInEmail\);\s*goHomeAfterSignIn\(\);/, 'password and code just done: no Face ID lock after');
 });

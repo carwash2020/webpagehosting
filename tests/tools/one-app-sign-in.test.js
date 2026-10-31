@@ -76,9 +76,11 @@ test('the return= allowlist is kept, and unlisted paths still fall back to the W
 test('portal sign-in: a staff account (positive role read) gets no portal session and is sent to the Workspace sign-in; failures count as a client', async () => {
   const fn = extractFn(PORTAL_LOGIN, 'goHomeAfterSignIn');
   assert.match(fn, /portalAccountIsStaff\(\)/);
-  assert.match(fn, /client\.auth\.signOut\(\{ scope: 'local' \}\)/);
-  assert.match(fn, /window\.location\.replace\('\/tools\/login\.html'\)/);
+  assert.match(fn, /sendStaffToWorkspace\(true\)/);
   assert.match(fn, /window\.location\.replace\('\/portal\/home\.html'\)/);
+  const staff = extractFn(PORTAL_LOGIN, 'sendStaffToWorkspace');
+  assert.match(staff, /client\.auth\.signOut\(\{ scope: 'local' \}\)/);
+  assert.match(staff, /window\.location\.replace\('\/tools\/login\.html'\)/);
   const run = async (result) => {
     const ctx = { Array, client: { from: () => ({ select: () => ({ limit: async () => result }) }) } };
     vm.createContext(ctx);
@@ -91,8 +93,10 @@ test('portal sign-in: a staff account (positive role read) gets no portal sessio
 });
 
 test('portal sign-in: every path home goes through the role check, the already-signed-in one included', () => {
-  assert.doesNotMatch(PORTAL_LOGIN.replace(/async function goHomeAfterSignIn[\s\S]*?\n  \}\n/, ''), /window\.location\.replace\('\/portal\/home\.html'\)/);
-  assert.match(PORTAL_LOGIN, /signingInEmail = email;\n    goHomeAfterSignIn\(\);\n  \}\);/);
+  // Fresh sign-ins (password, then any code or Face ID) all end in goHomeAfterSignIn().
+  assert.equal((PORTAL_LOGIN.match(/goHomeAfterSignIn\(\);/g) || []).length, 3);
+  // A visitor who is already signed in is checked too, and goes straight on (no animation) if not staff.
+  assert.match(PORTAL_LOGIN, /signingInEmail = email;\n    if \(await portalAccountIsStaff\(\)\) \{ await sendStaffToWorkspace\(false\); return; \}\n    window\.location\.replace\('\/portal\/home\.html'\);\n  \}\);/);
 });
 
 test('each door pre-fills the email for the other, through sessionStorage (not the URL)', () => {

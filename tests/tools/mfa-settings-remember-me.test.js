@@ -57,6 +57,8 @@ function fakeSupabase({ enrolled = false } = {}) {
       state.enrolled = true;
       return reply(200, { access_token: 'aal2-token', refresh_token: 'aal2-refresh', expires_in: 3600, user: { email: 'steve@example.com' } });
     }
+    // The role read right after sign-in (is this a staff account?).
+    if (pathname === '/rest/v1/account_roles') return reply(200, [{ email: 'steve@example.com' }]);
     if (pathname === '/rest/v1/rpc/generate_internal_recovery_codes') return reply(200, Array.from({ length: 10 }, (_, i) => `code-${i}`));
     if (pathname === '/rest/v1/rpc/count_unused_internal_recovery_codes') return reply(200, 10);
     return reply(200, []);

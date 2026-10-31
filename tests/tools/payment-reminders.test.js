@@ -190,6 +190,7 @@ test('Dashboard Money Owed: a Remind pill beside Mark paid on due and late invoi
     // Money on Home waits for a confirmed role (2026-09-29); the gate itself
     // is covered in package-b-loading-access.test.js.
     applyHomeMoneyState: () => 'shown',
+    renderStripeBalance: () => {},
   };
   ctx.isOverdue = (i) => ctx.getDueDate(i) < new Date(new Date().toDateString());
   vm.createContext(ctx);

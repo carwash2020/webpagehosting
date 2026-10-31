@@ -258,7 +258,8 @@ test('login.html: a lost-phone recovery redeems the code, sets up a new authenti
   assert.match(w.document.getElementById('mfaRecoveryCodesList').textContent, /NEW1-AAAA/);
 
   w.document.getElementById('mfaRecoveryCodesContinueBtn').click();
-  assert.equal(w.__redirects, 1);
+  // The role check (staff or client?) now runs before the redirect.
+  await until(() => w.__redirects === 1, 'the redirect');
   const s = storedSession(w);
   assert.equal(s.access_token, token('aal2'), 'the stored session is the verified one, which the server accepts');
   assert.ok(backend.log.includes('POST /rest/v1/rpc/redeem_internal_recovery_code'));
