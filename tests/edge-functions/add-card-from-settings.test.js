@@ -94,7 +94,10 @@ test('cancelling clears the form and restores the Add a Card button, rather than
 });
 
 test('Stripe.js is loaded and the CSP allows it, matching the same pattern already established on dashboard.html', () => {
-  assert.match(SETTINGS, /<script src="https:\/\/js\.stripe\.com\/v3\/"><\/script>/);
+  // Loaded by a small post-load injector (2026-10 speed pass) rather than a
+  // parser-blocking <script src>, so the URL appears as a string in that loader.
+  assert.match(SETTINGS, /s\.src = 'https:\/\/js\.stripe\.com\/v3\/';\s*document\.head\.appendChild\(s\);/);
+  assert.match(SETTINGS, /window\.addEventListener\('load'/);
   assert.match(SETTINGS, /script-src[^"]*https:\/\/js\.stripe\.com/);
   assert.match(SETTINGS, /connect-src[^"]*https:\/\/api\.stripe\.com/);
   assert.match(SETTINGS, /frame-src https:\/\/js\.stripe\.com/);

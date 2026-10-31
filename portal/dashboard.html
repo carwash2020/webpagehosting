@@ -101,10 +101,23 @@
   }
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=10f1831b6e">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous"></script>
 <script src="/signature-pad.js?v=f95f8e1d28"></script>
 <script src="/portal/portal-app.js?v=202609300100"></script>
-<script src="https://js.stripe.com/v3/"></script>
+<script>
+  // Stripe.js is only needed once a client opens the card sheet, never to
+  // paint the page -- so it no longer blocks parsing. It starts a few
+  // seconds after the page has loaded (so it doesn't compete with the
+  // page's own data requests on a slow phone connection), still well
+  // before anyone can pick invoices, sign and reach the card step.
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      var s = document.createElement('script');
+      s.src = 'https://js.stripe.com/v3/';
+      document.head.appendChild(s);
+    }, 3000);
+  });
+</script>
 <script src="/js/pdf-layout.js?v=4dca739ad1" defer></script>
 <style>
   body { background: #0a0a0a; max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
