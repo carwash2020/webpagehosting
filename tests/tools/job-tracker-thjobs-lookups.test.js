@@ -142,3 +142,22 @@ test('createJobFromTemplate() on an id that doesn\'t exist creates nothing', () 
   api.createJobFromTemplate(999);
   assert.equal(created.length, 0);
 });
+
+// P4 (2026-11-01): the Add a job form is client, date and job type; the rest is under More details.
+test('Add a job: client, date and job type are in the short form, and everything else sits under More details', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'job-tracker.html'), 'utf8');
+  const { JSDOM } = require('jsdom');
+  const doc = new JSDOM(html).window.document;
+  const more = doc.getElementById('jtMore');
+  assert.ok(more && more.tagName === 'DETAILS' && /More details/.test(more.querySelector('summary').textContent));
+  for (const id of ['jobClient', 'jobDate', 'jobTitle']) assert.ok(!more.contains(doc.getElementById(id)), id + ' is in the short form');
+  for (const id of ['jobPhone', 'jobAddress', 'jobClientEmail', 'jobReferredBy', 'jobPriority', 'jobStatus', 'jobHoursWorked', 'jobNotes']) assert.ok(more.contains(doc.getElementById(id)), id + ' is under More details');
+  assert.equal(more.open, false);
+});
+
+test('Job Tracker has no capital-letter labels: no text-transform: uppercase anywhere on the page', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'job-tracker.html'), 'utf8');
+  assert.doesNotMatch(html, /text-transform:\s*uppercase/);
+  assert.match(html, /body\.th-tool-page\[data-th-page="job-tracker"\] label,[\s\S]*?\.th-kicker,[\s\S]*?text-transform: none; letter-spacing: 0;/);
+  assert.match(html, /<button class="tab-btn is-active" data-tab="jobs">Jobs<\/button>/);
+});
