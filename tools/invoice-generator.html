@@ -127,6 +127,22 @@
   body.th-tool-page[data-th-page="invoice-generator"] .totals-row.total > span:first-child,
   body.th-tool-page[data-th-page="invoice-generator"] .pos-field label,
   body.th-tool-page[data-th-page="invoice-generator"] .inv-stat-label { text-transform: none; letter-spacing: 0; }
+  /* Line item polish (P4): Qty lines up with the other inputs, and Tax? is a
+     themed box instead of the browser's light-blue default. */
+  body.th-tool-page[data-th-page="invoice-generator"] .li-qty-unit:empty { display: none; }
+  @media (max-width: 760px) {
+    body.th-tool-page[data-th-page="invoice-generator"] .line-items-table td[data-label="Qty"]::before { order: -2; }
+    body.th-tool-page[data-th-page="invoice-generator"] .line-items-table .li-qty-unit { order: -1; margin-right: auto; font-size: 12px; color: var(--text-dim); }
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] .line-items-table input.li-taxable {
+    -webkit-appearance: none; appearance: none; flex: 0 0 auto; width: 24px; min-width: 24px; height: 24px; min-height: 24px; max-width: none; padding: 0; margin: 0;
+    border: 1px solid var(--border); border-radius: 7px; background: var(--th-field); cursor: pointer; vertical-align: middle;
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] .line-items-table input.li-taxable:checked {
+    background: var(--orange) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231a0d02' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 16px 16px no-repeat;
+    border-color: var(--orange);
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] .line-items-table input.li-taxable:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
   .inv-adv, .inv-more { margin: 8px 0; }
   .inv-adv > summary, .inv-more > summary { cursor: pointer; color: var(--text-dim); font-size: 14px; min-height: 36px; display: flex; align-items: center; }
   .inv-more > summary { color: var(--text); font-weight: 600; }
