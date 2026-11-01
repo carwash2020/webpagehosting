@@ -182,3 +182,28 @@ test('copy-all builds text containing every issue on that unit', async () => {
     assert.ok(copiedText.includes(iss.symptom), `copied text missing symptom: ${iss.symptom}`);
   });
 });
+
+// P4 (2026-11-01): search first, add-appliance and add-model are sheets, sentence case.
+test('Add an appliance and Add a model are form sheets (collapsed by default), and the inline form is gone', async () => {
+  const window = await ready(loadPage());
+  const doc = window.document;
+  for (const [id, fields] of [['prAddUnitSection', ['prNewType', 'prNewBrand', 'prNewModel', 'prNewManualLink', 'prNewPartsLink']], ['prAddModelSection', ['prNewModelInType', 'prNewManualLinkInType', 'prNewPartsLinkInType']]]) {
+    const sec = doc.getElementById(id);
+    assert.ok(sec && sec.classList.contains('form-section') && sec.classList.contains('is-collapsed'), id + ' is a collapsed form section');
+    assert.match(sec.querySelector(':scope > .form-section-header').getAttribute('onclick'), /toggleFormSection/);
+    for (const f of fields) assert.ok(sec.querySelector('#' + f), f + ' is in the sheet');
+  }
+  // Search is the first thing on the page.
+  const first = doc.querySelector('#prListView input, #prListView select');
+  assert.equal(first.id, 'prSearchInput');
+  window.togglePrAddUnitForm();
+  assert.equal(doc.getElementById('prAddUnitSection').classList.contains('is-collapsed'), false);
+  window.togglePrAddUnitForm();
+  assert.equal(doc.getElementById('prAddUnitSection').classList.contains('is-collapsed'), true);
+});
+
+test('Appliance Wiki has no text-transform: uppercase and neutralises the shared caps labels', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'parts-reference.html'), 'utf8');
+  assert.doesNotMatch(html, /text-transform:\s*uppercase/);
+  assert.match(html, /body\.th-tool-page\[data-th-page="parts-reference"\] label,[\s\S]*?\.th-kicker,[\s\S]*?text-transform: none; letter-spacing: 0;/);
+});
