@@ -233,7 +233,7 @@ test('the Today hero and greeting open on the shared skeleton, not on empty card
   // Money owed's figures open on the skeleton inside #todayMoneyBody (the
   // part renderTodayMoney() rewrites; redundancy pass, 2026-10-31). The
   // hidden Rest of Today list, and its skeleton, are gone.
-  assert.match(WORKSPACE, /<div class="today-money" id="todayMoney">\s*<div id="todayMoneyBody"><div class="today-money-label">Money Owed<\/div>(<div class="skeleton-line w-100"><\/div>){2}<\/div>/);
+  assert.match(WORKSPACE, /<div class="today-money" id="todayMoney">\s*(?:<!--[\s\S]*?-->\s*)?<div class="stripe-balance" id="stripeBalance" hidden><\/div>\s*<div id="todayMoneyBody"><div class="today-money-label">Money Owed<\/div>(<div class="skeleton-line w-100"><\/div>){2}<\/div>/);
   assert.doesNotMatch(WORKSPACE, /id="todayRestOfDay"/);
   assert.match(WORKSPACE, /<p class="greeting-banner-greeting" id="greetingBannerGreeting"><span class="skeleton-line"><\/span><\/p>/);
   assert.match(WORKSPACE, /<p class="greeting-banner-number" id="greetingBannerNumber"><span class="skeleton-line"><\/span><\/p>/);

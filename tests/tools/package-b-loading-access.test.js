@@ -60,6 +60,7 @@ function moneyDom(role, roleState) {
     function readyToInvoiceRows() { return []; }
     function escapeHtml(s) { return String(s); }
     function escapeAttr(s) { return String(s); }
+    function renderStripeBalance() {}
   `);
   // var, not const: each jsdom eval is its own script, and a top-level const
   // from one isn't visible to the next.

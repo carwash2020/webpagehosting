@@ -50,12 +50,17 @@ function render({ shifts, jobs, invoices, extra, openTeam } = {}) {
     querySelector: (sel) => (openTeam && sel === '.shift-team-wrap[open]' ? {} : null),
     addEventListener(type, fn) { this.listeners.push({ type, fn }); },
   };
+  // The shift button lives in the greeting banner now (#shiftBanner).
+  const banner = {
+    innerHTML: '', dataset: {}, listeners: [],
+    addEventListener(type, fn) { this.listeners.push({ type, fn }); },
+  };
   const intervals = [], opened = [];
   const ctx = Object.assign({
     console, Date, Math, JSON, Number, String, Object, Array, Set, Map, isNaN, Infinity,
     localStorage: { getItem: (k) => (k in mem ? mem[k] : null), setItem: (k, v) => { mem[k] = String(v); } },
     getStoredSession: () => ({ email: STEVE }),
-    document: { getElementById: (id) => (id === 'weekCard' ? el : null) },
+    document: { getElementById: (id) => (id === 'weekCard' ? el : id === 'shiftBanner' ? banner : null) },
     escapeHtml: (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;'),
     escapeAttr: (x) => String(x).replace(/"/g, '&quot;'),
     money: (n) => '$' + Number(n).toFixed(2),
@@ -65,9 +70,9 @@ function render({ shifts, jobs, invoices, extra, openTeam } = {}) {
   }, extra || {});
   vm.createContext(ctx);
   vm.runInContext(DL.replace(/^const /gm, 'var '), ctx);
-  vm.runInContext('var weekCardTick = null;' + extractFn(WS, 'shiftPersonName') + extractFn(WS, 'renderWeekCard') + ';this.f = renderWeekCard;', ctx);
+  vm.runInContext('var weekCardTick = null;' + extractFn(WS, 'shiftPersonName') + extractFn(WS, 'renderShiftBanner') + extractFn(WS, 'renderWeekCard') + ';this.f = renderWeekCard;', ctx);
   ctx.f();
-  return { html: el.innerHTML, el, cls, intervals, opened, ctx };
+  return { html: el.innerHTML, shift: banner.innerHTML, el, banner, cls, intervals, opened, ctx };
 }
 
 test('one card: the Hours worked card is gone, and Your week re-renders on a shift change or once the role loads', () => {
@@ -81,10 +86,11 @@ test('one card: the Hours worked card is gone, and Your week re-renders on a shi
   assert.doesNotMatch(WS, /<li><strong>Hours worked<\/strong>/);
 });
 
-test('not clocked in, no shifts yet: Start my day at the top, the job clock\'s bars as before, Worked at 0 h', () => {
-  const { html, cls, intervals } = render({ jobs: [{ id: 1, status: 'in-progress', timeLog: [{ start: iso(onDay(0, 9)), end: iso(onDay(0, 11)), hours: 2 }] }] });
+test('not clocked in, no shifts yet: Start my day in the greeting banner, the job clock\'s bars as before, Worked at 0 h', () => {
+  const { html, shift, cls, intervals } = render({ jobs: [{ id: 1, status: 'in-progress', timeLog: [{ start: iso(onDay(0, 9)), end: iso(onDay(0, 11)), hours: 2 }] }] });
   assert.match(html, /<span class="week-label" id="weekCardLabel">Your week<\/span>/);
-  assert.match(html, /<div class="shift-now is-off">[\s\S]*?Not clocked in<\/span><button type="button" class="primary-btn" data-shift-open>Start my day<\/button><\/div>/);
+  assert.match(shift, /<div class="shift-now is-off">[\s\S]*?Not clocked in<\/span><button type="button" class="primary-btn" data-shift-open>Start my day<\/button><\/div>/);
+  assert.doesNotMatch(html, /shift-now|data-shift-open/, 'the shift button is not in the week card any more');
   assert.doesNotMatch(html, /is-worked"|week-legend/, 'no shifts this week: one fill per bar, no legend');
   assert.equal(cls.has('has-worked'), false);
   assert.match(html, /aria-label="Hours on the clock: Mon 2 h, /);
@@ -101,15 +107,15 @@ test('an empty week: one hint that names both clocks', () => {
 
 test('on shift: since when, End my day, and each bar has worked (green) behind on the clock (orange), with a legend', () => {
   const start = Date.now() - 2 * HOUR;
-  const { html, cls, intervals } = render({
+  const { html, shift, cls, intervals } = render({
     shifts: [
       { id: 'a', email: STEVE, start: iso(onDay(0, 7)), end: iso(onDay(0, 16)), hours: 9 },
       { id: 'b', email: STEVE, start: iso(start), end: null, hours: null },
     ],
     jobs: [{ id: 1, status: 'done', timeLog: [{ start: iso(onDay(0, 8)), end: iso(onDay(0, 14)), hours: 6 }] }],
   });
-  assert.match(html, new RegExp('<div class="shift-now is-on">[\\s\\S]*?On shift since ' + timeLabel(start) + '<span class="shift-now-sub">120 min so far</span>'));
-  assert.match(html, /data-shift-open>End my day<\/button>/);
+  assert.match(shift, new RegExp('<div class="shift-now is-on">[\\s\\S]*?On shift since ' + timeLabel(start) + '<span class="shift-now-sub">120 min so far</span>'));
+  assert.match(shift, /data-shift-open>End my day<\/button>/);
   assert.equal(cls.has('has-worked'), true);
   if (sinceMonday > 0) {
     assert.match(html, /<div class="week-bar"><span class="week-bar-h">9<\/span><span class="week-bar-track"><span class="week-bar-fill is-worked" style="height:100%"><\/span><span class="week-bar-fill" style="height:67%"><\/span><\/span><span class="week-bar-day">M<\/span><\/div>/, 'Monday: 9 h worked, 6 h of it on the clock');
@@ -122,9 +128,9 @@ test('on shift: since when, End my day, and each bar has worked (green) behind o
 });
 
 test('a shift left open: Fix it, and it counts nothing', () => {
-  const { html } = render({ shifts: [{ id: 'a', email: STEVE, start: iso(Date.now() - 30 * HOUR), end: null, hours: null }] });
-  assert.match(html, /<div class="shift-now is-due">[\s\S]*?needs an end time<span class="shift-now-sub">It isn.t counting until you say when you finished\.<\/span>/);
-  assert.match(html, /data-shift-open>Fix it<\/button>/);
+  const { html, shift } = render({ shifts: [{ id: 'a', email: STEVE, start: iso(Date.now() - 30 * HOUR), end: null, hours: null }] });
+  assert.match(shift, /<div class="shift-now is-due">[\s\S]*?needs an end time<span class="shift-now-sub">It isn.t counting until you say when you finished\.<\/span>/);
+  assert.match(shift, /data-shift-open>Fix it<\/button>/);
   assert.match(html, /<div class="week-stat-value">0 h<\/div><div class="week-stat-label">Worked<\/div>/);
 });
 
@@ -157,12 +163,12 @@ test('everyone\'s week: folded away, finance only (fails closed), only once some
 
 test('its buttons open the shell\'s shift sheet, wired once', () => {
   const r = render();
-  const clicks = r.el.listeners.filter(l => l.type === 'click');
+  const clicks = r.banner.listeners.filter(l => l.type === 'click');
   assert.equal(clicks.length, 1);
   clicks[0].fn({ target: { closest: (sel) => (sel === '[data-shift-open]' ? {} : null) } });
   assert.equal(r.opened.length, 1);
   r.ctx.f();
-  assert.equal(r.el.listeners.filter(l => l.type === 'click').length, 1);
+  assert.equal(r.banner.listeners.filter(l => l.type === 'click').length, 1);
 });
 
 test('the look: worked in the shift clock\'s green, on the clock narrower in orange inside it', () => {

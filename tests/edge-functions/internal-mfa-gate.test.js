@@ -1,7 +1,7 @@
 // Two-factor gate on the internal edge functions (2026-09-25,
 // docs/ACTION-ITEMS.md #13; audit 2026-09-23 round 3 finding #4).
 //
-// These 15 functions only serve internal /tools/ accounts: each checks the
+// These 16 functions only serve internal /tools/ accounts: each checks the
 // caller's account_roles row with the service role, which bypasses RLS, so
 // the database-side two-factor rule never reached them. Each now also asks
 // check_internal_mfa_for_edge_function() (sql/security/enforce_internal_mfa_server_side.sql)
@@ -22,7 +22,7 @@ const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const FUNCTIONS = [
   'advisor-health', 'create-pos-charge', 'delete-portal-invoice', 'send-contract-notification',
   'send-invite', 'send-invoice-notification', 'send-job-confirmation-email', 'send-quote-notification',
-  'set-invoice-paid', 'sync-checkup-to-portal', 'sync-contract-to-portal', 'sync-invoice-to-portal',
+  'set-invoice-paid', 'stripe-balance', 'sync-checkup-to-portal', 'sync-contract-to-portal', 'sync-invoice-to-portal',
   'sync-job-to-portal', 'sync-quote-to-portal', 'trigger-workflow',
 ];
 
@@ -41,7 +41,7 @@ const bearer = (claims) => `Bearer ${b64url({ alg: 'HS256', typ: 'JWT' })}.${b64
 // account_roles check passes and the two-factor gate is what decides.
 const INTERNAL_ROW = {
   email: CLAIMS.email, role_name: 'Developer',
-  can_manage_invoices: true, can_manage_contracts: true, can_manage_roles: true,
+  can_manage_invoices: true, can_manage_contracts: true, can_manage_roles: true, can_view_finance: true,
 };
 
 function loadHandler(name, { gate, internal = true }) {
@@ -150,14 +150,14 @@ for (const name of FUNCTIONS) {
     const gate = src.indexOf(`await callerPassesInternalMfa(claims, "${name}")`);
     const body = src.indexOf('await req.json()', serve);
     assert.ok(accountCheck > serve && gate > accountCheck, `${name}: the gate comes after the account check`);
-    // advisor-health takes no request body at all.
-    if (name !== 'advisor-health') assert.ok(body > gate, `${name}: the body is read only after the gate`);
+    // advisor-health and stripe-balance take no request body at all.
+    if (name !== 'advisor-health' && name !== 'stripe-balance') assert.ok(body > gate, `${name}: the body is read only after the gate`);
     else assert.equal(body, -1);
     assert.equal(src.split('callerPassesInternalMfa(claims').length - 1, 1, 'called exactly once');
   });
 }
 
-test('the 15 gated functions are exactly the ones whose caller check reads account_roles for a user session', () => {
+test('the gated functions are exactly the ones whose caller check reads account_roles for a user session', () => {
   const dir = repo('edge-functions');
   const gated = fs.readdirSync(dir)
     .filter((f) => f.endsWith('-index.ts'))

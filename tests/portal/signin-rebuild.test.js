@@ -195,7 +195,7 @@ test('loading, wrong-password and success states are wired on both screens', () 
 });
 
 test('every redirect still happens; success only delays it by the animation', () => {
-  assert.match(PORTAL_LOGIN, /function goHomeAfterSignIn\(\) \{\s*ThSignin\.success\(\(\) => window\.location\.replace\('\/portal\/home\.html'\)\);\s*\}/);
+  assert.match(PORTAL_LOGIN, /async function goHomeAfterSignIn\(\) \{[\s\S]*?ThSignin\.success\(\(\) => window\.location\.replace\('\/portal\/home\.html'\)\);\s*\}/);
   assert.match(PORTAL_LOGIN, /\}\s*window\.location\.replace\('\/portal\/home\.html'\);\s*\}\);/, 'already-signed-in visitors are still sent straight to Home, no animation');
   assert.match(TOOLS_LOGIN, /ALLOWED_RETURN_PATHS\.has\(returnTo\) \? returnTo : '\/tools\/workspace\.html'/);
   assert.match(TOOLS_LOGIN, /ThSignin\.success\(\(\) => \{ window\.location\.href = target; \}\);/);

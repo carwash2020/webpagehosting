@@ -320,9 +320,39 @@
 
   // Runs the ~600ms success animation (logo un-ghosts, form settles), then
   // goes where every successful sign-in has always gone.
-  function goHomeAfterSignIn() {
+  // One sign-in for everyone (2026-10-31): a staff account that signs in here
+  // (password and any two-factor code done) has an internal role. It gets no
+  // portal session: this one is cleared and they're sent to the Workspace
+  // sign-in, which enforces the team's own two-factor rules. Nothing is
+  // handed across. A role that can't be read counts as a client, so this
+  // only ever sends someone away on a positive answer.
+  async function portalAccountIsStaff() {
+    try {
+      const { data, error } = await client.from('account_roles').select('email').limit(1);
+      return !error && Array.isArray(data) && data.length > 0;
+    } catch (e) { return false; }
+  }
+  // Staff who signed in here: no portal session; on to the Workspace sign-in.
+  async function sendStaffToWorkspace(animate) {
+    try { sessionStorage.setItem('th_signin_email_hint', signingInEmail || ''); } catch (e) { /* ignore */ }
+    await client.auth.signOut({ scope: 'local' });
+    if (animate) ThSignin.success(() => window.location.replace('/tools/login.html'));
+    else window.location.replace('/tools/login.html');
+  }
+  async function goHomeAfterSignIn() {
+    if (await portalAccountIsStaff()) { await sendStaffToWorkspace(true); return; }
     ThSignin.success(() => window.location.replace('/portal/home.html'));
   }
+
+  // Sent here from the Workspace sign-in: this email is a client account.
+  (function () {
+    let hint = '';
+    try { hint = sessionStorage.getItem('th_signin_email_hint') || ''; sessionStorage.removeItem('th_signin_email_hint'); } catch (e) { /* ignore */ }
+    if (hint) {
+      document.getElementById('clientEmail').value = hint;
+      document.getElementById('loginSub').textContent = 'That email is a client account. Sign in here to see your invoices.';
+    }
+  })();
 
   let forgotPasswordMode = false;
 
@@ -359,6 +389,10 @@
         return;
       }
     }
+    // Already signed in (and past any second step): staff go to the Workspace
+    // sign-in, everyone else straight on to Home as before, no animation.
+    signingInEmail = email;
+    if (await portalAccountIsStaff()) { await sendStaffToWorkspace(false); return; }
     window.location.replace('/portal/home.html');
   });
 
@@ -469,6 +503,7 @@
     }
     // The password was just typed: no Face ID lock straight after it.
     portalMarkSignedIn(email);
+    signingInEmail = email;
     goHomeAfterSignIn();
   });
 
