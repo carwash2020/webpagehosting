@@ -66,3 +66,25 @@ test('only the newest run of each other workflow counts, so a fixed backup clear
   assert.equal(s.deployRun, null);
   assert.deepEqual(Array.from(s.otherFailures, r => r.name), ['Check links']);
 });
+
+// P4 (2026-11-01): Health badges in sentence case.
+test('Health: "All clear" / "N issues" badges and the Live status header are sentence case, with no uppercase transform on the page', () => {
+  assert.doesNotMatch(html, /text-transform:\s*uppercase/);
+  assert.match(html, /data-th-page="dev-tools"\] :is\(h1, h2, h3, h4, th\),/, 'the shared h1-h3 caps rule is neutralised on this page');
+  assert.match(html, />All clear<\/span>/);
+  assert.doesNotMatch(html, /ALL CLEAR/);
+  assert.match(html, /' issue' \+ \(issues\.length === 1 \? '' : 's'\)/);
+  assert.match(html, /<h2 class="dev-section-title" id="devSecHealthLive">Live status<\/h2>/);
+});
+
+test('deploy-run badges read "Success" / "In progress", not capitals', async () => {
+  const { window } = load([
+    { id: 1, name: 'pages build and deployment', conclusion: 'success', status: 'completed', updated_at: '2026-10-31T15:17:00Z' },
+    { id: 2, name: 'Tests and consistency check', conclusion: null, status: 'in_progress', updated_at: '2026-10-31T15:17:00Z' },
+  ]);
+  await window.renderDeployStatus();
+  const doc = window.document;
+  assert.equal(doc.querySelector('#deployStatus .dev-check-status').textContent, 'Success');
+  const states = [...doc.querySelectorAll('#deployHistoryList .dev-check-status')].map((e) => e.textContent);
+  assert.deepEqual(states, ['Success', 'In progress']);
+});
