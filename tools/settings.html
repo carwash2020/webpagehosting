@@ -15,6 +15,7 @@
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
 <script src="/tools/auth.js?v=0b420b4211"></script>
+<script src="/trusted-device.js?v=a9dbd2c119"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -440,6 +441,18 @@
     </div>
   </div>
 
+  <!-- Trusted devices (2026-11-01). Devices where "Trust this device for 30
+       days" was on at the code step; each skips the code (never the
+       password) until it expires. Shown only while two-factor is on. Same
+       server mechanism as the client portal's list
+       (sql/security/add_trusted_devices.sql, /trusted-device.js). -->
+  <div class="settings-section" id="trustedDevicesSection" style="display:none;">
+    <h2>Trusted devices</h2>
+    <p class="settings-desc">These skip the 6-digit code for 30 days. Your password is still needed. Remove any you don't recognize. A new password, or turning two-factor off, removes them all.</p>
+    <div class="th-set-card" id="trustedDevicesList"></div>
+    <div class="settings-desc" id="trustedDevicesMsg" style="display:none; margin-top:10px;"></div>
+  </div>
+
   <div class="settings-section danger-zone">
     <h2>Session</h2>
     <div class="th-set-card">
@@ -648,12 +661,14 @@
       const remaining = await countRemainingRecoveryCodes(getAuthToken());
       document.getElementById('mfaRecoveryCodesStatus').textContent =
         remaining === null ? 'Could not check.' : `${remaining} unused code${remaining === 1 ? '' : 's'} left.`;
+      renderTrustedDevicesSettings();
     } else {
       mfaFactorId = null;
       status.textContent = mandatory ? 'Required -- not set up yet.' : 'Off for this account.';
       btn.textContent = 'Set up';
       btn.onclick = handleStartMfaEnrollSettings;
       recoveryRow.style.display = 'none';
+      document.getElementById('trustedDevicesSection').style.display = 'none';
       // Low-friction discovery for an optional-tier (Employee) account: a
       // brief, honest reason it's worth turning on, not just a passive
       // toggle someone could easily scroll past without knowing why they'd
@@ -779,6 +794,9 @@
       );
     }
 
+    // A new authenticator starts with no trusted devices (2026-11-01).
+    await revokeAllTrustedDevicesSettings();
+
     const codesResult = await generateRecoveryCodes(getAuthToken(), 10);
     // Refresh the toggle button/status/recovery-count row FIRST --
     // renderMfaSettingsCard() resets the codes-display area to hidden as
@@ -821,6 +839,14 @@
     await ensureFreshToken();
     const btn = document.getElementById('mfaSettingsToggleBtn');
     const msgEl = document.getElementById('mfaSettingsMsg');
+    // Signed in on a trusted device (2026-11-01), so this session skipped
+    // the code. Supabase only removes an authenticator for a session that
+    // entered it; say so plainly instead of showing its raw error.
+    if (typeof accessTokenAal === 'function' && accessTokenAal(getAuthToken()) !== 'aal2') {
+      msgEl.textContent = 'This device skipped the code because it is trusted. To turn off two-factor, sign out, then sign back in and enter your 6-digit code.';
+      msgEl.style.display = '';
+      return;
+    }
     btn.disabled = true;
     const result = await mfaUnenroll(getAuthToken(), mfaFactorId);
     btn.disabled = false;
@@ -830,9 +856,83 @@
       return;
     }
     await deleteRecoveryCodes(getAuthToken());
+    // No second factor left, so nothing to skip: revoke every trusted device.
+    await revokeAllTrustedDevicesSettings();
     msgEl.textContent = 'Two-factor authentication is off.';
     msgEl.style.display = '';
     renderMfaSettingsCard();
+  }
+
+  // ---- Trusted devices (2026-11-01) ----
+  // The shared mechanism (/trusted-device.js + sql/security/add_trusted_devices.sql),
+  // called over raw fetch like every other MFA call on this page. The
+  // portal's Settings shows the same list in its own card style.
+  function trustedDeviceRpc() {
+    return ThTrustedDevice.fetchRpc(SUPABASE_URL, SUPABASE_ANON_KEY, getAuthToken());
+  }
+  async function revokeAllTrustedDevicesSettings() {
+    if (typeof ThTrustedDevice === 'undefined') return;
+    await ensureFreshToken();
+    await ThTrustedDevice.revokeAll(trustedDeviceRpc(), getCurrentUserId());
+  }
+
+  function escapeTrustedDeviceText(str) {
+    return String(str == null ? '' : str).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  }
+
+  async function renderTrustedDevicesSettings() {
+    const section = document.getElementById('trustedDevicesSection');
+    const listEl = document.getElementById('trustedDevicesList');
+    const msgEl = document.getElementById('trustedDevicesMsg');
+    if (typeof ThTrustedDevice === 'undefined') { section.style.display = 'none'; return; }
+    section.style.display = '';
+    msgEl.style.display = 'none';
+    await ensureFreshToken();
+    let devices;
+    try {
+      devices = await ThTrustedDevice.list(trustedDeviceRpc());
+    } catch (e) {
+      listEl.innerHTML = '';
+      msgEl.textContent = 'Could not load trusted devices. Please try again.';
+      msgEl.style.display = '';
+      return;
+    }
+    if (!devices.length) {
+      listEl.innerHTML = '<div class="settings-row"><div class="th-set-row-main"><div class="settings-row-sub">No trusted devices. Turn on "Trust this device for 30 days" when you enter your code to add one.</div></div></div>';
+      return;
+    }
+    const userId = getCurrentUserId();
+    listEl.innerHTML = devices.map((d) => {
+      const here = ThTrustedDevice.isThisDevice(userId, d.id) ? ' <span class="th-v2-pill is-green">This device</span>' : '';
+      const where = d.surface === 'portal' ? 'Client portal' : 'Workspace';
+      const when = `Trusted ${ThTrustedDevice.formatDate(d.created_at)} \u00b7 until ${ThTrustedDevice.formatDate(d.expires_at)} \u00b7 ${where}`;
+      return '<div class="settings-row" data-trusted-device="' + escapeTrustedDeviceText(d.id) + '">' +
+        '<span class="th-v2-icon-tile" aria-hidden="true"><svg class="th-icon"><use href="#icon-phone" xlink:href="#icon-phone"></use></svg></span>' +
+        '<div class="th-set-row-main"><div class="settings-row-label">' + escapeTrustedDeviceText(d.label || 'Unknown device') + here + '</div>' +
+        '<div class="settings-row-sub">' + escapeTrustedDeviceText(when) + '</div></div>' +
+        '<button type="button" class="secondary-btn" data-remove-trusted-device="' + escapeTrustedDeviceText(d.id) + '" aria-label="Remove ' + escapeTrustedDeviceText(d.label || 'this device') + '">Remove</button>' +
+        '</div>';
+    }).join('');
+    listEl.querySelectorAll('[data-remove-trusted-device]').forEach((btn) => {
+      btn.addEventListener('click', () => handleRemoveTrustedDevice(btn.getAttribute('data-remove-trusted-device'), btn));
+    });
+  }
+
+  async function handleRemoveTrustedDevice(deviceId, btn) {
+    const confirmed = await showConfirm('Remove this trusted device? It will ask for your 6-digit code next time.', { confirmText: 'Remove', danger: true });
+    if (!confirmed) return;
+    btn.disabled = true;
+    await ensureFreshToken();
+    const msgEl = document.getElementById('trustedDevicesMsg');
+    try {
+      await ThTrustedDevice.remove(trustedDeviceRpc(), getCurrentUserId(), deviceId);
+    } catch (e) {
+      btn.disabled = false;
+      msgEl.textContent = 'Could not remove that device. Please try again.';
+      msgEl.style.display = '';
+      return;
+    }
+    renderTrustedDevicesSettings();
   }
 
   async function handleRegenerateRecoveryCodes() {

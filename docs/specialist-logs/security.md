@@ -1513,6 +1513,32 @@ From the read-only Stripe audit of 2026-10-30. All keys were verified live on 20
 - Live schema shapes (column types, nullability, existing policies, null tenant_ids) were read with SELECTs only.
 - **Not done:** `get_advisors` after applying, which is step 2 of the turn-on in `docs/stripe-hardening-2026-10-31/README.md`. Nothing was applied, deployed, or sent to Stripe or Resend.
 
+## 2026-11-01 -- Trusted devices: skip the 2FA code for 30 days on a known device
+
+Approved by Connor: "trusted device skips 2FA for 30 days." Password is always required; only the code is skipped, and only on a device the server recognises.
+
+**What already existed.** Both sign-in pages already had a "Trust this device for 30 days" switch, but it only chose *where* the verified session was stored (localStorage for 30 days vs. sessionStorage). It never skipped the code, and `docs/SIGNIN.md` plus `tests/portal/signin-rebuild.test.js` pinned exactly that. There was no server-side trust at all. This change keeps the switch and its storage behaviour and gives it the meaning the label always implied.
+
+**One mechanism, not two.** The portal (supabase-js) and the Workspace (raw fetch in `tools/auth.js`) have separate MFA code for good historical reasons, but trust storage and validation is security logic that should exist once. So: one migration (`sql/security/add_trusted_devices.sql`: tables `trusted_devices` and `trusted_device_sessions`, functions `trust_this_device`, `use_trusted_device`, `current_session_is_trusted`, `list_my_trusted_devices`, `revoke_trusted_device`, `revoke_all_trusted_devices`), and one browser helper (`/trusted-device.js`, `ThTrustedDevice`) that takes each surface's own `rpc(name, args)` transport. Two copies would drift; a fix to one (say, a revocation trigger) would silently miss the other.
+
+**Hashing.** Followed the recovery-code precedent exactly: pgcrypto bcrypt (`crypt(token, gen_salt('bf'))`), compared inside a SECURITY DEFINER function, over a deny-all table with grants revoked, keyed to `auth.uid()`, `search_path` including `extensions`. The token is 256 random bits minted server-side and returned once. The DB test searches every column of every row the feature writes for the plaintext token.
+
+**No edge function.** The comparison already runs server-side in Postgres against a table no client can read; the browser only sends the token and receives true/false. An edge function would add a deploy step and buy nothing.
+
+**Revocation is checked on use, not just by deleting rows.** Each row stores the verified `factor_id` it was granted under and `password_marker` (SHA-256 of the account's bcrypt password hash). A row counts only while that factor still exists and is verified and the marker still matches. So a password change via *any* path (portal settings, reset email, Workspace reset page, Supabase dashboard) and any 2FA removal/reset/re-enrolment, including a Workspace recovery-code redemption, kills every device without relying on the browser. I chose this over a trigger on `auth.users`/`auth.mfa_factors` because I can't verify trigger privileges on the hosted auth schema from here, and a migration that might half-apply is worse than a check that can't miss. The browsers also call `revoke_all_trusted_devices()` after those actions, so Settings shows the truth immediately. The marker is a hash of a salted hash; it can't be used to test password guesses.
+
+**Minting needs the code.** `trust_this_device()` refuses anything but an `aal2` session on an account with a verified factor, so a stolen password alone can never create trust.
+
+**The Workspace gate (split out, see the next entry).** A trusted sign-in stays `aal1` (Supabase can't mint `aal2` without the code). `internal_mfa_session_ok()` refuses it in `enforce` mode and logs `would_block` for it in `log` mode. This PR does not change that: `tools/login.html` asks the gate before storing a trusted session and falls back to the code if refused, so nobody loops. Recovery-code minting/deleting and turning 2FA off still require `aal2`; a trusted session gets a plain "sign back in with your code" message for the latter.
+
+**Risk-acceptance calls.**
+- The device token sits in localStorage next to the Supabase session, so XSS that could steal it could already steal the session. Accepted; no new exposure class.
+- Anyone who knows the password *and* uses the trusted browser skips the code. That is the feature; the switch copy says to leave it off on shared computers.
+- Portal pages' "second step owed" check now asks `current_session_is_trusted()`. The portal has never had server-side `aal2` enforcement (noted 2026-09-23), so this is no weaker than today. Flagged again rather than fixed: out of scope.
+- **"Sign out everywhere" doesn't exist** on either surface (only the recovery-code redemption signs out other sessions, and it already revokes trust via the factor check). Not built; flagged for the owner.
+
+**Verified (CI only, nothing applied live):** PGlite tests run the real migration on top of the real enforcement migration (`tests/security/trusted-devices-db.test.js`); 17 Workspace and 16 portal jsdom tests run the real pages (`tests/tools/trusted-device-login.test.js`, `tests/portal/trusted-device-portal.test.js`); all existing MFA/recovery test files re-run green. Not done: applying either migration, `get_advisors` after applying.
+
 <!-- Add new entries above this line -->
 
 ## 2026-10-04 -- Two-factor setup could lock an account out
