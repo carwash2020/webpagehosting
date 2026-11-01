@@ -1539,6 +1539,21 @@ Approved by Connor: "trusted device skips 2FA for 30 days." Password is always r
 
 **Verified (CI only, nothing applied live):** PGlite tests run the real migration on top of the real enforcement migration (`tests/security/trusted-devices-db.test.js`); 17 Workspace and 16 portal jsdom tests run the real pages (`tests/tools/trusted-device-login.test.js`, `tests/portal/trusted-device-portal.test.js`); all existing MFA/recovery test files re-run green. Not done: applying either migration, `get_advisors` after applying.
 
+## 2026-11-01 (later) -- Trusted devices: gate change split out; works before the migration is applied
+
+Connor's review of #563: item B said "additive migrations only", but `let_trusted_devices_pass_internal_mfa_gate.sql` replaced the bodies of two live security functions (`internal_mfa_session_ok`, `check_internal_mfa_for_edge_function`). That was not additive.
+
+**Split.** Both gate files (and their four PGlite tests) are out of #563's history and in their own draft PR, held for Connor's sign-off. That PR depends on #563 being merged and `add_trusted_devices.sql` applied, since it calls `trusted_device_session_valid()`. #563 is now additive only. A new PGlite test proves it: every `public`/`auth` function body has the same `md5(pg_get_functiondef)` before and after the migration. Connor confirmed the live `internal_mfa_mode` is `log`. A new test proves that in `log` mode `internal_mfa_session_status()` returns `blocked: false` for a trusted session, so Workspace trusted sign-ins work without the gate change. They do write `would_block` rows, which the review window will show. In `enforce` mode they are refused and login.html asks for the code (unchanged, still tested).
+
+**Before the migration is applied.** Every trusted-device call fails, and it must look exactly like the pre-feature app. PostgREST answers a missing function with HTTP 404 and `{"code":"PGRST202", "message":"Could not find the function public.<name>(...) in the schema cache", ...}`. postgrest-js 2.112.3 hands that parsed body back as `error` unchanged (read in its `processResponse()`). `ThTrustedDevice.isNotAvailable()` treats only PGRST202, PGRST205 (missing table), 42883 and 42P01 (a half-applied migration) as "not available". The Workspace transport now copies `code` from the 404 body.
+- Sign-in, both surfaces: every failure, of either kind, returns false, so the code is asked for. Nothing here can skip the code by failing. A missing function is silent. Any other failure is logged to the surface's own error log (`logClientError` in the Workspace, `logPortalClientError` in the portal).
+- Settings, both surfaces: the Trusted devices block stays hidden until the list answers. If the function is missing, it stays hidden. A real failure shows the existing "Couldn't load" message and is logged. Before, a missing migration showed that error to everyone with 2FA on.
+- Portal pages' `current_session_is_trusted()` check already failed closed (missing means the code is owed). Unchanged.
+
+**Verified.** New jsdom tests on both surfaces use the exact PostgREST body (missing migration: code required, sign-in completes, nothing kept, nothing shown or logged; Settings hidden; real 500/network failure: code required, logged; Settings shows its error). A mutation run against the previous `trusted-device.js` and Settings pages failed all 10 new Settings/logging/helper tests. The screenshot harness re-ran in Playwright with the real supabase-js 2.112.3 UMD (SRI matches portal/settings.html's pin) against a backend answering every trusted-device RPC with the real 404 body. Both surfaces passed: code required, signed in, no device kept, no message, nothing logged; Settings hid the block with no page errors (shots `*-04-*`, `*-05-*`).
+
+**Not done:** applying anything live; deploying anything. **Open:** until the migration is applied, the switch copy ("Skip the code here for 30 days") promises more than the server can do. It is harmless (the code is asked for next time) but slightly misleading.
+
 <!-- Add new entries above this line -->
 
 ## 2026-10-04 -- Two-factor setup could lock an account out

@@ -27,10 +27,26 @@ const USER_ID = '33333333-3333-4333-8333-333333333333';
 const DEVICE_KEY = `th_trusted_device:${USER_ID}`;
 const STEP_KEY = `th_portal_second_step_${EMAIL}`;
 
+// What supabase-js 2.112.3 returns as `error` for a function that isn't in
+// the database (before sql/security/add_trusted_devices.sql is applied):
+// PostgREST answers 404 with this body and postgrest-js hands the parsed body
+// back unchanged (processResponse(): `error = JSON.parse(body)`).
+const PARAMS = {
+  use_trusted_device: ['p_device_id', 'p_token'], trust_this_device: ['p_label', 'p_surface'],
+  revoke_trusted_device: ['p_device_id'],
+};
+function postgrestMissingFunction(name) {
+  const params = PARAMS[name];
+  return params
+    ? { code: 'PGRST202', details: `Searched for the function public.${name} with parameters ${params.join(', ')} or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache.`, hint: null, message: `Could not find the function public.${name}(${params.join(', ')}) in the schema cache` }
+    : { code: 'PGRST202', details: `Searched for the function public.${name} without parameters or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache.`, hint: null, message: `Could not find the function public.${name} without parameters in the schema cache` };
+}
+
 // The server: devices (id -> { token, revoked, expired, label }), the
 // sessions use_trusted_device() recorded as trusted, and the current session.
-function server({ devices = {}, factor = true, rpcMissing = false } = {}) {
-  return { devices, factor, rpcMissing, trustedSessions: new Set(), calls: [], session: null, sessionSeq: 0 };
+// rpcFail: { name: true } -- a real failure (500) of that function.
+function server({ devices = {}, factor = true, rpcMissing = false, rpcFail = {} } = {}) {
+  return { devices, factor, rpcMissing, rpcFail, trustedSessions: new Set(), calls: [], session: null, sessionSeq: 0 };
 }
 
 function stubClient(srv) {
@@ -92,7 +108,8 @@ function stubClient(srv) {
     },
     rpc: async (name, args) => {
       srv.calls.push('rpc:' + name);
-      if (srv.rpcMissing) return { data: null, error: { code: 'PGRST202', message: 'Could not find the function' } };
+      if (srv.rpcMissing) return { data: null, error: postgrestMissingFunction(name), status: 404 };
+      if (srv.rpcFail[name]) return { data: null, error: { code: 'XX000', details: null, hint: null, message: 'internal error' }, status: 500 };
       const out = RPCS[name] ? RPCS[name](args || {}) : null;
       if (out && out.error) return { data: null, error: out.error };
       return { data: out, error: null };
@@ -123,6 +140,9 @@ function load(html, srv, url, { stored, beforeParse } = {}) {
     },
   });
   windows.push(dom.window);
+  // The portal's error log (portal-app.js), as a spy.
+  dom.window.__logged = [];
+  dom.window.logPortalClientError = (msg) => { dom.window.__logged.push(String(msg)); };
   return dom.window;
 }
 
@@ -241,6 +261,54 @@ test('portal: before the migration is applied, sign-in with the code works exact
   assert.deepEqual(deviceRecord(w), validStored(), 'an error is not a "no": the token is kept');
 });
 
+// ---- before add_trusted_devices.sql is applied (2026-11-01) --------------------------------
+
+test('portal, migration not applied: "Trust this device" on, the code is still required, sign-in completes, nothing is shown or logged', async () => {
+  const srv = server({ rpcMissing: true });
+  const w = loadLogin(srv);
+  await submitPassword(w);
+  await until(() => codeShown(w), 'the code step');
+  assert.equal(w.__home, 0, 'the password alone is not enough');
+  w.document.getElementById('portalTrustDevice').checked = true;
+  w.document.getElementById('mfaChallengeCodeInput').value = '123456';
+  w.document.getElementById('mfaChallengeSubmit').click();
+  await until(() => w.__home === 1, 'home');
+  assert.ok(srv.calls.includes('challengeAndVerify'));
+  assert.ok(srv.calls.includes('rpc:trust_this_device'), 'it tried to trust the device');
+  assert.equal(deviceRecord(w), null, 'nothing kept');
+  assert.equal(w.document.getElementById('mfaChallengeError').textContent, '');
+  assert.deepEqual(w.__logged, [], 'a missing migration is not an error');
+
+  // Next sign-in: the code again, and the server isn't even asked.
+  const again = loadLogin(srv);
+  await submitPassword(again);
+  await until(() => codeShown(again), 'the code step again');
+  assert.equal(again.__home, 0);
+  assert.ok(!srv.calls.includes('rpc:use_trusted_device'));
+});
+
+test('portal: a real failure trusting the device still signs in with the code, and is logged', async () => {
+  const srv = server({ rpcFail: { trust_this_device: true } });
+  const w = loadLogin(srv);
+  await submitPassword(w);
+  await until(() => codeShown(w), 'the code step');
+  w.document.getElementById('mfaChallengeCodeInput').value = '123456';
+  w.document.getElementById('mfaChallengeSubmit').click();
+  await until(() => w.__home === 1, 'home');
+  assert.equal(deviceRecord(w), null);
+  assert.deepEqual(w.__logged, ['Trusted devices: trust_this_device failed: internal error']);
+});
+
+test('portal: a real failure checking a trusted device asks for the code and is logged', async () => {
+  const srv = server({ devices: { 'dev-1': { token: 'tok-dev-1' } }, rpcFail: { use_trusted_device: true } });
+  const w = loadLogin(srv, { stored: validStored() });
+  await submitPassword(w);
+  await until(() => codeShown(w), 'the code step');
+  assert.equal(w.__home, 0, 'a failure never skips the code');
+  assert.deepEqual(deviceRecord(w), validStored());
+  assert.deepEqual(w.__logged, ['Trusted devices: use_trusted_device failed: internal error']);
+});
+
 // ---- every portal page's second-step check ---------------------------------------------------
 
 function appPage(srv) {
@@ -322,6 +390,25 @@ test('portal Settings: Trusted devices lists each device with a Remove button; R
   await until(() => w.document.querySelectorAll('[data-remove-trusted-device]').length === 1, 'one row');
   assert.equal(srv.devices['dev-1'].revoked, true);
   assert.ok(!srv.devices['dev-2'].revoked);
+});
+
+test('portal Settings, migration not applied: the Trusted devices card is hidden, with no error and nothing logged', async () => {
+  const srv = server({ rpcMissing: true });
+  const w = await loadSettings(srv);
+  await until(() => srv.calls.includes('rpc:list_my_trusted_devices'), 'the list asked for');
+  await new Promise((r) => setTimeout(r, 30));
+  assert.equal(w.document.getElementById('trustedDevicesCard').style.display, 'none');
+  assert.equal(w.document.getElementById('trustedDevicesMsg').style.display, 'none');
+  assert.equal(w.document.getElementById('trustedDevicesBody').innerHTML, '');
+  assert.deepEqual(w.__logged, []);
+});
+
+test('portal Settings: a real failure loading the list says so, and is logged', async () => {
+  const srv = server({ devices: { 'dev-1': { token: 't1', label: 'A' } }, rpcFail: { list_my_trusted_devices: true } });
+  const w = await loadSettings(srv);
+  await until(() => w.document.getElementById('trustedDevicesCard').style.display !== 'none', 'the card');
+  assert.equal(w.document.getElementById('trustedDevicesMsg').textContent, "Couldn't load your trusted devices. Please try again.");
+  assert.ok(w.__logged.length >= 1 && w.__logged.every((m) => m === 'Trusted devices: list_my_trusted_devices failed: internal error'));
 });
 
 test('portal Settings: the card is hidden while two-factor is off', async () => {

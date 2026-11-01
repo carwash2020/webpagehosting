@@ -30,15 +30,32 @@ const DEVICE_KEY = `th_trusted_device:${USER_ID}`;
 const b64url = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const token = (aal, session = 's1') => `${b64url({ alg: 'HS256' })}.${b64url({ sub: USER_ID, email: EMAIL, role: 'authenticated', aal, session_id: session })}.sig`;
 const reply = (body, status = 200) => ({ ok: status >= 200 && status < 300, status, json: async () => body });
+// What PostgREST really answers (HTTP 404) for a function that isn't in the
+// database, i.e. before sql/security/add_trusted_devices.sql is applied.
+const PARAMS = {
+  use_trusted_device: ['p_device_id', 'p_token'], trust_this_device: ['p_label', 'p_surface'],
+  revoke_trusted_device: ['p_device_id'],
+};
+function postgrestMissingFunction(name) {
+  const params = PARAMS[name];
+  return params
+    ? { code: 'PGRST202', details: `Searched for the function public.${name} with parameters ${params.join(', ')} or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache.`, hint: null, message: `Could not find the function public.${name}(${params.join(', ')}) in the schema cache` }
+    : { code: 'PGRST202', details: `Searched for the function public.${name} without parameters or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache.`, hint: null, message: `Could not find the function public.${name} without parameters in the schema cache` };
+}
+const TRUSTED_RPCS = ['use_trusted_device', 'trust_this_device', 'list_my_trusted_devices', 'revoke_trusted_device', 'revoke_all_trusted_devices', 'current_session_is_trusted'];
 const aalOf = (init) => {
   try { return JSON.parse(Buffer.from(init.headers.Authorization.split('.')[1], 'base64url').toString()).aal; } catch (e) { return null; }
 };
 
 // A fake Supabase. `devices` is the server's table: id -> { token, revoked, expired }.
-function fakeSupabase({ devices = {}, gateBlocks = false, rpcMissing = false, role = { can_manage_roles: true } } = {}) {
+// rpcMissing: the trusted-device functions don't exist (migration not applied).
+// rpcFail: { name: status | 'network' } -- a real failure of one of them.
+function fakeSupabase({ devices = {}, gateBlocks = false, rpcMissing = false, rpcFail = {}, role = { can_manage_roles: true } } = {}) {
   const state = { devices, log: [], rpcArgs: {}, gateBlocks, sessions: 0 };
   const rpc = (name, handler) => (st, init) => {
-    if (rpcMissing) return reply({ code: 'PGRST202', message: 'Could not find the function' }, 404);
+    if (rpcMissing && TRUSTED_RPCS.includes(name)) return reply(postgrestMissingFunction(name), 404);
+    if (rpcFail[name] === 'network') return Promise.reject(new TypeError('Failed to fetch'));
+    if (rpcFail[name]) return reply({ code: 'XX000', details: null, hint: null, message: 'internal error' }, rpcFail[name]);
     const args = JSON.parse(init.body || '{}');
     (st.rpcArgs[name] = st.rpcArgs[name] || []).push({ args, aal: aalOf(init) });
     return handler(st, args, init);
@@ -106,6 +123,9 @@ function loadLogin(backend, { stored } = {}) {
     },
   });
   const w = dom.window;
+  // The Workspace's error log (tools-media-sharing.js, not loaded here).
+  w.__logged = [];
+  w.logClientError = (msg) => { w.__logged.push(String(msg)); };
   w.__redirects = 0;
   w.redirectAfterLogin = () => { w.__redirects++; };
   w.finishSignInFlow = () => { w.__redirects++; };
@@ -199,6 +219,62 @@ test('Workspace: before the migration is applied (functions missing), sign-in wo
   assert.deepEqual(deviceRecord(w), { id: 'dev-1', token: 'tok-dev-1' }, 'a network/missing-function error never deletes the token');
 });
 
+// ---- before add_trusted_devices.sql is applied (2026-11-01) --------------------------------
+// The real PostgREST answer for a missing function (404, PGRST202). Sign-in
+// must be exactly the pre-feature flow: password, then the code, no message,
+// nothing logged as an error. A REAL failure also falls back to the code
+// (never past it) but is logged.
+
+test('Workspace, migration not applied: "Trust this device" on, the code is still required, sign-in completes, nothing is shown or logged', async () => {
+  const backend = fakeSupabase({ rpcMissing: true });
+  const w = loadLogin(backend);
+  await submitPassword(w);
+  await until(() => visible(w, 'mfaChallengeView'), 'the code step');
+  assert.equal(storedSession(w), null, 'the password alone stores nothing');
+  assert.equal(w.document.getElementById('thTrustDevice').checked, true);
+  w.document.getElementById('mfaChallengeCodeInput').value = '123456';
+  w.document.getElementById('mfaChallengeSubmitBtn').click();
+  await until(() => w.__redirects === 1, 'signed in with the code');
+  assert.ok(backend.log.includes('POST /rest/v1/rpc/trust_this_device'), 'it tried to trust the device');
+  assert.equal(storedSession(w).access_token, token('aal2', 's-verified'));
+  assert.equal(deviceRecord(w), null, 'nothing kept: there is no device on the server');
+  assert.equal(w.document.getElementById('mfaChallengeError').textContent, '');
+  assert.deepEqual(w.__logged, [], 'a missing migration is not an error');
+
+  // The next sign-in on this device asks for the code again, and doesn't
+  // even ask the server (no token was kept).
+  const again = loadLogin(backend);
+  await submitPassword(again);
+  await until(() => visible(again, 'mfaChallengeView'), 'the code step again');
+  assert.equal(again.__redirects, 0);
+  assert.ok(!backend.log.includes('POST /rest/v1/rpc/use_trusted_device'));
+});
+
+test('Workspace: a real failure trusting the device (500) still signs in with the code, and is logged', async () => {
+  const backend = fakeSupabase({ rpcFail: { trust_this_device: 500 } });
+  const w = loadLogin(backend);
+  await submitPassword(w);
+  await until(() => visible(w, 'mfaChallengeView'), 'the code step');
+  w.document.getElementById('mfaChallengeCodeInput').value = '123456';
+  w.document.getElementById('mfaChallengeSubmitBtn').click();
+  await until(() => w.__redirects === 1, 'signed in with the code');
+  assert.equal(deviceRecord(w), null);
+  assert.equal(w.__logged.length, 1);
+  assert.match(w.__logged[0], /^Trusted devices: trust_this_device failed: internal error$/);
+});
+
+test('Workspace: a real failure checking a trusted device (network) asks for the code, keeps the token, and is logged', async () => {
+  const backend = fakeSupabase({ devices: trustedDevice(), rpcFail: { use_trusted_device: 'network' } });
+  const w = loadLogin(backend, { stored: { id: 'dev-1', token: 'tok-dev-1' } });
+  await submitPassword(w);
+  await until(() => visible(w, 'mfaChallengeView'), 'the code step');
+  assert.equal(w.__redirects, 0, 'a failure never skips the code');
+  assert.equal(storedSession(w), null);
+  assert.deepEqual(deviceRecord(w), { id: 'dev-1', token: 'tok-dev-1' });
+  assert.equal(w.__logged.length, 1);
+  assert.match(w.__logged[0], /use_trusted_device failed: Failed to fetch/);
+});
+
 test('Workspace: a correct code with "Trust this device" on trusts it, using the verified session; the browser keeps only id + token', async () => {
   const backend = fakeSupabase();
   const w = loadLogin(backend);
@@ -276,6 +352,8 @@ function loadSettings(backend, { aal = 'aal2', stored } = {}) {
       w.showConfirm = async () => true;
       w.initAppTour = () => {};
       w.refreshSettingsPushState = async () => {};
+      w.__logged = [];
+      w.logClientError = (msg) => { w.__logged.push(String(msg)); };
     },
   });
   return dom.window;
@@ -305,6 +383,51 @@ test('Workspace Settings: Trusted devices lists each device with a Remove button
   await until(() => !w.document.querySelector('[data-remove-trusted-device]'), 'no rows left');
   assert.equal(deviceRecord(w), null, 'removing this device forgets its token here too');
   assert.match(w.document.getElementById('trustedDevicesList').textContent, /No trusted devices/);
+});
+
+test('Workspace Settings, migration not applied: Trusted devices is hidden, with no error and nothing logged', async () => {
+  const backend = fakeSupabase({ rpcMissing: true });
+  const w = loadSettings(backend);
+  await w.renderMfaSettingsCard();
+  await until(() => backend.log.includes('POST /rest/v1/rpc/list_my_trusted_devices'), 'the list asked for');
+  await new Promise((r) => setTimeout(r, 30));
+  assert.ok(!visible(w, 'trustedDevicesSection'), 'the section is not shown');
+  assert.ok(!visible(w, 'trustedDevicesMsg'), 'no error message');
+  assert.equal(w.document.getElementById('trustedDevicesList').innerHTML, '');
+  assert.deepEqual(w.__logged, []);
+  assert.match(w.document.getElementById('mfaRecoveryCodesStatus').textContent, /8 unused codes left/, 'the rest of the 2FA card is untouched');
+});
+
+test('Workspace Settings: Trusted devices stays hidden while the list is loading (no empty flash)', async () => {
+  const backend = fakeSupabase({ devices: trustedDevice() });
+  let release;
+  const gate = new Promise((r) => { release = r; });
+  const orig = backend.fetch;
+  let asked = false;
+  backend.fetch = async (url, init) => {
+    if (!String(url).includes('list_my_trusted_devices')) return orig(url, init);
+    asked = true;
+    return gate.then(() => orig(url, init));
+  };
+  const w = loadSettings(backend);
+  await w.renderMfaSettingsCard();
+  await until(() => asked, 'the list asked for');
+  await new Promise((r) => setTimeout(r, 30));
+  assert.ok(!visible(w, 'trustedDevicesSection'));
+  release();
+  await until(() => visible(w, 'trustedDevicesSection'), 'shown once loaded');
+  await until(() => w.document.querySelectorAll('[data-remove-trusted-device]').length === 1, 'one row');
+});
+
+test('Workspace Settings: a real failure loading the list shows "Could not load" and is logged', async () => {
+  const backend = fakeSupabase({ rpcFail: { list_my_trusted_devices: 500 } });
+  const w = loadSettings(backend);
+  await w.renderMfaSettingsCard();
+  await until(() => visible(w, 'trustedDevicesSection'), 'the section');
+  assert.equal(w.document.getElementById('trustedDevicesMsg').textContent, 'Could not load trusted devices. Please try again.');
+  assert.ok(visible(w, 'trustedDevicesMsg'));
+  assert.ok(w.__logged.length >= 1, 'logged (once per render)');
+  assert.ok(w.__logged.every((m) => /^Trusted devices: list_my_trusted_devices failed: internal error$/.test(m)));
 });
 
 test('Workspace Settings: a device label is shown as text, never as markup', async () => {
@@ -365,6 +488,27 @@ test('Workspace password reset: a new password revokes every trusted device', as
 });
 
 // ---- the shared helper -------------------------------------------------------------------
+
+test('trusted-device.js: only "not in the database" answers count as not available; every other error is real', async () => {
+  const dom = new JSDOM('<!DOCTYPE html><body></body>', { runScripts: 'dangerously', url: 'https://www.triplehenterprisesllc.biz/tools/login.html' });
+  dom.window.eval(TRUSTED_JS);
+  const T = dom.window.ThTrustedDevice;
+  for (const code of ['PGRST202', 'PGRST205', '42883', '42P01']) assert.equal(T.isNotAvailable({ code }), true, code);
+  for (const e of [{ code: 'XX000' }, { code: '42501' }, { code: 'PGRST301' }, new TypeError('Failed to fetch'), { status: 404 }, null, undefined]) {
+    assert.equal(T.isNotAvailable(e), false, JSON.stringify(e));
+  }
+  // The Workspace transport carries PostgREST's code through from the real 404 body.
+  dom.window.fetch = async () => reply(postgrestMissingFunction('list_my_trusted_devices'), 404);
+  const err = await T.fetchRpc('https://x.supabase.co', 'anon', 'tok')('list_my_trusted_devices', {}).catch((e) => e);
+  assert.equal(err.status, 404);
+  assert.equal(err.code, 'PGRST202');
+  assert.equal(T.isNotAvailable(err), true);
+  assert.equal(await T.list(T.fetchRpc('https://x.supabase.co', 'anon', 'tok')), null, 'list() says "not available" instead of throwing');
+  // tryUse never returns anything but false when the function is missing.
+  dom.window.localStorage.setItem('th_trusted_device:u1', JSON.stringify({ id: 'd', token: 't' }));
+  assert.equal(await T.tryUse(T.fetchRpc('https://x.supabase.co', 'anon', 'tok'), 'u1'), false);
+});
+
 
 test('trusted-device.js: device labels name the browser and platform only', () => {
   const dom = new JSDOM('<!DOCTYPE html><body></body>', { runScripts: 'dangerously' });
