@@ -53,7 +53,7 @@
 <!-- data-layer.js (2026-09-22): the client registry and the directory
      query (thGetClientDirectory) the Clients tab now lists from. Loaded
      before the shared files below, same order as every other page. -->
-<script src="/tools/data-layer.js?v=c595490771" defer></script>
+<script src="/tools/data-layer.js?v=b5758547dc" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
@@ -153,7 +153,7 @@
   .dup-pair-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   @media (max-width: 600px) { .dup-pair-sides { grid-template-columns: 1fr; } }
   .dup-side { border: 1px solid var(--border); border-radius: 10px; padding: 10px; min-width: 0; overflow-wrap: anywhere; }
-  .dup-side-source { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; }
+  .dup-side-source { font-size: 12px; color: var(--text-dim); }
   .dup-side-name { font-weight: 600; margin: 2px 0 6px; }
   .dup-side dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; font-size: 13.5px; }
   .dup-side dt { color: var(--text-dim); }
@@ -175,7 +175,7 @@
   /* ---- Clients ---- */
   body.th-tool-page[data-th-page="clients"] .cd-toolbar { gap: 8px; }
   body.th-tool-page[data-th-page="clients"] .cd-summary {
-    font-family: var(--font-ui); text-transform: uppercase; letter-spacing: 1.2px; font-size: 12px; color: var(--text-dim);
+    font-family: var(--font-ui); font-size: 13px; color: var(--text-dim);
     display: flex; align-items: center; gap: 10px;
   }
   body.th-tool-page[data-th-page="clients"] .cd-summary::after { content: ''; flex: 1; height: 1px; background: var(--border); }
@@ -204,7 +204,7 @@
   body.th-tool-page[data-th-page="clients"] #clientsTabs::before { inset: -8px -12px; border-radius: 0; }
   body.th-tool-page[data-th-page="clients"] #clientsTabs .tab-btn {
     flex: 1 1 0; min-height: 40px; padding: 0 16px; border: 0; border-radius: var(--th-radius-seg); background: none; box-shadow: none;
-    color: var(--text-dim); font-family: var(--font-ui); font-size: 13px; letter-spacing: .8px; text-transform: uppercase;
+    color: var(--text-dim); font-family: var(--font-ui); font-size: 14px; font-weight: 600;
   }
   body.th-tool-page[data-th-page="clients"] #clientsTabs .tab-btn.is-active { background: var(--text); color: var(--bg); box-shadow: none; }
   body.th-tool-page[data-th-page="clients"] #clientsTabs .tab-btn:active { transform: scale(.97); }
@@ -272,13 +272,17 @@
   body.th-tool-page[data-th-page="clients"] .dev-panels-grid { gap: 16px; }
   body.th-tool-page[data-th-page="clients"] .dev-panel { background: var(--bg-panel); border-radius: var(--th-radius-xl); padding: 16px 18px; }
   body.th-tool-page[data-th-page="clients"] .dev-panel h2 {
-    font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text);
+    font-family: var(--font-ui); font-size: 15px; font-weight: 600; color: var(--text);
   }
   body.th-tool-page[data-th-page="clients"] .dev-panel input[type="text"],
   body.th-tool-page[data-th-page="clients"] .dev-panel input[type="email"] { min-height: 46px; border-radius: 12px; background: var(--th-field); }
   body.th-tool-page[data-th-page="clients"] .dev-check-row { border-bottom-color: var(--th-hairline); min-height: 52px; }
   body.th-tool-page[data-th-page="clients"] #emailListItems .dev-check-row.th-has-row-menu { gap: 8px; }
   body.th-tool-page[data-th-page="clients"] .dev-info-bubble { width: 30px; height: 30px; }
+
+  body.th-tool-page[data-th-page="clients"] .quick-actions-title,
+  body.th-tool-page[data-th-page="clients"] .quick-actions-btn { text-transform: none; letter-spacing: 0; }
+  body.th-tool-page[data-th-page="clients"] .th-page-tip-kicker { text-transform: none; letter-spacing: 0; }
 
   /* The live-sync badge's base look, as on every other synced tool page
      (Workspace Phase 4, Finance's Phase 3 pattern); the shell's .th-status
@@ -557,7 +561,7 @@
   <div class="help-modal">
     <button class="modal-close" onclick="closeHelpModal()" aria-label="Close">&times;</button>
     <h3>Clients</h3>
-    <p><strong>Clients tab</strong> &mdash; everyone you have worked for. Nobody has to be entered twice: a name typed on a job, invoice, quote, contact, or contract lands here on its own, and <strong>Add</strong> covers anyone new. Search by name, phone, email, or street. Each row shows what they owe (red once it is overdue) and their next or last job; the phone button calls them. Tap a client for their whole history, with Call, Text, Email, Directions, and one-tap <strong>New job</strong>, <strong>Invoice</strong>, or <strong>Quote</strong> already filled in with their details. Long-press a row for the same actions without opening it. <strong>Owes you</strong> lists only the people with a balance, biggest overdue first; <strong>A&ndash;Z</strong> is the phone-book view.</p>
+    <p><strong>Clients tab</strong> &mdash; everyone you have worked for. Nobody has to be entered twice: a name typed on a job, invoice, quote, contact, or contract lands here on its own, and <strong>Add</strong> covers anyone new. Search by name, phone, email, or street. Each row shows what they owe (red once it is overdue) and their next or last job; each row has <strong>Call</strong> and <strong>Text</strong> buttons, and the <strong>&hellip;</strong> button opens <strong>Quote</strong>, <strong>Invoice</strong>, <strong>New job</strong>, Email and Directions already filled in with their details. Tap a client for their whole history. <strong>Owes you</strong> lists only the people with a balance, biggest overdue first; <strong>A&ndash;Z</strong> is the phone-book view.</p>
     <p><strong>Portal tab</strong> &mdash; the admin side of the client-facing portal, split out of Dev Tools onto its own page (2026-09-03) since it had become a daily operational tool, not a diagnostics screen:</p>
     <p><strong>Portal accounts</strong> -- who has portal access, and a way to send or resend an invite to any email, whether or not they already have an invoice on file.</p>
     <p>Resending an invoice or quote is on <strong>Invoices</strong> (tap the row, then Resend).</p>
@@ -978,7 +982,7 @@
       // surfaces it for a second look rather than quietly filtering
       // it out and making the list disagree with the actual data.
       const internalFlag = internalEmails.has(a.email)
-        ? ' <span style="color:var(--orange-light); font-size:11.5px; font-weight:600;">INTERNAL ACCOUNT</span>'
+        ? ' <span style="color:var(--orange-light); font-size:12px; font-weight:600;">Internal account</span>'
         : '';
       return '<div class="dev-check-row" style="align-items:flex-start;"><div>' +
         '<div><strong>' + escapeHtml(a.name || '(no name)') + '</strong>' + internalFlag + '</div>' +
@@ -1675,6 +1679,7 @@
     return '';
   }
   function telHref(phone) { return 'tel:' + String(phone || '').replace(/[^\d+]/g, ''); }
+  function smsHref(phone) { return 'sms:' + String(phone || '').replace(/[^\d+]/g, ''); }
 
   function clientRowHtml(r) {
     const owedPill = r.overdueOwed > 0
@@ -1691,9 +1696,9 @@
         owedPill +
       '</a>' +
       (r.phone ? '<a class="th-icon-btn" href="' + escapeAttr(telHref(r.phone)) + '" aria-label="Call ' + escapeAttr(r.name) + '"><svg class="th-icon" aria-hidden="true"><use href="#icon-phone" xlink:href="#icon-phone"></use></svg></a>' : '') +
-      // v2 row menu (2026-09-29): the same sheet a long-press opens
-      // (clientQuickActions), one tap away for anyone who doesn't know
-      // to hold. Outside the link, like Call, so it never opens the record.
+      (r.phone ? '<a class="th-icon-btn" href="' + escapeAttr(smsHref(r.phone)) + '" aria-label="Text ' + escapeAttr(r.name) + '"><svg class="th-icon" aria-hidden="true"><use href="#icon-message" xlink:href="#icon-message"></use></svg></a>' : '') +
+      // The "..." opens Quote, Invoice, New job and the rest (clientQuickActions).
+      // Outside the link, like Call and Text, so it never opens the record.
       (typeof rowMenuButtonHtml === 'function' ? rowMenuButtonHtml(r.name) : '') +
     '</div>';
   }
@@ -1798,25 +1803,24 @@
     list.innerHTML = html;
   }
 
-  // Long-press a row for everything you'd do next with that client --
-  // the same quick-action sheet Job Tracker's cards use.
-  // v2 (2026-09-29): the same actions, now with the row menu's icons, and
-  // an opener so focus goes back to the ⋯ that opened the sheet.
+  // The row's "..." opens everything you'd do next with that client. Holding
+  // the row still opens the same sheet, but nothing depends on it.
+  // The opener sends focus back to the "..." that opened the sheet.
   function clientQuickActions(id, opener) {
     const r = clientDirRows.find(x => x.id === id);
     if (!r || typeof showQuickActionSheet !== 'function') return;
-    const actions = [{ label: 'Open', icon: 'external', kind: 'open', onClick: () => { location.href = '/tools/client-detail.html?id=' + encodeURIComponent(r.id); } }];
-    if (r.phone) {
-      actions.push({ label: 'Call', icon: 'phone', kind: 'extra', onClick: () => { location.href = telHref(r.phone); } });
-      actions.push({ label: 'Text', icon: 'message', kind: 'extra', onClick: () => { location.href = 'sms:' + String(r.phone).replace(/[^\d+]/g, ''); } });
+    // Links carry the client's ID, not the name: two clients can share one.
+    const idParam = 'clientId=' + encodeURIComponent(r.id);
+    const actions = [];
+    if (typeof canManageInvoices !== 'function' || canManageInvoices() || !getCurrentUserRole()) {
+      actions.push({ label: 'Quote', icon: 'note', kind: 'extra', onClick: () => { location.href = '/tools/invoice-generator.html?' + idParam + '#quote'; } });
+      actions.push({ label: 'Invoice', icon: 'receipt', kind: 'extra', onClick: () => { location.href = '/tools/invoice-generator.html?' + idParam + '#invoice'; } });
     }
+    actions.push({ label: 'New job', icon: 'wrench', kind: 'extra', onClick: () => { location.href = '/tools/job-tracker.html?' + idParam + '#add-job'; } });
     if (r.email) actions.push({ label: 'Email', icon: 'mail', kind: 'extra', onClick: () => { location.href = 'mailto:' + r.email; } });
     if (r.address) actions.push({ label: 'Directions', icon: 'navigate', kind: 'extra', onClick: () => { window.open('https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(r.address), '_blank', 'noopener'); } });
-    // showQuickActionSheet() renders labels as HTML -- escape the name.
-    actions.push({ label: 'New job for ' + escapeHtml(r.name), icon: 'wrench', kind: 'extra', onClick: () => { location.href = '/tools/job-tracker.html?client=' + encodeURIComponent(r.name) + '#add-job'; } });
-    if (typeof canManageInvoices !== 'function' || canManageInvoices() || !getCurrentUserRole()) {
-      actions.push({ label: 'Invoice ' + escapeHtml(r.name), icon: 'receipt', kind: 'extra', onClick: () => { location.href = '/tools/invoice-generator.html?client=' + encodeURIComponent(r.name) + '#invoice'; } });
-    }
+    actions.push({ label: 'Open profile', icon: 'external', kind: 'open', onClick: () => { location.href = '/tools/client-detail.html?id=' + encodeURIComponent(r.id); } });
+    // showQuickActionSheet() renders the title as HTML -- escape the name.
     showQuickActionSheet(escapeHtml(r.name), actions, opener ? { opener } : undefined);
   }
   function initClientDirLongPress() {

@@ -45,7 +45,7 @@ test('job-detail.html and client-detail.html both already have a real hero-stat 
   assert.match(JOB_DETAIL, /Revenue<\/div>/);
   assert.match(JOB_DETAIL, /Margin<\/div>/);
   assert.match(CLIENT_DETAIL, /<div class="client-stat-row">/);
-  assert.match(CLIENT_DETAIL, /Lifetime Revenue<\/div>/);
+  assert.match(CLIENT_DETAIL, /Lifetime revenue<\/div>/);
 });
 
 test('job-detail.html now shows the same 30-day warranty countdown job-tracker.html\'s own card shows for a Done job', () => {
