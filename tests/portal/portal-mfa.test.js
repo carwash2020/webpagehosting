@@ -107,7 +107,7 @@ test('login.html shows a real challenge overlay and verifies the code via Supaba
   assert.match(verifyBody, /if \(error\) \{[\s\S]*?return;[\s\S]*?\}/);
   assert.match(verifyBody, /goHomeAfterSignIn\(\);/);
   // goHomeAfterSignIn() is the one place that navigates: success animation first, then the same redirect.
-  assert.match(LOGIN, /function goHomeAfterSignIn\(\) \{\s*ThSignin\.success\(\(\) => window\.location\.replace\('\/portal\/home\.html'\)\);\s*\}/);
+  assert.match(LOGIN, /async function goHomeAfterSignIn\(\) \{[\s\S]*?ThSignin\.success\(\(\) => window\.location\.replace\('\/portal\/home\.html'\)\);\s*\}/);
 });
 
 test("login.html's challenge Cancel signs the just-created session out rather than leaving it half-authenticated", () => {
