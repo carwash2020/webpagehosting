@@ -112,15 +112,19 @@ test('A4: the linked row and dot styles cover the desktop key selector too', () 
 });
 
 test('A5: every field the scan flagged has a label tied to it', () => {
-  // Finance's Cost lookup fields (hours, rate, parts, taxRate) and Route
-  // Planner's Cost Analyzer fields (tripDistance, tripFuelRate,
-  // tripTaxRate) left with their cards in the redundancy pass
-  // (2026-10-31); checked as gone below.
+  // Finance's Cost lookup fields (hours, rate, parts, taxRate) left with
+  // its card in the redundancy pass (2026-10-31); checked as gone below.
+  // Route Planner's Cost Analyzer (tripDistance, tripFuelRate) came back
+  // in the corrections pack (2026-11-01, see tests/tools/cost-analyzer-restored.test.js)
+  // -- fixed, not reverted: the field pair stays, but tripTaxRate (the
+  // field the removal comment identified as the actual bug) does not
+  // come back with it, so it's still checked gone.
   const FIELDS = {
     'contract-generator.html': ['pwo_clientName', 'pwo_phone', 'pwo_serviceAddress', 'pwo_contactPicker', 'pwo_email', 'pwo_workOrderDate', 'pwo_description'],
     'runway-dashboard.html': ['settingSavingsPct'],
     'workspace.html': ['secureDocFile', 'secureDocCategory'],
     'parts-reference.html': ['prTypeFilterSelect'],
+    'route-planner.html': ['tripDistance', 'tripFuelRate'],
   };
   for (const [page, ids] of Object.entries(FIELDS)) {
     const doc = new JSDOM(read('tools', page)).window.document;
@@ -132,7 +136,7 @@ test('A5: every field the scan flagged has a label tied to it', () => {
       assert.ok(label.textContent.trim().length > 2, `${page}: #${id} label has visible text`);
     }
   }
-  for (const [page, ids] of [['finance.html', ['hours', 'rate', 'parts', 'taxRate']], ['route-planner.html', ['tripDistance', 'tripFuelRate', 'tripTaxRate']]]) {
+  for (const [page, ids] of [['finance.html', ['hours', 'rate', 'parts', 'taxRate']], ['route-planner.html', ['tripTaxRate']]]) {
     const doc = new JSDOM(read('tools', page)).window.document;
     for (const id of ids) assert.equal(doc.getElementById(id), null, `${page} #${id} left with its card`);
   }
