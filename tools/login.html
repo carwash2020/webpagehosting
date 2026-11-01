@@ -45,6 +45,7 @@
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=f212452f48">
 <script src="/tools/auth.js?v=0b420b4211"></script>
+<script src="/trusted-device.js?v=255d86a600"></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
@@ -417,7 +418,7 @@
       <input type="checkbox" id="thTrustDevice" role="switch" checked>
       <span class="si-switch-text login-hint">
         <span class="si-switch-label login-hint">Trust this device for 30 days</span>
-        <span class="si-switch-hint login-hint">Stay signed in here for 30 days. Leave off on a shared computer.</span>
+        <span class="si-switch-hint login-hint">Skip the code here for 30 days. You still sign in with your password. Leave off on a shared computer.</span>
       </span>
     </label>
     <div class="login-error" id="mfaChallengeError" role="alert"></div>
@@ -661,6 +662,9 @@
     // optional-tier account that chose to set it up).
     const factor = await mfaListVerifiedTotpFactor(pendingSession.access_token);
     if (factor) {
+      // Trusted device (2026-11-01): skips the code only when the server
+      // accepts this device's token for this account. Otherwise, the code.
+      if (await signInOnTrustedDevice()) return;
       pendingFactorId = factor.id;
       pendingRecoveryMode = false;
       document.getElementById('mfaChallengeCodeInput').style.display = '';
@@ -689,6 +693,29 @@
     persistSession(pendingSession, pendingRememberMe);
     finishSignInFlow();
   });
+
+  // ---- Trusted device (2026-11-01) ----
+  // "Trust this device for 30 days" after a correct code means a correct
+  // password alone signs in here for 30 days. The token this device keeps is
+  // checked by the database (use_trusted_device(), shared with the client
+  // portal, see /trusted-device.js); nothing on this page can skip the code
+  // by itself. Two server answers are needed: the token is right, and the
+  // Workspace's own 2FA gate accepts this session. If either is no, or
+  // anything fails, the code step runs exactly as before.
+  async function signInOnTrustedDevice() {
+    if (typeof ThTrustedDevice === 'undefined') return false;
+    const token = pendingSession.access_token;
+    const rpc = ThTrustedDevice.fetchRpc(SUPABASE_URL, SUPABASE_ANON_KEY, token);
+    if (!(await ThTrustedDevice.tryUse(rpc, ThTrustedDevice.userIdFromJwt(token)))) return false;
+    // Same check requireAuth() makes on every page (checkInternalMfaSession()
+    // in auth.js), made before anything is stored.
+    let status = null;
+    try { status = await rpc('internal_mfa_session_status', {}); } catch (e) { status = null; }
+    if (status && status.blocked === true) return false;
+    persistSession(pendingSession, pendingRememberMe);
+    finishSignInFlow();
+    return true;
+  }
 
   // ---- Challenge step (already-enrolled account) ----
 
@@ -799,6 +826,11 @@
     const result = await mfaChallengeAndVerify(pendingSession.access_token, pendingFactorId, code);
     btn.disabled = false; btn.textContent = 'Verify';
     if (!result.ok) { errorEl.textContent = result.error; shakeCodeBoxes(); return; }
+    // Trust switch on: this device skips the code for the next 30 days.
+    // Needs the verified (aal2) session just issued; best effort.
+    if (document.getElementById('thTrustDevice').checked && typeof ThTrustedDevice !== 'undefined') {
+      await ThTrustedDevice.remember(ThTrustedDevice.fetchRpc(SUPABASE_URL, SUPABASE_ANON_KEY, result.access_token), ThTrustedDevice.userIdFromJwt(result.access_token), 'tools');
+    }
     persistSession({
       access_token: result.access_token,
       refresh_token: result.refresh_token,

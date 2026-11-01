@@ -8,7 +8,8 @@
 //     auth calls; here: the new pieces never replace them)
 //   - "Remember me for 30 days" is real: ON persists 30 days, OFF ends with
 //     the browser, and an already-signed-in session keeps working
-//   - "Trust this device for 30 days" exists on both 2FA steps
+//   - "Trust this device for 30 days" exists on both 2FA steps, and skips
+//     only the code (never the password), only when the server says so
 //   - brand: #F26B1D on ink, Bricolage Grotesque + Geist, no Inter, no
 //     purple, no arrows on buttons
 //   - the ghost logo, the ~600ms success beat, prefers-reduced-motion
@@ -26,6 +27,7 @@ const TOOLS_LOGIN = read('tools', 'login.html');
 const CSS = read('signin.css');
 const UI_JS = read('signin-ui.js');
 const PORTAL_APP = read('portal', 'portal-app.js');
+const TRUSTED_JS = read('trusted-device.js');
 const PAGES = { 'portal/login.html': PORTAL_LOGIN, 'tools/login.html': TOOLS_LOGIN };
 
 // ---- ghost logo + shared assets ---------------------------------------------
@@ -158,10 +160,11 @@ test('both 2FA steps offer "Trust this device for 30 days"', () => {
   assert.match(TOOLS_LOGIN, /persistSession\(\{\s*access_token: result\.access_token,[\s\S]*?\}, pendingRememberMe\);/, 'tools: the verified session is stored with the trust choice');
 });
 
-test('Trust helper copy does not promise to skip the code; headings match on both screens', () => {
+test('Trust helper copy says the code is skipped but the password is not; headings match on both screens', () => {
+  // Trusted devices (2026-11-01): Trust now does skip the code on this
+  // device for 30 days (server-checked; see tests/security/trusted-devices-db.test.js).
   for (const [name, html] of Object.entries(PAGES)) {
-    assert.match(html, /Stay signed in here for 30 days\. Leave off on a shared computer\./, name);
-    assert.ok(!/aren't asked for a code/.test(html), `${name} must not say the code is skipped`);
+    assert.match(html, /Skip the code here for 30 days\. You still sign in with your password\. Leave off on a shared computer\./, name);
   }
   assert.match(PORTAL_LOGIN, /id="pageTitle">Sign in<\/h1>/);
   assert.match(TOOLS_LOGIN, /id="loginTitle">Sign in<\/h1>/);
@@ -171,12 +174,20 @@ test('code boxes keep breathing room from the screen edge (focus ring included)'
   assert.match(CSS, /body\.th-signin \.th-code-boxes-wrap \{ padding: 0 6px; \}/);
 });
 
-test('2FA is not weakened: no client flag lets a device skip the code', () => {
-  // Trust only chooses WHERE the verified session lives. The password step still hands over to the code step whenever a factor exists.
+test('2FA is not weakened: only the server can let a device skip the code, and never the password', () => {
+  // The password step still hands over to the code step whenever a factor
+  // exists, unless use_trusted_device() (server-side, bcrypt-checked) says
+  // this device is trusted. No local flag can stand in for that answer.
   assert.match(PORTAL_LOGIN, /aal\.nextLevel === 'aal2' && aal\.currentLevel !== 'aal2'/);
   assert.match(TOOLS_LOGIN, /const factor = await mfaListVerifiedTotpFactor\(pendingSession\.access_token\);\s*if \(factor\) \{/);
   assert.match(TOOLS_LOGIN, /if \(requiresMfaForRole\(roleInfo\)\) \{\s*await startMandatoryEnrollment\(\);/, 'employees without a factor are still forced to enrol');
-  assert.ok(!/trusted_device|th_trusted|skipMfa|skip2fa/i.test(PORTAL_LOGIN + TOOLS_LOGIN + UI_JS + PORTAL_APP));
+  // The skip is only reachable after signInWithPassword / the password grant.
+  assert.ok(PORTAL_LOGIN.indexOf('signInWithPassword') < PORTAL_LOGIN.indexOf('await portalSignInOnTrustedDevice(email)'));
+  assert.ok(TOOLS_LOGIN.indexOf('await signIn(email, password') < TOOLS_LOGIN.indexOf('if (await signInOnTrustedDevice()) return;'));
+  assert.match(TRUSTED_JS, /rpc\('use_trusted_device'/);
+  assert.match(TRUSTED_JS, /if \(ok === true\) return true;/, 'only an explicit true from the server skips the code');
+  assert.match(PORTAL_APP, /client\.rpc\('current_session_is_trusted'\)/, 'portal pages ask the server, not a local flag');
+  assert.ok(!/skipMfa|skip2fa/i.test(PORTAL_LOGIN + TOOLS_LOGIN + UI_JS + PORTAL_APP + TRUSTED_JS));
 });
 
 // ---- states -------------------------------------------------------------------
