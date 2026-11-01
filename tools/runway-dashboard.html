@@ -1538,23 +1538,16 @@ text-transform:uppercase;letter-spacing:1px;padding:14px 28px;border-radius:8px;
     body.th-tool-page .th-hdr-actions.is-floating { top: 8px; }
   }
   /* Tabs and action buttons: sentence case (Phase 2 item 7). The four tabs
-     can't share 390px, so they keep scrolling with Finance's "more" hint
-     (Phase 3 fix 7). */
+     can't share a row at 390px, so on a phone they sit two by two (no
+     sideways scrolling, nothing clipped). */
   body.th-tool-page .rw-tab-btn, body.th-tool-page button.action-btn, body.th-tool-page button.ghost-btn { text-transform: none; letter-spacing: .2px; }
   body.th-tool-page .rw-tab-btn { font-size: 14px; }
   body.th-tool-page :is(#openAddIncomeBtn, #openAddExpenseBtn, #openAddDebtBtn) { text-transform: none; letter-spacing: .2px; }
   @media (max-width: 600px) {
-    body.th-tool-page .tabs::after {
-      content: '\203A'; position: sticky; right: 0; z-index: 1; flex: 0 0 36px; align-self: stretch;
-      display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; box-sizing: border-box;
-      font-family: var(--font-app); font-size: 22px; line-height: 1; color: var(--text-dim);
-      background: linear-gradient(to right, transparent, var(--bg) 55%); pointer-events: none;
-    }
-    @supports (animation-timeline: scroll()) {
-      body.th-tool-page .tabs::after { animation: th-fin-tabs-hint linear both; animation-timeline: scroll(nearest inline); }
-    }
+    body.th-tool-page .tabs { display: grid; grid-template-columns: 1fr 1fr; width: auto; max-width: none; margin-right: 20px; overflow: visible; }
+    body.th-tool-page .rw-tab-btn { white-space: normal; text-align: center; padding: 10px 8px; }
+    body.th-tool-page .tabs::after { display: none; }
   }
-  @keyframes th-fin-tabs-hint { 0%, 88% { opacity: 1; } 100% { opacity: 0; } }
   /* One primary: flat, no lip, weight 400 (PR #544). */
   body.th-tool-page .primary-btn, body.th-tool-page button.action-btn { box-shadow: none; font-weight: 400; }
   body.th-tool-page .primary-btn:active, body.th-tool-page button.action-btn:active { box-shadow: none; transform: scale(.98); }
@@ -3389,8 +3382,8 @@ function renderRunwayHero(min){
       center: '<b>' + Math.round(goalPct * 100) + '%</b><span>of 6 months</span>',
       label: monthsCovered === null ? 'Runway: add your bills to see this' : shown + ' months covered, of a 6-month goal',
     }) +
-    '<div class="rw-hero-copy"><span class="rw-kicker">Runway</span>' +
-    '<span class="rw-hero-amt">' + shown + '</span>' +
+    '<div class="rw-hero-copy">' +
+    (monthsCovered === null ? '' : '<span class="rw-hero-amt">' + shown + '</span>') +
     '<span class="rw-hero-sub">' + (monthsCovered === null ? 'Add your bills on the Personal Budget tab to see this in months.' : 'months of bills your savings cover') + '</span>' +
     '<span class="rw-reserve"><span>Goal 6 months &middot; ' + fmt(min * 6) + '</span><span>' + fmt(efBalance) + ' in reserve</span></span></div>';
   if(typeof thAnimateRings === 'function') thAnimateRings(host);
