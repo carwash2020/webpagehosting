@@ -165,3 +165,13 @@ test('stripe-balance: a Stripe failure is a 502 that does not repeat Stripe\'s o
   assert.equal(res.status, 502);
   assert.doesNotMatch(JSON.stringify(await res.json()), /sk_test|Invalid API Key/);
 });
+
+// P4 (2026-11-01): Home in sentence case, one bold element.
+test('Home: no text-transform: uppercase, no capital-letter badges, and Start my day is the one bold element', () => {
+  assert.doesNotMatch(WS, /text-transform:\s*uppercase/);
+  assert.doesNotMatch(WS, />URGENT<|>EXPIRED<|'POLICY EXPIRED'/);
+  assert.match(WS, />Urgent<\/span> &middot; /);
+  assert.match(WS, /\.ops-lane-label,[\s\S]*?\.section-heading-title|\.section-heading-title,[\s\S]*?\.ops-lane-label/, 'lane and section headers are sentence case');
+  assert.match(WS, /#greetingBanner \*:not\(\[data-shift-open\]\),\s*\n\s*body\.th-tool-page\[data-th-page="workspace"\] #todayCols \*:not\(\[data-shift-open\]\) \{ font-weight: 500; \}/);
+  assert.match(WS, /\.shift-banner \.shift-now > button \{ font-weight: 700; \}/);
+});
