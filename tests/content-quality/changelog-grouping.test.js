@@ -36,7 +36,7 @@ test('commits from the same calendar day are grouped under one date header, not 
   ]);
   await window.renderChangelog();
   const el = window.document.getElementById('changelogList');
-  const headers = [...el.querySelectorAll('div')].filter(d => d.style.textTransform === 'uppercase');
+  const headers = [...el.querySelectorAll('div')].filter(d => d.classList.contains('changelog-date-header'));
   assert.equal(headers.length, 1, 'two same-day commits should share one header, not get one each');
 });
 
@@ -47,7 +47,7 @@ test('commits from different calendar days get separate headers, in the correct 
   ]);
   await window.renderChangelog();
   const el = window.document.getElementById('changelogList');
-  const headers = [...el.querySelectorAll('div')].filter(d => d.style.textTransform === 'uppercase').map(d => d.textContent);
+  const headers = [...el.querySelectorAll('div')].filter(d => d.classList.contains('changelog-date-header')).map(d => d.textContent);
   assert.equal(headers.length, 2);
   assert.match(headers[0], /August 21/);
   assert.match(headers[1], /August 20/);
