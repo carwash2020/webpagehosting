@@ -15,7 +15,7 @@ no auth call, id, or redirect changed. The rebuild is the shared stylesheet
 
 - The existing site logo (`images/logo-signature-orange.webp`), large, at 8% opacity behind the form. It is decorative (`alt=""`, `aria-hidden`).
 - Email, password with Show/Hide, Forgot password, Remember me for 30 days.
-- 2FA step with Trust this device for 30 days.
+- 2FA step with Trust this device for 30 days (skips the code on this device for 30 days; see below).
 - Loading (spinner + label), wrong-password (red field, message, focus returns to the password), and a ~600ms success beat: the logo goes from 8% to full, the form settles, then the page redirects.
 - `prefers-reduced-motion`: no transitions, no spinner spin, no shake; the success state flips instantly and redirects after a short beat.
 - Brand orange `#F26B1D` on dark ink `#0B0A09`. Bricolage Grotesque (display) and Geist (body), self-hosted in `fonts/signin/` (OFL licences beside them). No Inter, no purple, no arrows on buttons.
@@ -24,17 +24,36 @@ no auth call, id, or redirect changed. The rebuild is the shared stylesheet
 ## Remember me, and Trust this device: what they actually do
 
 Supabase has no per-login session lifetime, so both switches control **where the
-session is stored** and a hard 30-day cutoff, not whether the server checks
-anything.
+session is stored** and a hard 30-day cutoff. Trust also registers this device
+with the server so it can skip the code (below).
 
 | Switch | ON | OFF |
 |---|---|---|
 | Remember me for 30 days | Session kept 30 days on this device (survives closing the browser) | Session ends when the browser closes |
-| Trust this device for 30 days (2FA step) | The 2FA-verified session is kept 30 days on this device, so no code on each visit | The verified session ends when the browser closes |
+| Trust this device for 30 days (2FA step) | The verified session is kept 30 days, **and this device skips the 2FA code for 30 days** (password still required) | The verified session ends when the browser closes; the next sign-in asks for the code |
 
-- Trust starts from the Remember me setting and can be changed at the code step. The choice made at the code step decides how the verified session is stored.
-- **Trust never skips the code.** There is no client-side "trusted device" flag. Every password sign-in on an account with a verified factor still goes to the code step. Trust only decides how long the already-verified session lives. Leave it off on shared computers.
-- Employees: nothing is stored until the code (or a recovery code) is verified. Accounts that require 2FA and have none are still forced to enrol before anything is stored.
+- Trust starts from the Remember me setting and can be changed at the code step.
+- **Trusted devices (2026-11-01).** With Trust on, after a correct code the page calls
+  `trust_this_device()`. The server mints a random 256-bit token, stores only its bcrypt
+  hash (same scheme as the Workspace recovery codes), and hands the token back once. The
+  browser keeps `{ id, token, expires_at }` in localStorage (`th_trusted_device:<user id>`,
+  `/trusted-device.js`). On the next sign-in, **after a correct password**, the page sends
+  it to `use_trusted_device()`; only an explicit `true` skips the code. One mechanism for
+  both pages: `sql/security/add_trusted_devices.sql`.
+- What stops a device counting: 30 days pass; Remove in Settings; a password change (any
+  path, including a reset email or the Supabase dashboard); 2FA turned off, reset or set up
+  again; a Workspace recovery-code sign-in. These are checked on every use, server-side.
+- Any device without a token, or one the server refuses, gets the code exactly as before.
+  Leave Trust off on shared computers.
+- Settings → **Trusted devices** (portal: Sign-in & security; Workspace: below Two-Factor
+  Authentication) lists each device with Remove.
+- Workspace: a trusted session is still `aal1` to Supabase. While `internal_mfa_mode` is
+  `log` (live today) the server-side 2FA gate lets it through (and logs `would_block`). In
+  `enforce` mode the gate refuses it and login.html asks for the code instead. Teaching the
+  gate to accept trusted sessions replaces existing function bodies, so it is held in its
+  own draft PR for separate review. Recovery codes and turning 2FA off still need the code.
+- Employees: nothing is stored until the code, a recovery code, or a server-accepted trusted
+  device clears. Accounts that require 2FA and have none are still forced to enrol.
 
 ### Portal storage rules (`portalAuthStorage()` in `portal/portal-app.js`)
 

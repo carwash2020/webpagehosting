@@ -5926,3 +5926,13 @@ A final look-only pass over the Workspace tools and the client portal, measured 
 - **Matched to the Workspace:** portal status pills (sentence case, Archivo 12px), Contracts' back chevron (a bare orange chevron at the left edge), the header buttons' fill, and the header kicker and title metrics. Home's Start my day, Upload and Open job are the flat primary every other page uses.
 
 Screenshots and harness: `docs/cross-surface-consistency-2026-10-31/`. Details: `docs/specialist-logs/visual.md`.
+
+## What changed, 2026-11-01 -- Trusted devices: skip 2FA for 30 days on a known device
+
+Approved by Connor. "Trust this device for 30 days" on the 2FA step (portal and Workspace) now lets a correct **password** skip the code on that device for 30 days. The password is never skipped, and any other device still gets the code.
+
+- One mechanism for both surfaces: `sql/security/add_trusted_devices.sql` (bcrypt-hashed device tokens, deny-all tables, SECURITY DEFINER functions) and `/trusted-device.js` (`ThTrustedDevice`), called through each page's own transport.
+- Revoked automatically on a password change, 2FA off/reset/re-enrolled, a Workspace recovery-code sign-in, or 30 days; Remove per device in Settings → Trusted devices (portal: Sign-in & security; Workspace: below Two-Factor Authentication).
+- Additive only. Teaching the Workspace's server-side 2FA gate about trusted sessions replaces two existing function bodies, so it was split out to its own draft PR, held for Connor's review. While the gate is in `log` mode (live today) trusted Workspace sign-ins work without it.
+- **Not applied live.** Until the migrations are applied the pages behave exactly as before (the RPCs 404 and the code is asked for).
+- Tests: `tests/security/trusted-devices-db.test.js` (PGlite), `tests/tools/trusted-device-login.test.js`, `tests/portal/trusted-device-portal.test.js`. Screenshots and harness: `docs/trusted-devices-2026-11-01/`. Details: `docs/SIGNIN.md`, `docs/specialist-logs/security.md`.

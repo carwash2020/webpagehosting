@@ -118,7 +118,8 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=f212452f48">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/portal/portal-app.js?v=202610310200"></script>
+<script src="/portal/portal-app.js?v=202611011200"></script>
+<script src="/trusted-device.js?v=a9dbd2c119"></script>
 <style>
   body { background: #0a0a0a; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
   .login-box { max-width: 380px; width: 100%; text-align: center; }
@@ -272,9 +273,10 @@
   Two-factor challenge (2026-09-16) -- shown only for an account that
   already has a verified TOTP factor enrolled (see settings.html). A
   correct password alone is never enough for that account once this
-  overlay is required; nothing is stored client-side that would let a
-  device skip it. First Impressions handoff (2026-09-29): the 6-box
-  grid paints from this one real input -- id, attributes and the
+  overlay is required, except on a device the server recognises as
+  trusted (trust_this_device() after a correct code; see
+  /trusted-device.js and sql/security/add_trusted_devices.sql).
+  First Impressions handoff (2026-09-29): the 6-box grid paints from this one real input -- id, attributes and the
   challengeAndVerify() call underneath are unchanged.
 -->
 <div class="report-bug-overlay" id="mfaChallengeOverlay" style="display:none;">
@@ -293,7 +295,7 @@
       <input type="checkbox" id="portalTrustDevice" role="switch" checked>
       <span class="si-switch-text login-hint">
         <span class="si-switch-label login-hint">Trust this device for 30 days</span>
-        <span class="si-switch-hint login-hint">Stay signed in here for 30 days. Leave off on a shared computer.</span>
+        <span class="si-switch-hint login-hint">Skip the code here for 30 days. You still sign in with your password. Leave off on a shared computer.</span>
       </span>
     </label>
     <div class="report-bug-error" id="mfaChallengeError" role="alert"></div>
@@ -396,6 +398,34 @@
     window.location.replace('/portal/home.html');
   });
 
+  // Trusted devices (2026-11-01). The same database functions and browser
+  // helper (/trusted-device.js) the Workspace uses; this is the portal's way
+  // of calling them, through its supabase-js client.
+  function portalTrustedRpc() {
+    return async (name, args) => {
+      const { data, error } = await client.rpc(name, args);
+      if (error) throw error;
+      return data;
+    };
+  }
+  async function portalCurrentUserId() {
+    const { data } = await client.auth.getSession();
+    return (data && data.session && data.session.user && data.session.user.id) || null;
+  }
+  // "Trust this device for 30 days" after a correct code means a correct
+  // password alone signs in here for 30 days. use_trusted_device() checks
+  // this device's token against a bcrypt hash only the database can read,
+  // and records this session as trusted, which is what every portal page's
+  // second-step check asks the server about (portalSecondStepOwed()).
+  async function portalSignInOnTrustedDevice(email) {
+    if (typeof ThTrustedDevice === 'undefined') return false;
+    if (!(await ThTrustedDevice.tryUse(portalTrustedRpc(), await portalCurrentUserId()))) return false;
+    try { sessionStorage.setItem(portalSecondStepKey(email), '1'); } catch (e) { /* the server check covers it */ }
+    portalMarkSignedIn(email);
+    goHomeAfterSignIn();
+    return true;
+  }
+
   async function verifiedTotpFactorId() {
     const { data: factors } = await client.auth.mfa.listFactors();
     const factor = factors && (factors.totp || []).find((f) => f.status === 'verified');
@@ -489,6 +519,9 @@
         signingInEmail = email;
         // The trust switch on the code step starts from Remember me.
         document.getElementById('portalTrustDevice').checked = document.getElementById('rememberMe').checked;
+        // Trusted device (2026-11-01): skips the code only when the server
+        // accepts this device's token for this account. Otherwise, as before.
+        if (await portalSignInOnTrustedDevice(email)) return;
         // Face ID over the code (2026-09-23): on a device where this
         // account has Face ID set up, Face ID is the second step; the
         // code is one tap away if it fails. Anywhere else, the code.
@@ -580,6 +613,11 @@
         paintPortalCodeBoxes();
         codeInput.focus();
         return;
+      }
+      // Trust switch on: this device skips the code for the next 30 days.
+      // Needs the verified (aal2) session just issued; best effort.
+      if (document.getElementById('portalTrustDevice').checked && typeof ThTrustedDevice !== 'undefined') {
+        await ThTrustedDevice.remember(portalTrustedRpc(), await portalCurrentUserId(), 'portal');
       }
       releaseFocusTrap();
       // Password and code just done: no Face ID lock straight after.

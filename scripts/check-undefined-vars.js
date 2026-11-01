@@ -74,6 +74,9 @@ const SHARED_SCRIPT_FILES = [
   'tools/push-notifications.js',
   // Sign-in helpers shared by portal/login.html and tools/login.html (2026-10-31).
   'signin-ui.js',
+  // Trusted devices (2026-11-01): the browser half shared by both sign-in
+  // pages, both Settings pages and both password-reset pages.
+  'trusted-device.js',
   // Public, root-level shared file (2026-09-03) -- booking.html and
   // portal/work-orders.html both load this for the real business
   // hours and timezone-safe date math, so it needs to be on this list

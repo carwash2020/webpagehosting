@@ -443,9 +443,30 @@ function portalSecondStepKey(email) {
 // network; any error reads as "nothing owed", the behavior before this.
 async function portalSecondStepOwed(email, client) {
   if (sessionStorage.getItem(portalSecondStepKey(email))) return false;
+  let owed = false;
   try {
     const { data } = await client.auth.mfa.getAuthenticatorAssuranceLevel();
-    return !!data && data.nextLevel === 'aal2' && data.currentLevel !== 'aal2';
+    owed = !!data && data.nextLevel === 'aal2' && data.currentLevel !== 'aal2';
+  } catch (e) {
+    return false;
+  }
+  if (!owed) return false;
+  // Trusted devices (2026-11-01): a session that signed in on a device the
+  // server recognises as trusted (sql/security/add_trusted_devices.sql) has
+  // done its second step. Asked of the server, never read from a local flag;
+  // the answer is kept for this tab like Face ID's. A missing function or
+  // any error reads as "not trusted", so the code is asked for as before.
+  if (await portalSessionIsTrusted(client)) {
+    try { sessionStorage.setItem(portalSecondStepKey(email), '1'); } catch (e) { /* ignore */ }
+    return false;
+  }
+  return true;
+}
+
+async function portalSessionIsTrusted(client) {
+  try {
+    const { data, error } = await client.rpc('current_session_is_trusted');
+    return !error && data === true;
   } catch (e) {
     return false;
   }
