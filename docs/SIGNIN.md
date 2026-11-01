@@ -52,6 +52,10 @@ with the server so it can skip the code (below).
   `enforce` mode the gate refuses it and login.html asks for the code instead. Teaching the
   gate to accept trusted sessions replaces existing function bodies, so it is held in its
   own draft PR for separate review. Recovery codes and turning 2FA off still need the code.
+- Before `sql/security/add_trusted_devices.sql` is applied, the functions don't exist
+  (PostgREST answers 404 `PGRST202`). Both sign-in pages then ask for the code exactly as
+  before, with no message, and Settings hides Trusted devices. Any other failure still
+  falls back to the code, and is logged.
 - Employees: nothing is stored until the code, a recovery code, or a server-accepted trusted
   device clears. Accounts that require 2FA and have none are still forced to enrol.
 

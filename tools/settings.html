@@ -15,7 +15,7 @@
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
 <script src="/tools/auth.js?v=0b420b4211"></script>
-<script src="/trusted-device.js?v=a9dbd2c119"></script>
+<script src="/trusted-device.js?v=255d86a600"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -885,18 +885,24 @@
     const listEl = document.getElementById('trustedDevicesList');
     const msgEl = document.getElementById('trustedDevicesMsg');
     if (typeof ThTrustedDevice === 'undefined') { section.style.display = 'none'; return; }
-    section.style.display = '';
-    msgEl.style.display = 'none';
+    // The section stays as it is until the server answers, so it never
+    // flashes empty while loading or before the migration is applied.
     await ensureFreshToken();
     let devices;
     try {
       devices = await ThTrustedDevice.list(trustedDeviceRpc());
     } catch (e) {
+      section.style.display = '';
       listEl.innerHTML = '';
       msgEl.textContent = 'Could not load trusted devices. Please try again.';
       msgEl.style.display = '';
       return;
     }
+    // Not in the database yet (add_trusted_devices.sql not applied): there is
+    // nothing to list or remove, so the section isn't shown at all.
+    if (devices === null) { section.style.display = 'none'; return; }
+    section.style.display = '';
+    msgEl.style.display = 'none';
     if (!devices.length) {
       listEl.innerHTML = '<div class="settings-row"><div class="th-set-row-main"><div class="settings-row-sub">No trusted devices. Turn on "Trust this device for 30 days" when you enter your code to add one.</div></div></div>';
       return;

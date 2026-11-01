@@ -64,6 +64,36 @@ var ThTrustedDevice = (function () {
     } catch (e) { /* ignore */ }
   }
 
+  // "This feature isn't in the database yet" (2026-11-01). Until
+  // add_trusted_devices.sql is applied, every call here fails, and that must
+  // be silent: sign-in asks for the code exactly as before and Settings hides
+  // its Trusted devices list. These are the real answers for that state:
+  //   PGRST202  PostgREST, HTTP 404: "Could not find the function
+  //             public.<name>(...) in the schema cache" (function missing);
+  //   PGRST205  PostgREST, HTTP 404: the same for a table;
+  //   42883 / 42P01  Postgres undefined_function / undefined_table, if a
+  //             function exists but something it uses doesn't (half-applied).
+  // supabase-js puts the code on its error object; fetchRpc() below copies it
+  // from the response body. Anything else (network, 401, 500, a bad reply) is
+  // a real failure: it still falls back to the code, never past it, and is
+  // logged so it can be found.
+  var NOT_AVAILABLE = ['PGRST202', 'PGRST205', '42883', '42P01'];
+  function isNotAvailable(err) {
+    return !!err && typeof err.code === 'string' && NOT_AVAILABLE.indexOf(err.code) !== -1;
+  }
+  // Each surface's own error log: the Workspace's logClientError()
+  // (tools-media-sharing.js), the portal's logPortalClientError()
+  // (portal-app.js); the console if neither is on the page.
+  function report(what, err) {
+    if (isNotAvailable(err)) return;
+    var msg = 'Trusted devices: ' + what + ' failed: ' + String((err && err.message) || err);
+    try {
+      if (typeof logClientError === 'function') logClientError(msg);
+      else if (typeof logPortalClientError === 'function') logPortalClientError(msg);
+      else if (typeof console !== 'undefined') console.warn(msg);
+    } catch (e) { /* logging must never get in the way */ }
+  }
+
   // The account id (`sub`) of an access token. Read locally; only used to
   // pick which record to send, never to decide anything.
   function userIdFromJwt(token) {
@@ -91,6 +121,7 @@ var ThTrustedDevice = (function () {
       if (!res.ok) {
         var err = new Error((data && (data.message || data.error_description || data.msg)) || ('HTTP ' + res.status));
         err.status = res.status;
+        if (data && typeof data.code === 'string') err.code = data.code;
         throw err;
       }
       return data;
@@ -124,6 +155,8 @@ var ThTrustedDevice = (function () {
   // server accepted this device's token for the session that just signed in.
   // A token the server rejects (removed, expired, password or 2FA changed) is
   // forgotten here; a network error keeps it and simply asks for the code.
+  // Every failure, including the function not existing yet, returns false:
+  // the code is asked for. Nothing here can ever skip it by failing.
   async function tryUse(rpc, userId) {
     var rec = get(userId);
     if (!rec) return false;
@@ -133,6 +166,7 @@ var ThTrustedDevice = (function () {
       if (ok === false) clear(userId);
       return false;
     } catch (e) {
+      report('use_trusted_device', e);
       return false;
     }
   }
@@ -151,13 +185,21 @@ var ThTrustedDevice = (function () {
         save(userId, r);
         return true;
       }
-    } catch (e) { /* best effort */ }
+    } catch (e) { report('trust_this_device', e); }
     return false;
   }
 
-  // Settings. Throws on failure so the page can say so.
+  // Settings. Null when the feature isn't in the database yet (the page
+  // hides the list); throws on a real failure so the page can say so.
   async function list(rpc) {
-    var rows = await rpc('list_my_trusted_devices', {});
+    var rows;
+    try {
+      rows = await rpc('list_my_trusted_devices', {});
+    } catch (e) {
+      if (isNotAvailable(e)) return null;
+      report('list_my_trusted_devices', e);
+      throw e;
+    }
     return Array.isArray(rows) ? rows : [];
   }
 
@@ -175,7 +217,7 @@ var ThTrustedDevice = (function () {
   // and the authenticator on every use); this deletes them so Settings shows
   // the truth right away. Never throws.
   async function revokeAll(rpc, userId) {
-    try { await rpc('revoke_all_trusted_devices', {}); } catch (e) { /* the server-side checks still hold */ }
+    try { await rpc('revoke_all_trusted_devices', {}); } catch (e) { report('revoke_all_trusted_devices', e); /* the server-side checks still hold */ }
     if (userId) clear(userId); else clearAll();
   }
 
@@ -192,7 +234,7 @@ var ThTrustedDevice = (function () {
 
   return {
     get: get, save: save, clear: clear, clearAll: clearAll,
-    userIdFromJwt: userIdFromJwt, deviceLabel: deviceLabel, fetchRpc: fetchRpc,
+    isNotAvailable: isNotAvailable, userIdFromJwt: userIdFromJwt, deviceLabel: deviceLabel, fetchRpc: fetchRpc,
     tryUse: tryUse, remember: remember, list: list, remove: remove, revokeAll: revokeAll,
     isThisDevice: isThisDevice, formatDate: formatDate,
   };
