@@ -55,7 +55,7 @@ test('every field in the Workspace and portal markup has an accessible name', ()
 
 test('tied labels point at the right field (a sample from each kind of form)', () => {
   const cases = [
-    ['tools/job-tracker.html', 'jobTitle', 'Job Title / Description'],
+    ['tools/job-tracker.html', 'jobTitle', 'Job type'],
     ['tools/invoice-generator.html', 'invoiceTerms', 'Terms'],
     ['tools/finance.html', 'entryMiles', 'Miles'],
     ['tools/runway-dashboard.html', 'inc-frequency', 'Frequency'],
