@@ -345,6 +345,20 @@ click a setting by hand.
     `docs/daily-digest/README.md`. TODO: recipient addresses were not
     given, so none are stored anywhere in the repo.
 
+22. **Run `sql/security/grant_finance_access_connor_and_steve.sql`** (corrections
+    pack, 2026-11-01) -- needed before Log Expense actually works for Connor
+    and Steve. Additive only, **not applied by this PR**, same pattern as
+    `add_trusted_devices.sql`. Grants `can_view_finance` to
+    `nicholasconnordodart@gmail.com` and `steven7mikael@gmail.com` -- the two
+    real, currently-signed-up accounts (confirmed live in `auth.users`) that
+    have no row in `account_roles` at all. **Before running it, confirm these
+    are still the right emails**: `connor@triplehenterprisesllc.biz` and
+    `steve@triplehenterprisesllc.biz` already have this permission (nothing
+    to do for those), and the task's named `connor.dodart@taggngo.com` has no
+    matching account in this project. If Connor/Steve actually sign into the
+    Workspace with some other address today, swap it in before running (the
+    file's header comment explains exactly where).
+
 <!-- Add new manual action items above this line -->
 
 ## SEO action items (need a human, outside of code)
@@ -902,6 +916,12 @@ reference:
   use, a 16px date field (no iOS zoom), and errors that keep the form up
   so you can try again. A sent reschedule request now says the
   appointment stays on its current date until it's confirmed.
+- **Corrections pack (2026-11-01)**: Route Planner's Cost Analyzer is back
+  (`tools/route-planner.html`), now suggesting the real $25/free-within-15-miles
+  policy fee instead of a tax-inflated fuel estimate; the Invoices list
+  (`tools/invoice-generator.html`) flags any invoice never sent to the client
+  portal with a "Never sent to portal" badge; deleting a saved job type now
+  asks "Are you sure?" first. Full write-up: `docs/CHANGELOG.md`, 2026-11-01.
 <!-- Add new visual additions above this line -->
 
 ## Proposed visual improvements (not yet built)
