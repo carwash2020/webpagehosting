@@ -104,6 +104,9 @@ test('the Stripe card sits at the top of #todayMoney, is drawn by renderTodayMon
 });
 
 // ---- the edge function ----
+// Compare the parsed origin, never a substring of the URL string.
+const isStripe = (u) => { try { return new URL(String(u)).origin === 'https://api.stripe.com'; } catch (e) { return false; } };
+
 function loadFn({ gate = true, finance = true, key = 'sk_test_restricted', stripe }) {
   const src = fs.readFileSync(repo('edge-functions', 'stripe-balance-index.ts'), 'utf8');
   const calls = [];
@@ -113,9 +116,9 @@ function loadFn({ gate = true, finance = true, key = 'sk_test_restricted', strip
     Deno: { env: { get: (k) => ({ SUPABASE_URL: 'https://x.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'svc', STRIPE_BALANCE_SECRET_KEY: key }[k]) }, serve: (h) => { handler = h; } },
     fetch: async (url, init = {}) => {
       const u = String(url); calls.push({ url: u, init });
-      if (u.includes('/rest/v1/account_roles')) return json(finance ? [{ can_view_finance: true }] : [{ can_view_finance: false }]);
-      if (u.includes('check_internal_mfa_for_edge_function')) return json(gate);
-      if (u.startsWith('https://api.stripe.com')) return stripe(u);
+      if (new URL(u).pathname === '/rest/v1/account_roles') return json(finance ? [{ can_view_finance: true }] : [{ can_view_finance: false }]);
+      if (new URL(u).pathname === '/rest/v1/rpc/check_internal_mfa_for_edge_function') return json(gate);
+      if (isStripe(u)) return stripe(u);
       throw new Error('unexpected ' + u);
     },
     Response, Request, Headers, URL, atob, btoa, console, Promise, JSON, Math, Date,
@@ -126,7 +129,7 @@ function loadFn({ gate = true, finance = true, key = 'sk_test_restricted', strip
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
 const req = (claims = { role: 'authenticated', email: 'steve@x.com', sub: 'u', aal: 'aal2' }) =>
   new Request('https://x/functions/v1/stripe-balance', { method: 'POST', headers: { Authorization: `Bearer h.${b64(claims)}.s` }, body: '{}' });
-const stripeOk = (u) => new Response(JSON.stringify(u.includes('/v1/balance')
+const stripeOk = (u) => new Response(JSON.stringify(new URL(u).pathname === '/v1/balance'
   ? { available: [{ amount: 1000, currency: 'usd' }, { amount: 500, currency: 'usd' }, { amount: 9, currency: 'eur' }], pending: [{ amount: 250, currency: 'usd' }] }
   : { data: [{ amount: 4200, currency: 'usd', arrival_date: 1793500000, status: 'pending', id: 'po_1' }] }), { status: 200 });
 
@@ -135,7 +138,7 @@ test('stripe-balance: returns available, pending and the payout; only reads from
   const res = await handler(req());
   assert.equal(res.status, 200);
   assert.deepEqual(await res.json(), { ok: true, currency: 'usd', available: 1500, pending: 250, next_payout: { amount: 4200, currency: 'usd', arrival_date: 1793500000, status: 'pending' } });
-  const stripe = calls.filter((c) => c.url.startsWith('https://api.stripe.com'));
+  const stripe = calls.filter((c) => isStripe(c.url));
   assert.deepEqual(stripe.map((c) => c.url).sort(), ['https://api.stripe.com/v1/balance', 'https://api.stripe.com/v1/payouts?limit=1']);
   for (const c of stripe) { assert.equal(c.init.method, undefined, 'GET only'); assert.equal(c.init.headers.Authorization, 'Bearer sk_test_restricted'); }
 });
@@ -152,7 +155,7 @@ test('stripe-balance: signed-out 401, no finance role 403, refused two-factor 40
     const res = await handler(r);
     assert.equal(res.status, status);
     assert.equal((await res.json()).code, code);
-    assert.equal(calls.filter((c) => c.url.startsWith('https://api.stripe.com')).length, 0);
+    assert.equal(calls.filter((c) => isStripe(c.url)).length, 0);
   }
 });
 
