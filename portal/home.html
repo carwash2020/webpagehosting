@@ -110,9 +110,9 @@
     navigation: auto;
   }
 </style>
-<link rel="stylesheet" href="/tools/styles-tools.css?v=d7410af6b7">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=f212452f48">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous"></script>
-<script src="/portal/portal-app.js?v=202610310100"></script>
+<script src="/portal/portal-app.js?v=202610310200"></script>
 <style>
   body { background: #0a0a0a; max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
   /* Widened for real desktop screens (2026-09-03), reported directly
@@ -473,7 +473,7 @@
   .report-bug-actions { display: flex; gap: 10px; margin-top: 16px; }
   .report-bug-actions button { flex: 1; justify-content: center; }
 </style>
-<link rel="stylesheet" href="/portal/portal-polish.css?v=2c6fd305e8">
+<link rel="stylesheet" href="/portal/portal-polish.css?v=f0d57c5e20">
 </head>
 <body class="portal-page">
 
@@ -1266,7 +1266,7 @@
       renderRecentActivity(summary, new Date());
       document.getElementById('homeIntro').textContent = homeSummaryText(summary);
       renderGlance(summary);
-      if (typeof portalSetHeaderInitials === 'function') portalSetHeaderInitials(summary.displayName || session.user.email);
+      if (typeof portalSetHeaderInitials === 'function') portalSetHeaderInitials(session.user.email, summary.displayName);
       portalApplyNavUnreadBadges(summary.unread);
       portalApplyNavInvoiceDot(summary.invoices.filter(i => !i.paid).length);
       if (typeof portalApplyNavEstimatesDot === 'function') portalApplyNavEstimatesDot(summary.quotes.some(q => (q.status || 'pending') === 'pending'));

@@ -2533,3 +2533,57 @@ body.portal-page .empty-state.is-neutral .empty-state-icon {
 }
 /* Home: a failed account load filled one 190px tile of the card grid. */
 body.portal-page .home-cards > .empty-state { grid-column: 1 / -1; }
+
+/* ---------- 29. Cross-surface consistency pass (2026-10-31) ----------
+   The portal and the Workspace tools were redesigned separately (#553 and
+   Workspace Phase 2/3/4). Measured side by side at 390x844 dark
+   (docs/cross-surface-consistency-2026-10-31/), these were the places the
+   portal's chrome didn't match the Workspace's established pattern. Each
+   value below is the Workspace's, mapped onto the portal's own palette
+   tokens (the portal keeps its slightly lighter panel colours). */
+
+/* 29a. App bar type: the kicker is 11.5px (it was 11), and the Anton title
+   has the Workspace's line height and tracking (1.1 / .4px; it was
+   1.05 / .3px). Phone and tablet only; the computer layout has the rail. */
+@media (max-width: 1023px) {
+  html body.portal-page .portal-appbar .portal-kicker { font-size: 11.5px; }
+  html body.portal-page .portal-appbar .portal-title { line-height: 1.1; letter-spacing: .4px; }
+}
+
+/* 29b. Round header buttons sit on the panel colour with a 1px border, as
+   the Workspace's shift / Search / More buttons do. They were one step
+   lighter (--bg-panel-3), so they read heavier than the title. */
+html body.portal-page .portal-appbar .portal-icon-btn { background: var(--bg-panel); border-color: var(--border); }
+
+/* 29c. Back is the Workspace's top-left chevron (Job detail, Client detail,
+   Site Content): a bare orange 26px chevron in a 44px box, 2px from the
+   screen edge, no disc. Contracts' back was a filled round button 16px in. */
+html body.portal-page .portal-appbar .portal-icon-btn.portal-back-btn {
+  flex: 0 0 auto; width: 44px; height: 44px; min-width: 44px; margin: 0 -6px 0 -14px; padding: 0;
+  border: 0; border-radius: 12px; background: none; box-shadow: none; color: var(--orange-light);
+}
+html body.portal-page .portal-appbar .portal-icon-btn.portal-back-btn svg { width: 26px; height: 26px; stroke-width: 2.4; }
+html body.portal-page .portal-appbar .portal-icon-btn.portal-back-btn:active { background: var(--bg-panel-2); }
+@media (hover:hover){ html body.portal-page .portal-appbar .portal-icon-btn.portal-back-btn:hover { border: 0; color: var(--orange); } }
+
+/* 29d. Status pills read like the Workspace's (.th-v2-pill): Archivo 12px
+   600, sentence case as written, no tracking, 4px 10px. They were Oswald
+   11px tracked caps, while Home's own "Work request" tag and every
+   Workspace pill were already sentence case. Tone colours are unchanged
+   (both surfaces already share them). Eyebrows, section labels, field
+   labels and tab-bar labels keep caps on both surfaces. */
+html body.portal-page :is(
+  .invoice-status, .quote-status, .contract-status, .wo-status, .job-status-pill, .job-warranty,
+  .wo-scheduled-tag, .wo-urgency-tag, .set-card-badge, .invoice-card .invoice-status
+) {
+  font-family: var(--font-app, 'Archivo', system-ui, sans-serif); font-size: 12px; font-weight: 600;
+  letter-spacing: 0; text-transform: none; padding: 3px 10px; line-height: 1.6;
+}
+/* (3px, not 4: these keep a 1px border some tones colour, so the outer box
+   is the Workspace pill's 27px.) */
+
+/* 29e. Card-heading counts ("Needs your attention 4") are the Workspace's
+   heading badge: 22px, Archivo 12/700, 7px sides (it was 6). The fill
+   stays the portal's orange; the Workspace's red means urgent business
+   work, which isn't what a client's to-do list says. */
+html body.portal-page .attention-count { padding: 0 7px; }

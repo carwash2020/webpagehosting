@@ -13,7 +13,6 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
-const vm = require('vm');
 const { JSDOM } = require('jsdom');
 
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
@@ -34,18 +33,19 @@ function extractFn(src, name) {
   return src.slice(start, i);
 }
 
-test('page order is answer-first: greeting band, hero, route, action strip, Needs attention, Money owed, then the Business group -- no search box, chip row, tile grid, Backup drawer, Tools section or Gallery drawer', () => {
+test('page order is answer-first: greeting band, hero, action strip, Needs attention, Money owed, then the Business group -- no search box, chip row, tile grid, Backup drawer, Tools section or Gallery drawer', () => {
   const at = (needle) => { const i = WORKSPACE.indexOf(needle); assert.ok(i >= 0, `missing ${needle}`); return i; };
   // Redundancy pass (2026-10-31): Home's own search box left (the shared
   // Ctrl+K search covers the same records) and the Gallery queue moved to
-  // Site Content.
+  // Site Content. Cross-surface pass, round 2 (2026-10-31): Today's route
+  // left Home too (route and navigation live in Job detail / Route Planner).
   const order = [
-    'id="greetingBanner"', 'id="todayHero"', 'id="todayRouteCard"', 'id="dashPrimaryStrip"',
+    'id="greetingBanner"', 'id="todayHero"', 'id="dashPrimaryStrip"',
     'id="section-actionitems"', 'id="todayMoney"', 'class="dash-group-label"', 'id="section-snapshot"', 'id="section-analytics"',
     'id="section-compliance"', 'id="helpModalOverlay"',
   ];
   for (let i = 1; i < order.length; i++) assert.ok(at(order[i - 1]) < at(order[i]), `${order[i - 1]} should come before ${order[i]}`);
-  for (const gone of ['id="everythingElseChips"', 'class="tools-grid"', 'class="tool-tile', 'id="section-backup"', 'id="section-tools"', 'more-tools-details', 'jumpNavMoreBtn', 'class="global-search-block"', 'id="globalSearch"', 'id="section-gallery"']) {
+  for (const gone of ['id="everythingElseChips"', 'class="tools-grid"', 'class="tool-tile', 'id="section-backup"', 'id="section-tools"', 'more-tools-details', 'jumpNavMoreBtn', 'class="global-search-block"', 'id="globalSearch"', 'id="section-gallery"', 'id="todayRouteCard"', 'id="todayRouteAll"', 'id="todayRoute"']) {
     assert.doesNotMatch(WORKSPACE, new RegExp(gone.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `${gone} should be gone`);
   }
   assert.equal((WORKSPACE.match(/<div class="section-block" id=/g) || []).length, 4, 'exactly four section blocks remain');
@@ -62,36 +62,21 @@ test('the greeting is one compact band, not a card: same ids, same asserted rule
   }
 });
 
-test('Route today: a Google Maps directions link through every address on today\'s active jobs, in hero order, de-duplicated and capped at Google\'s 10 stops', () => {
-  const src = extractFn(WORKSPACE, 'todayRouteAddresses') + '\n' + extractFn(WORKSPACE, 'buildTodayRouteUrl');
-  const ctx = {};
-  vm.createContext(ctx);
-  vm.runInContext(src + '\nthis.build = buildTodayRouteUrl; this.addrs = todayRouteAddresses;', ctx);
-  const jobs = [
-    { address: '1 Main St' }, { address: '  1 main st ' }, { address: '' }, { address: '2 Oak Ave' }, {},
-  ];
-  // Arrays built inside the vm context carry that context's Array
-  // prototype, so compare by value, not by strict deep-equality.
-  assert.equal(JSON.stringify(ctx.addrs(jobs)), JSON.stringify(['1 Main St', '2 Oak Ave']));
-  assert.equal(ctx.build(jobs), 'https://www.google.com/maps/dir/?api=1&destination=2%20Oak%20Ave&travelmode=driving&waypoints=1%20Main%20St');
-  assert.equal(ctx.build([{ address: 'Only Stop' }]), 'https://www.google.com/maps/dir/?api=1&destination=Only%20Stop&travelmode=driving');
-  assert.equal(ctx.build([{ address: '' }]), null);
-  const many = Array.from({ length: 14 }, (_, i) => ({ address: `${i} Stop Rd` }));
-  assert.equal(ctx.addrs(many).length, 10);
-  // Same URL shape route-planner.html's own buildRouteUrl() produces.
-  const routePlanner = fs.readFileSync(repo('tools', 'route-planner.html'), 'utf8');
-  assert.match(routePlanner, /'https:\/\/www\.google\.com\/maps\/dir\/\?api=1&destination=' \+ encodeURIComponent\(destination\) \+ '&travelmode=driving'/);
-});
-
-test('the day\'s route is one button, Route all on Today\'s route (redundancy pass, 2026-10-31): the Next Job card no longer repeats it as Route today, and has no "1 of N"', () => {
+test('the whole day\'s route is Route Planner\'s now (cross-surface pass, round 2, 2026-10-31): Home builds no route link, and Route Planner pulls today\'s active jobs into the same Google Maps URL shape', () => {
+  // Home: no route builder, no Route all, no Route today on the Next Job card.
+  assert.doesNotMatch(WORKSPACE, /function (todayRouteAddresses|buildTodayRouteUrl|renderTodayRoute)\(/);
   const hero = extractFn(WORKSPACE, 'renderTodayHero');
   assert.doesNotMatch(hero, /buildTodayRouteUrl|todayRouteLink|Route today|View in Job Tracker/);
   assert.doesNotMatch(hero, /1 of '|today-next-of/);
   assert.match(hero, /Open job/);
-  const route = extractFn(WORKSPACE, 'renderTodayRoute');
-  assert.match(route, /const routeUrl = buildTodayRouteUrl\(getTodaysJobs\(\)\);/);
-  assert.match(route, /routeAll\.href = routeUrl; routeAll\.hidden = false;/);
-  assert.match(WORKSPACE, /<a class="th-v2-link" id="todayRouteAll" href="\/tools\/route-planner\.html" target="_blank" rel="noopener" hidden>/);
+  // Route Planner: Pull today's jobs (today, not done, with an address) ->
+  // Open full route, the URL Home's Route all used to build.
+  const routePlanner = fs.readFileSync(repo('tools', 'route-planner.html'), 'utf8');
+  assert.match(routePlanner, /onclick="pullTodaysJobs\(\)">Pull today's jobs</);
+  assert.match(routePlanner, /id="openRouteBtn"[^>]*>Open full route in Google Maps</);
+  const pull = extractFn(routePlanner, 'pullTodaysJobs');
+  assert.match(pull, /j\.date === today && j\.status !== 'done'/);
+  assert.match(routePlanner, /'https:\/\/www\.google\.com\/maps\/dir\/\?api=1&destination=' \+ encodeURIComponent\(destination\) \+ '&travelmode=driving'/);
 });
 
 test('Money Owed lists every unpaid invoice -- overdue first, then current by due date -- each with Mark paid and a due label, six shown and the rest folded under "N more unpaid" (the one list since the Income lane left, 2026-10-31)', () => {
@@ -238,8 +223,8 @@ test('workspace.html\'s 3 tour steps (of the First Impressions handoff\'s 6, 202
 
 test('the help modal describes the new layout and no longer mentions the chip row, the Tools section, or the retired Show on Calendar checkbox', () => {
   const help = WORKSPACE.match(/<div class="help-modal-body">([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>\s*<script>/)[1];
-  assert.match(help, /Route all/);
-  assert.doesNotMatch(help, /Route today|Rest of Today|Gallery Queue/);
+  assert.doesNotMatch(help, /Route all|Today's route|Route today|Rest of Today|Gallery Queue/);
+  assert.match(help, /Pull today's jobs/, 'the typical day points at Route Planner for the whole day\'s route');
   assert.match(help, /Needs attention/);
   assert.match(help, /Backup &amp; Restore lives in Dev Tools/, 'moved Settings -> Dev Tools on 2026-09-22');
   assert.doesNotMatch(help, /chip row|More tools|Show on Calendar|Today's schedule/);

@@ -38,6 +38,8 @@ function extractFn(src, name) {
   return src.slice(start, i);
 }
 
+// Settings' profile card uses the portal-wide initials rule (2026-10-31).
+const PORTAL_APP = fs.readFileSync(path.join(__dirname, '..', '..', 'portal', 'portal-app.js'), 'utf8');
 const SHELL = between(HTML, '<div class="settings-shell">', '\n<script>');
 const ROUTING = between(HTML, '  const SETTINGS_SECTIONS', '  function countNotificationEmailsOn()');
 
@@ -51,7 +53,7 @@ function settingsPage({ desktop = false, hash = '' } = {}) {
   const { window } = dom;
   window.matchMedia = () => ({ matches: desktop, addEventListener() {} });
   window.scrollTo = () => {};
-  window.eval(ROUTING + '\n' + extractFn(HTML, 'cardExpirationStatus') + '\n' + extractFn(HTML, 'renderPaymentSummary') +
+  window.eval(extractFn(PORTAL_APP, 'portalInitialsFor') + '\n' + ROUTING + '\n' + extractFn(HTML, 'cardExpirationStatus') + '\n' + extractFn(HTML, 'renderPaymentSummary') +
     '\nwindow.__t = { settingsStatus, renderNotificationsSummary, renderSecuritySummary, settingsInitials, renderSettingsProfile, renderPaymentSummary, setSettingsSummary };');
   return window;
 }
@@ -241,11 +243,15 @@ test('Payment names the card a charge would use, and flags one that has expired'
 test('the profile row shows initials and the name, falling back to the email -- never a blank avatar', () => {
   const w = settingsPage();
   const { settingsInitials, renderSettingsProfile } = w.__t;
+  // The same letters the header avatar shows on every other portal page
+  // (portalInitialsFor), so a one-word name or an email-only client no
+  // longer gets one letter here and two there.
   assert.equal(settingsInitials('Jane Q. Client', 'x@y.com'), 'JC');
-  assert.equal(settingsInitials('Cher', 'x@y.com'), 'C');
-  assert.equal(settingsInitials('', 'bob@example.com'), 'B');
+  assert.equal(settingsInitials('Cher', 'x@y.com'), 'CH');
+  assert.equal(settingsInitials('', 'bob@example.com'), 'BO');
+  assert.equal(settingsInitials('', ''), '?');
   renderSettingsProfile('', 'bob@example.com');
-  assert.equal(w.document.getElementById('settingsAvatar').textContent, 'B');
+  assert.equal(w.document.getElementById('settingsAvatar').textContent, 'BO');
   assert.equal(w.document.getElementById('settingsProfileName').textContent, 'Your profile');
   assert.equal(w.document.getElementById('summary-profile').textContent, 'bob@example.com');
 });

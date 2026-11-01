@@ -3,6 +3,50 @@
 Started 2026-09-16, alongside the `tripleh-visual` skill. See `README.md` in
 this directory for how these logs work.
 
+## 2026-10-31 -- Cross-surface pass, round 2: rebased onto #552, and Today's route off Home too
+
+**Rebase.** #552 (Stripe hardening) merged first. Its overlap with this PR was `docs/CHANGELOG.md` (adjacent entries, so I kept both, main's first), `portal/dashboard.html` and `tools/invoice-generator.html` (both auto-merged cleanly), and both service workers' `CACHE_NAME` lines (only the fingerprints differed). I took main's side for the stamps and ran `npm run fix-versions`. I normalised the workspace cache to v432 (main is v431) after repeated fix-versions runs pushed it further; the portal cache is v205.
+
+**Connor's rule now: route and Navigate live only in Job detail, and nothing route- or navigation-related stays on Home.** Round 1 left Today's route and its Route all link alone as out of scope. They're now gone: the markup, the `.today-route*` CSS, `renderTodayRoute()`, and `todayRouteAddresses()` / `buildTodayRouteUrl()`, which nothing else used. The help text and `docs/REFERENCE.md` were updated too. `todayScheduleV2()` stays because the Jobs ring uses it.
+
+**Where the capability lives now: a pure removal, no gap in function.**
+- **The day's route:** Route Planner's **Pull today's jobs** loads today's not-done jobs with an address (the same filter as `getTodaysJobs()`). **Open full route in Google Maps** then builds the URL Route all built (`maps/dir/?api=1&destination=…&waypoints=…&travelmode=driving`). One small difference: Route Planner refuses more than 10 stops with a warning, where Home silently cut the list at 10.
+- **The day's timeline** (numbered stops with done/working/booked pills): today's jobs are under Today on Jobs. The Jobs ring keeps the count, and Next Job names the first stop.
+- **Discoverability caveat:** on a phone, Route Planner is in More (the grid button). On a computer, the More button is hidden and #550 set `sidebar: false` because "Today's route on the Dashboard opens the day's route". So on desktop it's now Ctrl+K "route" only. I left #550's approved sidebar decision alone and flagged it. Dropping `sidebar: false` is the one-line fix if Connor wants it back.
+
+**Desktop layout:** Home's left column is now Next Job plus the two daily tiles, so at 1280 it ends well above the right column (Needs attention, Money owed). It isn't broken, just unbalanced. Left as is; a candidate for a later rebalance.
+
+**Tests and harnesses:**
+- **Tests:** new `tests/tools/home-no-route-or-navigate.test.js` pins both rounds. It checks that Home has no Maps URL, navigate icon, Navigate, Today's route or Route Planner link once comments are stripped, that Job detail's Directions line is byte-pinned, and that Route Planner's pull/open and its More / Ctrl+K entries are still there. The old pins in `dashboard-today-first`, `workspace-today-hero` and `finance-split` now assert absence.
+- **Redundancy harness:** check 2 is now "no route on Home". It gained two `route` checks: Route Planner's pull builds a three-stop Maps route, and Job detail's Directions still points at the job's address. That makes 96/96. **Trap:** `await page.evaluate(() => pullTodaysJobs())` hangs forever, because it awaits a `showAlert` dialog. Also, the stub answers the relational `jobs` table with `[]`, so the check forces the documented localStorage fallback.
+- **Measure harness:** `measure.js` gained the `workspace-below-hero` and `route-planner` states.
+
+**Trap:** a comment naming Connor in `tools-nav-pwa.js` fails `text-audit.test.js` (the nav file must never name a person).
+
+## 2026-10-31 -- Cross-surface consistency pass: Workspace + portal, measured side by side
+
+This was one PR off fresh main, rebased onto #554 after it merged. **Chrome only.** Not touched: data, payments (#554's `loadStripeJs` / `mountPaymentUI` / `mountAddCardSetupUI`), PDF, auth or messaging. Harness: `docs/cross-surface-consistency-2026-10-31/harness/measure.js`. It renders tool pages through the redundancy pass's stubs and portal pages through #553's, from one checkout. It prints each element category's distinct computed-style signatures per surface, so a mismatch shows as two lines instead of one.
+
+**Item 1, Home's Navigate:** there was no embedded map on Home on main, only a per-job **Navigate** cell in the Next Job grid and the address rendered as a `maps.google.com/?q=` link. Both are gone. The address is plain text, the grid is 3-up (`grid-auto-flow: column` shares the row by itself), and the help text no longer promises a tap-to-open-Maps address. **Today's route / Route all stays**: it's the day's aggregate route, the one #550 kept on purpose. Job detail's Directions quick action is untouched. Nothing on Home had a URL or anchor, so no redirect was needed.
+
+**Item 2, avatar initials. Root cause:** the saved name lives only in `client_profiles.display_name`. Home read it, but Invoices, Visits, Estimates, Contracts and Requests passed `session.user.email` (kim@ gives KI). #553's per-device localStorage cache of Home's letters only helped a device that had opened Home in this storage. A first visit to another tab, a new device, cleared storage, or a name changed in Settings all still showed KI. Settings' profile card had a third rule (one letter for a one-word name, the email's first letter otherwise). **Fix:** one function, `portalInitialsFor(displayName, email)`. It uses the saved name first, then the email prefix, and treats a "name" that is really an email as no name. Pages that don't already load the profile call `portalLoadHeaderInitials(client, email)`, which makes the same filtered read Home makes. Home passes its loaded name, and Settings' card delegates to the shared function. The cache is gone. Portal `verify.js` gained 5 fresh-session checks (open each page first: KR). `tests/portal/avatar-initials-one-source.test.js` is new. Settings' test pins now assert the shared rule (Cher gives CH, bob@ gives BO).
+
+**Item 3, measured gaps fixed:**
+- **Portal app bar.** The kicker is 11.5px (was 11). The title has the Workspace's line-height 1.1 and 0.4px tracking (was 1.05 / 0.3). Header discs are on `--bg-panel` (were `--bg-panel-3`, a step heavier than the Workspace's).
+- **Portal back.** Contracts' filled grey disc 16px in is now the Workspace's bare orange 26px chevron, 2px from the edge.
+- **Portal pills.** These were Oswald 11px tracked caps, while every Workspace pill and the portal's own Home "Work request" tag were Archivo 12/600 sentence case. The source strings were already sentence case. Vertical padding is 3px because these pills keep a 1px border, so the outer box is the Workspace's 27.2px. **This reverses #553's "pills keep caps"**. Eyebrows, section labels, field labels and tab-bar labels still keep caps on both surfaces.
+- **Workspace primaries.** Phase 2's three pages never got the blanket flat-primary rule (they only had per-component overrides), so Home's Start my day and Upload kept the 3px lip at 700. Open job, alone since #550 removed Route today, still had the old pair look (Archivo 600 plus a border); it's now the flat Oswald 400.
+- **Count badge.** The portal's attention count has 7px sides (was 6).
+
+**Checked and already matching:** header height (62/62.4), title font and size, header-button size, Next Job vs Next visit action tiles (Oswald 12/500, sentence case, 64px), tone colours, the card radius scale (22 section / 18 tile), card padding, and the heading count size and type. **Left on purpose:**
+- the portal's opaque-vs-translucent bars and the 84 vs 85px tab bar (#553 chose blur; 85 is pinned by Workspace offsets);
+- the portal's richer empty card (a dashed card with an orange disc, explanation and CTA, for a client who lands on an empty page) vs the Workspace's quiet line (W1.9). The orange disc was Connor's #553 call;
+- the red Workspace vs orange portal heading count (urgent business work vs a client to-do);
+- gutters (12-14 vs 16) and primary radius (10 vs 12-14). These are density and token differences that would touch every page;
+- the Workspace's Invoices `.th-pill` (11.5px) vs `.th-v2-pill` (12px), which is internal to the Workspace.
+
+**Traps:** Phase 2's `verify.js` crashes at its Home search check on main too (#550 removed `#globalSearch`). It's stale; the redundancy harness supersedes it. `portal-app.js`'s hand stamp went to `?v=202610310200` on all 9 pages.
+
 ## 2026-10-31 -- Client portal redesign: the Workspace's native-app checklist on every portal page
 
 This applies Workspace Phase 2/3/4's checklist (and #550's redirect rule) to `portal/*.html`, off main at 1742407. **Chrome only.** Not touched: Stripe/payment code, PDF code, invoice/quote math, auth/MFA, message sending and contract signing. Harness: `docs/portal-redesign-2026-10-31/harness/`. `common.js` has a static server per checkout, PostgREST/RPC/edge/auth stubs with a write log, a Stripe.js mock, a seeded aal1 session, a pinned clock, `REAL_FONTS`, `EMPTY`, and `FAIL` plus a runtime fail switch. `shoot.js` and `verify.js` build on it.
