@@ -3865,6 +3865,12 @@
     return { deployRun: deployRun, otherFailures: otherFailures };
   }
 
+  // 'success' -> 'Success', 'in_progress' -> 'In progress'.
+  function stateLabel(x) {
+    const t = String(x || '').replace(/_/g, ' ');
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
+
   async function renderDeployStatus() {
     const el = document.getElementById('deployStatus');
     const historyEl = document.getElementById('deployHistoryList');
@@ -3881,7 +3887,7 @@
       el.innerHTML =
         '<div class="dev-check-row"><div><div>' + escapeHtml(run.name || run.display_title || 'workflow') + '</div>' +
         '<div class="dev-check-detail">' + when + '</div></div>' +
-        '<span class="dev-check-status ' + (ok ? 'pass' : 'fail') + '">' + (run.conclusion ? run.conclusion.toUpperCase() : (run.status || '').toUpperCase()) + '</span></div>' +
+        '<span class="dev-check-status ' + (ok ? 'pass' : 'fail') + '">' + stateLabel(run.conclusion || run.status) + '</span></div>' +
         summary.otherFailures.map(r =>
           '<div class="dev-check-row dev-other-failure"><div><div>' + escapeHtml(workflowLabel(r.name)) + ' failed</div>' +
           '<div class="dev-check-detail">' + new Date(r.updated_at).toLocaleString() + '</div></div></div>'
@@ -3891,7 +3897,7 @@
         historyEl.innerHTML = '<h3 style="margin:0 0 8px; font-size:14px; color:var(--text-dim);">Last 8 runs</h3>' +
           runs.slice(0, 8).map(r => {
             const rOk = r.conclusion === 'success';
-            const state = r.conclusion ? r.conclusion.toUpperCase() : (r.status || '').toUpperCase();
+            const state = stateLabel(r.conclusion || r.status);
             return '<div style="padding:6px 0; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:12.5px;">' +
               '<span style="color:var(--text-dim);">' + escapeHtml(r.name || 'workflow') + ' &mdash; ' + new Date(r.updated_at).toLocaleString() + '</span>' +
               '<span class="dev-check-status ' + (r.conclusion ? (rOk ? 'pass' : 'fail') : '') + '">' + state + '</span></div>';
