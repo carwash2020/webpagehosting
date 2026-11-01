@@ -291,7 +291,7 @@ test('everyone sees Clients in the nav now; the palette and Create sheet point a
 
 test('"New job for" and "Invoice" a client: job-tracker.html and invoice-generator.html fill ?client= into the form the hash opens, fill-only, then drop the param', () => {
   const jt = read('job-tracker.html');
-  assert.match(jt, /function applyPresetClientFromUrl\(\) \{[\s\S]*?if \(field && !field\.value\.trim\(\)\) \{\s*field\.value = name;\s*autofillJobClient\(\);/);
+  assert.match(jt, /function applyPresetClientFromUrl\(\) \{[\s\S]*?if \(field && !field\.value\.trim\(\)\) \{\s*field\.value = name;[\s\S]*?autofillJobClient\(\);/);
   assert.match(jt, /if \(initialHash === 'add-job'\) \{\s*applyPresetClientFromUrl\(\);/);
   assert.match(jt, /\} else if \(h === 'add-job'\) \{\s*activateTab\('jobs'\);\s*applyPresetClientFromUrl\(\);/);
   const ig = read('invoice-generator.html');
@@ -306,9 +306,13 @@ test('"New job for" and "Invoice" a client: job-tracker.html and invoice-generat
 
 test('client-detail.html: Call / Text / Email / Directions, New job / Invoice / Quote with the client filled in, what they owe, jobs open the job itself, a real back-to-Clients link', () => {
   const cd = read('client-detail.html');
-  for (const label of ["'phone', 'Call'", "'message', 'Text'", "'inbox', 'Email'", "'navigate', 'Directions'"]) assert.ok(cd.includes(label), label);
-  assert.match(cd, /\/tools\/job-tracker\.html\?client=' \+ nameParam \+ '#add-job">New job</);
-  assert.match(cd, /\/tools\/invoice-generator\.html\?client=' \+ nameParam \+ '#invoice">Invoice</);
+  for (const label of ["'phone', 'Call'", "'message', 'Text'", "'inbox', 'Email'", "'note', 'Quote'", "'receipt', 'Invoice'"]) assert.ok(cd.includes(label), label);
+  assert.match(cd, />Directions<\/a>/);
+  // Links carry the client's ID, not the name (two clients can share one).
+  assert.match(cd, /\/tools\/job-tracker\.html\?' \+ idParam \+ '#add-job'/);
+  assert.match(cd, /\/tools\/invoice-generator\.html\?' \+ idParam \+ '#invoice'/);
+  assert.match(cd, /\/tools\/invoice-generator\.html\?' \+ idParam \+ '#quote'/);
+  assert.doesNotMatch(cd, /\?client=/);
   assert.match(cd, /href: '\/tools\/job-detail\.html\?id=' \+ encodeURIComponent\(j\.id\)/);
   assert.match(cd, /Owes ' \+ money\(owed\)/);
   assert.match(cd, /<a href="\/tools\/clients\.html" class="help-btn" aria-label="Back to Clients"/);
@@ -335,4 +339,24 @@ test('attachLongPress: a link that opts in with data-long-press-target fires the
   w.document.getElementById('opt').dispatchEvent(next);
   assert.ok(!next.defaultPrevented, 'only that one click is swallowed');
   assert.match(CLIENTS, /class="th-row-link" data-long-press-target href=/);
+});
+
+test('P3: a client row has Call and Text, and its ... sheet leads with Quote, Invoice and New job by client ID; no purple, no caps labels', () => {
+  const cl = read('clients.html');
+  const cd = read('client-detail.html');
+  assert.match(cl, /aria-label="Text ' \+ escapeAttr\(r\.name\)/);
+  assert.match(cl, /label: 'Quote'[\s\S]*label: 'Invoice'[\s\S]*label: 'New job'/);
+  assert.match(cl, /'clientId=' \+ encodeURIComponent\(r\.id\)/);
+  assert.doesNotMatch(cl, /\?client=/);
+  // Receiving pages: ID first, name still works for old links.
+  assert.match(read('invoice-generator.html'), /thClientFromParams\(params\)/);
+  assert.match(read('job-tracker.html'), /thClientFromParams\(params\)/);
+  for (const src of [cl, cd]) {
+    assert.doesNotMatch(src, /text-transform:\s*uppercase/);
+    assert.doesNotMatch(src, /tone: 'purple'|is-purple/);
+  }
+  assert.doesNotMatch(cl, /INTERNAL ACCOUNT/);
+  // One filtered Records list, not a timeline plus per-type sections.
+  assert.match(cd, /\['all', 'All'\], \['jobs', 'Jobs'\], \['invoices', 'Invoices'\], \['quotes', 'Quotes'\]/);
+  assert.doesNotMatch(cd, /renderRecordSection/);
 });

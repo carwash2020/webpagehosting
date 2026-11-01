@@ -88,7 +88,7 @@ const CASES = [
   { file: 'tools/site-content.html', pattern: /alt="\$\{escapeAttr\(p\.public_caption \|\| ''\)\}"/, label: 'Gallery queue photo alt=' },
   { file: 'tools/workspace.html', pattern: /href="tel:' \+ escapeAttr\(job\.phone\) \+ '"/, label: "Today's next job phone href=" },
   { file: 'tools/job-detail.html', pattern: /href="tel:' \+ escapeAttr\(j\.phone\) \+ '"/, label: 'Job Detail phone href=' },
-  { file: 'tools/client-detail.html', pattern: /href="tel:' \+ escapeAttr\(c\.phone\) \+ '"/, label: 'Client Detail phone href=' },
+  { file: 'tools/client-detail.html', pattern: /escapeAttr\(href\)[\s\S]*actionLink\(tel, 'phone', 'Call'\)/, label: 'Client Detail phone href= (tel digits only, through actionLink)' },
   { file: 'tools/client-detail.html', pattern: /href="mailto:' \+ escapeAttr\(c\.email\) \+ '"/, label: 'Client Detail email href=' },
   { file: 'tools/invoice-generator.html', pattern: /<option value="\$\{escapeAttr\(c\.name\)\}">/, label: 'Contact autofill option value=' },
   { file: 'tools/parts-reference.html', pattern: /value="' \+ escapeAttr\(iss\.symptom\) \+ '"/, label: 'Issue symptom value=' },

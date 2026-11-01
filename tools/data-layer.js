@@ -722,6 +722,25 @@ function thFindClientById(id) {
   return thLoadClients().find(c => c.id === id) || null;
 }
 
+// A link's client, by ID first (?clientId=, what Clients and a client's own
+// page send, because two clients can share a name) and by name second (the
+// older ?client= links, which keep working). Returns the registry record, or
+// null when the link only carries a name nobody has on file.
+function thClientFromParams(params) {
+  const byId = thFindClientById(params.get('clientId'));
+  if (byId) return byId;
+  const name = params.get('client');
+  return name ? thFindClientByName(name) : null;
+}
+
+// The client ID a form was opened for (?clientId=), if the name on the form
+// is still that client's. Callers use it before thEnsureClient(), which only
+// matches by name and would pick the wrong one of two clients sharing it.
+function thPresetClientId(presetId, name) {
+  const preset = thFindClientById(presetId);
+  return (preset && thNormalizeClientName(preset.name) === thNormalizeClientName(name)) ? preset.id : null;
+}
+
 // Returns the client record for a name, creating one if it doesn't exist yet.
 // This is what new save paths should call so records created from here on
 // are linked from birth, rather than needing another backfill later.

@@ -56,7 +56,7 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=f212452f48">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=11d0839316" defer></script>
-<script src="/tools/data-layer.js?v=c595490771" defer></script>
+<script src="/tools/data-layer.js?v=b5758547dc" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/signature-pad.js?v=f95f8e1d28" defer></script>
@@ -1799,7 +1799,7 @@
   // Read before applyJobRefFromUrl()/applyClientFromUrl() strip them.
   function genTabFromQuery() {
     const params = new URLSearchParams(window.location.search);
-    return (params.get('jobRef') || params.get('client') || params.get('item') || params.get('price')) ? 'invoice' : null;
+    return (params.get('jobRef') || params.get('clientId') || params.get('client') || params.get('item') || params.get('price')) ? 'invoice' : null;
   }
   function applyGenTabFromHash() {
     const tab = (window.location.hash || '').replace('#', '');
@@ -3105,10 +3105,10 @@
     const jobRefTitle = jobRefId ? (loadJobs().find(j => String(j.id) === jobRefId) || {}).title || '' : '';
     const clientNameVal = document.getElementById('clientName').value;
     const clientId = (clientNameVal && typeof thEnsureClient === 'function')
-      ? (thEnsureClient(clientNameVal, {
+      ? ((typeof thPresetClientId === 'function' && thPresetClientId(presetClientId, clientNameVal)) || (thEnsureClient(clientNameVal, {
           address: document.getElementById('clientAddress').value,
           email: document.getElementById('clientEmail').value.trim(),
-        }) || {}).id
+        }) || {}).id)
       : undefined;
     const newEntry = {
       id: Date.now(),
@@ -3219,10 +3219,10 @@
     const jobRefTitle = jobRefId ? (loadJobs().find(j => String(j.id) === jobRefId) || {}).title || '' : '';
     const quoteClientNameVal = document.getElementById('quoteClientName').value;
     const quoteClientId = (quoteClientNameVal && typeof thEnsureClient === 'function')
-      ? (thEnsureClient(quoteClientNameVal, {
+      ? ((typeof thPresetClientId === 'function' && thPresetClientId(presetClientId, quoteClientNameVal)) || (thEnsureClient(quoteClientNameVal, {
           address: document.getElementById('quoteClientAddress').value.trim(),
           email: document.getElementById('quoteClientEmail').value.trim(),
-        }) || {}).id
+        }) || {}).id)
       : undefined;
     const newEntry = {
       id: Date.now(),
@@ -3701,17 +3701,28 @@
   // the hash opens and runs the same registry autofill a typed name gets
   // (email, address). Fill-only, and stripped from the URL once applied,
   // same as ?jobRef= above.
+  // ?clientId= (the client's registry ID) is what Clients sends now, since
+  // two clients can share a name; ?client=<name> still works for old links.
+  let presetClientId = null;
   function applyClientFromUrl() {
     const params = new URLSearchParams(window.location.search);
-    const name = params.get('client');
-    if (!name) return;
+    const record = (typeof thClientFromParams === 'function') ? thClientFromParams(params) : null;
+    const name = record ? record.name : params.get('client');
+    if (!name) { params.delete('clientId'); return; }
     const isQuote = window.location.hash === '#quote';
     const field = document.getElementById(isQuote ? 'quoteClientName' : 'clientName');
     if (field && !field.value.trim()) {
       field.value = name;
+      if (record) {
+        presetClientId = record.id;
+        const fill = (id, v) => { const el = document.getElementById(id); if (el && !el.value.trim() && v) el.value = v; };
+        fill(isQuote ? 'quoteClientEmail' : 'clientEmail', record.email);
+        fill(isQuote ? 'quoteClientAddress' : 'clientAddress', record.address);
+      }
       if (isQuote) autofillQuoteClient(); else autofillFromContact('clientName', 'contact-1');
     }
     params.delete('client');
+    params.delete('clientId');
     const rest = params.toString();
     history.replaceState(null, '', window.location.pathname + (rest ? '?' + rest : '') + window.location.hash);
   }

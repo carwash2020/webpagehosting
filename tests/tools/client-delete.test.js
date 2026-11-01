@@ -69,7 +69,7 @@ test('the client page ends with a Delete block, after Contracts and away from th
   assert.ok(btn.classList.contains('small-btn') && btn.classList.contains('danger'), 'the shared danger button');
   const blocks = [...w.document.querySelectorAll('#clientContent > .section-block')];
   assert.ok(blocks[blocks.length - 1].classList.contains('client-delete-zone'), 'last block on the page');
-  assert.match(blocks[blocks.length - 2].textContent, /Contracts/);
+  assert.match(blocks[blocks.length - 2].textContent, /Records/);
   assert.ok(!w.document.querySelector('.client-hero #deleteClientBtn'), 'not in the hero with Call / Text / New job');
   assert.match(blocks[blocks.length - 1].textContent, /Removes Yelp customer from Clients\. Their jobs, invoices, quotes, and contracts stay on file\./);
 });

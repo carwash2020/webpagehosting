@@ -149,8 +149,8 @@ test('no ?invoice or ?quote: nothing opens', () => {
 test('the client and job pages link each invoice and quote by id', () => {
   const client = fs.readFileSync(path.join(TOOLS, 'client-detail.html'), 'utf8');
   const job = fs.readFileSync(path.join(TOOLS, 'job-detail.html'), 'utf8');
-  assert.equal((client.match(/&invoice=' \+ encodeURIComponent\(i\.id\)/g) || []).length, 2, 'client timeline + Invoices section');
-  assert.equal((client.match(/&quote=' \+ encodeURIComponent\(q\.id\)/g) || []).length, 2, 'client timeline + Quotes section');
+  assert.equal((client.match(/&invoice=' \+ encodeURIComponent\(i\.id\)/g) || []).length, 1, 'the one Records list');
+  assert.equal((client.match(/&quote=' \+ encodeURIComponent\(q\.id\)/g) || []).length, 1, 'the one Records list');
   assert.equal((job.match(/&invoice=' \+ encodeURIComponent\(i\.id\)/g) || []).length, 1);
   assert.equal((job.match(/&quote=' \+ encodeURIComponent\(q\.id\)/g) || []).length, 1);
   // The page runs it on load, after the tab from #recent is shown.

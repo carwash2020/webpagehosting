@@ -157,6 +157,6 @@ test('an internal account appearing in the portal client list is flagged, not hi
   // Flagged rather than filtered: a staff address with real client
   // invoices on file is legitimate but unusual, and hiding it would
   // make the list silently disagree with the actual data.
-  assert.match(CLIENTS, /INTERNAL ACCOUNT/);
+  assert.match(CLIENTS, /Internal account/);
   assert.match(CLIENTS, /async function loadInternalEmails\(\)/);
 });
