@@ -107,12 +107,12 @@
   }
   .pr-unit-card:hover { border-color: var(--orange-light); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,0,0,.18); }
   .pr-unit-card:active { transform: translateY(1px); box-shadow: none; }
-  .pr-unit-type { font-family:var(--font-ui); font-size: 12.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--orange-light); }
+  .pr-unit-type { font-family:var(--font-ui); font-size: 12.5px; color: var(--orange-light); }
   .pr-category-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
   .pr-unit-name { font-size: 17px; font-weight: 600; color: var(--white); margin-top: 2px; }
   .pr-unit-count { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
   .pr-unit-badge {
-    display: inline-block; font-size: 10.5px; text-transform: uppercase; letter-spacing: .03em;
+    display: inline-block; font-size: 10.5px;
     color: var(--text-dim); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; margin-top: 6px;
     transition: border-color .18s ease, color .18s ease;
   }
@@ -141,6 +141,14 @@
   .pr-chevron {
     display: inline-flex; transition: transform .2s ease; transform: rotate(0deg);
   }
+  /* Sentence case for the shared pieces this page shows (field labels, header
+     kicker, tip kicker, sheet titles): the shared stylesheet capitalises them
+     for every tool; this page doesn't. */
+  body.th-tool-page[data-th-page="parts-reference"] label,
+  body.th-tool-page[data-th-page="parts-reference"] .th-kicker,
+  body.th-tool-page[data-th-page="parts-reference"] .th-page-tip-kicker,
+  body.th-tool-page[data-th-page="parts-reference"] .th-sheet-title,
+  body.th-tool-page[data-th-page="parts-reference"] .th-bn-create-label { text-transform: none; letter-spacing: 0; }
   .pr-chevron.is-open { transform: rotate(180deg); }
   .pr-row-icon-btn {
     background: none; border: none; cursor: pointer; padding: 4px; line-height: 1;
@@ -165,8 +173,6 @@
     .pr-row-icon-btn { width: 44px; height: 44px; }
   }
   .pr-count { color: var(--text-dim); font-size: 13px; margin-bottom: 14px; }
-  #prAddUnitForm { display: none; }
-  #prAddUnitForm.is-open { display: block; }
   #prUnitDetail, #prTypeView { display: none; }
   #prUnitDetail.is-open, #prTypeView.is-open { display: block; }
   #prListView.is-hidden { display: none; }
@@ -199,7 +205,7 @@
   .pr-issue-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
   .pr-issue-symptom { font-size: 15.5px; font-weight: 600; color: var(--white); }
   .pr-issue-price { font-family:var(--font-ui); font-size: 19px; color: var(--white); white-space: nowrap; }
-  .pr-issue-price-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; }
+  .pr-issue-price-label { font-size: 11px; color: var(--text-dim); }
   .pr-issue-part { font-size: 14.5px; color: var(--text); margin-bottom: 4px; }
   .pr-issue-partnum { color: var(--text-dim); font-size: 13px; }
   .pr-issue-note { font-size: 13.5px; color: var(--text-dim); margin-top: 6px; }
@@ -216,7 +222,7 @@
   }
 
   /* Quick-access strip: pinned + recently viewed models */
-  .pr-quick-label { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+  .pr-quick-label { font-size: 12px; color: var(--text-dim); margin-bottom: 8px; }
   .pr-quick-strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 18px; scrollbar-width: thin; }
   .pr-quick-chip {
     flex: 0 0 auto; display: flex; flex-direction: column; gap: 2px; text-align: left;
@@ -226,7 +232,7 @@
   }
   .pr-quick-chip:hover { border-color: var(--orange-light); transform: translateY(-1px); }
   .pr-quick-pin { color: var(--orange-light); font-size: 11px; margin-right: 3px; }
-  .pr-quick-brand { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pr-quick-brand { font-size: 11px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .pr-quick-model { font-size: 13px; color: var(--white); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   /* Search-result mode (flat list, matches brand/type/model or issue text) */
@@ -235,8 +241,7 @@
   /* Verified vs logged-by-you badges, confirmed-date staleness */
   .pr-issue-meta-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 3px; }
   .pr-verified-badge {
-    display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; text-transform: uppercase;
-    letter-spacing: .03em; padding: 2px 6px; border-radius: 4px; white-space: nowrap;
+    display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; padding: 2px 6px; border-radius: 4px; white-space: nowrap;
   }
   .pr-verified-badge.verified { color: #6fcf97; background: rgba(111,207,151,.12); border: 1px solid rgba(111,207,151,.3); }
   .pr-verified-badge.logged { color: var(--text-dim); background: var(--bg-panel-3); border: 1px solid var(--border); }
@@ -272,9 +277,9 @@
     body.th-tool-page[data-th-page="parts-reference"] .pr-search-filter-row { top: 61px; }
   }
   body.th-tool-page[data-th-page="parts-reference"] .pr-breadcrumb {
-    font-family: var(--font-ui); text-transform: uppercase; letter-spacing: 1.2px; font-size: 12px;
+    font-family: var(--font-ui); font-size: 12px;
   }
-  body.th-tool-page[data-th-page="parts-reference"] .tool-title { font-family: var(--font-display); text-transform: uppercase; font-size: 30px; line-height: 1.05; }
+  body.th-tool-page[data-th-page="parts-reference"] .tool-title { font-family: var(--font-display); font-size: 30px; line-height: 1.05; }
 
   /* ==========================================================================
      v2 (2026-09-29) -- App redesign v2 §8.12, Appliance Wiki. On top of W4
@@ -284,7 +289,7 @@
   /* The 56px search field with an orange border. */
   body.th-tool-page[data-th-page="parts-reference"] .pr-search-filter-row { align-items: flex-end; }
   body.th-tool-page[data-th-page="parts-reference"] .pr-search-filter-row label {
-    font-family: var(--font-ui); font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-dim);
+    font-family: var(--font-ui); font-size: 11px; color: var(--text-dim);
   }
   body.th-tool-page[data-th-page="parts-reference"] #prSearchInput {
     min-height: 56px; padding: 0 16px; border-radius: 18px; font-size: 16px;
@@ -303,7 +308,7 @@
   }
   body.th-tool-page[data-th-page="parts-reference"] .pr-type-tile.is-active { background: var(--tone-orange-bg); border-color: var(--orange-tint-border); color: var(--orange-light); }
   body.th-tool-page[data-th-page="parts-reference"] .pr-type-tile:active { transform: scale(.97); }
-  body.th-tool-page[data-th-page="parts-reference"] .pr-type-tile-label { font-family: var(--font-display); font-size: 22px; line-height: 1; text-transform: uppercase; overflow-wrap: anywhere; }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-type-tile-label { font-family: var(--font-display); font-size: 22px; line-height: 1; overflow-wrap: anywhere; }
   body.th-tool-page[data-th-page="parts-reference"] .pr-type-tile-meta { font-size: 12.5px; color: var(--text-dim); }
   @media (hover: hover) { body.th-tool-page[data-th-page="parts-reference"] .pr-type-tile:not(.is-active):hover { border-color: var(--orange-tint-border); } }
   @media (max-width: 420px) { body.th-tool-page[data-th-page="parts-reference"] .pr-type-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -313,10 +318,10 @@
     background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl); padding: 6px 18px; margin-bottom: 16px;
   }
   body.th-tool-page[data-th-page="parts-reference"] .pr-fixes-head { display: flex; align-items: center; gap: 10px; padding: 10px 0 4px; }
-  body.th-tool-page[data-th-page="parts-reference"] .pr-fixes-title { font-family: var(--font-ui); font-size: 13px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text); min-width: 0; }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-fixes-title { font-family: var(--font-ui); font-size: 13px; color: var(--text); min-width: 0; }
   body.th-tool-page[data-th-page="parts-reference"] .pr-fixes-add {
     margin-left: auto; flex-shrink: 0; min-height: 36px; padding: 0 4px; border: 0; background: none; cursor: pointer;
-    font-family: var(--font-ui); font-size: 12.5px; letter-spacing: .8px; text-transform: uppercase; color: var(--orange-light);
+    font-family: var(--font-ui); font-size: 12.5px; color: var(--orange-light);
   }
   body.th-tool-page[data-th-page="parts-reference"] .pr-fix-row { display: flex; align-items: center; gap: 4px; border-top: 1px solid var(--th-hairline); }
   body.th-tool-page[data-th-page="parts-reference"] .pr-fix-open {
@@ -350,12 +355,12 @@
     background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl); padding: 16px 18px;
   }
   body.th-tool-page[data-th-page="parts-reference"] #prListView > .form-section h3 {
-    font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text);
+    font-family: var(--font-ui); font-size: 13px; font-weight: 500; color: var(--text);
   }
   body.th-tool-page[data-th-page="parts-reference"] .pr-unit-card { background: var(--th-field); border-radius: var(--th-radius-tile); margin-bottom: 10px; }
   body.th-tool-page[data-th-page="parts-reference"] .pr-unit-card:active { transform: scale(.985); }
   body.th-tool-page[data-th-page="parts-reference"] .pr-unit-type { font-size: 11.5px; letter-spacing: 1.2px; }
-  body.th-tool-page[data-th-page="parts-reference"] .pr-unit-name { font-family: var(--font-display); font-weight: 400; font-size: 20px; letter-spacing: .3px; text-transform: uppercase; color: var(--text); }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-unit-name { font-family: var(--font-display); font-weight: 400; font-size: 20px; color: var(--text); }
   body.th-tool-page[data-th-page="parts-reference"] .pr-unit-badge { border-radius: 999px; padding: 3px 9px; background: var(--tone-orange-bg); color: var(--tone-orange-fg); border: 0; font-size: 11px; }
   @media (min-width: 1024px) {
     body.th-tool-page[data-th-page="parts-reference"] #prUnitsList,
@@ -367,12 +372,12 @@
 
   /* Level 2 / 3: breadcrumbs, models as cards, issues as ruled rows with a ⋯. */
   body.th-tool-page[data-th-page="parts-reference"] .pr-breadcrumb a { min-height: 32px; display: inline-flex; align-items: center; }
-  body.th-tool-page[data-th-page="parts-reference"] .pr-back-link { min-height: 40px; font-family: var(--font-ui); font-size: 13px; letter-spacing: .8px; text-transform: uppercase; color: var(--orange-light); }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-back-link { min-height: 40px; font-family: var(--font-ui); font-size: 13px; color: var(--orange-light); }
   body.th-tool-page[data-th-page="parts-reference"] .pr-type-section { background: var(--bg-panel); border-radius: var(--th-radius-xl); margin-bottom: 12px; }
   body.th-tool-page[data-th-page="parts-reference"] .pr-type-section-header { min-height: 60px; padding: 10px 12px 10px 18px; gap: 10px; }
   body.th-tool-page[data-th-page="parts-reference"] .pr-type-section-name { font-size: 15.5px; overflow-wrap: anywhere; min-width: 0; }
   body.th-tool-page[data-th-page="parts-reference"] .pr-type-section-body { border-top-color: var(--th-hairline); padding: 14px 18px 16px; }
-  body.th-tool-page[data-th-page="parts-reference"] .pr-type-section-body h3 { font-family: var(--font-ui); font-size: 13px !important; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text); }
+  body.th-tool-page[data-th-page="parts-reference"] .pr-type-section-body h3 { font-family: var(--font-ui); font-size: 13px !important; font-weight: 500; color: var(--text); }
   body.th-tool-page[data-th-page="parts-reference"] .pr-link-box { border-radius: 14px; min-height: 52px; }
   body.th-tool-page[data-th-page="parts-reference"] .pr-issue {
     background: none; border: 0; border-top: 1px solid var(--th-hairline); border-radius: 0; margin: 0; padding: 14px 0;
@@ -430,13 +435,16 @@
   <div id="prCommonFixes" class="pr-common-fixes"></div>
   <div id="prDisplayNameRow" style="margin-bottom:14px;"></div>
 
-  <div class="form-section">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-      <h3 style="margin:0;">Appliances</h3>
-      <button class="secondary-btn" onclick="togglePrAddUnitForm()">+ Add Appliance</button>
+  <!-- Add an appliance (P4, 2026-11-01): a sheet (the shared form-sheet
+       pattern, tools-effects.js) instead of an inline form, so the page is
+       search, tiles and the list. The old inline #prAddUnitForm id is kept
+       on the sheet body. -->
+  <div class="form-section is-collapsed" id="prAddUnitSection">
+    <div class="form-section-header" onclick="toggleFormSection('prAddUnitSection')">
+      <h3>Add an appliance</h3>
+      <span class="collapse-chevron">&#9660;</span>
     </div>
-
-    <div id="prAddUnitForm" style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+    <div class="form-section-body" id="prAddUnitForm">
       <div class="tool-form-row">
         <div class="form-field">
           <label for="prNewType">Appliance Type</label>
@@ -466,10 +474,14 @@
         </div>
       </div>
       <div class="form-footer">
-        <button class="primary-btn" onclick="savePrUnit()">Save Appliance</button>
+        <button class="primary-btn" onclick="savePrUnit()">Save appliance</button>
         <button class="secondary-btn" onclick="togglePrAddUnitForm()">Cancel</button>
       </div>
     </div>
+  </div>
+
+  <div class="form-section">
+    <h3 style="margin:0;">Appliances</h3>
 
     <p class="pr-count" id="prCount" style="margin-top:16px;"></p>
     <!-- F10 fix (2026-09-07): renderUnits() overwrites this synchronously
@@ -512,10 +524,21 @@
   <div class="tool-title" id="prBrandDetailTitle" style="font-size:22px;"></div>
   <p class="tool-sub" id="prBrandDetailSubtitle" style="margin-bottom:16px;"></p>
 
-  <div style="margin-bottom:14px;">
-    <button class="secondary-btn" onclick="toggleAddModelInType()">+ Add Model</button>
+  <!-- Add a model (P4): a sheet, same pattern as Add an appliance. -->
+  <div class="form-section is-collapsed" id="prAddModelSection">
+    <div class="form-section-header" onclick="toggleFormSection('prAddModelSection')">
+      <h3>Add a model</h3>
+      <span class="collapse-chevron">&#9660;</span>
+    </div>
+    <div class="form-section-body">
+      <div class="tool-form-row"><div class="form-field full"><label for="prNewModelInType">Model number or name</label>
+        <input type="text" id="prNewModelInType" placeholder="e.g. WRS325FDAM04 &mdash; Side-by-Side Refrigerator"></div></div>
+      <div class="tool-form-row"><div class="form-field"><label for="prNewManualLinkInType">Manual link (optional)</label><input type="text" id="prNewManualLinkInType" placeholder="https://..."></div>
+      <div class="form-field"><label for="prNewPartsLinkInType">Parts catalog link (optional)</label><input type="text" id="prNewPartsLinkInType" placeholder="https://..."></div></div>
+      <div class="form-footer"><button class="primary-btn" onclick="saveNewModelInType()">Save model</button>
+      <button class="secondary-btn" onclick="toggleAddModelInType()">Cancel</button></div>
+    </div>
   </div>
-  <div id="prAddModelFormContainer"></div>
 
   <div id="prTypeSectionsList"></div>
 </div>
@@ -2251,7 +2274,7 @@
   }
 
   function togglePrAddUnitForm() {
-    document.getElementById('prAddUnitForm').classList.toggle('is-open');
+    document.getElementById('prAddUnitSection').classList.toggle('is-collapsed');
     populatePrDatalists();
   }
 
@@ -2508,23 +2531,22 @@
   // pre-fills brand/type from context instead of making the user retype
   // them in the generic top-level "+ Add Appliance" form.
   function toggleAddModelInType() {
-    activePrAddModelOpen = !activePrAddModelOpen;
+    // Closing by the scrim, swipe or Escape changes the sheet without this
+    // flag, so read the sheet itself.
+    const sec = document.getElementById('prAddModelSection');
+    activePrAddModelOpen = !!sec && sec.classList.contains('is-collapsed');
     renderAddModelForm();
   }
 
   function renderAddModelForm() {
-    const container = document.getElementById('prAddModelFormContainer');
-    if (!container) return;
-    if (!activePrAddModelOpen) { container.innerHTML = ''; return; }
-    container.innerHTML =
-      '<div class="pr-type-section" style="padding:16px; margin-bottom:12px;">' +
-      '<div class="tool-form-row"><div class="form-field full"><label>Model Number / Name</label>' +
-      '<input type="text" id="prNewModelInType" placeholder="e.g. WRS325FDAM04 &mdash; Side-by-Side Refrigerator"></div></div>' +
-      '<div class="tool-form-row"><div class="form-field"><label>Manual Link (optional)</label><input type="text" id="prNewManualLinkInType" placeholder="https://..."></div>' +
-      '<div class="form-field"><label>Parts Catalog Link (optional)</label><input type="text" id="prNewPartsLinkInType" placeholder="https://..."></div></div>' +
-      '<div class="form-footer"><button class="primary-btn" onclick="saveNewModelInType()">Save Model</button>' +
-      '<button class="secondary-btn" onclick="toggleAddModelInType()">Cancel</button></div>' +
-      '</div>';
+    const sec = document.getElementById('prAddModelSection');
+    if (!sec) return;
+    if (!activePrAddModelOpen) {
+      ['prNewModelInType', 'prNewManualLinkInType', 'prNewPartsLinkInType'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      sec.classList.add('is-collapsed');
+      return;
+    }
+    sec.classList.remove('is-collapsed');
   }
 
   function saveNewModelInType() {
@@ -2979,7 +3001,7 @@
     const items = prCommonFixItems();
     const label = activePrType === 'all' ? 'All types' : activePrType;
     host.innerHTML = '<div class="pr-fixes-head"><span class="pr-fixes-title">' + escapeHtml(label) + ' &middot; common fixes</span>' +
-      '<button type="button" class="pr-fixes-add" onclick="togglePrAddUnitForm(); document.getElementById(\'prAddUnitForm\').scrollIntoView({ behavior: \'smooth\', block: \'center\' });">+ Add entry</button></div>' +
+      '<button type="button" class="pr-fixes-add" onclick="togglePrAddUnitForm();">Add entry</button></div>' +
       (items.length ? items.map(({ u, iss }) =>
         '<div class="pr-fix-row" data-pr-fix-unit="' + u.id + '" data-pr-fix-issue="' + iss.id + '">' +
           '<button type="button" class="pr-fix-open" aria-label="Open ' + escapeAttr(u.brand + ' ' + (u.model || u.type)) + '">' +
