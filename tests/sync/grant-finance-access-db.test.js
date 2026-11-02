@@ -54,62 +54,26 @@ async function buildDb() {
   return db;
 }
 
-test('grants can_view_finance to the two real unprivileged accounts (nicholasconnordodart@gmail.com, steven7mikael@gmail.com)', async () => {
+test('gmail accounts get nothing -- only the real .biz sign-ins are granted', async () => {
   const db = await buildDb();
   await db.exec(MIGRATION);
-  const r = await db.query(
-    `select email, can_view_finance from public.account_roles where email in
-     ('nicholasconnordodart@gmail.com', 'steven7mikael@gmail.com') order by email`
-  );
-  assert.deepEqual(r.rows, [
-    { email: 'nicholasconnordodart@gmail.com', can_view_finance: true },
-    { email: 'steven7mikael@gmail.com', can_view_finance: true },
-  ]);
+  const r = await db.query(`select email from public.account_roles order by email`);
+  assert.deepEqual(r.rows.map((x) => x.email), ['connor@triplehenterprisesllc.biz', 'steve@triplehenterprisesllc.biz']);
 });
 
-test('grants ONLY can_view_finance to the two new accounts -- every other permission stays false', async () => {
+test('already-correct .biz rows are left exactly as they were', async () => {
   const db = await buildDb();
+  const before = (await db.query(`select * from public.account_roles order by email`)).rows;
   await db.exec(MIGRATION);
-  const r = await db.query(
-    `select can_manage_roles, can_access_dev_tools, can_access_dev_tools_full, can_manage_site_content,
-            can_manage_invoices, can_manage_contracts, can_view_runway, can_manage_reviews
-     from public.account_roles where email = 'nicholasconnordodart@gmail.com'`
-  );
-  assert.deepEqual(r.rows[0], {
-    can_manage_roles: false, can_access_dev_tools: false, can_access_dev_tools_full: false,
-    can_manage_site_content: false, can_manage_invoices: false, can_manage_contracts: false,
-    can_view_runway: false, can_manage_reviews: false,
-  });
+  await db.exec(MIGRATION);
+  assert.deepEqual((await db.query(`select * from public.account_roles order by email`)).rows, before);
 });
 
-test('does not touch the two already-correct @triplehenterprisesllc.biz rows', async () => {
+test('grants Steve finance + portal invoices (and an account_roles row for invites) when missing, nothing else', async () => {
   const db = await buildDb();
-  const before = (await db.query(`select * from public.account_roles order by email`)).rows
-    .filter((r) => r.email.endsWith('@triplehenterprisesllc.biz'));
+  await db.exec(`delete from public.account_roles where email = 'steve@triplehenterprisesllc.biz'`);
   await db.exec(MIGRATION);
-  const after2 = (await db.query(`select * from public.account_roles order by email`)).rows
-    .filter((r) => r.email.endsWith('@triplehenterprisesllc.biz'));
-  assert.deepEqual(after2, before);
-});
-
-test('is idempotent -- running it twice leaves the same two rows with can_view_finance true, no duplicate rows, no error', async () => {
-  const db = await buildDb();
-  await db.exec(MIGRATION);
-  await db.exec(MIGRATION);
-  const r = await db.query(`select email, can_view_finance from public.account_roles order by email`);
-  assert.equal(r.rows.length, 4); // the 2 seeded .biz rows + the 2 granted here
-  assert.ok(r.rows.every((row) => row.can_view_finance === true));
-});
-
-test('upsert never lowers a permission a row already has, and leaves role_name alone', async () => {
-  const db = await buildDb();
-  // Simulate the account having been granted something else in the
-  // meantime, before this migration is ever applied.
-  await db.exec(`insert into public.account_roles (email, role_name, can_manage_invoices)
-    values ('steven7mikael@gmail.com', 'Employee', true)`);
-  await db.exec(MIGRATION);
-  const r = await db.query(
-    `select role_name, can_manage_invoices, can_view_finance from public.account_roles where email = 'steven7mikael@gmail.com'`
-  );
-  assert.deepEqual(r.rows[0], { role_name: 'Employee', can_manage_invoices: true, can_view_finance: true });
+  const r = await db.query(`select role_name, can_view_finance, can_manage_invoices, can_manage_roles
+    from public.account_roles where email = 'steve@triplehenterprisesllc.biz'`);
+  assert.deepEqual(r.rows[0], { role_name: null, can_view_finance: true, can_manage_invoices: true, can_manage_roles: false });
 });

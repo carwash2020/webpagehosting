@@ -66,10 +66,20 @@
 -- the time this runs (e.g. given some other permission in the meantime),
 -- this only raises can_view_finance -- it never lowers an existing
 -- permission or clobbers role_name.
-insert into public.account_roles (email, can_view_finance)
+-- CORRECTION (2026-11-02, Connor): Steve signs in with
+-- steve@triplehenterprisesllc.biz, and Connor's live sign-in (last
+-- sign-in 2026-11-02) is connor@triplehenterprisesllc.biz -- NOT the
+-- gmail addresses above. Steve also needs manual portal invites
+-- (send-invite: any account_roles row) and manual portal invoices
+-- (sync-invoice-to-portal + the Clients Portal tab: can_manage_invoices).
+-- Checked live 2026-11-02: both .biz rows already have can_view_finance,
+-- can_manage_invoices = true, so this is a no-op kept as the record.
+-- The gmail accounts get nothing.
+insert into public.account_roles (email, can_view_finance, can_manage_invoices)
 values
-  ('nicholasconnordodart@gmail.com', true),
-  ('steven7mikael@gmail.com', true)
+  ('connor@triplehenterprisesllc.biz', true, true),
+  ('steve@triplehenterprisesllc.biz', true, true)
 on conflict (email) do update
-  set can_view_finance = true
-  where public.account_roles.can_view_finance is distinct from true;
+  set can_view_finance = true, can_manage_invoices = true
+  where public.account_roles.can_view_finance is distinct from true
+     or public.account_roles.can_manage_invoices is distinct from true;

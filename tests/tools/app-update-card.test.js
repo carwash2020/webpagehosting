@@ -84,7 +84,7 @@ function installFakeServiceWorker(w, device, server) {
 
 // One app open: the page as the network serves it right now, then
 // tools-nav-pwa.js, then the load-time register() (tools-media-sharing.js).
-async function openApp(device, server) {
+async function openApp(device, server, { typed = true } = {}) {
   // jsdom can't navigate; a reload shows up as a "Not implemented:
   // navigation" error, which is how the tests count reloads.
   const virtualConsole = new VirtualConsole();
@@ -109,6 +109,8 @@ async function openApp(device, server) {
   w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
   w.navigator.serviceWorker.register('/service-worker.js');
   await tick();
+  // Most tests model a page with something typed into it (ask-first card).
+  if (typed) w.document.dispatchEvent(new w.Event('input', { bubbles: true }));
   return w;
 }
 const card = (w) => w.document.querySelector('.th-update-card');
@@ -231,7 +233,7 @@ test('offline, or an unreadable live page, never shows the card -- it does not g
   assert.equal(anyBanner(w2), null, 'a 404 is not a newer page');
 });
 
-test('never reloads on its own; Later and the close button dismiss, Update reloads', async () => {
+test('with something typed it never reloads on its own; Later and the close button dismiss, Update reloads', async () => {
   const server = makeServer();
   const device = await installedDevice(server);
   const w = await openApp(device, server);
@@ -292,4 +294,25 @@ test('the build comparison is one-way and ignores scripts added at runtime', () 
   assert.equal(w.thPageIsBehind(running, running.map((p) => p.replace('a.js?v=1', 'a.js?v=2'))), true);
   assert.equal(w.thPageIsBehind(running, []), false, 'nothing readable: not behind');
   w.close();
+});
+
+test('nothing typed: a real new version reloads straight into it, no card (force-update)', async () => {
+  const server = makeServer();
+  const device = await installedDevice(server);
+  const w = await openApp(device, server, { typed: false });
+  shipSharedFileChange(server, 'abab121212');
+  await w.navigator.serviceWorker.getRegistration().then((r) => r.update());
+  await tick();
+  assert.equal(w.__reloads.length, 1, 'reloaded itself');
+  assert.equal(card(w), null);
+});
+
+test('nothing typed: a worker-only bump still does not reload', async () => {
+  const server = makeServer();
+  const device = await installedDevice(server);
+  const w = await openApp(device, server, { typed: false });
+  shipWorkerOnlyBump(server);
+  await w.navigator.serviceWorker.getRegistration().then((r) => r.update());
+  await tick();
+  assert.equal(w.__reloads.length, 0);
 });

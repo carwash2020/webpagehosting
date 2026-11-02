@@ -2296,7 +2296,8 @@ function showThBanner(message, actionLabel, onAction, onDismiss) {
 // else asks for a new worker while it sits open, so coming back to the
 // foreground asks for one (at most every 5 minutes).
 //
-// Never a forced reload: this app has real forms (a job, notes) where
+// Reload policy: a page with nothing typed reloads itself into the new
+// version (2026-11-02). Otherwise never a forced reload: this app has real forms (a job, notes) where
 // reloading mid-task would lose work. One banner per page, and once it's
 // dismissed this page doesn't ask again; the new version arrives on the
 // next natural navigation anyway.
@@ -2387,6 +2388,8 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
     let checking = null;
     let recheck = false;
     let lastUpdateRequest = Date.now(); // this load's navigation just checked
+    let userHasTyped = false;
+    document.addEventListener('input', () => { userHasTyped = true; }, true);
 
     function captureRunningParts() {
       if (!runningParts) runningParts = thPageBuildParts(document, location.href);
@@ -2414,6 +2417,10 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
         .then((liveParts) => {
           if (shown || !thPageIsBehind(runningParts, liveParts)) return;
           shown = true;
+          // Force-update (2026-11-02): nothing typed on this page yet, so
+          // reloading can't lose work -- go straight to the new version.
+          // Anything typed keeps the old ask-first card.
+          if (!userHasTyped) { window.location.reload(); return; }
           showThUpdateCard(() => window.location.reload());
         })
         .catch(() => { /* offline or blocked -- stay quiet */ })
@@ -2435,6 +2442,9 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistration()
         .then((reg) => reg && reg.update())
         .catch(() => { /* offline, or nothing new */ });
+      // A resumed app may be behind even when the worker is already
+      // current (it updated while this page sat open), so compare too.
+      checkForRealUpdate();
     });
   })();
 }
