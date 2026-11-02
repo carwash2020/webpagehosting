@@ -116,7 +116,7 @@
   }
   .dev-section-title {
     font-family: var(--font-ui); font-size: 13px; font-weight: 600;
-    letter-spacing: 1.4px; text-transform: uppercase; color: var(--text);
+ color: var(--text);
     margin: 0; order: 0;
   }
   .dev-section-sub { margin: 0; font-size: 12.5px; color: var(--text-dim); order: 2; }
@@ -169,6 +169,14 @@
     padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px;
   }
   .dev-check-row:last-child { border-bottom: none; }
+  /* Sentence-case section, panel and badge text (P4 declutter); shared CSS sets caps. */
+  body.th-tool-page[data-th-page="dev-tools"] .dev-section-title,
+  body.th-tool-page[data-th-page="dev-tools"] .dev-panel h2,
+  body.th-tool-page[data-th-page="dev-tools"] .dev-check-status,
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-q-kicker,
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-q-answer,
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-verdict,
+  body.th-tool-page[data-th-page="dev-tools"] .th-dt-matrix th { text-transform: none; letter-spacing: 0; }
   .dev-check-status { font-size: 13px; font-weight: 600; white-space: nowrap; }
   .dev-check-status.pass { color: #6fcf97; }
   .dev-check-status.fail { color: #e05555; }
@@ -415,7 +423,7 @@
   body.th-tool-page[data-th-page="dev-tools"] .dev-tab-btn,
   body.th-tool-page[data-th-page="dev-tools"] .dev-tab-bar > a {
     min-height: 40px; padding: 0 14px; border-radius: var(--th-radius-seg); flex-shrink: 0;
-    font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: .8px; text-transform: uppercase;
+    font-family: var(--font-ui); font-size: 13px; font-weight: 500;
   }
   body.th-tool-page[data-th-page="dev-tools"] .dev-tab-btn.is-active { background: var(--text); color: var(--bg); font-weight: 500; }
   body.th-tool-page[data-th-page="dev-tools"] .dev-tab-btn.is-active .th-icon { color: var(--bg); }
@@ -447,17 +455,17 @@
   body.th-tool-page[data-th-page="dev-tools"] .th-dt-q[data-th-tone="orange"] .th-dt-q-icon { background: var(--tone-orange-bg); color: var(--tone-orange-fg); }
   body.th-tool-page[data-th-page="dev-tools"] .th-dt-q-main { flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
   body.th-tool-page[data-th-page="dev-tools"] .th-dt-q-kicker {
-    margin: 0; font-family: var(--font-ui); font-size: 11.5px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text-dim);
+    margin: 0; font-family: var(--font-ui); font-size: 11.5px; font-weight: 500; color: var(--text-dim);
   }
   body.th-tool-page[data-th-page="dev-tools"] .th-dt-q-answer {
-    margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 28px; line-height: 1.05; text-transform: uppercase; color: var(--text);
+    margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 28px; line-height: 1.05; color: var(--text);
     overflow-wrap: anywhere;
   }
   body.th-tool-page[data-th-page="dev-tools"] .th-dt-q-detail { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--text-dim); }
   body.th-tool-page[data-th-page="dev-tools"] .th-dt-q .th-dt-q-action {
     min-height: 48px; padding: 0 18px; border: 0; border-radius: var(--th-radius-track); white-space: nowrap; justify-content: center;
     background: var(--orange); color: var(--th-ink-on-orange); box-shadow: 3px 3px 0 0 var(--orange-dark);
-    font-family: var(--font-ui); font-size: 14px; font-weight: 600; letter-spacing: .9px; text-transform: uppercase;
+    font-family: var(--font-ui); font-size: 14px; font-weight: 600;
   }
   body.th-tool-page[data-th-page="dev-tools"] .th-dt-q .th-dt-q-action:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 1px 1px 0 0 var(--orange-dark); }
   body.th-tool-page[data-th-page="dev-tools"] .th-dt-q .th-dt-q-action:disabled { opacity: .55; }
@@ -471,7 +479,7 @@
   }
   body.th-tool-page[data-th-page="dev-tools"] .dev-panel.is-collapsible { border-radius: var(--th-radius-tile); }
   body.th-tool-page[data-th-page="dev-tools"] .dev-panel h2 {
-    font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text);
+    font-family: var(--font-ui); font-size: 13px; font-weight: 500; color: var(--text);
   }
   body.th-tool-page[data-th-page="dev-tools"] .dev-panel.is-collapsible h2 { font-size: 13px; }
   body.th-tool-page[data-th-page="dev-tools"] .dev-panel .secondary-btn,
@@ -503,7 +511,7 @@
   body.th-tool-page[data-th-page="dev-tools"] .dev-status-dot.warn { background: var(--orange-light); box-shadow: 0 0 0 3px var(--tone-orange-bg); }
   body.th-tool-page[data-th-page="dev-tools"] .dev-status-dot.bad { background: var(--status-error); box-shadow: 0 0 0 3px var(--tone-red-bg); }
   body.th-tool-page[data-th-page="dev-tools"] .th-dt-verdict {
-    margin: 12px 0 0; font-family: var(--font-display); font-size: 22px; text-transform: uppercase; line-height: 1.1; color: var(--tone-green-fg);
+    margin: 12px 0 0; font-family: var(--font-display); font-size: 22px; line-height: 1.1; color: var(--tone-green-fg);
   }
   body.th-tool-page[data-th-page="dev-tools"] .th-dt-verdict.is-bad { color: var(--tone-red-fg); }
   /* Access: the permissions matrix. */
@@ -512,7 +520,7 @@
   body.th-tool-page[data-th-page="dev-tools"] .th-dt-matrix-wrap { overflow-x: auto; }
   body.th-tool-page[data-th-page="dev-tools"] .th-dt-matrix { width: 100%; min-width: 320px; border-collapse: collapse; font-size: 13.5px; }
   body.th-tool-page[data-th-page="dev-tools"] .th-dt-matrix th {
-    padding: 8px 6px; font-family: var(--font-ui); font-weight: 500; font-size: 11.5px; letter-spacing: 1.1px; text-transform: uppercase;
+    padding: 8px 6px; font-family: var(--font-ui); font-weight: 500; font-size: 11.5px;
     color: var(--text-dim); text-align: center; white-space: nowrap;
   }
   body.th-tool-page[data-th-page="dev-tools"] .th-dt-matrix th:first-child,
@@ -1596,8 +1604,8 @@
       if (cronAlertRows > 0) issues.push(cronAlertRows + ' open cron alert' + (cronAlertRows === 1 ? '' : 's') + ' (see Cron Health)');
 
       results.innerHTML = issues.length
-        ? '<div class="dev-check-row"><div>' + issues.map(i => escapeHtml(i)).join('<br>') + '</div><span class="dev-check-status fail">' + issues.length + ' ISSUE' + (issues.length === 1 ? '' : 'S') + '</span></div>'
-        : '<div class="dev-check-row"><div>Consistency check, service worker, Supabase, latest deploy, and cron health all look good.</div><span class="dev-check-status pass">ALL CLEAR</span></div>';
+        ? '<div class="dev-check-row"><div>' + issues.map(i => escapeHtml(i)).join('<br>') + '</div><span class="dev-check-status fail">' + issues.length + ' issue' + (issues.length === 1 ? '' : 's') + '</span></div>'
+        : '<div class="dev-check-row"><div>Consistency check, service worker, Supabase, latest deploy, and cron health all look good.</div><span class="dev-check-status pass">All clear</span></div>';
     } catch (e) {
       results.innerHTML = '<p class="tool-sub">Something went wrong running the full check: ' + escapeHtml(e.message || String(e)) + '</p>';
     } finally {
@@ -3935,7 +3943,7 @@
         const detailId = 'changelogDetail' + i;
         let headerHtml = '';
         if (dateHeader && dateHeader !== lastDateHeader) {
-          headerHtml = '<div style="font-family:var(--font-ui); font-size:11.5px; letter-spacing:.5px; text-transform:uppercase; color:var(--orange-light); margin-top:' + (lastDateHeader ? '18px' : '0') + '; margin-bottom:6px;">' + dateHeader + '</div>';
+          headerHtml = '<div class="changelog-date-header" style="font-family:var(--font-ui); font-size:11.5px; color:var(--orange-light); margin-top:' + (lastDateHeader ? '18px' : '0') + '; margin-bottom:6px;">' + dateHeader + '</div>';
           lastDateHeader = dateHeader;
         }
         return headerHtml +

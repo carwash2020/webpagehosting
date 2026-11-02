@@ -206,7 +206,11 @@ test('redirect: an old Home ?search= link opens Money owed\'s search and drops t
 
 const IG = read('invoice-generator.html');
 const PRICE_REF_JS = IG.slice(IG.indexOf('  function loadPriceReferencesForPicker() {'), IG.indexOf('  async function createPriceReference() {'))
-  + IG.match(/ {2}async function createPriceReference\(\) \{[\s\S]*?\n {2}\}\n {2}function deletePriceReference\(id\) \{[\s\S]*?\n {2}\}\n/)[0];
+  // deletePriceReference() gained a confirm step (corrections pack,
+  // 2026-11-01, async showConfirm()) and so gained the `async` keyword
+  // plus an explanatory comment block right above it -- both matched
+  // loosely here (non-greedy `[\s\S]*?`) rather than assumed either way.
+  + IG.match(/ {2}async function createPriceReference\(\) \{[\s\S]*?\n {2}\}\n[\s\S]*?(?:async )?function deletePriceReference\(id\) \{[\s\S]*?\n {2}\}\n/)[0];
 const PRICE_REF_HTML = ['invoice', 'quote'].map((k) => IG.match(new RegExp('  <div class="tool-form-row" id="' + k + 'PriceRefRow"[\\s\\S]*?PriceRefManager" hidden>[\\s\\S]*?\\n    </div>\\n  </div>\\n'))[0]).join('');
 
 function loadPriceRefManager(seed) {
@@ -295,11 +299,19 @@ test('item 11 follow-up: Cancel on the new-job-type dialog saves nothing', async
   assert.equal(out.syncs, 0);
 });
 
-test('item 11 follow-up: delete (x) removes it everywhere, tombstones it for sync and keeps it in the deleted-items graveyard, like Cost Lookup did', () => {
+// Confirms the pending showConfirm() dialog (corrections pack, 2026-11-01:
+// deletePriceReference() now asks first) -- showConfirm opens the overlay
+// and its buttons synchronously before returning its pending Promise, so
+// the danger button is already there to click right after tap() returns.
+const confirmDeleteDialog = (w) => w.document.querySelector('#customDialogButtons .dialog-btn-danger').click();
+
+test('item 11 follow-up: delete (x) asks first, then removes it everywhere, tombstones it for sync and keeps it in the deleted-items graveyard, like Cost Lookup did', async () => {
   const seed = [{ id: 1, label: 'Dishwasher install', hours: 2, rate: 85 }, { id: 1790000000000, label: 'Disposal swap', hours: 1, rate: 90 }];
   const { w, out, stored, $, tap } = loadPriceRefManager({ th_price_reference: seed });
   w.togglePriceRefManager('quotePriceRefManager', $('#quotePriceRefManageToggle'));
-  tap('#quotePriceRefManager .price-ref-chip[data-price-ref-id="1790000000000"] .chip-remove');
+  let p = tap('#quotePriceRefManager .price-ref-chip[data-price-ref-id="1790000000000"] .chip-remove');
+  confirmDeleteDialog(w);
+  await p;
   assert.deepEqual(stored(), [seed[0]]);
   assert.ok(out.syncs >= 1, 'queued for sync (the tombstone and graveyard writes queue their own too)');
   assert.doesNotMatch($('#quotePriceRefSelect').textContent, /Disposal swap/);
@@ -311,11 +323,25 @@ test('item 11 follow-up: delete (x) removes it everywhere, tombstones it for syn
   assert.equal(grave[0].recordType, 'priceReference');
   assert.deepEqual(grave[0].record, seed[1]);
   // Last one gone: the picker hides again, the manage link stays.
-  tap('#quotePriceRefManager .price-ref-chip .chip-remove');
+  p = tap('#quotePriceRefManager .price-ref-chip .chip-remove');
+  confirmDeleteDialog(w);
+  await p;
   assert.deepEqual(stored(), []);
   assert.equal($('#quotePriceRefRow').style.display, 'none');
   assert.ok($('#quotePriceRefManageToggle'));
   assert.match($('#quotePriceRefManager .price-ref-list').textContent, /No saved job types yet/);
+});
+
+test('item 11 follow-up: Cancel on the delete confirm leaves the saved job type untouched', async () => {
+  const seed = [{ id: 1, label: 'Dishwasher install', hours: 2, rate: 85 }];
+  const { w, out, stored, $, tap } = loadPriceRefManager({ th_price_reference: seed });
+  w.togglePriceRefManager('quotePriceRefManager', $('#quotePriceRefManageToggle'));
+  const p = tap('#quotePriceRefManager .price-ref-chip[data-price-ref-id="1"] .chip-remove');
+  w.document.querySelector('#customDialogButtons .dialog-btn-cancel').click();
+  await p;
+  assert.deepEqual(stored(), seed);
+  assert.equal(out.syncs, 0);
+  assert.equal(w.localStorage.getItem('th_price_ref_tombstones'), null);
 });
 
 test('item 11 follow-up: a saved label is escaped in the manage list (no markup injection)', () => {

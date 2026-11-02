@@ -112,7 +112,8 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=f212452f48">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous"></script>
 <script src="/signature-pad.js?v=f95f8e1d28"></script>
-<script src="/portal/portal-app.js?v=202610310200"></script>
+<script src="/portal/portal-app.js?v=202611011200"></script>
+<script src="/trusted-device.js?v=255d86a600"></script>
 <script>
   // Stripe.js is only needed once a client opens the card sheet, never to
   // paint the page -- so it no longer blocks parsing. It starts a few
@@ -649,6 +650,19 @@
           </div>
         </div>
         <div class="set-msg" id="mfaMsg" style="display:none;"></div>
+      </div>
+      <!--
+        Trusted devices (2026-11-01). Devices where "Trust this device for
+        30 days" was on at the code step; each skips the code (never the
+        password) until it expires. Shown only while two-factor is on, since
+        nothing can be trusted without it. Remove revokes one device on the
+        server (revoke_trusted_device()); see sql/security/add_trusted_devices.sql.
+      -->
+      <div class="set-card" id="trustedDevicesCard" style="display:none;">
+        <span class="set-card-title">Trusted devices</span>
+        <div class="set-card-sub">These skip the 2FA code for 30 days. Your password is still needed. Remove any you don't recognize. Changing your password or turning two-factor off removes them all.</div>
+        <div id="trustedDevicesBody"></div>
+        <div class="set-msg" id="trustedDevicesMsg" style="display:none;"></div>
       </div>
       <!--
         Biometric unlock (2026-09-05), requested directly. Device-specific:
@@ -1313,7 +1327,11 @@
     }
     document.getElementById('newPassword').value = '';
     document.getElementById('confirmPassword').value = '';
-    showPasswordMsg('Password updated. Use the new one next time you sign in.', false);
+    // A new password revokes every trusted device (the server already
+    // stops honouring them; this clears the list too).
+    await portalRevokeAllTrustedDevices();
+    showPasswordMsg('Password updated. Use the new one next time you sign in. Trusted devices will ask for your 2FA code again.', false);
+    renderTrustedDevices();
   }
 
   document.getElementById('savePasswordBtn').addEventListener('click', updatePassword);
@@ -1540,6 +1558,82 @@
       btn.textContent = 'Set up two-factor authentication';
       btn.onclick = handleStartMfaEnroll;
     }
+    renderTrustedDevices();
+  }
+
+  // ---- Trusted devices (2026-11-01) ----
+  // The shared mechanism (/trusted-device.js + the database functions in
+  // sql/security/add_trusted_devices.sql), called through this page's
+  // supabase-js client. The Workspace's Settings shows the same list its own way.
+  function portalTrustedRpc() {
+    return async (name, args) => {
+      const { data, error } = await client.rpc(name, args);
+      if (error) throw error;
+      return data;
+    };
+  }
+  async function portalCurrentUserId() {
+    const { data } = await client.auth.getSession();
+    return (data && data.session && data.session.user && data.session.user.id) || null;
+  }
+  // After a password change, or when two-factor is turned off or set up
+  // again. Never throws.
+  async function portalRevokeAllTrustedDevices() {
+    if (typeof ThTrustedDevice === 'undefined') return;
+    await ThTrustedDevice.revokeAll(portalTrustedRpc(), await portalCurrentUserId());
+  }
+
+  async function renderTrustedDevices() {
+    const card = document.getElementById('trustedDevicesCard');
+    const body = document.getElementById('trustedDevicesBody');
+    const msgEl = document.getElementById('trustedDevicesMsg');
+    if (!mfaFactorId || typeof ThTrustedDevice === 'undefined') { card.style.display = 'none'; return; }
+    // The card stays as it is until the server answers, so it never flashes
+    // empty while loading or before the migration is applied.
+    let devices;
+    try {
+      devices = await ThTrustedDevice.list(portalTrustedRpc());
+    } catch (e) {
+      card.style.display = '';
+      body.innerHTML = '';
+      msgEl.textContent = "Couldn't load your trusted devices. Please try again.";
+      msgEl.className = 'set-msg is-error';
+      msgEl.style.display = 'block';
+      return;
+    }
+    // Not in the database yet (add_trusted_devices.sql not applied): there is
+    // nothing to list or remove, so the card isn't shown at all.
+    if (devices === null) { card.style.display = 'none'; return; }
+    card.style.display = '';
+    msgEl.style.display = 'none';
+    if (!devices.length) {
+      body.innerHTML = '<p class="set-card-sub" style="margin:0;">No trusted devices. Turn on "Trust this device for 30 days" when you enter your code to add one.</p>';
+      return;
+    }
+    const userId = await portalCurrentUserId();
+    body.innerHTML = devices.map((d) => {
+      const here = ThTrustedDevice.isThisDevice(userId, d.id) ? ' <span class="set-card-badge">This device</span>' : '';
+      const when = 'Trusted ' + ThTrustedDevice.formatDate(d.created_at) + ' \u00b7 until ' + ThTrustedDevice.formatDate(d.expires_at);
+      return '<div class="set-row" data-trusted-device="' + escapeHtml(d.id) + '"><span class="set-row-key">' +
+        escapeHtml(d.label || 'Unknown device') + here + '<br><span class="set-card-exp">' + escapeHtml(when) + '</span></span>' +
+        '<button type="button" class="small-btn danger" data-remove-trusted-device="' + escapeHtml(d.id) + '" aria-label="Remove ' + escapeHtml(d.label || 'this device') + '">Remove</button></div>';
+    }).join('');
+    body.querySelectorAll('[data-remove-trusted-device]').forEach((btn) => {
+      btn.addEventListener('click', () => removeTrustedDevice(btn.getAttribute('data-remove-trusted-device'), btn));
+    });
+  }
+
+  async function removeTrustedDevice(deviceId, btn) {
+    const confirmed = await portalConfirm('Remove this trusted device? It will ask for your 2FA code next time.', { confirmLabel: 'Remove' });
+    if (!confirmed) return;
+    btn.disabled = true;
+    try {
+      await ThTrustedDevice.remove(portalTrustedRpc(), await portalCurrentUserId(), deviceId);
+      showToast('Trusted device removed.');
+    } catch (e) {
+      showToast("Couldn't remove that device. Please try again.", { type: 'error' });
+    }
+    renderTrustedDevices();
   }
 
   async function handleStartMfaEnroll() {
@@ -1594,6 +1688,8 @@
       return;
     }
     mfaPendingFactorId = null;
+    // A new authenticator starts with no trusted devices.
+    await portalRevokeAllTrustedDevices();
     showToast('Two-factor authentication is on.');
     renderMfaToggle();
   }
@@ -1642,6 +1738,8 @@
       msgEl.className = 'set-msg is-error';
       msgEl.style.display = 'block';
     } else {
+      // No second factor left, so nothing to skip: revoke every device.
+      await portalRevokeAllTrustedDevices();
       showToast('Two-factor authentication is off.');
     }
     renderMfaToggle();

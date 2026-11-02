@@ -1,0 +1,75 @@
+-- Grant Finance access (Log Expense) to Connor and Steve's real accounts
+-- (2026-11-01, corrections pack). Additive only -- NOT applied to the live
+-- project by this PR. Run by hand (Supabase SQL editor, or
+-- mcp__Supabase__execute_sql) once a human has reviewed it, same pattern as
+-- add_trusted_devices.sql in the still-open trusted-device-2fa-skip work.
+--
+-- Requested: "Give Connor and Steve Finance access so Log Expense works."
+-- Log Expense (job-tracker.html's job quick-actions, finance.html itself)
+-- is gated on canViewFinance(), which reads account_roles.can_view_finance
+-- (tools/auth.js, current as of granular_permissions_expansion.sql).
+--
+-- First checked the obvious assumption -- that connor@triplehenterprisesllc.biz
+-- and steve@triplehenterprisesllc.biz (seeded in
+-- sql/infra/create_account_roles_system.sql, 2026-08-15) just needed the
+-- checkbox flipped -- against the LIVE account_roles table. Both already
+-- have can_view_finance = true:
+--
+--   email                              | can_view_finance
+--   connor@triplehenterprisesllc.biz   | true
+--   steve@triplehenterprisesllc.biz    | true
+--
+-- So flipping that checkbox for those two rows would change nothing. Next,
+-- checked which emails actually have a live Supabase Auth account at all
+-- (auth.users), since account_roles is keyed by email and a row for an
+-- email nobody signs in with is inert:
+--
+--   steve@triplehenterprisesllc.biz     created 2026-08-01
+--   connor@triplehenterprisesllc.biz    created 2026-08-13
+--   nicholasconnordodart@gmail.com      created 2026-09-02
+--   steven7mikael@gmail.com             created 2026-09-03
+--   (plus several client-portal accounts, unrelated here)
+--
+-- nicholasconnordodart@gmail.com and steven7mikael@gmail.com -- created one
+-- and two days after the two *.biz accounts, never mentioned anywhere else
+-- in this repo -- have NO row in account_roles at all, so every permission
+-- defaults to false for them, including can_view_finance. That is almost
+-- certainly why Log Expense doesn't work for "Connor and Steve" today: they
+-- are signing in with these personal addresses, not the original
+-- @triplehenterprisesllc.biz accounts the role system was originally seeded
+-- for.
+--
+-- This migration grants can_view_finance to those two real, currently
+-- unprivileged accounts. It deliberately does NOT touch the two
+-- @triplehenterprisesllc.biz rows (already correct, already granted) and
+-- does NOT grant any OTHER permission (can_manage_roles,
+-- can_access_dev_tools_full, can_manage_invoices, can_manage_contracts,
+-- can_view_runway, can_manage_reviews) -- "Finance access so Log Expense
+-- works" is specifically can_view_finance; broadening it to match the
+-- *.biz accounts' full Developer/Owner bundles is a separate decision for
+-- Connor to make explicitly, not something to assume from a bug report.
+--
+-- NOTE for whoever applies this: the task that produced this PR named
+-- connor.dodart@taggngo.com and steve@triplehenterprisesllc.biz as the two
+-- emails to grant. Neither of those has ANY row in this project's
+-- auth.users (connor.dodart@taggngo.com doesn't exist here at all; the
+-- *.biz steve@ account exists but already has the permission). If one of
+-- those IS actually how Connor or Steve signs into the Workspace today
+-- (e.g. a Supabase Auth email alias, or an account provisioned after this
+-- was written), run the equivalent upsert for that exact email instead --
+-- the WHERE/VALUES below are written so a correct replacement email is a
+-- one-line swap. Applying this as written grants access to the two real
+-- unprivileged accounts actually found live; it does nothing for an email
+-- that still has no matching auth.users row.
+--
+-- Upsert, not a plain INSERT: if a row for either email already exists by
+-- the time this runs (e.g. given some other permission in the meantime),
+-- this only raises can_view_finance -- it never lowers an existing
+-- permission or clobbers role_name.
+insert into public.account_roles (email, can_view_finance)
+values
+  ('nicholasconnordodart@gmail.com', true),
+  ('steven7mikael@gmail.com', true)
+on conflict (email) do update
+  set can_view_finance = true
+  where public.account_roles.can_view_finance is distinct from true;
