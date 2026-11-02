@@ -218,8 +218,9 @@ test('settings.html confirms before turning two-factor authentication off', () =
 });
 
 test('settings.html deletes recovery codes when two-factor authentication is turned off', () => {
-  const start = SETTINGS.indexOf('async function handleDisableMfaSettings()');
-  const body = SETTINGS.slice(start, start + 900);
+  // Whole function body (2026-11-01: a trusted-device guard made it longer
+  // than the old fixed 900-character window).
+  const body = SETTINGS.match(/async function handleDisableMfaSettings\(\)[\s\S]*?\n  \}\n/)[0];
   assert.match(body, /await deleteRecoveryCodes\(getAuthToken\(\)\);/);
 });
 

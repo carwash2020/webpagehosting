@@ -93,8 +93,11 @@ test('portal sign-in: a staff account (positive role read) gets no portal sessio
 });
 
 test('portal sign-in: every path home goes through the role check, the already-signed-in one included', () => {
-  // Fresh sign-ins (password, then any code or Face ID) all end in goHomeAfterSignIn().
-  assert.equal((PORTAL_LOGIN.match(/goHomeAfterSignIn\(\);/g) || []).length, 3);
+  // Fresh sign-ins (password, then any code, Face ID, or a trusted device
+  // that skipped the code -- 2026-11-01) all end in goHomeAfterSignIn().
+  assert.equal((PORTAL_LOGIN.match(/goHomeAfterSignIn\(\);/g) || []).length, 4);
+  const trusted = PORTAL_LOGIN.match(/async function portalSignInOnTrustedDevice\(email\) \{[\s\S]*?\n  \}\n/)[0];
+  assert.match(trusted, /goHomeAfterSignIn\(\);/, 'a trusted-device sign-in takes the same role-checked way home');
   // A visitor who is already signed in is checked too, and goes straight on (no animation) if not staff.
   assert.match(PORTAL_LOGIN, /signingInEmail = email;\n    if \(await portalAccountIsStaff\(\)\) \{ await sendStaffToWorkspace\(false\); return; \}\n    window\.location\.replace\('\/portal\/home\.html'\);\n  \}\);/);
 });
