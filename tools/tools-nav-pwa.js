@@ -2435,6 +2435,19 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
       checkForRealUpdate();
     });
 
+    // app-freshness.js (shared with the portal) decides WHEN to check:
+    // resume, focus, bfcache restore, back online, every 30 min.
+    window.addEventListener('th-app-check', () => { if (!shown) checkForRealUpdate(); });
+    if (window.thAppFreshness) {
+      // version.json says this build is too old and something is typed:
+      // ask first, never reload over someone's work.
+      window.thAppFreshness.onStale(() => {
+        if (shown) return;
+        shown = true;
+        showThUpdateCard(() => window.location.reload());
+      });
+    }
+
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState !== 'visible' || shown) return;
       if (Date.now() - lastUpdateRequest < UPDATE_CHECK_EVERY_MS) return;

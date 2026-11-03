@@ -142,6 +142,11 @@
       .then(function (liveParts) {
         if (shown || !pageIsBehind(runningParts, liveParts)) return;
         shown = true;
+        // Force-update (2026-11-03, same policy as the Workspace): nothing
+        // typed on this page, so reloading can't lose anything -- go
+        // straight to the new version. Anything typed keeps the banner.
+        var fresh = window.thAppFreshness;
+        if (fresh && !fresh.isDirty()) { window.portalUpdateNow(); return; }
         showBanner();
       })
       .catch(function () { /* offline or blocked -- stay quiet */ })
@@ -268,6 +273,20 @@
   // check that actually catches new versions in practice. Throttled the
   // same way the tools app throttles its own foreground check, so
   // switching tabs/apps repeatedly does not re-fetch on every switch.
+  // app-freshness.js (shared with the Workspace) decides WHEN to check:
+  // resume, focus, bfcache restore, back online, every 30 min. A page
+  // can be behind even with a current worker (it updated while this page
+  // sat open), so compare the page itself too.
+  window.addEventListener('th-app-check', function () {
+    if (shown) return;
+    lastCheckAt = Date.now();
+    checkForUpdate();
+    verifyAndMaybeShow();
+  });
+  if (window.thAppFreshness) {
+    window.thAppFreshness.onStale(function () { if (!shown) { shown = true; showBanner(); } });
+  }
+
   document.addEventListener('visibilitychange', function () {
     if (document.visibilityState !== 'visible' || shown) return;
     if (Date.now() - lastCheckAt < CHECK_THROTTLE_MS) return;
