@@ -190,6 +190,55 @@ function dismissToast(toast) {
   setTimeout(() => toast.remove(), 200);
 }
 
+// ---- Deferred deletes (handoff 2026-11-03 §4B) ----
+// Every Workspace delete waits out a 6-second Undo window before it really
+// happens. It used to wait on a bare setTimeout, so leaving the page inside
+// that window (pagehide), or a phone sending the app to the background,
+// killed the timer and the record silently came back. thDeferDelete() keeps
+// the same window, but leaving now FINISHES every pending delete at once
+// (and pushes it with flushSyncNow, since sync.js's own pagehide flush has
+// already run by the time this listener does) instead of dropping it. Undo
+// goes through thCancelDeferredDelete(), so an undone delete never runs.
+// A finalizer must do its local removal before its first await: on the way
+// out only the synchronous part is guaranteed to run.
+const _thPendingDeletes = new Map(); // timer handle -> finalize
+function thDeferDelete(finalize, delayMs) {
+  const handle = setTimeout(() => {
+    _thPendingDeletes.delete(handle);
+    finalize();
+  }, delayMs || 6000);
+  _thPendingDeletes.set(handle, finalize);
+  return handle;
+}
+function thCancelDeferredDelete(handle) {
+  clearTimeout(handle);
+  return _thPendingDeletes.delete(handle);
+}
+function thFlushDeferredDeletes() {
+  if (!_thPendingDeletes.size) return;
+  const pending = Array.from(_thPendingDeletes.entries());
+  _thPendingDeletes.clear();
+  pending.forEach(([handle, finalize]) => {
+    clearTimeout(handle);
+    try {
+      const result = finalize();
+      if (result && typeof result.catch === 'function') result.catch((e) => console.error('Deferred delete failed:', e));
+    } catch (e) { console.error('Deferred delete failed:', e); }
+  });
+  // Their Undo buttons can no longer undo anything.
+  if (typeof document !== 'undefined' && typeof dismissToast === 'function') {
+    document.querySelectorAll('.th-toast-undo').forEach((t) => dismissToast(t));
+  }
+  if (typeof flushSyncNow === 'function') flushSyncNow();
+}
+if (typeof window !== 'undefined') window.addEventListener('pagehide', thFlushDeferredDeletes);
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') thFlushDeferredDeletes();
+  });
+}
+// ---- end deferred deletes
+
 // Item #13 (2026-08-20): a dedicated toast with a real Undo action, for
 // deletions that are actually reversible for a short window -- built as
 // its own function rather than extending showToast() itself, which is
@@ -208,8 +257,11 @@ function showUndoToast(message, onUndo, options) {
   toast.innerHTML =
     '<svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg>' +
     '<span></span>' +
-    '<button type="button" class="th-toast-undo-btn">Undo</button>';
+    '<button type="button" class="th-toast-undo-btn"></button>';
   toast.querySelector('span').textContent = message; // textContent, not innerHTML -- message may contain user data
+  // options.actionLabel (2026-11-03): the invoice form's "Resume draft?"
+  // prompt reuses this toast with a Resume button.
+  toast.querySelector('.th-toast-undo-btn').textContent = options.actionLabel || 'Undo';
 
   toast.querySelector('.th-toast-undo-btn').addEventListener('click', (e) => {
     e.stopPropagation(); // don't also trigger the toast's own dismiss-on-click below

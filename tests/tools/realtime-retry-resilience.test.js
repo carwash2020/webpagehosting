@@ -269,7 +269,7 @@ function makeStrictHarness({ hidden = false, onLine = true } = {}) {
     try { t.fn(); } catch (e) { errors.push(e); }
     await flush();
   };
-  return { sandbox, logs, callbacks, errors, flush, retry, fire: (st) => callbacks[callbacks.length - 1](st) };
+  return { sandbox, timers, logs, callbacks, errors, flush, retry, fire: (st) => callbacks[callbacks.length - 1](st) };
 }
 
 for (const fn of ['startRealtimeSync', 'startLeadsRealtime', 'startApplicantsRealtime', 'startBookingsRealtime', 'startJobsRealtime', 'startInvoicesRealtime']) {
@@ -320,3 +320,43 @@ test('the portal error capture ignores "Skipping view transition" rejections', (
   sandbox.logPortalClientError('Real failure', 'portal-app.js');
   assert.deepEqual(sent, ['Real failure']);
 });
+
+// Handoff 2026-11-03 §4A: the Dev Tools health log still showed
+// "cannot add postgres_changes callbacks for realtime:invoices-realtime
+// after subscribe()" next to CHANNEL_ERROR. supabase-js reports
+// CHANNEL_ERROR on the same channel more than once (its own onError plus
+// the failed join, and again on every one of its own automatic rejoins),
+// and every report scheduled its own retry. Two retries in flight both
+// captured the same old channel, both awaited its removal, and the second
+// build then got the first build's already-subscribed channel back from
+// supabase-js and threw. A repeated or stale status report must never
+// start a second retry.
+for (const fn of ['startRealtimeSync', 'startLeadsRealtime', 'startApplicantsRealtime', 'startBookingsRealtime', 'startJobsRealtime', 'startInvoicesRealtime']) {
+  test(`${fn}: a channel that reports CHANNEL_ERROR twice still re-subscribes exactly once, without throwing`, async () => {
+    const h = makeStrictHarness();
+    const unhandled = [];
+    const onUnhandled = (e) => unhandled.push(e);
+    process.on('unhandledRejection', onUnhandled);
+    try {
+      h.sandbox[fn](() => {}, () => {});
+      const first = h.callbacks[0];
+      first('CHANNEL_ERROR');
+      first('CHANNEL_ERROR'); // same channel, second report
+      // Run every pending retry timer back-to-back, before any removal
+      // settles -- the real browser has no reason to wait in between.
+      for (const t of h.timers.filter((x) => x.delay !== h.sandbox.REALTIME_WATCHDOG_MS)) {
+        h.timers.splice(h.timers.indexOf(t), 1);
+        try { t.fn(); } catch (e) { h.errors.push(e); }
+      }
+      await h.flush();
+      const pending = () => h.callbacks.length;
+      assert.deepEqual(h.errors.map((e) => e.message), []);
+      assert.deepEqual(unhandled.map((e) => e && e.message), []);
+      assert.equal(pending(), 2, 'exactly one new channel subscribed after the double report');
+      // A late status from the old, replaced channel is ignored.
+      first('CHANNEL_ERROR');
+      await h.flush();
+      assert.equal(h.callbacks.length, 2, 'a stale channel cannot start another retry');
+    } finally { process.off('unhandledRejection', onUnhandled); }
+  });
+}

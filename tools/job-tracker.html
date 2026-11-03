@@ -55,11 +55,11 @@
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=f212452f48">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=11d0839316" defer></script>
+<script src="/tools/sync.js?v=cf58a92104" defer></script>
 <script src="/tools/data-layer.js?v=b5758547dc" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
-<script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
+<script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=2cf0b2f75c" defer></script>
 <script src="/tools/tools-command-palette.js?v=479d6a96e7" defer></script>
@@ -1697,13 +1697,23 @@
     // Supabase photo cleanup, which is genuinely irreversible once it
     // runs -- is deferred for a real undo window rather than happening
     // immediately and permanently on confirmation.
-    const timer = setTimeout(async () => {
+    const timer = thDeferDelete(async () => {
       pendingDeleteJobIds.delete(id);
+
+      // The job's own removal comes first (handoff 2026-11-03 §4B): when
+      // this runs because the page is closing, only the part before the
+      // first await is sure to finish.
+      const jobToDelete = thJobs.get(id);
+      removeJobFromPortal(jobToDelete);
+      thJobs.remove(id);
+      if (jobToDelete && typeof thAddToGraveyard === 'function') thAddToGraveyard('job', jobToDelete);
+      renderJobs();
 
       // Photos live only in Supabase (th_job_photos + the job-photos
       // bucket), keyed by job ID -- once the job itself is gone, there's
       // no longer any way to find or clean these up later, so this has
-      // to happen alongside the job's own removal, not after.
+      // to happen alongside the job's own removal. They are found by the
+      // ID alone, so removing the job record first doesn't lose them.
       if (typeof fetchJobPhotos === 'function' && typeof deleteJobPhoto === 'function') {
         const photoResult = await fetchJobPhotos(id);
         if (photoResult.ok && photoResult.photos.length > 0) {
@@ -1717,18 +1727,12 @@
           }
         }
       }
-
-      const jobToDelete = thJobs.get(id);
-      removeJobFromPortal(jobToDelete);
-      thJobs.remove(id);
-      if (jobToDelete && typeof thAddToGraveyard === 'function') thAddToGraveyard('job', jobToDelete);
-      renderJobs();
     }, 6000);
 
     pendingDeleteJobIds.set(id, timer);
     renderJobs();
     showUndoToast('Job deleted.', () => {
-      clearTimeout(pendingDeleteJobIds.get(id));
+      thCancelDeferredDelete(pendingDeleteJobIds.get(id));
       pendingDeleteJobIds.delete(id);
       renderJobs();
     });
@@ -2150,8 +2154,23 @@
     // making this change: this function never cleaned up Supabase
     // photos at all before, unlike single-job delete -- bulk-deleted
     // jobs' photos were being silently orphaned in cloud storage.
-    const timer = setTimeout(async () => {
+    const timer = thDeferDelete(async () => {
       idsToDelete.forEach(id => pendingDeleteJobIds.delete(id));
+
+      // Local removal first, photo cleanup after (handoff 2026-11-03
+      // §4B) -- see the single-job delete above.
+      const allJobs = loadJobs();
+      const deletedJobs = allJobs.filter(j => idsToDelete.has(j.id));
+      deletedJobs.forEach(j => {
+        // Bulk delete used to skip this (2026-10-01, found in the Item 1
+        // inventory): bulk-deleted done jobs stayed in the client portal.
+        removeJobFromPortal(j);
+        if (typeof thAddJobTombstone === 'function') thAddJobTombstone(j.id);
+        if (typeof mirrorDelete === 'function') mirrorDelete('jobs', j.id);
+        if (typeof thAddToGraveyard === 'function') thAddToGraveyard('job', j);
+      });
+      saveJobs(allJobs.filter(j => !idsToDelete.has(j.id)));
+      renderJobs();
 
       let failedPhotoCount = 0;
       if (typeof fetchJobPhotos === 'function' && typeof deleteJobPhoto === 'function') {
@@ -2167,25 +2186,12 @@
       if (failedPhotoCount > 0) {
         await showAlert(`Deleted the jobs, but ${failedPhotoCount} photo${failedPhotoCount === 1 ? '' : 's'} across them couldn't be removed from cloud storage (likely a network issue) and may still be sitting there unused.`);
       }
-
-      const allJobs = loadJobs();
-      const deletedJobs = allJobs.filter(j => idsToDelete.has(j.id));
-      deletedJobs.forEach(j => {
-        // Bulk delete used to skip this (2026-10-01, found in the Item 1
-        // inventory): bulk-deleted done jobs stayed in the client portal.
-        removeJobFromPortal(j);
-        if (typeof thAddJobTombstone === 'function') thAddJobTombstone(j.id);
-        if (typeof mirrorDelete === 'function') mirrorDelete('jobs', j.id);
-        if (typeof thAddToGraveyard === 'function') thAddToGraveyard('job', j);
-      });
-      saveJobs(allJobs.filter(j => !idsToDelete.has(j.id)));
-      renderJobs();
     }, 6000);
 
     idsToDelete.forEach(id => pendingDeleteJobIds.set(id, timer));
     renderJobs();
     showUndoToast(count + ' job' + (count === 1 ? '' : 's') + ' deleted.', () => {
-      clearTimeout(timer);
+      thCancelDeferredDelete(timer);
       idsToDelete.forEach(id => pendingDeleteJobIds.delete(id));
       renderJobs();
     });

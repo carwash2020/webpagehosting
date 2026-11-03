@@ -1566,6 +1566,9 @@ async function deleteLead(id) {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/th_leads?id=eq.${id}`, {
       method: 'DELETE',
+      // A bodyless DELETE, so keepalive's 64 KiB cap can't bite: a delete
+      // finished on the way out of the page (thFlushDeferredDeletes) still lands.
+      keepalive: true,
       headers: {
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': `Bearer ${getAuthToken()}`,
@@ -1622,6 +1625,9 @@ async function deleteJobApplication(id) {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/th_job_applications?id=eq.${id}`, {
       method: 'DELETE',
+      // A bodyless DELETE, so keepalive's 64 KiB cap can't bite: a delete
+      // finished on the way out of the page (thFlushDeferredDeletes) still lands.
+      keepalive: true,
       headers: {
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': `Bearer ${getAuthToken()}`,
@@ -2111,6 +2117,17 @@ const REALTIME_WATCHDOG_MS = 35000;
 // (and the removal awaited, because supabase-js drops it from its channel
 // list asynchronously) before ANY re-subscribe, for all six channels.
 // The first attempt has no old channel and runs synchronously.
+// REALTIME_SINGLE_RETRY_NOTE (handoff 2026-11-03 §4A): the guard above
+// was not enough on its own. supabase-js reports CHANNEL_ERROR on the
+// same channel more than once (its onError, the failed join, and each of
+// its own automatic rejoins), and every report used to queue a retry.
+// Two retries in flight both removed the same old channel and both
+// rebuilt it: one leaked a live, orphaned channel, or the second build
+// got the first one's already-subscribed channel back and threw the
+// "after subscribe()" error. Each start*Realtime() now keeps a
+// generation number and a retryScheduled flag, so a repeated report is
+// ignored while a retry is queued and a replaced channel's late reports
+// (including the CLOSED its own removal emits) are ignored entirely.
 function subscribeFreshChannel(client, existingChannel, build) {
   if (!existingChannel) { build(); return; }
   let removal = null;
@@ -2144,7 +2161,14 @@ function startRealtimeSync(onRemoteChange, onStatusChange) {
 
   // See the REALTIME_RETRY_DELAYS/REALTIME_BACKGROUND_RETRY_MS comment
   // above for the full explanation and the real evidence behind it.
+  // One retry in flight at a time, and only the current channel's
+  // reports count (handoff 2026-11-03 §4A -- see
+  // REALTIME_SINGLE_RETRY_NOTE above).
+  let generation = 0;
+  let retryScheduled = false;
   function attemptSubscribe(attempt) {
+    const myGeneration = ++generation;
+    retryScheduled = false;
     subscribeFreshChannel(client, _realtimeChannel, () => {
     _realtimeChannel = client
       .channel('workspace-sync-' + code)
@@ -2176,11 +2200,14 @@ function startRealtimeSync(onRemoteChange, onStatusChange) {
         }
       )
       .subscribe((status) => {
+        if (myGeneration !== generation) return; // a replaced channel's late report
+        if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && retryScheduled) return; // repeated report; a retry is already queued
         if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && attempt < REALTIME_RETRY_DELAYS.length) {
           // Expected, self-recovering, intermediate retry -- not logged
           // (2026-09-05 finding, still true): logging every one of these
           // at error severity crowded out th_client_errors' own 20-entry
           // cap with non-actionable noise.
+          retryScheduled = true;
           setTimeout(() => attemptSubscribe(attempt + 1), REALTIME_RETRY_DELAYS[attempt]);
           return; // don't mark resolved or notify the page yet -- a retry is still in flight
         }
@@ -2198,6 +2225,7 @@ function startRealtimeSync(onRemoteChange, onStatusChange) {
           // requiring a manual reload after one bad stretch. Re-enters
           // this same exhausted branch every time (silently) rather
           // than restarting the fast foreground backoff.
+          retryScheduled = true;
           setTimeout(() => attemptSubscribe(REALTIME_RETRY_DELAYS.length), REALTIME_BACKGROUND_RETRY_MS);
           return;
         }
@@ -2237,7 +2265,14 @@ function startLeadsRealtime(onChange, onStatusChange) {
 
   // Same retry fix as startRealtimeSync above -- see that comment for
   // the full explanation, backed by this project's own Supabase logs.
+  // One retry in flight at a time, and only the current channel's
+  // reports count (handoff 2026-11-03 §4A -- see
+  // REALTIME_SINGLE_RETRY_NOTE above).
+  let generation = 0;
+  let retryScheduled = false;
   function attemptSubscribe(attempt) {
+    const myGeneration = ++generation;
+    retryScheduled = false;
     subscribeFreshChannel(client, _leadsRealtimeChannel, () => {
     _leadsRealtimeChannel = client
       .channel('leads-realtime')
@@ -2255,9 +2290,12 @@ function startLeadsRealtime(onChange, onStatusChange) {
         }
       )
       .subscribe((status) => {
+        if (myGeneration !== generation) return; // a replaced channel's late report
+        if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && retryScheduled) return; // repeated report; a retry is already queued
         if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && attempt < REALTIME_RETRY_DELAYS.length) {
           // Not logged as an error -- same reasoning as the
           // workspace_sync channel's own subscribe() above.
+          retryScheduled = true;
           setTimeout(() => attemptSubscribe(attempt + 1), REALTIME_RETRY_DELAYS[attempt]);
           return;
         }
@@ -2270,6 +2308,7 @@ function startLeadsRealtime(onChange, onStatusChange) {
             }
           }
           if (onStatusChange) onStatusChange(status);
+          retryScheduled = true;
           setTimeout(() => attemptSubscribe(REALTIME_RETRY_DELAYS.length), REALTIME_BACKGROUND_RETRY_MS);
           return;
         }
@@ -2299,7 +2338,14 @@ function startApplicantsRealtime(onChange, onStatusChange) {
 
   // Same retry fix as startLeadsRealtime above -- see that comment for
   // the full explanation, backed by this project's own Supabase logs.
+  // One retry in flight at a time, and only the current channel's
+  // reports count (handoff 2026-11-03 §4A -- see
+  // REALTIME_SINGLE_RETRY_NOTE above).
+  let generation = 0;
+  let retryScheduled = false;
   function attemptSubscribe(attempt) {
+    const myGeneration = ++generation;
+    retryScheduled = false;
     subscribeFreshChannel(client, _applicantsRealtimeChannel, () => {
     _applicantsRealtimeChannel = client
       .channel('applicants-realtime')
@@ -2317,7 +2363,10 @@ function startApplicantsRealtime(onChange, onStatusChange) {
         }
       )
       .subscribe((status) => {
+        if (myGeneration !== generation) return; // a replaced channel's late report
+        if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && retryScheduled) return; // repeated report; a retry is already queued
         if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && attempt < REALTIME_RETRY_DELAYS.length) {
+          retryScheduled = true;
           setTimeout(() => attemptSubscribe(attempt + 1), REALTIME_RETRY_DELAYS[attempt]);
           return;
         }
@@ -2330,6 +2379,7 @@ function startApplicantsRealtime(onChange, onStatusChange) {
             }
           }
           if (onStatusChange) onStatusChange(status);
+          retryScheduled = true;
           setTimeout(() => attemptSubscribe(REALTIME_RETRY_DELAYS.length), REALTIME_BACKGROUND_RETRY_MS);
           return;
         }
@@ -2371,7 +2421,14 @@ function startBookingsRealtime(onChange, onStatusChange) {
   let realtimeResolved = false;
   let loggedFailure = false;
 
+  // One retry in flight at a time, and only the current channel's
+  // reports count (handoff 2026-11-03 §4A -- see
+  // REALTIME_SINGLE_RETRY_NOTE above).
+  let generation = 0;
+  let retryScheduled = false;
   function attemptSubscribe(attempt) {
+    const myGeneration = ++generation;
+    retryScheduled = false;
     subscribeFreshChannel(client, _bookingsRealtimeChannel, () => {
     _bookingsRealtimeChannel = client
       .channel('bookings-realtime')
@@ -2389,9 +2446,12 @@ function startBookingsRealtime(onChange, onStatusChange) {
         }
       )
       .subscribe((status) => {
+        if (myGeneration !== generation) return; // a replaced channel's late report
+        if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && retryScheduled) return; // repeated report; a retry is already queued
         if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && attempt < REALTIME_RETRY_DELAYS.length) {
           // Not logged as an error -- same reasoning as the
           // workspace_sync channel's own subscribe() above.
+          retryScheduled = true;
           setTimeout(() => attemptSubscribe(attempt + 1), REALTIME_RETRY_DELAYS[attempt]);
           return;
         }
@@ -2404,6 +2464,7 @@ function startBookingsRealtime(onChange, onStatusChange) {
             }
           }
           if (onStatusChange) onStatusChange(status);
+          retryScheduled = true;
           setTimeout(() => attemptSubscribe(REALTIME_RETRY_DELAYS.length), REALTIME_BACKGROUND_RETRY_MS);
           return;
         }
@@ -2433,7 +2494,14 @@ function startJobsRealtime(onChange, onStatusChange) {
   let realtimeResolved = false;
   let loggedFailure = false;
 
+  // One retry in flight at a time, and only the current channel's
+  // reports count (handoff 2026-11-03 §4A -- see
+  // REALTIME_SINGLE_RETRY_NOTE above).
+  let generation = 0;
+  let retryScheduled = false;
   function attemptSubscribe(attempt) {
+    const myGeneration = ++generation;
+    retryScheduled = false;
     subscribeFreshChannel(client, _jobsRealtimeChannel, () => {
     _jobsRealtimeChannel = client
       .channel('jobs-realtime')
@@ -2451,7 +2519,10 @@ function startJobsRealtime(onChange, onStatusChange) {
         }
       )
       .subscribe((status) => {
+        if (myGeneration !== generation) return; // a replaced channel's late report
+        if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && retryScheduled) return; // repeated report; a retry is already queued
         if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && attempt < REALTIME_RETRY_DELAYS.length) {
+          retryScheduled = true;
           setTimeout(() => attemptSubscribe(attempt + 1), REALTIME_RETRY_DELAYS[attempt]);
           return;
         }
@@ -2464,6 +2535,7 @@ function startJobsRealtime(onChange, onStatusChange) {
             }
           }
           if (onStatusChange) onStatusChange(status);
+          retryScheduled = true;
           setTimeout(() => attemptSubscribe(REALTIME_RETRY_DELAYS.length), REALTIME_BACKGROUND_RETRY_MS);
           return;
         }
@@ -2494,7 +2566,14 @@ function startInvoicesRealtime(onChange, onStatusChange) {
   let realtimeResolved = false;
   let loggedFailure = false;
 
+  // One retry in flight at a time, and only the current channel's
+  // reports count (handoff 2026-11-03 §4A -- see
+  // REALTIME_SINGLE_RETRY_NOTE above).
+  let generation = 0;
+  let retryScheduled = false;
   function attemptSubscribe(attempt) {
+    const myGeneration = ++generation;
+    retryScheduled = false;
     subscribeFreshChannel(client, _invoicesRealtimeChannel, () => {
     _invoicesRealtimeChannel = client
       .channel('invoices-realtime')
@@ -2512,7 +2591,10 @@ function startInvoicesRealtime(onChange, onStatusChange) {
         }
       )
       .subscribe((status) => {
+        if (myGeneration !== generation) return; // a replaced channel's late report
+        if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && retryScheduled) return; // repeated report; a retry is already queued
         if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && attempt < REALTIME_RETRY_DELAYS.length) {
+          retryScheduled = true;
           setTimeout(() => attemptSubscribe(attempt + 1), REALTIME_RETRY_DELAYS[attempt]);
           return;
         }
@@ -2525,6 +2607,7 @@ function startInvoicesRealtime(onChange, onStatusChange) {
             }
           }
           if (onStatusChange) onStatusChange(status);
+          retryScheduled = true;
           setTimeout(() => attemptSubscribe(REALTIME_RETRY_DELAYS.length), REALTIME_BACKGROUND_RETRY_MS);
           return;
         }

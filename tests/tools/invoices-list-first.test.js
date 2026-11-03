@@ -209,7 +209,7 @@ test('with no invoices at all the list says so and offers New invoice; the tiles
   const w = loadPage([]);
   w.setInvoiceFilter('all');
   assert.equal(w.document.getElementById('invoiceSummary').innerHTML, '');
-  assert.match(w.document.getElementById('invoiceLogList').innerHTML, /No invoices generated yet\.<button type="button" class="primary-btn" onclick="activateGenTab\('invoice'\)">New invoice<\/button>/);
+  assert.match(w.document.getElementById('invoiceLogList').innerHTML, /No invoices generated yet\.<button type="button" class="primary-btn" onclick="openNewInvoice\(\)">New invoice<\/button>/);
   w.close();
 });
 

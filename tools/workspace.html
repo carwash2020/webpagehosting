@@ -71,7 +71,7 @@
 <link rel="stylesheet" href="/styles.css?v=f201d6d01a">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=f212452f48">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=11d0839316" defer></script>
+<script src="/tools/sync.js?v=cf58a92104" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
      "Approve & Schedule" form to warn if a chosen time falls outside
      real business hours, matching the same real hours booking.html,
@@ -81,7 +81,7 @@
 <script src="/tools/data-layer.js?v=b5758547dc" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
-<script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
+<script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=2cf0b2f75c" defer></script>
 <script src="/tools/tools-command-palette.js?v=479d6a96e7" defer></script>
@@ -2809,7 +2809,7 @@
     const row = document.querySelector('[data-applicant-id="' + id + '"]');
     await new Promise(resolve => animateRowExit(row, resolve));
 
-    const timer = setTimeout(async () => {
+    const timer = thDeferDelete(async () => {
       pendingDeleteApplicantIds.delete(id);
       const result = await deleteJobApplication(id);
       if (!result.ok) { await showAlert('Could not delete: ' + result.error); }
@@ -2819,7 +2819,7 @@
     pendingDeleteApplicantIds.set(id, timer);
     loadAndRenderApplicants();
     showUndoToast('Application deleted.', () => {
-      clearTimeout(pendingDeleteApplicantIds.get(id));
+      thCancelDeferredDelete(pendingDeleteApplicantIds.get(id));
       pendingDeleteApplicantIds.delete(id);
       loadAndRenderApplicants();
     });
@@ -2924,7 +2924,7 @@
     const row = document.querySelector('[data-lead-id="' + id + '"]');
     await new Promise(resolve => animateRowExit(row, resolve));
 
-    const timer = setTimeout(async () => {
+    const timer = thDeferDelete(async () => {
       pendingDeleteLeadIds.delete(id);
       const result = await deleteLead(id);
       if (!result.ok) { await showAlert('Could not delete: ' + result.error); }
@@ -2934,7 +2934,7 @@
     pendingDeleteLeadIds.set(id, timer);
     loadAndRenderLeads();
     showUndoToast('Lead deleted.', () => {
-      clearTimeout(pendingDeleteLeadIds.get(id));
+      thCancelDeferredDelete(pendingDeleteLeadIds.get(id));
       pendingDeleteLeadIds.delete(id);
       loadAndRenderLeads();
     });
