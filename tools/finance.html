@@ -809,9 +809,7 @@
   }
 
   function backfillLegacyInvoicesIntoIncomeLog() {
-    let invoices;
-    try { invoices = JSON.parse(localStorage.getItem('th_invoices') || '[]'); }
-    catch (e) { return; } // malformed data here shouldn't block the rest of page init
+    const invoices = thInvoices.all(); // [] for missing or malformed data, as before
     const incomeLog = thIncome.all();
     const mirroredIds = new Set(incomeLog.filter(e => e.origin === 'invoice').map(e => e.invoiceId));
     const unmirrored = invoices.filter(i => !mirroredIds.has(i.id));

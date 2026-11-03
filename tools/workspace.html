@@ -3065,8 +3065,10 @@
       referredBy,
     };
     jobs.push(newJob);
-    localStorage.setItem('th_tracker_jobs', JSON.stringify(jobs));
-    if (typeof scheduleSync === 'function') scheduleSync();
+    // thWrite: the same write + scheduleSync this did by hand (data-layer.js).
+    // The relational mirror below stays targeted at this one job, since the
+    // referral row waits on its result.
+    thWrite(TH_KEYS.jobs, jobs);
     // Until 2026-10-01 this only wrote localStorage, so the job reached
     // public.jobs only when some other job was saved later, and the
     // booking's "Who referred you?" answer was dropped, so the referrer
@@ -3573,8 +3575,7 @@
   // schema change: same th_tracker_jobs data, same date+status filter,
   // same priority sort renderTodayJobs() already used.
   function getTodaysJobs() {
-    let jobs = [];
-    try { jobs = JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); } catch (e) { jobs = []; }
+    const jobs = thJobs.all();
     const today = new Date();
     const todayKey = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
     const todaysJobs = jobs.filter(j => j.date === todayKey && j.status !== 'done');

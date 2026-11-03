@@ -6,18 +6,26 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { scan, helpers } = require('../../scripts/item1-census.js');
+const { scan, helpers, aliasesFor } = require('../../scripts/item1-census.js');
 
 const rows = scan();
 const has = (file, key, kind) => rows.some((r) => r.file === file && r.key === key && r.kind === kind);
 
-test('resolves a local constant alias (finance.html EXPENSE_STORAGE_KEY)', () => {
-  assert.ok(has('tools/finance.html', 'th_expense_log', 'write'));
-  assert.ok(has('tools/finance.html', 'th_expense_log', 'read'));
+// The page-level aliases these first pinned (finance.html EXPENSE_STORAGE_KEY,
+// job-tracker.html STORAGE_KEYS.contacts) are gone: since 2026-11-03 every
+// page reads and writes these keys through the data-layer.js seams, which is
+// exactly what this census is for. The alias forms are still resolved --
+// pinned against the scanner itself -- and the pages are pinned clean.
+test('resolves a local constant alias and a local key-map alias', () => {
+  const src = "const EXPENSE_STORAGE_KEY = 'th_expense_log';\n  const STORAGE_KEYS = { jobs: 'th_tracker_jobs', contacts: 'th_tracker_contacts' };";
+  const a = aliasesFor(src, {});
+  assert.equal(a.EXPENSE_STORAGE_KEY, 'th_expense_log');
+  assert.equal(a['STORAGE_KEYS.contacts'], 'th_tracker_contacts');
 });
 
-test('resolves a local key-map alias (job-tracker.html STORAGE_KEYS.contacts)', () => {
-  assert.ok(has('tools/job-tracker.html', 'th_tracker_contacts', 'write'));
+test('no page writes a migrated key behind the data layer\'s back any more (thWrite is the data layer)', () => {
+  const pageWrites = rows.filter((r) => /^tools\/[^/]+\.html$/.test(r.file) && r.kind === 'write' && !/\bthWrite\(/.test(r.text));
+  assert.deepEqual(pageWrites.map((r) => r.file + ':' + r.line + ' ' + r.key), []);
 });
 
 test('resolves the shared TH_KEYS alias (data-layer.js thRead(TH_KEYS.jobs))', () => {

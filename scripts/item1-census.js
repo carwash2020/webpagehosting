@@ -231,4 +231,4 @@ if (require.main === module) {
   else console.log(markdown(rows, helperList));
 }
 
-module.exports = { scan, helpers, MIGRATED };
+module.exports = { scan, helpers, aliasesFor, MIGRATED };
