@@ -68,6 +68,10 @@ function setup({ signedIn = true, undo = false } = {}) {
   const timers = [];
   w.setTimeout = (fn) => { timers.push(fn); return timers.length; };
   w.clearTimeout = (t) => { timers[t - 1] = null; };
+  // The real thDeferDelete/thCancelDeferredDelete (tools-media-sharing.js) wrap
+  // exactly these, plus finishing on pagehide (tests/tools/deletion-survives-navigation.test.js).
+  w.thDeferDelete = (fn) => w.setTimeout(fn, 6000);
+  w.thCancelDeferredDelete = (t) => w.clearTimeout(t);
   w.showUndoToast = (msg, onUndo) => { if (undo) onUndo(); };
   w.eval(REMOVE + DELETE_ONE + DELETE_BULK + '\nwindow.__t = { deleteJob, bulkDeleteJobs, removeJobFromPortal };');
   out.flush = async () => { for (const fn of timers.splice(0)) if (fn) await fn(); };

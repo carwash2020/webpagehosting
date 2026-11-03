@@ -640,7 +640,9 @@ test('deleteJob defers the real deletion behind a timer rather than executing im
   const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
   const fn = src.match(/async function deleteJob\(id\)[\s\S]*?\n  \}\n/);
   assert.ok(fn, 'deleteJob not found');
-  assert.match(fn[0], /setTimeout\(async \(\) => \{/, 'the real deletion logic should be deferred inside a setTimeout');
+  // thDeferDelete (handoff 2026-11-03 §4B): the same 6s window, but leaving
+  // the page finishes the delete instead of dropping it.
+  assert.match(fn[0], /thDeferDelete\(async \(\) => \{/, 'the real deletion logic should be deferred through thDeferDelete');
   assert.match(fn[0], /showUndoToast\(/, 'should show an undo toast rather than a plain toast');
   assert.match(fn[0], /pendingDeleteJobIds\.set\(id, timer\)/, 'the pending job id must be tracked so renderJobs() can filter it out of view');
 });
@@ -670,7 +672,7 @@ test('undoing a bulk delete cancels the ONE shared timer and restores every job 
   const fn = src.match(/async function bulkDeleteJobs\(\)[\s\S]*?\n  \}\n/);
   const undoCallback = fn[0].match(/showUndoToast\([^,]+,\s*\(\) => \{([\s\S]*?)\}\);/);
   assert.ok(undoCallback, 'undo callback not found');
-  assert.match(undoCallback[1], /clearTimeout\(timer\)/);
+  assert.match(undoCallback[1], /thCancelDeferredDelete\(timer\)/);
   assert.match(undoCallback[1], /idsToDelete\.forEach\(id => pendingDeleteJobIds\.delete\(id\)\)/);
 });
 
@@ -933,7 +935,7 @@ test('deleteIncomeEntry and deleteExpense both defer the real deletion behind a 
   for (const fn of ['deleteIncomeEntry', 'deleteExpense']) {
     const m = src.match(new RegExp('async function ' + fn + '\\(id\\)[\\s\\S]*?\\n  \\}\\n'));
     assert.ok(m, fn + ' not found');
-    assert.match(m[0], /setTimeout\(/);
+    assert.match(m[0], /thDeferDelete\(/);
     assert.match(m[0], /showUndoToast\(/);
   }
 });
@@ -942,7 +944,7 @@ test('deleteContractLogEntry defers behind a timer', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'contract-generator.html'), 'utf8');
   const m = src.match(/async function deleteContractLogEntry\(id\)[\s\S]*?\n  \}\n/);
   assert.ok(m, 'deleteContractLogEntry not found');
-  assert.match(m[0], /setTimeout\(/);
+  assert.match(m[0], /thDeferDelete\(/);
   assert.match(m[0], /showUndoToast\(/);
 });
 
@@ -950,7 +952,7 @@ test('deleteLeadFromDashboard defers the real Supabase DELETE call, not just a l
   const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'workspace.html'), 'utf8');
   const m = src.match(/async function deleteLeadFromDashboard\(id\)[\s\S]*?\n  \}\n/);
   assert.ok(m, 'deleteLeadFromDashboard not found');
-  assert.match(m[0], /setTimeout\(async \(\) => \{/);
+  assert.match(m[0], /thDeferDelete\(async \(\) => \{/);
   assert.match(m[0], /await deleteLead\(id\)/);
   assert.match(m[0], /showUndoToast\(/);
 });
