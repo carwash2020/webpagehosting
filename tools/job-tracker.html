@@ -56,13 +56,13 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=f212452f48">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=cf58a92104" defer></script>
-<script src="/tools/data-layer.js?v=b5758547dc" defer></script>
+<script src="/tools/data-layer.js?v=7b44a62eae" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=c189cd58b4" defer></script>
-<script src="/tools/tools-command-palette.js?v=479d6a96e7" defer></script>
+<script src="/tools/tools-command-palette.js?v=66031659c7" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -1211,7 +1211,6 @@
 
 <script>
   const STORAGE_KEYS = { jobs: 'th_tracker_jobs', contacts: 'th_tracker_contacts', notes: 'th_tracker_notes_v2', priceRef: 'th_price_reference' };
-  const INCOME_STORAGE_KEY = 'th_income_log';
   const OLD_NOTES_KEY = 'th_tracker_notes'; // legacy single-note key, read once for migration only
 
   const CARD_INFO = {
@@ -1298,7 +1297,7 @@
     renderContacts();
     renderTemplates();
     renderNotesList();
-    if (currentNoteId !== null && loadNotes().some(n => n.id === currentNoteId)) {
+    if (currentNoteId !== null && thNotes.all().some(n => n.id === currentNoteId)) {
       selectNote(currentNoteId);
     } else if (currentNoteId !== null) {
       currentNoteId = null;
@@ -1344,14 +1343,8 @@
   });
 
   // ---------- Jobs ----------
-  function loadJobs() { try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.jobs) || '[]'); } catch (e) { return []; } }
-  function saveJobs(jobs) {
-    localStorage.setItem(STORAGE_KEYS.jobs, JSON.stringify(jobs));
-    scheduleSync();
-    // Best-effort relational mirror (code-health pass, 2026-09-08) -- see
-    // sync.js's RELATIONAL MIRROR section. Never blocks or throws back here.
-    if (typeof mirrorJobsToRelational === 'function') mirrorJobsToRelational(jobs);
-  }
+  // Jobs go through thJobs (data-layer.js): all() / replaceAll(), which
+  // schedules the sync and runs the best-effort relational mirror.
   let currentSort = 'date';
 
   // Fills phone/address/email from the shared client registry when a
@@ -1485,7 +1478,7 @@
   async function addJob() {
     const title = document.getElementById('jobTitle').value.trim();
     if (!title) { await showAlert('Give the job a title first.'); return; }
-    const jobs = loadJobs();
+    const jobs = thJobs.all();
     const clientName = document.getElementById('jobClient').value.trim();
     const phone = document.getElementById('jobPhone').value.trim();
     if (!isPlausiblePhone(phone)) { await showAlert('That phone number doesn\'t look right -- please double-check it.'); return; }
@@ -1535,7 +1528,7 @@
       // edit since `fields` no longer carries it.
       jobs.push({ id: newId, ...fields, showOnCalendar: true, createdBy: currentUser, lastEditedBy: currentUser });
     }
-    saveJobs(jobs);
+    thJobs.replaceAll(jobs);
     // Referral program: only on genuine creation, not every edit -- see
     // mirrorReferralCreated()'s own comment in sync.js for why.
     if (!wasEditing && referredBy && typeof mirrorReferralCreated === 'function') {
@@ -1605,7 +1598,7 @@
       // re-marking the job Done keeps the receipt link correct.
       let linkedInvoiceNumber = null;
       try {
-        const linkedInvoice = loadInvoicesForHistory().find(inv => String(inv.jobRefId) === String(savedJobId));
+        const linkedInvoice = thInvoices.all().find(inv => String(inv.jobRefId) === String(savedJobId));
         if (linkedInvoice) linkedInvoiceNumber = linkedInvoice.invoiceNumber || null;
       } catch (e) { /* best-effort -- job still syncs without a receipt link if this fails */ }
       fetch(`${SUPABASE_URL}/functions/v1/sync-job-to-portal`, {
@@ -2095,7 +2088,7 @@
 
   async function bulkMarkJobsDone() {
     if (selectedJobIds.size === 0) { showToast('Nothing selected.', { type: 'error' }); return; }
-    const jobs = loadJobs();
+    const jobs = thJobs.all();
     const newlyDone = [];
     jobs.forEach(j => {
       if (selectedJobIds.has(j.id) && j.status !== 'done') {
@@ -2104,7 +2097,7 @@
         newlyDone.push(j);
       }
     });
-    saveJobs(jobs);
+    thJobs.replaceAll(jobs);
     const count = selectedJobIds.size;
     toggleJobSelectionMode();
     showToast(count + ' job' + (count === 1 ? '' : 's') + ' marked done.');
@@ -2159,7 +2152,7 @@
 
       // Local removal first, photo cleanup after (handoff 2026-11-03
       // §4B) -- see the single-job delete above.
-      const allJobs = loadJobs();
+      const allJobs = thJobs.all();
       const deletedJobs = allJobs.filter(j => idsToDelete.has(j.id));
       deletedJobs.forEach(j => {
         // Bulk delete used to skip this (2026-10-01, found in the Item 1
@@ -2169,7 +2162,7 @@
         if (typeof mirrorDelete === 'function') mirrorDelete('jobs', j.id);
         if (typeof thAddToGraveyard === 'function') thAddToGraveyard('job', j);
       });
-      saveJobs(allJobs.filter(j => !idsToDelete.has(j.id)));
+      thJobs.replaceAll(allJobs.filter(j => !idsToDelete.has(j.id)));
       renderJobs();
 
       let failedPhotoCount = 0;
@@ -3012,8 +3005,7 @@
 
 
   // ---------- Contacts ----------
-  function loadContacts() { try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.contacts) || '[]'); } catch (e) { return []; } }
-  function saveContacts(contacts) { localStorage.setItem(STORAGE_KEYS.contacts, JSON.stringify(contacts)); scheduleSync(); }
+  // Contacts go through thContacts (data-layer.js).
 
   let editingContactId = null;
   let justAddedContactId = null;
@@ -3022,7 +3014,7 @@
     if (!name) { await showAlert('Give the contact a name first.'); return; }
     const contactPhoneVal = document.getElementById('contactPhone').value.trim();
     if (!isPlausiblePhone(contactPhoneVal)) { await showAlert('That phone number doesn\'t look right -- please double-check it.'); return; }
-    const contacts = loadContacts();
+    const contacts = thContacts.all();
     const fields = {
       name,
       role: document.getElementById('contactRole').value.trim(),
@@ -3039,7 +3031,7 @@
       newId = Date.now();
       contacts.push({ id: newId, ...fields });
     }
-    saveContacts(contacts);
+    thContacts.replaceAll(contacts);
     ['contactName','contactRole','contactPhone','contactEmail','contactNotes'].forEach(id => document.getElementById(id).value = '');
     cancelContactEdit();
     justAddedContactId = newId;
@@ -3048,7 +3040,7 @@
   }
 
   function editContact(id) {
-    const contact = loadContacts().find(c => c.id === id);
+    const contact = thContacts.all().find(c => c.id === id);
     if (!contact) return;
     editingContactId = id;
     toggleFormSection('contactFormSection', true);
@@ -3080,20 +3072,18 @@
     if (editingContactId === id) cancelContactEdit();
     const row = document.querySelector('[data-contact-id="' + id + '"]');
     animateRowExit(row, () => {
-      const contactToDelete = loadContacts().find(c => c.id === id);
-      saveContacts(loadContacts().filter(c => c.id !== id));
-      if (typeof thAddContactTombstone === 'function') thAddContactTombstone(id);
+      const contactToDelete = thContacts.all().find(c => c.id === id);
+      thContacts.remove(id); // write + tombstone
       if (contactToDelete && typeof thAddToGraveyard === 'function') thAddToGraveyard('contact', contactToDelete);
       renderContacts();
       showToast('Contact deleted.');
     });
   }
 
-  function loadInvoicesForHistory() { try { return JSON.parse(localStorage.getItem('th_invoices') || '[]'); } catch (e) { return []; } }
 
   function renderContacts() {
     const searchTerm = (document.getElementById('contactSearch')?.value || '').trim().toLowerCase();
-    let contacts = loadContacts();
+    let contacts = thContacts.all();
     if (searchTerm) {
       contacts = contacts.filter(c =>
         (c.name || '').toLowerCase().includes(searchTerm) ||
@@ -3156,7 +3146,7 @@
     container.dataset.longPressWired = '1';
     attachLongPress(container, '.contact-card', (cardEl) => {
       const id = Number(cardEl.dataset.contactId);
-      const contact = loadContacts().find(c => c.id === id);
+      const contact = thContacts.all().find(c => c.id === id);
       if (!contact) return;
       showQuickActionSheet(contact.name || 'Contact', [
         { label: 'History', onClick: () => toggleClientHistory(id) },
@@ -3172,12 +3162,12 @@
     const isOpen = el.style.display !== 'none';
     if (isOpen) { el.style.display = 'none'; return; }
 
-    const contact = loadContacts().find(c => c.id === contactId);
+    const contact = thContacts.all().find(c => c.id === contactId);
     if (!contact) return;
     const name = contact.name.trim().toLowerCase();
 
     const jobs = thJobs.list({ pageSize: Infinity }).rows.filter(j => j.client && j.client.trim().toLowerCase() === name);
-    const invoices = loadInvoicesForHistory().filter(i => i.clientName && i.clientName.trim().toLowerCase() === name);
+    const invoices = thInvoices.all().filter(i => i.clientName && i.clientName.trim().toLowerCase() === name);
     // loadIncomeEntries() moved to finance.html with the Income tab --
     // this Contacts feature legitimately still needs manual income data
     // for the lifetime-spend total, so it reads via the shared layer
@@ -3206,27 +3196,26 @@
   let currentNoteId = null;
   let noteSaveTimer = null;
 
-  function loadNotes() { try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.notes) || '[]'); } catch (e) { return []; } }
-  function saveNotesList(list) { localStorage.setItem(STORAGE_KEYS.notes, JSON.stringify(list)); scheduleSync(); }
+  // Notes go through thNotes (data-layer.js).
 
   function migrateOldNoteIfNeeded() {
     const hasNewNotes = localStorage.getItem(STORAGE_KEYS.notes);
     const oldNote = localStorage.getItem(OLD_NOTES_KEY);
     if (!hasNewNotes && oldNote && oldNote.trim()) {
-      saveNotesList([{ id: Date.now(), title: 'Notes', body: oldNote, updatedAt: Date.now() }]);
+      thNotes.replaceAll([{ id: Date.now(), title: 'Notes', body: oldNote, updatedAt: Date.now() }]);
     }
   }
 
   function initNotes() {
     migrateOldNoteIfNeeded();
     renderNotesList();
-    const notes = loadNotes();
+    const notes = thNotes.all();
     if (notes.length > 0) selectNote(notes[0].id);
   }
 
   let justAddedNoteId = null;
   function renderNotesList() {
-    let notes = [...loadNotes()].sort((a, b) => b.updatedAt - a.updatedAt);
+    let notes = [...thNotes.all()].sort((a, b) => b.updatedAt - a.updatedAt);
     const searchEl = document.getElementById('noteSearch');
     const searchTerm = searchEl ? searchEl.value.trim().toLowerCase() : '';
     if (searchTerm) {
@@ -3255,7 +3244,7 @@
 
   function selectNote(id) {
     currentNoteId = id;
-    const note = loadNotes().find(n => n.id === id);
+    const note = thNotes.all().find(n => n.id === id);
     if (!note) return;
     document.getElementById('noteEditorSection').style.display = '';
     document.getElementById('noteEmptyState').style.display = 'none';
@@ -3265,10 +3254,10 @@
   }
 
   function createNote() {
-    const notes = loadNotes();
+    const notes = thNotes.all();
     const note = { id: Date.now(), title: 'Untitled Note', body: '', updatedAt: Date.now() };
     notes.push(note);
-    saveNotesList(notes);
+    thNotes.replaceAll(notes);
     justAddedNoteId = note.id;
     selectNote(note.id);
   }
@@ -3279,8 +3268,8 @@
     const row = document.querySelector('[data-note-id="' + id + '"]');
     animateRowExit(row, () => {
       if (typeof thAddNoteTombstone === 'function') thAddNoteTombstone(id); // so a stale device can't bring it back
-      const notes = loadNotes().filter(n => n.id !== id);
-      saveNotesList(notes);
+      const notes = thNotes.all().filter(n => n.id !== id);
+      thNotes.replaceAll(notes);
       if (currentNoteId === id) {
         currentNoteId = null;
         document.getElementById('noteEditorSection').style.display = 'none';
@@ -3297,13 +3286,13 @@
     clearTimeout(noteSaveTimer);
     noteSaveTimer = setTimeout(() => {
       if (currentNoteId === null) return;
-      const notes = loadNotes();
+      const notes = thNotes.all();
       const note = notes.find(n => n.id === currentNoteId);
       if (!note) return;
       note.title = document.getElementById('noteTitle').value;
       note.body = document.getElementById('noteBody').value;
       note.updatedAt = Date.now();
-      saveNotesList(notes);
+      thNotes.replaceAll(notes);
       renderNotesList();
       const indicator = document.getElementById('noteSaveIndicator');
       indicator.classList.add('is-visible');
@@ -3322,7 +3311,7 @@
 
   // ---------- Calendar view (2026-09-21) ----------
   // Moved here from the retired calendar.html. Reads the SAME job list
-  // the List/Board views render (loadJobs(), minus pending deletes,
+  // the List/Board views render (thJobs.all(), minus pending deletes,
   // filtered by the search box) rather than the relational `jobs`
   // table that page piloted -- two sources on one page could show a
   // job in the list but not on the calendar for the seconds between a
@@ -3759,7 +3748,7 @@
         renderJobs();
         const id = e && e.detail ? e.detail.jobId : null;
         if (editingJobId !== null && String(editingJobId) === String(id)) {
-          const job = loadJobs().find(j => String(j.id) === String(id));
+          const job = thJobs.all().find(j => String(j.id) === String(id));
           if (job) {
             document.getElementById('jobHoursWorked').value = job.hoursWorked || '';
             document.getElementById('jobStatus').value = job.status || 'not-started';

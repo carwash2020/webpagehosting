@@ -1855,6 +1855,19 @@ function thGetJobBundle(jobId) {
 const TH_JOBS_PAGE_SIZE = 50;
 
 const thJobs = {
+  // all(): every stored job, in stored order (what each page's loadJobs()
+  // returned). replaceAll(jobs): the whole-list write each page's saveJobs()
+  // did -- write (which schedules the sync), then the best-effort relational
+  // mirror. Throws if the write fails, as saveJobs() did (2026-11-03).
+  all() {
+    const jobs = thRead(TH_KEYS.jobs, []);
+    return Array.isArray(jobs) ? jobs : [];
+  },
+  replaceAll(jobs) {
+    if (!thWrite(TH_KEYS.jobs, jobs)) throw new Error('Could not save th_tracker_jobs -- device storage may be full.');
+    if (typeof mirrorJobsToRelational === 'function') mirrorJobsToRelational(jobs);
+  },
+
   // filters: { status, notStatus, clientId, client, dateFrom, dateTo, ids,
   // pageSize }. cursor: the `nextCursor` a previous call returned, or
   // omitted/null for the first page.
@@ -1927,3 +1940,84 @@ const thJobs = {
   },
 };
 
+
+// ---------------------------------------------------------------------------
+// ITEM 1 PHASE 2a, the remaining entities (handoff 2026-11-03 §2/§7.2:
+// "finish the shared data-layer migration"). Same interface as thJobs above
+// -- list/get/create/update/remove -- plus two things every page's own
+// load/save pair was really doing:
+//   all()          the full stored list, in stored order (what each page's
+//                  loadX() returned; list() re-sorts and pages, all() doesn't)
+//   replaceAll(r)  write the whole list (what each page's saveX(list) did).
+//                  Throws if the write fails, exactly as those savers did
+//                  (localStorage.setItem threw on a full quota), so a flow
+//                  that used to stop on a failed save still stops -- now
+//                  with thWrite()'s "storage may be full" toast as well.
+// Each entity keeps its save side-effects in one place (afterWrite) instead
+// of one copy per page: invoices drop sync.js's relational read cache so the
+// next render sees the local write. Every write still schedules a sync
+// (thWrite). remove() = write + tombstone + relational mirrorDelete, the
+// same storage-level sequence the pages ran by hand.
+function thMakeCollection(opts) {
+  const read = () => {
+    const rows = thRead(opts.key, []);
+    return Array.isArray(rows) ? rows : [];
+  };
+  const write = (rows) => {
+    if (!thWrite(opts.key, rows)) return false;
+    if (opts.afterWrite) opts.afterWrite(rows);
+    return true;
+  };
+  return {
+    key: opts.key,
+    all() { return read(); },
+    // filters: { where (predicate), ids, pageSize }; keyset on id, descending.
+    list(filters, cursor) {
+      filters = filters || {};
+      let rows = read().filter(r => r && typeof r === 'object');
+      if (filters.where) rows = rows.filter(filters.where);
+      if (filters.ids) { const want = new Set(filters.ids); rows = rows.filter(r => want.has(r.id)); }
+      rows.sort((a, b) => (b.id > a.id ? 1 : b.id < a.id ? -1 : 0));
+      if (cursor !== undefined && cursor !== null) rows = rows.filter(r => r.id < cursor);
+      const pageSize = filters.pageSize || TH_JOBS_PAGE_SIZE;
+      const page = rows.slice(0, pageSize);
+      return { rows: page, nextCursor: page.length === pageSize ? page[page.length - 1].id : null };
+    },
+    get(id) { return read().find(r => r && r.id === id) || null; },
+    create(row) {
+      const rows = read();
+      const created = Object.assign({ id: Date.now() }, row);
+      rows.push(created);
+      return write(rows) ? created : null;
+    },
+    update(id, patch) {
+      const rows = read();
+      const idx = rows.findIndex(r => r && r.id === id);
+      if (idx === -1) return null;
+      rows[idx] = Object.assign({}, rows[idx], patch);
+      return write(rows) ? rows[idx] : null;
+    },
+    remove(id) {
+      const rows = read();
+      if (!rows.some(r => r && r.id === id)) return false;
+      if (!write(rows.filter(r => !(r && r.id === id)))) return false;
+      if (opts.tombstone) opts.tombstone(id);
+      if (opts.mirrorTable && typeof mirrorDelete === 'function') mirrorDelete(opts.mirrorTable, id);
+      return true;
+    },
+    replaceAll(rows) {
+      if (!write(rows)) throw new Error('Could not save ' + opts.key + ' -- device storage may be full.');
+    },
+  };
+}
+
+const thInvoices = thMakeCollection({
+  key: TH_KEYS.invoices, tombstone: thAddInvoiceTombstone, mirrorTable: 'invoices',
+  afterWrite() { if (typeof invalidateRelationalInvoicesCache === 'function') invalidateRelationalInvoicesCache(); },
+});
+const thQuotes = thMakeCollection({ key: TH_KEYS.quotes, tombstone: thAddQuoteTombstone, mirrorTable: 'quotes' });
+const thIncome = thMakeCollection({ key: TH_KEYS.income, tombstone: thAddIncomeTombstone });
+const thExpenses = thMakeCollection({ key: TH_KEYS.expenses, tombstone: thAddExpenseTombstone });
+const thContracts = thMakeCollection({ key: TH_KEYS.contracts, tombstone: thAddContractTombstone, mirrorTable: 'contracts' });
+const thContacts = thMakeCollection({ key: TH_KEYS.contacts, tombstone: thAddContactTombstone });
+const thNotes = thMakeCollection({ key: TH_KEYS.notes, tombstone: thAddNoteTombstone });

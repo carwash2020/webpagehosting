@@ -14,6 +14,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
+const { installDataLayer } = require('../data-layer-harness');
 
 const INV = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'invoice-generator.html'), 'utf8');
 
@@ -22,6 +23,7 @@ async function loadPage() {
   const dom = new JSDOM(INV, {
     runScripts: 'dangerously', url: 'https://example.com/tools/invoice-generator.html',
     beforeParse(w) {
+      installDataLayer(w);
       w.requireAuth = () => {};
       w.canManageInvoices = () => true;
       w.localStorage.setItem('th_invoices', '[]');

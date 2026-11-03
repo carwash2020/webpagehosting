@@ -115,11 +115,12 @@ test('every new long-press init function guards against double-wiring the same c
 // --- behavioral: the long-press callback actually builds the right sheet ---
 
 const { JSDOM } = require('jsdom');
+const { installDataLayer } = require('../data-layer-harness');
 
 test('finance.html: initExpenseRowLongPress, invoked end-to-end with a real long-press, opens a quick-action sheet for the right entry with working Edit/Delete callbacks', () => {
   const dom = new JSDOM(financeHtml, {
     runScripts: 'dangerously', url: 'https://example.com/tools/finance.html',
-    beforeParse(w) {
+    beforeParse(w) { installDataLayer(w);
       w.requireAuth = () => {};
       w.canViewFinance = () => true;
       w.localStorage.setItem('th_expense_log', JSON.stringify([{ id: 7, vendor: 'Home Depot', desc: 'Screws', amount: 12.5, date: '2026-09-20', type: 'expense' }]));
@@ -218,7 +219,7 @@ test('invoice-generator.html: the invoice log gets a long-press init function op
 test('invoice-generator.html: the invoice sheet, invoked end-to-end through the long-press, is for the right invoice, escapes its title, and has working Mark Paid / Resend / Delete callbacks', () => {
   const dom = new JSDOM(invoiceGenHtml, {
     runScripts: 'dangerously', url: 'https://example.com/tools/invoice-generator.html',
-    beforeParse(w) {
+    beforeParse(w) { installDataLayer(w);
       w.requireAuth = () => {};
       w.canManageInvoices = () => true;
       w.localStorage.setItem('th_invoices', JSON.stringify([
@@ -281,7 +282,7 @@ test('review-request.html: setRequestStatus fires a success haptic only for the 
 test('review-request.html: setRequestStatus behavioral check -- haptic fires for \'received\', not for \'no_response\' or \'sent\'', () => {
   const dom = new JSDOM(reviewRequestHtml, {
     runScripts: 'dangerously', url: 'https://example.com/tools/review-request.html',
-    beforeParse(w) {
+    beforeParse(w) { installDataLayer(w);
       w.requireAuth = () => {};
       w.localStorage.setItem('th_review_requests_log', JSON.stringify([
         { id: 1, name: 'Jane', phone: '555-1111', status: 'sent' },

@@ -74,7 +74,7 @@ test('Part Cost Trend matches by Part Number first, falling back to a Descriptio
 test('Part Cost Trend excludes mileage entries -- there is no "cost" of a mileage log line to trend', () => {
   const fnMatch = financeHtml.match(/function renderPartCostTrend\(\) \{[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch);
-  assert.match(fnMatch[0], /loadExpenses\(\)\.filter\(e => e\.type !== 'mileage'\)/);
+  assert.match(fnMatch[0], /thExpenses\.all\(\)\.filter\(e => e\.type !== 'mileage'\)/);
 });
 
 test('renderExpenses() always keeps the Part Cost Trend results in sync, rather than needing every add/edit/delete call site updated individually', () => {

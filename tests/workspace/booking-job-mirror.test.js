@@ -45,7 +45,7 @@ function setup({ booking = BOOKING, jobMirrorOk = true } = {}) {
   w.showToast = (m) => out.toasts.push(m);
   w.showAlert = async (m) => { out.alerts.push(m); };
   w.loadAndRenderBookings = () => {};
-  w.loadJobs = () => JSON.parse(w.localStorage.getItem('th_tracker_jobs') || '[]');
+  w.thJobs = { all: () => JSON.parse(w.localStorage.getItem('th_tracker_jobs') || '[]') };
   w.eval(MIRROR_JOBS + MIRROR_REFERRAL + CONVERT + '\nwindow.__c = convertBookingToJob;');
   // The mirror runs in the background; let its promise chain settle.
   out.run = async (id) => { await w.__c(id); await new Promise((r) => setTimeout(r, 0)); };

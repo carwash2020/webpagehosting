@@ -77,7 +77,9 @@ test('deleteExpense (finance.html) actually calls thAddExpenseTombstone when the
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'finance.html'), 'utf8');
   const fnMatch = src.match(/async function deleteExpense\(id\)[\s\S]*?\n  \}/);
   assert.ok(fnMatch, 'deleteExpense not found');
-  assert.match(fnMatch[0], /thAddExpenseTombstone\(/);
+  // Since 2026-11-03: thExpenses.remove(id), whose seam (data-layer.js) calls thAddExpenseTombstone.
+  assert.match(fnMatch[0], /thExpenses\.remove\(id\)/);
+  assert.match(fs.readFileSync(path.join(TOOLS_DIR, 'data-layer.js'), 'utf8'), /key: TH_KEYS\.expenses, tombstone: thAddExpenseTombstone/);
 });
 
 test('clearAllExpenses (finance.html) records a tombstone for every entry being wiped, not just single deletes', () => {
@@ -115,7 +117,9 @@ test('deleteIncomeEntry (finance.html) actually calls thAddIncomeTombstone when 
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'finance.html'), 'utf8');
   const fnMatch = src.match(/async function deleteIncomeEntry\(id\)[\s\S]*?\n  \}/);
   assert.ok(fnMatch, 'deleteIncomeEntry not found');
-  assert.match(fnMatch[0], /thAddIncomeTombstone\(/);
+  // Since 2026-11-03: thIncome.remove(id), whose seam (data-layer.js) calls thAddIncomeTombstone.
+  assert.match(fnMatch[0], /thIncome\.remove\(id\)/);
+  assert.match(fs.readFileSync(path.join(TOOLS_DIR, 'data-layer.js'), 'utf8'), /key: TH_KEYS\.income, tombstone: thAddIncomeTombstone/);
 });
 
 test('clearAllIncome (finance.html) records a tombstone for every entry being wiped, not just single deletes', () => {
@@ -153,7 +157,9 @@ test('deleteContact (job-tracker.html) actually calls thAddContactTombstone when
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'job-tracker.html'), 'utf8');
   const fnMatch = src.match(/async function deleteContact\(id\)[\s\S]*?\n  \}/);
   assert.ok(fnMatch, 'deleteContact not found');
-  assert.match(fnMatch[0], /thAddContactTombstone\(/);
+  // Since 2026-11-03: thContacts.remove(id), whose seam (data-layer.js) calls thAddContactTombstone.
+  assert.match(fnMatch[0], /thContacts\.remove\(id\)/);
+  assert.match(fs.readFileSync(path.join(TOOLS_DIR, 'data-layer.js'), 'utf8'), /key: TH_KEYS\.contacts, tombstone: thAddContactTombstone/);
 });
 
 test('a stale device pushing back its old copy of a deleted contact does not resurrect it on pull', () => {
@@ -184,7 +190,9 @@ test('deleteContractLogEntry (contract-generator.html) actually calls thAddContr
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'contract-generator.html'), 'utf8');
   const fnMatch = src.match(/async function deleteContractLogEntry\(id\)[\s\S]*?\n  \}/);
   assert.ok(fnMatch, 'deleteContractLogEntry not found');
-  assert.match(fnMatch[0], /thAddContractTombstone\(/);
+  // Since 2026-11-03: thContracts.remove(id), whose seam (data-layer.js) calls thAddContractTombstone.
+  assert.match(fnMatch[0], /thContracts\.remove\(id\)/);
+  assert.match(fs.readFileSync(path.join(TOOLS_DIR, 'data-layer.js'), 'utf8'), /key: TH_KEYS\.contracts, tombstone: thAddContractTombstone/);
 });
 
 test('a stale device pushing back its old copy of a deleted contract does not resurrect it on pull', () => {
@@ -338,7 +346,10 @@ test('deleteInvoiceLogEntry (invoice-generator.html) actually calls thAddInvoice
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'invoice-generator.html'), 'utf8');
   const fnMatch = src.match(/async function deleteInvoiceLogEntry\(id\)[\s\S]*?\n  \}/);
   assert.ok(fnMatch, 'deleteInvoiceLogEntry not found');
-  assert.match(fnMatch[0], /thAddInvoiceTombstone\(/);
+  // Since 2026-11-03 the storage-level delete is thInvoices.remove(id), and
+  // the seam (data-layer.js) is what calls thAddInvoiceTombstone.
+  assert.match(fnMatch[0], /thInvoices\.remove\(id\)/);
+  assert.match(fs.readFileSync(path.join(TOOLS_DIR, 'data-layer.js'), 'utf8'), /const thInvoices = thMakeCollection\(\{\s*key: TH_KEYS\.invoices, tombstone: thAddInvoiceTombstone,/);
 });
 
 test('deleteInvoiceLogEntry removes ONLY the income entry derived from that invoice -- never manually-entered income', () => {
@@ -395,7 +406,9 @@ test('deleteQuoteLogEntry (invoice-generator.html) actually calls thAddQuoteTomb
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'invoice-generator.html'), 'utf8');
   const fnMatch = src.match(/async function deleteQuoteLogEntry\(id\)[\s\S]*?\n  \}/);
   assert.ok(fnMatch, 'deleteQuoteLogEntry not found');
-  assert.match(fnMatch[0], /thAddQuoteTombstone\(/);
+  // Since 2026-11-03: thQuotes.remove(id), whose seam calls thAddQuoteTombstone.
+  assert.match(fnMatch[0], /thQuotes\.remove\(id\)/);
+  assert.match(fs.readFileSync(path.join(TOOLS_DIR, 'data-layer.js'), 'utf8'), /key: TH_KEYS\.quotes, tombstone: thAddQuoteTombstone,/);
 });
 
 test('a stale device pushing back its old copy of a deleted quote does not resurrect it on pull', () => {

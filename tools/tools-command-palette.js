@@ -17,6 +17,9 @@
   var path = (window.location && window.location.pathname) || '';
   if (/\/(login|reset-password)\.html$/.test(path)) return;
 
+  // Read-only and deliberately NOT through data-layer.js (2026-11-03): this
+  // palette also opens on login, reset-password, settings, parts-reference
+  // and route-planner, which don't load data-layer.js.
   function loadJobs() { try { return JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); } catch (e) { return []; } }
   function loadContacts() { try { return JSON.parse(localStorage.getItem('th_tracker_contacts') || '[]'); } catch (e) { return []; } }
   function loadInvoices() { try { return JSON.parse(localStorage.getItem('th_invoices') || '[]'); } catch (e) { return []; } }

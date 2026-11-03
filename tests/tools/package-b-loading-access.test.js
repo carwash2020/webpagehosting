@@ -50,7 +50,7 @@ function moneyDom(role, roleState) {
     function canViewFinance() { return !!(__role && __role.canViewFinance); }
     function canViewRunway() { return !!(__role && __role.canViewRunway); }
     function canManageReviews() { return !!(__role && __role.canManageReviews); }
-    function loadInvoices() { return [{ id: 'inv-1', clientName: 'Secret Client', invoiceNumber: 'INV-9001', total: 4321.5 }]; }
+    var thInvoices = { all: () => [{ id: 'inv-1', clientName: 'Secret Client', invoiceNumber: 'INV-9001', total: 4321.5 }] };
     function invoicePaymentStatus() { return 'unpaid'; }
     function isOverdue() { return false; }
     function getDueDate() { return null; }

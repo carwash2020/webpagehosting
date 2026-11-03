@@ -10,6 +10,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const { JSDOM } = require('jsdom');
+const { installDataLayer } = require('../data-layer-harness');
 
 const TOOLS = path.join(__dirname, '..', '..', 'tools');
 const read = (f) => fs.readFileSync(path.join(TOOLS, f), 'utf8');
@@ -134,6 +135,7 @@ test('invoice: delete, then navigate away immediately -- the invoice stays delet
   const dom = new JSDOM(INV, {
     runScripts: 'dangerously', url: 'https://example.com/tools/invoice-generator.html',
     beforeParse(w) {
+      installDataLayer(w);
       w.requireAuth = () => {};
       w.canManageInvoices = () => true;
       w.localStorage.setItem('th_invoices', JSON.stringify([{ id: 7, invoiceNumber: 'INV-TEST-7', clientName: 'TEST', total: 10, date: '2026-11-03' }]));

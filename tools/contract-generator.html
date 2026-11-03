@@ -56,13 +56,13 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=f212452f48">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=cf58a92104" defer></script>
-<script src="/tools/data-layer.js?v=b5758547dc" defer></script>
+<script src="/tools/data-layer.js?v=7b44a62eae" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=c189cd58b4" defer></script>
-<script src="/tools/tools-command-palette.js?v=479d6a96e7" defer></script>
+<script src="/tools/tools-command-palette.js?v=66031659c7" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <!-- U15/W18 fix (High-Impact Upgrades, Master Audit, 2026-09-08): the
      shared masthead/footer/totals-block renderer, also used by
@@ -525,13 +525,8 @@
   }
 
   // ---------- Contact picker (reads Job Tracker's master Contacts list) ----------
-  function loadMasterContacts() {
-    try { return JSON.parse(localStorage.getItem('th_tracker_contacts') || '[]'); }
-    catch (e) { return []; }
-  }
-
   function populateContactPickers() {
-    const contacts = loadMasterContacts();
+    const contacts = thContacts.all();
     ['pwo', 'stpa', 'ltsa'].forEach(prefix => {
       const select = document.getElementById(prefix + '_contactPicker');
       if (!select) return;
@@ -544,7 +539,7 @@
 
   function applyContactPicker(prefix, contactId) {
     if (!contactId) return;
-    const contact = loadMasterContacts().find(c => String(c.id) === String(contactId));
+    const contact = thContacts.all().find(c => String(c.id) === String(contactId));
     if (!contact) return;
     document.getElementById(prefix + '_clientName').value = contact.name || '';
     document.getElementById(prefix + '_phone').value = contact.phone || '';
@@ -553,14 +548,7 @@
   }
 
   // ---------- Contract log (th_contracts, synced like everything else) ----------
-  function loadContractLog() {
-    try { return JSON.parse(localStorage.getItem('th_contracts') || '[]'); }
-    catch (e) { return []; }
-  }
-  function saveContractLog(list) {
-    localStorage.setItem('th_contracts', JSON.stringify(list));
-    if (typeof scheduleSync === 'function') scheduleSync();
-  }
+  // The contract log goes through thContracts, contacts through thContacts (data-layer.js).
   // Item #13 extended (2026-08-20): undoable-delete tracking, matching
   // job-tracker.html's pattern.
   const pendingDeleteContractIds = new Map();
@@ -588,7 +576,7 @@
 
   function renderContractLog() {
     const searchTerm = (document.getElementById('contractSearch')?.value || '').trim().toLowerCase();
-    let log = [...loadContractLog()].sort((a, b) => b.id - a.id);
+    let log = [...thContracts.all()].sort((a, b) => b.id - a.id);
     if (pendingDeleteContractIds.size > 0) log = log.filter(e => !pendingDeleteContractIds.has(e.id));
     if (searchTerm) {
       log = log.filter(entry =>
@@ -674,7 +662,7 @@
     container.dataset.longPressWired = '1';
     attachLongPress(container, '.contract-log-item', (itemEl) => {
       const id = Number(itemEl.dataset.contractId);
-      const entry = loadContractLog().find(e => e.id === id);
+      const entry = thContracts.all().find(e => e.id === id);
       if (!entry) return;
       showQuickActionSheet(entry.fields.clientName || 'Contract', [
         { label: 'Re-download', onClick: () => redownloadContract(id) },
@@ -783,10 +771,8 @@
 
     const timer = thDeferDelete(() => {
       pendingDeleteContractIds.delete(id);
-      const entryToDelete = loadContractLog().find(e => e.id === id);
-      saveContractLog(loadContractLog().filter(e => e.id !== id));
-      if (typeof thAddContractTombstone === 'function') thAddContractTombstone(id);
-      if (typeof mirrorDelete === 'function') mirrorDelete('contracts', id);
+      const entryToDelete = thContracts.all().find(e => e.id === id);
+      thContracts.remove(id); // write + tombstone + relational mirrorDelete
       if (entryToDelete && typeof thAddToGraveyard === 'function') thAddToGraveyard('contract', entryToDelete);
       renderContractLog();
     }, 6000);
@@ -801,7 +787,7 @@
   }
 
   function redownloadContract(id) {
-    const entry = loadContractLog().find(e => e.id === id);
+    const entry = thContracts.all().find(e => e.id === id);
     if (!entry) return;
     buildContractPDF(entry.type, entry.fields);
   }
@@ -1076,7 +1062,7 @@
     const businessSignatureDataUrl = getSignatureDataUrl('businessSignatureCanvas');
     await buildContractPDF(type, fields, clientSignatureDataUrl, businessSignatureDataUrl);
 
-    const log = loadContractLog();
+    const log = thContracts.all();
     const nextId = log.length ? Math.max(...log.map(e => e.id)) + 1 : 1;
     const now = new Date();
     const contractClientId = (fields.clientName && typeof thEnsureClient === 'function')
@@ -1092,7 +1078,7 @@
       signedByClient: !!clientSignatureDataUrl,
       signedByBusiness: !!businessSignatureDataUrl,
     });
-    saveContractLog(log);
+    thContracts.replaceAll(log);
     // Best-effort relational mirror (code-health pass, 2026-09-08) -- see
     // sync.js's RELATIONAL MIRROR section. Never blocks or throws back here.
     if (typeof mirrorContractToRelational === 'function') mirrorContractToRelational(log[log.length - 1]);

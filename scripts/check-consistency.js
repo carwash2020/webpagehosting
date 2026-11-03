@@ -68,7 +68,7 @@ function readTool(filename) {
 // because the throw happens before the DOMContentLoaded listener can
 // even register, everything inside it (the tour, sync, error
 // reporting) silently never runs either.
-const DEFERRED_SCRIPT_FILES = ['tools-dialogs.js', 'tools-effects.js', 'tools-nav-pwa.js', 'tools-tour.js', 'tools-media-sharing.js'];
+const DEFERRED_SCRIPT_FILES = ['tools-dialogs.js', 'tools-effects.js', 'tools-nav-pwa.js', 'tools-tour.js', 'tools-media-sharing.js', 'data-layer.js'];
 
 function getDeferredFunctionNames() {
   const names = new Set();

@@ -58,13 +58,13 @@ test('the paid-status sync only fires for an invoice actually on the portal', ()
 
 test('the paid-status sync never blocks the local save', () => {
   const fnMatch = INVOICE_GEN.match(/function toggleInvoicePaid\(id\) \{[\s\S]*?\n  \}\n/);
-  // saveInvoiceLog must come before the portal call, and the call must be
+  // The log write (thInvoices.replaceAll) must come before the portal call, and the call must be
   // fire-and-forget -- same pattern as every other portal sync here.
-  const saveIdx = fnMatch[0].indexOf('saveInvoiceLog');
+  const saveIdx = fnMatch[0].indexOf('thInvoices.replaceAll(');
   const pushIdx = fnMatch[0].indexOf('pushInvoicePaidToPortal(');
   assert.ok(saveIdx > -1 && pushIdx > saveIdx, 'the local log is the real record and must be written first');
   const dash = WORKSPACE_SRC.match(/async function togglePaid\(id\)[\s\S]*?\n  \}/)[0];
-  assert.ok(dash.indexOf('saveInvoices(invoices)') < dash.indexOf('pushInvoicePaidToPortal('));
+  assert.ok(dash.indexOf('thInvoices.replaceAll(invoices)') < dash.indexOf('pushInvoicePaidToPortal('));
   assert.match(pushHelperSrc(), /\.catch\(e => console\.warn/);
   assert.doesNotMatch(pushHelperSrc(), /\bawait\b/);
 });

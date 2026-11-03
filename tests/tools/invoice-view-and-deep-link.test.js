@@ -15,6 +15,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
+const { installDataLayer } = require('../data-layer-harness');
 
 const TOOLS = path.join(__dirname, '..', '..', 'tools');
 const PAGE = fs.readFileSync(path.join(TOOLS, 'invoice-generator.html'), 'utf8');
@@ -29,14 +30,15 @@ const QUOTE = { id: 77, quoteNumber: 'Q-2026-0077', clientName: 'San Diego build
 function setup({ url = 'https://example.com/tools/invoice-generator.html', signed = 'https://x.supabase.co/storage/v1/object/sign/invoice-pdfs/invoices/INV-2026-1051.pdf?token=t', popup = true } = {}) {
   const dom = new JSDOM('<!doctype html><body><div class="inv-item" data-invoice-id="1790448758936"></div><div class="inv-item" data-quote-id="77"></div></body>', { url, runScripts: 'outside-only' });
   const w = dom.window;
+  installDataLayer(w);
   const out = { sheets: [], toasts: [], signs: [], opened: [], quoteSheets: [] };
   const fakeTab = { location: { href: '' }, closed: false, close() { this.closed = true; } };
   out.tab = fakeTab;
   w.open = (u, t) => { out.opened.push([u, t]); return popup ? fakeTab : null; };
   w.getSignedStorageUrl = async (bucket, p, exp) => { out.signs.push([bucket, p, exp]); return signed; };
   w.invoicesForDisplay = () => [INV, NO_EMAIL];
-  w.loadInvoiceLog = () => [INV, NO_EMAIL];
-  w.loadQuoteLog = () => [QUOTE];
+  w.thInvoices.all = () => [INV, NO_EMAIL];
+  w.thQuotes.all = () => [QUOTE];
   w.invoiceState = () => ({ status: 'unpaid', balance: 212.66 });
   w.invoiceClientHref = () => '/tools/client-detail.html?id=c_1';
   w.money = (n) => '$' + Number(n).toFixed(2);

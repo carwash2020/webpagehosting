@@ -9,6 +9,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
+const { installDataLayer } = require('../data-layer-harness');
 
 const TOOLS = path.join(__dirname, '..', '..', 'tools');
 const read = (f) => fs.readFileSync(path.join(TOOLS, f), 'utf8');
@@ -22,7 +23,7 @@ function shellOn(page, { perms = {}, storage = {} } = {}) {
   const html = read(page);
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', url: 'https://example.com/tools/' + page,
-    beforeParse(w) {
+    beforeParse(w) { installDataLayer(w);
       w.requireAuth = () => {};
       w.initAppTour = () => {};
       for (const [k, v] of Object.entries(storage)) w.localStorage.setItem(k, v);

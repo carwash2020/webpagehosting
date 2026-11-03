@@ -78,13 +78,13 @@
      manage-booking.html, portal/quotes.html, and portal/jobs.html use. -->
 <script src="/js/business-hours.js?v=e0e3b29210"></script>
 <script src="/tools/push-notifications.js?v=3c123334a6" defer></script>
-<script src="/tools/data-layer.js?v=b5758547dc" defer></script>
+<script src="/tools/data-layer.js?v=7b44a62eae" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=c189cd58b4" defer></script>
-<script src="/tools/tools-command-palette.js?v=479d6a96e7" defer></script>
+<script src="/tools/tools-command-palette.js?v=66031659c7" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -1786,20 +1786,12 @@
     renderOpenedSection(key);
   }
 
-  function loadJobs() { try { return JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); } catch (e) { return []; } }
-  function loadExpenses() { try { return JSON.parse(localStorage.getItem('th_expense_log') || '[]'); } catch (e) { return []; } }
-  function loadInvoices() { try { return JSON.parse(localStorage.getItem('th_invoices') || '[]'); } catch (e) { return []; } }
-  function saveInvoices(list) {
-    localStorage.setItem('th_invoices', JSON.stringify(list));
-    // Writes stay on the blob. Drop the relational read-cache so the
-    // next list render sees this local write instead of stale rows.
-    if (typeof invalidateRelationalInvoicesCache === 'function') invalidateRelationalInvoicesCache();
-    if (typeof scheduleSync === 'function') scheduleSync();
-  }
-  // List/display reads only. togglePaid() still uses loadInvoices() so
+  // Invoice reads/writes: thInvoices (data-layer.js), which drops the
+  // relational read cache and schedules the sync on every write.
+  // List/display reads only. togglePaid() still uses thInvoices.all() so
   // a write-back never strips line_items the relational fetch omits.
   function invoicesForDisplay() {
-    return (typeof getInvoicesForRead === 'function') ? getInvoicesForRead() : loadInvoices();
+    return (typeof getInvoicesForRead === 'function') ? getInvoicesForRead() : thInvoices.all();
   }
   // Home's own "Find a client" search (renderGlobalSearch and its
   // jump-to-invoice helpers) was removed in the redundancy pass
@@ -1869,7 +1861,7 @@
   // never disagree. All invoices, not period-scoped: money owed doesn't
   // reset just because a date filter changed.
   function computeMoneyOwed() {
-    const allInvoices = loadInvoices();
+    const allInvoices = thInvoices.all();
     const unpaid = allInvoices.filter(i => invoicePaymentStatus(i) !== 'paid');
     const overdue = unpaid.filter(isOverdue);
     const overdueTotal = overdue.reduce((sum, i) => sum + getRemainingCents(i), 0) / 100;
@@ -1921,8 +1913,8 @@
 
   function renderMetrics() {
     const range = getCurrentRange();
-    const invoices = loadInvoices().filter(i => inRange(i.date, range));
-    const expenses = loadExpenses().filter(e => inRange(e.date, range));
+    const invoices = thInvoices.all().filter(i => inRange(i.date, range));
+    const expenses = thExpenses.all().filter(e => inRange(e.date, range));
 
     const revenue = invoices.reduce((sum, i) => sum + (i.total || 0), 0);
     const expenseTotal = expenses.filter(e => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0);
@@ -1991,7 +1983,7 @@
     // giving a shape-of-the-business glance that a single filtered
     // number can't.
     function computeMonthlyRevenueSeries(months) {
-      const all = loadInvoices();
+      const all = thInvoices.all();
       const now = new Date();
       const series = [];
       for (let i = months - 1; i >= 0; i--) {
@@ -2025,14 +2017,14 @@
     if (currentPeriod === 'week') {
       const prevStart = startOfDay(new Date(range.start.getTime() - 7 * 24 * 60 * 60 * 1000));
       const prevEnd = startOfDay(new Date(range.start.getTime() - 1 * 24 * 60 * 60 * 1000));
-      const prevRevenue = loadInvoices().filter(i => inRange(i.date, { start: prevStart, end: prevEnd })).reduce((sum, i) => sum + (i.total || 0), 0);
+      const prevRevenue = thInvoices.all().filter(i => inRange(i.date, { start: prevStart, end: prevEnd })).reduce((sum, i) => sum + (i.total || 0), 0);
       renderTrendBadge(revenueTrendEl, revenue, prevRevenue, 'prior 7 days');
       revenueSub.textContent = invoices.length + ' invoice' + (invoices.length === 1 ? '' : 's');
     } else if (currentPeriod === 'month') {
       const now = new Date();
       const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
-      const prevRevenue = loadInvoices().filter(i => inRange(i.date, { start: prevMonthStart, end: prevMonthEnd })).reduce((sum, i) => sum + (i.total || 0), 0);
+      const prevRevenue = thInvoices.all().filter(i => inRange(i.date, { start: prevMonthStart, end: prevMonthEnd })).reduce((sum, i) => sum + (i.total || 0), 0);
       renderTrendBadge(revenueTrendEl, revenue, prevRevenue, 'last month');
       revenueSub.textContent = invoices.length + ' invoice' + (invoices.length === 1 ? '' : 's');
     } else {
@@ -2050,7 +2042,7 @@
   }
 
   function renderStatusBars() {
-    const jobs = loadJobs();
+    const jobs = thJobs.all();
     const counts = { 'not-started': 0, 'in-progress': 0, 'done': 0 };
     jobs.forEach(j => { if (counts[j.status] !== undefined) counts[j.status]++; });
     const max = Math.max(1, ...Object.values(counts));
@@ -2066,7 +2058,7 @@
 
   function renderTopVendors() {
     const range = getCurrentRange();
-    const expenses = loadExpenses().filter(e => e.type === 'expense' && inRange(e.date, range) && e.vendor);
+    const expenses = thExpenses.all().filter(e => e.type === 'expense' && inRange(e.date, range) && e.vendor);
     const totals = {};
     expenses.forEach(e => { totals[e.vendor] = (totals[e.vendor] || 0) + e.amount; });
     const sorted = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 5);
@@ -2147,8 +2139,8 @@
     // Snapshot period filter above -- "who are my best clients" is a
     // relationship question, not a this-month question. All invoices
     // ever, aggregated by client name.
-    const invoices = loadInvoices().filter(i => i.clientName && i.clientName.trim());
-    const jobs = loadJobs();
+    const invoices = thInvoices.all().filter(i => i.clientName && i.clientName.trim());
+    const jobs = thJobs.all();
     const totals = {};
     invoices.forEach(inv => {
       const key = inv.clientName.trim();
@@ -2196,7 +2188,7 @@
   const FOLLOWUP_THRESHOLD_DAYS = 182; // ~6 months
 
   function renderFollowups() {
-    const jobs = loadJobs().filter(j => j.client && j.client.trim() && j.date);
+    const jobs = thJobs.all().filter(j => j.client && j.client.trim() && j.date);
     const lastJobByClient = {};
     jobs.forEach(j => {
       const key = j.client.trim();
@@ -2237,7 +2229,7 @@
   }
 
   function renderUpcoming() {
-    const jobs = loadJobs().filter(j => j.status !== 'done' && j.date);
+    const jobs = thJobs.all().filter(j => j.status !== 'done' && j.date);
     const now = new Date();
     const weekOut = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     const upcoming = jobs
@@ -2282,7 +2274,7 @@
   }
 
   async function togglePaid(id) {
-    const invoices = loadInvoices();
+    const invoices = thInvoices.all();
     const inv = invoices.find(i => i.id === id);
     if (!inv) return;
     const total = Number(inv.total) || 0;
@@ -2306,7 +2298,7 @@
       inv.paidAmount = total;
     }
     inv.paid = invoicePaymentStatus(inv) === 'paid'; // keep the legacy boolean in sync for anything else that still reads it directly
-    saveInvoices(invoices);
+    thInvoices.replaceAll(invoices);
     // Best-effort relational mirror (code-health pass, 2026-09-08) -- see
     // sync.js's RELATIONAL MIRROR section. Never blocks or throws back here.
     if (typeof mirrorInvoiceToRelational === 'function') mirrorInvoiceToRelational(inv);
@@ -2330,8 +2322,7 @@
   }
 
   function loadManualIncomeForWorkspace() {
-    try { return JSON.parse(localStorage.getItem('th_income_log') || '[]').filter(e => e.origin !== 'invoice'); }
-    catch (e) { return []; }
+    return thIncome.all().filter(e => e && e.origin !== 'invoice');
   }
 
   // Ready to invoice (2026-09-22, Workspace rework part 5): done jobs with
@@ -2344,7 +2335,7 @@
   const RTI_SHOWN = 6;
   function readyToInvoiceRows() {
     return (typeof thJobsToInvoice === 'function')
-      ? thJobsToInvoice(loadJobs(), invoicesForDisplay(), loadManualIncomeForWorkspace())
+      ? thJobsToInvoice(thJobs.all(), invoicesForDisplay(), loadManualIncomeForWorkspace())
       : [];
   }
   function readyToInvoiceWhen(daysAgo) {
@@ -2379,7 +2370,7 @@
   }
 
   function openReadyToInvoiceActions(jobId) {
-    const job = loadJobs().find(j => Number(j.id) === Number(jobId));
+    const job = thJobs.all().find(j => Number(j.id) === Number(jobId));
     if (!job || typeof showQuickActionSheet !== 'function') return;
     const actions = [
       { label: 'Create invoice', onClick: () => { window.location.href = '/tools/invoice-generator.html?jobRef=' + encodeURIComponent(job.id); } },
@@ -3052,7 +3043,7 @@
       ? (thEnsureClient(booking.name, { phone: booking.phone, address: booking.address, email: booking.email }) || {}).id
       : undefined;
 
-    const jobs = loadJobs();
+    const jobs = thJobs.all();
     const newId = Date.now();
     const currentUser = (typeof getCurrentUserEmail === 'function') ? getCurrentUserEmail() : null;
     const referredBy = (booking.referred_by || '').trim();
@@ -3915,7 +3906,7 @@
     // gone), so it lists them all -- the first six, then the rest folded
     // under one line so the card stays a card.
     const today = new Date(new Date().toDateString());
-    const unpaidInvoices = loadInvoices()
+    const unpaidInvoices = thInvoices.all()
       .filter(i => invoicePaymentStatus(i) !== 'paid')
       .map(i => ({ inv: i, overdue: isOverdue(i), due: getDueDate(i) }))
       .sort((a, b) => (a.overdue === b.overdue ? ((a.due ? a.due.getTime() : Infinity) - (b.due ? b.due.getTime() : Infinity)) : (a.overdue ? -1 : 1)));
@@ -3991,7 +3982,7 @@
   // you), then the rest in getTodaysJobs()'s own order -- the Up next card's.
   function todayScheduleV2() {
     const key = todayKeyV2();
-    const done = loadJobs().filter(j => j.date === key && j.status === 'done');
+    const done = thJobs.all().filter(j => j.date === key && j.status === 'done');
     return done.concat(getTodaysJobs());
   }
   function anyFinanceAccessV2() {
@@ -4001,14 +3992,14 @@
   // sums renderMetrics() shows for "This Month".
   function monthRevenueV2() {
     const now = new Date();
-    const sum = (start, end) => loadInvoices().filter(i => inRange(i.date, { start, end })).reduce((s, i) => s + (i.total || 0), 0);
+    const sum = (start, end) => thInvoices.all().filter(i => inRange(i.date, { start, end })).reduce((s, i) => s + (i.total || 0), 0);
     const revenue = sum(new Date(now.getFullYear(), now.getMonth(), 1), new Date(now.getFullYear(), now.getMonth() + 1, 0));
     const prev = sum(new Date(now.getFullYear(), now.getMonth() - 1, 1), new Date(now.getFullYear(), now.getMonth(), 0));
     return { revenue, prev, pct: prev > 0 ? Math.round((revenue - prev) / prev * 100) : null };
   }
   // The same six calendar months renderMetrics()'s sparkline draws.
   function monthlyRevenueSeriesV2(months) {
-    const all = loadInvoices();
+    const all = thInvoices.all();
     const now = new Date();
     const out = [];
     for (let i = months - 1; i >= 0; i--) {
@@ -4026,7 +4017,7 @@
   // Weekly invoiced totals, oldest first: the last `weeks` Monday-to-Sunday
   // weeks up to this one, by invoice date.
   function weeklyRevenueV2(weeks) {
-    const all = loadInvoices();
+    const all = thInvoices.all();
     const now = new Date();
     const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
     const out = [];
@@ -4052,7 +4043,7 @@
       hours = today ? today.hours : 0;
     }
     const key = todayKeyV2();
-    const todays = loadInvoices().filter(i => i.date === key);
+    const todays = thInvoices.all().filter(i => i.date === key);
     const invoiced = todays.reduce((s, i) => s + (Number(i.total) || 0), 0);
     const paid = todays.reduce((s, i) => s + getPaidAmount(i), 0);
     const ring = (value, tone, center, of, label, name) =>
@@ -4121,7 +4112,7 @@
     const donutEl = document.getElementById('insightsStatusDonut');
     if (donutEl && typeof thDonutSvg === 'function') {
       const counts = { 'not-started': 0, 'in-progress': 0, 'done': 0 };
-      loadJobs().forEach(j => { if (counts[j.status] !== undefined) counts[j.status]++; });
+      thJobs.all().forEach(j => { if (counts[j.status] !== undefined) counts[j.status]++; });
       const total = counts['not-started'] + counts['in-progress'] + counts['done'];
       donutEl.innerHTML = thDonutSvg([
         { value: counts['not-started'], tone: 'blue', label: 'Not Started' },

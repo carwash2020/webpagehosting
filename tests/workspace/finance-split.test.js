@@ -16,6 +16,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
+const { installDataLayer } = require('../data-layer-harness');
 
 const JOB_TRACKER_PATH = path.join(__dirname, '..', '..', 'tools', 'job-tracker.html');
 const FINANCE_PATH = path.join(__dirname, '..', '..', 'tools', 'finance.html');
@@ -51,10 +52,10 @@ const COST_LOOKUP_FUNCTIONS = [
 ];
 const MOVED_FUNCTIONS = [
   'renderJobProfitability',
-  'loadIncomeEntries', 'saveIncomeEntries', 'populateIncomeJobRefOptions',
+  'populateIncomeJobRefOptions',
   'addIncomeEntry', 'editIncomeEntry', 'cancelIncomeEntryEdit', 'deleteIncomeEntry',
   'clearAllIncome', 'backfillLegacyInvoicesIntoIncomeLog', 'renderIncomeEntries',
-  'buildIncomeCSV', 'exportIncomeCSV', 'loadExpenses', 'saveExpenses', 'getMileageRate',
+  'buildIncomeCSV', 'exportIncomeCSV', 'getMileageRate',
   'saveMileageRate', 'loadMileageRate', 'populateJobRefOptions', 'addExpense',
   'editExpense', 'cancelExpenseEdit', 'deleteExpense', 'clearAllExpenses',
   'renderExpenses', 'buildCSV', 'openSignedReceipt', 'exportCSV',
@@ -66,6 +67,9 @@ test('every moved function is defined in finance.html', () => {
     !new RegExp('function ' + name + '\\(').test(src)
   );
   assert.deepEqual(missing, [], 'these functions should exist in finance.html but do not: ' + missing.join(', '));
+  // Its income/expense load/save pairs became thIncome / thExpenses (data-layer.js, 2026-11-03).
+  assert.match(src, /thIncome\.all\(\)/);
+  assert.match(src, /thExpenses\.replaceAll\(/);
 });
 
 test('Cost lookup\'s functions are gone from finance.html (and never came back to job-tracker.html) since the tab left, 2026-10-31', () => {
@@ -106,9 +110,12 @@ test('none of the moved functions are CALLED from job-tracker.html anymore (not 
 
 test('job-tracker.html\'s Jobs tab still has everything it needs: loadJobs, renderJobs, addJob, computeJobMargin wrapper', () => {
   const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
-  for (const name of ['loadJobs', 'saveJobs', 'renderJobs', 'addJob', 'editJob', 'deleteJob', 'computeJobMargin', 'renderContacts', 'renderTemplates']) {
+  for (const name of ['renderJobs', 'addJob', 'editJob', 'deleteJob', 'computeJobMargin', 'renderContacts', 'renderTemplates']) {
     assert.match(src, new RegExp('function (async )?' + name + '\\('), name + ' should still be defined in job-tracker.html');
   }
+  // loadJobs/saveJobs became thJobs.all() / thJobs.replaceAll() (data-layer.js, 2026-11-03).
+  assert.match(src, /thJobs\.all\(\)/);
+  assert.match(src, /thJobs\.replaceAll\(/);
 });
 
 test('the job-card margin badge reads expense/income/invoice data via the shared data layer, not a removed local function', () => {
@@ -578,7 +585,8 @@ test('job-tracker.html\'s DOMContentLoaded init actually runs end-to-end without
     // onto the window before ANY script runs, which a plain post-
     // construction assignment can't do (the page's own top-of-file
     // script already ran and threw by the time the constructor returns).
-    beforeParse(window) { window.requireAuth = () => {}; },
+    beforeParse(window) {
+      installDataLayer(window); window.requireAuth = () => {}; },
   });
   const { window } = dom;
   window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
@@ -590,8 +598,6 @@ test('job-tracker.html\'s DOMContentLoaded init actually runs end-to-end without
   // this sandbox either -- renderJobs() calls thRead()/TH_KEYS
   // unconditionally for the margin badge, so both need a real-shaped
   // stub rather than being left undefined.
-  window.TH_KEYS = { invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
-  window.thRead = (key, fallback) => fallback;
   window.attachLongPress = () => {};
   window.wireSearchClear = () => {};
   window.attachVoiceDictation = () => {};
@@ -826,7 +832,7 @@ test('convertQuoteToInvoice finds the matching saved quote by quote number, with
   const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'invoice-generator.html'), 'utf8');
   const fn = src.match(/async function convertQuoteToInvoice\(\)[\s\S]*?showToast/);
   assert.ok(fn, 'convertQuoteToInvoice not found');
-  assert.match(fn[0], /loadQuoteLog\(\)\.find\(q => q\.quoteNumber === currentQuoteNumber\)/);
+  assert.match(fn[0], /thQuotes\.all\(\)\.find\(q => q\.quoteNumber === currentQuoteNumber\)/);
   assert.match(fn[0], /pendingSourceQuoteId = matchingQuote \? matchingQuote\.id : null/,
     'must handle the case where no saved quote matches -- clicking Convert without ever saving a quote first is a valid workflow');
 });
@@ -1111,7 +1117,8 @@ test('finance.html\'s DOMContentLoaded init actually runs to completion and rend
   const html = fs.readFileSync(FINANCE_PATH, 'utf8');
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', url: 'https://example.com/',
-    beforeParse(window) { window.requireAuth = () => {}; },
+    beforeParse(window) {
+      installDataLayer(window); window.requireAuth = () => {}; },
   });
   const { window } = dom;
   window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
@@ -1120,8 +1127,6 @@ test('finance.html\'s DOMContentLoaded init actually runs to completion and rend
   window.initSyncOnLoad = () => Promise.resolve();
   window.getCurrentUserEmail = () => null;
   window.hasDevToolsAccess = () => true;
-  window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
-  window.thRead = (key, fallback) => fallback;
   window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
   window.todayDateStrBusinessTz = () => { const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const m = {}; p.forEach(x => { m[x.type] = x.value; }); return `${m.year}-${m.month}-${m.day}`; };
   window.escapeHtml = (s) => String(s == null ? '' : s);
@@ -1336,7 +1341,8 @@ test('finance.html shows its default tab (Expenses, since Cost Lookup left on 20
   const html = fs.readFileSync(FINANCE_PATH, 'utf8');
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', url: 'https://example.com/', // deliberately no hash
-    beforeParse(window) { window.requireAuth = () => {}; },
+    beforeParse(window) {
+      installDataLayer(window); window.requireAuth = () => {}; },
   });
   const { window } = dom;
   window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
@@ -1345,8 +1351,6 @@ test('finance.html shows its default tab (Expenses, since Cost Lookup left on 20
   window.initSyncOnLoad = () => Promise.resolve();
   window.getCurrentUserEmail = () => null;
   window.hasDevToolsAccess = () => true;
-  window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
-  window.thRead = (key, fallback) => fallback;
   window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
   window.todayDateStrBusinessTz = () => { const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const m = {}; p.forEach(x => { m[x.type] = x.value; }); return `${m.year}-${m.month}-${m.day}`; };
   window.escapeHtml = (s) => String(s == null ? '' : s);
@@ -1366,7 +1370,8 @@ test('finance.html still correctly activates a DIFFERENT tab when a real hash is
   const html = fs.readFileSync(FINANCE_PATH, 'utf8');
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', url: 'https://example.com/#expenses',
-    beforeParse(window) { window.requireAuth = () => {}; },
+    beforeParse(window) {
+      installDataLayer(window); window.requireAuth = () => {}; },
   });
   const { window } = dom;
   window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
@@ -1375,8 +1380,6 @@ test('finance.html still correctly activates a DIFFERENT tab when a real hash is
   window.initSyncOnLoad = () => Promise.resolve();
   window.getCurrentUserEmail = () => null;
   window.hasDevToolsAccess = () => true;
-  window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
-  window.thRead = (key, fallback) => fallback;
   window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
   window.todayDateStrBusinessTz = () => { const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const m = {}; p.forEach(x => { m[x.type] = x.value; }); return `${m.year}-${m.month}-${m.day}`; };
   window.escapeHtml = (s) => String(s == null ? '' : s);
@@ -1402,7 +1405,8 @@ test('an old finance.html#cost (account without Invoices) or #inventory link, or
     virtualConsole.on('jsdomError', (e) => { if (/navigation/i.test(e.message)) navigations.push(e.message); });
     const dom = new JSDOM(html, {
       runScripts: 'dangerously', url, virtualConsole,
-      beforeParse(window) { window.requireAuth = () => {}; window.canManageInvoices = () => canInvoice; if (remembered) window.localStorage.setItem('th_finance_tab', remembered); },
+      beforeParse(window) {
+      installDataLayer(window); window.requireAuth = () => {}; window.canManageInvoices = () => canInvoice; if (remembered) window.localStorage.setItem('th_finance_tab', remembered); },
     });
     const { window } = dom;
     window.initAppTour = () => {};
@@ -1410,8 +1414,6 @@ test('an old finance.html#cost (account without Invoices) or #inventory link, or
     window.showConfirm = () => Promise.resolve(true);
     window.initSyncOnLoad = () => Promise.resolve();
     window.getCurrentUserEmail = () => null;
-    window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
-    window.thRead = (key, fallback) => fallback;
     window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
     window.todayDateStrBusinessTz = () => '2026-10-31';
     window.escapeHtml = (s) => String(s == null ? '' : s);
@@ -1441,7 +1443,8 @@ test('job-tracker.html shows its default tab (Jobs) on a normal, hash-less load,
   ]) {
     const dom = new JSDOM(html, {
       runScripts: 'dangerously', url,
-      beforeParse(window) { window.requireAuth = () => {}; },
+      beforeParse(window) {
+      installDataLayer(window); window.requireAuth = () => {}; },
     });
     const { window } = dom;
   window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
@@ -1449,12 +1452,9 @@ test('job-tracker.html shows its default tab (Jobs) on a normal, hash-less load,
     window.showConfirm = () => Promise.resolve(true);
     window.initSyncOnLoad = () => Promise.resolve();
     window.getCurrentUserEmail = () => null;
-    window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
-    window.thRead = (key, fallback) => fallback;
     // renderJobs() now reads through the thJobs seam (Item 1 Phase 2a,
     // 2026-10-13) -- data-layer.js (the real thJobs) isn't loaded in this
     // minimal sandbox, same as the other th*/window stubs just above.
-    window.thJobs = { list: () => ({ rows: [], nextCursor: null }), get: () => null, create: (row) => row, update: () => null, remove: () => false };
     window.attachLongPress = () => {};
     window.wireSearchClear = () => {};
     window.attachVoiceDictation = () => {};
@@ -1510,7 +1510,8 @@ test('the error banner actually appears and shows the real error message when in
   const html = fs.readFileSync(FINANCE_PATH, 'utf8');
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', url: 'https://example.com/',
-    beforeParse(window) { window.requireAuth = () => {}; },
+    beforeParse(window) {
+      installDataLayer(window); window.requireAuth = () => {}; },
   });
   const { window } = dom;
   window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
@@ -1573,7 +1574,8 @@ test('the full expense lifecycle (add, highlight, edit, cancel, re-render) works
   const html = fs.readFileSync(FINANCE_PATH, 'utf8');
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', url: 'https://example.com/',
-    beforeParse(window) { window.requireAuth = () => {}; },
+    beforeParse(window) {
+      installDataLayer(window); window.requireAuth = () => {}; },
   });
   const { window } = dom;
   window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
@@ -1583,8 +1585,6 @@ test('the full expense lifecycle (add, highlight, edit, cancel, re-render) works
   window.showAlert = async () => {};
   window.initSyncOnLoad = () => Promise.resolve();
   window.getCurrentUserEmail = () => 'connor@triplehenterprisesllc.biz';
-  window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
-  window.thRead = (key, fallback) => fallback;
   window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
   window.todayDateStrBusinessTz = () => { const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const m = {}; p.forEach(x => { m[x.type] = x.value; }); return `${m.year}-${m.month}-${m.day}`; };
   window.escapeHtml = (s) => String(s == null ? '' : s);
@@ -1618,7 +1618,8 @@ test('the full income lifecycle (add, highlight, edit, cancel, re-render) also w
   const html = fs.readFileSync(FINANCE_PATH, 'utf8');
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', url: 'https://example.com/',
-    beforeParse(window) { window.requireAuth = () => {}; },
+    beforeParse(window) {
+      installDataLayer(window); window.requireAuth = () => {}; },
   });
   const { window } = dom;
   window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
@@ -1628,8 +1629,6 @@ test('the full income lifecycle (add, highlight, edit, cancel, re-render) also w
   window.showAlert = async () => {};
   window.initSyncOnLoad = () => Promise.resolve();
   window.getCurrentUserEmail = () => null;
-  window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
-  window.thRead = (key, fallback) => fallback;
   window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
   window.todayDateStrBusinessTz = () => { const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const m = {}; p.forEach(x => { m[x.type] = x.value; }); return `${m.year}-${m.month}-${m.day}`; };
   window.escapeHtml = (s) => String(s == null ? '' : s);
@@ -1671,7 +1670,8 @@ test('selecting Mileage as the expense type actually shows the Miles field and h
   const html = fs.readFileSync(FINANCE_PATH, 'utf8');
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', url: 'https://example.com/',
-    beforeParse(window) { window.requireAuth = () => {}; },
+    beforeParse(window) {
+      installDataLayer(window); window.requireAuth = () => {}; },
   });
   const { window } = dom;
   window.initAppTour = () => {}; // real fn lives in the external tools-tour.js, not loaded in this minimal sandbox
@@ -1679,8 +1679,6 @@ test('selecting Mileage as the expense type actually shows the Miles field and h
   window.showConfirm = () => Promise.resolve(true);
   window.initSyncOnLoad = () => Promise.resolve();
   window.getCurrentUserEmail = () => null;
-  window.TH_KEYS = { jobs: 'th_tracker_jobs', invoices: 'th_invoices', expenses: 'th_expense_log', income: 'th_income_log' };
-  window.thRead = (key, fallback) => fallback;
   window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
   window.todayDateStrBusinessTz = () => { const p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Denver', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const m = {}; p.forEach(x => { m[x.type] = x.value; }); return `${m.year}-${m.month}-${m.day}`; };
   window.escapeHtml = (s) => String(s == null ? '' : s);
@@ -2142,7 +2140,8 @@ test('a genuinely thrown error inside runway-dashboard.html\'s real init is caug
   const navPwaSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'tools-nav-pwa.js'), 'utf8');
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', url: 'https://example.com/tools/runway-dashboard.html',
-    beforeParse(window) { window.requireAuth = () => {}; window.HTMLElement.prototype.scrollIntoView = () => {}; },
+    beforeParse(window) {
+      installDataLayer(window); window.requireAuth = () => {}; window.HTMLElement.prototype.scrollIntoView = () => {}; },
   });
   const { window } = dom;
   window.HTMLCanvasElement.prototype.getContext = () => ({
@@ -2179,7 +2178,8 @@ test('the tour still renders correctly (including the visual highlight) on a pag
   const navPwaSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'tools-nav-pwa.js'), 'utf8');
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', url: 'https://example.com/tools/runway-dashboard.html',
-    beforeParse(window) { window.requireAuth = () => {}; window.HTMLElement.prototype.scrollIntoView = () => {}; },
+    beforeParse(window) {
+      installDataLayer(window); window.requireAuth = () => {}; window.HTMLElement.prototype.scrollIntoView = () => {}; },
   });
   const { window } = dom;
   window.HTMLCanvasElement.prototype.getContext = () => ({
@@ -2366,6 +2366,7 @@ test('the jsPDF-not-ready guard actually works end to end: shows the real alert 
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', url: 'https://example.com/tools/invoice-generator.html',
     beforeParse(window) {
+      installDataLayer(window);
       window.eval(PDF_LAYOUT_SRC);
       window.requireAuth = () => {};
       window.HTMLElement.prototype.scrollIntoView = () => {};
@@ -2441,6 +2442,7 @@ function testTopLevelInitNoLongerThrows(pageFile, pagePath, tourStepIndex, extra
     const dom = new JSDOM(html, {
       runScripts: 'dangerously', url: 'https://example.com/tools/' + pageFile,
       beforeParse(window) {
+      installDataLayer(window);
         window.requireAuth = () => {};
         window.HTMLElement.prototype.scrollIntoView = () => {};
         window.money = (n) => '$' + (Number(n) || 0).toFixed(2);
@@ -2602,6 +2604,7 @@ test('the tour card gets real, correct styling on runway-dashboard.html now -- p
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', url: 'https://example.com/tools/runway-dashboard.html',
     beforeParse(window) {
+      installDataLayer(window);
       window.requireAuth = () => {};
       window.HTMLElement.prototype.scrollIntoView = () => {};
       window.HTMLCanvasElement.prototype.getContext = () => ({
@@ -3108,6 +3111,7 @@ test('generatePDF() completes all the way through to resetInvoiceForm() without 
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', url: 'https://example.com/tools/invoice-generator.html',
     beforeParse(window) {
+      installDataLayer(window);
       window.eval(PDF_LAYOUT_SRC);
       window.requireAuth = () => {};
       window.HTMLElement.prototype.scrollIntoView = () => {};
@@ -3217,6 +3221,7 @@ test('generateQuotePDF() completes all the way through to resetQuoteForm() witho
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', url: 'https://example.com/tools/invoice-generator.html',
     beforeParse(window) {
+      installDataLayer(window);
       window.eval(PDF_LAYOUT_SRC);
       window.requireAuth = () => {};
       window.HTMLElement.prototype.scrollIntoView = () => {};
