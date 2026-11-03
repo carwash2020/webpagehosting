@@ -52,7 +52,7 @@
     document.documentElement.style.colorScheme = saved === 'light' ? 'light' : 'dark';
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=f201d6d01a">
+<link rel="stylesheet" href="/styles.css?v=df34dcbf74">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=f212452f48">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=cf58a92104" defer></script>
@@ -62,7 +62,7 @@
 <script src="/signature-pad.js?v=f95f8e1d28" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=2cf0b2f75c" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=c189cd58b4" defer></script>
 <script src="/tools/tools-command-palette.js?v=479d6a96e7" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <!-- U15/W18 fix (High-Impact Upgrades, Master Audit, 2026-09-08): the
@@ -663,7 +663,7 @@
     <button type="button" class="help-btn" onclick="activateGenTab('recent')" aria-label="Back to Invoices" title="Back to Invoices"><svg class="th-icon" aria-hidden="true"><use href="#icon-chevron" xlink:href="#icon-chevron"></use></svg></button>
   </div>
   <div class="hub-header-left">
-    <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
+    <img src="/images/logo-signature-orange.webp?v=adc4d42660" alt="Triple H Enterprises">
     <span class="hub-title" id="mainContent">Invoices</span>
   </div>
   <div class="hub-header-right">
@@ -4283,7 +4283,7 @@
     const brandLabel = (savedCardInfo.brand || 'card').charAt(0).toUpperCase() + (savedCardInfo.brand || 'card').slice(1);
     area.innerHTML =
       '<div class="pos-saved-card-box">' +
-      '<div><div class="pos-card-label">' + escapeHtmlPos(brandLabel) + ' ending in ' + escapeHtmlPos(savedCardInfo.last4) + '</div>' +
+      '<div><div class="pos-card-label">' + escapeHtml(brandLabel) + ' ending in ' + escapeHtml(savedCardInfo.last4) + '</div>' +
       '<div class="pos-card-sub">Saved from a previous payment</div></div>' +
       '</div>' +
       '<button class="primary-btn" id="posChargeSavedBtn" style="width:100%; justify-content:center;" onclick="chargeSavedCard()">Charge Saved Card</button>' +
@@ -4346,12 +4346,6 @@
   // which loaded no shared script providing one; kept here rather than
   // swapped for tools-dialogs.js's escapeHtml() so the moved code stays
   // verbatim and its tests keep reading the same text.
-  function escapeHtmlPos(str) {
-    const div = document.createElement('div');
-    div.textContent = String(str == null ? '' : str);
-    return div.innerHTML;
-  }
-
   function readAmountAndDescription() {
     const email = document.getElementById('posClientEmail').value.trim();
     const amount = parseFloat(document.getElementById('posAmount').value);

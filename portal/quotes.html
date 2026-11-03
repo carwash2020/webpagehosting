@@ -46,7 +46,7 @@
 <link rel="shortcut icon" href="/favicon.ico">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="/images/favicon-192.png?v=202608010300">
+<link rel="icon" type="image/png" sizes="192x192" href="/images/favicon-192.png?v=8412b86ece">
 <link rel="manifest" href="/portal/manifest.json">
 <script>
   // Service worker registration (2026-09-04) -- provides both offline
@@ -62,13 +62,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Triple H">
-<link rel="apple-touch-icon" href="/images/apple-touch-icon.png?v=202608010300">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png?v=2612e812ab">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="/styles.css?v=f201d6d01a">
-<link rel="stylesheet" href="/portal/portal-app.css?v=202609230030">
+<link rel="stylesheet" href="/styles.css?v=df34dcbf74">
+<link rel="stylesheet" href="/portal/portal-app.css?v=b99f53bc6f">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -107,7 +107,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=f212452f48">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous"></script>
-<script src="/portal/portal-app.js?v=202611011200"></script>
+<script src="/portal/portal-app.js?v=3b49bb66f2"></script>
 <!-- Shared business-hours data (2026-09-03) -- see business-hours.js's
      own header comment. This page used to keep its own hand-copied
      duplicate of these exact constants ("keep these in sync manually
@@ -331,7 +331,7 @@
      stay in the markup (Sign out shows in the rail and Settings). -->
 <div class="portal-header portal-appbar">
   <div class="portal-header-left">
-    <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
+    <img src="/images/logo-signature-orange.webp?v=adc4d42660" alt="Triple H Enterprises">
     <div>
       <div class="portal-kicker">Review + approve</div>
       <div class="portal-title">Estimates</div>
@@ -355,7 +355,7 @@
      the five-tab bar and must stay exactly five links. -->
 <div class="portal-rail">
   <a class="portal-rail-brand" href="/portal/home.html">
-    <img src="/images/logo-signature-orange.webp?v=202608142300" alt="">
+    <img src="/images/logo-signature-orange.webp?v=adc4d42660" alt="">
     <span><span class="portal-rail-name">Triple H</span><span class="portal-rail-tag">Client portal</span></span>
   </a>
   <nav class="portal-nav" aria-label="Primary">
@@ -406,11 +406,7 @@
   // throughout /tools/ and portal/dashboard.html) -- reimplemented
   // here rather than shared, since this page deliberately loads none
   // of the internal scripts.
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = String(str == null ? '' : str);
-    return div.innerHTML;
-  }
+  // escapeHtml() lives in portal-app.js (one copy for every portal page).
 
   function renderLineItemsTable(items) {
     if (!Array.isArray(items) || !items.length) return '';

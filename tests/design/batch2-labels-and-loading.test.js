@@ -116,11 +116,16 @@ test('pdfLoadJsPdf adds one pinned, SRI-checked script, shares it across clicks,
 
 test('both service workers precache the orange logo at the exact URL pages request', () => {
   const used = new Set();
-  for (const page of PAGES) for (const m of read(page).matchAll(/\/images\/logo-signature-orange\.webp(\?v=[0-9]+)?/g)) used.add(m[0]);
-  assert.deepEqual([...used], ['/images/logo-signature-orange.webp?v=202608142300'], 'one URL across the Workspace and portal');
+  for (const page of PAGES) for (const m of read(page).matchAll(/\/images\/logo-signature-orange\.webp(\?v=[A-Za-z0-9]+)?/g)) used.add(m[0]);
+  // The stamp is the image's content hash since 2026-11-03 (every local ?v=
+  // is; tests/scripts/every-local-stamp-is-a-content-hash.test.js), not a
+  // hand-picked timestamp -- so derive it rather than pin one.
+  const hash = require('crypto').createHash('sha256').update(fs.readFileSync(path.join(__dirname, '..', '..', 'images', 'logo-signature-orange.webp'))).digest('hex').slice(0, 10);
+  const url = '/images/logo-signature-orange.webp?v=' + hash;
+  assert.deepEqual([...used], [url], 'one URL across the Workspace and portal');
   for (const sw of ['service-worker.js', 'portal/service-worker.js']) {
     const src = read(sw);
-    assert.ok(src.includes("'/images/logo-signature-orange.webp?v=202608142300'"), sw);
+    assert.ok(src.includes("'" + url + "'"), sw);
     assert.ok(!src.includes("'/images/logo-signature-orange.webp'"), `${sw}: no bare copy nobody requests`);
   }
 });

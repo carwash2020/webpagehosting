@@ -68,7 +68,8 @@ function makeChartSandbox(prebuiltCardIds = []) {
   const niceMaxFn = extractFn(DASHBOARD, 'niceChartMax');
   const renderFn = extractFn(DASHBOARD, 'renderInvoiceChart');
   const highlightFn = extractFn(DASHBOARD, 'highlightInvoiceCard');
-  const escapeHtmlFn = extractFn(DASHBOARD, 'escapeHtml');
+  // escapeHtml() moved to portal-app.js (one copy for every portal page, 2026-11-03).
+  const escapeHtmlFn = extractFn(fs.readFileSync(path.join(__dirname, '..', '..', 'portal', 'portal-app.js'), 'utf8'), 'escapeHtml');
   const formatCurrencyFn = extractFn(DASHBOARD, 'formatCurrency');
   vm.runInContext(`
     const CHART_BAR_WIDTH = 22;

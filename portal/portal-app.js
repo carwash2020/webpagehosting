@@ -12,6 +12,16 @@
 // (invoice-card, job-card, quote-card, wo-card, set-card), and
 // building a pixel-matched skeleton per page would be considerably
 // more work for a perceptual improvement that doesn't need it.
+// The portal's one HTML escaper (2026-11-03, handoff §2: one copy of each
+// helper). Seven pages each carried this exact function; portal-app.js
+// loads (not deferred) before every page's own script, so it is in scope
+// wherever they used it.
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = String(str == null ? '' : str);
+  return div.innerHTML;
+}
+
 function portalSkeletonCards(count) {
   const card =
     '<div class="skeleton-card">' +
