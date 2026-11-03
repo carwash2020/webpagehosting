@@ -307,6 +307,93 @@ const SYNC_KNOWN_AT_KEY = 'th_sync_known_at';
 // Every device auto-uses this same fixed code so sync just works silently.
 const DEFAULT_SYNC_CODE = 'tripleh-workspace-2026';
 
+// ---------------------------------------------------------------------------
+// SCOPED SYNC (handoff 2026-11-03 §2, Phase 2.4; sql/sync/01_scoped_workspace_sync.sql)
+//
+// The blob is split into two rows and the DATABASE decides, per signed-in
+// person, which ones they can read or write: 'scope:ops' for any account in
+// account_roles, 'scope:money' (the keys below) only with can_view_finance
+// or can_manage_invoices. This file no longer asks for a row by a shared
+// code to find its data -- it reads every row RLS shows this account,
+// merges them, and writes each key back to its own scope's row.
+//
+// Transition, so no device's data is stranded:
+//   * Until the SQL is applied (no `scope` column yet) everything works
+//     exactly as before, on the old row alone.
+//   * Afterwards, an account that can see money also keeps writing the
+//     old row (SYNC_LEGACY_DUAL_WRITE) so a device still on an older build,
+//     which only knows that row, stays in step. An account without money
+//     access can't see the old row (it holds money data) and never writes
+//     it -- it doesn't hold the money keys, so its whole-blob write would
+//     blank them.
+//   * Reads merge the old row first, then the scoped rows, so whatever an
+//     older device wrote to the old row is never lost.
+// Retiring the old row (stop the dual-write, then remove it) is a later,
+// separate step, once every device is on this build.
+//
+// Must match public.workspace_sync_money_keys() in the SQL
+// (tests/sync/scoped-workspace-sync-db.test.js). Every other key is ops.
+const SYNC_MONEY_KEYS = [
+  'th_expense_tombstones', 'th_expense_log',
+  'th_income_tombstones', 'th_income_log',
+  'th_invoice_tombstones', 'th_invoices',
+  'th_quote_tombstones', 'th_quotes',
+  'th_tax_rate', 'th_tax_labor', 'th_tax_parts', 'th_setaside_rate',
+  'rd_personal-expenses', 'rd_personal-income', 'rd_budget-settings',
+  'rd_business-months', 'rd_emergency-fund', 'rd_debts',
+  'th_graveyard', 'th_sync_conflicts',
+];
+const SYNC_SCOPE_CODES = { ops: 'scope:ops', money: 'scope:money' };
+const SYNC_LEGACY_DUAL_WRITE = true;
+
+function syncScopeOfKey(k) { return SYNC_MONEY_KEYS.includes(k) ? 'money' : 'ops'; }
+function syncKeysOfScope(scope) { return SYNC_DATA_KEYS.filter(k => syncScopeOfKey(k) === scope); }
+function pickSyncKeys(data, keys) {
+  const out = {};
+  keys.forEach(k => { if (data[k] !== undefined) out[k] = data[k]; });
+  return out;
+}
+
+// Every workspace_sync row this account may see. Before the SQL is applied
+// the `scope` column doesn't exist, the request is a 400, and this falls
+// back to the old row by its code. Returns { ok, scoped (true once the
+// split rows exist), legacy (row or null), rows: { ops, money } }, or
+// { ok: false, error }.
+async function fetchVisibleSyncRows(code) {
+  const headers = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}` };
+  const legacyOnly = async () => {
+    const legacyRes = await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${SYNC_TABLE}?code=eq.${encodeURIComponent(code)}&select=data,updated_at`, { headers });
+    if (!legacyRes.ok) return { ok: false, error: 'http-' + legacyRes.status };
+    const legacyRows = await legacyRes.json();
+    return { ok: true, scoped: false, legacy: (Array.isArray(legacyRows) && legacyRows[0]) || null, rows: {} };
+  };
+  const res = await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${SYNC_TABLE}?select=code,scope,data,updated_at`, { headers });
+  if (res.status === 400) return legacyOnly(); // no `scope` column yet: the SQL isn't applied
+  if (!res.ok) return { ok: false, error: 'http-' + res.status };
+  const all = await res.json();
+  const rows = {};
+  (Array.isArray(all) ? all : []).forEach(r => { if (r && (r.scope === 'ops' || r.scope === 'money') && r.code === SYNC_SCOPE_CODES[r.scope]) rows[r.scope] = r; });
+  const legacy = (Array.isArray(all) ? all : []).find(r => r && r.code === code && !r.scope) || null;
+  // Nothing recognisable came back: ask for the old row by its code, the
+  // way this always worked, rather than conclude there's no data.
+  if (!rows.ops && !rows.money && !legacy) return legacyOnly();
+  return { ok: true, scoped: !!(rows.ops || rows.money), legacy, rows };
+}
+
+// Old row first, then each scoped row's own keys only.
+function applyVisibleSyncRows(visible) {
+  if (visible.legacy) applySyncData(visible.legacy.data);
+  ['ops', 'money'].forEach(scope => {
+    const r = visible.rows[scope];
+    if (r) applySyncData(r.data, syncKeysOfScope(scope));
+  });
+}
+
+function latestVisibleUpdatedAt(visible) {
+  const stamps = [visible.legacy, visible.rows.ops, visible.rows.money].filter(Boolean).map(r => r.updated_at).filter(Boolean);
+  return stamps.sort().pop() || null;
+}
+
 // typeof first (2026-09-30): if supabase-config.js didn't load, this says
 // "not configured" instead of throwing a ReferenceError out of every
 // fire-and-forget mirror call (the Graveyard restore's among them).
@@ -866,54 +953,44 @@ async function pushSync() {
     if (!fresh) { recordSyncStatus('push', false, 'session-expired'); return { ok: false, error: 'session-expired' }; }
   }
 
-  // Real fix for the whole-blob "last write wins" gap: this used to POST
-  // collectSyncData() -- local's current state, whatever it happened to
-  // be -- straight over the server row, unconditionally, with no merge
-  // of any kind. Two devices editing different records (or even different
-  // fields of the same record) without an intervening pull meant whichever
-  // one pushed last silently discarded everything the other had already
-  // gotten onto the server. Pulling and merging the current server row
-  // in first, the exact same per-record/per-field merge pullSync() itself
-  // uses, means a push now behaves like "sync," not "overwrite" -- the
-  // worst case left is two edits to the SAME field of the SAME record in
-  // the tiny window between this GET and the POST below, which is exactly
-  // what mergeRecordArrays' conflict log exists to make visible rather
-  // than eliminate outright.
+  // Merge what's on the server first (see the merge-before-write comment
+  // above), from every row this account may see (SCOPED SYNC, above).
+  let visible = null;
   try {
-    const currentRes = await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${SYNC_TABLE}?code=eq.${encodeURIComponent(code)}&select=data,updated_at`, {
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${getAuthToken()}`,
-      },
-    });
-    if (currentRes.ok) {
-      const currentRows = await currentRes.json();
-      if (currentRows.length) applySyncData(currentRows[0].data);
-    }
+    visible = await fetchVisibleSyncRows(code);
+    if (visible.ok) applyVisibleSyncRows(visible);
   } catch (e) {
-    // Couldn't reach the server to merge first -- fall back to pushing
-    // local's current state as-is rather than blocking the push entirely.
-    // Same risk as before this fix existed, not a new one introduced by it.
+    // A failed merge-read shouldn't block the write; same as before.
   }
 
   const nowIso = new Date().toISOString();
-  const body = [{ code, data: collectSyncData(), updated_at: nowIso }];
+  const all = collectSyncData();
+  const scoped = !!(visible && visible.ok && visible.scoped);
+  let body;
+  let pushedKeys;
+  if (!scoped) {
+    // Old server (no split rows yet) -- or the read failed: the old row, as before.
+    body = [{ code, data: all, updated_at: nowIso }];
+    pushedKeys = SYNC_DATA_KEYS;
+  } else {
+    body = [];
+    pushedKeys = [];
+    ['ops', 'money'].forEach(scope => {
+      if (!visible.rows[scope]) return; // not this account's to write
+      const keys = syncKeysOfScope(scope);
+      body.push({ code: SYNC_SCOPE_CODES[scope], scope, data: pickSyncKeys(all, keys), updated_at: nowIso });
+      pushedKeys = pushedKeys.concat(keys);
+    });
+    if (SYNC_LEGACY_DUAL_WRITE && visible.rows.money) {
+      body.push({ code, scope: null, data: all, updated_at: nowIso });
+      pushedKeys = SYNC_DATA_KEYS;
+    }
+    if (!body.length) { recordSyncStatus('push', false, 'no-rows-visible'); return { ok: false, error: 'no-rows-visible' }; }
+  }
 
   try {
     const res = await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${SYNC_TABLE}?on_conflict=code`, {
       method: 'POST',
-      // NOT keepalive: true anymore -- that flag caps the total request
-      // body at a hard 64 KiB (part of the Fetch spec itself, not a
-      // Supabase or CSP thing), and the combined synced payload now
-      // regularly exceeds that once Appliance Wiki's data was added to
-      // it. Every push was silently failing with a generic "Failed to
-      // fetch" and zero console detail -- keepalive wasn't protecting
-      // anything at that point anyway, since the oversized request
-      // failed outright regardless of whether the tab was closing or
-      // not. The real tradeoff being accepted by removing it: a push
-      // that's in flight at the exact instant the tab closes may now
-      // get cancelled instead of completing in the background. That's
-      // a rare edge case; failing every single push was not.
       headers: {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_ANON_KEY,
@@ -923,16 +1000,11 @@ async function pushSync() {
       body: JSON.stringify(body),
     });
     if (!res.ok) { recordSyncStatus('push', false, 'http-' + res.status); return { ok: false, error: 'http-' + res.status }; }
-    saveSyncBaseFromPushed(body[0].data, SYNC_DATA_KEYS);
+    saveSyncBaseFromPushed(all, pushedKeys);
     localStorage.setItem(SYNC_KNOWN_AT_KEY, nowIso);
     recordSyncStatus('push', true);
     return { ok: true };
   } catch (e) {
-    // Was previously a hardcoded 'network' string for every possible
-    // failure -- a genuine outage, a CORS block, a CSP violation, a DNS
-    // failure, all looked identical and impossible to diagnose remotely.
-    // Capturing the real message means the next failure is actually
-    // readable instead of just "network."
     const detail = 'network: ' + (e && e.message ? e.message : String(e));
     recordSyncStatus('push', false, detail);
     return { ok: false, error: detail };
@@ -949,18 +1021,14 @@ async function pullSync() {
   }
 
   try {
-    const res = await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${SYNC_TABLE}?code=eq.${encodeURIComponent(code)}&select=data,updated_at`, {
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${getAuthToken()}`,
-      },
-    });
-    if (!res.ok) { recordSyncStatus('pull', false, 'http-' + res.status); return { ok: false, error: 'http-' + res.status }; }
-    const rows = await res.json();
-    if (!rows.length) { recordSyncStatus('pull', false, 'no-data-yet'); return { ok: false, error: 'no-data-yet' }; }
+    // Every row this account may see (SCOPED SYNC, above), old row first.
+    const visible = await fetchVisibleSyncRows(code);
+    if (!visible.ok) { recordSyncStatus('pull', false, visible.error); return { ok: false, error: visible.error }; }
+    if (!visible.legacy && !visible.scoped) { recordSyncStatus('pull', false, 'no-data-yet'); return { ok: false, error: 'no-data-yet' }; }
 
-    applySyncData(rows[0].data);
-    localStorage.setItem(SYNC_KNOWN_AT_KEY, rows[0].updated_at);
+    applyVisibleSyncRows(visible);
+    const knownAt = latestVisibleUpdatedAt(visible);
+    if (knownAt) localStorage.setItem(SYNC_KNOWN_AT_KEY, knownAt);
     recordSyncStatus('pull', true);
     return { ok: true };
   } catch (e) {
@@ -2174,7 +2242,9 @@ function startRealtimeSync(onRemoteChange, onStatusChange) {
       .channel('workspace-sync-' + code)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'workspace_sync', filter: `code=eq.${code}` },
+        // Every workspace_sync row this account may see (RLS applies to
+        // Realtime too): the old row and both scoped rows (Phase 2.4).
+        { event: '*', schema: 'public', table: 'workspace_sync' },
         async (payload) => {
           // Wrapped in try/catch and logged explicitly, rather than
           // relying on the browser's own window.onerror to catch a

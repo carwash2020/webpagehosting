@@ -280,33 +280,15 @@ async function claimPosCharge(paymentIntentId: string): Promise<boolean> {
 // from 'invoice'-origin entries (which link back to a real invoice
 // row) -- a POS sale deliberately has neither an invoiceId nor a
 // jobRefId, since the whole point is skipping the invoice step.
+// Rows holding the money keys (handoff 2026-11-03 Phase 2.4,
+// sql/sync/01_scoped_workspace_sync.sql): the old whole-blob row, which
+// devices on older builds still read, and the scoped money row. Every
+// money write goes to both while the old row is still in use; a row that
+// doesn't exist yet (the SQL not applied) is skipped. The entry written is
+// built once, so both rows carry the same record with the same id.
+const MONEY_SYNC_CODES = ["tripleh-workspace-2026", "scope:money"];
+
 async function logPosIncomeToWorkspaceSync(description: string, amount: number, clientLabel: string, internalAccountEmail: string, stripePaymentIntentId: string) {
-  const syncRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026&select=data`,
-    { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
-  );
-  if (!syncRes.ok) {
-    // The Stripe charge itself already succeeded by the time this runs --
-    // logged so a real POS sale that never made it into the income log
-    // is at least visible for manual reconciliation, instead of the
-    // register operator seeing "charge succeeded" on screen with no
-    // sign anything is actually missing from the books.
-    console.error(`Failed to read workspace_sync for POS charge (PaymentIntent ${stripePaymentIntentId}): ${await syncRes.text().catch(() => "")}`);
-    return;
-  }
-  const syncRows = await syncRes.json();
-  if (!syncRows.length) return;
-  const blob = syncRows[0].data;
-  const incomeLog = JSON.parse(blob.th_income_log || "[]");
-  // Idempotent on the PaymentIntent id -- Stripe sends
-  // payment_intent.succeeded to stripe-webhook for EVERY successful
-  // charge regardless of how it was confirmed, including one already
-  // confirmed synchronously right here (the 'charge_saved' path knows
-  // the real outcome immediately and logs it directly, without
-  // waiting on the webhook at all). Without this check, that same
-  // charge would be logged twice -- once here, once again when the
-  // webhook's own pos_charge handling sees the same event.
-  if (incomeLog.some((entry: any) => entry.stripePaymentIntentId === stripePaymentIntentId)) return;
   // toISOString() is always UTC -- the business runs on America/Denver
   // time, 6-7 hours behind, so a POS sale rung up in the evening would
   // otherwise get logged under tomorrow's date in the income log.
@@ -315,7 +297,7 @@ async function logPosIncomeToWorkspaceSync(description: string, amount: number, 
   }).formatToParts(new Date());
   const posDateMap: Record<string, string> = {};
   posDateParts.forEach((p) => { posDateMap[p.type] = p.value; });
-  incomeLog.push({
+  const entry = {
     id: Date.now(),
     date: `${posDateMap.year}-${posDateMap.month}-${posDateMap.day}`,
     desc: description || "POS sale",
@@ -328,15 +310,44 @@ async function logPosIncomeToWorkspaceSync(description: string, amount: number, 
     stripePaymentIntentId,
     createdBy: internalAccountEmail,
     lastEditedBy: internalAccountEmail,
-  });
-  blob.th_income_log = JSON.stringify(incomeLog);
-  const posSyncPatchRes = await fetch(`${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026`, {
-    method: "PATCH",
-    headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ data: blob, updated_at: new Date().toISOString() }),
-  });
-  if (!posSyncPatchRes.ok) {
-    console.error(`Failed to log POS income for PaymentIntent ${stripePaymentIntentId}: ${await posSyncPatchRes.text().catch(() => "")}`);
+  };
+  for (const code of MONEY_SYNC_CODES) {
+    const syncRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.${encodeURIComponent(code)}&select=data`,
+      { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+    );
+    if (!syncRes.ok) {
+      // The Stripe charge itself already succeeded by the time this runs --
+      // logged so a real POS sale that never made it into the income log
+      // is at least visible for manual reconciliation, instead of the
+      // register operator seeing "charge succeeded" on screen with no
+      // sign anything is actually missing from the books.
+      console.error(`Failed to read workspace_sync (${code}) for POS charge (PaymentIntent ${stripePaymentIntentId}): ${await syncRes.text().catch(() => "")}`);
+      continue;
+    }
+    const syncRows = await syncRes.json();
+    if (!syncRows.length) continue;
+    const blob = syncRows[0].data || {};
+    const incomeLog = JSON.parse(blob.th_income_log || "[]");
+    // Idempotent on the PaymentIntent id -- Stripe sends
+    // payment_intent.succeeded to stripe-webhook for EVERY successful
+    // charge regardless of how it was confirmed, including one already
+    // confirmed synchronously right here (the 'charge_saved' path knows
+    // the real outcome immediately and logs it directly, without
+    // waiting on the webhook at all). Without this check, that same
+    // charge would be logged twice -- once here, once again when the
+    // webhook's own pos_charge handling sees the same event.
+    if (incomeLog.some((e: any) => e.stripePaymentIntentId === stripePaymentIntentId)) continue;
+    incomeLog.push(entry);
+    blob.th_income_log = JSON.stringify(incomeLog);
+    const posSyncPatchRes = await fetch(`${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.${encodeURIComponent(code)}`, {
+      method: "PATCH",
+      headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ data: blob, updated_at: new Date().toISOString() }),
+    });
+    if (!posSyncPatchRes.ok) {
+      console.error(`Failed to log POS income (${code}) for PaymentIntent ${stripePaymentIntentId}: ${await posSyncPatchRes.text().catch(() => "")}`);
+    }
   }
 }
 

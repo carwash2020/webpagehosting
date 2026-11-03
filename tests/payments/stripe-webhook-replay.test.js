@@ -71,8 +71,13 @@ async function fakeFetch(url, init = {}) {
     return json(rows[0].r);
   }
   if (u.pathname === '/rest/v1/workspace_sync') {
-    if (method === 'GET') return json(ctx.blob ? [{ data: ctx.blob }] : []);
-    if (method === 'PATCH') { ctx.blob = JSON.parse(init.body).data; return new Response(null, { status: 204 }); }
+    // One row per code, as in the database: ctx.blob is the old whole-blob
+    // row, ctx.moneyBlob the scoped money row (absent until the 2026-11-03
+    // scoped-sync SQL is applied, which the webhook must tolerate).
+    const code = (u.searchParams.get('code') || '').replace(/^eq\./, '');
+    const slot = code === 'scope:money' ? 'moneyBlob' : 'blob';
+    if (method === 'GET') return json(ctx[slot] ? [{ data: ctx[slot] }] : []);
+    if (method === 'PATCH') { ctx[slot] = JSON.parse(init.body).data; return new Response(null, { status: 204 }); }
   }
   if (u.pathname === '/functions/v1/Send-Push') { ctx.pushes.push(JSON.parse(init.body)); return json({ ok: true }); }
   if (u.host === 'api.resend.com') { ctx.emails.push(JSON.parse(init.body)); return json({ id: 'email_fake' }); }
@@ -104,6 +109,7 @@ after(async () => {
 
 async function fresh() {
   ctx.db = await h.buildDb();
+  ctx.moneyBlob = null;
   ctx.blob = { th_invoices: JSON.stringify([
     { id: 101, total: 150, paid: false, paidAmount: 0 },
     { id: 102, total: 40, paid: false, paidAmount: 0 },
@@ -175,6 +181,17 @@ test('POS: first delivery logs income and sends the receipt; a second event for 
   assert.equal(log[0].stripePaymentIntentId, 'pi_pos');
   assert.equal(ctx.emails.length, 1);
   assert.equal(ctx.emails[0].to, 'walkin@example.com');
+});
+
+test('POS with the scoped money row present: the sale lands once in each row, as the same entry', async () => {
+  await fresh();
+  ctx.moneyBlob = {};
+  await deliver('pi_succeeded_pos');
+  const legacy = JSON.parse(ctx.blob.th_income_log);
+  const money = JSON.parse(ctx.moneyBlob.th_income_log);
+  assert.equal(legacy.length, 1);
+  assert.equal(money.length, 1);
+  assert.deepEqual(money[0], legacy[0], 'same record, same id, so a device merging both rows keeps one');
 });
 
 test('charge.refunded: the webhook reads the refund list from Stripe and the invoice shows refunded', async () => {
