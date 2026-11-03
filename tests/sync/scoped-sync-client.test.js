@@ -14,7 +14,7 @@ const SYNC = fs.readFileSync(path.join(TOOLS, 'sync.js'), 'utf8');
 const DATA = fs.readFileSync(path.join(TOOLS, 'data-layer.js'), 'utf8');
 const LEGACY = 'tripleh-workspace-2026';
 
-// server: { migrated, money (this account has money access), rows: { code: {code, scope, data, updated_at} } }
+// server: { migrated, money, runway (this account's switches), rows: { code: {code, scope, data, updated_at} } }
 function load(server) {
   const posts = [];
   const gets = [];
@@ -25,7 +25,8 @@ function load(server) {
       w.SUPABASE_ANON_KEY = 'anon';
       w.getAuthToken = () => 'token';
       w.showToast = () => {};
-      const visible = () => Object.values(server.rows).filter((r) => (r.scope === 'ops' ? true : server.money));
+      const can = (scope) => (scope === 'ops' ? true : scope === 'money' ? !!server.money : scope === 'runway' ? !!server.runway : !!(server.money && server.runway));
+      const visible = () => Object.values(server.rows).filter((r) => can(r.scope));
       w.fetch = async (url, opts = {}) => {
         const method = opts.method || 'GET';
         if (method === 'GET' && /workspace_sync\?select=code,scope,data,updated_at/.test(url)) {
@@ -36,13 +37,13 @@ function load(server) {
         if (method === 'GET' && /workspace_sync\?code=eq\./.test(url)) {
           gets.push('legacy');
           const r = server.rows[LEGACY];
-          return { ok: true, status: 200, json: async () => (r && (!server.migrated || server.money) ? [{ data: r.data, updated_at: r.updated_at }] : []) };
+          return { ok: true, status: 200, json: async () => (r && (!server.migrated || can(null)) ? [{ data: r.data, updated_at: r.updated_at }] : []) };
         }
         if (method === 'POST' && /workspace_sync\?on_conflict=code/.test(url)) {
           const body = JSON.parse(opts.body);
           posts.push(body);
           for (const row of body) {
-            const allowed = server.migrated ? (row.scope === 'ops' || server.money) : true;
+            const allowed = server.migrated ? can(row.scope === undefined ? null : row.scope) : true;
             if (!allowed) return { ok: false, status: 403, json: async () => ({ message: 'new row violates row-level security policy' }) };
           }
           for (const row of body) server.rows[row.code] = { code: row.code, scope: row.scope === undefined ? null : row.scope, data: row.data, updated_at: row.updated_at };
@@ -76,25 +77,43 @@ test('before the SQL is applied (no scope column) it works exactly as before: re
   assert.ok(!('scope' in posts[0][0]), 'no scope field is sent to a server without the column');
 });
 
-test('with money access: each scope row gets only its own keys, and the old row still gets the whole blob (dual-write)', async () => {
-  const server = { migrated: true, money: true, rows: {
-    [LEGACY]: { code: LEGACY, scope: null, data: {}, updated_at: '2026-11-03T00:00:00Z' },
-    'scope:ops': { code: 'scope:ops', scope: 'ops', data: {}, updated_at: '2026-11-03T00:00:00Z' },
-    'scope:money': { code: 'scope:money', scope: 'money', data: {}, updated_at: '2026-11-03T00:00:00Z' },
-  } };
+const ALL_ROWS = () => ({
+  [LEGACY]: { code: LEGACY, scope: null, data: {}, updated_at: '2026-11-03T00:00:00Z' },
+  'scope:ops': { code: 'scope:ops', scope: 'ops', data: {}, updated_at: '2026-11-03T00:00:00Z' },
+  'scope:money': { code: 'scope:money', scope: 'money', data: {}, updated_at: '2026-11-03T00:00:00Z' },
+  'scope:runway': { code: 'scope:runway', scope: 'runway', data: {}, updated_at: '2026-11-03T00:00:00Z' },
+});
+
+test('with every switch on: each scope row gets only its own keys, and the old row still gets the whole blob (dual-write)', async () => {
+  const server = { migrated: true, money: true, runway: true, rows: ALL_ROWS() };
   const { w, posts } = load(server);
   put(w, 'th_tracker_jobs', [{ id: 1 }]);
   put(w, 'th_invoices', [{ id: 7, total: 300 }]);
   put(w, 'rd_personal-expenses', [{ id: 9, label: 'Mortgage' }]);
   assert.equal((await w.pushSync()).ok, true);
   const byCode = Object.fromEntries(posts[0].map((r) => [r.code, r]));
-  assert.deepEqual(Object.keys(byCode).sort(), ['scope:money', 'scope:ops', LEGACY].sort());
+  assert.deepEqual(Object.keys(byCode).sort(), ['scope:money', 'scope:ops', 'scope:runway', LEGACY].sort());
   assert.ok(byCode['scope:ops'].data.th_tracker_jobs);
-  assert.ok(!byCode['scope:ops'].data.th_invoices && !byCode['scope:ops'].data['rd_personal-expenses'], 'no money key in the ops row');
-  assert.ok(byCode['scope:money'].data.th_invoices && byCode['scope:money'].data['rd_personal-expenses']);
+  assert.ok(!byCode['scope:ops'].data.th_invoices && !byCode['scope:ops'].data['rd_personal-expenses'], 'no money or Runway key in the ops row');
+  assert.ok(byCode['scope:money'].data.th_invoices && !byCode['scope:money'].data['rd_personal-expenses'], 'invoices in money, Runway not');
+  assert.ok(byCode['scope:runway'].data['rd_personal-expenses'] && !byCode['scope:runway'].data.th_invoices, 'Runway in its own row');
   assert.ok(!byCode['scope:money'].data.th_tracker_jobs, 'no ops key in the money row');
   assert.ok(byCode[LEGACY].data.th_tracker_jobs && byCode[LEGACY].data.th_invoices, 'the old row keeps the whole blob for older devices');
   assert.equal(byCode[LEGACY].scope, null);
+});
+
+test('Money on, Runway off: writes ops and money only -- never the Runway row, the old blob, or a Runway key', async () => {
+  const server = { migrated: true, money: true, runway: false, rows: ALL_ROWS() };
+  server.rows['scope:runway'].data = blob({ 'rd_debts': [{ id: 1, label: 'Truck loan' }] });
+  const { w, posts } = load(server);
+  assert.equal((await w.pullSync()).ok, true);
+  assert.equal(get(w, 'rd_debts'), null, 'Runway data never reaches this device');
+  put(w, 'th_invoices', [{ id: 7 }]);
+  assert.equal((await w.pushSync()).ok, true);
+  assert.deepEqual(posts[0].map((r) => r.code).sort(), ['scope:money', 'scope:ops']);
+  const runwayKeys = w.eval('SYNC_RUNWAY_KEYS');
+  assert.ok(posts[0].every((r) => Object.keys(r.data).every((k) => !runwayKeys.includes(k))));
+  assert.deepEqual(JSON.parse(server.rows['scope:runway'].data.rd_debts), [{ id: 1, label: 'Truck loan' }], 'the Runway row is untouched');
 });
 
 test('Money off: reads and writes only the ops row -- never the old blob, never a money key', async () => {
@@ -116,7 +135,7 @@ test('Money off: reads and writes only the ops row -- never the old blob, never 
 });
 
 test('an older device still writing only the old row is never lost: reads merge the old row first, then the scoped rows', async () => {
-  const server = { migrated: true, money: true, rows: {
+  const server = { migrated: true, money: true, runway: true, rows: {
     // An old build added invoice 8 to the old row after the split.
     [LEGACY]: { code: LEGACY, scope: null, data: blob({ th_invoices: [{ id: 7, total: 300 }, { id: 8, total: 95 }] }), updated_at: '2026-11-03T12:00:00Z' },
     'scope:ops': { code: 'scope:ops', scope: 'ops', data: blob({ th_tracker_jobs: [{ id: 1 }] }), updated_at: '2026-11-03T10:00:00Z' },

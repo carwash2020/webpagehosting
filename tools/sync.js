@@ -310,43 +310,48 @@ const DEFAULT_SYNC_CODE = 'tripleh-workspace-2026';
 // ---------------------------------------------------------------------------
 // SCOPED SYNC (handoff 2026-11-03 §2, Phase 2.4; sql/sync/01_scoped_workspace_sync.sql)
 //
-// The blob is split into two rows and the DATABASE decides, per signed-in
+// The blob is split into three rows and the DATABASE decides, per signed-in
 // person, which ones they can read or write: 'scope:ops' for any account in
-// account_roles, 'scope:money' (the keys below) only with can_view_finance
-// or can_manage_invoices. This file no longer asks for a row by a shared
+// account_roles, 'scope:money' (SYNC_MONEY_KEYS) only with can_view_finance
+// or can_manage_invoices, 'scope:runway' (SYNC_RUNWAY_KEYS: Runway
+// Dashboard's personal budget and debts, its own scope by Connor's call
+// 2026-11-03) only with can_view_runway. This file no longer asks for a row by a shared
 // code to find its data -- it reads every row RLS shows this account,
 // merges them, and writes each key back to its own scope's row.
 //
 // Transition, so no device's data is stranded:
 //   * Until the SQL is applied (no `scope` column yet) everything works
 //     exactly as before, on the old row alone.
-//   * Afterwards, an account that can see money also keeps writing the
-//     old row (SYNC_LEGACY_DUAL_WRITE) so a device still on an older build,
-//     which only knows that row, stays in step. An account without money
-//     access can't see the old row (it holds money data) and never writes
-//     it -- it doesn't hold the money keys, so its whole-blob write would
-//     blank them.
+//   * Afterwards, an account that can see money AND Runway also keeps
+//     writing the old row (SYNC_LEGACY_DUAL_WRITE) so a device still on an
+//     older build, which only knows that row, stays in step. Any other
+//     account can't see the old row (it holds every key) and never writes
+//     it -- it doesn't hold all the keys, so its whole-blob write would
+//     blank the ones it lacks.
 //   * Reads merge the old row first, then the scoped rows, so whatever an
 //     older device wrote to the old row is never lost.
 // Retiring the old row (stop the dual-write, then remove it) is a later,
 // separate step, once every device is on this build.
 //
-// Must match public.workspace_sync_money_keys() in the SQL
-// (tests/sync/scoped-workspace-sync-db.test.js). Every other key is ops.
+// Must match public.workspace_sync_money_keys() / workspace_sync_runway_keys()
+// in the SQL (tests/sync/scoped-workspace-sync-db.test.js). Every other key is ops.
 const SYNC_MONEY_KEYS = [
   'th_expense_tombstones', 'th_expense_log',
   'th_income_tombstones', 'th_income_log',
   'th_invoice_tombstones', 'th_invoices',
   'th_quote_tombstones', 'th_quotes',
   'th_tax_rate', 'th_tax_labor', 'th_tax_parts', 'th_setaside_rate',
-  'rd_personal-expenses', 'rd_personal-income', 'rd_budget-settings',
-  'rd_business-months', 'rd_emergency-fund', 'rd_debts',
   'th_graveyard', 'th_sync_conflicts',
 ];
-const SYNC_SCOPE_CODES = { ops: 'scope:ops', money: 'scope:money' };
+const SYNC_RUNWAY_KEYS = [
+  'rd_personal-expenses', 'rd_personal-income', 'rd_budget-settings',
+  'rd_business-months', 'rd_emergency-fund', 'rd_debts',
+];
+const SYNC_SCOPES = ['ops', 'money', 'runway'];
+const SYNC_SCOPE_CODES = { ops: 'scope:ops', money: 'scope:money', runway: 'scope:runway' };
 const SYNC_LEGACY_DUAL_WRITE = true;
 
-function syncScopeOfKey(k) { return SYNC_MONEY_KEYS.includes(k) ? 'money' : 'ops'; }
+function syncScopeOfKey(k) { return SYNC_MONEY_KEYS.includes(k) ? 'money' : SYNC_RUNWAY_KEYS.includes(k) ? 'runway' : 'ops'; }
 function syncKeysOfScope(scope) { return SYNC_DATA_KEYS.filter(k => syncScopeOfKey(k) === scope); }
 function pickSyncKeys(data, keys) {
   const out = {};
@@ -372,25 +377,26 @@ async function fetchVisibleSyncRows(code) {
   if (!res.ok) return { ok: false, error: 'http-' + res.status };
   const all = await res.json();
   const rows = {};
-  (Array.isArray(all) ? all : []).forEach(r => { if (r && (r.scope === 'ops' || r.scope === 'money') && r.code === SYNC_SCOPE_CODES[r.scope]) rows[r.scope] = r; });
+  (Array.isArray(all) ? all : []).forEach(r => { if (r && SYNC_SCOPES.includes(r.scope) && r.code === SYNC_SCOPE_CODES[r.scope]) rows[r.scope] = r; });
   const legacy = (Array.isArray(all) ? all : []).find(r => r && r.code === code && !r.scope) || null;
   // Nothing recognisable came back: ask for the old row by its code, the
   // way this always worked, rather than conclude there's no data.
-  if (!rows.ops && !rows.money && !legacy) return legacyOnly();
-  return { ok: true, scoped: !!(rows.ops || rows.money), legacy, rows };
+  const anyScoped = SYNC_SCOPES.some(sc => rows[sc]);
+  if (!anyScoped && !legacy) return legacyOnly();
+  return { ok: true, scoped: anyScoped, legacy, rows };
 }
 
 // Old row first, then each scoped row's own keys only.
 function applyVisibleSyncRows(visible) {
   if (visible.legacy) applySyncData(visible.legacy.data);
-  ['ops', 'money'].forEach(scope => {
+  SYNC_SCOPES.forEach(scope => {
     const r = visible.rows[scope];
     if (r) applySyncData(r.data, syncKeysOfScope(scope));
   });
 }
 
 function latestVisibleUpdatedAt(visible) {
-  const stamps = [visible.legacy, visible.rows.ops, visible.rows.money].filter(Boolean).map(r => r.updated_at).filter(Boolean);
+  const stamps = [visible.legacy].concat(SYNC_SCOPES.map(sc => visible.rows[sc])).filter(Boolean).map(r => r.updated_at).filter(Boolean);
   return stamps.sort().pop() || null;
 }
 
@@ -975,13 +981,15 @@ async function pushSync() {
   } else {
     body = [];
     pushedKeys = [];
-    ['ops', 'money'].forEach(scope => {
+    SYNC_SCOPES.forEach(scope => {
       if (!visible.rows[scope]) return; // not this account's to write
       const keys = syncKeysOfScope(scope);
       body.push({ code: SYNC_SCOPE_CODES[scope], scope, data: pickSyncKeys(all, keys), updated_at: nowIso });
       pushedKeys = pushedKeys.concat(keys);
     });
-    if (SYNC_LEGACY_DUAL_WRITE && visible.rows.money) {
+    // The old row holds every key: only an account that holds them all
+    // (sees every scoped row) may keep it in step.
+    if (SYNC_LEGACY_DUAL_WRITE && SYNC_SCOPES.every(sc => visible.rows[sc])) {
       body.push({ code, scope: null, data: all, updated_at: nowIso });
       pushedKeys = SYNC_DATA_KEYS;
     }

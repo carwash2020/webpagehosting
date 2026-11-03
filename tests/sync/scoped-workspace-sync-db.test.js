@@ -16,7 +16,7 @@ const SYNC = fs.readFileSync(path.join(ROOT, 'tools', 'sync.js'), 'utf8');
 
 const OWNER = 'steve@triplehenterprisesllc.biz';
 const HELPER = 'helper@example.com'; // staff, Money off
-const BOOKKEEPER = 'books@example.com'; // invoices only, no finance tab
+const BOOKKEEPER = 'books@example.com'; // invoices on, Runway off
 const CLIENT = 'client@example.com'; // portal client: not in account_roles
 
 const LEGACY = {
@@ -45,12 +45,13 @@ const SCHEMA = `
   create table public.account_roles (
     email text primary key, role_name text,
     can_view_finance boolean not null default false,
-    can_manage_invoices boolean not null default false
+    can_manage_invoices boolean not null default false,
+    can_view_runway boolean not null default false
   );
   insert into public.account_roles values
-    ('${OWNER}', 'Owner', true, true),
-    ('${HELPER}', 'Helper', false, false),
-    ('${BOOKKEEPER}', 'Books', false, true);
+    ('${OWNER}', 'Owner', true, true, true),
+    ('${HELPER}', 'Helper', false, false, false),
+    ('${BOOKKEEPER}', 'Books', false, true, false);
   -- account_roles' own RLS, as live: staff can read it, nobody else.
   alter table public.account_roles enable row level security;
   create function public.current_user_has_any_role() returns boolean
@@ -93,30 +94,45 @@ async function asUser(email, fn) {
 }
 const codes = async (email) => (await asUser(email, (tx) => tx.query('select code from public.workspace_sync order by code'))).rows.map((r) => r.code);
 
-test('the money key list in the SQL and SYNC_MONEY_KEYS in tools/sync.js are the same list, and every one is a real synced key', async () => {
+test('the money and Runway key lists in the SQL match SYNC_MONEY_KEYS / SYNC_RUNWAY_KEYS in tools/sync.js, and every one is a real synced key', async () => {
   const d = await db();
-  const sqlKeys = (await d.query('select unnest(public.workspace_sync_money_keys()) k')).rows.map((r) => r.k).sort();
+  const sqlList = async (fn) => (await d.query(`select unnest(public.${fn}()) k`)).rows.map((r) => r.k).sort();
+  const money = await sqlList('workspace_sync_money_keys');
+  const runway = await sqlList('workspace_sync_runway_keys');
   const ctx = {};
   vm.createContext(ctx);
   const grab = (name) => { const i = SYNC.indexOf('const ' + name + ' = ['); return SYNC.slice(i, SYNC.indexOf('];', i) + 2).replace('const ' + name, 'this.' + name); };
-  vm.runInContext(grab('SYNC_DATA_KEYS') + '\n' + grab('SYNC_MONEY_KEYS'), ctx);
-  assert.deepEqual([...ctx.SYNC_MONEY_KEYS].sort(), sqlKeys);
-  for (const k of sqlKeys) assert.ok(ctx.SYNC_DATA_KEYS.includes(k), k + ' is synced');
+  vm.runInContext(grab('SYNC_DATA_KEYS') + '\n' + grab('SYNC_MONEY_KEYS') + '\n' + grab('SYNC_RUNWAY_KEYS'), ctx);
+  assert.deepEqual([...ctx.SYNC_MONEY_KEYS].sort(), money);
+  assert.deepEqual([...ctx.SYNC_RUNWAY_KEYS].sort(), runway);
+  assert.ok(runway.every((k) => k.startsWith('rd_')) && runway.length === 6, 'all six Runway keys');
+  assert.ok(!money.some((k) => runway.includes(k)), 'no key is in both');
+  for (const k of money.concat(runway)) assert.ok(ctx.SYNC_DATA_KEYS.includes(k), k + ' is synced');
 });
 
-test('the seeded rows split the old blob exactly: money keys in the money row, everything else in the ops row, nothing lost', async () => {
+test('the seeded rows split the old blob exactly: money, Runway and everything else each in its own row, nothing lost', async () => {
   const d = await db();
   const rows = Object.fromEntries((await d.query("select code, data from public.workspace_sync")).rows.map((r) => [r.code, r.data]));
-  assert.deepEqual(Object.keys(rows['scope:money']).sort(), ['rd_personal-expenses', 'th_graveyard', 'th_income_log', 'th_invoices']);
+  assert.deepEqual(Object.keys(rows['scope:money']).sort(), ['th_graveyard', 'th_income_log', 'th_invoices']);
+  assert.deepEqual(Object.keys(rows['scope:runway']).sort(), ['rd_personal-expenses']);
   assert.deepEqual(Object.keys(rows['scope:ops']).sort(), ['th_clients', 'th_contracts', 'th_shift_log', 'th_tracker_jobs']);
-  assert.deepEqual({ ...rows['scope:ops'], ...rows['scope:money'] }, rows['tripleh-workspace-2026'], 'the two rows add back up to the old blob');
+  assert.deepEqual({ ...rows['scope:ops'], ...rows['scope:money'], ...rows['scope:runway'] }, rows['tripleh-workspace-2026'], 'the three rows add back up to the old blob');
   assert.deepEqual(rows['tripleh-workspace-2026'], LEGACY, 'the old row is untouched');
 });
 
-test('an account with Money sees all three rows; Money off sees only the ops row; invoices-only counts as money access', async () => {
-  assert.deepEqual(await codes(OWNER), ['scope:money', 'scope:ops', 'tripleh-workspace-2026']);
+test('everything on sees every row; Money off sees only ops; Invoices on but Runway off sees money but not Runway or the old blob', async () => {
+  assert.deepEqual(await codes(OWNER), ['scope:money', 'scope:ops', 'scope:runway', 'tripleh-workspace-2026']);
   assert.deepEqual(await codes(HELPER), ['scope:ops']);
-  assert.deepEqual(await codes(BOOKKEEPER), ['scope:money', 'scope:ops', 'tripleh-workspace-2026']);
+  assert.deepEqual(await codes(BOOKKEEPER), ['scope:money', 'scope:ops']);
+});
+
+test('Runway off cannot read or write the Runway row or the old blob (which also holds Runway), even with money access', async () => {
+  const upd = await asUser(BOOKKEEPER, (tx) => tx.query("update public.workspace_sync set data = '{}'::jsonb where code in ('scope:runway', 'tripleh-workspace-2026')"));
+  assert.equal(upd.affectedRows, 0);
+  await assert.rejects(asUser(BOOKKEEPER, (tx) => tx.query("update public.workspace_sync set scope = 'runway' where code = 'scope:money'")), /row-level security/);
+  const d = await db();
+  const runway = (await d.query("select data from public.workspace_sync where code = 'scope:runway'")).rows[0].data;
+  assert.ok(runway['rd_personal-expenses'], 'the Runway row is intact');
 });
 
 test('a portal client or a signed-out visitor sees no rows at all', async () => {
@@ -167,5 +183,5 @@ test('re-running the migration is safe: it changes nothing that already exists',
   const afterRows = (await d.query('select code, scope, data from public.workspace_sync order by code')).rows;
   assert.deepEqual(afterRows, before);
   const policies = (await d.query("select policyname from pg_policies where tablename = 'workspace_sync' order by 1")).rows.map((r) => r.policyname);
-  assert.deepEqual(policies, ['Money row and legacy blob: money access only', 'Ops row: any internal account']);
+  assert.deepEqual(policies, ['Money row: money access only', 'Old whole blob: money and Runway access', 'Ops row: any internal account', 'Runway row: Runway access only']);
 });
