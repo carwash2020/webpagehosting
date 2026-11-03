@@ -271,7 +271,7 @@
 // invoices/jobs/quotes/contracts/requests, not just its own; see
 // docs/specialist-logs/security.md, 2026-09-29). All seven are in
 // PRECACHE_URLS.
-const CACHE_NAME = 'th-portal-v209'; // precache-fingerprint:db20df215636
+const CACHE_NAME = 'th-portal-v210'; // precache-fingerprint:c8945a87b3f1
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',
@@ -280,7 +280,7 @@ const PRECACHE_URLS = [
   '/portal/portal-app.css',
   '/portal/portal-app.js',
   '/portal/portal-polish.css',
-  '/portal/portal-update.js',
+  '/portal/portal-update.js', '/js/app-freshness.js',
   '/styles.css', '/js/business-hours.js',
   '/portal/push-notifications.js',
   // The shared PDF document system and its embedded fonts (2026-09-24),

@@ -713,7 +713,7 @@
 // specificity) when there's nothing scheduled, and unhides it the
 // moment a real job exists again. workspace.html is precached. Same
 // reasoning as every prior bump in this file's history.
-const CACHE_NAME = 'th-workspace-v447'; // precache-fingerprint:de571f967cff
+const CACHE_NAME = 'th-workspace-v448'; // precache-fingerprint:c0c827ad9df8
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/route-planner.html', '/tools/review-request.html', '/tools/login.html',
@@ -769,7 +769,7 @@ const PRECACHE_URLS = [
   // for the same reason.
   '/styles.css', '/tools/styles-tools.css', '/tools/dev-tools-shared.js', '/tools/sync.js', '/tools/auth.js', '/tools/data-layer.js',
   '/tools/tools-effects.js', '/tools/tools-dialogs.js', '/tools/tools-media-sharing.js', '/tools/tools-nav-pwa.js',
-  '/tools/tools-command-palette.js',
+  '/tools/tools-command-palette.js', '/js/app-freshness.js',
   '/tools/manifest.json',
   // Added 2026-08-14 -- same gap as above, these 2 scripts were live but unlisted.
   '/tools/qrcode-lib.js', '/tools/push-notifications.js',
