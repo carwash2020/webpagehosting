@@ -24,6 +24,12 @@ const path = require('path');
 
 const REPO_DIR = path.join(__dirname, '..', 'edge-functions');
 
+// In the repo on purpose but not deployed yet: each ships disabled and is
+// turned on by hand. Listed in the report, but not a failure. Remove the
+// slug here once it's deployed.
+//   daily-digest -- off until the owners turn it on (docs/daily-digest/README.md)
+const NOT_DEPLOYED_YET = new Set(['daily-digest']);
+
 function args(argv) {
   const out = {};
   for (let i = 0; i < argv.length; i += 2) out[argv[i].replace(/^--/, '')] = argv[i + 1];
@@ -54,7 +60,7 @@ function describeDifference(live, mine, liveFnDir) {
 function compare({ liveSlugs, liveDir, repoDir = REPO_DIR }) {
   const repo = new Map(fs.readdirSync(repoDir).filter((f) => f.endsWith('-index.ts'))
     .map((f) => [f.slice(0, -'-index.ts'.length), path.join(repoDir, f)]));
-  const result = { same: [], differs: [], onlyLive: [], onlyRepo: [], notDownloaded: [], details: {} };
+  const result = { same: [], differs: [], onlyLive: [], onlyRepo: [], notDeployedYet: [], notDownloaded: [], details: {} };
   const seen = new Set();
   for (const slug of liveSlugs) {
     const key = slug.toLowerCase();
@@ -69,7 +75,10 @@ function compare({ liveSlugs, liveDir, repoDir = REPO_DIR }) {
     result.differs.push(slug);
     result.details[slug] = describeDifference(live, mine, path.join(liveDir, slug));
   }
-  for (const key of repo.keys()) if (!seen.has(key)) result.onlyRepo.push(key);
+  for (const key of repo.keys()) {
+    if (seen.has(key)) continue;
+    (NOT_DEPLOYED_YET.has(key) ? result.notDeployedYet : result.onlyRepo).push(key);
+  }
   return result;
 }
 
@@ -88,6 +97,7 @@ function report(r) {
   list('Live differs from the repo', r.differs, '-- deploy from main (`supabase functions deploy <slug>`), or bring the repo in line if the live copy is the right one.', shape);
   list('Live only, not in edge-functions/', r.onlyLive, '-- add its source to the repo.');
   list('In edge-functions/, not deployed', r.onlyRepo, '-- deploy it, or remove the file.');
+  list('Not deployed yet, on purpose', r.notDeployedYet || [], '-- ships disabled; see NOT_DEPLOYED_YET in scripts/check-edge-function-drift.js.');
   list('Could not download', r.notDownloaded, '-- the download step failed for these; the check could not compare them.');
   lines.push(`${r.same.length} function(s) match.`);
   return lines.join('\n') + '\n';
