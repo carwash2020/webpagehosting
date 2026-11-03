@@ -16,7 +16,7 @@
     "verify": "npm run check-undefined-vars && npm run check-consistency && npm run lint && npm run check-links && npm test"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "^0.5.8",
+    "@electric-sql/pglite": "^0.5.12",
     "eslint": "^10.12.0",
     "jsdom": "^30.1.2"
   }
