@@ -147,7 +147,7 @@ test('the heading follows the chip (§4F: it read "SPENT THIS MONTH" while Incom
   assert.equal(w.MONEY_CHIP_HEADS.income(), 'Income · every entry');
   assert.equal(w.MONEY_CHIP_HEADS.expenses(), 'Expenses · every entry');
   assert.equal(w.MONEY_CHIP_HEADS.profitability(), 'Profitability · by job');
-  assert.match(FIN, /if \(head\) head\.textContent = MONEY_CHIP_HEADS\[tabName\] \? MONEY_CHIP_HEADS\[tabName\]\(\) : '';/);
+  assert.match(FIN, /if \(head\) head\.textContent = typeof headFn === 'function' \? headFn\(\) : '';/);
 });
 
 test('the Income list: an unpaid invoice says "Not paid yet" and adds nothing; totals count paid invoices only', () => {
@@ -173,4 +173,24 @@ test('one page: chips, not tabs; All by default; Log expense / Log income keep t
   assert.match(FIN, /<a href="\/tools\/runway-dashboard\.html" class="mny-link" id="mnyFullRunway" hidden>Full Runway: budget, net worth, reports &rsaquo;<\/a>/);
   assert.match(FIN, /<span class="hub-title">Money<\/span>/);
   assert.match(FIN, /<title>Money \| Triple H Enterprises \(Internal Tool\)<\/title>/);
+});
+
+test('the chip heading is looked up by own key only: a hash or stored tab like "constructor" or "__proto__" never calls into Object.prototype (CodeQL, PR #579)', () => {
+  const fn = FIN.slice(FIN.indexOf('  function activateTab(tabName) {'), FIN.indexOf('\n  }\n', FIN.indexOf('  function activateTab(tabName) {')) + 4);
+  assert.match(fn, /const headFn = Object\.prototype\.hasOwnProperty\.call\(MONEY_CHIP_HEADS, tabName\) \? MONEY_CHIP_HEADS\[tabName\] : null;/);
+  assert.doesNotMatch(fn, /MONEY_CHIP_HEADS\[tabName\]\(\)/);
+  // Run the real function with every panel present, so the early return
+  // can't be what protects it.
+  const heads = { all: () => 'All', income: () => 'Income' };
+  for (const [tab, want] of [['all', 'All'], ['constructor', ''], ['__proto__', ''], ['toString', ''], ['hasOwnProperty', '']]) {
+    const head = { textContent: 'x' };
+    const ctx = {
+      MONEY_CHIP_HEADS: heads, FINANCE_TAB_KEY: 'k', localStorage: { setItem() {} },
+      populateJobRefOptions() {}, populateIncomeJobRefOptions() {}, renderJobProfitability() {}, renderMoneyLedger() {},
+      document: { getElementById: (id) => (id === 'mnyLedgerHead' ? head : {}), querySelectorAll: () => [] },
+    };
+    vm.createContext(ctx);
+    vm.runInContext(fn + ';activateTab(' + JSON.stringify(tab) + ');', ctx);
+    assert.equal(head.textContent, want, tab);
+  }
 });
