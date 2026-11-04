@@ -1017,6 +1017,78 @@ function thRunwayMonthsCovered() {
   return monthly > 0 ? balance / monthly : null;
 }
 
+// ---------- Field view / Office view (Phase 4, 2026-11-04) ----------
+// Approved "Field view and Office view" design. Field = your own jobs
+// (assigned to you, or unassigned ones you created); Office = every job,
+// with assign and create-for-others. Office exists only for accounts with
+// "Manage jobs for others" (canManageOthersJobs, auth.js); for anyone else
+// the view is always Field and there is no switch. The choice is per
+// device. This is a screen filter, not access control: every job is still
+// synced to every device (Connor's call, 2026-11-04).
+const TH_VIEW_KEY = 'th_view_mode';
+function thCanUseOfficeView() {
+  return typeof canManageOthersJobs === 'function' && canManageOthersJobs();
+}
+function thViewMode() {
+  if (!thCanUseOfficeView()) return 'field';
+  let saved = null;
+  try { saved = localStorage.getItem(TH_VIEW_KEY); } catch (e) { saved = null; }
+  return saved === 'field' ? 'field' : 'office';
+}
+function thSetViewMode(mode) {
+  const next = mode === 'field' ? 'field' : 'office';
+  try { localStorage.setItem(TH_VIEW_KEY, next); } catch (e) { /* storage blocked */ }
+  try { window.dispatchEvent(new Event('th-view-changed')); } catch (e) { /* old browser */ }
+}
+function thMyEmail() {
+  return String((typeof getCurrentUserEmail === 'function' && getCurrentUserEmail()) || '').toLowerCase();
+}
+// Whose job this is: its assignee, or (never assigned) whoever made it.
+function thJobOwner(job) {
+  return String((job && (job.assignee || job.createdBy)) || '').toLowerCase();
+}
+function thJobInView(job, mode) {
+  // Until this account's permissions have loaded (or if they couldn't),
+  // nothing is filtered: every job shows, as before Phase 4. Once known,
+  // Field view narrows to your own jobs.
+  if (!mode && !(typeof isRoleLoaded === 'function' && isRoleLoaded())) return true;
+  if ((mode || thViewMode()) === 'office') return true;
+  const me = thMyEmail();
+  return !!me && thJobOwner(job) === me;
+}
+// The team, for names on assignee chips and the Assigned to picker:
+// team_roster() (any internal account may read it), cached on this device.
+const TH_TEAM_CACHE_KEY = 'th_team_roster_cache';
+function thTeamMembers() {
+  try {
+    const v = JSON.parse(localStorage.getItem(TH_TEAM_CACHE_KEY) || '[]');
+    return Array.isArray(v) ? v.filter(p => p && p.email && p.status !== 'deactivated') : [];
+  } catch (e) { return []; }
+}
+async function thRefreshTeamMembers() {
+  if (typeof SUPABASE_URL === 'undefined' || typeof getAuthToken !== 'function' || typeof SUPABASE_ANON_KEY === 'undefined') return thTeamMembers();
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/team_roster', {
+      method: 'POST',
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + getAuthToken(), 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    if (!res.ok) return thTeamMembers();
+    const rows = await res.json();
+    const slim = (Array.isArray(rows) ? rows : []).map(r => ({ email: String(r.email || '').toLowerCase(), display_name: r.display_name || null, status: r.status }));
+    try { localStorage.setItem(TH_TEAM_CACHE_KEY, JSON.stringify(slim)); } catch (e) { /* storage blocked */ }
+    return thTeamMembers();
+  } catch (e) { return thTeamMembers(); }
+}
+function thPersonName(email) {
+  const e = String(email || '').toLowerCase();
+  if (!e) return '';
+  const p = thTeamMembers().find(x => x.email === e);
+  if (p && p.display_name) return p.display_name;
+  const local = e.split('@')[0];
+  return local.charAt(0).toUpperCase() + local.slice(1);
+}
+
 function thLocalDateStr(d) {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }

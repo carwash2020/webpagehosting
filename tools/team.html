@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<!-- background-color, not the background shorthand (2026-09-06): the
+     shorthand also resets background-image, which silently cancelled the
+     ambient gradient tools/styles-tools.css defines on this element --
+     rendered fine in isolation and never caught by any test, but never
+     actually visible on a real tool page. Fixed here rather than dropping
+     the inline value: it still paints dark before CSS parses, which is
+     the whole reason it exists (see color-scheme below on pages that have
+     it) -- it just no longer overrides a property it never meant to touch.
+     Portal pages carry the identical inline value for the same FOUC
+     reason, but their own ambient gradient lives on body.portal-page, not
+     html, so it was never at risk from this -- fixed for consistency and
+     to remove the same latent hazard before anything ever puts a
+     background-image on html here too. -->
+<html lang="en" style="background-color:#0a0a0a;">
+<head>
+<script src="/tools/auth.js?v=9445ba2176"></script>
+<script src="/trusted-device.js?v=255d86a600"></script>
+<script>
+  // Security gate -- redirect to login before this page's own content
+  // is meaningfully usable. See auth.js for why this exists (a small,
+  // role-based multi-user system now -- account_roles/role_definitions,
+  // not a single shared account).
+  requireAuth();
+</script>
+<link rel="manifest" href="/tools/manifest.json">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Triple H">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex, nofollow">
+<title>Team · Triple H Enterprises</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.github.com; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
+<script>
+  (function () {
+    // Tools app light/dark theme (2026-08-20), tucked into Settings.
+    // A separate preference from the public site's own theme toggle --
+    // different audience, different devices. Defaults to dark,
+    // matching the tools app's original look; applied here, before any
+    // stylesheet loads, to avoid a flash of the wrong theme on load.
+    var saved = localStorage.getItem('th_tools_theme');
+    if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    document.documentElement.style.colorScheme = saved === 'light' ? 'light' : 'dark';
+  })();
+</script>
+<link rel="stylesheet" href="/styles.css?v=7c03870603">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=c98fed7b3e">
+<script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
+<script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
+<script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
+<script src="/js/app-freshness.js?v=191f305671" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=fe9cdc1e0f" defer></script>
+<script src="/tools/tools-command-palette.js?v=ac4de65287" defer></script>
+<script src="/tools/tools-tour.js?v=9763411289" defer></script>
+<script src="/tools/data-layer.js?v=34e05d4fce" defer></script>
+<script src="/tools/dev-tools-shared.js?v=ffcb14381f" defer></script>
+<script src="/tools/sync.js?v=66c2196d60" defer></script>
+<style>
+  @view-transition {
+    navigation: auto;
+  }
+  body { max-width: 640px; margin: 0 auto; }
+  @media (min-width: 1024px) { body { max-width: var(--tool-maxw-narrow); margin-left: calc(240px + max(0px, (100vw - 240px - var(--tool-maxw-narrow)) / 2)); padding-top: 75px; } }
+
+  /* Team (Phase 4, 2026-11-04, approved "Team: roster and invite" and
+     "one person's capabilities" designs). */
+  .team-invite-btn { min-height: 40px !important; padding: 0 14px !important; border-radius: 999px !important; font-size: 14px !important; white-space: nowrap; }
+  .team-intro { margin: 0 16px 12px; font-size: 13.5px; line-height: 1.45; color: var(--text-dim); }
+  .team-list { display: flex; flex-direction: column; gap: 10px; margin: 0 16px 24px; }
+  .team-row { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 12px; background: var(--bg-panel); border: 1px solid var(--border); }
+  .team-row.is-deactivated { border-style: dashed; opacity: .85; }
+  .team-row-head { display: flex; align-items: center; gap: 12px; }
+  .team-avatar { width: 40px; height: 40px; flex: 0 0 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; background: var(--orange-tint-soft, #2a1a08); color: var(--tone-orange-fg); }
+  .team-who { flex: 1 1 auto; min-width: 0; }
+  .team-name { font-size: 15px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+  .team-email { font-size: 12.5px; color: var(--text-dim); overflow-wrap: anywhere; }
+  .team-status { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+  .team-status.is-active { background: var(--tone-green-bg, #10261a); color: var(--tone-green-fg, #6fd19a); }
+  .team-status.is-invited { background: var(--tone-orange-bg, #2a2008); color: var(--tone-orange-fg, #ffcf66); }
+  .team-status.is-deactivated { background: var(--bg-panel-2); color: var(--text-dim); }
+  .team-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .team-tag { font-size: 12px; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--border); color: var(--text); }
+  .team-meta { font-size: 12.5px; color: var(--text-dim); }
+  .team-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .team-actions button, .team-actions a { min-height: 40px; }
+  .team-open { background: none; border: 0; padding: 0; color: inherit; text-align: left; font: inherit; cursor: pointer; display: flex; align-items: center; gap: 12px; width: 100%; }
+  .team-caps { margin: 0 16px; border-radius: 12px; background: var(--bg-panel); border: 1px solid var(--border); overflow: hidden; }
+  .team-cap { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+  .team-cap:last-child { border-bottom: 0; }
+  .team-cap-main { flex: 1 1 auto; min-width: 0; }
+  .team-cap-label { font-size: 15px; font-weight: 600; color: var(--text); }
+  .team-cap-sub { font-size: 12.5px; color: var(--text-dim); line-height: 1.4; }
+  .team-cap-partial { font-size: 12px; color: var(--tone-orange-fg); }
+  .team-person-head { display: flex; align-items: center; gap: 10px; margin: 0 16px 12px; }
+  .team-section-label { margin: 16px 16px 8px; font-family: var(--font-ui); font-size: 12px; letter-spacing: 1.5px; color: var(--text-dim); text-transform: uppercase; }
+  .team-note { margin: 10px 16px; font-size: 12.5px; line-height: 1.45; color: var(--text-dim); }
+  .team-danger { display: block; width: calc(100% - 32px); margin: 16px; min-height: 48px; border-radius: 12px; border: 1px solid #5a2a2a; background: #1a1010; color: #ff9a9a; font: inherit; font-weight: 600; font-size: 15px; cursor: pointer; }
+  .team-sheet { position: fixed; inset: 0; z-index: 1200; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.55); }
+  .team-sheet[hidden] { display: none; }
+  .team-sheet-card { width: 100%; max-width: 480px; box-sizing: border-box; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 20px 20px 0 0; padding: 18px 16px calc(20px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 14px; }
+  .team-sheet-card .form-field { margin: 0; }
+  .team-sheet-head { display: flex; align-items: center; justify-content: space-between; }
+  .team-sheet-title { margin: 0; font-size: 17px; font-weight: 600; color: var(--text); }
+  .team-sheet-x { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border); background: var(--bg-panel-2); color: var(--text); font-size: 20px; cursor: pointer; }
+  .team-sheet-hint { font-size: 13px; line-height: 1.45; color: var(--text-dim); padding: 10px 12px; border-radius: 10px; background: var(--bg-panel-2); }
+  .team-error { color: #ff8a80; font-size: 13.5px; }
+  @media (min-width: 700px) { .team-sheet { align-items: center; } .team-sheet-card { border-radius: 20px; } }
+</style>
+</head>
+<body data-th-page="team">
+
+<div id="roleBlockedOverlay" class="role-blocked-overlay" data-rb role="alert">
+  <div class="th-rb-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+  <h1>Team</h1>
+  <p class="th-rb-body">This page isn’t part of your account’s access. <span class="th-rb-who"></span> If you need something from here, ask Steve.</p>
+  <div class="th-rb-actions">
+    <a href="/tools/workspace.html" class="primary-btn">Back to Home</a>
+    <button type="button" class="secondary-btn th-rb-switch" onclick="signOut()">Switch account</button>
+    <button type="button" class="secondary-btn th-rb-retry" onclick="retryRoleCheck(this, canManageRoles)">Try again</button>
+  </div>
+</div>
+<a href="#mainContent" class="skip-link">Skip to main content</a>
+
+<div class="hub-header">
+  <div class="hub-header-left">
+    <img src="/images/logo-signature-orange.webp?v=adc4d42660" alt="Triple H Enterprises">
+    <span class="hub-title" id="mainContent">Team</span>
+  </div>
+  <div class="hub-header-right">
+    <button type="button" class="primary-btn team-invite-btn" id="teamInviteBtn">Invite someone</button>
+  </div>
+</div>
+
+<!-- The roster (team_roster(), sql/security/phase4_team_roster_and_deactivate.sql). -->
+<section id="teamRosterView" aria-labelledby="mainContent" style="padding:0;">
+  <p class="team-intro">Everyone starts with their own assigned jobs: log hours and parts, mark done. Turn on more per person.</p>
+  <div class="team-list" id="teamList"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div></div>
+</section>
+
+<!-- One person: their capabilities and Deactivate. -->
+<section id="teamPersonView" hidden style="padding:0;">
+  <div class="team-person-head">
+    <button type="button" class="secondary-btn" id="teamBackBtn" aria-label="Back to Team">&lsaquo; Team</button>
+    <div class="team-who"><div class="team-name" id="teamPersonName"></div><div class="team-email" id="teamPersonMeta"></div></div>
+  </div>
+  <div class="team-section-label" id="teamPersonCapsLabel">What they can do</div>
+  <p class="team-note" style="margin-top:0;">Always: their own assigned jobs, log hours and parts, mark done.</p>
+  <div class="team-caps" id="teamCaps"></div>
+  <p class="team-note">Changes apply the next time a page loads on their device.</p>
+  <div id="teamPersonActions"></div>
+</section>
+
+<!-- confirmDevPassword() (dev-tools-shared.js) prompt, as on clients.html. -->
+<div class="help-modal-overlay" id="devPasswordOverlay">
+  <div class="help-modal" style="max-width:380px;">
+    <button class="help-modal-close" onclick="devPasswordCancel()" aria-label="Close">&times;</button>
+    <h3>Confirm dev password</h3>
+    <div class="help-modal-body">
+      <p style="margin-bottom:14px;">This is a soft confirmation to catch an accidental save, not real protection against someone technically determined -- anyone who's already logged into Connor's account and views this page's source could bypass it. It exists to stop a stray tap or someone else picking up an unlocked phone. Only asked once per browser session -- closing the tab resets it.</p>
+      <input type="password" id="devPasswordInput" aria-label="Dev password" placeholder="Dev password" style="width:100%; margin-bottom:12px;" onkeydown="if(event.key==='Enter') devPasswordSubmit();">
+      <div class="form-footer">
+        <button class="primary-btn" onclick="devPasswordSubmit()">Confirm</button>
+        <button class="secondary-btn" onclick="devPasswordCancel()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Invite sheet. -->
+<div class="team-sheet" id="teamInviteSheet" role="dialog" aria-modal="true" aria-labelledby="teamInviteTitle" hidden>
+  <form class="team-sheet-card" id="teamInviteForm" novalidate>
+    <div class="team-sheet-head">
+      <h2 class="team-sheet-title" id="teamInviteTitle" tabindex="-1">Invite someone</h2>
+      <button type="button" class="team-sheet-x" id="teamInviteClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="form-field">
+      <label for="teamInviteName">Name</label>
+      <input type="text" id="teamInviteName" placeholder="First and last name" autocomplete="off" maxlength="120">
+    </div>
+    <div class="form-field">
+      <label for="teamInviteEmail">Email</label>
+      <input type="email" id="teamInviteEmail" placeholder="name@example.com" autocomplete="off">
+    </div>
+    <div class="team-sheet-hint">They start with their own assigned jobs only. Turn on Money, Clients and the rest from their row once they've joined.</div>
+    <div class="team-note" style="margin:0;">They get an email with a link to set a password. The link works once; Resend makes a new one.</div>
+    <div class="team-error" id="teamInviteError" role="alert"></div>
+    <button type="submit" class="primary-btn" id="teamInviteSend" style="min-height:52px;">Send invite</button>
+  </form>
+</div>
+
+<script>
+  // ---- Team (Phase 4, 2026-11-04) -----------------------------------------
+  // The roster comes from team_roster(); permission switches are PATCHes on
+  // account_roles (its RLS: only accounts that can manage the team; the
+  // live last-admin trigger refuses taking Team & Settings from the last
+  // person who has it). Invite / Resend / Revoke / Deactivate / Reactivate
+  // go through the team-admin edge function. Every change asks for the Dev
+  // Tools password first, as Dev Tools' own permission panel always has.
+
+  // The six capabilities over the nine switches (Connor's mapping,
+  // 2026-11-04). can_access_dev_tools_full is not here: it stays in Dev
+  // Tools > Access.
+  const TEAM_CAPS = [
+    { key: 'money', label: 'Money', sub: 'Invoices, Charge a card, Money and Runway', cols: ['can_manage_invoices', 'can_view_finance', 'can_view_runway'] },
+    { key: 'clients', label: 'Clients', sub: 'The client list, portal invites', cols: ['can_manage_clients'] },
+    { key: 'contracts', label: 'Contracts', sub: 'Write and send contracts', cols: ['can_manage_contracts'] },
+    { key: 'reviews', label: 'Reviews', sub: 'Ask clients for reviews', cols: ['can_manage_reviews'] },
+    { key: 'team', label: 'Team & Settings', sub: 'This screen, Website editing, Dev Tools', cols: ['can_manage_roles', 'can_manage_site_content', 'can_access_dev_tools'] },
+    { key: 'others', label: 'Manage jobs for others', sub: 'Office view: all jobs, assign and schedule for anyone', cols: ['can_manage_others_jobs'] },
+  ];
+  const TEAM_STATUS_LABEL = { active: 'Active', invited: 'Invite pending', deactivated: 'Deactivated' };
+
+  let teamRoster = [];
+  let teamSelected = null;
+
+  function teamCapState(person, cap) {
+    const on = cap.cols.filter(c => person[c] === true).length;
+    return on === cap.cols.length ? 'on' : on === 0 ? 'off' : 'partial';
+  }
+  function teamDisplayName(p) {
+    if (p.display_name) return p.display_name;
+    const local = String(p.email || '').split('@')[0];
+    return local ? local.charAt(0).toUpperCase() + local.slice(1) : p.email;
+  }
+  function teamInitials(p) {
+    const parts = teamDisplayName(p).split(/\s+/).filter(Boolean);
+    return ((parts[0] || '?')[0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
+  }
+  function teamDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: d.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
+  }
+  function teamJobsAssigned(email) {
+    if (typeof thJobs === 'undefined' || !thJobs.all) return null;
+    const e = String(email).toLowerCase();
+    return thJobs.all().filter(j => String(j.assignee || '').toLowerCase() === e && j.status !== 'done').length;
+  }
+
+  async function teamFetchRoster() {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/team_roster', {
+      method: 'POST',
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + getAuthToken(), 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }
+
+  function teamRowHtml(p) {
+    const tags = p.status === 'deactivated' ? '' : TEAM_CAPS.filter(c => teamCapState(p, c) === 'on').map(c => '<span class="team-tag">' + escapeHtml(c.label) + '</span>').join('');
+    const jobs = teamJobsAssigned(p.email);
+    const meta = p.status === 'invited'
+      ? 'Invited ' + escapeHtml(teamDate(p.invited_at)) + (tags ? '' : ' · own jobs only')
+      : p.status === 'deactivated'
+        ? "Can't sign in · history kept"
+        : (p.last_sign_in_at ? 'Last sign-in ' + escapeHtml(teamDate(p.last_sign_in_at)) : 'Not signed in yet') + (jobs === null ? '' : ' · ' + jobs + ' job' + (jobs === 1 ? '' : 's') + ' assigned');
+    const email = escapeAttr(p.email);
+    let actions = '';
+    if (p.status === 'invited') actions = '<div class="team-actions"><button type="button" class="secondary-btn" data-team-act="resend" data-email="' + email + '">Resend</button><button type="button" class="secondary-btn" data-team-act="revoke" data-email="' + email + '">Revoke</button></div>';
+    if (p.status === 'deactivated') actions = '<div class="team-actions"><button type="button" class="secondary-btn" data-team-act="reactivate" data-email="' + email + '">Reactivate</button></div>';
+    return '<div class="team-row' + (p.status === 'deactivated' ? ' is-deactivated' : '') + '">' +
+      '<button type="button" class="team-open" data-team-open="' + email + '"' + (p.status === 'deactivated' ? ' disabled' : '') + '>' +
+        '<span class="team-avatar" aria-hidden="true">' + escapeHtml(teamInitials(p)) + '</span>' +
+        '<span class="team-who"><span class="team-name" style="display:block;">' + escapeHtml(teamDisplayName(p)) + '</span><span class="team-email" style="display:block;">' + escapeHtml(p.email) + '</span></span>' +
+        '<span class="team-status is-' + escapeAttr(p.status) + '">' + escapeHtml(TEAM_STATUS_LABEL[p.status] || p.status) + '</span>' +
+      '</button>' +
+      (tags ? '<div class="team-tags">' + tags + '</div>' : '') +
+      '<div class="team-meta">' + meta + '</div>' + actions + '</div>';
+  }
+
+  function teamRenderRoster() {
+    const list = document.getElementById('teamList');
+    if (!teamRoster.length) { list.innerHTML = '<p class="team-meta">No one yet.</p>'; return; }
+    const order = { active: 0, invited: 1, deactivated: 2 };
+    list.innerHTML = teamRoster.slice().sort((a, b) => (order[a.status] - order[b.status]) || teamDisplayName(a).localeCompare(teamDisplayName(b))).map(teamRowHtml).join('');
+  }
+
+  function teamIsLastManager(p) {
+    return p.can_manage_roles === true && teamRoster.filter(x => x.status !== 'deactivated' && x.can_manage_roles === true).length <= 1;
+  }
+
+  function teamRenderPerson() {
+    const p = teamRoster.find(x => x.email === teamSelected);
+    if (!p) { teamShowRoster(); return; }
+    document.getElementById('teamPersonName').textContent = teamDisplayName(p);
+    document.getElementById('teamPersonMeta').textContent = p.email + ' · ' + (TEAM_STATUS_LABEL[p.status] || p.status);
+    document.getElementById('teamPersonCapsLabel').textContent = 'What ' + teamDisplayName(p).split(' ')[0] + ' can do';
+    document.getElementById('teamCaps').innerHTML = TEAM_CAPS.map(cap => {
+      const st = teamCapState(p, cap);
+      const id = 'teamCap-' + cap.key;
+      return '<div class="team-cap"><div class="team-cap-main"><div class="team-cap-label" id="' + id + '">' + escapeHtml(cap.label) + '</div>' +
+        '<div class="team-cap-sub">' + escapeHtml(cap.sub) + '</div>' +
+        (st === 'partial' ? '<div class="team-cap-partial">Partly on: some of it is turned off in Dev Tools. Switching it sets all of it.</div>' : '') +
+        '</div><button type="button" class="th-toggle" role="switch" aria-checked="' + (st === 'on' ? 'true' : 'false') + '" aria-labelledby="' + id + '" data-team-cap="' + escapeAttr(cap.key) + '"></button></div>';
+    }).join('');
+    const me = typeof getCurrentUserEmail === 'function' ? String(getCurrentUserEmail() || '').toLowerCase() : '';
+    const actions = document.getElementById('teamPersonActions');
+    if (p.email.toLowerCase() === me) actions.innerHTML = '<p class="team-note">This is you. Someone else on the team can deactivate your account if they need to.</p>';
+    else if (teamIsLastManager(p)) actions.innerHTML = '<p class="team-note">Deactivate isn’t offered: ' + escapeHtml(teamDisplayName(p)) + ' is the last active person with Team &amp; Settings, and someone always has to be able to manage the team.</p>';
+    else actions.innerHTML = '<button type="button" class="team-danger" data-team-act="deactivate" data-email="' + escapeAttr(p.email) + '">Deactivate ' + escapeHtml(teamDisplayName(p)) + '</button>';
+  }
+
+  function teamShowRoster() {
+    teamSelected = null;
+    document.getElementById('teamPersonView').hidden = true;
+    document.getElementById('teamRosterView').hidden = false;
+    teamRenderRoster();
+  }
+  function teamShowPerson(email) {
+    teamSelected = email;
+    document.getElementById('teamRosterView').hidden = true;
+    document.getElementById('teamPersonView').hidden = false;
+    teamRenderPerson();
+    const back = document.getElementById('teamBackBtn');
+    if (back) back.focus();
+  }
+
+  async function teamReload() {
+    try {
+      teamRoster = await teamFetchRoster();
+      // Names for assignee chips and the Assigned to picker elsewhere.
+      try { localStorage.setItem('th_team_roster_cache', JSON.stringify(teamRoster.map(r => ({ email: String(r.email).toLowerCase(), display_name: r.display_name || null, status: r.status })))); } catch (e2) { /* storage blocked */ }
+    } catch (e) {
+      document.getElementById('teamList').innerHTML = '<p class="team-error">Couldn’t load the team (' + escapeHtml(e.message || String(e)) + '). Try again in a minute.</p>';
+      return;
+    }
+    if (teamSelected) teamRenderPerson(); else teamRenderRoster();
+  }
+
+  async function teamCall(action, payload) {
+    const res = await fetch(SUPABASE_URL + '/functions/v1/team-admin', {
+      method: 'POST',
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + getAuthToken(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ action }, payload)),
+    });
+    let body = {};
+    try { body = await res.json(); } catch (e) { /* keep {} */ }
+    return { ok: res.ok && body.ok === true, body };
+  }
+
+  async function teamToggleCap(capKey, btn) {
+    const p = teamRoster.find(x => x.email === teamSelected);
+    const cap = TEAM_CAPS.find(c => c.key === capKey);
+    if (!p || !cap) return;
+    const next = btn.getAttribute('aria-checked') !== 'true';
+    if (!next && cap.key === 'team' && teamIsLastManager(p)) {
+      showToast('Someone else needs Team & Settings first: the team always needs one person who can manage it.', { type: 'error' });
+      return;
+    }
+    if (typeof confirmDevPassword === 'function' && !(await confirmDevPassword())) return;
+    const patch = {};
+    cap.cols.forEach(c => { patch[c] = next; });
+    btn.disabled = true;
+    const res = await fetch(SUPABASE_URL + '/rest/v1/account_roles?email=eq.' + encodeURIComponent(p.email), {
+      method: 'PATCH',
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + getAuthToken(), 'Content-Type': 'application/json', Prefer: 'return=representation' },
+      body: JSON.stringify(patch),
+    });
+    btn.disabled = false;
+    let rows = [];
+    try { rows = await res.json(); } catch (e) { /* none */ }
+    if (!res.ok || !Array.isArray(rows) || rows.length !== 1) {
+      const msg = rows && rows.message ? rows.message : 'That change didn’t save.';
+      showToast(msg, { type: 'error' });
+      return;
+    }
+    Object.assign(p, patch);
+    teamRenderPerson();
+    showToast(cap.label + (next ? ' on' : ' off') + ' for ' + teamDisplayName(p) + '.');
+  }
+
+  async function teamAction(act, email) {
+    const p = teamRoster.find(x => x.email === email);
+    const name = p ? teamDisplayName(p) : email;
+    const confirmText = {
+      revoke: 'Revoke the invite for ' + name + '? Their link stops working.',
+      deactivate: 'Deactivate ' + name + '? They’re signed out everywhere and can’t sign in. Their jobs, invoices, hours and history stay as they are, still showing their name. You can reactivate them any time.' + (p && teamJobsAssigned(email) ? ' ' + teamJobsAssigned(email) + ' jobs are still assigned to them; they stay assigned until you move them.' : ''),
+      reactivate: 'Reactivate ' + name + '? They can sign in again with exactly the access they had.',
+    }[act];
+    if (confirmText && !(await showConfirm(confirmText, { confirmText: act === 'deactivate' ? 'Deactivate' : act === 'revoke' ? 'Revoke' : 'Reactivate', danger: act !== 'reactivate' }))) return;
+    if (typeof confirmDevPassword === 'function' && !(await confirmDevPassword())) return;
+    const r = await teamCall(act, { email });
+    if (!r.ok) { showToast(r.body.error || 'That didn’t work. Try again.', { type: 'error' }); await teamReload(); return; }
+    showToast({ resend: 'New link sent to ', revoke: 'Invite revoked for ', deactivate: 'Deactivated ', reactivate: 'Reactivated ' }[act] + name + '.');
+    if (act === 'deactivate' || act === 'revoke') teamSelected = null;
+    await teamReload();
+    if (!teamSelected) teamShowRoster();
+  }
+
+  // Invite sheet.
+  let teamInviteOpener = null;
+  function teamOpenInvite() {
+    teamInviteOpener = document.activeElement;
+    document.getElementById('teamInviteError').textContent = '';
+    document.getElementById('teamInviteSheet').hidden = false;
+    document.getElementById('teamInviteTitle').focus();
+  }
+  function teamCloseInvite() {
+    document.getElementById('teamInviteSheet').hidden = true;
+    if (teamInviteOpener && teamInviteOpener.focus) teamInviteOpener.focus();
+  }
+  async function teamSendInvite(e) {
+    e.preventDefault();
+    const name = document.getElementById('teamInviteName').value.trim();
+    const email = document.getElementById('teamInviteEmail').value.trim().toLowerCase();
+    const err = document.getElementById('teamInviteError');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = 'Enter their email address.'; return; }
+    if (typeof confirmDevPassword === 'function' && !(await confirmDevPassword())) return;
+    const btn = document.getElementById('teamInviteSend');
+    btn.disabled = true; btn.textContent = 'Sending…';
+    const r = await teamCall('invite', { email, name });
+    btn.disabled = false; btn.textContent = 'Send invite';
+    if (!r.ok) {
+      err.textContent = r.body.error || 'The invite didn’t send. Try again.';
+      if (r.body.invited) await teamReload();
+      return;
+    }
+    document.getElementById('teamInviteForm').reset();
+    teamCloseInvite();
+    showToast('Invite sent to ' + email + '.');
+    await teamReload();
+  }
+
+  document.getElementById('teamInviteBtn').addEventListener('click', teamOpenInvite);
+  document.getElementById('teamInviteClose').addEventListener('click', teamCloseInvite);
+  document.getElementById('teamInviteForm').addEventListener('submit', teamSendInvite);
+  document.getElementById('teamInviteSheet').addEventListener('click', (e) => { if (e.target === e.currentTarget) teamCloseInvite(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !document.getElementById('teamInviteSheet').hidden) teamCloseInvite(); });
+  document.getElementById('teamBackBtn').addEventListener('click', teamShowRoster);
+  document.addEventListener('click', (e) => {
+    const open = e.target.closest('[data-team-open]');
+    if (open && !open.disabled) { teamShowPerson(open.getAttribute('data-team-open')); return; }
+    const act = e.target.closest('[data-team-act]');
+    if (act) { teamAction(act.getAttribute('data-team-act'), act.getAttribute('data-email')); return; }
+    const cap = e.target.closest('[data-team-cap]');
+    if (cap && !cap.disabled) teamToggleCap(cap.getAttribute('data-team-cap'), cap);
+  });
+
+  // Only accounts that can manage the team (Team & Settings). The roster
+  // itself is readable by any internal account; the switches and actions
+  // are refused by the database and team-admin for anyone else anyway.
+  window.addEventListener('th-role-loaded', () => {
+    if (typeof canManageRoles === 'function' && canManageRoles()) {
+      document.getElementById('roleBlockedOverlay').classList.remove('is-shown');
+      teamReload();
+    } else {
+      document.getElementById('roleBlockedOverlay').classList.add('is-shown');
+    }
+  });
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof loadCurrentUserRole === 'function') loadCurrentUserRole();
+  });
+</script>
+</body>
+</html>

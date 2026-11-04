@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=0b420b4211"></script>
+<script src="/tools/auth.js?v=9445ba2176"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -53,16 +53,16 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=7c03870603">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=3b1514fb8b">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=c98fed7b3e">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=66c2196d60" defer></script>
-<script src="/tools/data-layer.js?v=bf98147713" defer></script>
+<script src="/tools/data-layer.js?v=34e05d4fce" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=24587c0be7" defer></script>
-<script src="/tools/tools-command-palette.js?v=210664ba23" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=fe9cdc1e0f" defer></script>
+<script src="/tools/tools-command-palette.js?v=ac4de65287" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -952,6 +952,13 @@
         <select id="jobStatus"><option value="not-started" selected>Not Started</option><option value="in-progress">In Progress</option><option value="done">Done</option></select>
       </div>
     </div>
+    <!-- Assigned to (Phase 4, 2026-11-04): only in Office view, for
+         accounts with "Manage jobs for others". In Field view a new job
+         is yours, and editing never moves it. -->
+    <div class="form-field" id="jobAssigneeField" hidden>
+      <label for="jobAssignee">Assigned to</label>
+      <select id="jobAssignee"></select>
+    </div>
     <!-- Job duration tracking (closes a real audit gap: no way to sanity-
          check quoted hours against how long a job actually took). Purely
          a manual figure -- there's no start/stop timer here, matching
@@ -1033,6 +1040,8 @@
     </div>
   </div>
 
+  <!-- Whose jobs (Office view, Phase 4): Everyone, each person, Unassigned. -->
+  <div class="jt-assignee-filter" id="jtAssigneeFilter" role="group" aria-label="Whose jobs" hidden></div>
   <div class="sort-group" id="statusFilterGroup" style="margin-bottom: 16px;">
     <button class="sort-btn is-active" data-status-filter="not-done" onclick="setStatusFilter('not-done')">Active <span class="jt-chip-n" data-filter-count="not-done"></span></button>
     <button class="sort-btn" data-status-filter="not-started" onclick="setStatusFilter('not-started')">Not started <span class="jt-chip-n" data-filter-count="not-started"></span></button>
@@ -1475,6 +1484,73 @@
     return (value.match(/\d/g) || []).length >= 7;
   }
 
+  // ---- Assignee and Field / Office view (Phase 4, 2026-11-04) ----------
+  let jtAssigneeFilterValue = 'all'; // 'all' | 'unassigned' | an email
+  function jtOffice() { return typeof thViewMode === 'function' && thViewMode() === 'office'; }
+  function jtAssigneeChip(job) {
+    if (!jtOffice()) return '';
+    const owner = typeof thJobOwner === 'function' ? thJobOwner(job) : '';
+    if (!owner) return ' <span class="th-assignee-chip is-unassigned">Unassigned</span>';
+    return ' <span class="th-assignee-chip">' + escapeHtml(thPersonName(owner)) + '</span>';
+  }
+  function jtApplyAssigneeFilter(jobs) {
+    if (!jtOffice() || jtAssigneeFilterValue === 'all') return jobs;
+    return jobs.filter(j => {
+      const owner = typeof thJobOwner === 'function' ? thJobOwner(j) : '';
+      return jtAssigneeFilterValue === 'unassigned' ? !owner : owner === jtAssigneeFilterValue;
+    });
+  }
+  function jtRenderAssigneeFilter() {
+    const el = document.getElementById('jtAssigneeFilter');
+    if (!el) return;
+    if (!jtOffice()) { el.hidden = true; el.innerHTML = ''; jtAssigneeFilterValue = 'all'; return; }
+    const people = typeof thTeamMembers === 'function' ? thTeamMembers() : [];
+    const opts = [['all', 'Everyone']].concat(people.map(p => [p.email, thPersonName(p.email)]), [['unassigned', 'Unassigned']]);
+    el.innerHTML = opts.map(([v, label]) => '<button type="button" data-assignee-filter="' + escapeAttr(v) + '" aria-pressed="' + (jtAssigneeFilterValue === v) + '">' + escapeHtml(label) + '</button>').join('');
+    el.hidden = false;
+  }
+  // Office view: the picker is shown and filled; Field view: hidden.
+  function jtFillAssigneePicker(selected) {
+    const field = document.getElementById('jobAssigneeField');
+    const sel = document.getElementById('jobAssignee');
+    if (!field || !sel) return;
+    if (!jtOffice()) { field.hidden = true; sel.innerHTML = ''; return; }
+    const me = typeof thMyEmail === 'function' ? thMyEmail() : '';
+    const want = selected === null || selected === undefined ? me : selected;
+    const people = typeof thTeamMembers === 'function' ? thTeamMembers() : [];
+    const emails = people.map(p => p.email);
+    if (me && !emails.includes(me)) emails.unshift(me);
+    if (want && !emails.includes(want)) emails.push(want);
+    sel.innerHTML = '<option value="">Unassigned</option>' + emails.map(e => '<option value="' + escapeAttr(e) + '">' + escapeHtml(thPersonName(e)) + (e === me ? ' (you)' : '') + '</option>').join('');
+    sel.value = want || '';
+    field.hidden = false;
+  }
+  // undefined = the form has no say (Field view); '' = Unassigned.
+  function jtAssigneeFromForm() {
+    const field = document.getElementById('jobAssigneeField');
+    const sel = document.getElementById('jobAssignee');
+    if (!field || field.hidden || !sel) return undefined;
+    return sel.value || null;
+  }
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-assignee-filter]');
+    if (!b) return;
+    jtAssigneeFilterValue = b.getAttribute('data-assignee-filter');
+    renderJobs();
+  });
+  function jtOnViewChange() {
+    if (!editingJobId) jtFillAssigneePicker(null);
+    renderJobs();
+  }
+  window.addEventListener('th-view-changed', jtOnViewChange);
+  window.addEventListener('th-role-loaded', () => {
+    jtOnViewChange();
+    if (typeof thRefreshTeamMembers === 'function') thRefreshTeamMembers().then(jtOnViewChange);
+  });
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof thMountViewSwitch === 'function') thMountViewSwitch(document.querySelector('.hub-header'));
+  });
+
   async function addJob() {
     const title = document.getElementById('jobTitle').value.trim();
     if (!title) { await showAlert('Give the job a title first.'); return; }
@@ -1509,6 +1585,11 @@
       hoursWorked: parseFloat(document.getElementById('jobHoursWorked').value) || null,
     };
     const wasEditing = !!editingJobId;
+    // Who it's for (Phase 4): picked in Office view; otherwise a new job is
+    // yours and an edit leaves it with whoever has it.
+    const assigneeEmail = typeof jtAssigneeFromForm === 'function' ? jtAssigneeFromForm() : undefined;
+    if (assigneeEmail !== undefined) fields.assignee = assigneeEmail;
+    else if (!wasEditing) fields.assignee = (typeof thMyEmail === 'function' && thMyEmail()) || null;
     let newId = null;
     // Real per-person attribution -- only stamped when a real account
     // is actually logged in (not the old manually-typed fallback names
@@ -1539,6 +1620,7 @@
     document.getElementById('jobDate').value = '';
     document.getElementById('jobPriority').value = 'medium';
     document.getElementById('jobStatus').value = 'not-started';
+    if (typeof jtFillAssigneePicker === 'function') jtFillAssigneePicker(null);
     document.getElementById('jobFirstTimeNudge').style.display = 'none';
     cancelJobEdit();
     justAddedJobId = newId;
@@ -1637,6 +1719,7 @@
     document.getElementById('jobNotes').value = job.notes || '';
     document.getElementById('jobReferredBy').value = job.referredBy || '';
     document.getElementById('jobHoursWorked').value = job.hoursWorked || '';
+    if (typeof jtFillAssigneePicker === 'function') jtFillAssigneePicker(typeof thJobOwner === 'function' ? thJobOwner(job) : (job.assignee || null));
     updateFirstTimeNudge(job.client || '');
     if (typeof jtSyncMore === 'function') jtSyncMore(true);
 
@@ -2418,7 +2501,7 @@
         ${jobSelectionMode ? `<label class="job-card-select"><input type="checkbox" ${selectedJobIds.has(job.id) ? 'checked' : ''} onchange="toggleJobSelected(${job.id}, this.checked)"></label>` : ''}
         ${jcTimeHtml}
         <div class="job-card-top">
-          <h4 class="job-card-title ${isDone ? 'is-done-text' : ''}">${personDot(job.lastEditedBy, 'Last edited by')}<a href="/tools/job-detail.html?id=${job.id}" style="color:inherit; text-decoration:none;">${escapeHtml(job.title)}</a></h4>
+          <h4 class="job-card-title ${isDone ? 'is-done-text' : ''}">${personDot(job.lastEditedBy, 'Last edited by')}<a href="/tools/job-detail.html?id=${job.id}" style="color:inherit; text-decoration:none;">${escapeHtml(job.title)}</a>${typeof jtAssigneeChip === 'function' ? jtAssigneeChip(job) : ''}</h4>
           <div class="job-badges">
             <span class="badge badge-${job.priority}">${job.priority}</span>
             ${opts.showStatusBadge ? `<span class="badge badge-status status-${job.status}">${STATUS_LABEL[job.status]}</span>` : ''}
@@ -2480,6 +2563,11 @@
     // this filter is the ONLY thing making a pending-delete job
     // disappear from view in the meantime.
     if (pendingDeleteJobIds.size > 0) allJobs = allJobs.filter(j => !pendingDeleteJobIds.has(j.id));
+    // Field view: only your jobs; Office view: everyone's, narrowed by the
+    // whose-jobs chips (Phase 4, thJobInView in data-layer.js).
+    if (typeof thJobInView === 'function') allJobs = allJobs.filter(j => thJobInView(j));
+    if (typeof jtApplyAssigneeFilter === 'function') allJobs = jtApplyAssigneeFilter(allJobs);
+    if (typeof jtRenderAssigneeFilter === 'function') jtRenderAssigneeFilter();
     if (searchTerm) {
       allJobs = allJobs.filter(j =>
         (j.title || '').toLowerCase().includes(searchTerm) ||
