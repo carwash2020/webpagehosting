@@ -1427,9 +1427,8 @@ Built before merge (same PR):
    Settings > Add-ons when their add-on is off, even by direct URL.
 9. **Card payment wording.** The public pages no longer say "via a secure
    Stripe invoice". The live FAQ and Terms rows (read from the database)
-   need `sql/site-content/2026-11-04_card_payment_wording.sql`, not applied
-   yet: it waits for Connor's approval (or paste the same text in Website
-   editing).
+   were updated with `sql/site-content/2026-11-04_card_payment_wording.sql`
+   on 2026-11-04, with Connor's approval.
 10. **The Jobs page's browser title** is "Jobs".
 
 <!-- Add new bug-lane questions above this line -->

@@ -1,11 +1,8 @@
--- Card payment wording (2026-11-04, Phase 3.4 decision 9). NOT APPLIED:
--- this is a change to live site content, so it waits for Connor's
--- approval. The public pages' static copies were updated in the repo; the
--- live FAQ and Terms are read from these two rows (index.html fetches
--- site_faq and site_terms), so they still say "via a secure Stripe invoice"
--- until this runs -- or until the same text is pasted in Website editing
--- (Settings > Add-ons > Website editing), which records history the same
--- way.
+-- Card payment wording (2026-11-04, Phase 3.4 decision 9). APPLIED
+-- 2026-11-04 18:00 UTC with Connor's approval ("apply the faq sql"); both
+-- rows read back with the new text. The public pages' static copies were
+-- updated in the repo; the live FAQ and Terms are read from these two rows
+-- (index.html fetches site_faq and site_terms).
 --
 -- Each UPDATE only touches the row while it still holds the old text, so
 -- running it twice, or after someone edited the row, changes nothing.

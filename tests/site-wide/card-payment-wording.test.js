@@ -2,8 +2,8 @@
 // and Terms said cards were paid "via a secure Stripe invoice", which no
 // longer matches how cards are taken -- in person (Charge a card) or online
 // through the invoice's pay link. The static copies (the fallback text and
-// the FAQPage JSON-LD Google reads) are fixed here; the live rows are a
-// prepared, not-yet-applied SQL change (sql/site-content/).
+// the FAQPage JSON-LD Google reads) are fixed here; the live rows were
+// updated by sql/site-content/2026-11-04_card_payment_wording.sql.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
@@ -38,9 +38,9 @@ test('every page with the payment FAQ says the same new thing in its visible ans
   }
 });
 
-test('the live FAQ and Terms rows get the same text from a prepared SQL file that is marked not applied and only touches the old text', () => {
+test('the live FAQ and Terms rows got the same text from a SQL file (applied 2026-11-04 with approval) that only touches the old text', () => {
   const sql = fs.readFileSync(path.join(ROOT, 'sql', 'site-content', '2026-11-04_card_payment_wording.sql'), 'utf8');
-  assert.match(sql, /NOT APPLIED/);
+  assert.match(sql, /APPLIED\n-- 2026-11-04 18:00 UTC with Connor's approval/);
   assert.ok(sql.includes("set answer = '" + NEW_FAQ + "'"));
   assert.match(sql, /where id = 5\s+and answer = 'Cash, check, Venmo, and Cash App are all accepted, along with credit and debit cards via a secure Stripe invoice\.';/);
   assert.match(sql, /where id = 4\s+and body = 'Payment is due upon completion[^']*\(via a secure Stripe invoice\) are accepted\.';/);
