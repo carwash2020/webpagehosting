@@ -228,7 +228,8 @@ test('workspace.html\'s 3 tour steps (of the First Impressions handoff\'s 6, 202
 test('the help modal describes the new layout and no longer mentions the chip row, the Tools section, or the retired Show on Calendar checkbox', () => {
   const help = WORKSPACE.match(/<div class="help-modal-body">([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>\s*<script>/)[1];
   assert.doesNotMatch(help, /Route all|Today's route|Route today|Rest of Today|Gallery Queue/);
-  assert.match(help, /Pull today's jobs/, 'the typical day points at Route Planner for the whole day\'s route');
+  // 2026-11-04: Route Planner is an add-on; the help says how to turn it on.
+  assert.match(help, /Plan today's route<\/strong>/, 'the typical day points at the Route planner add-on for the whole day\'s route');
   assert.match(help, /Needs attention/);
   assert.match(help, /Backup &amp; Restore lives in Dev Tools/, 'moved Settings -> Dev Tools on 2026-09-22');
   assert.doesNotMatch(help, /chip row|More tools|Show on Calendar|Today's schedule/);

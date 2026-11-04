@@ -2882,3 +2882,23 @@ function thPageTip(pageKey, bodyHtml, anchor, opts) {
   });
   anchor.parentNode.insertBefore(card, anchor);
 }
+
+// Add-ons (2026-11-04, approved "Route planner add-on" design). Extra tools
+// that are off by default and, while off, have no way in anywhere in the
+// app: not the nav, not Search, not a button. Kept in th_addons, which
+// sync.js carries to every device on the account. Unknown or unreadable
+// means off.
+function thReadAddons() {
+  try {
+    var v = JSON.parse(localStorage.getItem('th_addons') || '{}');
+    return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  } catch (e) { return {}; }
+}
+function thAddonOn(name) { return thReadAddons()[name] === true; }
+function thSetAddon(name, on) {
+  var v = thReadAddons();
+  v[name] = !!on;
+  try { localStorage.setItem('th_addons', JSON.stringify(v)); } catch (e) { /* storage blocked */ }
+  if (typeof scheduleSync === 'function') scheduleSync();
+  try { window.dispatchEvent(new Event('th-addons-changed')); } catch (e) { /* old browser */ }
+}

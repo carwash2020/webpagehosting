@@ -1161,18 +1161,18 @@ test('finance.html\'s DOMContentLoaded init actually runs to completion and rend
 // rendered as bare floating buttons with no container background --
 // exactly matching what the reported screenshots showed.
 
-test('the bottom nav has Finance instead of Routes, and Route Planner is still reachable from the Workspace (More / Search)', () => {
+test('the bottom nav has Finance instead of Routes, and Route Planner is still reachable from the Workspace (My Day, while its add-on is on)', () => {
   const navSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'tools-nav-pwa.js'), 'utf8');
   assert.match(navSrc, /href:\s*'\/tools\/finance\.html'.*icon:\s*'dollar'.*label:\s*'Money'/s, 'Finance is "Money" since 2026-11-04 (the nine)');
   assert.doesNotMatch(navSrc, /label:\s*'Routes'/);
   // Route Planner used to be reached from the dashboard's tile grid;
   // since 2026-09-21 the grid is gone and the sidebar / More sheet
   // (SIDEBAR_DESTS) carry it instead -- still reachable, one tap.
-  // 2026-11-04: out of the nav (the nine); Search still has it until the
-  // add-on switch lands (Settings > Add-ons).
-  const palette = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'tools-command-palette.js'), 'utf8');
-  assert.match(palette, /href: '\/tools\/route-planner\.html'/, 'Route Planner must still be linked from somewhere, or it becomes unreachable');
+  // 2026-11-04: out of the nav (the nine) and Search; an add-on whose one
+  // way in is My Day's Plan today's route (Settings > Add-ons).
   const wsSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'workspace.html'), 'utf8');
+  assert.match(wsSrc, /<a href="\/tools\/route-planner\.html#today" class="dash-route-btn" id="dashRouteBtn" hidden>/, 'Route Planner must still be linked from somewhere, or it becomes unreachable');
+  assert.match(fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'settings.html'), 'utf8'), /data-addon="routePlanner"/, 'and its switch is in Settings');
   // Redundancy pass (2026-10-31): the Next Job card's own Route today
   // left. Cross-surface pass, round 2 (2026-10-31): Today's route's Route
   // all left Home too, so Route Planner is the one way to route the day.

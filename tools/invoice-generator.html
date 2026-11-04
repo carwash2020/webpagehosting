@@ -55,15 +55,15 @@
 <link rel="stylesheet" href="/styles.css?v=7c03870603">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=3b1514fb8b">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=486abe5b22" defer></script>
+<script src="/tools/sync.js?v=66c2196d60" defer></script>
 <script src="/tools/data-layer.js?v=9081e6e314" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/signature-pad.js?v=f95f8e1d28" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=d56f1ed8e0" defer></script>
-<script src="/tools/tools-command-palette.js?v=15c76f6910" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=7e89e87344" defer></script>
+<script src="/tools/tools-command-palette.js?v=7b37f6c2ef" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <!-- U15/W18 fix (High-Impact Upgrades, Master Audit, 2026-09-08): the
      masthead/footer/totals-block drawing code below moved into this
@@ -781,7 +781,7 @@
   <details class="inv-adv"><summary>More ways to add</summary>
   <button type="button" class="add-row-btn" onclick="addLaborLineItem('addLineItem')">+ Add labor</button>
   <button type="button" class="add-row-btn" onclick="addMileageLineItem('addLineItem')">+ Add mileage</button>
-  <button type="button" class="secondary-btn" style="margin-left:8px;" onclick="openWikiLookup('jobDescription')">Look Up in Wiki</button>
+  <button type="button" class="secondary-btn" style="margin-left:8px;" data-addon-wiki hidden onclick="openWikiLookup('jobDescription')">Look Up in Wiki</button>
   <div class="price-ref-manage">
     <button type="button" class="price-ref-manage-toggle" id="invoicePriceRefManageToggle" aria-expanded="false" aria-controls="invoicePriceRefManager" onclick="togglePriceRefManager('invoicePriceRefManager', this)">Manage saved job types</button>
     <div class="price-ref-manager" id="invoicePriceRefManager" hidden>
@@ -1002,7 +1002,7 @@
   <button type="button" class="add-row-btn" onclick="addQuoteLineItem('', '', 1, '', true, '', true)">+ Add line item</button>
   <button type="button" class="add-row-btn" onclick="addLaborLineItem('addQuoteLineItem')">+ Add labor</button>
   <button type="button" class="add-row-btn" onclick="addMileageLineItem('addQuoteLineItem')">+ Add mileage</button>
-  <button type="button" class="secondary-btn" style="margin-left:8px;" onclick="openWikiLookup('quoteJobDescription')">Look Up in Wiki</button>
+  <button type="button" class="secondary-btn" style="margin-left:8px;" data-addon-wiki hidden onclick="openWikiLookup('quoteJobDescription')">Look Up in Wiki</button>
 
   <div class="totals-box">
     <div style="margin:0 0 10px; display:flex; align-items:center; gap:6px;"><button class="help-btn" onclick="openCardInfo('salesTax')" aria-label="About sales tax on this estimate" title="About sales tax on this estimate">?</button><span class="inline-note" style="margin:0;">Sales tax on repair labor</span></div>
@@ -3919,6 +3919,14 @@
   // Connor's own curated common jobs one click at a time -- this is for
   // the less-common cases that quick list doesn't have, checked against
   // the comprehensive wiki instead.
+  // Appliance Wiki is an add-on (2026-11-04): these buttons show only
+  // while it is on (Settings > Add-ons).
+  function showWikiButtons() {
+    const on = typeof thAddonOn === 'function' && thAddonOn('applianceWiki');
+    document.querySelectorAll('[data-addon-wiki]').forEach(b => { b.hidden = !on; });
+  }
+  window.addEventListener('th-addons-changed', showWikiButtons);
+  document.addEventListener('DOMContentLoaded', showWikiButtons);
   function openWikiLookup(descriptionFieldId) {
     const query = (document.getElementById(descriptionFieldId).value || '').trim();
     const url = '/tools/parts-reference.html' + (query ? '?search=' + encodeURIComponent(query) : '');

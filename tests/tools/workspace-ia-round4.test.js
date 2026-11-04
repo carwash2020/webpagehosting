@@ -55,7 +55,7 @@ test('the tour engine calls onShow before highlighting, picks the first VISIBLE 
 
 test('the command palette lists every action before you type, filters them by title or keyword, and gates the finance-domain ones the way the nav does', () => {
   assert.match(PALETTE, /var ACTIONS = \[/);
-  for (const href of ['/tools/job-tracker.html#add-job', '/tools/job-tracker.html#calendar', '/tools/job-tracker.html#contacts', '/tools/invoice-generator.html#quote', '/tools/invoice-generator.html#charge', '/tools/invoice-generator.html#recent', '/tools/finance.html#expenses', '/tools/finance.html#income', '/tools/finance.html#profitability', '/tools/route-planner.html', '/tools/contract-generator.html', '/tools/review-request.html', '/tools/parts-reference.html', '/tools/runway-dashboard.html#runway', '/tools/settings.html', '/tools/workspace.html?tour=1']) {
+  for (const href of ['/tools/job-tracker.html#add-job', '/tools/job-tracker.html#calendar', '/tools/job-tracker.html#contacts', '/tools/invoice-generator.html#quote', '/tools/invoice-generator.html#charge', '/tools/invoice-generator.html#recent', '/tools/finance.html#expenses', '/tools/finance.html#income', '/tools/finance.html#profitability', '/tools/contract-generator.html', '/tools/review-request.html', '/tools/runway-dashboard.html#runway', '/tools/settings.html', '/tools/workspace.html?tour=1']) {
     assert.ok(PALETTE.includes("href: '" + href + "'"), `palette should link to ${href}`);
   }
   for (const [href, perm] of [['/tools/finance.html#expenses', 'canViewFinance'], ['/tools/invoice-generator.html#charge', 'canManageInvoices'], ['/tools/contract-generator.html', 'canManageContracts'], ['/tools/review-request.html', 'canManageReviews'], ['/tools/runway-dashboard.html#runway', 'canViewRunway']]) {
@@ -72,15 +72,15 @@ test('the command palette lists every action before you type, filters them by ti
   const hrefs = () => [...window.document.querySelectorAll('#thCmdkResults a')].map(a => a.getAttribute('href'));
   assert.ok(hrefs().includes('/tools/job-tracker.html#add-job'), 'New job listed before typing');
   assert.ok(hrefs().includes('/tools/contract-generator.html'));
-  // Redundancy pass (2026-10-31): Route Planner is a More / Search
-  // destination -- not in the before-you-type list, found the moment you
-  // type (below). Cost lookup and Inventory left with their Finance tabs.
-  assert.ok(!hrefs().includes('/tools/route-planner.html'), 'Plan a route waits for typing');
+  // Route Planner and the Appliance Wiki are add-ons (2026-11-04), neither
+  // in Search (tests/workspace/addons.test.js). Cost lookup and Inventory
+  // left with their Finance tabs.
+  assert.ok(!PALETTE.includes("href: '/tools/route-planner.html") && !PALETTE.includes("href: '/tools/parts-reference.html"));
   assert.ok(!PALETTE.includes("href: '/tools/finance.html#cost'") && !PALETTE.includes("href: '/tools/finance.html#inventory'"));
   assert.ok(!hrefs().some(h => /finance\.html|invoice-generator\.html|runway/.test(h)), 'gated actions hidden: ' + hrefs().join(','));
   const input = window.document.getElementById('thCmdkInput');
-  input.value = 'rout'; input.dispatchEvent(new window.Event('input'));
-  assert.deepEqual(hrefs(), ['/tools/route-planner.html'], 'typing filters to the matching action');
+  input.value = 'contract'; input.dispatchEvent(new window.Event('input'));
+  assert.deepEqual(hrefs(), ['/tools/contract-generator.html'], 'typing filters to the matching action');
 });
 
 test('tabbed pages take a #tab deep link and follow a same-document hash change (the palette and the tour link straight to tabs)', () => {

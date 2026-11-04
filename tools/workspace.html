@@ -71,7 +71,7 @@
 <link rel="stylesheet" href="/styles.css?v=7c03870603">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=3b1514fb8b">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=486abe5b22" defer></script>
+<script src="/tools/sync.js?v=66c2196d60" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
      "Approve & Schedule" form to warn if a chosen time falls outside
      real business hours, matching the same real hours booking.html,
@@ -83,8 +83,8 @@
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=d56f1ed8e0" defer></script>
-<script src="/tools/tools-command-palette.js?v=15c76f6910" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=7e89e87344" defer></script>
+<script src="/tools/tools-command-palette.js?v=7b37f6c2ef" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -216,6 +216,16 @@
      navigation, money owed split current/overdue, and the rest of the
      day beside it, replacing the old flat "Today" drawer. */
   .today-hero { display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; margin-bottom: 20px; }
+  /* Plan today's route (Route planner add-on, 2026-11-04). */
+  .dash-route-btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 56px; margin: 12px 0 0;
+    border: 1px solid var(--orange); border-radius: 16px; background: var(--bg-panel); color: var(--text);
+    font-family: var(--font-ui); font-size: 16px; font-weight: 600; text-decoration: none; -webkit-tap-highlight-color: transparent;
+  }
+  .dash-route-btn[hidden] { display: none; }
+  .dash-route-btn .th-icon { width: 20px; height: 20px; color: var(--tone-orange-fg); }
+  .dash-route-btn:active { transform: scale(.98); }
+  @media (hover: hover) { .dash-route-btn:hover { background: var(--bg-panel-2); } }
   @media (max-width: 900px) { .today-hero { grid-template-columns: 1fr; } }
   .today-next-job {
     background: linear-gradient(135deg, var(--bg-panel-2), var(--bg-panel));
@@ -1329,6 +1339,10 @@
 <div class="today-hero" id="todayHero">
   <div class="today-next-job" id="todayNextJob"><div class="skeleton-line w-40"></div><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div></div>
 </div>
+<!-- Route planner add-on (2026-11-04, approved design): its one way in,
+     shown only while the add-on is on (Settings > Add-ons) and there are
+     jobs left today. #today pulls today's jobs when Route Planner opens. -->
+<a href="/tools/route-planner.html#today" class="dash-route-btn" id="dashRouteBtn" hidden><svg class="th-icon" aria-hidden="true"><use href="#icon-map" xlink:href="#icon-map"></use></svg>Plan today&rsquo;s route</a>
 
 <!-- Cross-surface pass, round 2 (2026-10-31): Today's route (the day's
      timeline and its Route all Google Maps link) left Home. Connor's rule:
@@ -1681,7 +1695,7 @@
       <p><strong>A typical day, start to finish:</strong></p>
       <ol style="padding-left: 20px; margin: 8px 0 16px;">
         <li>Open the Dashboard: Next Job, Money Owed, and Needs attention are the first screen.</li>
-        <li>Heading out? Open a job for its <strong>Directions</strong>, or <strong>Route Planner</strong> (the grid button at the top right, or search &ldquo;route&rdquo;) and tap <strong>Pull today's jobs</strong>, then <strong>Open full route in Google Maps</strong> for the whole day's driving.</li>
+        <li>Heading out? Open a job for its <strong>Directions</strong>. For the whole day's driving, turn on the <strong>Route planner</strong> add-on in Settings &gt; Add-ons: <strong>Plan today's route</strong> then shows under Next Job and opens today's jobs in order, ready for Google Maps.</li>
         <li>New job comes in? Tap the orange <strong>+</strong> and <strong>Job</strong> &mdash; that opens Job Tracker with the add form ready. Use the microphone icon next to Notes to dictate instead of typing. Every dated job shows on the Calendar view automatically.</li>
         <li>On site, tap <strong>Done</strong> on the job's card or table row (or use the status dropdown for In Progress). Attach photos with the Photos button. Marking a job done asks what's next: <strong>Create invoice</strong> (the form opens filled from the job) or a pre-filled review request.</li>
         <li>Forgot to invoice one? It waits in <strong>Ready to invoice</strong> on the Money Owed card until it's billed, paid another way, or marked no charge.</li>
@@ -3589,6 +3603,8 @@
     const nextEl = document.getElementById('todayNextJob');
     if (!nextEl) return;
     const todaysJobs = getTodaysJobs();
+    const routeBtn = document.getElementById('dashRouteBtn');
+    if (routeBtn) routeBtn.hidden = !(todaysJobs.length > 0 && typeof thAddonOn === 'function' && thAddonOn('routePlanner'));
 
     // Empty schedule (2026-09-29): the greeting card's own summary line
     // ("Nothing left on today's schedule.") already says this -- a second
@@ -4514,6 +4530,7 @@
       renderSnapshotLastUpdated();
       renderMfaNagBanner();
       window.addEventListener('th-clock-change', () => { renderTodayHero(); renderWeekCard(); });
+      window.addEventListener('th-addons-changed', () => renderTodayHero());
       window.addEventListener('th-shift-change', renderWeekCard);
       window.addEventListener('th-role-loaded', renderWeekCard);
       window.addEventListener('th-invoice-reminded', renderMetrics);

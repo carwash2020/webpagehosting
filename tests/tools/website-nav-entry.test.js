@@ -66,13 +66,12 @@ test('Team is gated like Dev Tools, and Dev Tools opens the account permissions 
   assert.match(DEV, /function revealTeamPanel\(\)/);
 });
 
-test('a site-content manager sees Website editing under Add-ons once the role loads', () => {
+test('a site-content manager sees Website editing under Add-ons once the role loads (the Add-ons card itself is always there: it holds the Route planner and Appliance Wiki switches)', () => {
   const { roleLoaded, $ } = settingsWith({});
   assert.equal($('settingsWebsiteRow').hidden, true, 'hidden before the role loads');
-  assert.equal($('settingsAddons').hidden, true);
+  assert.equal($('settingsAddons').hidden, false);
   roleLoaded({ canManageSiteContent: true });
   assert.equal($('settingsWebsiteRow').hidden, false);
-  assert.equal($('settingsAddons').hidden, false);
   assert.equal($('settingsWebsiteRow').querySelector('a').getAttribute('href'), '/tools/site-content.html');
   assert.match($('settingsWebsiteRow').textContent, /Edit the public site's hours, banners, FAQ and terms from here\./);
 });

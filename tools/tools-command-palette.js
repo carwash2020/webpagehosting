@@ -67,12 +67,13 @@
     { title: 'Profitability', meta: 'Money \u203a what each job made', href: '/tools/finance.html#profitability', keywords: 'profit margin', perm: 'canViewFinance' },
     // Cost lookup and Inventory left with their Finance tabs (redundancy
     // pass, 2026-10-31): pricing a job is New quote's job, and nothing read
-    // the inventory list. Plan a route shows once you type (typedOnly):
-    // Route Planner is a More / Search destination now, not a top item.
-    { title: 'Plan a route', meta: 'Route Planner', href: '/tools/route-planner.html', keywords: 'directions maps drive stops mileage', typedOnly: true },
+    // the inventory list. Route Planner is an add-on since 2026-11-04: its
+    // one way in is My Day's "Plan today's route", so it is not here.
     { title: 'New contract', meta: 'Contract Generator', href: '/tools/contract-generator.html', keywords: 'work order agreement sign', perm: 'canManageContracts' },
     { title: 'Send review request', meta: 'Review Request Sender', href: '/tools/review-request.html', keywords: 'google yelp text qr', perm: 'canManageReviews' },
-    { title: 'Look up a part', meta: 'Appliance Wiki', href: '/tools/parts-reference.html', keywords: 'manual model brand appliance wiki' },
+    // Appliance Wiki is an add-on too (2026-11-04): its one way in is the
+    // invoice and quote line items' Look Up in Wiki (handoff §2: "Parts
+    // lookup: only inside invoice line items ... not a destination page").
     { title: 'Runway Dashboard', meta: 'Personal budget and business runway', href: '/tools/runway-dashboard.html#runway', keywords: 'budget net worth draw', perm: 'canViewRunway' },
     { title: 'Dashboard', meta: 'Home \u203a today, money owed, needs attention', href: '/tools/workspace.html', keywords: 'home today inbox' },
     // Out of the nav since 2026-11-04 (nine items), so Search keeps them reachable.
