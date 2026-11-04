@@ -551,7 +551,7 @@ async function loadCurrentUserRole(overrideAccessToken, overrideEmail) {
           // the caller's own afterward costs nothing extra RLS
           // wasn't already allowing.
           res = await fetch(
-            `${SUPABASE_URL}/rest/v1/account_roles?select=email,role_name,can_manage_roles,can_access_dev_tools,can_access_dev_tools_full,can_manage_site_content,can_manage_invoices,can_manage_contracts,can_view_finance,can_view_runway,can_manage_reviews`,
+            `${SUPABASE_URL}/rest/v1/account_roles?select=email,role_name,can_manage_roles,can_access_dev_tools,can_access_dev_tools_full,can_manage_site_content,can_manage_invoices,can_manage_contracts,can_view_finance,can_view_runway,can_manage_reviews,can_manage_clients,can_manage_others_jobs`,
             {
               headers: {
                 'apikey': SUPABASE_ANON_KEY,
@@ -616,6 +616,9 @@ async function loadCurrentUserRole(overrideAccessToken, overrideEmail) {
         canViewFinance: !!row.can_view_finance,
         canViewRunway: !!row.can_view_runway,
         canManageReviews: !!row.can_manage_reviews,
+        // Phase 4 (2026-11-04, sql/security/phase4_team_roster_and_deactivate.sql).
+        canManageClients: !!row.can_manage_clients,
+        canManageOthersJobs: !!row.can_manage_others_jobs,
         description: '',
       };
       if (!usingOverride) _cachedRoleInfo = roleInfo;
@@ -719,6 +722,18 @@ function canViewRunway() {
 }
 function canManageReviews() {
   return !!(_cachedRoleInfo && _cachedRoleInfo.canManageReviews);
+}
+// Phase 4 (2026-11-04): the Clients capability, and "Manage jobs for
+// others" (Office view: every job, assign and schedule for anyone).
+function canManageClients() {
+  return !!(_cachedRoleInfo && _cachedRoleInfo.canManageClients);
+}
+function canManageOthersJobs() {
+  return !!(_cachedRoleInfo && _cachedRoleInfo.canManageOthersJobs);
+}
+// True once this account's permissions have actually loaded.
+function isRoleLoaded() {
+  return !!_cachedRoleInfo;
 }
 
 // Superseded by hasDevToolsAccess() above -- kept as a thin wrapper

@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=0b420b4211"></script>
+<script src="/tools/auth.js?v=9445ba2176"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -49,17 +49,17 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=7c03870603">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=3b1514fb8b">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=c98fed7b3e">
 <!-- data-layer.js (2026-09-22): the client registry and the directory
      query (thGetClientDirectory) the Clients tab now lists from. Loaded
      before the shared files below, same order as every other page. -->
-<script src="/tools/data-layer.js?v=bf98147713" defer></script>
+<script src="/tools/data-layer.js?v=34e05d4fce" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=24587c0be7" defer></script>
-<script src="/tools/tools-command-palette.js?v=210664ba23" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=fe9cdc1e0f" defer></script>
+<script src="/tools/tools-command-palette.js?v=ac4de65287" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <!-- supabase-js (2026-09-22): the client list follows live changes from other devices
      (startRealtimeSync), which needs the realtime client this page never loaded before. -->
@@ -297,6 +297,18 @@
 </style>
 </head>
 <body data-th-page="clients">
+<!-- Clients capability (Phase 4, 2026-11-04, can_manage_clients): an
+     account without it sees this instead of the list. -->
+<div id="roleBlockedOverlay" class="role-blocked-overlay" data-rb role="alert">
+  <div class="th-rb-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+  <h1>Clients</h1>
+  <p class="th-rb-body">This page isn’t part of your account’s access. <span class="th-rb-who"></span> If you need something from here, ask Steve.</p>
+  <div class="th-rb-actions">
+    <a href="/tools/workspace.html" class="primary-btn">Back to Home</a>
+    <button type="button" class="secondary-btn th-rb-switch" onclick="signOut()">Switch account</button>
+    <button type="button" class="secondary-btn th-rb-retry" onclick="retryRoleCheck(this, canManageClients)">Try again</button>
+  </div>
+</div>
 <a href="#mainContent" class="skip-link">Skip to main content</a>
 
 <div class="hub-header">
@@ -1940,7 +1952,12 @@
         if (location.hash === '#new') openAddClient();
       });
       if (location.hash === '#new') openAddClient();
-      window.addEventListener('th-role-loaded', (e) => { applyPortalPermission(e.detail); refreshClientDupNotice(e.detail); });
+      window.addEventListener('th-role-loaded', (e) => {
+        // Clients capability (Phase 4): fail closed once the role is known.
+        const ok = typeof canManageClients === 'function' && canManageClients();
+        document.getElementById('roleBlockedOverlay').classList.toggle('is-shown', !ok);
+        applyPortalPermission(e.detail); refreshClientDupNotice(e.detail);
+      });
       // Pull the latest from the cloud (and learn the account's role),
       // then re-list: a client added on another device shows up here.
       if (typeof initSyncOnLoad === 'function') {

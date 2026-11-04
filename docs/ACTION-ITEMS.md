@@ -1431,4 +1431,41 @@ Built before merge (same PR):
    on 2026-11-04, with Connor's approval.
 10. **The Jobs page's browser title** is "Jobs".
 
+## Phase 4: built, and what it deliberately doesn't do (2026-11-04)
+
+Built: the Team page (roster, invite / resend / revoke, deactivate /
+reactivate, six capability switches), Clients and "Manage jobs for others"
+capabilities, a job assignee, Field / Office views, and the Dev Tools
+sections home. Live: migration `phase4_team_roster_and_deactivate` and the
+`team-admin` edge function (both approved).
+
+For Connor to decide (none of these were built):
+
+1. **Field view is a screen filter.** Every job still syncs to every
+   device; Field view only hides other people's jobs on Jobs and My Day
+   (Connor's choice). Server-enforced per-person jobs would need the job
+   sync reworked.
+2. **The Clients capability is enforced in the screens** (nav, Search,
+   + New, the Clients page), not in the database: client data rules are
+   unchanged, so any staff account can still read it underneath.
+3. **Other Dashboard lists aren't filtered by view.** Due this week, Ready
+   to invoice and Your week still show everyone's jobs in Field view.
+4. **Deactivate and already-open sessions.** Deactivating removes all data
+   access at once and blocks new sign-ins. A browser tab they already had
+   open keeps its (now useless) sign-in token until it expires, up to about
+   an hour; there is no "sign out every device" call.
+5. **Names.** Existing accounts have no display name, so Team shows the
+   first part of the email ("Steve", "Connor"). There is no way to edit a
+   name yet; invited people get the name typed in the invite.
+6. **Full technical Dev Tools access** isn't one of the six capabilities;
+   it stays in Dev Tools > Access > Account permissions, which now links to
+   Team.
+7. **Phase 4 note from Connor:** a "Manage add-ons" capability if the team
+   grows. Not built: any account can still flip an add-on.
+8. **Invite links** depend on Supabase's Auth redirect allowlist including
+   `https://www.triplehenterprisesllc.biz/**`, the same setting client
+   invites use. If an invite lands on the homepage, that's the cause.
+9. **The Jobs page header** still says "Job Tracker" (its browser title is
+   "Jobs" since 3.4).
+
 <!-- Add new bug-lane questions above this line -->

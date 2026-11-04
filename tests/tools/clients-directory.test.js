@@ -274,11 +274,12 @@ test('the Portal tab hides on a definite "no" from the role (an account that can
   assert.ok(w.document.getElementById('tab-directory').classList.contains('is-active'), 'cannot be forced open afterwards');
 });
 
-test('everyone sees Clients in the nav now; the palette and Create sheet point at the directory; the tour teaches it', () => {
+test('Clients is in the nav for accounts with the Clients capability (Phase 4, 2026-11-04; every account that existed then has it); the palette and Create sheet point at the directory', () => {
   const nav = read('tools-nav-pwa.js');
   const checks = nav.match(/var NAV_PERMISSION_CHECKS = \{([\s\S]*?)\};/)[1];
-  assert.doesNotMatch(checks, /'\/tools\/clients\.html': function/);
-  assert.match(nav, /\{ label: 'Client', +hint: 'Add to your client list', +icon: 'user-plus', href: '\/tools\/clients\.html#new' \}/);
+  assert.match(checks, /'\/tools\/clients\.html': function \(\) \{ return typeof canManageClients === 'function' && canManageClients\(\); \}/);
+  assert.match(nav, /\{ label: 'Client', +hint: 'Add to your client list', +icon: 'user-plus', href: '\/tools\/clients\.html#new', perm: 'canManageClients' \}/);
+  assert.match(CLIENTS, /<div id="roleBlockedOverlay" class="role-blocked-overlay"[\s\S]{0,800}?retryRoleCheck\(this, canManageClients\)/);
   const palette = read('tools-command-palette.js');
   assert.match(palette, /\{ label: 'Clients', load: loadClients,/);
   assert.match(palette, /href: '\/tools\/client-detail\.html\?id=' \+ encodeURIComponent\(c\.id\)/);

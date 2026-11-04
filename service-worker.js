@@ -713,7 +713,7 @@
 // specificity) when there's nothing scheduled, and unhides it the
 // moment a real job exists again. workspace.html is precached. Same
 // reasoning as every prior bump in this file's history.
-const CACHE_NAME = 'th-workspace-v489'; // precache-fingerprint:2ac6fa0f5b6f
+const CACHE_NAME = 'th-workspace-v499'; // precache-fingerprint:add78feb3d28
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/route-planner.html', '/tools/review-request.html', '/tools/login.html',
@@ -738,6 +738,7 @@ const PRECACHE_URLS = [
   // Added 2026-08-20 -- same gap yet again, found while already
   // touching this list for the light-mode work above.
   '/tools/settings.html',
+  '/tools/team.html',
   // Added 2026-08-26 -- found by a new, automated check comparing this
   // list against the real file set, rather than another manual audit.
   // reset-password.html was missing entirely (a password-reset link

@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=0b420b4211"></script>
+<script src="/tools/auth.js?v=9445ba2176"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -69,7 +69,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=7c03870603">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=3b1514fb8b">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=c98fed7b3e">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=66c2196d60" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -78,13 +78,13 @@
      manage-booking.html, portal/quotes.html, and portal/jobs.html use. -->
 <script src="/js/business-hours.js?v=e0e3b29210"></script>
 <script src="/tools/push-notifications.js?v=3c123334a6" defer></script>
-<script src="/tools/data-layer.js?v=bf98147713" defer></script>
+<script src="/tools/data-layer.js?v=34e05d4fce" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=24587c0be7" defer></script>
-<script src="/tools/tools-command-palette.js?v=210664ba23" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=fe9cdc1e0f" defer></script>
+<script src="/tools/tools-command-palette.js?v=ac4de65287" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -3602,7 +3602,8 @@
     const jobs = thJobs.all();
     const today = new Date();
     const todayKey = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-    const todaysJobs = jobs.filter(j => j.date === todayKey && j.status !== 'done');
+    // Field view: only your jobs; Office view: everyone's (Phase 4).
+    const todaysJobs = jobs.filter(j => j.date === todayKey && j.status !== 'done' && (typeof thJobInView !== 'function' || thJobInView(j)));
     const priorityOrder = { high: 0, medium: 1, low: 2 };
     todaysJobs.sort((a, b) => (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1));
     return todaysJobs;
@@ -4548,6 +4549,10 @@
       renderMfaNagBanner();
       window.addEventListener('th-clock-change', () => { renderTodayHero(); renderWeekCard(); });
       window.addEventListener('th-addons-changed', () => renderTodayHero());
+      // Field / Office view (Phase 4): the switch under the header, and My
+      // Day redrawn when it changes.
+      if (typeof thMountViewSwitch === 'function') thMountViewSwitch(document.querySelector('.hub-header'));
+      window.addEventListener('th-view-changed', () => renderTodayHero());
       window.addEventListener('th-shift-change', renderWeekCard);
       window.addEventListener('th-role-loaded', renderWeekCard);
       window.addEventListener('th-invoice-reminded', renderMetrics);

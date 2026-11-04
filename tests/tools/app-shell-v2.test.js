@@ -27,7 +27,7 @@ function shellOn(page, { perms = {}, storage = {} } = {}) {
       w.requireAuth = () => {};
       w.initAppTour = () => {};
       for (const [k, v] of Object.entries(storage)) w.localStorage.setItem(k, v);
-      for (const fn of ['canManageInvoices', 'canViewFinance', 'canViewRunway', 'canManageContracts', 'canManageReviews', 'hasDevToolsAccess']) {
+      for (const fn of ['canManageInvoices', 'canViewFinance', 'canViewRunway', 'canManageContracts', 'canManageReviews', 'hasDevToolsAccess', 'canManageClients', 'canManageRoles']) {
         w[fn] = () => !!perms[fn];
       }
       w.getCurrentUserRole = () => ({ roleName: 'Test' });
@@ -40,7 +40,7 @@ function shellOn(page, { perms = {}, storage = {} } = {}) {
   window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
   return window;
 }
-const ALL = { canManageInvoices: true, canViewFinance: true, canViewRunway: true, canManageContracts: true, canManageReviews: true, hasDevToolsAccess: true };
+const ALL = { canManageInvoices: true, canViewFinance: true, canViewRunway: true, canManageContracts: true, canManageReviews: true, hasDevToolsAccess: true, canManageClients: true, canManageRoles: true };
 
 test('the bar is four links around a (+) Create button, in that order', () => {
   const w = shellOn('job-tracker.html', { perms: ALL });
@@ -80,7 +80,8 @@ test('the Create sheet deep-links into forms that already open themselves from t
 test('Create tiles follow the same permission checks as the nav: gated forms are hidden, ungated ones stay', () => {
   const w = shellOn('workspace.html', { perms: {} });
   const visible = [...w.document.querySelectorAll('#thCreateSheet .th-create-tile')].filter(t => !t.hidden).map(t => t.querySelector('.th-create-label').textContent);
-  assert.deepEqual(visible, ['Job', 'Client']);
+  // Client is gated on the Clients capability since Phase 4 (2026-11-04).
+  assert.deepEqual(visible, ['Job']);
 });
 
 test('opening and closing the Create sheet: the (+) toggles it, Esc closes it, focus returns to the button', () => {

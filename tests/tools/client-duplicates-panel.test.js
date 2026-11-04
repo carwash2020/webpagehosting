@@ -166,7 +166,7 @@ test('Review on the notice opens the Portal tab', () => {
 
 test('wiring: the panel renders with the other Portal panels, the notice listens for the role, and the ? has help text', () => {
   assert.match(CLIENTS, /portalPanelsRendered = true;\n    renderClientDuplicates\(\);/);
-  assert.match(CLIENTS, /th-role-loaded', \(e\) => \{ applyPortalPermission\(e\.detail\); refreshClientDupNotice\(e\.detail\); \}/);
+  assert.match(CLIENTS, /th-role-loaded', \(e\) => \{[\s\S]{0,400}?applyPortalPermission\(e\.detail\); refreshClientDupNotice\(e\.detail\);\s*\}\);/);
   assert.match(CLIENTS, /onclick="openDevInfo\('clientduplicates'\)"/);
   assert.match(DEV_SHARED, /clientduplicates: \{/);
   assert.match(CLIENTS, /<div class="cd-dup-notice" id="clientDupNotice" hidden>/);

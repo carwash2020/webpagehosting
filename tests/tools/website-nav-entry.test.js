@@ -51,7 +51,7 @@ test('the nav is the nine, in the approved groups -- no Website, Dev Tools, Wiki
     ['Money', 'Money', '/tools/finance.html'],
     ['Office', 'Contracts', '/tools/contract-generator.html'],
     ['Office', 'Reviews', '/tools/review-request.html'],
-    ['Office', 'Team', '/tools/dev-tools.html#team'],
+    ['Office', 'Team', '/tools/team.html'],
     ['Office', 'Settings', '/tools/settings.html'],
   ]);
   for (const gone of ['site-content.html', 'dev-tools.html\'', 'parts-reference.html', 'runway-dashboard.html', 'route-planner.html', 'workspace.html#insights']) {
@@ -59,11 +59,13 @@ test('the nav is the nine, in the approved groups -- no Website, Dev Tools, Wiki
   }
 });
 
-test('Team is gated like Dev Tools, and Dev Tools opens the account permissions panel for it', () => {
-  assert.match(NAV, /'\/tools\/dev-tools\.html#team': function \(\) \{ return typeof hasDevToolsAccess === 'function' && hasDevToolsAccess\(\); \}/);
+test('Team is its own page since Phase 4 (2026-11-04), gated on Team & Settings; Dev Tools\' account permissions panel links to it', () => {
+  assert.match(NAV, /'\/tools\/team\.html': function \(\) \{ return typeof canManageRoles === 'function' && canManageRoles\(\); \}/);
+  assert.doesNotMatch(NAV, /'\/tools\/dev-tools\.html#team'/);
   const DEV = read('dev-tools.html');
   assert.match(DEV, /<div class="dev-panel dev-panel-wide" id="team">\s*<div class="dev-panel-heading">\s*<h2>Account permissions<\/h2>/);
-  assert.match(DEV, /function revealTeamPanel\(\)/);
+  assert.match(DEV, /are on <a href="\/tools\/team\.html"/);
+  assert.match(read('team.html'), /retryRoleCheck\(this, canManageRoles\)/);
 });
 
 test('a site-content manager sees Website editing under Add-ons once the role loads (the Add-ons card itself is always there: it holds the Route planner and Appliance Wiki switches)', () => {
@@ -108,7 +110,7 @@ test('everything that left the nav is still in Search, behind the same checks', 
   for (const [title, href, perm] of [
     ['Website', '/tools/site-content.html', 'canManageSiteContent'],
     ['Dev Tools', '/tools/dev-tools.html', 'hasDevToolsAccess'],
-    ['Team', '/tools/dev-tools.html#team', 'hasDevToolsAccess'],
+    ['Team', '/tools/team.html', 'canManageRoles'],
     ['Analytics', '/tools/workspace.html#insights', null],
     ['Runway Dashboard', '/tools/runway-dashboard.html#runway', 'canViewRunway'],
   ]) {

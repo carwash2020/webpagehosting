@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=0b420b4211"></script>
+<script src="/tools/auth.js?v=9445ba2176"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -53,15 +53,15 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=7c03870603">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=3b1514fb8b">
-<script src="/tools/data-layer.js?v=bf98147713" defer></script>
+<link rel="stylesheet" href="/tools/styles-tools.css?v=c98fed7b3e">
+<script src="/tools/data-layer.js?v=34e05d4fce" defer></script>
 <script src="/tools/dev-tools-shared.js?v=ffcb14381f" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=24587c0be7" defer></script>
-<script src="/tools/tools-command-palette.js?v=210664ba23" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=fe9cdc1e0f" defer></script>
+<script src="/tools/tools-command-palette.js?v=ac4de65287" defer></script>
 <script src="/tools/sync.js?v=66c2196d60" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -582,6 +582,33 @@
     <span class="dev-status-chip"><span class="dev-status-dot checking" id="statusDotSync"></span><span id="statusTextSync">Sync</span></span>
     <span class="dev-status-chip"><span class="dev-status-dot checking" id="statusDotSW"></span><span id="statusTextSW">Service worker</span></span>
   </div>
+
+  <!-- Sections home (Phase 4, 2026-11-04, approved "Dev Tools: today's
+       sections, cleaner" design): the same sections as the tab bar, as
+       tiles with what's inside and a badge when something needs a look.
+       Tap one to open just that section; the tab bar then switches
+       sections, and "All sections" comes back here. Search finds any tool
+       by name. Everything below the home is unchanged. -->
+  <div class="dt-home" id="dtHome" role="region" aria-labelledby="dtHomeTitle">
+    <h2 class="dt-home-title" id="dtHomeTitle">Sections</h2>
+    <div class="dt-find">
+      <label for="dtFind">Find a tool</label>
+      <input type="search" id="dtFind" placeholder="backup, errors, push…" autocomplete="off">
+      <div class="dt-find-results" id="dtFindResults" role="list" hidden></div>
+    </div>
+    <nav class="dt-tiles" id="dtTiles" aria-label="Dev Tools sections">
+      <button type="button" class="dt-tile" data-dt-tile="health"><span class="dt-tile-head"><span class="dt-tile-name">Health</span><span class="dt-tile-badge" data-dt-badge="health" hidden></span></span><span class="dt-tile-sub">Errors, uptime, cron<span data-dt-count="health"></span></span></button>
+      <button type="button" class="dt-tile" data-dt-tile="data"><span class="dt-tile-head"><span class="dt-tile-name">Data</span></span><span class="dt-tile-sub">Checks, backups, deleted items<span data-dt-count="data"></span></span></button>
+      <button type="button" class="dt-tile" data-dt-tile="sync"><span class="dt-tile-head"><span class="dt-tile-name">Sync</span><span class="dt-tile-badge" data-dt-badge="sync" hidden></span></span><span class="dt-tile-sub">Sync status, this device<span data-dt-count="sync"></span></span></button>
+      <button type="button" class="dt-tile" data-dt-tile="notifications"><span class="dt-tile-head"><span class="dt-tile-name">Notifications</span></span><span class="dt-tile-sub">Test sends, what went out<span data-dt-count="notifications"></span></span></button>
+      <button type="button" class="dt-tile" data-dt-tile="ops"><span class="dt-tile-head"><span class="dt-tile-name">Ops</span></span><span class="dt-tile-sub">Deploys, to-dos, shortcuts<span data-dt-count="ops"></span></span></button>
+      <button type="button" class="dt-tile" data-dt-tile="reports"><span class="dt-tile-head"><span class="dt-tile-name">Reports</span></span><span class="dt-tile-sub">Last 8 weeks<span data-dt-count="reports"></span></span></button>
+      <button type="button" class="dt-tile" data-dt-tile="access"><span class="dt-tile-head"><span class="dt-tile-name">Access</span></span><span class="dt-tile-sub">Who can open what · Team<span data-dt-count="access"></span></span></button>
+      <a class="dt-tile" href="/tools/site-content.html"><span class="dt-tile-head"><span class="dt-tile-name">Content</span></span><span class="dt-tile-sub">Website editing ›</span></a>
+    </nav>
+    <p class="dt-recent" id="dtRecent" hidden></p>
+  </div>
+  <a href="#" class="dt-back-home" id="dtBackHome" hidden>&lsaquo; All sections</a>
 
   <nav class="dev-tab-bar" id="devTabBar">
     <button type="button" class="dev-tab-btn" data-tab="health" onclick="switchDevToolsTab('health')"><span class="jump-nav-icon"><svg class="th-icon" aria-hidden="true"><use href="#icon-flask" xlink:href="#icon-flask"></use></svg></span>Health<span class="th-v2-count th-dt-tab-count" id="dtHealthCount" aria-label="client errors"></span></button>
@@ -1262,6 +1289,10 @@
       <h2>Account permissions</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('roles')" aria-label="What does this do?" title="What does this do?">?</button>
     </div>
+    <!-- Phase 4 (2026-11-04): people, invites, capabilities and deactivate
+         live on Team now; this panel stays for the raw switches (including
+         full technical Dev Tools access, which Team doesn't show). -->
+    <p class="tool-sub" style="margin:0 0 10px;">People, invites and what each person can do are on <a href="/tools/team.html" style="color:var(--orange-light);">Team &rsaquo;</a>. These are the raw switches underneath.</p>
     <div id="accountRolesList"></div>
     <div id="permCategoriesRow" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;"></div>
     <div id="permCategoryPanel" style="margin-top:10px;"></div>
@@ -2373,6 +2404,7 @@
   const DEV_TAB_KEY = 'th_dev_tools_active_tab';
 
   function switchDevToolsTab(name) {
+    dtLeaveHome();
     document.querySelectorAll('.dev-tab-panel[data-tab-panel]').forEach(grid => {
       grid.classList.toggle('is-active-tab-panel', grid.getAttribute('data-tab-panel') === name);
     });
@@ -2459,7 +2491,106 @@
     if (!initial || !visibleTabNames.includes(initial)) initial = visibleTabNames[0] || 'health';
 
     switchDevToolsTab(initial);
+    // Phase 4: open on the sections home, unless a link points at a tool.
+    if (!location.hash) dtGoHome();
   }
+
+  // ---- Sections home (Phase 4, 2026-11-04) -------------------------------
+  const DT_RECENT_KEY = 'th_dev_tools_recent';
+  function dtPanelTitle(panel) {
+    const h = panel.querySelector('.dev-panel-heading h2, h2');
+    return h ? h.textContent.trim() : '';
+  }
+  function dtVisiblePanels(tab) {
+    const grid = document.querySelector('.dev-tab-panel[data-tab-panel="' + tab + '"]');
+    return grid ? Array.from(grid.querySelectorAll('.dev-panel')).filter(p => p.style.display !== 'none' && dtPanelTitle(p)) : [];
+  }
+  function dtRefreshHome() {
+    document.querySelectorAll('[data-dt-tile]').forEach(tile => {
+      const tab = tile.getAttribute('data-dt-tile');
+      const btn = document.querySelector('.dev-tab-btn[data-tab="' + tab + '"]');
+      tile.hidden = !!btn && btn.style.display === 'none';
+      const n = dtVisiblePanels(tab).length;
+      const count = tile.querySelector('[data-dt-count]');
+      if (count) count.textContent = n ? ' \u00b7 ' + n + (tab === 'reports' ? ' report' : ' tool') + (n === 1 ? '' : 's') : '';
+    });
+    const errs = (document.getElementById('dtHealthCount') || {}).textContent || '';
+    const hb = document.querySelector('[data-dt-badge="health"]');
+    // Only a real count: the health checks fill in after load, so no
+    // count yet is not the same as "all clear".
+    if (hb) { hb.hidden = !errs; hb.textContent = errs ? errs + ' error' + (errs === '1' ? '' : 's') : ''; hb.classList.add('is-warn'); }
+    let conflicts = 0;
+    try { conflicts = (JSON.parse(localStorage.getItem('th_sync_conflicts') || '[]') || []).length; } catch (e) { conflicts = 0; }
+    const sb = document.querySelector('[data-dt-badge="sync"]');
+    if (sb) { sb.hidden = !conflicts; sb.textContent = conflicts + ' conflict' + (conflicts === 1 ? '' : 's'); sb.classList.add('is-warn'); }
+    let recent = [];
+    try { recent = JSON.parse(localStorage.getItem(DT_RECENT_KEY) || '[]'); } catch (e) { recent = []; }
+    const all = dtAllTools();
+    recent = (Array.isArray(recent) ? recent : []).filter(r => all.some(t => t.title === r)).slice(0, 3);
+    const rec = document.getElementById('dtRecent');
+    if (rec) {
+      rec.hidden = !recent.length;
+      rec.innerHTML = recent.length ? 'Recent: ' + recent.map(r => '<a href="#" data-dt-open-tool="' + escapeAttr(r) + '">' + escapeHtml(r) + '</a>').join(' \u00b7 ') : '';
+    }
+  }
+  function dtAllTools() {
+    const out = [];
+    document.querySelectorAll('[data-dt-tile]').forEach(tile => {
+      if (tile.hidden) return;
+      const tab = tile.getAttribute('data-dt-tile');
+      const section = tile.querySelector('.dt-tile-name').textContent;
+      dtVisiblePanels(tab).forEach(p => out.push({ tab, section, title: dtPanelTitle(p), panel: p }));
+    });
+    return out;
+  }
+  function dtGoHome() {
+    document.body.classList.add('dt-at-home');
+    document.getElementById('dtHome').hidden = false;
+    document.getElementById('dtBackHome').hidden = true;
+    dtRefreshHome();
+  }
+  function dtLeaveHome() {
+    const home = document.getElementById('dtHome');
+    if (!home) return;
+    document.body.classList.remove('dt-at-home');
+    home.hidden = true;
+    document.getElementById('dtBackHome').hidden = false;
+  }
+  function dtRemember(title) {
+    if (!title) return;
+    let recent = [];
+    try { recent = JSON.parse(localStorage.getItem(DT_RECENT_KEY) || '[]'); } catch (e) { recent = []; }
+    recent = [title].concat((Array.isArray(recent) ? recent : []).filter(r => r !== title)).slice(0, 6);
+    try { localStorage.setItem(DT_RECENT_KEY, JSON.stringify(recent)); } catch (e) { /* storage blocked */ }
+  }
+  function dtOpenTool(title) {
+    const t = dtAllTools().find(x => x.title === title);
+    if (!t) return;
+    switchDevToolsTab(t.tab);
+    if (t.panel.classList.contains('is-collapsed') && typeof toggleDevPanel === 'function') toggleDevPanel(t.panel.querySelector('.dev-panel-heading'));
+    dtRemember(title);
+    t.panel.scrollIntoView({ block: 'start' });
+  }
+  document.addEventListener('click', (e) => {
+    const tile = e.target.closest('[data-dt-tile]');
+    if (tile) { switchDevToolsTab(tile.getAttribute('data-dt-tile')); window.scrollTo(0, 0); return; }
+    const open = e.target.closest('[data-dt-open-tool]');
+    if (open) { e.preventDefault(); dtOpenTool(open.getAttribute('data-dt-open-tool')); return; }
+    if (e.target.closest('#dtBackHome')) { e.preventDefault(); dtGoHome(); window.scrollTo(0, 0); return; }
+    // Opening a tool's panel counts as using it (for Recent).
+    const heading = e.target.closest('.dev-panel-heading');
+    if (heading) dtRemember(dtPanelTitle(heading.closest('.dev-panel')));
+  });
+  document.getElementById('dtFind').addEventListener('input', (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    const box = document.getElementById('dtFindResults');
+    if (!q) { box.hidden = true; box.innerHTML = ''; return; }
+    const hits = dtAllTools().filter(t => t.title.toLowerCase().includes(q) || t.section.toLowerCase().includes(q)).slice(0, 12);
+    box.innerHTML = hits.length
+      ? hits.map(t => '<a href="#" role="listitem" class="dt-find-hit" data-dt-open-tool="' + escapeAttr(t.title) + '"><span>' + escapeHtml(t.title) + '</span><span class="dt-find-sec">' + escapeHtml(t.section) + '</span></a>').join('')
+      : '<p class="dt-find-none">No tool matches that.</p>';
+    box.hidden = false;
+  });
 
   // Granular permission expansion (2026-09-02) -- requested directly:
   // "Review tool? Checkbox. Dev tool stats? On today, off tomorrow."

@@ -109,15 +109,17 @@ function thNavEsc(v) {
     '/tools/finance.html': function () { return typeof canViewFinance === 'function' && canViewFinance(); },
     '/tools/runway-dashboard.html': function () { return typeof canViewRunway === 'function' && canViewRunway(); },
     '/tools/invoice-generator.html': function () { return typeof canManageInvoices === 'function' && canManageInvoices(); },
-    // clients.html left this map 2026-09-22 (Workspace rework part 2): the
-    // page opens on the client list now -- the same local client data
-    // Job Tracker already shows every account -- and gates its own Portal
-    // tab (the portal admin console) on canManageInvoices instead.
+    // clients.html left this map 2026-09-22 (Workspace rework part 2) and
+    // came back 2026-11-04 with its own capability (Phase 4: Clients,
+    // can_manage_clients, ON for every account that existed then). Its
+    // Portal tab still gates on canManageInvoices as well.
+    '/tools/clients.html': function () { return typeof canManageClients === 'function' && canManageClients(); },
     '/tools/contract-generator.html': function () { return typeof canManageContracts === 'function' && canManageContracts(); },
     '/tools/review-request.html': function () { return typeof canManageReviews === 'function' && canManageReviews(); },
     '/tools/dev-tools.html': function () { return typeof hasDevToolsAccess === 'function' && hasDevToolsAccess(); },
-    // Team (2026-11-04): Dev Tools' account permissions panel, same gate.
-    '/tools/dev-tools.html#team': function () { return typeof hasDevToolsAccess === 'function' && hasDevToolsAccess(); },
+    // Team (Phase 4, 2026-11-04): its own page, for accounts with Team &
+    // Settings (can_manage_roles).
+    '/tools/team.html': function () { return typeof canManageRoles === 'function' && canManageRoles(); },
     // Website (2026-09-23): the same check site-content.html gates on.
     // Listed in SIDEBAR_DESTS with hideUntilAllowed -- see below.
     '/tools/site-content.html': function () { return typeof canManageSiteContent === 'function' && canManageSiteContent(); }
@@ -224,7 +226,7 @@ function thNavEsc(v) {
     { group: 'Money',  href: '/tools/finance.html',            icon: 'dollar',   label: 'Money' },
     { group: 'Office', href: '/tools/contract-generator.html', icon: 'scroll',   label: 'Contracts' },
     { group: 'Office', href: '/tools/review-request.html',     icon: 'star',     label: 'Reviews' },
-    { group: 'Office', href: '/tools/dev-tools.html#team',     icon: 'user-plus', label: 'Team' },
+    { group: 'Office', href: '/tools/team.html',               icon: 'user-plus', label: 'Team' },
     { group: 'Office', href: '/tools/settings.html',           icon: 'gear',     label: 'Settings' }
   ];
   var HIDDEN_UNTIL_ALLOWED = {};
@@ -252,7 +254,7 @@ function thNavEsc(v) {
     { label: 'Charge a card', hint: 'Take a card now',            icon: 'card',    href: '/tools/invoice-generator.html#charge', perm: 'canManageInvoices' },
     { label: 'Expense',      hint: 'Snap the receipt',            icon: 'camera',  href: '/tools/finance.html#expenses', perm: 'canViewFinance' },
     { label: 'Income',       hint: 'Cash or check received',      icon: 'dollar',  href: '/tools/finance.html#income', perm: 'canViewFinance' },
-    { label: 'Client',       hint: 'Add to your client list',     icon: 'user-plus', href: '/tools/clients.html#new' },
+    { label: 'Client',       hint: 'Add to your client list',     icon: 'user-plus', href: '/tools/clients.html#new', perm: 'canManageClients' },
     { label: 'Contract',     hint: 'Work order or agreement',     icon: 'scroll',  href: '/tools/contract-generator.html', perm: 'canManageContracts' },
     { label: 'Review ask',   hint: 'Text a Google review link',   icon: 'star',    href: '/tools/review-request.html', perm: 'canManageReviews' }
   ];
@@ -2904,4 +2906,37 @@ function thSetAddon(name, on) {
   try { localStorage.setItem('th_addons', JSON.stringify(v)); } catch (e) { /* storage blocked */ }
   if (typeof scheduleSync === 'function') scheduleSync();
   try { window.dispatchEvent(new Event('th-addons-changed')); } catch (e) { /* old browser */ }
+}
+
+// Field view / Office view switch (Phase 4, 2026-11-04, approved design).
+// Only for accounts with "Manage jobs for others" (thCanUseOfficeView in
+// data-layer.js); for anyone else nothing is drawn: Field view only, no
+// switch. Mounted by the Dashboard and Jobs under their header; it
+// re-checks on th-role-loaded and redraws on th-view-changed.
+function thMountViewSwitch(afterEl) {
+  if (!afterEl || !afterEl.parentNode) return;
+  function draw() {
+    var existing = document.getElementById('thViewSwitch');
+    var allowed = typeof thCanUseOfficeView === 'function' && thCanUseOfficeView();
+    if (!allowed) { if (existing) existing.remove(); return; }
+    var mode = typeof thViewMode === 'function' ? thViewMode() : 'office';
+    var el = existing || document.createElement('div');
+    el.id = 'thViewSwitch';
+    el.className = 'th-view-switch';
+    el.setAttribute('role', 'group');
+    el.setAttribute('aria-label', 'View');
+    el.innerHTML =
+      '<button type="button" data-view="field" aria-pressed="' + (mode === 'field') + '">Field</button>' +
+      '<button type="button" data-view="office" aria-pressed="' + (mode === 'office') + '">Office</button>';
+    if (!existing) {
+      el.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-view]');
+        if (b && typeof thSetViewMode === 'function') thSetViewMode(b.getAttribute('data-view'));
+      });
+      afterEl.parentNode.insertBefore(el, afterEl.nextSibling);
+    }
+  }
+  draw();
+  window.addEventListener('th-role-loaded', draw);
+  window.addEventListener('th-view-changed', draw);
 }
