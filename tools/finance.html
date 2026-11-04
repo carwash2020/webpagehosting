@@ -671,10 +671,7 @@
     // The heading follows the chip (handoff §4F: the header read "SPENT
     // THIS MONTH" while the Income tab was selected).
     const head = document.getElementById('mnyLedgerHead');
-    // Own keys only: tabName comes from the URL hash or this device's
-    // storage, so never let it reach Object.prototype (CodeQL, PR #579).
-    const headFn = Object.prototype.hasOwnProperty.call(MONEY_CHIP_HEADS, tabName) ? MONEY_CHIP_HEADS[tabName] : null;
-    if (head) head.textContent = typeof headFn === 'function' ? headFn() : '';
+    if (head) head.textContent = moneyChipHead(tabName);
     try { localStorage.setItem(FINANCE_TAB_KEY, tabName); } catch (e) { /* storage blocked */ }
   }
 
@@ -689,12 +686,18 @@
   function moneyMonthName(key, withYear) {
     return new Date(key + '-15T12:00:00').toLocaleDateString('en-US', withYear ? { month: 'long', year: 'numeric' } : { month: 'long' });
   }
-  const MONEY_CHIP_HEADS = {
-    all: () => 'All activity \u00b7 ' + moneyMonthName(moneyMonthKey()),
-    income: () => 'Income \u00b7 every entry',
-    expenses: () => 'Expenses \u00b7 every entry',
-    profitability: () => 'Profitability \u00b7 by job',
-  };
+  // The ledger heading for a chip. A switch over the four known chips, not
+  // a lookup by name: tabName comes from the URL hash or this device's
+  // storage, so it never picks a function to call (CodeQL, PR #579).
+  function moneyChipHead(tabName) {
+    switch (tabName) {
+      case 'all': return 'All activity \u00b7 ' + moneyMonthName(moneyMonthKey());
+      case 'income': return 'Income \u00b7 every entry';
+      case 'expenses': return 'Expenses \u00b7 every entry';
+      case 'profitability': return 'Profitability \u00b7 by job';
+      default: return '';
+    }
+  }
   function moneyFmt(n) {
     return '$' + (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }

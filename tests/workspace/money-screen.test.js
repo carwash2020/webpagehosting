@@ -71,7 +71,7 @@ function page({ runway = true, data = SAMPLE } = {}) {
     function backfillLegacyInvoicesIntoIncomeLog() {}
     ${MONEY_JS}
     ${INCOME_JS}
-    ;Object.assign(window, { MONEY_CHIP_HEADS });
+    ;Object.assign(window, { moneyChipHead });
   `);
   const $ = (id) => w.document.getElementById(id);
   return { w, $ };
@@ -143,11 +143,11 @@ test('the All ledger is this month\'s money in and out: paid income and expenses
 
 test('the heading follows the chip (§4F: it read "SPENT THIS MONTH" while Income was selected)', () => {
   const { w } = page();
-  assert.equal(w.MONEY_CHIP_HEADS.all(), 'All activity · November');
-  assert.equal(w.MONEY_CHIP_HEADS.income(), 'Income · every entry');
-  assert.equal(w.MONEY_CHIP_HEADS.expenses(), 'Expenses · every entry');
-  assert.equal(w.MONEY_CHIP_HEADS.profitability(), 'Profitability · by job');
-  assert.match(FIN, /if \(head\) head\.textContent = typeof headFn === 'function' \? headFn\(\) : '';/);
+  assert.equal(w.moneyChipHead('all'), 'All activity · November');
+  assert.equal(w.moneyChipHead('income'), 'Income · every entry');
+  assert.equal(w.moneyChipHead('expenses'), 'Expenses · every entry');
+  assert.equal(w.moneyChipHead('profitability'), 'Profitability · by job');
+  assert.match(FIN, /if \(head\) head\.textContent = moneyChipHead\(tabName\);/);
 });
 
 test('the Income list: an unpaid invoice says "Not paid yet" and adds nothing; totals count paid invoices only', () => {
@@ -175,22 +175,22 @@ test('one page: chips, not tabs; All by default; Log expense / Log income keep t
   assert.match(FIN, /<title>Money \| Triple H Enterprises \(Internal Tool\)<\/title>/);
 });
 
-test('the chip heading is looked up by own key only: a hash or stored tab like "constructor" or "__proto__" never calls into Object.prototype (CodeQL, PR #579)', () => {
+test('the chip heading never picks a function by name: a hash or stored tab like "constructor" or "__proto__" gets an empty heading (CodeQL, PR #579)', () => {
   const fn = FIN.slice(FIN.indexOf('  function activateTab(tabName) {'), FIN.indexOf('\n  }\n', FIN.indexOf('  function activateTab(tabName) {')) + 4);
-  assert.match(fn, /const headFn = Object\.prototype\.hasOwnProperty\.call\(MONEY_CHIP_HEADS, tabName\) \? MONEY_CHIP_HEADS\[tabName\] : null;/);
-  assert.doesNotMatch(fn, /MONEY_CHIP_HEADS\[tabName\]\(\)/);
-  // Run the real function with every panel present, so the early return
-  // can't be what protects it.
-  const heads = { all: () => 'All', income: () => 'Income' };
-  for (const [tab, want] of [['all', 'All'], ['constructor', ''], ['__proto__', ''], ['toString', ''], ['hasOwnProperty', '']]) {
-    const head = { textContent: 'x' };
+  const head = FIN.slice(FIN.indexOf('  function moneyChipHead(tabName) {'), FIN.indexOf('\n  }\n', FIN.indexOf('  function moneyChipHead(tabName) {')) + 4);
+  assert.match(head, /switch \(tabName\) \{/);
+  assert.doesNotMatch(FIN, /MONEY_CHIP_HEADS/, 'no name-to-function table left');
+  // Run the real activateTab and moneyChipHead with every panel present,
+  // so activateTab's early return can't be what protects it.
+  for (const [tab, want] of [['income', 'Income \u00b7 every entry'], ['constructor', ''], ['__proto__', ''], ['toString', ''], ['hasOwnProperty', '']]) {
+    const el = { textContent: 'x' };
     const ctx = {
-      MONEY_CHIP_HEADS: heads, FINANCE_TAB_KEY: 'k', localStorage: { setItem() {} },
+      FINANCE_TAB_KEY: 'k', localStorage: { setItem() {} }, moneyMonthName: () => 'November', moneyMonthKey: () => '2026-11',
       populateJobRefOptions() {}, populateIncomeJobRefOptions() {}, renderJobProfitability() {}, renderMoneyLedger() {},
-      document: { getElementById: (id) => (id === 'mnyLedgerHead' ? head : {}), querySelectorAll: () => [] },
+      document: { getElementById: (id) => (id === 'mnyLedgerHead' ? el : {}), querySelectorAll: () => [] },
     };
     vm.createContext(ctx);
-    vm.runInContext(fn + ';activateTab(' + JSON.stringify(tab) + ');', ctx);
-    assert.equal(head.textContent, want, tab);
+    vm.runInContext(head + fn + ';activateTab(' + JSON.stringify(tab) + ');', ctx);
+    assert.equal(el.textContent, want, tab);
   }
 });
