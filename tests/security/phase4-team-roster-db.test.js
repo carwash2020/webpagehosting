@@ -256,5 +256,5 @@ test('the migration changes no existing function, policy or trigger', () => {
   }
   assert.doesNotMatch(MIGRATION, /drop policy if exists "(?!Internal accounts can view deactivated accounts)/);
   assert.doesNotMatch(MIGRATION, /drop trigger/);
-  assert.match(MIGRATION, /NOT APPLIED/);
+  assert.match(MIGRATION, /APPLIED 2026-11-04 with Connor's approval/);
 });

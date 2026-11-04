@@ -1,12 +1,16 @@
 -- Phase 4: Team roster, invites and deactivate (2026-11-04).
 --
--- NOT APPLIED. A change to live permissions: it waits for Connor's
--- approval, like every DB change in this build.
+-- APPLIED 2026-11-04 with Connor's approval ("apply the phase 4
+-- migration"), as Supabase migration phase4_team_roster_and_deactivate.
+-- Checked live afterwards: both accounts keep all nine switches and got
+-- Clients + Manage jobs for others ON; the archive table has RLS and no
+-- direct writes; team_require_manager is not callable; the last-admin
+-- trigger is unchanged; team_roster() returns both accounts as active.
 --
 -- Connor's decisions (2026-11-04):
 --   * Deactivate is a full block, done by MOVING the person's account_roles
 --     row into account_roles_deactivated (plus a sign-in ban and sign-out,
---     done by the team-deactivate edge function). Every internal access rule
+--     done by the team-admin edge function). Every internal access rule
 --     (about 38 RLS policies) and every internal edge function (25) already
 --     treats "no account_roles row" as "not staff", so access stops at once
 --     with no rule rewrites. Reactivate moves the row back exactly as it was.
@@ -17,7 +21,7 @@
 --     (can_manage_others_jobs). Every account that exists when this runs
 --     gets both ON, so nobody loses anything; a newly invited person starts
 --     with every switch OFF.
---   * Team invites are new (team-invite edge function). The row an invite
+--   * Team invites are new (team-admin edge function). The row an invite
 --     creates is written here, by RPC, as the caller: the database itself
 --     checks the caller may manage the team.
 --
