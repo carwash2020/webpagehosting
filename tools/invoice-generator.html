@@ -53,10 +53,10 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=7c03870603">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=c98fed7b3e">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=1a061bc473">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=66c2196d60" defer></script>
-<script src="/tools/data-layer.js?v=34e05d4fce" defer></script>
+<script src="/tools/sync.js?v=6ea51d0d1e" defer></script>
+<script src="/tools/data-layer.js?v=5ec046275f" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/signature-pad.js?v=f95f8e1d28" defer></script>
@@ -1368,7 +1368,11 @@
     if (inv.jobRefId) actions.push({ label: 'Open job', onClick: () => { window.location.href = '/tools/job-detail.html?id=' + encodeURIComponent(inv.jobRefId); } });
     actions.push({ label: 'Delete', isDanger: true, onClick: () => deleteInvoiceLogEntry(id) });
     const title = (inv.clientName || 'Invoice') + ' \u00b7 #' + (inv.invoiceNumber || '\u2014') + ' \u00b7 ' + money(st.status === 'paid' ? inv.total : st.balance);
-    showQuickActionSheet(escapeHtml(title), actions);
+    // Phase 5: an invoice takes its source from its job.
+    const job = inv.jobRefId ? thJobs.get(Number(inv.jobRefId)) || thJobs.all().find(j => String(j.id) === String(inv.jobRefId)) : null;
+    const cf = job && typeof thCameFrom === 'function' ? thCameFrom(job) : null;
+    const sourceLine = cf && cf.known ? '<br><span class="tool-sub">Came from: ' + escapeHtml(cf.label) + (cf.campaign ? ' \u00b7 ' + escapeHtml(cf.campaign) : '') + ' \u00b7 from the job</span>' : '';
+    showQuickActionSheet(escapeHtml(title) + sourceLine, actions);
   }
 
   // View invoice (2026-10-03, requested directly: "make it so i can actually

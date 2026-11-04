@@ -288,7 +288,7 @@
 }
 </script>
 <script src="/js/cookie-consent.js?v=14d2625000" defer></script>
-<script src="/js/utm-tracking.js?v=5aa2d867e3" defer></script>
+<script src="/js/utm-tracking.js?v=794bbcf4b0" defer></script>
 </head>
 <body class="has-blueprint-bg page-home">
 <div class="bg-blueprint" aria-hidden="true"></div>
@@ -2939,7 +2939,11 @@
         // separate from the manual "source" dropdown above. Never present
         // (getStoredUtmParams returns null) if the visitor never arrived
         // via a UTM-tagged link, or if that attribution has aged out.
-      }, (typeof window.getStoredUtmParams === 'function' && window.getStoredUtmParams()) || {})]),
+        // Phase 5: the first outside site that sent them, and the Google
+        // Analytics visit ID only if they accepted analytics cookies
+        // (utm-tracking.js getStoredAttributionExtras).
+      }, (typeof window.getStoredUtmParams === 'function' && window.getStoredUtmParams()) || {},
+        (typeof window.getStoredAttributionExtras === 'function' && window.getStoredAttributionExtras()) || {})]),
     })
     .then((response) => {
       if (response.ok || response.status === 409) {

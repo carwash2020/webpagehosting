@@ -136,19 +136,9 @@ test('a visit with no utm params at all never touches an existing valid attribut
   assert.equal(dom.window.getStoredUtmParams().utm_source, 'google');
 });
 
-test('workspace.html has a Campaign Sources breakdown, reusing the leads already fetched rather than a second query', () => {
-  assert.match(workspaceHtml, /<div class="analytics-subheading">Campaign Sources/);
-  assert.match(workspaceHtml, /<div id="utmSources"><\/div>/);
-  const fnMatch = workspaceHtml.match(/async function loadAndRenderLeads\(\) \{[\s\S]*?\n  \}\n/);
-  assert.ok(fnMatch, 'expected to isolate loadAndRenderLeads()');
-  assert.match(fnMatch[0], /renderUtmSources\(visibleLeads\)/);
-  const renderFnMatch = workspaceHtml.match(/function renderUtmSources\(leads\) \{[\s\S]*?\n  \}\n/);
-  assert.ok(renderFnMatch, 'expected to isolate renderUtmSources()');
-  assert.doesNotMatch(renderFnMatch[0], /fetchLeads|th_leads/, 'should never issue its own query');
-});
-
-test('renderUtmSources only counts leads that actually carry a utm_source, unlike renderLeadSources\' "Not specified" fallback', () => {
-  const renderFnMatch = workspaceHtml.match(/function renderUtmSources\(leads\) \{[\s\S]*?\n  \}\n/);
-  assert.ok(renderFnMatch);
-  assert.match(renderFnMatch[0], /leads\.filter\(l => l\.utm_source\)/);
+// Phase 5 (2026-11-04): Campaign Sources gave way to Insights' By source
+// table, where a UTM campaign is its own row (insights_channel()).
+test('the old Campaign Sources list is replaced by the By source table', () => {
+  assert.doesNotMatch(workspaceHtml, /Campaign Sources|id="utmSources"|function renderUtmSources/);
+  assert.match(workspaceHtml, /id="insBySource"/);
 });

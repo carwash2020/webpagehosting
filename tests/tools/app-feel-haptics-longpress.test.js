@@ -212,7 +212,7 @@ test('invoice-generator.html: the invoice log gets a long-press init function op
   assert.match(fn, /actions\.push\(\{ label: inv\.clientEmail \? 'Resend' : 'Send to an email', onClick: \(\) => resendInvoiceToClient\(id\) \}\);/);
   assert.match(fn, /label: st\.status === 'paid' \? 'Mark Unpaid' : 'Mark Paid'/);
   assert.match(fn, /label: 'Delete', isDanger: true/);
-  assert.match(fn, /showQuickActionSheet\(escapeHtml\(title\), actions\)/, 'the sheet renders its title as HTML');
+  assert.match(fn, /showQuickActionSheet\(escapeHtml\(title\) \+ sourceLine, actions\)/, 'the sheet renders its title as HTML (escaped), plus the job\'s source (escaped) when known');
   assert.match(invoiceGenHtml, /if \(typeof renderQuoteLog === 'function'\) renderQuoteLog\(\);\s*\n\s*if \(typeof initInvoiceLogLongPress === 'function'\) initInvoiceLogLongPress\(\);/);
 });
 

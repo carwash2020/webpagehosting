@@ -1326,6 +1326,11 @@ function mirrorJobsToRelational(jobs) {
     notes: j.notes || null, show_on_calendar: !!j.showOnCalendar,
     status_changed_at: j.statusChangedAt || null, created_by: j.createdBy || null,
     last_edited_by: j.lastEditedBy || null, referred_by: j.referredBy || null,
+    // Phase 5: where the job came from (copied from its lead or booking, or
+    // picked by hand), so Insights can follow a source to paid.
+    source: j.source || null, utm_source: j.utmSource || null, utm_medium: j.utmMedium || null,
+    utm_campaign: j.utmCampaign || null, utm_term: j.utmTerm || null, utm_content: j.utmContent || null,
+    landing_referrer: j.landingReferrer || null,
   })));
 }
 
@@ -1640,6 +1645,60 @@ async function markLeadHandled(id, handled) {
   }
 }
 
+// Phase 5: "Make a job" -- the lead points at the job it became and leaves
+// Needs attention. Staff only (th_leads update policy); a visitor can't set
+// job_id at all (th_clean_attribution trigger).
+async function linkLeadToJob(id, jobId) {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/th_leads?id=eq.${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${getAuthToken()}`,
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({ job_id: jobId, handled: true }),
+    });
+    if (!res.ok) return { ok: false, error: 'http-' + res.status };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: 'network' };
+  }
+}
+
+// Phase 5 Insights: leads, jobs, invoices and money received per source
+// (public.insights_source_funnel, run as the signed-in staff member), and
+// the once-a-day Google Analytics copy (public.ga_report_cache).
+async function fetchInsightsFunnel(sinceIso) {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured', rows: [] };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/insights_source_funnel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}` },
+      body: JSON.stringify({ p_since: sinceIso }),
+    });
+    if (!res.ok) return { ok: false, error: 'http-' + res.status, rows: [] };
+    return { ok: true, rows: await res.json() };
+  } catch (e) {
+    return { ok: false, error: 'network', rows: [] };
+  }
+}
+async function fetchWebsiteReport(period) {
+  if (!isSyncConfigured()) return { ok: false, error: 'not-configured', report: null };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/ga_report_cache?select=report,fetched_at&period=eq.${encodeURIComponent(period)}&limit=1`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}` },
+    });
+    if (!res.ok) return { ok: false, error: 'http-' + res.status, report: null };
+    const rows = await res.json();
+    return { ok: true, report: rows[0] ? rows[0].report : null, fetchedAt: rows[0] ? rows[0].fetched_at : null };
+  } catch (e) {
+    return { ok: false, error: 'network', report: null };
+  }
+}
+
 async function deleteLead(id) {
   if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
   try {
@@ -1794,6 +1853,8 @@ async function fetchJobsFromRelational() {
       notes: r.notes, showOnCalendar: !!r.show_on_calendar,
       statusChangedAt: r.status_changed_at, createdBy: r.created_by,
       lastEditedBy: r.last_edited_by, referredBy: r.referred_by,
+      source: r.source, utmSource: r.utm_source, utmMedium: r.utm_medium, utmCampaign: r.utm_campaign,
+      utmTerm: r.utm_term, utmContent: r.utm_content, landingReferrer: r.landing_referrer,
     }));
     return { ok: true, jobs };
   } catch (e) {

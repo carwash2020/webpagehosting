@@ -1089,6 +1089,63 @@ function thPersonName(email) {
   return local.charAt(0).toUpperCase() + local.slice(1);
 }
 
+// Where a lead, booking or job came from (Phase 5, 2026-11-04). Same labels
+// and order as public.insights_channel() in
+// sql/infra/phase5_attribution_and_ga4.sql, so a job card and the Insights
+// "By source" table always agree. Accepts a th_leads / th_bookings row
+// (snake_case) or a job (camelCase).
+const TH_SOURCE_CHOICES = ['Google Search', 'Yelp / Online Reviews', 'Referral (friend or family)', 'Repeat Customer', 'Saw Our Vehicle or Sign', 'Social Media', 'Other'];
+function thAttribution(rec) {
+  const r = rec || {};
+  const pick = (a, b) => { const v = r[a] != null ? r[a] : r[b]; return v == null ? '' : String(v).trim(); };
+  return {
+    source: pick('source', 'source'),
+    utmSource: pick('utm_source', 'utmSource'),
+    utmMedium: pick('utm_medium', 'utmMedium'),
+    utmCampaign: pick('utm_campaign', 'utmCampaign'),
+    utmTerm: pick('utm_term', 'utmTerm'),
+    utmContent: pick('utm_content', 'utmContent'),
+    referredBy: pick('referred_by', 'referredBy'),
+    landingReferrer: pick('landing_referrer', 'landingReferrer').toLowerCase(),
+  };
+}
+function thHasAttribution(rec) {
+  const a = thAttribution(rec);
+  return !!(a.source || a.utmSource || a.utmCampaign || a.landingReferrer || a.referredBy);
+}
+function thChannelLabel(rec, opts) {
+  const a = thAttribution(rec);
+  const ignoreCampaign = !!(opts && opts.ignoreCampaign);
+  const GBP = ['gbp', 'gmb', 'google_business', 'googlebusiness', 'google-business', 'google_business_profile'];
+  const s = a.utmSource.toLowerCase(), m = a.utmMedium.toLowerCase(), c = a.utmCampaign.toLowerCase(), ref = a.landingReferrer;
+  if (a.referredBy || /^referral/i.test(a.source)) return 'Referral';
+  if (GBP.includes(s) || ['gbp', 'gmb', 'google_business'].includes(m) || GBP.includes(c)) return 'Google Business';
+  if (a.utmCampaign && !ignoreCampaign) return a.utmCampaign.slice(0, 60);
+  if (s === 'google' && ['cpc', 'ppc', 'paid', 'paid_search'].includes(m)) return 'Google Ads';
+  if (a.utmSource) return a.utmSource.slice(0, 60);
+  if (a.source === 'Google Search' || /(^|\.)google\.[a-z.]+$/.test(ref)) return 'Google search';
+  if (a.source === 'Social Media' || /(^|\.)(facebook|instagram|nextdoor|tiktok|twitter|x|linkedin|youtube|pinterest)\.com$/.test(ref) || ref === 't.co') return 'Social';
+  if (/(^|\.)(bing|duckduckgo|yahoo|ecosia)\.com$/.test(ref)) return 'Other search';
+  if (a.source) return a.source.slice(0, 60);
+  return 'Not known';
+}
+// For the "Came from: X" chip and the campaign chip beside it.
+function thCameFrom(rec) {
+  const a = thAttribution(rec);
+  const label = thChannelLabel(rec, { ignoreCampaign: true });
+  const campaign = a.utmCampaign && label !== 'Google Business' && label !== 'Referral' ? a.utmCampaign.slice(0, 60) : '';
+  return { label, campaign, known: label !== 'Not known' || !!campaign };
+}
+// The attribution fields a job copies from the lead or booking it came from.
+function thJobAttributionFrom(rec) {
+  const a = thAttribution(rec);
+  return {
+    source: a.source || null, utmSource: a.utmSource || null, utmMedium: a.utmMedium || null,
+    utmCampaign: a.utmCampaign || null, utmTerm: a.utmTerm || null, utmContent: a.utmContent || null,
+    landingReferrer: a.landingReferrer || null,
+  };
+}
+
 function thLocalDateStr(d) {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }

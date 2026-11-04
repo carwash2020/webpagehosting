@@ -69,16 +69,16 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=7c03870603">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=c98fed7b3e">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=1a061bc473">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=66c2196d60" defer></script>
+<script src="/tools/sync.js?v=6ea51d0d1e" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
      "Approve & Schedule" form to warn if a chosen time falls outside
      real business hours, matching the same real hours booking.html,
      manage-booking.html, portal/quotes.html, and portal/jobs.html use. -->
 <script src="/js/business-hours.js?v=e0e3b29210"></script>
 <script src="/tools/push-notifications.js?v=3c123334a6" defer></script>
-<script src="/tools/data-layer.js?v=34e05d4fce" defer></script>
+<script src="/tools/data-layer.js?v=5ec046275f" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
@@ -1065,7 +1065,8 @@
   }
   body.th-tool-page[data-th-page="workspace"] .insights-card[hidden] { display: none; }
   body.th-tool-page[data-th-page="workspace"] .insights-card--rev { flex: 2 1 420px; }
-  body.th-tool-page[data-th-page="workspace"] .insights-card--utm { flex-basis: 100%; }
+  body.th-tool-page[data-th-page="workspace"] .insights-card--funnel,
+  body.th-tool-page[data-th-page="workspace"] .insights-card--website { flex-basis: 100%; }
   body.th-tool-page[data-th-page="workspace"] .insights-card .analytics-subheading {
     margin: 0 0 12px !important; display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px;
     font-family: var(--font-ui); font-size: 13px; letter-spacing: 1.4px; color: var(--text);
@@ -1099,11 +1100,45 @@
   body.th-tool-page[data-th-page="workspace"] .insights-card .vendor-bar-fill { border-radius: 4px; }
   body.th-tool-page[data-th-page="workspace"] .insights-card--clients .vendor-bar-fill { background: var(--orange); }
   body.th-tool-page[data-th-page="workspace"] .insights-card--vendors .vendor-bar-fill { background: var(--tone-blue-fg); }
-  body.th-tool-page[data-th-page="workspace"] .insights-card--sources .vendor-bar-fill { background: var(--tone-green-fg); }
-  /* Campaigns: a ruled table of source and leads. */
-  body.th-tool-page[data-th-page="workspace"] .insights-card--utm .vendor-bar-row { grid-template-columns: minmax(0, 1fr) auto; margin: 0; padding: 11px 0; border-top: 1px solid var(--th-hairline); }
-  body.th-tool-page[data-th-page="workspace"] .insights-card--utm .vendor-bar-track { display: none; }
-  body.th-tool-page[data-th-page="workspace"] .insights-card--utm .vendor-bar-count { color: var(--tone-green-fg); }
+  /* Phase 5 Insights: the period switch, the five-step funnel, the By source
+     table, and the website card (approved design). */
+  body.th-tool-page[data-th-page="workspace"] .insights-card .analytics-subheading .ins-period {
+    margin-left: auto; display: inline-flex; padding: 3px; gap: 2px; border: 1px solid var(--border); border-radius: 999px; background: var(--bg-panel-2);
+  }
+  body.th-tool-page[data-th-page="workspace"] .ins-period button {
+    min-height: 32px; padding: 0 11px; border: 0; border-radius: 999px; background: transparent; color: var(--text-dim);
+    font-family: var(--font-app); font-size: 12.5px; font-weight: 600; letter-spacing: 0; cursor: pointer;
+  }
+  body.th-tool-page[data-th-page="workspace"] .ins-period button[aria-pressed="true"] { background: var(--text); color: var(--bg); }
+  @media (pointer: coarse) { body.th-tool-page[data-th-page="workspace"] .ins-period button { min-height: 44px; } }
+  body.th-tool-page[data-th-page="workspace"] .ins-funnel { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; text-align: center; margin: 0 0 14px; }
+  body.th-tool-page[data-th-page="workspace"] .ins-step b { display: block; font-family: var(--font-display, var(--font-ui)); font-size: 22px; line-height: 1.15; color: var(--text); }
+  body.th-tool-page[data-th-page="workspace"] .ins-step span { display: block; font-size: 11.5px; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="workspace"] .ins-step.is-money b { color: var(--tone-green-fg); }
+  body.th-tool-page[data-th-page="workspace"] .ins-row {
+    display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr)); gap: 6px; padding: 10px 0; border-top: 1px solid var(--th-hairline); font-size: 14px; color: var(--text);
+  }
+  body.th-tool-page[data-th-page="workspace"] .ins-row.is-head { border-top: 0; padding-top: 0; font-size: 11.5px; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="workspace"] .ins-row.no-money { grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(0, 1fr)); }
+  body.th-tool-page[data-th-page="workspace"] .ins-row > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  body.th-tool-page[data-th-page="workspace"] .ins-row > span:not(:first-child) { text-align: right; }
+  body.th-tool-page[data-th-page="workspace"] .ins-row .is-money { color: var(--tone-green-fg); }
+  body.th-tool-page[data-th-page="workspace"] .ins-row.is-unknown { color: var(--text-dim); }
+  body.th-tool-page[data-th-page="workspace"] .ins-row.is-unknown .is-money { color: inherit; }
+  body.th-tool-page[data-th-page="workspace"] .ins-note { margin: 12px 0 0; font-size: 12.5px; line-height: 1.45; color: var(--text-faint); }
+  body.th-tool-page[data-th-page="workspace"] .ins-web-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 12px; }
+  body.th-tool-page[data-th-page="workspace"] .ins-web-tile { padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-panel-2); }
+  body.th-tool-page[data-th-page="workspace"] .ins-web-tile b { display: block; font-family: var(--font-display, var(--font-ui)); font-size: 22px; color: var(--text); }
+  body.th-tool-page[data-th-page="workspace"] .ins-web-tile span { font-size: 12px; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="workspace"] .ins-web-list { margin: 0 0 12px; }
+  body.th-tool-page[data-th-page="workspace"] .ins-web-list h4 { margin: 0 0 4px; font-family: var(--font-ui); font-size: 12px; letter-spacing: 1.5px; color: var(--text-dim); font-weight: 500; }
+  body.th-tool-page[data-th-page="workspace"] .ins-web-row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--th-hairline); font-size: 14px; color: var(--text); }
+  body.th-tool-page[data-th-page="workspace"] .ins-web-row span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* Make a job (Phase 5): the lead's source chips and its one strong action. */
+  body.th-tool-page[data-th-page="workspace"] .lead-card-source { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  body.th-tool-page[data-th-page="workspace"] .lead-card-source span { font-size: 12px; padding: 3px 10px; border-radius: 999px; background: var(--bg-panel-3); color: var(--text-dim); }
+  body.th-tool-page[data-th-page="workspace"] .lead-make-job,
+  body.th-tool-page[data-th-page="workspace"] .ops-lane .lead-toggle-btn.lead-make-job { background: var(--orange); color: var(--th-ink-on-orange); border-color: transparent; font-weight: 600; }
 
   /* Package B7 (Claude Design next pass, 2026-09-29): Home paints the last
      visit's day at once and refreshes in place.
@@ -1567,29 +1602,31 @@
       <div class="analytics-subheading">Top Clients <span style="text-transform:none; letter-spacing:0;">(lifetime revenue, not limited to the period above)</span></div>
       <div id="topClients"></div>
       </div>
-      <div class="insights-card insights-card--sources">
-      <!-- Marketing-source-of-lead tracking (closes a real audit gap):
-           the referral program already tracks ONE specific source with
-           its own reward ledger, but there was no way to see how
-           customers found the business more generally. Reuses the same
-           leads data the Leads Inbox above already fetched -- no second
-           query -- so this is bounded by fetchLeads()'s own limit=50,
-           the most recent leads rather than a full historical count. -->
-      <div class="analytics-subheading">Lead Sources <span style="text-transform:none; letter-spacing:0;">(most recent 50 leads)</span></div>
-      <div id="leadSources"></div>
+      <!-- Phase 5 (2026-11-04, approved design "Insights: source -> paid, and
+           the website"): replaces the two lead-source and campaign lists
+           (most recent 50 leads only). From first visit to paid, and
+           which source each step came from, read from the database for the
+           whole period (insights_source_funnel, run as the signed-in
+           person: Paid only for accounts that can view finance). The
+           website card reads the once-a-day Google Analytics copy
+           (ga_report_cache) the ga4-report function keeps; the browser
+           never talks to Google. -->
+      <div class="insights-card insights-card--funnel" id="insightsFunnelCard">
+        <div class="analytics-subheading is-first">From first visit to paid
+          <span class="ins-period" role="group" aria-label="Period">
+            <button type="button" data-ins-period="30d" aria-pressed="false">30 days</button>
+            <button type="button" data-ins-period="90d" aria-pressed="true">90 days</button>
+            <button type="button" data-ins-period="365d" aria-pressed="false">Year</button>
+          </span>
+        </div>
+        <div class="ins-funnel" id="insFunnel"></div>
+        <div class="ins-table" id="insBySource"></div>
+        <p class="ins-note">Paid counts money actually received. A job keeps the source of the lead or booking it came from; its invoices take it from the job.</p>
       </div>
-      <div class="insights-card insights-card--utm">
-      <!-- UTM campaign-attribution breakdown (2026-09-15) -- the
-           automatic, URL-driven counterpart above's own manual "How did
-           you hear about us?" dropdown can't capture: which ad
-           platform/campaign a UTM-tagged link actually came from, read
-           directly off the utm_source column utm-tracking.js populates
-           on the public lead/booking forms. Only shows rows for leads
-           that actually carry a utm_source at all (a lead with none
-           just never came from a tagged link), same bounded 50-lead
-           window as Lead Sources just above, no second query. -->
-      <div class="analytics-subheading">Campaign Sources <span style="text-transform:none; letter-spacing:0;">(UTM-tagged, most recent 50 leads)</span></div>
-      <div id="utmSources"></div>
+      <div class="insights-card insights-card--website" id="insightsWebsiteCard">
+        <div class="analytics-subheading">The website <span class="insights-card-note" id="insWebPeriod">last 90 days</span></div>
+        <div id="insWebBody"></div>
+        <p class="ins-note" id="insWebNote"></p>
       </div>
     </div>
   </div>
@@ -2098,63 +2135,6 @@
         <div class="vendor-bar-label" title="${escapeAttr(vendor)}">${escapeHtml(vendor)}</div>
         <div class="vendor-bar-track"><div class="vendor-bar-fill" style="width:${(total / max * 100)}%"></div></div>
         <div class="vendor-bar-count">${money(total)}</div>
-      </div>`).join('');
-  }
-
-  // Marketing-source-of-lead tracking (closes a real audit gap): counts
-  // the `source` field captured on the public lead form and booking
-  // flow, grouped and sorted the same way renderTopVendors() already
-  // does for expense vendors -- reuses the leads array
-  // loadAndRenderLeads() already fetched, not a second query. Leads
-  // that skipped the optional field (or were submitted before it
-  // existed) count as "Not specified" rather than being silently
-  // dropped from the total.
-  function renderLeadSources(leads) {
-    const container = document.getElementById('leadSources');
-    if (!container) return;
-    const counts = {};
-    leads.forEach(l => { const key = l.source || 'Not specified'; counts[key] = (counts[key] || 0) + 1; });
-    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-    if (sorted.length === 0) {
-      container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>No leads yet.</div>';
-      return;
-    }
-    const max = sorted[0][1];
-    container.innerHTML = sorted.map(([source, count]) => `
-      <div class="vendor-bar-row">
-        <div class="vendor-bar-label" title="${escapeAttr(source)}">${escapeHtml(source)}</div>
-        <div class="vendor-bar-track"><div class="vendor-bar-fill" style="width:${(count / max * 100)}%"></div></div>
-        <div class="vendor-bar-count">${count}</div>
-      </div>`).join('');
-  }
-
-  // UTM campaign-attribution breakdown (2026-09-15) -- the automatic,
-  // URL-driven counterpart to renderLeadSources() just above (which
-  // counts the manual "How did you hear about us?" dropdown). Grouped
-  // by utm_source specifically (google/facebook/etc.) rather than the
-  // full utm_source+utm_medium+utm_campaign combination -- a per-exact-
-  // campaign breakdown would fragment into dozens of single-lead rows
-  // on a business this size, where "which platform" is the useful
-  // question and "which specific ad" rarely has enough volume yet to
-  // matter. Same reuse-not-refetch pattern: called from the same
-  // already-fetched leads array as renderLeadSources().
-  function renderUtmSources(leads) {
-    const container = document.getElementById('utmSources');
-    if (!container) return;
-    const withUtm = leads.filter(l => l.utm_source);
-    if (withUtm.length === 0) {
-      container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>No UTM-tagged leads yet.</div>';
-      return;
-    }
-    const counts = {};
-    withUtm.forEach(l => { counts[l.utm_source] = (counts[l.utm_source] || 0) + 1; });
-    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-    const max = sorted[0][1];
-    container.innerHTML = sorted.map(([source, count]) => `
-      <div class="vendor-bar-row">
-        <div class="vendor-bar-label" title="${escapeAttr(source)}">${escapeHtml(source)}</div>
-        <div class="vendor-bar-track"><div class="vendor-bar-fill" style="width:${(count / max * 100)}%"></div></div>
-        <div class="vendor-bar-count">${count}</div>
       </div>`).join('');
   }
 
@@ -2845,14 +2825,13 @@
     loadAndRenderApplicants();
   }
 
+  let lastLoadedLeads = [];
   async function loadAndRenderLeads() {
     const container = document.getElementById('leadsList');
     if (typeof fetchLeads !== 'function' || !isSyncConfigured()) {
       container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-link" xlink:href="#icon-link"></use></svg>Cloud sync isn\'t set up yet, so leads can\'t load.</div>';
       actionItemCounts.leads = 0;
       updateActionItemsBadge();
-      renderLeadSources([]);
-      renderUtmSources([]);
       return;
     }
     const result = await fetchLeads();
@@ -2860,18 +2839,13 @@
       container.innerHTML = '<div class="empty-state-small is-warning"><svg class="th-icon" aria-hidden="true"><use href="#icon-warning" xlink:href="#icon-warning"></use></svg>Couldn\'t load leads (' + escapeHtml(result.error) + '). Make sure the th_leads table exists in Supabase.</div>';
       actionItemCounts.leads = 0;
       updateActionItemsBadge();
-      renderLeadSources([]);
-      renderUtmSources([]);
       return;
     }
     let visibleLeads = result.leads;
+    lastLoadedLeads = result.leads;
     if (pendingDeleteLeadIds.size > 0) visibleLeads = visibleLeads.filter(l => !pendingDeleteLeadIds.has(l.id));
     actionItemCounts.leads = visibleLeads.filter(l => !l.handled).length;
     updateActionItemsBadge();
-    if (!dashSectionClosed('analytics')) {
-      renderLeadSources(visibleLeads);
-      renderUtmSources(visibleLeads);
-    }
     if (dashSectionClosed('actionitems')) return;
     // Item #13 extended (2026-08-20): filters out any lead pending an
     // undoable delete -- the real DELETE call to Supabase is deferred
@@ -2890,13 +2864,43 @@
             <div class="lead-card-meta">${escapeHtml(l.service || '')}${l.preferred_date ? ' &middot; wants ' + escapeHtml(l.preferred_date) : ''}${l.preferred_time ? ' (' + escapeHtml(l.preferred_time) + ')' : ''}</div>
           </div>
           <div class="dash-list-item-right">
+            ${l.job_id ? '' : `<button class="lead-toggle-btn lead-make-job" data-make-job="${l.id}" onclick="makeJobFromLead(${l.id})">Make a job</button>`}
             <button class="lead-toggle-btn ${l.handled ? 'is-handled' : 'is-new'}" onclick="toggleLeadHandled(${l.id}, ${!l.handled})">${l.handled ? 'Handled' : 'New'}</button>
             <button class="small-btn danger" onclick="deleteLeadFromDashboard(${l.id})">Delete</button>
           </div>
         </div>
+        ${leadSourceChipsHtml(l)}
         ${l.details ? leadDetailsHtml(l.details) : ''}
       </div>`).join('');
     requestAnimationFrame(() => trimUnneededShowMore(container));
+  }
+
+  // Where this lead came from (Phase 5): "From: Google search" plus the
+  // campaign when there is one. Nothing at all when nothing is known.
+  function leadSourceChipsHtml(l) {
+    if (typeof thCameFrom !== 'function') return '';
+    const cf = thCameFrom(l);
+    if (!cf.known) return '';
+    return '<div class="lead-card-source"><span>From: ' + escapeHtml(cf.label) + '</span>' + (cf.campaign ? '<span>' + escapeHtml(cf.campaign) + '</span>' : '') + '</div>';
+  }
+
+  // Make a job (Phase 5, approved design): opens the usual new-job form on
+  // Jobs with this lead filled in. Saving there copies the lead's source to
+  // the job and links the lead to it, which clears it from this list.
+  const TH_JOB_FROM_LEAD_KEY = 'th_job_from_lead';
+  function makeJobFromLead(id) {
+    const lead = (lastLoadedLeads || []).find(l => l.id === id);
+    if (!lead) return;
+    try {
+      sessionStorage.setItem(TH_JOB_FROM_LEAD_KEY, JSON.stringify({
+        id: lead.id, name: lead.name || '', phone: lead.phone || '', email: lead.email || '',
+        service: lead.service || '', details: lead.details || '', preferred_date: lead.preferred_date || '',
+        preferred_time: lead.preferred_time || '', referred_by: lead.referred_by || '', source: lead.source || '',
+        utm_source: lead.utm_source || '', utm_medium: lead.utm_medium || '', utm_campaign: lead.utm_campaign || '',
+        utm_term: lead.utm_term || '', utm_content: lead.utm_content || '', landing_referrer: lead.landing_referrer || '',
+      }));
+    } catch (e) { /* private mode: the form opens with the lead number only */ }
+    window.location.href = '/tools/job-tracker.html?fromLead=' + encodeURIComponent(id) + '#add-job';
   }
 
   // A lead's, applicant's or booking's own words (2026-09-29): anything past about
@@ -3088,6 +3092,9 @@
       lastEditedBy: currentUser,
       referredBy,
     };
+    // Phase 5: the job keeps where the booking came from (and says so), so
+    // its invoices and the Insights funnel can follow it to paid.
+    if (typeof thJobAttributionFrom === 'function') Object.assign(newJob, thJobAttributionFrom(booking), { sourceFrom: 'booking' });
     jobs.push(newJob);
     // thWrite: the same write + scheduleSync this did by hand (data-layer.js).
     // The relational mirror below stays targeted at this one job, since the
@@ -4159,6 +4166,98 @@
     }
   }
 
+  // Phase 5 Insights. One period for both cards, kept on this device.
+  const INS_PERIOD_KEY = 'th_insights_period';
+  const INS_DAYS = { '30d': 30, '90d': 90, '365d': 365 };
+  const INS_LABEL = { '30d': 'last 30 days', '90d': 'last 90 days', '365d': 'last 12 months' };
+  function insPeriod() {
+    let v = null;
+    try { v = localStorage.getItem(INS_PERIOD_KEY); } catch (e) { v = null; }
+    return INS_DAYS[v] ? v : '90d';
+  }
+  function setInsPeriod(v) {
+    if (!INS_DAYS[v]) return;
+    try { localStorage.setItem(INS_PERIOD_KEY, v); } catch (e) { /* this visit only */ }
+    renderInsightsFunnel();
+  }
+  const insNum = (n) => (Number(n) || 0).toLocaleString('en-US');
+  let insightsRun = 0;
+  async function renderInsightsFunnel() {
+    const funnelEl = document.getElementById('insFunnel');
+    const tableEl = document.getElementById('insBySource');
+    const webEl = document.getElementById('insWebBody');
+    if (!funnelEl || !tableEl || !webEl) return;
+    const period = insPeriod();
+    document.querySelectorAll('[data-ins-period]').forEach(b => b.setAttribute('aria-pressed', b.getAttribute('data-ins-period') === period ? 'true' : 'false'));
+    const periodLabel = document.getElementById('insWebPeriod');
+    if (periodLabel) periodLabel.textContent = INS_LABEL[period];
+    if (typeof fetchInsightsFunnel !== 'function' || !isSyncConfigured()) {
+      tableEl.innerHTML = '<div class="empty-state-small">Cloud sync isn\'t set up yet, so Insights can\'t load.</div>';
+      return;
+    }
+    const run = ++insightsRun;
+    const since = new Date(Date.now() - INS_DAYS[period] * 86400000).toISOString();
+    const [funnel, web] = await Promise.all([fetchInsightsFunnel(since), fetchWebsiteReport(period)]);
+    if (run !== insightsRun) return; // a newer period was picked meanwhile
+    const rows = funnel.ok ? funnel.rows : [];
+    // The database fills Paid only for accounts that can view finance, so
+    // its answer decides; with no rows yet, the page's own check does.
+    const money_ = rows.length ? rows.some(r => r.paid != null) : anyFinanceAccessV2();
+    const sum = (k) => rows.reduce((t, r) => t + (Number(r[k]) || 0), 0);
+    const report = web.ok ? web.report : null;
+    const steps = [
+      [report ? insNum(report.sessions) : '\u2014', 'Visits', false],
+      [insNum(sum('leads')), 'Leads & bookings', false],
+      [insNum(sum('jobs')), 'Jobs', false],
+      [insNum(sum('invoiced')), 'Invoiced', false],
+    ];
+    if (money_) steps.push([money(sum('paid')), 'Paid', true]);
+    funnelEl.style.gridTemplateColumns = 'repeat(' + steps.length + ', minmax(0, 1fr))';
+    funnelEl.innerHTML = steps.map(([v, label, isMoney]) => '<div class="ins-step' + (isMoney ? ' is-money' : '') + '"><b>' + v + '</b><span>' + escapeHtml(label) + '</span></div>').join('');
+
+    if (!funnel.ok) {
+      tableEl.innerHTML = '<div class="empty-state-small is-warning">Couldn\'t load the source numbers (' + escapeHtml(funnel.error) + ').</div>';
+    } else if (!rows.length) {
+      tableEl.innerHTML = '<div class="empty-state-small">No leads, jobs or invoices in this period yet.</div>';
+    } else {
+      const cls = 'ins-row' + (money_ ? '' : ' no-money');
+      tableEl.innerHTML = '<div class="analytics-subheading" style="margin:0 0 4px !important;">By source</div>' +
+        '<div class="' + cls + ' is-head"><span>Source</span><span>Leads</span><span>Jobs</span>' + (money_ ? '<span>Paid</span>' : '') + '</div>' +
+        rows.map(r => '<div class="' + cls + (r.channel === 'Not known' ? ' is-unknown' : '') + '"><span title="' + escapeAttr(r.channel) + '">' + escapeHtml(r.channel) + '</span>' +
+          '<span>' + insNum(r.leads) + '</span><span>' + insNum(r.jobs) + '</span>' +
+          (money_ ? '<span class="is-money">' + money(Number(r.paid) || 0) + '</span>' : '') + '</div>').join('');
+    }
+
+    const note = document.getElementById('insWebNote');
+    if (!report) {
+      webEl.innerHTML = '<div class="empty-state-small">' + (web.ok
+        ? 'Website numbers appear here after the first daily update from Google Analytics.'
+        : 'Couldn\'t load the website numbers (' + escapeHtml(web.error) + ').') + '</div>';
+      if (note) note.textContent = 'Visitors who declined cookies aren\'t counted here.';
+      return;
+    }
+    const list = (title, items) => items.length
+      ? '<div class="ins-web-list"><h4>' + escapeHtml(title) + '</h4>' + items.map(([a, b]) => '<div class="ins-web-row"><span title="' + escapeAttr(a) + '">' + escapeHtml(a) + '</span><span>' + insNum(b) + '</span></div>').join('') + '</div>'
+      : '';
+    webEl.innerHTML =
+      '<div class="ins-web-tiles">' +
+        '<div class="ins-web-tile"><b>' + insNum(report.sessions) + '</b><span>Visits</span></div>' +
+        '<div class="ins-web-tile"><b>' + insNum(report.calls) + '</b><span>Calls tapped</span></div>' +
+        '<div class="ins-web-tile"><b>' + insNum(report.bookings) + '</b><span>Bookings</span></div>' +
+      '</div>' +
+      list('WHERE VISITS COME FROM', (report.channels || []).slice(0, 6).map(c => [c.name, c.sessions])) +
+      list('TOP PAGES', (report.pages || []).slice(0, 5).map(pg => [pg.title || pg.path, pg.views]));
+    if (note) {
+      const when = web.fetchedAt ? new Date(web.fetchedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+      note.textContent = 'From Google Analytics, refreshed once a day' + (when ? ' \u00b7 updated ' + when : '') + '. Visitors who declined cookies aren\'t counted here.';
+    }
+  }
+  document.addEventListener('click', (e) => {
+    const b = e.target && e.target.closest && e.target.closest('[data-ins-period]');
+    if (b) setInsPeriod(b.getAttribute('data-ins-period'));
+  });
+  window.addEventListener('th-role-loaded', () => { if (currentDashView === 'insights') renderInsightsFunnel(); });
+
   function renderTodayV2() {
     renderTodayRings();
     renderTodaySummaryLine();
@@ -4189,6 +4288,7 @@
       expandSection('snapshot');
       expandSection('analytics');
       renderInsightsCharts();
+      renderInsightsFunnel();
     }
   }
   function initDashViews() {

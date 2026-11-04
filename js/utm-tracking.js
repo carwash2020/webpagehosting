@@ -78,6 +78,63 @@
 
   captureFromUrl();
 
+  // Phase 5 (2026-11-04): two more pieces of "where did this visitor come
+  // from", saved on the lead or booking so Insights can follow it to paid.
+  //
+  // 1. The first outside site that sent them (www.google.com,
+  //    m.facebook.com): host name only, never the path or search terms,
+  //    first-touch with the same 90-day window as the UTM values. Like the
+  //    UTM values, it never leaves this browser except on a form the visitor
+  //    sends themselves.
+  // 2. The Google Analytics visit ID, ONLY when the visitor accepted
+  //    analytics cookies (cookie-consent.js, 'th-cookie-consent' ===
+  //    'granted'). Read from GA's own _ga cookie, which GA only sets after
+  //    that consent; declined or undecided means null, always.
+  var REFERRER_KEY = 'th_first_referrer';
+  var OWN_HOSTS = /(^|\.)triplehenterprisesllc\.biz$/i;
+
+  function captureReferrer() {
+    var host = '';
+    try { host = document.referrer ? new URL(document.referrer).hostname.toLowerCase() : ''; } catch (e) { host = ''; }
+    if (!host || host === window.location.hostname.toLowerCase() || OWN_HOSTS.test(host)) return;
+    if (!/^[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?$/.test(host)) return;
+    try {
+      var prev = JSON.parse(localStorage.getItem(REFERRER_KEY) || 'null');
+      if (prev && typeof prev.captured_at === 'number' && Date.now() - prev.captured_at <= MAX_AGE_MS) return;
+      localStorage.setItem(REFERRER_KEY, JSON.stringify({ host: host, captured_at: Date.now() }));
+    } catch (e) { /* storage blocked -- nothing to keep */ }
+  }
+
+  captureReferrer();
+
+  function storedReferrer() {
+    try {
+      var prev = JSON.parse(localStorage.getItem(REFERRER_KEY) || 'null');
+      if (!prev || typeof prev.captured_at !== 'number' || Date.now() - prev.captured_at > MAX_AGE_MS) return null;
+      return prev.host || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function gaClientIdWithConsent() {
+    var consent = null;
+    try { consent = localStorage.getItem('th-cookie-consent'); } catch (e) { consent = null; }
+    if (consent !== 'granted') return null;
+    var m = String(document.cookie || '').match(/(?:^|;\s*)_ga=([^;]+)/);
+    if (!m) return null;
+    var parts = decodeURIComponent(m[1]).split('.');
+    if (parts.length < 4) return null;
+    var id = parts.slice(-2).join('.');
+    return /^[0-9]{1,20}\.[0-9]{1,20}$/.test(id) ? id : null;
+  }
+
+  // Read at submit time by the lead form (index.html) and the booking form
+  // (booking.html), next to getStoredUtmParams().
+  window.getStoredAttributionExtras = function () {
+    return { landing_referrer: storedReferrer(), ga_client_id: gaClientIdWithConsent() };
+  };
+
   // Exposed for both public forms (index.html, booking.html) to read at
   // submit time. Returns null if nothing was ever captured, or if the
   // stored attribution has aged out past MAX_AGE_MS.

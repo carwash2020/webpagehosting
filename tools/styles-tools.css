@@ -4744,6 +4744,12 @@ html body.th-tool-page:is([data-th-page="workspace"], [data-th-page="job-tracker
 .th-view-switch button[aria-pressed="true"] { background: var(--text); color: var(--bg); }
 .th-assignee-chip { display: inline-block; margin-left: 6px; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--orange-tint-soft, #2a1a08); color: var(--tone-orange-fg); vertical-align: middle; }
 .th-assignee-chip.is-unassigned { background: var(--bg-panel-2); color: var(--text-dim); }
+/* Phase 5: where a job came from -- neutral, so it never reads as a person. */
+.th-assignee-chip.jt-source-chip { background: var(--bg-panel-2); color: var(--text-dim); font-weight: 500; }
+.jt-came-from { margin: 4px 0 10px; color: var(--text-dim); }
+#jobSourceRow[hidden], .jt-came-from[hidden] { display: none !important; }
+.th-source-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.th-source-chips span { font-size: 12px; padding: 3px 10px; border-radius: 999px; background: var(--bg-panel-2); color: var(--text-dim); }
 .jt-assignee-filter { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
 .jt-assignee-filter button { min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text); font: inherit; font-size: 13px; cursor: pointer; }
 .jt-assignee-filter button[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
