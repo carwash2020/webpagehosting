@@ -193,7 +193,21 @@ test('Done resets the form and closes the sheet', () => {
   assert.equal($('posChargeArea').innerHTML, '');
 });
 
-test('where Charge a card opens from: the Invoices list, Money (for accounts that can bill), + New and Search -- all the same sheet via #charge', () => {
+test('Dashboard: Charge a card sits in the Money Owed card header (approved design), only for accounts that can bill; the daily strip stays two actions', () => {
+  const WS = read('workspace.html');
+  const fn = WS.slice(WS.indexOf('  function renderTodayMoney(owed) {'), WS.indexOf('\n  }\n', WS.indexOf('  function renderTodayMoney(owed) {')));
+  assert.match(fn, /const canCharge = typeof canManageInvoices === 'function' && canManageInvoices\(\);/, 'fails closed: no permission function, no button');
+  assert.match(fn, /'<a href="\/tools\/invoice-generator\.html#charge" class="today-charge-btn" id="dashChargeBtn">/);
+  assert.match(fn, /<div class="today-money-head"><div class="today-money-label">Money Owed<\/div>\$\{chargeBtn\}<\/div>/);
+  // Only drawn while Money Owed itself is shown (finance roles): the
+  // hidden/locked states return before the header is built.
+  assert.ok(fn.indexOf("if (moneyState !== 'shown') {") < fn.indexOf('const canCharge'));
+  const strip = WS.match(/<nav class="dash-primary-strip"[\s\S]*?<\/nav>/)[0];
+  assert.equal((strip.match(/class="dash-primary-action"/g) || []).length, 2);
+  assert.doesNotMatch(strip, /Charge a card|#charge/);
+});
+
+test('where Charge a card opens from: the Dashboard, the Invoices list, Money (for accounts that can bill), + New and Search -- all the same sheet via #charge', () => {
   assert.match(INV, /<button type="button" class="mn-new-btn is-secondary" id="invChargeBtn" onclick="openChargeCard\(this\)">Charge a card<\/button>\s*<button type="button" class="mn-new-btn" onclick="openNewInvoice\(\)">\+ New invoice<\/button>/);
   assert.doesNotMatch(INV, /data-tab="pos"|data-money-seg="pos"/, 'the Quick charge tab and its switch segment are gone');
   assert.match(FIN, /<a href="\/tools\/invoice-generator\.html#charge" class="secondary-btn" id="mnyChargeBtn" hidden>Charge a card<\/a>/);

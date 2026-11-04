@@ -1392,44 +1392,44 @@ From the second pass (2026-09-29, #445-#469 and the portal leak fixes):
   contract text plus the signature image
   (`edge-functions/respond-to-contract-index.ts`). Build a proper contract
   PDF for that email and for the portal's Download. Not in 3.4.
+- **Record a paid date on invoices.** Money counts paid-invoice income in
+  the invoice's own month (an October invoice paid in November counts in
+  October), because invoices don't record when they were paid. Not in 3.4.
+- **Phase 4: a "Manage add-ons" capability** if the team grows. For now any
+  account can flip an add-on in Settings > Add-ons, and the change applies
+  to the whole account.
 
-## Phase 3.4: for Connor to decide (2026-11-04)
+## Phase 3.4 decisions (Connor, 2026-11-04)
 
-Found while building 3.4. None of these were built; each is listed so you
-can say yes, no, or later.
+Kept as built:
 
-1. **"Start my day" in the sidebar.** The handoff's Cut list names it, but
-   it is the shift clock (punch in/out records, Your week's hours), not a
-   nav link. Left as is.
-2. **Invoices have no paid date.** Money dates paid-invoice income by the
-   invoice's date, so an October invoice paid in November counts in
-   October. Fixing it means recording when an invoice was paid.
-3. **Income and Expenses chips list every entry.** All is this month only
-   (as designed); the Income and Expenses chips show the existing all-time
-   lists, headed "· every entry", not "· NOVEMBER".
-4. **Charge a card on the Dashboard.** The handoff puts a Charge a card
-   button on the Dashboard. There is no approved Dashboard design for it,
-   and the daily strip was cut to two actions on 2026-10-31. Today it is in
-   + New (on every page), Search, Invoices and Money.
-5. **Appliance Wiki's one way in.** With its add-on on, it is the invoice
-   and quote line items' Look Up in Wiki (handoff: "only inside invoice line
-   items"). Not in Search. Say if you want it in Search too.
-6. **Who may flip an add-on.** Settings > Add-ons switches show to every
-   account and change it for the whole account. There is no permission for
-   them; adding one would be a permission change.
-7. **Add-on pages by direct link.** With an add-on off, its page still
-   opens if someone has the URL (a bookmark). Nothing links to it.
-8. **Mark done skips the Job done sheet.** It now opens the review request
-   (your choice). The sheet's Create invoice moved to a "Not billed yet.
-   Create the invoice" line on the review page; its "No charge" is still on
-   the Dashboard's Ready to invoice and the job's menu. Bulk Mark done still
-   asks about reviews one job at a time, as before.
-9. **Public FAQ says "via a secure Stripe invoice".** The site's FAQ text
-   doesn't match how card payments work now (pay link / Charge a card).
-10. **Old invoices have no pay link.** Invoices sent before Phase 3.2 don't
-    carry the guest pay link.
-11. **The Jobs page's browser title still reads "Job Tracker"**
-    (`tools/job-tracker.html` `<title>`), while the nav calls it Jobs. Out
-    of 3.4's scope.
+1. **"Start my day" stays in the sidebar.** It is the shift clock (punch
+   in/out, the week's hours), not a nav link, so it is off the handoff's
+   Cut list.
+2. **Paid-invoice income counts in the invoice's month** for 3.4. Recording
+   a paid date is on the post-3.4 backlog above.
+3. **Income and Expenses chips keep their all-time lists.** The "· every
+   entry" heading labels the scope and keeps the old Finance history.
+4. **Mark done opens the review request.** Create invoice ("Not billed yet.
+   Create the invoice" on the review page) and No charge (Ready to invoice,
+   the job's menu) are still reachable.
+5. **Old invoices keep current behavior.** The pay link appears when an
+   invoice is re-sent from the form. No backfill.
+
+Built before merge (same PR):
+
+6. **Charge a card on the Dashboard**, in the Money Owed card's header
+   (approved design: Phase 3 designs, board 8). Only for accounts that can
+   bill. The daily strip stays two actions.
+7. **The Wiki in Search** ("Look up a part"), only while its add-on is on.
+   Never in the nav.
+8. **Off means invisible.** Route Planner's and the Wiki's pages redirect to
+   Settings > Add-ons when their add-on is off, even by direct URL.
+9. **Card payment wording.** The public pages no longer say "via a secure
+   Stripe invoice". The live FAQ and Terms rows (read from the database)
+   need `sql/site-content/2026-11-04_card_payment_wording.sql`, not applied
+   yet: it waits for Connor's approval (or paste the same text in Website
+   editing).
+10. **The Jobs page's browser title** is "Jobs".
 
 <!-- Add new bug-lane questions above this line -->

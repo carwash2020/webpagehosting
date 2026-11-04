@@ -71,9 +71,10 @@
     // one way in is My Day's "Plan today's route", so it is not here.
     { title: 'New contract', meta: 'Contract Generator', href: '/tools/contract-generator.html', keywords: 'work order agreement sign', perm: 'canManageContracts' },
     { title: 'Send review request', meta: 'Review Request Sender', href: '/tools/review-request.html', keywords: 'google yelp text qr', perm: 'canManageReviews' },
-    // Appliance Wiki is an add-on too (2026-11-04): its one way in is the
-    // invoice and quote line items' Look Up in Wiki (handoff §2: "Parts
-    // lookup: only inside invoice line items ... not a destination page").
+    // Appliance Wiki is an add-on (2026-11-04): listed only while it is on
+    // (the owner's call; it is never in the nav). Route Planner is never
+    // here: its one way in is My Day's Plan today's route.
+    { title: 'Look up a part', meta: 'Appliance Wiki', href: '/tools/parts-reference.html', keywords: 'manual model brand appliance wiki', addon: 'applianceWiki' },
     { title: 'Runway Dashboard', meta: 'Personal budget and business runway', href: '/tools/runway-dashboard.html#runway', keywords: 'budget net worth draw', perm: 'canViewRunway' },
     { title: 'Dashboard', meta: 'Home \u203a today, money owed, needs attention', href: '/tools/workspace.html', keywords: 'home today inbox' },
     // Out of the nav since 2026-11-04 (nine items), so Search keeps them reachable.
@@ -87,6 +88,7 @@
   function actionItems(term) {
     return ACTIONS.filter(function (a) {
       if (a.perm && !allowed(a.perm)) return false;
+      if (a.addon && !(typeof window.thAddonOn === 'function' && window.thAddonOn(a.addon))) return false;
       if (!term) return !a.typedOnly;
       return (a.title + ' ' + a.meta + ' ' + (a.keywords || '')).toLowerCase().indexOf(term) > -1;
     }).map(function (a) { return { title: a.title, meta: a.meta, href: a.href }; });

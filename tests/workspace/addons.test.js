@@ -3,15 +3,17 @@
 // Planner). Two tools that are off by default and, while off, have no way
 // in anywhere in the app -- not the nav, not Search, not a button. On:
 //   - Route planner: exactly one "Plan today's route" button in My Day.
-//   - Appliance Wiki: Look Up in Wiki in the invoice and quote line items
-//     (handoff §2: "Parts lookup: only inside invoice line items ... not a
-//     destination page").
+//   - Appliance Wiki: "Look up a part" in Search, and Look Up in Wiki in
+//     the invoice and quote line items. Never in the nav.
+// While off, the add-on's page doesn't open by direct URL either: it goes
+// to Settings > Add-ons.
 // The switches live in Settings > Add-ons and sync to every device on the
 // account (th_addons).
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 const { JSDOM } = require('jsdom');
 
 const TOOLS = path.join(__dirname, '..', '..', 'tools');
@@ -74,7 +76,7 @@ test('Settings > Add-ons: a Route planner and an Appliance Wiki switch, both off
   const rows = [...block.matchAll(/<div class="settings-row-label" id="(\w+)">([^<]+)<\/div>[\s\S]*?<button type="button" class="th-toggle" role="switch" aria-checked="false" data-addon="(\w+)"/g)].map(m => [m[2], m[3]]);
   assert.deepEqual(rows, [['Route planner', 'routePlanner'], ['Appliance Wiki', 'applianceWiki']]);
   assert.match(block, /Adds &ldquo;Plan today&rsquo;s route&rdquo; to My Day: today&rsquo;s jobs in order, mileage cost and a suggested trip charge, then open in Google Maps\./);
-  assert.match(block, /Adds &ldquo;Look Up in Wiki&rdquo; to invoice and quote line items/);
+  assert.match(block, /Adds &ldquo;Look up a part&rdquo; to Search, and &ldquo;Look Up in Wiki&rdquo; to invoice and quote line items\./);
   assert.equal((block.match(/Off: shown nowhere in the app, not in the menu or search either\./g) || []).length, 2);
   assert.doesNotMatch(SETTINGS, /<div class="settings-section" id="settingsAddons" hidden>/, 'the Add-ons card shows to every account');
 });
@@ -112,13 +114,33 @@ function palette(addons) {
   return { hrefs };
 }
 
-test('Search never lists Route Planner or the Appliance Wiki, on or off: each add-on has one way in (My Day; the invoice line items)', () => {
-  for (const addons of [null, { routePlanner: true, applianceWiki: true }]) {
-    const p = palette(addons);
-    for (const q of ['', 'route', 'rout', 'directions', 'mileage', 'part', 'wiki', 'manual', 'appliance']) {
-      assert.ok(!p.hrefs(q).some(h => /route-planner|parts-reference/.test(h)), JSON.stringify(addons) + ' "' + q + '"');
+test('Search: "Look up a part" only while the Appliance Wiki add-on is on; Route Planner never, on or off (its one way in is My Day)', () => {
+  const off = palette(null);
+  for (const q of ['', 'part', 'wiki', 'manual', 'appliance']) assert.ok(!off.hrefs(q).includes('/tools/parts-reference.html'), 'off: "' + q + '"');
+  const on = palette({ applianceWiki: true });
+  assert.ok(on.hrefs('').includes('/tools/parts-reference.html'));
+  for (const q of ['part', 'wiki', 'manual']) assert.ok(on.hrefs(q).includes('/tools/parts-reference.html'), 'on: "' + q + '"');
+  const both = palette({ routePlanner: true, applianceWiki: true });
+  for (const q of ['', 'route', 'rout', 'directions', 'mileage']) assert.ok(!both.hrefs(q).some(h => h.includes('route-planner')), 'no route entry for "' + q + '"');
+});
+
+test('off means invisible even by URL: Route Planner and the Wiki go to Settings > Add-ons when their add-on is off, before the page renders', () => {
+  for (const [file, name] of [['route-planner.html', 'routePlanner'], ['parts-reference.html', 'applianceWiki']]) {
+    const src = read(file);
+    const at = src.indexOf('// Add-on gate (2026-11-04)');
+    assert.ok(at > 0 && at < src.indexOf('<body'), file + ': the gate runs in <head>, before anything renders');
+    assert.ok(at > src.indexOf('requireAuth();'), file + ': after the sign-in gate');
+    const code = src.slice(src.indexOf('(function () {', at), src.indexOf('})();', at) + 5);
+    for (const [stored, goes] of [[null, true], ['not json', true], [JSON.stringify({ [name]: false }), true], [JSON.stringify({ [name]: 'yes' }), true],
+      [JSON.stringify({ routePlanner: true, applianceWiki: true }), false], [JSON.stringify({ [name]: true }), false]]) {
+      let went = null;
+      const ctx = { JSON, localStorage: { getItem: () => stored }, location: { replace: (u) => { went = u; } } };
+      vm.createContext(ctx);
+      vm.runInContext(code, ctx);
+      assert.equal(went, goes ? '/tools/settings.html#settingsAddons' : null, file + ' with ' + stored);
     }
   }
+  assert.match(SETTINGS, /<div class="settings-section" id="settingsAddons">/, 'the redirect lands on the Add-ons card');
 });
 
 test('My Day: exactly one "Plan today\'s route", hidden unless the add-on is on and jobs are left today; it opens Route Planner on today\'s jobs', () => {
@@ -152,7 +174,11 @@ test('while off, nowhere: no other page, nav entry or Search action links into R
     const src = read(f);
     for (const m of src.matchAll(/(?:href=["']|href: ')\/tools\/(route-planner|parts-reference)\.html[^"']*/g)) found.push(f + ': ' + m[0]);
   }
-  assert.deepEqual(found, ['workspace.html: href="/tools/route-planner.html#today'], 'behind its add-on (checked above); anything new here needs the same gate');
+  assert.deepEqual(found.sort(), [
+    "tools-command-palette.js: href: '/tools/parts-reference.html",
+    'workspace.html: href="/tools/route-planner.html#today',
+  ], 'each is behind its add-on (checked above); anything new here needs the same gate');
+  assert.match(PALETTE, /href: '\/tools\/parts-reference\.html', [^}]*addon: 'applianceWiki' \}/);
   // openWikiLookup builds its URL in script; its buttons are gated above.
   assert.match(INV, /const url = '\/tools\/parts-reference\.html' \+/);
   const sidebar = NAV.slice(NAV.indexOf('var SIDEBAR_DESTS = ['), NAV.indexOf('];', NAV.indexOf('var SIDEBAR_DESTS = [')));

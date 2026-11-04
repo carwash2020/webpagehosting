@@ -84,7 +84,7 @@
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=24587c0be7" defer></script>
-<script src="/tools/tools-command-palette.js?v=7b37f6c2ef" defer></script>
+<script src="/tools/tools-command-palette.js?v=210664ba23" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -245,6 +245,16 @@
   }
   .today-money.is-warning { border-color: #e05252; }
   .today-money-label { color: var(--text-dim); font-size: 11px; margin-bottom: 10px; }
+  .today-money-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+  .today-money-head .today-money-label { margin-bottom: 0; }
+  .today-charge-btn {
+    display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; flex-shrink: 0;
+    border: 1px solid var(--orange); border-radius: 999px; background: var(--bg-panel); color: var(--text);
+    font-family: var(--font-ui); font-size: 14px; font-weight: 600; text-decoration: none; -webkit-tap-highlight-color: transparent;
+  }
+  .today-charge-btn .th-icon { width: 18px; height: 18px; color: var(--tone-orange-fg); }
+  .today-charge-btn:active { transform: scale(.97); }
+  @media (hover: hover) { .today-charge-btn:hover { background: var(--bg-panel-2); } }
   .today-money-row { display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0; }
   .today-money-row + .today-money-row { border-top: 1px solid var(--border); }
   .today-money-row-label { color: var(--text-dim); font-size: 13px; }
@@ -3896,7 +3906,7 @@
     } else {
       body = '<div class="skeleton-line w-100"></div>';
     }
-    el.innerHTML = '<div class="stripe-balance-head"><span class="stripe-balance-title">Stripe balance</span><a class="th-v2-link" href="/tools/finance.html">Open Finance</a></div>' +
+    el.innerHTML = '<div class="stripe-balance-head"><span class="stripe-balance-title">Stripe balance</span><a class="th-v2-link" href="/tools/finance.html">Open Money</a></div>' +
       '<div class="stripe-balance-figures">' + body + '</div>';
     loadStripeBalance();
   }
@@ -3967,8 +3977,15 @@
     // pills -- the same invoices, the same sums Business Snapshot shows.
     const v2Month = (typeof anyFinanceAccessV2 === 'function' && anyFinanceAccessV2() && typeof monthRevenueV2 === 'function') ? monthRevenueV2() : null;
     const v2Spark = (v2Month && typeof sparkPathV2 === 'function') ? sparkPathV2(monthlyRevenueSeriesV2(6)) : '';
+    // Charge a card (2026-11-04, approved "Charge a card on the Dashboard"
+    // design): in the card's header, for accounts that can bill. It opens
+    // the same sheet as Invoices (#charge); the daily strip stays two.
+    const canCharge = typeof canManageInvoices === 'function' && canManageInvoices();
+    const chargeBtn = canCharge
+      ? '<a href="/tools/invoice-generator.html#charge" class="today-charge-btn" id="dashChargeBtn"><svg class="th-icon" aria-hidden="true"><use href="#icon-card" xlink:href="#icon-card"></use></svg>Charge a card</a>'
+      : '';
     el.innerHTML = `
-      <div class="today-money-label">Money Owed</div>
+      <div class="today-money-head"><div class="today-money-label">Money Owed</div>${chargeBtn}</div>
       <div class="today-money-total">${money(owed.outstandingTotal)}</div>
       <div class="today-money-row">
         <span class="today-money-row-label">Current</span>

@@ -72,10 +72,12 @@ test('the command palette lists every action before you type, filters them by ti
   const hrefs = () => [...window.document.querySelectorAll('#thCmdkResults a')].map(a => a.getAttribute('href'));
   assert.ok(hrefs().includes('/tools/job-tracker.html#add-job'), 'New job listed before typing');
   assert.ok(hrefs().includes('/tools/contract-generator.html'));
-  // Route Planner and the Appliance Wiki are add-ons (2026-11-04), neither
-  // in Search (tests/workspace/addons.test.js). Cost lookup and Inventory
-  // left with their Finance tabs.
-  assert.ok(!PALETTE.includes("href: '/tools/route-planner.html") && !PALETTE.includes("href: '/tools/parts-reference.html"));
+  // Route Planner and the Appliance Wiki are add-ons (2026-11-04): Route
+  // Planner is never in Search; the Wiki only while its add-on is on (off
+  // here; tests/workspace/addons.test.js). Cost lookup and Inventory left
+  // with their Finance tabs.
+  assert.ok(!PALETTE.includes("href: '/tools/route-planner.html"));
+  assert.ok(!hrefs().includes('/tools/parts-reference.html'), 'Look up a part hidden while the Wiki add-on is off');
   assert.ok(!PALETTE.includes("href: '/tools/finance.html#cost'") && !PALETTE.includes("href: '/tools/finance.html#inventory'"));
   assert.ok(!hrefs().some(h => /finance\.html|invoice-generator\.html|runway/.test(h)), 'gated actions hidden: ' + hrefs().join(','));
   const input = window.document.getElementById('thCmdkInput');

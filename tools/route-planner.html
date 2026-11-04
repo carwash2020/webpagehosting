@@ -22,6 +22,16 @@
   // not a single shared account).
   requireAuth();
 </script>
+<script>
+  // Add-on gate (2026-11-04): Route Planner is an add-on (Settings >
+  // Add-ons). While it is off the page does not open, not even from a
+  // bookmark or a typed URL: it goes to Settings > Add-ons instead.
+  (function () {
+    var on = false;
+    try { var a = JSON.parse(localStorage.getItem('th_addons') || '{}'); on = !!a && a['routePlanner'] === true; } catch (e) { on = false; }
+    if (!on) location.replace('/tools/settings.html#settingsAddons');
+  })();
+</script>
 <link rel="manifest" href="/tools/manifest.json">
 <meta name="theme-color" content="#0a0a0a">
 <meta name="mobile-web-app-capable" content="yes">
@@ -82,7 +92,7 @@
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=24587c0be7" defer></script>
-<script src="/tools/tools-command-palette.js?v=7b37f6c2ef" defer></script>
+<script src="/tools/tools-command-palette.js?v=210664ba23" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
