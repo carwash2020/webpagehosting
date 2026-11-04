@@ -898,6 +898,24 @@ td { padding: 10px 8px; font-size: 14px; color: var(--white); border-bottom: 1px
    item shrink below its content's natural size; without it, flexbox
    defaults to min-width:auto, which is the real cause of the overflow. */
 .form-field input[type="date"] { min-width: 0; max-width: 100%; }
+/* iOS Safari date fields overflowing their card (2026-11-04, Connor's
+   report: New quote > Estimate Details, #quoteDate sticks out past the
+   card's right edge at phone width while Estimate Number fits; the
+   invoice tab's #invoiceDate is the same pattern). The rule above only
+   lets the input shrink. The overflow was padding-plus-border wide: with
+   its native appearance, iOS Safari draws a date input at its own width
+   and ignores box-sizing: border-box, so width:100% + padding + border
+   spills over. appearance:none makes Safari size it like every other
+   field (the native date picker still opens on tap); the value is kept
+   left-aligned, since iOS centres it without the native appearance. */
+.form-field input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+.form-field input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 /* :focus-visible above already gives keyboard users a blue outline: this
    is deliberately separate -- :focus-visible's own browser heuristics
    often don't fire for a plain tap/click, which on a touch-primary tool
