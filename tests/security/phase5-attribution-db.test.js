@@ -213,6 +213,10 @@ test('the website report and the sales queue: internal accounts read, nobody but
   await assert.rejects(q(null, 'select * from public.ga_report_cache'), /permission denied/);
   await assert.rejects(q(null, 'select * from public.ga_conversions'), /permission denied/);
   await assert.rejects(q(OWNER, 'select public.ga_client_id_for_job(900, $1)', [T]), /permission denied/);
+  for (const fn of ['th_clean_attribution', 'ga_queue_paid_invoice']) {
+    const r = await admin("select has_function_privilege('anon', $1, 'execute') a, has_function_privilege('authenticated', $1, 'execute') b", ['public.' + fn + '()']);
+    assert.deepEqual([r.rows[0].a, r.rows[0].b], [false, false], fn + ' runs only as a trigger');
+  }
   await assert.rejects(q(null, "select * from public.insights_source_funnel(now() - interval '90 days')"), /permission denied/);
 });
 

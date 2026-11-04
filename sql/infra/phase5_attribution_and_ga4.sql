@@ -78,6 +78,7 @@ begin
   return new;
 end;
 $$;
+revoke execute on function public.th_clean_attribution() from public, anon, authenticated;
 
 drop trigger if exists th_clean_attribution on public.th_leads;
 create trigger th_clean_attribution before insert or update on public.th_leads
