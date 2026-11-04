@@ -3289,7 +3289,7 @@ test('generatePDF() captures logInvoice()\'s return value, rather than calling i
   const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'invoice-generator.html'), 'utf8');
   const fnMatch = src.match(/async function generatePDF\(opts\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate generatePDF()');
-  assert.match(fnMatch[0], /const newEntry = logInvoice\(\{ subtotal, tax, discount, total \}\);/);
+  assert.match(fnMatch[0], /const newEntry = logInvoice\(\{ subtotal, tax, discount, total, payToken \}\);/);
 });
 
 test('the portal-sync send is properly awaited inside generatePDF(), not a detached fire-and-forget chain', () => {

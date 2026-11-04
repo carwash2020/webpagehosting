@@ -24,8 +24,11 @@ test('no Venmo or Cash App reference remains anywhere in the invoice generator',
   assert.doesNotMatch(INVOICE_GEN, /Cash App/i);
 });
 
-test('the default payment text still lists real accepted methods (cash, check, Stripe cards)', () => {
-  assert.match(INVOICE_GEN, /We accept cash, check, and credit\/debit cards via a secure Stripe invoice\./);
+// 2026-11-04 (handoff §3A): "via a secure Stripe invoice" is gone -- no
+// client could ever open one. A sent invoice now carries its own pay link
+// (tests/workspace/invoice-pdf-pay-link.test.js).
+test('the default payment text still lists real accepted methods (cash, check, cards)', () => {
+  assert.match(INVOICE_GEN, />We accept cash, check, and credit\/debit cards\.<\/textarea>/);
 });
 
 test('the Venmo QR code image asset was removed, not just its reference', () => {

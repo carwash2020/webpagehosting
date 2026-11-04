@@ -57,6 +57,10 @@ function pdfLoadJsPdf() {
 // is used for rules, fills and large type only. Small orange text uses
 // ORANGE_DARK (#c96400, the site's --orange-dark), which reads on paper.
 // NAVY/GRAY/LIGHTGRAY are kept as aliases for older callers.
+// The pay link on the dark CTA card (#6cb4ff): blue reads as "a link" and
+// stays readable on DARK_BG.
+const PDF_LINK_BLUE = [108, 180, 255];
+
 const PDF_COLORS = {
   INK: [28, 28, 28],
   BODY: [52, 52, 52],
@@ -955,20 +959,50 @@ function pdfDrawSummary(doc, { y, rows, total, stamp, cta, theme }) {
     pdfDrawStamp(doc, Object.assign({ cx: L + Math.min(leftW, 260) / 2 + 8, cy: top + Math.max(ry - top, 70) / 2 + 4 }, stamp));
     ry = Math.max(ry, top + 80);
   } else if (cta) {
-    const leftW = Math.min(x - L - 16, 230);
-    const boxH = Math.max(ry - top, 78);
+    // 2026-11-04 (handoff §3A, approved design): a sent invoice's card ends
+    // in the pay address -- the whole address as visible blue, underlined
+    // text (so a printed copy still works) that is also a real link. The
+    // card widens for it so the address stays on one line.
+    const link = cta.link && cta.link.text && cta.link.url ? cta.link : null;
+    const leftW = Math.min(x - L - 16, link ? 300 : 230);
+    const textW = leftW - 28;
+    pdfSetFont(doc, pdfRole('bold', theme), 10.5, ORANGE_LIGHT);
+    const headLines = pdfLines(doc, String(cta.heading || '').toUpperCase(), textW);
+    pdfSetFont(doc, pdfRole('body', theme), 8.75, WHITE);
+    const bodyLines = [];
+    (cta.lines || []).forEach(l => { pdfLines(doc, String(l), textW).forEach(line => bodyLines.push(line)); });
+    const afterLines = [];
+    if (link) (cta.after || []).forEach(l => { pdfLines(doc, String(l), textW).forEach(line => afterLines.push(line)); });
+    let linkSize = 9;
+    if (link) {
+      pdfSetFont(doc, pdfRole('bold', theme), linkSize, PDF_LINK_BLUE);
+      while (linkSize > 7 && doc.getTextWidth(String(link.text)) > textW) { linkSize -= 0.25; doc.setFontSize(linkSize); }
+    }
+    const contentH = 21 + headLines.length * 13 + 4 + bodyLines.length * 11.5 + (link ? 13 + afterLines.length * 11.5 + 6 : 0);
+    const boxH = Math.max(ry - top, 78, link ? contentH : 0);
     doc.setFillColor(...DARK_BG);
     doc.rect(L, top, leftW, boxH, 'F');
     doc.setFillColor(...ORANGE);
     doc.rect(L, top, leftW, 3, 'F');
     let cy = top + 21;
     pdfSetFont(doc, pdfRole('bold', theme), 10.5, ORANGE_LIGHT);
-    pdfLines(doc, String(cta.heading || '').toUpperCase(), leftW - 28).forEach(line => { doc.text(line, L + 14, cy); cy += 13; });
+    headLines.forEach(line => { doc.text(line, L + 14, cy); cy += 13; });
     cy += 4;
     pdfSetFont(doc, pdfRole('body', theme), 8.75, WHITE);
-    (cta.lines || []).forEach(l => {
-      pdfLines(doc, String(l), leftW - 28).forEach(line => { doc.text(line, L + 14, cy); cy += 11.5; });
-    });
+    bodyLines.forEach(line => { doc.text(line, L + 14, cy); cy += 11.5; });
+    if (link) {
+      cy += 1.5;
+      const t = String(link.text);
+      pdfSetFont(doc, pdfRole('bold', theme), linkSize, PDF_LINK_BLUE);
+      if (typeof doc.textWithLink === 'function') doc.textWithLink(t, L + 14, cy, { url: String(link.url) });
+      else doc.text(t, L + 14, cy);
+      doc.setDrawColor(...PDF_LINK_BLUE);
+      doc.setLineWidth(0.6);
+      doc.line(L + 14, cy + 1.5, L + 14 + doc.getTextWidth(t), cy + 1.5);
+      cy += 15;
+      pdfSetFont(doc, pdfRole('body', theme), 8.75, WHITE);
+      afterLines.forEach(line => { doc.text(line, L + 14, cy); cy += 11.5; });
+    }
     ry = Math.max(ry, top + boxH);
   }
   doc.setDrawColor(...RULE);

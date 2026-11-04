@@ -2,6 +2,19 @@
 <html lang="en" style="background:#0a0a0a;">
 <head>
 <meta charset="UTF-8">
+<script>
+  // Pay links (2026-11-04, handoff §3A): the invoice email and PDF point
+  // at /pay/<invoice number>-<code>. GitHub Pages has no file there, so it
+  // serves this page; hand the visitor straight to the pay page, before
+  // anything here paints. replace(), so Back doesn't land on this 404.
+  (function () {
+    var m = /^\/pay\/([^/?#]+)\/?$/.exec(location.pathname);
+    if (!m) return;
+    var c = m[1];
+    try { c = decodeURIComponent(c); } catch (e) { /* a mangled %-escape: pass it on as typed */ }
+    location.replace('/pay/?c=' + encodeURIComponent(c));
+  })();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Page Not Found | Triple H Enterprises</title>
 <meta name="robots" content="noindex">

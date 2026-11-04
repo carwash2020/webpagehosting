@@ -94,19 +94,41 @@ test('send-invoice-notification attaches the PDF and says "attached" when pdf_ba
   assert.equal(res.body.ok, true);
   assert.equal(resendCalls.length, 1);
   assert.deepEqual(resendCalls[0].attachments, [{ filename: 'invoice.pdf', content: 'ZmFrZXBkZg==' }]);
-  assert.match(resendCalls[0].subject, /Your invoice from Triple H Enterprises/);
-  assert.match(resendCalls[0].html, /Your invoice is attached/);
-  assert.match(resendCalls[0].html, /is attached to this email as a PDF/);
-  assert.equal(resendCalls[0].bcc, 'steve@triplehenterprisesllc.biz', 'Steve gets a copy of the actual invoice email, BCC on the same send');
+  // 2026-11-04 approved "Invoice email" design: one subject for every invoice email.
+  assert.equal(resendCalls[0].subject, 'Invoice INV-1 from Triple H Enterprises · $250.00');
+  assert.match(resendCalls[0].html, /Your invoice from Triple H/);
+  assert.match(resendCalls[0].html, /Hi Jane, thanks for choosing us\. Your invoice is below and attached as a PDF\./);
+  assert.deepEqual(resendCalls[0].bcc, ['steve@triplehenterprisesllc.biz', 'connor@triplehenterprisesllc.biz'], 'Steve and Connor get the exact email the client got');
 });
 
-test('send-invoice-notification without pdf_base64 falls back to the PDF-less "new invoice" copy (the resend path) and does NOT BCC Steve', async () => {
+test('without pdf_base64 (the resend path) it is the same email without the attachment -- and Steve and Connor still get a copy', async () => {
   const { call, resendCalls } = setupNotify();
   await call({ client_email: 'client@example.com', client_name: 'Jane Smith', invoice_number: 'INV-1', total: 250, has_portal_account: true });
   assert.equal(resendCalls[0].attachments, undefined);
-  assert.match(resendCalls[0].subject, /New invoice from Triple H Enterprises/);
-  assert.match(resendCalls[0].html, /You have a new invoice/);
-  assert.equal(resendCalls[0].bcc, undefined, 'no BCC on the PDF-less fallback -- this is not "the invoice emailed to the customer"');
+  assert.doesNotMatch(resendCalls[0].html, /attached as a PDF/);
+  assert.deepEqual(resendCalls[0].bcc, ['steve@triplehenterprisesllc.biz', 'connor@triplehenterprisesllc.biz'], 'handoff §3A: a copy of every invoice email, not only the ones with a PDF');
+});
+
+test('with a pay code: a Pay button and the printed address, both to /pay/<number>-<code>, no account needed', async () => {
+  const { call, resendCalls } = setupNotify();
+  await call({ client_email: 'tony@example.com', client_name: 'Tony Perides', invoice_number: 'INV-2026-1112', total: 300, description: 'Repair fridge', pdf_base64: 'eA==', has_portal_account: false, pay_token: 'k7f3qm2xw9', due_date: '2026-11-15', terms: 'Net 15' });
+  const m = resendCalls[0];
+  const URL = 'https://www.triplehenterprisesllc.biz/pay/INV-2026-1112-k7f3qm2xw9';
+  assert.equal(m.subject, 'Invoice INV-2026-1112 from Triple H Enterprises · $300.00 due Nov 15');
+  assert.match(m.html, new RegExp(`<a href="${URL}"[^>]*>Pay this invoice &middot; \\$300\\.00</a>`));
+  assert.match(m.html, new RegExp(`Or copy this link into your browser: <a href="${URL}"[^>]*>triplehenterprisesllc\\.biz/pay/INV-2026-1112-k7f3qm2xw9</a>`));
+  assert.match(m.html, /You can pay it right from this email, no account needed\./);
+  assert.match(m.html, /Nov 15, 2026 \(Net 15\)/);
+  assert.match(m.html, /Prefer cash or check\? Pay Steve in person and mention invoice INV-2026-1112\./);
+  assert.doesNotMatch(m.html, /portal\/dashboard\.html/, 'the pay link replaces the portal login link');
+  assert.match(m.text, new RegExp(`Pay this invoice \\(no account needed\\): ${URL}`));
+});
+
+test('a pay code of the wrong shape is never put in a link', async () => {
+  const { call, resendCalls } = setupNotify();
+  await call({ client_email: 'a@example.com', client_name: 'A', invoice_number: 'INV-9', total: 10, pay_token: '"><script>', has_portal_account: false });
+  assert.doesNotMatch(resendCalls[0].html, /\/pay\//);
+  assert.doesNotMatch(resendCalls[0].html, /<script>/);
 });
 
 test('the "View and Pay" CTA only appears when has_portal_account is true', async () => {
@@ -126,8 +148,9 @@ test('a failed Resend send is still reported as a real failure, not silently ok'
 
 // ---------- sync-invoice-to-portal ----------
 
-function setupSync({ existingClient = false, existingInvoice = false } = {}) {
+function setupSync({ existingClient = false, existingInvoice = false, noPayTokenColumn = false } = {}) {
   const calls = [];
+  const upserts = [];
   const fetchStub = async (url, init = {}) => {
     const u = String(url);
     const method = (init.method || 'GET').toUpperCase();
@@ -135,7 +158,12 @@ function setupSync({ existingClient = false, existingInvoice = false } = {}) {
     if (u.includes('/rest/v1/rpc/check_internal_mfa_for_edge_function')) return j(true);
     if (u.includes('/rest/v1/client_portal_invoices?client_email=')) return j(existingClient ? [{ id: 1 }] : []);
     if (u.includes('/rest/v1/client_portal_invoices?source_invoice_id=')) return j(existingInvoice ? [{ id: 1 }] : []);
-    if (u.includes('/rest/v1/client_portal_invoices?on_conflict=')) return j([{ id: 1 }]);
+    if (u.includes('/rest/v1/client_portal_invoices?on_conflict=')) {
+      const rows = JSON.parse(init.body);
+      upserts.push(rows[0]);
+      if (noPayTokenColumn && 'pay_token' in rows[0]) return j({ code: 'PGRST204', message: "Could not find the 'pay_token' column of 'client_portal_invoices' in the schema cache" }, 400);
+      return j([{ id: 1 }]);
+    }
     if (u.endsWith('/functions/v1/send-invite')) {
       calls.push({ fn: 'send-invite', body: JSON.parse(init.body) });
       return j({ ok: true });
@@ -147,7 +175,7 @@ function setupSync({ existingClient = false, existingInvoice = false } = {}) {
     throw new Error(`unexpected fetch in sync-invoice-to-portal: ${method} ${u}`);
   };
   const call = loadFunction('sync-invoice-to-portal-index.ts', 'sync-invoice-to-portal', { fetchStub });
-  return { call, calls };
+  return { call, calls, upserts };
 }
 
 const BASE_INVOICE = {
@@ -180,6 +208,36 @@ test('pdf_base64/pdf_filename are optional -- omitting them still sends a notifi
   assert.equal(res.body.ok, true);
   assert.equal(calls[0].body.pdf_base64, null);
   assert.equal(calls[0].body.pdf_filename, null);
+});
+
+test('sync stores the pay code on the portal row and hands it to the email', async () => {
+  const { call, calls, upserts } = setupSync();
+  const res = await call({ ...BASE_INVOICE, pay_token: 'k7f3qm2xw9', due_date: '2026-11-07', terms: 'Net 15' });
+  assert.equal(res.body.ok, true);
+  assert.equal(upserts[0].pay_token, 'k7f3qm2xw9');
+  assert.equal(calls[0].body.pay_token, 'k7f3qm2xw9');
+  assert.equal(calls[0].body.due_date, '2026-11-07');
+  assert.equal(calls[0].body.terms, 'Net 15');
+});
+
+test('sync: no code leaves the stored code alone; a malformed one is refused', async () => {
+  const a = setupSync();
+  await a.call({ ...BASE_INVOICE });
+  assert.ok(!('pay_token' in a.upserts[0]), 'a resend of an older invoice never wipes a code');
+  assert.equal(a.calls[0].body.pay_token, null);
+  const b = setupSync();
+  const r = await b.call({ ...BASE_INVOICE, pay_token: 'NOT-A-CODE' });
+  assert.equal(r.status, 400);
+  assert.equal(b.upserts.length, 0);
+});
+
+test('sync before the pay_token column exists: the invoice still goes out, just without a pay link', async () => {
+  const { call, calls, upserts } = setupSync({ noPayTokenColumn: true });
+  const res = await call({ ...BASE_INVOICE, pay_token: 'k7f3qm2xw9' });
+  assert.equal(res.body.ok, true);
+  assert.equal(upserts.length, 2);
+  assert.ok(!('pay_token' in upserts[1]));
+  assert.equal(calls[0].body.pay_token, null, 'no link to a code that was never stored');
 });
 
 // ---------- the client side: generatePDF() actually sends the PDF it just built ----------

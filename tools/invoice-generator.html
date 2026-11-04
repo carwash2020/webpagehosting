@@ -69,7 +69,7 @@
      masthead/footer/totals-block drawing code below moved into this
      shared file, now also used by job-detail.html's job sheet and
      contract-generator.html. -->
-<script src="/js/pdf-layout.js?v=4dca739ad1" defer></script>
+<script src="/js/pdf-layout.js?v=f56a0ea2a2" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -852,7 +852,7 @@
   </div>
   <div class="form-field">
     <label for="paymentText">Payment text (shown at the bottom of the invoice)</label>
-  <textarea id="paymentText" aria-label="Payment text shown at the bottom of the invoice">We accept cash, check, and credit/debit cards via a secure Stripe invoice.</textarea>
+  <textarea id="paymentText" aria-label="Payment text shown at the bottom of the invoice">We accept cash, check, and credit/debit cards.</textarea>
   </div>
 </details>
 
@@ -1408,13 +1408,12 @@
     const rebuildTaxRate = Number(inv.subtotal) ? (Number(inv.tax) || 0) / Number(inv.subtotal) * 100 : 0;
     y = drawPdfTotalsBlock(doc, {
       y, pageW, subtotal, tax: Number(inv.tax) || 0, taxRatePct: rebuildTaxRate, discount: Number(inv.discount) || 0, discountLabel: 'Discount', totalLabel: 'TOTAL DUE', theme: 'inter',
-      cta: { heading: 'Pay this invoice', lines: ['See payment details below.', 'Questions? Call or text (435) 414-1667.'] },
+      cta: invoicePayCta({ link: inv.payToken ? payLinkFor(inv.invoiceNumber, inv.payToken) : null }),
     });
     const paymentText = (document.getElementById('paymentText') || {}).value || '';
-    y = pdfDrawNoteBox(doc, { y: y + 6, label: 'Payment', theme: 'inter', lines: [
-      paymentText,
-      { text: 'Please reference invoice ' + (inv.invoiceNumber || '') + ' with payment.', small: true },
-    ] });
+    y = pdfDrawNoteBox(doc, Object.assign({ y: y + 6, theme: 'inter' }, invoicePaymentNote({
+      link: inv.payToken, invoiceNumber: inv.invoiceNumber || '', paymentText,
+    })));
     pdfFinalize(doc, { message: 'Thank you for choosing Triple H Enterprises. Work guaranteed.', theme: 'inter' });
     return doc;
   }
@@ -1610,6 +1609,7 @@
             description: inv.jobRefTitle || null,
             line_items: inv.line_items,
             total: inv.total,
+            pay_token: inv.payToken || null,
           }),
         });
         const result = await res.json().catch(() => ({}));
@@ -1633,6 +1633,9 @@
           invoice_number: inv.invoiceNumber,
           total: Number(inv.total),
           description: inv.jobRefTitle || null,
+          pay_token: inv.payToken || null,
+          due_date: (typeof thInvoiceDueDate === 'function' && thInvoiceDueDate(inv) && typeof thLocalDateStr === 'function') ? thLocalDateStr(thInvoiceDueDate(inv)) : null,
+          terms: inv.terms || null,
         }),
       });
       const result = await res.json().catch(() => ({}));
@@ -2670,6 +2673,44 @@
   // actually became a real invoice would be worse than no linkage at
   // all. The quote only gets marked once the invoice is genuinely saved.
   let pendingSourceQuoteId = null;
+
+  // Guest pay link (2026-11-04, handoff §3A; Connor: pay "right from this
+  // email -- no account needed"). A sent invoice gets its own code, made
+  // here, saved on the invoice and on its portal row (pay_token), and
+  // printed on the PDF as /pay/<invoice number>-<code>. The code is the
+  // only key to /pay/, so it is random (crypto, not Math.random) and drawn
+  // from letters and digits without look-alikes (no 0/o, 1/l/i): 31^10,
+  // about 8e14 codes. edge-functions/guest-pay-index.ts accepts this shape.
+  function makePayToken() {
+    const ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789';
+    const bytes = new Uint8Array(10);
+    let out = '';
+    while (out.length < 10) {
+      crypto.getRandomValues(bytes);
+      for (let i = 0; i < bytes.length && out.length < 10; i++) {
+        // 248 = 31 * 8: dropping 248-255 keeps every letter equally likely.
+        if (bytes[i] < 248) out += ALPHABET[bytes[i] % 31];
+      }
+    }
+    return out;
+  }
+  function payLinkFor(invoiceNumber, token) {
+    const text = 'triplehenterprisesllc.biz/pay/' + encodeURIComponent(String(invoiceNumber || 'invoice')) + '-' + token;
+    return { text, url: 'https://www.' + text };
+  }
+  // The dark card beside the totals and the payment note under them (the
+  // approved PDF design): with a pay link the card carries one sentence
+  // ending in the address, and the note lists the other ways to pay;
+  // without one (a downloaded invoice, an invoice from before pay links)
+  // both are as they were.
+  function invoicePayCta({ link }) {
+    if (!link) return { heading: 'Pay this invoice', lines: ['See payment details below.', 'Questions? Call or text (435) 414-1667.'] };
+    return { heading: 'Pay this invoice online', lines: ['Pay by card or bank, no account needed, at'], link, after: ['Secure checkout by Stripe. Questions? Call or text (435) 414-1667.'] };
+  }
+  function invoicePaymentNote({ link, invoiceNumber, paymentText }) {
+    if (link) return { label: 'Other ways to pay', lines: ['Cash or check in person: please write ' + invoiceNumber + ' on the check. Cards: online at the address above.'] };
+    return { label: 'Payment', lines: [paymentText, { text: 'Please reference invoice ' + invoiceNumber + ' with payment.', small: true }] };
+  }
   // opts.send (2026-09-02): false = just produce the PDF for Connor;
   // true = also sync to the portal and email the client. Defaults to
   // FALSE deliberately -- any future caller that forgets to pass this
@@ -2700,6 +2741,17 @@
     const INVOICE_TYPE_LABELS = { standard: 'INVOICE', deposit: 'DEPOSIT INVOICE', balance: 'BALANCE DUE', progress: 'PROGRESS PAYMENT' };
     const invoiceTypeVal = (document.getElementById('invoiceType') || {}).value || 'standard';
     const invoiceNumberVal = document.getElementById('invoiceNumber').value;
+    const clientEmailVal = document.getElementById('clientEmail').value.trim();
+    // clientEmail's type="email" never gets native browser validation
+    // here -- this page has no <form> element at all, so
+    // reportValidity()/checkValidity() never fires. A malformed address
+    // previously only surfaced as a generic "Failed to send" alert once
+    // sync-invoice-to-portal actually tried and failed to email it.
+    const clientEmailLooksValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmailVal);
+    // Only an invoice that will really be emailed gets a pay code, so a
+    // downloaded copy never carries a link that leads nowhere.
+    const willSend = shouldSend && clientEmailLooksValid && typeof getAuthToken === 'function';
+    const payToken = willSend ? makePayToken() : null;
     const invoiceDateIso = document.getElementById('invoiceDate').value;
     const longDate = (d) => d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     const invoiceDateDisplay = invoiceDateIso ? longDate(new Date(invoiceDateIso + 'T00:00:00')) : '';
@@ -2766,13 +2818,12 @@
     const total = Math.round(Math.max(0, subtotal + tax - discount) * 100) / 100;
     y = drawPdfTotalsBlock(doc, {
       y, pageW, subtotal, tax, taxRatePct: taxRate, discount, discountLabel, totalLabel: 'TOTAL DUE', theme: 'inter',
-      cta: { heading: 'Pay this invoice', lines: ['See payment details below.', 'Questions? Call or text (435) 414-1667.'] },
+      cta: invoicePayCta({ link: payToken ? payLinkFor(invoiceNumberVal, payToken) : null }),
     });
 
-    y = pdfDrawNoteBox(doc, { y: y + 6, label: 'Payment', theme: 'inter', lines: [
-      document.getElementById('paymentText').value,
-      { text: 'Please reference invoice ' + invoiceNumberVal + ' with payment.', small: true },
-    ] });
+    y = pdfDrawNoteBox(doc, Object.assign({ y: y + 6, theme: 'inter' }, invoicePaymentNote({
+      link: payToken, invoiceNumber: invoiceNumberVal, paymentText: document.getElementById('paymentText').value,
+    })));
 
     // U17 fix (High-Impact Upgrades, 2026-09-07): "the thirty-day labour
     // warranty is already tracked internally... stating it on the job
@@ -2805,7 +2856,7 @@
     // closes). Every later reference to the invoice's id/number/etc.
     // in this function uses THIS captured value, never a bare
     // `newEntry` that was never actually in scope here.
-    const newEntry = logInvoice({ subtotal, tax, discount, total });
+    const newEntry = logInvoice({ subtotal, tax, discount, total, payToken });
 
     // Download PDF uses a plain save; only the explicit Send path
     // offers the OS share sheet (2026-09-02). Previously every press
@@ -2858,13 +2909,8 @@
         logClientError(`generatePDF(): could not base64-encode PDF for email attachment -- ${e.message || String(e)}`, 'invoice-generator.html', null, null, null);
       }
     }
-    const clientEmailVal = document.getElementById('clientEmail').value.trim();
-    // clientEmail's type="email" never gets native browser validation
-    // here -- this page has no <form> element at all, so
-    // reportValidity()/checkValidity() never fires. A malformed address
-    // previously only surfaced as a generic "Failed to send" alert once
-    // sync-invoice-to-portal actually tried and failed to email it.
-    const clientEmailLooksValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmailVal);
+    // (clientEmailVal / clientEmailLooksValid are worked out at the top,
+    // since whether this invoice gets a pay link depends on them.)
     if (shouldSend && !clientEmailVal) {
       await showAlert("No client email on this invoice, so there's nobody to send it to. Add one and use Resend from the Invoice Log.");
     } else if (shouldSend && clientEmailVal && !clientEmailLooksValid) {
@@ -2888,6 +2934,9 @@
             description: newEntry.jobRefTitle || null,
             line_items: getLineItems(),
             total: newEntry.total,
+            pay_token: payToken,
+            due_date: dueDate && typeof thLocalDateStr === 'function' ? thLocalDateStr(dueDate) : null,
+            terms: invoiceTermsVal || null,
             pdf_base64: pdfBase64,
             pdf_filename: filename,
           }),
@@ -3259,6 +3308,8 @@
       discount: totals.discount,
       total: totals.total,
       paid: false,
+      // The guest pay code (makePayToken), only on an invoice that was sent.
+      payToken: totals.payToken || null,
       jobRefId: jobRefId || '',
       jobRefTitle,
       // Saved to the internal log too (2026-09-06), requested
