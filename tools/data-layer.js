@@ -1344,6 +1344,39 @@ function thFinishJob(jobId, now) {
   return job;
 }
 
+// ---------- Review request on Mark done (2026-11-04) ----------
+// Handoff §2: "Review requests: trigger automatically when a job is marked
+// done, not a screen someone must remember to visit." The owner's choice:
+// marking a job done opens the review request, prefilled for that client.
+// It is still built in the browser and sent from your own text or email
+// app (Review Request Sender's local-only model). An account without the
+// Reviews permission stays where it is. While the job is still unbilled,
+// the review page offers Create the invoice (?invoiceJob=), since the Job
+// done sheet that used to offer it is skipped.
+function thCanSendReviews() {
+  return typeof canManageReviews !== 'function' || canManageReviews() || !(typeof getCurrentUserRole === 'function' && getCurrentUserRole());
+}
+function thJobUnbilledForMe(job) {
+  const canInvoice = typeof canManageInvoices !== 'function' || canManageInvoices() || !(typeof getCurrentUserRole === 'function' && getCurrentUserRole());
+  if (!canInvoice) return false;
+  const income = thRead(TH_KEYS.income, []).filter(e => e.origin !== 'invoice');
+  return thJobMoneyStage(Object.assign({}, job, { status: 'done' }), thRead(TH_KEYS.invoices, []), income).stage === 'to-invoice';
+}
+function thReviewRequestHref(job, opts) {
+  const params = new URLSearchParams();
+  if (job.client) params.set('name', String(job.client).split(' ')[0]);
+  if (job.title) params.set('job', job.title);
+  if (job.phone) params.set('phone', job.phone);
+  if (opts && opts.unbilled) params.set('invoiceJob', String(job.id));
+  return '/tools/review-request.html?' + params.toString();
+}
+// Returns true when it is leaving for the review request.
+function thOpenReviewOnDone(job) {
+  if (!job || !thCanSendReviews()) return false;
+  window.location.href = thReviewRequestHref(job, { unbilled: thJobUnbilledForMe(job) });
+  return true;
+}
+
 // ---------- Payment reminders (2026-09-23, Workspace rework part 10) ----------
 // A reminder that writes itself: who, which invoice, how much, how late,
 // and -- for an invoice on the client portal (it has a client email) --

@@ -1393,4 +1393,43 @@ From the second pass (2026-09-29, #445-#469 and the portal leak fixes):
   (`edge-functions/respond-to-contract-index.ts`). Build a proper contract
   PDF for that email and for the portal's Download. Not in 3.4.
 
+## Phase 3.4: for Connor to decide (2026-11-04)
+
+Found while building 3.4. None of these were built; each is listed so you
+can say yes, no, or later.
+
+1. **"Start my day" in the sidebar.** The handoff's Cut list names it, but
+   it is the shift clock (punch in/out records, Your week's hours), not a
+   nav link. Left as is.
+2. **Invoices have no paid date.** Money dates paid-invoice income by the
+   invoice's date, so an October invoice paid in November counts in
+   October. Fixing it means recording when an invoice was paid.
+3. **Income and Expenses chips list every entry.** All is this month only
+   (as designed); the Income and Expenses chips show the existing all-time
+   lists, headed "· every entry", not "· NOVEMBER".
+4. **Charge a card on the Dashboard.** The handoff puts a Charge a card
+   button on the Dashboard. There is no approved Dashboard design for it,
+   and the daily strip was cut to two actions on 2026-10-31. Today it is in
+   + New (on every page), Search, Invoices and Money.
+5. **Appliance Wiki's one way in.** With its add-on on, it is the invoice
+   and quote line items' Look Up in Wiki (handoff: "only inside invoice line
+   items"). Not in Search. Say if you want it in Search too.
+6. **Who may flip an add-on.** Settings > Add-ons switches show to every
+   account and change it for the whole account. There is no permission for
+   them; adding one would be a permission change.
+7. **Add-on pages by direct link.** With an add-on off, its page still
+   opens if someone has the URL (a bookmark). Nothing links to it.
+8. **Mark done skips the Job done sheet.** It now opens the review request
+   (your choice). The sheet's Create invoice moved to a "Not billed yet.
+   Create the invoice" line on the review page; its "No charge" is still on
+   the Dashboard's Ready to invoice and the job's menu. Bulk Mark done still
+   asks about reviews one job at a time, as before.
+9. **Public FAQ says "via a secure Stripe invoice".** The site's FAQ text
+   doesn't match how card payments work now (pay link / Charge a card).
+10. **Old invoices have no pay link.** Invoices sent before Phase 3.2 don't
+    carry the guest pay link.
+11. **The Jobs page's browser title still reads "Job Tracker"**
+    (`tools/job-tracker.html` `<title>`), while the nav calls it Jobs. Out
+    of 3.4's scope.
+
 <!-- Add new bug-lane questions above this line -->

@@ -56,12 +56,12 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=3b1514fb8b">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=66c2196d60" defer></script>
-<script src="/tools/data-layer.js?v=9081e6e314" defer></script>
+<script src="/tools/data-layer.js?v=bf98147713" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=7e89e87344" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=24587c0be7" defer></script>
 <script src="/tools/tools-command-palette.js?v=7b37f6c2ef" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
@@ -1746,6 +1746,10 @@
 
     if (wasNotDone && newStatus === 'done') {
       if (typeof celebrateCompletion === 'function') celebrateCompletion();
+      // Mark done opens the prefilled review request (2026-11-04,
+      // thOpenReviewOnDone in data-layer.js); the sheet is for accounts
+      // that can't send reviews.
+      if (typeof thOpenReviewOnDone === 'function' && thOpenReviewOnDone(thJobs.get(id) || job)) return;
       await openJobDoneSheet(job);
     }
   }
@@ -1779,7 +1783,9 @@
     if (stage === 'to-invoice' && canInvoice) {
       actions.push({ label: 'Create invoice', onClick: () => { window.location.href = '/tools/invoice-generator.html?jobRef=' + encodeURIComponent(job.id); } });
     }
-    actions.push({ label: 'Send a review request' + (job.client ? ' to ' + job.client.split(' ')[0] : ''), onClick: () => { window.location.href = reviewRequestHref(job); } });
+    if (typeof thCanSendReviews !== 'function' || thCanSendReviews()) {
+      actions.push({ label: 'Send a review request' + (job.client ? ' to ' + job.client.split(' ')[0] : ''), onClick: () => { window.location.href = reviewRequestHref(job); } });
+    }
     if (stage === 'to-invoice' && canInvoice) {
       actions.push({ label: 'No charge (warranty, favor)', onClick: () => setJobNoCharge(job.id, true) });
     }

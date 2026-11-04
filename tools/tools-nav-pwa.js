@@ -1242,9 +1242,12 @@ function thOpenClockStoppedSheet(r) {
       } });
     }
     actions.push({ label: 'Mark it done', onClick: function () {
-      if (!thFinishJob(job.id)) return;
+      var done = thFinishJob(job.id);
+      if (!done) return;
       if (typeof celebrateCompletion === 'function') celebrateCompletion();
       if (typeof showToast === 'function') showToast(name + ' marked done.');
+      // Mark done opens the prefilled review request (2026-11-04).
+      if (typeof thOpenReviewOnDone === 'function') thOpenReviewOnDone(done);
     } });
   }
   actions.push(keepRunning);

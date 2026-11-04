@@ -67,7 +67,7 @@
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=7e89e87344" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=24587c0be7" defer></script>
 <script src="/tools/tools-command-palette.js?v=7b37f6c2ef" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <script src="/tools/qrcode-lib.js?v=79ec86f828" defer></script>
@@ -257,6 +257,9 @@
   body.th-tool-page[data-th-page="review-request"] .review-ready .dash-list-item-right { display: flex; align-items: center; gap: 4px; }
   body.th-tool-page[data-th-page="review-request"] .review-ready-sent { min-width: 64px; justify-content: center; }
   body.th-tool-page[data-th-page="review-request"] .review-ready-empty { margin: 4px 0 10px; font-size: 13.5px; color: var(--text-dim); }
+  .review-invoice-next { margin: 0 0 14px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--orange-tint-border); background: var(--tone-orange-bg); font-size: 14px; color: var(--text); }
+  .review-invoice-next[hidden] { display: none; }
+  .review-invoice-next a { color: var(--tone-orange-fg); font-weight: 600; text-decoration: none; }
   body.th-tool-page[data-th-page="review-request"] .review-ready-empty[hidden] { display: none; }
 
   /* Message preview: an iMessage-style thread. */
@@ -381,6 +384,9 @@
 
 <div class="form-section review-details-section">
   <h3>Job Details</h3>
+  <!-- Arriving from Mark done on a job that isn't billed yet (2026-11-04):
+       the invoice is one tap away. -->
+  <p class="review-invoice-next" id="reviewInvoiceNext" hidden>Not billed yet. <a href="/tools/invoice-generator.html" id="reviewInvoiceNextLink">Create the invoice &rsaquo;</a></p>
   <div class="form-field">
     <label for="custName">Customer's first name (optional &mdash; leave blank for a generic greeting)</label>
     <input type="text" id="custName" placeholder="Sarah">
@@ -1144,6 +1150,12 @@
   if (params.get('name')) document.getElementById('custName').value = params.get('name');
   if (params.get('job')) document.getElementById('jobDesc').value = params.get('job');
   if (params.get('phone')) document.getElementById('custPhone').value = formatPhoneStatic(params.get('phone'));
+  // Mark done on an unbilled job (thOpenReviewOnDone in data-layer.js).
+  const invoiceJob = params.get('invoiceJob');
+  if (invoiceJob && /^[\w-]{1,64}$/.test(invoiceJob)) {
+    document.getElementById('reviewInvoiceNextLink').href = '/tools/invoice-generator.html?jobRef=' + encodeURIComponent(invoiceJob);
+    document.getElementById('reviewInvoiceNext').hidden = false;
+  }
 
   function copyMessage() {
     const message = buildMessage();
