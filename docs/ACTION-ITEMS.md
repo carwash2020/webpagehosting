@@ -208,23 +208,57 @@ click a setting by hand.
     follow-up. The hours are an attendance record, not pay: the business
     still pays per job.
 
-15. **Decide who can save a card from portal Settings** (2026-09-23
-    audit, finding #6, MEDIUM). `manage-saved-card`'s
-    `create_setup_intent` mode accepts any signed-in account. While
-    public signup was on (#11), a stranger could sign up and use it to
-    create Stripe Customers and SetupIntents, a common way to test
-    stolen cards.
+15. ~~**Decide who can save a card from portal Settings**~~ **Done
+    (2026-11-03), deployed.** (2026-09-23 audit, finding #6, MEDIUM).
+    `manage-saved-card`'s `create_setup_intent` mode accepted any
+    signed-in account. While public signup was on (#11), a stranger
+    could sign up and use it to create Stripe Customers and
+    SetupIntents, a common way to test stolen cards.
     - **Stranger case closed (2026-09-25):** signup is off (#11), so only
-      invited clients and staff can sign in. What's left is an invited
+      invited clients and staff can sign in. What's left was an invited
       account misusing it.
-    - **The code fix needs a product call:** who counts as a real client?
-      "Has an invoice, quote, job, contract or checkup" would block a
-      client whose only item is a work order they submitted themselves.
-      `client_account_codes` can't be the marker, because it's empty for
-      every current client account.
-    - **Next step:** once you decide, ask a new chat to gate
-      `edge-functions/manage-saved-card-index.ts` on that rule, and
-      deploy it.
+    - **Connor's decision (2026-11-03):** a "real client" for
+      saved-card purposes is an account with at least one invoice,
+      quote, job, contract, checkup, OR a work order it submitted
+      itself. Work orders count.
+    - **Implemented:** `edge-functions/manage-saved-card-index.ts`'s
+      `create_setup_intent` mode now calls `accountHasBusinessRecord()`
+      before anything else (before even asking for a signature), which
+      checks `client_portal_invoices`, `client_portal_quotes`,
+      `client_portal_jobs`, `client_portal_contracts`,
+      `client_portal_checkups` and `client_portal_work_orders` directly
+      with the service-role key for a row with `client_email` equal to
+      the caller's own verified session email. No row in any of the
+      six -> a clear 403 ("Saving a card isn't available on this
+      account yet..."), never a silent no-op.
+    - **"Submitted themselves," resolved without guessing:**
+      `client_portal_work_orders` has no internal/staff INSERT policy
+      at all (`sql/portal/create_client_portal_work_orders.sql`) --
+      its only INSERT policy is the client's own, requiring
+      `client_email = auth.email()`. Staff tooling only ever reads it
+      (via `internal_read_client_portal_work_orders`) or updates an
+      existing row's status (via
+      `internal_update_client_portal_work_order()`); grepping
+      `edge-functions/` and `sql/` found no service-role or
+      staff-attributed insert into this table anywhere in the repo. So
+      a row's mere existence already proves it was submitted by that
+      client themselves -- no separate `submitted_by` column exists or
+      is needed. If a staff-initiated work-order creation path is ever
+      added, this gate needs to be revisited.
+    - **Tests:** `tests/edge-functions/saved-card-business-record-gate.test.js`
+      (an account with none of the 6 refused with a clear error; each
+      of the 6 individually lets it through; the work-order case
+      specifically; the gate runs before the signature check).
+    - **Deployed (2026-11-04)** as `manage-saved-card` v16 on the live
+      project (`csvfqdjuobylgafgolho`), after CI went fully green on
+      [PR #576](https://github.com/carwash2020/webpagehosting/pull/576)
+      (test x2, CodeQL, Snyk, Repowise review, fix-versions, all
+      passed). Verified by reading the deployed source back with
+      `mcp__Supabase__get_edge_function` and comparing it byte-for-byte
+      against the PR branch's `edge-functions/manage-saved-card-index.ts`
+      -- identical sha256 (`f23ac3be...957c56b`) on both sides, so the
+      live function and the PR are not diverged. PR left open for
+      Connor, not merged.
 16. ~~**Webhook doesn't compare the amount paid to the invoice total**
     (2026-09-23 audit, finding #7, LOW).~~ **Done (2026-09-25), deployed.**
     `stripe-webhook` now compares `amount_received` to what the
@@ -266,33 +300,30 @@ click a setting by hand.
     recovery codes somewhere safe. Until then, Steve's password alone opens
     everything.
 
-19. **Homepage redesign v2 -- what still needs a call before it's built**
-    (2026-09-25). A full rebuild from an approved design mockup
-    (`Homepage Redesign v2.dc.html`) was asked for; the safe, CSS-only
-    parts shipped (services card layout, reviews tint, teardown scrub
-    chrome -- see `docs/specialist-logs/visual.md`, same date, and the
-    PR). These items need Connor's sign-off before a future session
-    does them, because each one either removes/moves real tested work
-    or adds new behavior beyond a style pass:
-    - **Move the hero estimate form (`#heroLeadForm`) out of the hero
-      and into a new `#schedule` panel.** The design asks for this, but
-      `tests/design/homepage-hero-lead-form.test.js` pins its exact
-      position inside `.hero` across 7 assertions, and moving it may
-      touch GA4 event wiring in `analytics-events.js`. Doable, but
-      needs its own pass that rewrites those tests on purpose.
-    - **Remove `#honest`, `.stats-bar`, `.trust`, `#closing`, or `#areas`
-      as their own homepage sections**, as the design's "removed on
-      purpose" list asks. Each is real, recently-finished, tested work:
-      `#honest` also holds `#careCard`, a seasonal-tip feature the
-      design handoff doesn't mention, so deleting the section risks
-      quietly losing that feature too. `#areas`'s service-radius diagram
-      had its city bearings corrected the same day as this handoff (see
-      the two visual.md entries just above the redesign one) -- removing
-      it as a section would throw that work away without asking.
-      `#closing` is the page's deliberate "peak moment" screen from a
-      2026-09-08 audit. **Left alone and still fully visible** this
-      pass; decide whether they should go, hide, or stay before anyone
-      touches them again.
+19. **Homepage redesign v2 -- Connor's 4 sign-off decisions, 2026-11-03**
+    (originally scoped 2026-09-25). A full rebuild from an approved
+    design mockup (`Homepage Redesign v2.dc.html`) was asked for; the
+    safe, CSS-only parts shipped first (services card layout, reviews
+    tint, teardown scrub chrome -- see `docs/specialist-logs/visual.md`,
+    2026-09-25, and that PR). Two more items (teardown SVG redraw,
+    pointer-drag compare overlay) shipped later the same month. The
+    remaining 4 items needed Connor's explicit sign-off because each
+    either removes/moves real tested work or adds new behavior beyond a
+    style pass. Connor has now ruled on all 4 (see the PR for the FAQ
+    tabs/accordion rebuild and the #reviews big number):
+    - **REJECTED -- Move the hero estimate form (`#heroLeadForm`) out of
+      the hero and into a new `#schedule` panel.** The design asked for
+      this, but `tests/design/homepage-hero-lead-form.test.js` pins its
+      exact position inside `.hero` across 7 assertions, and moving it
+      may touch GA4 event wiring in `analytics-events.js`. Connor's call:
+      leave it in the hero. `#heroLeadForm` is untouched.
+    - **REJECTED -- Remove `#honest`, `.stats-bar`, `.trust`, `#closing`,
+      or `#areas` as their own homepage sections**, as the design's
+      "removed on purpose" list asked. Each was real, recently-finished,
+      tested work (`#honest`'s `#careCard` seasonal tip, `#areas`'s
+      corrected service-radius bearings, `#closing`'s 2026-09-08 "peak
+      moment" role). Connor's call: keep all 5 sections, unchanged in
+      their existence. None of the 5 were touched.
     - ~~**Redraw the teardown SVG**~~ Done 2026-09-29 (the prototype port;
       the drain pump, its callout and chip are in `index.html`). Original note:
       with the mockup's new parts (a lit
@@ -305,15 +336,30 @@ click a setting by hand.
       control doing this job; adding a second interaction layer is new
       JS with real risk to `homepage-hero-reveal.test.js`'s pinned
       state, not restyling.
-    - **Rebuild the FAQ as inline topic-tabs + accordion**, replacing
-      the current modal (`#faqModal`). A real UX change, not a style
-      pass.
-    - **A "big 5.0" review number** on `#reviews`. Any new element
-      showing the rating needs to be wired into `review-stats.js`'s
-      existing hook-class list (`.js-review-rating-stat` etc.) or it
-      will silently go stale the next time the real rating changes in
-      `tools/site-content.html` -- small work, just not done in this
-      pass.
+    - ~~**Rebuild the FAQ as inline topic-tabs + accordion**~~ APPROVED
+      and done (PR, 2026-11-03): `#faqModal` (the pop-up) is gone;
+      `index.html` now has an inline `#faq` section with one tab per
+      category (`#faqTabs`, a real ARIA tablist) and one accordion panel
+      per tab (`#faqPanels`), between `#schedule` and `#closing`. Every
+      question/answer from the old modal is preserved, and the live
+      `site_faq` fetch (and the FAQPage JSON-LD sync) rebuilds the
+      tabs/panels the same way it used to rebuild the flat list -- see
+      `tests/seo/faq-schema-sync.test.js` and
+      `tests/design/homepage-faq-tabs.test.js`. Every other page's
+      `/#faq` link (landing pages, about.html, our-work.html) still
+      works unchanged -- it's now a plain in-page anchor instead of a
+      JS-intercepted modal-opener.
+    - ~~**A "big 5.0" review number**~~ APPROVED and done (PR,
+      2026-11-03): `#reviews` now has a prominent `.reviews-rating-big`
+      number above the review wall, wired into `review-stats.js`'s
+      existing `.js-review-rating-stat` / `.js-review-count-stat` /
+      `.js-review-star-label` hook classes (same ones the stats strip
+      already used), so it moves automatically with the real Google
+      rating and never goes stale. See
+      `tests/site-content/review-stats-public.test.js`.
+    - **Nothing from this item is still open.** All 6 original proposals
+      have a final disposition (2 done in September, 2 rejected, 2 done
+      now).
 
 20. **Re-enable Salt Lake Valley coverage once Steve's capacity allows --
     temporarily pulled on 2026-10-28** because the driving distance

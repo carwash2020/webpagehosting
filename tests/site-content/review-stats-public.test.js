@@ -189,8 +189,23 @@ test('no public page shows a "X.X from N Google reviews" phrase outside a .js-re
 
 test('the review-count stat and the rating stat are hooked on the homepage', () => {
   const w = pageDom('index.html');
-  assert.equal(w.document.querySelectorAll('.js-review-rating-stat').length, 1);
-  assert.equal(w.document.querySelectorAll('.js-review-count-stat').length, 1);
-  assert.equal(w.document.querySelectorAll('.js-review-star-label').length, 1);
+  // 2 each: the stats-bar strip near the top, plus the #reviews "big
+  // number" added 2026-11-03 (item 19) -- both wired to the same
+  // review-stats.js hooks, so both move together with the real rating.
+  assert.equal(w.document.querySelectorAll('.js-review-rating-stat').length, 2);
+  assert.equal(w.document.querySelectorAll('.js-review-count-stat').length, 2);
+  assert.equal(w.document.querySelectorAll('.js-review-star-label').length, 2);
   assert.equal(w.document.querySelectorAll('.js-review-stars').length, 2);
+});
+
+test('the #reviews "big number" rating updates live, in step with the stats-bar one', () => {
+  const w = pageDom('index.html');
+  w.applyReviewStats({ googleRating: '4.9', googleReviewCount: '12' });
+  const ratingStats = [...w.document.querySelectorAll('.js-review-rating-stat')];
+  const countStats = [...w.document.querySelectorAll('.js-review-count-stat')];
+  assert.deepEqual(ratingStats.map(el => el.textContent), ['4.9', '4.9']);
+  assert.deepEqual(countStats.map(el => el.textContent), ['12', '12']);
+  const bigNumber = w.document.querySelector('.reviews-rating-number .js-review-rating-stat');
+  assert.ok(bigNumber, 'expected the big number inside #reviews to carry the hook class');
+  assert.ok(w.document.querySelector('#reviews .js-review-rating-stat'), 'expected the hook to live inside #reviews, not just the stats bar');
 });

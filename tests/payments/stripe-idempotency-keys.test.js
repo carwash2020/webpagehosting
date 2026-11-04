@@ -20,6 +20,8 @@ function reset() {
     stripeCalls: [], idem: new Map(), created: { customers: 0, payment_intents: 0, setup_intents: 0 },
     customers: [], posClaims: new Set(), incomeLog: [], emails: [], portalInvoices: [], patches: [],
     savedCards: { cus_pat: [{ id: 'pm_saved', card: { brand: 'visa', last4: '4242' } }] },
+    businessRecords: { client_portal_invoices: [], client_portal_quotes: [], client_portal_jobs: [],
+      client_portal_contracts: [], client_portal_checkups: [], client_portal_work_orders: [] },
   });
 }
 reset();
@@ -77,6 +79,18 @@ async function fakeFetch(url, init = {}) {
     return new Response(null, { status: 201 });
   }
   if (u.pathname === '/rest/v1/card_authorizations') return new Response(null, { status: 201 });
+  // manage-saved-card's create_setup_intent business-record gate: a plain
+  // ?client_email=eq.X&select=id&limit=1 GET against any of these six
+  // tables. client_portal_invoices also gets ?id=... GETs from the
+  // payment-intent tests below, which fall through to its own handler.
+  const businessRecordMatch = u.pathname.match(/^\/rest\/v1\/(client_portal_quotes|client_portal_jobs|client_portal_contracts|client_portal_checkups|client_portal_work_orders)$/)
+    || (u.pathname === '/rest/v1/client_portal_invoices' && u.searchParams.has('client_email') ? [null, 'client_portal_invoices'] : null);
+  if (businessRecordMatch && method === 'GET') {
+    const email = (u.searchParams.get('client_email') || '').replace(/^eq\./, '');
+    const pool = businessRecordMatch[1] === 'client_portal_invoices' ? st.portalInvoices : st.businessRecords[businessRecordMatch[1]];
+    const rows = pool.filter((r) => r.client_email === email);
+    return json(rows.slice(0, 1));
+  }
   if (u.pathname === '/rest/v1/stripe_pos_charges_logged') {
     const id = JSON.parse(init.body).payment_intent_id;
     if (st.posClaims.has(id)) return json([], 201);
@@ -245,6 +259,10 @@ test('create-bulk-payment-intent: the same batch in a different order is the sam
 test('manage-saved-card: SetupIntent and detach are keyed; a retried add-card with the same request_id makes one SetupIntent', async () => {
   reset();
   st.customers.push({ client_email: 'pat@example.com', stripe_customer_id: 'cus_pat' });
+  // pat has a real job on file, so the business-record gate (ACTION-ITEMS
+  // #15) lets create_setup_intent through -- see the dedicated gate test
+  // file for the gate's own behavior.
+  st.businessRecords.client_portal_jobs.push({ id: 1, client_email: 'pat@example.com' });
   const body = { mode: 'create_setup_intent', request_id: 'card-ffffffffffffffff', ...SIG };
   const a = await call('manage-saved-card', body, 'pat@example.com');
   const b = await call('manage-saved-card', body, 'pat@example.com');
