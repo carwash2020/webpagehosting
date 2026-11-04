@@ -56,7 +56,7 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=f212452f48">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=486abe5b22" defer></script>
-<script src="/tools/data-layer.js?v=7b44a62eae" defer></script>
+<script src="/tools/data-layer.js?v=bfaab0c44f" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
@@ -635,7 +635,7 @@
       quick.push(['sms:' + phoneDigits, 'message', 'Text']);
     }
     if (j.address) quick.push(['https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(j.address), 'navigate', 'Directions', true]);
-    if (allowed('canManageInvoices')) quick.push(['/tools/invoice-generator.html?jobRef=' + encodeURIComponent(j.id), 'receipt', 'Invoice']);
+    if (allowed('canManageInvoices') && thJobActions(j, bundle.money).canInvoice) quick.push(['/tools/invoice-generator.html?jobRef=' + encodeURIComponent(j.id), 'receipt', 'Invoice']);
     if (allowed('canViewFinance')) quick.push(['/tools/finance.html?job=' + encodeURIComponent(j.id) + '#expenses', 'camera', 'Expense']);
     // W2 (2026-09-28): the last step of the daily loop sits in the same thumb
     // bar once the job is Done -- the same review-request.html ?name=&job=&phone=

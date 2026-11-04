@@ -10,6 +10,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { jobActionsSandbox } = require('../job-actions-sandbox');
 
 const TOOLS = path.join(__dirname, '..', '..', 'tools');
 const JT = fs.readFileSync(path.join(TOOLS, 'job-tracker.html'), 'utf8');
@@ -27,9 +28,12 @@ function extractFn(src, name) {
   throw new Error('unbalanced ' + name);
 }
 function run(names, extra) {
-  const ctx = Object.assign({ console, Date, Math, String, encodeURIComponent }, extra || {});
+  const ctx = Object.assign({ console, Date, Math, String, encodeURIComponent }, jobActionsSandbox(), extra || {});
   vm.createContext(ctx);
-  vm.runInContext(names.map(n => extractFn(JT, n)).join('\n') + '\n;this.__fns = {' + names.join(',') + '};', ctx);
+  // The money pill's label table rides along (jobCardHtml draws it now that
+  // the sandbox has a money stage).
+  const pills = JT.slice(JT.indexOf('const JOB_MONEY_PILL = {'), JT.indexOf('};', JT.indexOf('const JOB_MONEY_PILL = {')) + 2).replace('const ', 'var ');
+  vm.runInContext(pills + '\n' + names.map(n => extractFn(JT, n)).join('\n') + '\n;this.__fns = {' + names.join(',') + '};', ctx);
   return ctx.__fns;
 }
 function iso(offsetDays) {
@@ -80,8 +84,11 @@ test('a card gets Call and Directions buttons from its phone and address, a More
   assert.match(html, /<span class="jc-phone"> &middot; \(435\) 555-0101<\/span>/);
   assert.match(html, /<span class="jc-addr"><span class="jc-sep"> &middot; <\/span>1 Main St, St\. George<\/span>/);
   // Everything the desktop board card showed is still in the markup.
-  for (const bit of ['class="small-btn job-done-btn"', 'class="status-select"', '>Photos</button>', '>Create Invoice</a>', '>Edit</button>', '>Delete</button>']) assert.ok(html.includes(bit), bit);
+  for (const bit of ['class="small-btn job-done-btn"', 'class="status-select"', '>Photos</button>', '>Edit</button>', '>Delete</button>']) assert.ok(html.includes(bit), bit);
+  assert.ok(!html.includes('>Create Invoice</a>'), 'a job that is not done yet offers no invoice (actions match the job state, 2026-11-03)');
   const bare = renderCard({ id: 8, title: 'No contact', priority: 'low', status: 'done', date: '' });
+  assert.ok(bare.includes('>Create Invoice</a>'), 'a done, unbilled job does');
+  assert.ok(!bare.includes('job-done-btn'), 'and no Done button');
   assert.doesNotMatch(bare, /href="tel:|google\.com\/maps/, 'no phone, no address: no Call, no Directions');
   assert.match(bare, /job-more-btn/, 'More is always there');
   assert.match(bare, /No date set/);
@@ -112,7 +119,8 @@ test('openJobActions is the one sheet for a job -- More and long-press both open
   });
   openJobActions(5);
   assert.equal(shown.title, '&lt;b&gt;Leak&lt;/b&gt;', 'the sheet renders its title as HTML, so it is escaped');
-  assert.deepEqual(shown.labels, ['Mark Done', 'Start (In Progress)', 'Open job', 'Photos', 'Create invoice', 'Send confirmation email', 'Log Expense', 'Edit', 'Delete']);
+  // No Create invoice on a job that isn't done yet (actions match the job's state, 2026-11-03).
+  assert.deepEqual(shown.labels, ['Mark Done', 'Start (In Progress)', 'Open job', 'Photos', 'Send confirmation email', 'Log Expense', 'Edit', 'Delete']);
   shown.actions.find(a => a.label === 'Start (In Progress)').onClick();
   assert.deepEqual(calls, [['status', 5, 'in-progress']]);
   // Log Expense opens Finance's Expenses form for this job (redundancy
@@ -120,7 +128,7 @@ test('openJobActions is the one sheet for a job -- More and long-press both open
   shown.actions.find(a => a.label === 'Log Expense').onClick();
   assert.equal(loc.href, '/tools/finance.html?job=5#expenses');
   openJobActions(6);
-  assert.deepEqual(shown.labels, ['Back to Not Started', 'Open job', 'Photos', 'Create invoice', 'Log Expense', 'Edit', 'Delete'], 'a done job: no Mark Done, no confirmation email without an address');
+  assert.deepEqual(shown.labels, ['Back to Not Started', 'Open job', 'Photos', 'Create invoice', 'No charge (warranty, favor)', 'Log Expense', 'Edit', 'Delete'], 'a done, unbilled job: Create invoice and No charge, no Mark Done, no confirmation email without an address');
   // Finance is a finance-permission page, so an account without it isn't
   // offered a link it can't open (same gate as Job detail's Expense).
   financeOk = false;
@@ -141,7 +149,8 @@ test('Job Detail gets a one-tap row -- Call / Text / Directions from the job, In
   assert.match(fn, /quick\.push\(\['tel:' \+ phoneDigits, 'phone', 'Call'\]\);/);
   assert.match(fn, /quick\.push\(\['sms:' \+ phoneDigits, 'message', 'Text'\]\);/);
   assert.match(fn, /'navigate', 'Directions', true\]/);
-  assert.match(fn, /if \(allowed\('canManageInvoices'\)\) quick\.push\(\['\/tools\/invoice-generator\.html\?jobRef=' \+ encodeURIComponent\(j\.id\), 'receipt', 'Invoice'\]\);/);
+  // Invoice only once the job is ready to invoice (thJobActions, 2026-11-03).
+  assert.match(fn, /if \(allowed\('canManageInvoices'\) && thJobActions\(j, bundle\.money\)\.canInvoice\) quick\.push\(\['\/tools\/invoice-generator\.html\?jobRef=' \+ encodeURIComponent\(j\.id\), 'receipt', 'Invoice'\]\);/);
   assert.match(fn, /if \(allowed\('canViewFinance'\)\) quick\.push\(\['\/tools\/finance\.html\?job=' \+ encodeURIComponent\(j\.id\) \+ '#expenses', 'camera', 'Expense'\]\);/);
 });
 

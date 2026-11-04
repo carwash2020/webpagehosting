@@ -1067,6 +1067,17 @@ function thJobSteps(job, money) {
   return { steps, current: next ? next.key : null };
 }
 
+// What a job may offer (handoff 2026-11-03 §2/§4F: "Actions must match the
+// job's state -- no Mark done on already-paid jobs, no INVOICE action on
+// INVOICED jobs"). `money` is thJobMoneyStage()'s result. Invoice only while
+// the job is done and nothing is billed; Mark done only while it isn't done
+// and nothing is billed yet (a job paid up front doesn't ask to be done).
+function thJobActions(job, money) {
+  const stage = money && money.stage;
+  const billed = stage === 'invoiced' || stage === 'overdue' || stage === 'paid' || stage === 'no-charge';
+  return { canInvoice: stage === 'to-invoice', canMarkDone: !!job && job.status !== 'done' && !billed };
+}
+
 // When a job was finished: the moment its status last changed to Done
 // (statusChangedAt, written by every status change since 2026-08), else its
 // own date for jobs finished before that field existed.

@@ -56,7 +56,7 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=f212452f48">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=486abe5b22" defer></script>
-<script src="/tools/data-layer.js?v=7b44a62eae" defer></script>
+<script src="/tools/data-layer.js?v=bfaab0c44f" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
@@ -2375,6 +2375,7 @@
   function jobCardHtml(job, marginData, opts) {
     opts = opts || {};
     const isDone = job.status === 'done';
+    const jobActs = thJobActions(job, thJobMoneyStage(job, marginData.invoices || [], marginData.manualIncome || []));
     const margin = isDone ? computeJobMargin(job, marginData.invoices, marginData.expenses, marginData.manualIncome) : null;
     // $/hr (job-duration tracking, closing a real audit gap): revenue
     // per actual hour worked, shown only when both a real margin AND a
@@ -2406,7 +2407,7 @@
       (jcHasDay ? (jcIsToday ? 'Today' : jcDay.toLocaleDateString('en-US', { weekday: 'short' })) : 'No date') + '</span></div>';
     return `
       <div class="job-card priority-${job.priority} ${isDone ? 'is-done' : ''}${moneyPillHtml.includes('is-to-invoice') ? ' needs-invoice' : ''} ${job.id === justAddedJobId ? 'list-row-enter' : ''}" data-job-id="${job.id}">
-        ${(opts.enableSwipe && !isDone) ? `<div class="job-card-swipe-action"><button class="small-btn" onclick="setJobStatus(${job.id}, 'done')">Done</button></div>` : ''}
+        ${(opts.enableSwipe && jobActs.canMarkDone) ? `<div class="job-card-swipe-action"><button class="small-btn" onclick="setJobStatus(${job.id}, 'done')">Done</button></div>` : ''}
         <div class="job-card-swipe-inner">
         ${jobSelectionMode ? `<label class="job-card-select"><input type="checkbox" ${selectedJobIds.has(job.id) ? 'checked' : ''} onchange="toggleJobSelected(${job.id}, this.checked)"></label>` : ''}
         ${jcTimeHtml}
@@ -2425,7 +2426,7 @@
         </div>
         ${job.notes ? `<div class="job-card-notes">${escapeHtml(job.notes)}</div>` : ''}
         <div class="job-card-actions">
-          ${!isDone ? `<button type="button" class="small-btn job-done-btn" onclick="setJobStatus(${job.id}, 'done')">Done</button>` : ''}
+          ${jobActs.canMarkDone ? `<button type="button" class="small-btn job-done-btn" onclick="setJobStatus(${job.id}, 'done')">Done</button>` : ''}
           ${telHref ? `<a class="job-quick-btn" href="${escapeAttr(telHref)}" aria-label="Call ${escapeAttr(job.client || 'the client')}"><svg class="th-icon" aria-hidden="true"><use href="#icon-phone" xlink:href="#icon-phone"></use></svg></a>` : ''}
           ${mapsHref ? `<a class="job-quick-btn" href="${escapeAttr(mapsHref)}" target="_blank" rel="noopener" aria-label="Directions to ${escapeAttr(job.address)}"><svg class="th-icon" aria-hidden="true"><use href="#icon-navigate" xlink:href="#icon-navigate"></use></svg></a>` : ''}
           <select class="status-select" onchange="setJobStatus(${job.id}, this.value)">
@@ -2439,7 +2440,7 @@
               ? `<button class="small-btn is-active" disabled title="Sent ${escapeAttr(new Date(job.confirmationSentAt).toLocaleString())}">✓ Confirmation Sent</button>`
               : `<button class="small-btn" onclick="sendJobConfirmationEmail(${job.id})">Send Confirmation Email</button>`
           ) : ''}
-          <a class="small-btn" href="/tools/invoice-generator.html?jobRef=${job.id}" style="text-decoration:none; display:inline-flex; align-items:center;">Create Invoice</a>
+          ${jobActs.canInvoice ? `<a class="small-btn" href="/tools/invoice-generator.html?jobRef=${job.id}" style="text-decoration:none; display:inline-flex; align-items:center;">Create Invoice</a>` : ''}
           <button class="small-btn" onclick="editJob(${job.id})">Edit</button>
           <button class="small-btn danger" onclick="deleteJob(${job.id})">Delete</button>
           <button type="button" class="job-quick-btn job-more-btn" onclick="openJobActions(${job.id})" aria-label="More for ${escapeAttr(job.title)}" aria-haspopup="dialog"><svg class="th-icon" aria-hidden="true"><use href="#icon-more" xlink:href="#icon-more"></use></svg></button>
@@ -2561,6 +2562,7 @@
     const tableJobs = applyTableSort(jobs);
     tableBody.innerHTML = tableJobs.map(job => {
       const isDone = job.status === 'done';
+      const rowActs = thJobActions(job, thJobMoneyStage(job, marginData.invoices || [], marginData.manualIncome || []));
       const margin = isDone ? computeJobMargin(job, marginInvoices, marginExpenses, marginManualIncome) : null;
       const effectiveRateCellHtml = (margin && margin.hasInvoice && job.hoursWorked)
         ? ` <span class="badge" style="background:rgba(58,160,255,0.15); color:var(--blue-light);" title="Revenue ÷ actual hours worked">${money(margin.revenue / job.hoursWorked)}/hr</span>`
@@ -2580,8 +2582,8 @@
           <td>${job.address ? escapeHtml(job.address) : '&mdash;'}</td>
           <td class="col-amount">${marginCellHtml}</td>
           <td class="jt-actions-cell">
-            ${!isDone ? `<button type="button" class="small-btn job-done-btn" onclick="setJobStatus(${job.id}, 'done')">Done</button>` : ''}
-            <a class="small-btn" href="/tools/invoice-generator.html?jobRef=${job.id}" style="text-decoration:none; display:inline-flex; align-items:center;">Create Invoice</a>
+            ${rowActs.canMarkDone ? `<button type="button" class="small-btn job-done-btn" onclick="setJobStatus(${job.id}, 'done')">Done</button>` : ''}
+            ${rowActs.canInvoice ? `<a class="small-btn" href="/tools/invoice-generator.html?jobRef=${job.id}" style="text-decoration:none; display:inline-flex; align-items:center;">Create Invoice</a>` : ''}
             <button class="small-btn" onclick="editJob(${job.id})">Edit</button>
             <button class="small-btn danger" onclick="deleteJob(${job.id})">Delete</button>
           </td>
@@ -2644,7 +2646,10 @@
       if (thJobClockSince(job) !== null) actions.push({ label: 'Stop the clock (' + thFormatClock(thJobClockElapsedMs(job)) + ')', icon: 'stop', onClick: () => thStopClock(jobId) });
       else if (job.status !== 'done') actions.push({ label: 'Start the clock', icon: 'play', onClick: () => thStartClock(jobId) });
     }
-    if (job.status !== 'done') {
+    // One rule for what this job may offer (thJobActions, data-layer.js).
+    const money = thJobMoneyStage(job, thRead(TH_KEYS.invoices, []), thRead(TH_KEYS.income, []).filter(e => e.origin !== 'invoice'));
+    const acts = thJobActions(job, money);
+    if (acts.canMarkDone) {
       actions.push({ label: 'Mark Done', icon: 'check', onClick: () => setJobStatus(jobId, 'done') });
     }
     // Client texts (2026-09-23, rework part 12): On my way / Running late /
@@ -2659,10 +2664,8 @@
       if (document.getElementById('photos-' + jobId)) toggleJobPhotos(jobId, job.title);
       else location.href = '/tools/job-detail.html?id=' + encodeURIComponent(jobId);
     } });
-    actions.push({ label: 'Create invoice', icon: 'receipt', onClick: () => { location.href = '/tools/invoice-generator.html?jobRef=' + jobId; } });
-    const stage = (job.status === 'done' && typeof thJobMoneyStage === 'function')
-      ? thJobMoneyStage(job, thRead(TH_KEYS.invoices, []), thRead(TH_KEYS.income, []).filter(e => e.origin !== 'invoice')).stage
-      : null;
+    if (acts.canInvoice) actions.push({ label: 'Create invoice', icon: 'receipt', onClick: () => { location.href = '/tools/invoice-generator.html?jobRef=' + jobId; } });
+    const stage = job.status === 'done' ? money.stage : null;
     if (stage === 'to-invoice') actions.push({ label: 'No charge (warranty, favor)', icon: 'check-circle', onClick: () => setJobNoCharge(jobId, true) });
     if (stage === 'no-charge') actions.push({ label: 'Needs an invoice after all', icon: 'receipt', onClick: () => setJobNoCharge(jobId, false) });
     if (job.clientEmail && !job.confirmationSentAt) actions.push({ label: 'Send confirmation email', icon: 'mail', onClick: () => sendJobConfirmationEmail(jobId) });
