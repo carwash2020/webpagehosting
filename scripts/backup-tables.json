@@ -25,6 +25,7 @@
     "site_terms_history": "id",
     "role_definitions": "name",
     "account_roles": "email",
+    "account_roles_deactivated": "email",
     "internal_mfa_enforcement": "id",
     "client_profiles": "client_email",
     "client_notification_preferences": "client_email",
