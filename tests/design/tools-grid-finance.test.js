@@ -13,6 +13,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
+const { whereReachable } = require('../nav-reachability');
 
 const TOOLS_DIR = path.join(__dirname, '..', '..', 'tools');
 const WORKSPACE = fs.readFileSync(path.join(TOOLS_DIR, 'workspace.html'), 'utf8');
@@ -32,10 +33,9 @@ test('the dashboard no longer carries a Tools tile grid or per-tile info bubbles
   assert.doesNotMatch(WORKSPACE, /id="section-tools"/);
 });
 
-test('every destination the tile grid used to link is still a sidebar / More-sheet destination in tools-nav-pwa.js (Calendar became a Job Tracker view, so it is reached via the strip instead)', () => {
-  const sidebarBlock = NAV.match(/var SIDEBAR_DESTS = \[([\s\S]*?)\];/)[1];
+test('every destination the tile grid used to link is still reachable: the nav, Search or Settings (2026-11-04: the nav is the nine; Calendar is a Job Tracker view reached via the strip)', () => {
   for (const href of FORMER_TILE_DESTS) {
-    assert.ok(sidebarBlock.includes("'" + href + "'"), `expected ${href} in SIDEBAR_DESTS`);
+    assert.ok(whereReachable(href).length > 0, `expected ${href} to be reachable from the nav, Search or Settings`);
   }
   assert.match(WORKSPACE, /href="\/tools\/job-tracker\.html#calendar"/, 'Calendar is reached from the daily-action strip');
 });

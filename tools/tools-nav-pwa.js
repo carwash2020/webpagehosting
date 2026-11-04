@@ -116,6 +116,8 @@ function thNavEsc(v) {
     '/tools/contract-generator.html': function () { return typeof canManageContracts === 'function' && canManageContracts(); },
     '/tools/review-request.html': function () { return typeof canManageReviews === 'function' && canManageReviews(); },
     '/tools/dev-tools.html': function () { return typeof hasDevToolsAccess === 'function' && hasDevToolsAccess(); },
+    // Team (2026-11-04): Dev Tools' account permissions panel, same gate.
+    '/tools/dev-tools.html#team': function () { return typeof hasDevToolsAccess === 'function' && hasDevToolsAccess(); },
     // Website (2026-09-23): the same check site-content.html gates on.
     // Listed in SIDEBAR_DESTS with hideUntilAllowed -- see below.
     '/tools/site-content.html': function () { return typeof canManageSiteContent === 'function' && canManageSiteContent(); }
@@ -205,25 +207,24 @@ function thNavEsc(v) {
   // route and navigation stay off Home). On a computer the More button is
   // hidden, so there it's Search ("route") only: drop sidebar: false here
   // if that proves too hidden.
+  // The nine (2026-11-04, handoff §2 "Nav only: Dashboard, Jobs, Clients,
+  // Invoices, Contracts, Money, Reviews, Team, Settings"; approved Money
+  // design's sidebar). Where the six that left now live (the owner's
+  // choices, 2026-11-04): Dev Tools and Website open from Settings; Analytics is the
+  // Dashboard's Insights view; Runway opens from Money; Route Planner and
+  // Appliance Wiki are add-ons (Settings > Add-ons, off by default). All of
+  // them stay in Search (Cmd-K), the add-ons only while switched on.
+  // Team opens Dev Tools' account permissions panel until Phase 4 builds
+  // the Team screen.
   var SIDEBAR_DESTS = [
     { group: 'Work',   href: '/tools/workspace.html',          icon: 'home',     label: 'Dashboard' },
-    { group: 'Work',   href: '/tools/job-tracker.html',        icon: 'wrench',   label: 'Job Tracker' },
-    { group: 'Work',   href: '/tools/route-planner.html',      icon: 'map',      label: 'Route Planner', sidebar: false },
+    { group: 'Work',   href: '/tools/job-tracker.html',        icon: 'wrench',   label: 'Jobs' },
     { group: 'Work',   href: '/tools/clients.html',            icon: 'users',    label: 'Clients' },
     { group: 'Money',  href: '/tools/invoice-generator.html',  icon: 'receipt',  label: 'Invoices' },
-    { group: 'Money',  href: '/tools/finance.html',            icon: 'dollar',   label: 'Finance' },
-    { group: 'Money',  href: '/tools/runway-dashboard.html',   icon: 'chart',    label: 'Runway Dashboard' },
-    // Insights (v2, 2026-09-28): Home's Business Snapshot + Analytics as
-    // their own screen -- a view toggle on the dashboard itself, the same
-    // hash-routed pattern as Job Tracker's #calendar. The More drawer
-    // picks it up from here like every other destination; moreLabel is
-    // its tile name there.
-    { group: 'Insights', href: '/tools/workspace.html#insights', icon: 'trending', label: 'Analytics', moreLabel: 'Insights' },
+    { group: 'Money',  href: '/tools/finance.html',            icon: 'dollar',   label: 'Money' },
     { group: 'Office', href: '/tools/contract-generator.html', icon: 'scroll',   label: 'Contracts' },
     { group: 'Office', href: '/tools/review-request.html',     icon: 'star',     label: 'Reviews' },
-    { group: 'Office', href: '/tools/parts-reference.html',    icon: 'book',     label: 'Appliance Wiki' },
-    { group: 'Office', href: '/tools/site-content.html',       icon: 'globe',    label: 'Website', hideUntilAllowed: true },
-    { group: 'Office', href: '/tools/dev-tools.html',          icon: 'terminal', label: 'Dev Tools' },
+    { group: 'Office', href: '/tools/dev-tools.html#team',     icon: 'user-plus', label: 'Team' },
     { group: 'Office', href: '/tools/settings.html',           icon: 'gear',     label: 'Settings' }
   ];
   var HIDDEN_UNTIL_ALLOWED = {};
@@ -259,8 +260,22 @@ function thNavEsc(v) {
   // A destination may carry a hash (/tools/workspace.html#insights, v2): it
   // is the current one when both path and hash match, and it takes "current"
   // away from the plain page it lives on while that hash is showing.
+  // Pages that left the nav (2026-11-04) mark the item they're opened from,
+  // so the nav still says where you are: Runway opens from Money; Website
+  // and Dev Tools from Settings; the Route Planner from My Day (Dashboard).
+  // Dev Tools' own #team view is the Team item, not Settings.
+  var NAV_PARENT = {
+    '/tools/runway-dashboard.html': '/tools/finance.html',
+    '/tools/site-content.html': '/tools/settings.html',
+    '/tools/dev-tools.html': '/tools/settings.html',
+    '/tools/route-planner.html': '/tools/workspace.html'
+  };
   function destIsHere(d) {
     var parts = String(d.href).split('#');
+    var hashNow = (window.location && window.location.hash || '').replace(/^#/, '');
+    if (NAV_PARENT[path] && d.href === NAV_PARENT[path]) {
+      return !(path === '/tools/dev-tools.html' && hashNow === 'team');
+    }
     if (parts[0] !== path) return false;
     var hash = (window.location && window.location.hash || '').replace(/^#/, '');
     if (parts.length > 1) return hash === parts[1];

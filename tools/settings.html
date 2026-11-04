@@ -59,8 +59,8 @@
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=c189cd58b4" defer></script>
-<script src="/tools/tools-command-palette.js?v=66031659c7" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=a10b595ddd" defer></script>
+<script src="/tools/tools-command-palette.js?v=07b30f3624" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <script src="/tools/sync.js?v=486abe5b22" defer></script>
 <script src="/tools/push-notifications.js?v=3c123334a6" defer></script>
@@ -322,6 +322,57 @@
       </div>
     </div>
   </div>
+
+  <!-- Add-ons (2026-11-04, approved "Route planner add-on" design). Website
+       editing is here because the nav no longer lists it (handoff §2: nine
+       items). The Route Planner and Appliance Wiki switches join this card
+       in 3.4d. Rows show only to accounts allowed to open them. -->
+  <div class="settings-section" id="settingsAddons" hidden>
+    <h2>Add-ons</h2>
+    <p class="settings-desc">Extra tools for this account. Add-ons are shared by every device on the account.</p>
+    <div class="th-set-card">
+      <div class="settings-row" id="settingsWebsiteRow" hidden>
+        <span class="th-v2-icon-tile" aria-hidden="true"><svg class="th-icon"><use href="#icon-globe" xlink:href="#icon-globe"></use></svg></span>
+        <div class="th-set-row-main">
+          <div class="settings-row-label">Website editing</div>
+          <div class="settings-row-sub">Edit the public site's hours, banners, FAQ and terms from here.</div>
+        </div>
+        <a href="/tools/site-content.html" class="secondary-btn th-set-chev" style="text-decoration:none;">Open</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dev Tools (2026-11-04): out of the nav, opened from here and from
+       Search. Shown only to accounts with Dev Tools access. -->
+  <div class="settings-section" id="settingsDevToolsSection" hidden>
+    <h2>Dev Tools</h2>
+    <p class="settings-desc">Diagnostics, data, accounts and system checks.</p>
+    <div class="th-set-card">
+      <div class="settings-row">
+        <span class="th-v2-icon-tile" aria-hidden="true"><svg class="th-icon"><use href="#icon-terminal" xlink:href="#icon-terminal"></use></svg></span>
+        <div class="th-set-row-main">
+          <div class="settings-row-label">Open Dev Tools</div>
+          <div class="settings-row-sub">Health log, backups, account permissions and more.</div>
+        </div>
+        <a href="/tools/dev-tools.html" class="secondary-btn th-set-chev" style="text-decoration:none;">Open</a>
+      </div>
+    </div>
+  </div>
+  <script>
+    // Show each row only to an account allowed to open it -- the same
+    // auth.js checks the nav and Search use.
+    (function () {
+      function apply() {
+        var site = typeof canManageSiteContent === 'function' && canManageSiteContent();
+        var dev = typeof hasDevToolsAccess === 'function' && hasDevToolsAccess();
+        document.getElementById('settingsWebsiteRow').hidden = !site;
+        document.getElementById('settingsAddons').hidden = !site;
+        document.getElementById('settingsDevToolsSection').hidden = !dev;
+      }
+      window.addEventListener('th-role-loaded', apply);
+      if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', apply); else apply();
+    })();
+  </script>
 
   <div class="settings-section">
     <h2>Notifications</h2>

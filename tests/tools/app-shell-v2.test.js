@@ -152,7 +152,7 @@ test('on both Money pages a two-segment Invoices | Finance switch joins the head
 });
 
 test('Search and More are header buttons on every page; runway (no shared header) gets them pinned to its own header', () => {
-  const w = shellOn('parts-reference.html', { perms: ALL });
+  const w = shellOn('contract-generator.html', { perms: ALL });
   const actions = w.document.querySelector('.hub-header-right > .th-hdr-actions');
   assert.ok(actions);
   let opened = 0;
@@ -161,7 +161,7 @@ test('Search and More are header buttons on every page; runway (no shared header
   assert.equal(opened, 1);
   actions.querySelector('.th-hdr-menu').click();
   assert.ok(!w.document.getElementById('thMoreSheet').hasAttribute('hidden'));
-  assert.ok(actions.querySelector('.th-hdr-menu').classList.contains('is-active'), 'the Wiki lives in More, so the More button carries the you-are-here dot');
+  assert.ok(actions.querySelector('.th-hdr-menu').classList.contains('is-active'), 'Contracts lives in More on a phone, so the More button carries the you-are-here dot');
 
   const r = shellOn('runway-dashboard.html', { perms: ALL });
   assert.ok(r.document.querySelector('header#mainContent > .th-hdr-actions.is-floating'));
@@ -175,7 +175,8 @@ test('the More drawer is an app grid of the remaining pages plus two utility row
   // manage site content -- see website-nav-entry.test.js.
   // Insights (v2, 2026-09-28) is Home's #insights view: a sidebar row
   // ("Analytics") the drawer derives a tile from, like every other page.
-  assert.deepEqual(labels, ['Route Planner', 'Runway Dashboard', 'Insights', 'Contracts', 'Reviews', 'Appliance Wiki', 'Website', 'Dev Tools', 'Settings']);
+  // 2026-11-04: the nav is the nine, so More holds the four the bar doesn't.
+  assert.deepEqual(labels, ['Contracts', 'Reviews', 'Team', 'Settings']);
   let helped = 0;
   w.openHelpModal = () => { helped++; };
   sheet.querySelector('[data-th-util="help"]').click();

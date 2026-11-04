@@ -4,6 +4,7 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const { whereReachable } = require('../nav-reachability');
 const fs = require('fs');
 const path = require('path');
 
@@ -63,8 +64,8 @@ test('sidebar and More sheet share grouped short labels without dropping a desti
   assert.match(NAV, /label: 'Invoices'/);
   assert.match(NAV, /label: 'Contracts'/);
   assert.match(NAV, /label: 'Reviews'/);
-  assert.match(NAV, /label: 'Job Tracker'/);
-  assert.match(NAV, /label: 'Runway Dashboard'/);
+  assert.match(NAV, /label: 'Jobs'/);
+  assert.match(NAV, /label: 'Money'/);
   assert.match(NAV, /function destLinksHtml\(dests\)/);
   assert.match(NAV, /class="th-sidebar-group"/);
   for (const href of [
@@ -81,6 +82,6 @@ test('sidebar and More sheet share grouped short labels without dropping a desti
     '/tools/dev-tools.html',
     '/tools/settings.html',
   ]) {
-    assert.ok(NAV.includes(href), `expected ${href} in NAV`);
+    assert.ok(whereReachable(href).length > 0, `expected ${href} reachable from the nav, Search or Settings`);
   }
 });

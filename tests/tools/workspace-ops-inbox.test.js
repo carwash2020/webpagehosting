@@ -121,9 +121,9 @@ test('injecting the shell on a real page produces 4 dest links plus the (+) Crea
   assert.ok(sheet);
   const sheetHrefs = [...sheet.querySelectorAll('a')].map(a => a.getAttribute('href'));
   assert.ok(sheetHrefs.includes('/tools/contract-generator.html'));
-  assert.ok(sheetHrefs.includes('/tools/route-planner.html'));
   assert.ok(sheetHrefs.includes('/tools/review-request.html'));
-  assert.ok(sheetHrefs.includes('/tools/runway-dashboard.html'));
+  assert.ok(sheetHrefs.includes('/tools/dev-tools.html#team'), 'Team (2026-11-04)');
+  assert.ok(!sheetHrefs.includes('/tools/route-planner.html') && !sheetHrefs.includes('/tools/runway-dashboard.html'), 'out of the nine (2026-11-04)');
   assert.ok(sheetHrefs.includes('/tools/settings.html'));
   assert.ok(!sheetHrefs.includes('/tools/job-tracker.html'), 'primary dests must not be duplicated in More');
   assert.ok(!sheetHrefs.includes('/tools/clients.html'), 'Clients is a primary dest now, so it must not also sit in More');

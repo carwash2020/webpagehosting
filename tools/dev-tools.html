@@ -60,8 +60,8 @@
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=c189cd58b4" defer></script>
-<script src="/tools/tools-command-palette.js?v=66031659c7" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=a10b595ddd" defer></script>
+<script src="/tools/tools-command-palette.js?v=07b30f3624" defer></script>
 <script src="/tools/sync.js?v=486abe5b22" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -1257,7 +1257,7 @@
 
   <div class="dev-panels-grid">
 
-  <div class="dev-panel dev-panel-wide">
+  <div class="dev-panel dev-panel-wide" id="team">
     <div class="dev-panel-heading">
       <h2>Account permissions</h2>
       <button class="dev-info-bubble" onclick="openDevInfo('roles')" aria-label="What does this do?" title="What does this do?">?</button>
@@ -4137,6 +4137,19 @@
       window.location.replace('/tools/site-content.html');
       return;
     }
+    // Team (2026-11-04): the nav's Team item is /tools/dev-tools.html#team
+    // until Phase 4 builds the Team screen. Open the account permissions
+    // panel (expanding it if collapsed) once the page has drawn.
+    function revealTeamPanel() {
+      if (location.hash !== '#team') return;
+      const el = document.getElementById('team');
+      if (!el) return;
+      if (el.classList.contains('is-collapsed') && typeof toggleDevPanel === 'function') toggleDevPanel(el.querySelector('.dev-panel-heading'));
+      el.scrollIntoView({ block: 'start' });
+    }
+    window.addEventListener('hashchange', revealTeamPanel);
+    window.addEventListener('th-role-loaded', () => setTimeout(revealTeamPanel, 50));
+    setTimeout(revealTeamPanel, 300);
     const proceed = () => {
       const allowed = typeof hasDevToolsAccess === 'function' && hasDevToolsAccess();
       document.getElementById(allowed ? 'devMainView' : 'devBlockedView').style.display = allowed ? 'block' : 'block';

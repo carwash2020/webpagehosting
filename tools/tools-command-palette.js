@@ -74,6 +74,11 @@
     { title: 'Look up a part', meta: 'Appliance Wiki', href: '/tools/parts-reference.html', keywords: 'manual model brand appliance wiki' },
     { title: 'Runway Dashboard', meta: 'Personal budget and business runway', href: '/tools/runway-dashboard.html#runway', keywords: 'budget net worth draw', perm: 'canViewRunway' },
     { title: 'Dashboard', meta: 'Home \u203a today, money owed, needs attention', href: '/tools/workspace.html', keywords: 'home today inbox' },
+    // Out of the nav since 2026-11-04 (nine items), so Search keeps them reachable.
+    { title: 'Analytics', meta: 'Dashboard \u203a Insights', href: '/tools/workspace.html#insights', keywords: 'insights snapshot report funnel stats' },
+    { title: 'Team', meta: 'Dev Tools \u203a account permissions', href: '/tools/dev-tools.html#team', keywords: 'accounts people staff permissions access roles', perm: 'hasDevToolsAccess' },
+    { title: 'Dev Tools', meta: 'Health log, backups, accounts, system', href: '/tools/dev-tools.html', keywords: 'developer diagnostics health log backup admin', perm: 'hasDevToolsAccess' },
+    { title: 'Website', meta: 'Edit the public site: hours, banners, FAQ, terms', href: '/tools/site-content.html', keywords: 'site content cms hours banner faq terms', perm: 'canManageSiteContent' },
     { title: 'Settings', meta: 'Account, theme, notifications, backup', href: '/tools/settings.html', keywords: 'backup restore theme password notifications' },
     { title: 'Replay the tour', meta: 'Two-minute walkthrough of every page', href: '/tools/workspace.html?tour=1', keywords: 'help tutorial guide how to' }
   ];

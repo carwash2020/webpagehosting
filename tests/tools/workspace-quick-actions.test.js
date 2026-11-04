@@ -5,6 +5,7 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const { whereReachable } = require('../nav-reachability');
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
@@ -118,7 +119,7 @@ test('Find client opens the shared search (Ctrl+K) -- Home\'s own search box is 
   assert.doesNotMatch(WORKSPACE, /id="globalSearch"|id="globalSearchWrap"|function renderGlobalSearch/);
 });
 
-test('the tile grid is gone (2026-09-21), and every destination it used to link is still in the shared nav lists', () => {
+test('the tile grid is gone (2026-09-21), and every destination it used to link is still reachable: nav, Search or Settings (2026-11-04)', () => {
   assert.doesNotMatch(WORKSPACE, /<details class="more-tools-details"/);
   assert.doesNotMatch(WORKSPACE, /class="tools-grid"/);
   const NAV = fs.readFileSync(repo('tools', 'tools-nav-pwa.js'), 'utf8');
@@ -135,7 +136,7 @@ test('the tile grid is gone (2026-09-21), and every destination it used to link 
     '/tools/settings.html',
     '/tools/dev-tools.html',
   ]) {
-    assert.ok(NAV.includes("'" + href + "'"), `expected ${href} to remain a nav destination`);
+    assert.ok(whereReachable(href).length > 0, `expected ${href} to stay reachable`);
   }
 });
 

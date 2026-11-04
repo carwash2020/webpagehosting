@@ -57,10 +57,10 @@ test('Job detail keeps its own Directions (one job) untouched', () => {
   assert.match(JOB_DETAIL, /if \(j\.address\) quick\.push\(\['https:\/\/www\.google\.com\/maps\/dir\/\?api=1&destination=' \+ encodeURIComponent\(j\.address\), 'navigate', 'Directions', true\]\);/);
 });
 
-test('Route Planner still routes the whole day, and is reachable from More and Search', () => {
+test('Route Planner still routes the whole day, and is reachable from Search (no longer More: 2026-11-04 nine-item nav)', () => {
   assert.match(ROUTE_PLANNER, /onclick="pullTodaysJobs\(\)">Pull today's jobs</);
   assert.match(ROUTE_PLANNER, /id="openRouteBtn"[^>]*>Open full route in Google Maps</);
-  assert.match(NAV, /href: '\/tools\/route-planner\.html',\s+icon: 'map',\s+label: 'Route Planner', sidebar: false \}/, 'in the More drawer (sidebar: false only hides it from the desktop sidebar list)');
+  assert.doesNotMatch(NAV, /href: '\/tools\/route-planner\.html'/, 'not in the nav or More');
   assert.match(PALETTE, /title: 'Plan a route', meta: 'Route Planner', href: '\/tools\/route-planner\.html'/, 'and Ctrl+K "route"');
 });
 
