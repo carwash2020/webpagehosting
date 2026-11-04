@@ -1386,4 +1386,11 @@ From the second pass (2026-09-29, #445-#469 and the portal leak fixes):
   `getRegistration()` fallback so it can say "Off for this device"
   without waiting.
 
+## Post-3.4 backlog (Connor, 2026-11-04)
+
+- **Signed-contract PDF.** Today a signed contract's emailed copy is the
+  contract text plus the signature image
+  (`edge-functions/respond-to-contract-index.ts`). Build a proper contract
+  PDF for that email and for the portal's Download. Not in 3.4.
+
 <!-- Add new bug-lane questions above this line -->

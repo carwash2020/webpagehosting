@@ -94,3 +94,4 @@ without a pay link.
   email, so leaving it blank sends the receipt to the address the invoice
   went to. The design showed the field pre-filled; it is left empty on
   purpose so the page never shows the client's email.
+  **Decided (Connor, 2026-11-04): permanent.**

@@ -98,8 +98,12 @@ Do not sign a real client's contract.
 
 - No PDF is attached to the signed copy. The portal has no contract PDF
   builder, so the copy is the contract text plus the signature image.
+  **Decided (Connor, 2026-11-04): stays this way for now.** A proper
+  contract PDF is on the post-3.4 backlog (docs/ACTION-ITEMS.md), not in
+  3.4.
 - The sign-in page says "A contract is waiting for your signature" without
   naming it. The page can't read the contract before sign-in, and putting
   the title in the link would let anyone put their own words on our page.
+  **Decided (Connor, 2026-11-04): permanent.**
 - New accounts made by Create account don't get a referral account code
   until Steve sends them something (an invite still creates one).
