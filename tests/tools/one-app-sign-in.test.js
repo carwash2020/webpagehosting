@@ -77,7 +77,7 @@ test('portal sign-in: a staff account (positive role read) gets no portal sessio
   const fn = extractFn(PORTAL_LOGIN, 'goHomeAfterSignIn');
   assert.match(fn, /portalAccountIsStaff\(\)/);
   assert.match(fn, /sendStaffToWorkspace\(true\)/);
-  assert.match(fn, /window\.location\.replace\('\/portal\/home\.html'\)/);
+  assert.match(fn, /window\.location\.replace\(portalAfterSignInUrl\(\)\)/);
   const staff = extractFn(PORTAL_LOGIN, 'sendStaffToWorkspace');
   assert.match(staff, /client\.auth\.signOut\(\{ scope: 'local' \}\)/);
   assert.match(staff, /window\.location\.replace\('\/tools\/login\.html'\)/);
@@ -94,12 +94,14 @@ test('portal sign-in: a staff account (positive role read) gets no portal sessio
 
 test('portal sign-in: every path home goes through the role check, the already-signed-in one included', () => {
   // Fresh sign-ins (password, then any code, Face ID, or a trusted device
-  // that skipped the code -- 2026-11-01) all end in goHomeAfterSignIn().
-  assert.equal((PORTAL_LOGIN.match(/goHomeAfterSignIn\(\);/g) || []).length, 4);
+  // that skipped the code -- 2026-11-01; Create account's confirmed code --
+  // 2026-11-04) all end in goHomeAfterSignIn().
+  assert.equal((PORTAL_LOGIN.match(/goHomeAfterSignIn\(\);/g) || []).length, 5);
+  assert.match(extractFn(PORTAL_LOGIN, 'confirmSignupCode'), /goHomeAfterSignIn\(\);/, 'a brand-new account takes the same role-checked way in');
   const trusted = PORTAL_LOGIN.match(/async function portalSignInOnTrustedDevice\(email\) \{[\s\S]*?\n  \}\n/)[0];
   assert.match(trusted, /goHomeAfterSignIn\(\);/, 'a trusted-device sign-in takes the same role-checked way home');
   // A visitor who is already signed in is checked too, and goes straight on (no animation) if not staff.
-  assert.match(PORTAL_LOGIN, /signingInEmail = email;\n    if \(await portalAccountIsStaff\(\)\) \{ await sendStaffToWorkspace\(false\); return; \}\n    window\.location\.replace\('\/portal\/home\.html'\);\n  \}\);/);
+  assert.match(PORTAL_LOGIN, /signingInEmail = email;\n    if \(await portalAccountIsStaff\(\)\) \{ await sendStaffToWorkspace\(false\); return; \}\n    window\.location\.replace\(portalAfterSignInUrl\(\)\);\n  \}\);/);
 });
 
 test('each door pre-fills the email for the other, through sessionStorage (not the URL)', () => {

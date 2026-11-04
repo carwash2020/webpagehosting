@@ -63,7 +63,7 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="/styles.css?v=df34dcbf74">
-<link rel="stylesheet" href="/portal/portal-app.css?v=b99f53bc6f">
+<link rel="stylesheet" href="/portal/portal-app.css?v=20c867dc42">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -103,7 +103,7 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=f212452f48">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous"></script>
 <script src="/signature-pad.js?v=f95f8e1d28"></script>
-<script src="/portal/portal-app.js?v=3b49bb66f2"></script>
+<script src="/portal/portal-app.js?v=abb7e37c38"></script>
 <script>
   // Stripe.js is only needed once a client opens the card sheet, never to
   // paint the page -- so it no longer blocks parsing. It starts a few
@@ -707,7 +707,7 @@
   async function renderInvoices() {
     const { data: { session } } = await client.auth.getSession();
     if (!session) {
-      window.location.replace('/portal/login.html');
+      window.location.replace(portalLoginUrl());
       return;
     }
     document.getElementById('clientEmailDisplay').textContent = session.user.email;

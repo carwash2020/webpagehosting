@@ -713,7 +713,7 @@
 // specificity) when there's nothing scheduled, and unhides it the
 // moment a real job exists again. workspace.html is precached. Same
 // reasoning as every prior bump in this file's history.
-const CACHE_NAME = 'th-workspace-v461'; // precache-fingerprint:ca1b6949aff9
+const CACHE_NAME = 'th-workspace-v463'; // precache-fingerprint:e6ccffd2ce29
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/route-planner.html', '/tools/review-request.html', '/tools/login.html',

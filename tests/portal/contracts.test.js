@@ -41,7 +41,8 @@ test('contracts is deliberately NOT a 6th item in the shared 5-column bottom nav
 });
 
 test('an unauthenticated visitor is redirected to login, not shown contracts', () => {
-  assert.match(html, /if \(!session\) \{\s*window\.location\.replace\('\/portal\/login\.html'\);/);
+  // 2026-11-04 (§3D): to login, carrying ?return= so sign-in lands back on this contract.
+  assert.match(html, /if \(!session\) \{\s*(?:\/\/[^\n]*\n\s*)*window\.location\.replace\(portalLoginUrl\(\)\);/);
 });
 
 test('signing/declining only ever go through the respond-to-contract edge function, never a direct table write', () => {

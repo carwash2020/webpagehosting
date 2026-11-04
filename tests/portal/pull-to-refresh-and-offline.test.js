@@ -23,7 +23,7 @@ test('the offline indicator checks navigator.onLine on init, not just future onl
   const fnMatch = JS.match(/function initOfflinePortalIndicator\(\)[\s\S]*?\n\}\n/);
   assert.ok(fnMatch, 'expected to isolate initOfflinePortalIndicator()');
   assert.match(fnMatch[0], /navigator\.onLine/);
-  assert.match(fnMatch[0], /updateBanner\(\);\s*\n\}/, 'expected an initial check, not just event listeners');
+  assert.match(fnMatch[0], /\n  check\(\);\s*\n\}/, 'expected an initial check, not just event listeners');
 });
 
 test('the offline indicator self-initializes rather than requiring an explicit call on every differently-structured page', () => {
@@ -38,7 +38,9 @@ test('the offline banner is informational, not blocking -- fixed position, never
   const block = CSS.match(/\.offline-banner \{[\s\S]*?\}/);
   assert.ok(block);
   assert.match(block[0], /position: fixed;/);
-  assert.doesNotMatch(CSS, /\.offline-banner[\s\S]{0,300}display: none[\s\S]*?content/);
+  // (Since 2026-11-04 a [hidden] banner is display:none -- that hides the
+  // banner itself, it never covers content.)
+  assert.doesNotMatch(CSS.replace(/\.offline-banner\[hidden\] \{\s*display: none;\s*\}/, ''), /\.offline-banner[\s\S]{0,300}display: none[\s\S]*?content/);
 });
 
 test('the offline banner clears the iPhone notch/status bar area', () => {

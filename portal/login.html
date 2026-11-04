@@ -33,6 +33,10 @@
   before: correctly handles auth-related token parsing that isn't
   worth reimplementing by hand.
 
+  2026-11-04: Create account now exists (handoff §2), through the
+  portal-signup edge function, with Supabase's public sign-up still OFF.
+  The paragraph below is the history.
+
   Real design decision, not a small detail: there is no public "sign
   up" on this page at all. An account only ever gets created because
   Triple H Enterprises invoiced this client first (see send-invite
@@ -79,7 +83,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=df34dcbf74">
-<link rel="stylesheet" href="/portal/portal-app.css?v=b99f53bc6f">
+<link rel="stylesheet" href="/portal/portal-app.css?v=20c867dc42">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -118,7 +122,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=f212452f48">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/portal/portal-app.js?v=3b49bb66f2"></script>
+<script src="/portal/portal-app.js?v=abb7e37c38"></script>
 <script src="/trusted-device.js?v=255d86a600"></script>
 <style>
   body { background: #0a0a0a; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
@@ -184,6 +188,7 @@
   }
   .th-code-box.is-filled { color: var(--text); }
   .th-code-box.is-current { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(255,128,0,.22); }
+  #signupCodeInput.th-code-real-input,
   #mfaChallengeCodeInput.th-code-real-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; margin: 0; padding: 0; letter-spacing: 0; text-align: left; }
   .th-code-hint { font-size: 13px; color: var(--text-dim); margin: 0 0 12px; }
 </style>
@@ -192,7 +197,7 @@
      Loaded last so it restyles the card above without changing any id, field or auth call. -->
 <link rel="preload" href="/fonts/signin/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/signin/geist-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/signin.css?v=b0eedcc727">
+<link rel="stylesheet" href="/signin.css?v=09922ecfc6">
 <script src="/signin-ui.js?v=557e91d779"></script>
 <script>
   // Sign-in must never depend on a cosmetic script. If /signin-ui.js did not
@@ -219,6 +224,12 @@
   <div class="login-kicker">Triple H client portal</div>
   <h1 class="login-title" id="pageTitle">Sign in</h1>
   <p class="login-sub" id="loginSub">See your invoices, estimates and visits, and pay in a tap.</p>
+  <!-- Create account (2026-11-04, handoff §2): next to Sign in, as in the
+       approved "Portal create account" design. -->
+  <div class="si-tabs" id="modeTabs" role="group" aria-label="Sign in or create an account">
+    <button type="button" class="si-tab is-active" id="tabSignIn" aria-pressed="true">Sign in</button>
+    <button type="button" class="si-tab" id="tabCreate" aria-pressed="false">Create account</button>
+  </div>
 
   <form id="loginForm">
     <div class="login-field">
@@ -233,7 +244,7 @@
       </div>
     </div>
     <label class="si-switch" id="rememberRow" for="rememberMe">
-      <input type="checkbox" id="rememberMe" role="switch" checked>
+      <input type="checkbox" id="rememberMe" role="switch">
       <span class="si-switch-text login-hint">
         <span class="si-switch-label login-hint">Remember me for 30 days</span>
         <span class="si-switch-hint login-hint">Off: you're signed out when you close the browser.</span>
@@ -242,9 +253,12 @@
     <div class="login-error" id="loginError" role="alert"></div>
     <div class="login-success" id="loginSuccess" style="display:none;" role="status"></div>
     <button type="submit" class="btn orange login-btn" id="loginSubmitBtn">Sign In</button>
+    <p class="login-hint si-create-next" id="createNextHint" hidden>Next: check your email. We send a 6-digit code to confirm it's really you. Only after that do we show anything Triple H has sent to this address, so typing someone else's email reveals nothing.</p>
     <button type="button" class="forgot-link" id="forgotLink">Forgot your password?</button>
   </form>
-  <p class="login-foot login-nosignup">No sign-up here: your account is created when Triple H sends your first invoice.</p>
+  <!-- Keeps the honesty of the old "No sign-up here" line (handoff §5C) while
+       pointing at the real way in. -->
+  <p class="login-foot login-nosignup" id="signupFoot">New here? Tap <strong>Create account</strong> and use the email your invoice or quote was sent to. Everything Triple H has sent you appears as soon as you confirm it.</p>
   <p class="login-foot" style="margin-top:14px;">By signing in you agree to Triple H Enterprises' <a href="/terms.html">Terms and Conditions</a> and <a href="/privacy.html">Privacy Policy</a>.</p>
   <button type="button" class="report-bug-link" id="reportBugLink">Report a problem</button>
 
@@ -265,6 +279,30 @@
     <div id="reportBugSuccessArea" style="display:none;">
       <div class="report-bug-success" id="reportBugSuccess">Thanks, we got your report and will take a look.</div>
       <button class="btn secondary-btn" id="reportBugBackToSignInBtn" type="button" style="width:100%; justify-content:center; margin-top:10px;">Back to sign in</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create account, step 2 (2026-11-04): the 6-digit code portal-signup
+     emailed. Same 6-box code grid as the two-factor step below. -->
+<div class="report-bug-overlay" id="signupCodeOverlay" style="display:none;">
+  <div class="report-bug-modal mfa-challenge-modal">
+    <div class="th-step-topbar"><button type="button" class="th-step-back" id="signupCodeBackBtn">Back</button><span class="th-step-spacer" aria-hidden="true"></span></div>
+    <h1 class="report-bug-title">Check your email</h1>
+    <p class="report-bug-sub" id="signupCodeSub">We sent a 6-digit code. Enter it here to finish.</p>
+    <div class="th-code-boxes-wrap" id="signupCodeBoxesWrap">
+      <div class="th-code-boxes" id="signupCodeBoxes" aria-hidden="true">
+        <span class="th-code-box"></span><span class="th-code-box"></span><span class="th-code-box"></span>
+        <span class="th-code-box"></span><span class="th-code-box"></span><span class="th-code-box"></span>
+      </div>
+      <input type="text" id="signupCodeInput" aria-label="6-digit code from the email" class="th-code-real-input" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" maxlength="6">
+    </div>
+    <p class="th-code-hint">It can take a minute to arrive. Check spam too. The code works for 15 minutes.</p>
+    <div class="report-bug-error" id="signupCodeError" role="alert"></div>
+    <div class="report-bug-success" id="signupCodeNote" role="status" style="display:none;"></div>
+    <div class="report-bug-actions">
+      <button class="btn secondary-btn" id="signupCodeResend" type="button">Send a new code</button>
+      <button class="btn orange" id="signupCodeSubmit" type="button">Confirm</button>
     </div>
   </div>
 </div>
@@ -341,9 +379,11 @@
     if (animate) ThSignin.success(() => window.location.replace('/tools/login.html'));
     else window.location.replace('/tools/login.html');
   }
+  // Home, or back to the page that sent them here (?return=, checked
+  // against a fixed list of portal pages by portalAfterSignInUrl()).
   async function goHomeAfterSignIn() {
     if (await portalAccountIsStaff()) { await sendStaffToWorkspace(true); return; }
-    ThSignin.success(() => window.location.replace('/portal/home.html'));
+    ThSignin.success(() => window.location.replace(portalAfterSignInUrl()));
   }
 
   // Sent here from the Workspace sign-in: this email is a client account.
@@ -353,6 +393,7 @@
     if (hint) {
       document.getElementById('clientEmail').value = hint;
       document.getElementById('loginSub').textContent = 'That email is a client account. Sign in here to see your invoices.';
+      document.getElementById('loginSub').dataset.hinted = '1';
     }
   })();
 
@@ -395,7 +436,7 @@
     // sign-in, everyone else straight on to Home as before, no animation.
     signingInEmail = email;
     if (await portalAccountIsStaff()) { await sendStaffToWorkspace(false); return; }
-    window.location.replace('/portal/home.html');
+    window.location.replace(portalAfterSignInUrl());
   });
 
   // Trusted devices (2026-11-01). The same database functions and browser
@@ -432,6 +473,137 @@
     return factor ? factor.id : null;
   }
 
+  // Sign in / Create account (2026-11-04, handoff §2; Connor chose the
+  // server-side path: Supabase's public sign-up stays OFF). Create account
+  // asks portal-signup to make an UNCONFIRMED account and email a 6-digit
+  // code; the right code confirms it, and then this page signs in with the
+  // password just chosen. An unconfirmed account can't sign in and, in the
+  // database, can't see a single row.
+  const SIGN_IN_SUB = 'See your invoices, estimates and visits, and pay in a tap.';
+  const CREATE_SUB = "Use the email address Triple H sends your invoices and quotes to. We'll match you to them automatically.";
+  // Opened from a contract email (?return=/portal/contracts.html...): say so.
+  const CONTRACT_SUB = 'A contract is waiting for your signature. Sign in or create your account and it opens right away.';
+  const returningToContract = (portalReturnTarget() || '').indexOf('/portal/contracts.html') === 0;
+  if (returningToContract && !document.getElementById('loginSub').dataset.hinted) {
+    document.getElementById('loginSub').textContent = CONTRACT_SUB;
+  }
+  let createMode = false;
+  function setCreateMode(on) {
+    createMode = on;
+    if (on && forgotPasswordMode) document.getElementById('forgotLink').click();
+    document.getElementById('tabSignIn').classList.toggle('is-active', !on);
+    document.getElementById('tabCreate').classList.toggle('is-active', on);
+    document.getElementById('tabSignIn').setAttribute('aria-pressed', String(!on));
+    document.getElementById('tabCreate').setAttribute('aria-pressed', String(on));
+    document.getElementById('pageTitle').textContent = on ? 'Create your account' : 'Sign in';
+    document.getElementById('loginSub').textContent = on ? CREATE_SUB : (returningToContract ? CONTRACT_SUB : SIGN_IN_SUB);
+    document.querySelector('label[for="clientPassword"]').textContent = on ? 'Choose a password' : 'Password';
+    const pw = document.getElementById('clientPassword');
+    pw.autocomplete = on ? 'new-password' : 'current-password';
+    pw.minLength = on ? 8 : 0;
+    document.getElementById('rememberRow').style.display = on ? 'none' : '';
+    document.getElementById('forgotLink').style.display = on ? 'none' : '';
+    document.getElementById('createNextHint').hidden = !on;
+    document.getElementById('signupFoot').style.display = on ? 'none' : '';
+    document.getElementById('loginSubmitBtn').textContent = on ? 'Create account' : 'Sign In';
+    document.getElementById('loginError').textContent = '';
+  }
+  document.getElementById('tabSignIn').addEventListener('click', () => setCreateMode(false));
+  document.getElementById('tabCreate').addEventListener('click', () => setCreateMode(true));
+
+  const SIGNUP_URL = 'https://csvfqdjuobylgafgolho.supabase.co/functions/v1/portal-signup';
+  const SIGNUP_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs';
+  async function portalSignup(body) {
+    try {
+      const res = await fetch(SIGNUP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: SIGNUP_ANON, Authorization: 'Bearer ' + SIGNUP_ANON },
+        body: JSON.stringify(body),
+      });
+      return await res.json().catch(() => ({ ok: false }));
+    } catch (e) {
+      return { ok: false, error: "Can't reach the server. Check your connection and try again." };
+    }
+  }
+
+  // The pending sign-up, kept in memory only (never stored).
+  let pendingSignup = null;
+  function paintSignupCodeBoxes() {
+    const val = document.getElementById('signupCodeInput').value || '';
+    document.querySelectorAll('#signupCodeBoxes .th-code-box').forEach((box, i) => {
+      box.textContent = val[i] || '';
+      box.classList.toggle('is-filled', !!val[i]);
+      box.classList.toggle('is-current', i === Math.min(val.length, 5) && val.length < 6);
+    });
+  }
+  let releaseSignupFocusTrap = null;
+  function openSignupCode(email) {
+    setPortalStepChromeHidden(true);
+    document.getElementById('signupCodeSub').textContent = 'We sent a 6-digit code to ' + email + '. Enter it here to finish.';
+    document.getElementById('signupCodeOverlay').style.display = 'flex';
+    document.getElementById('signupCodeInput').value = '';
+    document.getElementById('signupCodeError').textContent = '';
+    document.getElementById('signupCodeNote').style.display = 'none';
+    paintSignupCodeBoxes();
+    releaseSignupFocusTrap = trapFocusWithin(document.getElementById('signupCodeOverlay'));
+    document.getElementById('signupCodeInput').focus();
+  }
+  function closeSignupCode() {
+    document.getElementById('signupCodeOverlay').style.display = 'none';
+    setPortalStepChromeHidden(false);
+    if (releaseSignupFocusTrap) { releaseSignupFocusTrap(); releaseSignupFocusTrap = null; }
+  }
+  document.getElementById('signupCodeInput').addEventListener('input', () => {
+    document.getElementById('signupCodeBoxesWrap').classList.remove('is-invalid');
+    paintSignupCodeBoxes();
+  });
+  document.getElementById('signupCodeBackBtn').addEventListener('click', () => { pendingSignup = null; closeSignupCode(); });
+  document.getElementById('signupCodeResend').addEventListener('click', async () => {
+    if (!pendingSignup) return;
+    const btn = document.getElementById('signupCodeResend');
+    ThSignin.setBusy(btn, true, 'Sending...', 'Send a new code');
+    const r = await portalSignup({ action: 'start', email: pendingSignup.email, password: pendingSignup.password });
+    ThSignin.setBusy(btn, false, '', 'Send a new code');
+    const note = document.getElementById('signupCodeNote');
+    if (r.ok) { note.textContent = 'A new code is on its way. Use the newest one.'; note.style.display = 'block'; }
+    else document.getElementById('signupCodeError').textContent = r.error || 'Something went wrong. Please try again.';
+  });
+  async function confirmSignupCode() {
+    if (!pendingSignup) return;
+    const code = document.getElementById('signupCodeInput').value.trim();
+    const errorEl = document.getElementById('signupCodeError');
+    if (!/^\d{6}$/.test(code)) { errorEl.textContent = 'Enter the 6-digit code from the email.'; return; }
+    const btn = document.getElementById('signupCodeSubmit');
+    ThSignin.setBusy(btn, true, 'Confirming...', 'Confirm');
+    const r = await portalSignup({ action: 'verify', email: pendingSignup.email, code });
+    if (!r.ok) {
+      ThSignin.setBusy(btn, false, '', 'Confirm');
+      errorEl.textContent = r.error || "That code didn't work. Please try again.";
+      const wrap = document.getElementById('signupCodeBoxesWrap');
+      wrap.classList.add('is-invalid');
+      ThSignin.shake(wrap);
+      return;
+    }
+    // Confirmed: sign in with the password just chosen. Remember me is off
+    // for a new account, as on the sign-in form.
+    portalSetRemember(false);
+    const { error } = await client.auth.signInWithPassword({ email: pendingSignup.email, password: pendingSignup.password });
+    ThSignin.setBusy(btn, false, '', 'Confirm');
+    if (error) {
+      // An address that already had an account was emailed "sign in
+      // instead" rather than a code, so this is the honest next step.
+      errorEl.textContent = 'Your email is confirmed. Sign in with your password to continue.';
+      return;
+    }
+    signingInEmail = pendingSignup.email;
+    portalMarkSignedIn(pendingSignup.email);
+    pendingSignup = null;
+    if (releaseSignupFocusTrap) { releaseSignupFocusTrap(); releaseSignupFocusTrap = null; }
+    goHomeAfterSignIn();
+  }
+  document.getElementById('signupCodeSubmit').addEventListener('click', confirmSignupCode);
+  document.getElementById('signupCodeInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); confirmSignupCode(); } });
+
   document.getElementById('forgotLink').addEventListener('click', () => {
     forgotPasswordMode = !forgotPasswordMode;
     const passwordInput = document.getElementById('clientPassword');
@@ -443,6 +615,7 @@
     passwordInput.required = !forgotPasswordMode;
     passwordInput.disabled = forgotPasswordMode;
     document.getElementById('rememberRow').style.display = forgotPasswordMode ? 'none' : '';
+    document.getElementById('modeTabs').style.display = forgotPasswordMode ? 'none' : '';
     document.getElementById('pageTitle').textContent = forgotPasswordMode ? 'Reset your password' : 'Sign in';
     document.getElementById('loginSub').textContent = forgotPasswordMode
       ? "Enter your email and we'll send you a link to choose a new password."
@@ -464,6 +637,23 @@
     const emailInput = document.getElementById('clientEmail');
     const passwordInput = document.getElementById('clientPassword');
     ThSignin.setInvalid([emailInput, passwordInput], errorEl, false);
+
+    if (createMode) {
+      const password = passwordInput.value;
+      if (password.length < 8) {
+        errorEl.textContent = 'Password needs to be at least 8 characters.';
+        ThSignin.setInvalid([passwordInput], errorEl, true);
+        passwordInput.focus();
+        return;
+      }
+      ThSignin.setBusy(btn, true, 'Creating...', 'Create account');
+      const r = await portalSignup({ action: 'start', email, password });
+      ThSignin.setBusy(btn, false, '', 'Create account');
+      if (!r.ok) { errorEl.textContent = r.error || 'Something went wrong. Please try again.'; return; }
+      pendingSignup = { email: email.toLowerCase(), password };
+      openSignupCode(email);
+      return;
+    }
 
     if (forgotPasswordMode) {
       ThSignin.setBusy(btn, true, 'Sending...', 'Send Reset Link');
@@ -549,7 +739,7 @@
     document.querySelectorAll('.login-box > .login-foot').forEach((el) => { el.style.display = hidden ? 'none' : ''; });
     document.getElementById('reportBugLink').style.display = hidden ? 'none' : '';
     // The sign-in heading belongs to step 1 only; each later step brings its own.
-    ['.login-kicker', '#pageTitle', '#loginSub'].forEach((sel) => { document.querySelector(sel).style.display = hidden ? 'none' : ''; });
+    ['.login-kicker', '#pageTitle', '#loginSub', '#modeTabs'].forEach((sel) => { document.querySelector(sel).style.display = hidden ? 'none' : ''; });
   }
   function paintPortalCodeBoxes() {
     const val = document.getElementById('mfaChallengeCodeInput').value || '';

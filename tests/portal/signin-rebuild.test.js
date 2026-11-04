@@ -142,12 +142,17 @@ test('email + password with Show/Hide, a real Remember me switch, and Forgot pas
   for (const [name, html] of Object.entries(PAGES)) {
     assert.match(html, /<div class="si-pw" data-si-pw>\s*<input type="password"[^>]*autocomplete="current-password"/, `${name}: password field in the Show/Hide wrapper`);
     assert.match(html, /<button type="button" class="si-toggle" aria-label="Show password" aria-pressed="false" aria-controls="[a-zA-Z]+">Show<\/button>/, `${name}: Show/Hide button`);
-    assert.match(html, /<input type="checkbox" id="rememberMe" role="switch" checked>/, `${name}: Remember me switch`);
+    assert.match(html, /<input type="checkbox" id="rememberMe" role="switch"(?: checked)?>/, `${name}: Remember me switch`);
     assert.match(html, /Remember me for 30 days/);
     assert.match(html, /signed out when you close the browser/, `${name}: says what OFF does`);
     assert.match(html, /Forgot your password\?/);
     assert.match(html, /<h1 class="login-title/, `${name}: one h1`);
   }
+  // Handoff 2026-11-03 §5: "Portal 'Remember me for 30 days' is switched ON by
+  // default on a public login page. Fix: default it OFF." The Workspace sign-in
+  // (staff, own devices) keeps it on.
+  assert.match(PORTAL_LOGIN, /<input type="checkbox" id="rememberMe" role="switch">/, 'portal: Remember me starts OFF');
+  assert.match(TOOLS_LOGIN, /<input type="checkbox" id="rememberMe" role="switch" checked>/, 'Workspace: unchanged');
   // Forgot password was a href-less <a> (not keyboard reachable); now a real button.
   assert.match(PORTAL_LOGIN, /<button type="button" class="forgot-link" id="forgotLink">/);
 });
@@ -206,8 +211,9 @@ test('loading, wrong-password and success states are wired on both screens', () 
 });
 
 test('every redirect still happens; success only delays it by the animation', () => {
-  assert.match(PORTAL_LOGIN, /async function goHomeAfterSignIn\(\) \{[\s\S]*?ThSignin\.success\(\(\) => window\.location\.replace\('\/portal\/home\.html'\)\);\s*\}/);
-  assert.match(PORTAL_LOGIN, /\}\s*window\.location\.replace\('\/portal\/home\.html'\);\s*\}\);/, 'already-signed-in visitors are still sent straight to Home, no animation');
+  // Home, or the checked ?return= page (2026-11-04, §3D) -- portalAfterSignInUrl().
+  assert.match(PORTAL_LOGIN, /async function goHomeAfterSignIn\(\) \{[\s\S]*?ThSignin\.success\(\(\) => window\.location\.replace\(portalAfterSignInUrl\(\)\)\);\s*\}/);
+  assert.match(PORTAL_LOGIN, /\}\s*window\.location\.replace\(portalAfterSignInUrl\(\)\);\s*\}\);/, 'already-signed-in visitors are still sent straight on, no animation'); 
   assert.match(TOOLS_LOGIN, /ALLOWED_RETURN_PATHS\.has\(returnTo\) \? returnTo : '\/tools\/workspace\.html'/);
   assert.match(TOOLS_LOGIN, /ThSignin\.success\(\(\) => \{ window\.location\.href = target; \}\);/);
 });

@@ -537,3 +537,33 @@ body.th-signin.is-success.si[class] .login-box { transform: translateY(14px) sca
   body.th-signin .si-switch input:checked { background: Highlight; }
   body.th-signin .si-ghost { forced-color-adjust: none; }
 }
+
+/* ---- Sign in / Create account tabs (portal, 2026-11-04) ------------------ */
+body.th-signin.si[class] .login-box .si-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  margin: 0 0 22px;
+  background: var(--si-field);
+  border: 1.5px solid var(--si-line);
+  border-radius: 14px;
+}
+body.th-signin.si[class] .login-box .si-tab {
+  min-height: 48px;
+  margin: 0;
+  padding: 0 12px;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  color: var(--si-dim);
+  font-family: var(--si-body);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+body.th-signin.si[class] .login-box .si-tab.is-active { background: var(--si-orange); color: var(--si-ink); }
+body.th-signin.si[class] .login-box .si-tab:focus-visible { outline: 3px solid var(--si-orange-hi); outline-offset: 2px; }
+@media (hover: hover) { body.th-signin.si[class] .login-box .si-tab:not(.is-active):hover { color: var(--si-text); } }
+body.th-signin.si[class] .login-box .si-create-next { margin: 14px 0 0; font-size: 14px; line-height: 1.5; color: var(--si-dim); }
+body.th-signin .login-box .si-create-next[hidden] { display: none !important; }

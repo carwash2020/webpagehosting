@@ -1,9 +1,18 @@
 // Supabase Edge Function: send-contract-notification
 //
-// Same shape as send-quote-notification, for a client who already has a
-// portal account getting notified about a NEW contract to review and
-// sign. Called from sync-contract-to-portal only when the client isn't
-// brand new (the invite flow already covers their very first portal item).
+// Same shape as send-quote-notification: the "Please sign" email for a NEW
+// contract. Called from sync-contract-to-portal.
+//
+// 2026-11-04 (handoff §3D, Connor's choices that day):
+//   * It now goes to a brand-new client too. Their first contract used to
+//     send only the "You've been invoiced" account invite, which never said
+//     a contract was waiting and landed on the home screen. The email says
+//     how to get in: Review & Sign, then Create account with this address.
+//   * The button opens that exact contract (#contract-card-<id>); a visitor
+//     who isn't signed in is brought back to it after sign-in.
+//   * Steve and Connor are bcc'd on every one. It used to reach Connor's
+//     inbox only by chance and never Steve's; the handoff asked for this to
+//     be decided, not changed silently -- decided with Connor, 2026-11-04.
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -11,6 +20,14 @@ const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const LEAD_EMAIL_FROM = Deno.env.get("LEAD_EMAIL_FROM") || "";
 const PORTAL_URL = "https://www.triplehenterprisesllc.biz/portal/contracts.html";
 const LOGO_URL = "https://www.triplehenterprisesllc.biz/images/logo-signature-email.png";
+const STEVE_EMAIL = "steve@triplehenterprisesllc.biz";
+const CONNOR_EMAIL = "connor@triplehenterprisesllc.biz";
+function contractUrl(portalContractId: unknown): string {
+  return typeof portalContractId === "number" && Number.isInteger(portalContractId) && portalContractId > 0
+    ? `${PORTAL_URL}#contract-card-${portalContractId}`
+    : PORTAL_URL;
+}
+const NEW_CLIENT_LINE = "New to the Triple H portal? Tap Review & Sign, then Create account with this email address. It takes a minute, and the contract opens right after.";
 
 const ALLOWED_ORIGIN = "https://www.triplehenterprisesllc.biz";
 const CORS_HEADERS: Record<string, string> = {
@@ -90,7 +107,7 @@ async function sendClientPush(email: string, title: string, body: string, url: s
   }
 }
 
-function buildEmailHtml(clientName: string, contractTitle: string): string {
+function buildEmailHtml(clientName: string, contractTitle: string, url: string, newClient: boolean): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -115,11 +132,12 @@ function buildEmailHtml(clientName: string, contractTitle: string): string {
             <h1 style="color: #ff8000; font-size: 22px; margin: 0 0 20px; text-align: center;">A contract is ready for your signature</h1>
             <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 20px;">Hi ${escapeHtml(clientName)},</p>
             <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 20px;">Please review and sign: <strong>${escapeHtml(contractTitle)}</strong>.</p>
+            ${newClient ? `<p style="color: #555; font-size: 14px; line-height: 1.5; margin: 0 0 12px;">${escapeHtml(NEW_CLIENT_LINE)}</p>` : ""}
           </td>
         </tr>
         <tr>
           <td align="center" style="padding: 8px 28px 28px;">
-            <a href="${PORTAL_URL}" style="display: inline-block; background: #ff8000; color: #ffffff; text-decoration: none; font-family: -apple-system, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 600; padding: 14px 32px; border-radius: 8px;">Review &amp; Sign</a>
+            <a href="${url}" style="display: inline-block; background: #ff8000; color: #ffffff; text-decoration: none; font-family: -apple-system, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 600; padding: 14px 32px; border-radius: 8px;">Review &amp; Sign</a>
           </td>
         </tr>
         <tr>
@@ -138,13 +156,14 @@ function buildEmailHtml(clientName: string, contractTitle: string): string {
 </html>`;
 }
 
-function buildEmailText(clientName: string, contractTitle: string): string {
+function buildEmailText(clientName: string, contractTitle: string, url: string, newClient: boolean): string {
   return [
     `Hi ${clientName},`,
     "",
     `A contract is ready for your review and signature: ${contractTitle}.`,
     "",
-    `Review and sign it here: ${PORTAL_URL}`,
+    `Review and sign it here: ${url}`,
+    newClient ? NEW_CLIENT_LINE : "",
     "",
     "Triple H Enterprises",
     "(435) 414-1667, triplehenterprisesllc.biz",
@@ -215,7 +234,7 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: MFA_REQUIRED_ERROR, code: "mfa_required" }, 403);
     }
 
-    const { client_email, client_name, contract_title } = await req.json();
+    const { client_email, client_name, contract_title, portal_contract_id, has_portal_account } = await req.json();
     if (
       typeof client_email !== "string" || !client_email.includes("@") ||
       typeof contract_title !== "string" || !contract_title
@@ -235,9 +254,10 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         from: `Triple H Enterprises <${LEAD_EMAIL_FROM}>`,
         to: client_email,
+        bcc: [STEVE_EMAIL, CONNOR_EMAIL],
         subject: `Please sign: ${contract_title}`,
-        html: buildEmailHtml(displayName, contract_title),
-        text: buildEmailText(displayName, contract_title),
+        html: buildEmailHtml(displayName, contract_title, contractUrl(portal_contract_id), has_portal_account === false),
+        text: buildEmailText(displayName, contract_title, contractUrl(portal_contract_id), has_portal_account === false),
       }),
     });
 
@@ -246,7 +266,7 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: `Email failed to send: ${errBody.slice(0, 300)}` }, 502);
     }
 
-    await sendClientPush(client_email, "Contract ready to sign", contract_title, "/portal/contracts.html");
+    await sendClientPush(client_email, "Contract ready to sign", contract_title, contractUrl(portal_contract_id).replace("https://www.triplehenterprisesllc.biz", ""));
 
     return json({ ok: true });
   } catch (err: any) {

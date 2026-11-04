@@ -437,6 +437,12 @@ body.portal-page {
   transform: translateY(0);
 }
 
+/* Hidden means hidden (2026-11-04): the slide-off transform alone could
+   leave it showing on a page whose layout moved it (handoff §5). */
+.offline-banner[hidden] {
+  display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .offline-banner {
     transition: none;
