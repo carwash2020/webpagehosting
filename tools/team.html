@@ -385,7 +385,7 @@
     const name = p ? teamDisplayName(p) : email;
     const confirmText = {
       revoke: 'Revoke the invite for ' + name + '? Their link stops working.',
-      deactivate: 'Deactivate ' + name + '? They’re signed out everywhere and can’t sign in. Their jobs, invoices, hours and history stay as they are, still showing their name. You can reactivate them any time.' + (p && teamJobsAssigned(email) ? ' ' + teamJobsAssigned(email) + ' jobs are still assigned to them; they stay assigned until you move them.' : ''),
+      deactivate: 'Deactivate ' + name + '? They lose access to everything right away and can’t sign in again. Their jobs, invoices, hours and history stay as they are, still showing their name. You can reactivate them any time.' + (p && teamJobsAssigned(email) ? ' ' + teamJobsAssigned(email) + ' jobs are still assigned to them; they stay assigned until you move them.' : ''),
       reactivate: 'Reactivate ' + name + '? They can sign in again with exactly the access they had.',
     }[act];
     if (confirmText && !(await showConfirm(confirmText, { confirmText: act === 'deactivate' ? 'Deactivate' : act === 'revoke' ? 'Revoke' : 'Reactivate', danger: act !== 'reactivate' }))) return;
