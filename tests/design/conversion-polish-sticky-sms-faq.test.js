@@ -100,7 +100,10 @@ test('compact FAQ covers trip fee, same-day, warranty, repair-vs-replace, and pa
   assert.match(block, /Cash, check, Venmo, and Cash App are all accepted/);
   assert.equal((block.match(/<details class="faq-plain-item">/g) || []).length, 5);
   assert.match(block, /href="#faq" id="intentFaqMore">See all FAQs</);
-  assert.match(INDEX, /setupSimpleModal\('faqOverlay', 'faqClose', \['navFaqDesktop','navFaqMobile','navFaqFooter','intentFaqMore'\]\)/);
+  // 2026-11-03 (item 19): "See all FAQs" now scrolls to the inline
+  // #faq tabs/accordion section instead of opening #faqModal.
+  assert.match(INDEX, /<section class="faq-section" id="faq"/);
+  assert.doesNotMatch(INDEX, /setupSimpleModal\('faqOverlay'/);
 });
 
 test('repair-vs-replace and trip-fee wording is copied from existing FAQ pages, not invented', () => {

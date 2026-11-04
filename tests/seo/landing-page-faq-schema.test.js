@@ -110,14 +110,21 @@ for (const name of PAGES_WITHOUT_SCHEDULE) {
   });
 }
 
-test('index.html captures setupSimpleModal(\'faqOverlay\', ...)\'s return value so /#faq can auto-open it, the same way /#terms already does', () => {
+// 2026-11-03 (item 19, Connor's sign-off): index.html's #faqModal
+// pop-up was replaced by an inline topic-tabs + accordion section with
+// id="faq". /#faq is now a plain in-page anchor every landing page's
+// "See all FAQs" link already pointed at -- the browser's own
+// hash-scroll takes it there natively, so there's no JS hash
+// interception left to pin here.
+test('index.html replaced #faqModal with an inline #faq tabs/accordion section, not a modal', () => {
   const html = read('index.html');
-  assert.match(html, /const faqModal = setupSimpleModal\('faqOverlay', 'faqClose', \['navFaqDesktop','navFaqMobile','navFaqFooter','intentFaqMore'\]\);/);
-  assert.match(html, /if \(window\.location\.hash === '#faq' && faqModal\) \{\s*\n\s*faqModal\.open\(\);/);
+  assert.match(html, /<section class="faq-section" id="faq" aria-labelledby="faqHeading">/);
+  assert.doesNotMatch(html, /id="faqOverlay"|id="faqModal"|setupSimpleModal\('faqOverlay'/);
 });
 
-test('index.html keeps the live-fetched FAQ modal and does not grow a landing-page local-faq section', () => {
+test('index.html keeps the live-fetched FAQ (now tabs/accordion) and does not grow a landing-page local-faq section', () => {
   const html = read('index.html');
-  assert.match(html, /<div class="modal-overlay" id="faqOverlay">/);
+  assert.match(html, /id="faqTabs"/);
+  assert.match(html, /id="faqPanels"/);
   assert.doesNotMatch(html, /<section id="local-faq">/);
 });

@@ -31,9 +31,11 @@ test('section headings render immediately -- no opacity/transform fade -- via a 
   // #schedule's (one merged section, one heading), making 9. The
   // SEO fix that added the "From the blog" teaser section brought its
   // own section-head, making 10 again. SEO-4's "Helpful guides" block
-  // (#helpful-guides) adds one more, making 11.
+  // (#helpful-guides) adds one more, making 11. The inline #faq section
+  // (2026-11-03, replacing #faqModal) brought its own section-head too,
+  // making 12.
   const count = [...INDEX.matchAll(/class="section-head" data-reveal>/g)].length;
-  assert.equal(count, 11, 'expected all 11 remaining section-head instances to still carry data-reveal');
+  assert.equal(count, 12, 'expected all 12 remaining section-head instances to still carry data-reveal');
 });
 
 test('the process step-line draw-in (gated on .section-head.is-visible via a sibling selector) is untouched', () => {

@@ -81,7 +81,7 @@
 <link rel="preconnect" href="https://csvfqdjuobylgafgolho.supabase.co">
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
-<link rel="stylesheet" href="styles.css?v=f201d6d01a">
+<link rel="stylesheet" href="styles.css?v=ec3464c0ec">
 <!-- Improvement roadmap (2026-09-09), tier 1: the hero background is a
      CSS background-image (see .hero in styles.css), so the browser
      doesn't discover it until CSS is parsed -- likely this page's LCP
@@ -1128,6 +1128,14 @@
         <p>Real feedback from Google reviews.</p>
       </div>
 
+      <div class="reviews-rating-big" data-reveal>
+        <p class="reviews-rating-number">
+          <span class="js-review-rating-stat" data-count-to="5" data-decimals="1">5.0</span><span class="reviews-rating-star" aria-hidden="true">&#9733;</span>
+        </p>
+        <p class="reviews-rating-sub js-review-star-label">Real 5-Star Reviews</p>
+        <p class="reviews-rating-meta">from <span class="js-review-count-stat" data-count-to="9">9</span> Google reviews</p>
+      </div>
+
       <div class="reviews-wall">
             <div class="review-card" data-reveal>
               <div class="review-stars">
@@ -1700,6 +1708,154 @@
        open/closed status + next-opening line the hero already shows,
        populated by the same shared triage.js code (no second, driftable
        copy of that logic). -->
+  <section class="faq-section" id="faq" aria-labelledby="faqHeading">
+    <div class="wrap">
+      <div class="section-head" data-reveal>
+        <h2 id="faqHeading">Frequently Asked Questions</h2>
+        <p>Answers to the questions that come up most, by topic.</p>
+      </div>
+
+      <div class="faq-list" id="faqList">
+        <div class="faq-tabs" role="tablist" aria-label="FAQ topics" id="faqTabs">
+          <button type="button" class="faq-tab is-active" role="tab" id="faqTab-0" aria-selected="true" aria-controls="faqPanel-0" tabindex="0">Pricing &amp; Payment</button>
+          <button type="button" class="faq-tab" role="tab" id="faqTab-1" aria-selected="false" aria-controls="faqPanel-1" tabindex="-1">Scheduling &amp; Availability</button>
+          <button type="button" class="faq-tab" role="tab" id="faqTab-2" aria-selected="false" aria-controls="faqPanel-2" tabindex="-1">Service Area &amp; Coverage</button>
+          <button type="button" class="faq-tab" role="tab" id="faqTab-3" aria-selected="false" aria-controls="faqPanel-3" tabindex="-1">Policies</button>
+        </div>
+
+        <div class="faq-panels" id="faqPanels">
+          <div class="faq-panel" role="tabpanel" id="faqPanel-0" aria-labelledby="faqTab-0" tabindex="0">
+            <div class="faq-item">
+              <button type="button" class="faq-question">
+                Do you offer estimates before starting work?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div class="faq-answer"><p>Pricing is set once the problem has been diagnosed. Some jobs can be estimated over the phone, but many issues need an in-person look before a firm price can be given. Either way, you'll know the cost before any work begins.</p></div>
+            </div>
+
+            <div class="faq-item">
+              <button type="button" class="faq-question">
+                What payment methods do you accept?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div class="faq-answer"><p>Cash, check, Venmo, and Cash App are all accepted, along with credit and debit cards via a secure Stripe invoice.</p></div>
+            </div>
+
+            <div class="faq-item">
+              <button type="button" class="faq-question">
+                Is there a trip fee?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div class="faq-answer"><p>Jobs within 15 miles have no trip fee. Beyond 15 miles, a $25 trip fee is added to the total.</p></div>
+            </div>
+
+            <div class="faq-item">
+              <button type="button" class="faq-question">
+                Is a deposit required to book?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div class="faq-answer"><p>No. Booking online never asks for payment information &mdash; you're only charged after the visit, based on the final invoice.</p></div>
+            </div>
+
+            <div class="faq-item">
+              <button type="button" class="faq-question">
+                Do you have a referral program?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div class="faq-answer"><p>Yes. Refer someone and you'll get a $25 credit toward your next service once their job is complete and paid. Just have them mention your name when they book, or ask about it when scheduling.</p></div>
+            </div>
+          </div>
+
+          <div class="faq-panel" role="tabpanel" id="faqPanel-1" aria-labelledby="faqTab-1" tabindex="0" hidden>
+            <div class="faq-item">
+              <button type="button" class="faq-question">
+                How far in advance do I need to book?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div class="faq-answer"><p>Availability can vary, so booking at least 7 days out is preferred when possible. If something can't wait, call or text <span class="js-phone-text">(435) 414-1667</span> directly instead of using the online scheduling options.</p></div>
+            </div>
+
+            <div class="faq-item">
+              <button type="button" class="faq-question">
+                Can I text instead of call?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div class="faq-answer"><p>Yes, texting <span class="js-phone-text">(435) 414-1667</span> works great for quick questions, photos of the issue, or scheduling. Use the "Text Us" bubble on the site from a phone, or just text the number directly.</p></div>
+            </div>
+
+            <div class="faq-item">
+              <button type="button" class="faq-question">
+                Do you offer emergency or same-day service?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div class="faq-answer"><p>Yes, for things that can't wait, like an active leak or a fridge that's failed. Call or text directly rather than booking online so it gets seen right away.</p></div>
+            </div>
+
+            <div class="faq-item">
+              <button type="button" class="faq-question">
+                What's the best way to schedule a job?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div class="faq-answer"><p>Whichever is easiest for you. Use "Book Instantly" to pick an open time slot, fill out the request form for something more detailed, or just call or text <span class="js-phone-text">(435) 414-1667</span> directly.</p></div>
+            </div>
+          </div>
+
+          <div class="faq-panel" role="tabpanel" id="faqPanel-2" aria-labelledby="faqTab-2" tabindex="0" hidden>
+            <div class="faq-item">
+              <button type="button" class="faq-question">
+                What areas do you serve?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div class="faq-answer"><p>St. George, Hurricane, Washington, Santa Clara, and the surrounding Southern Utah area. We can also take on larger jobs in Cedar City, Duck Creek, or Mesquite, NV by request, just contact us to check availability and scheduling.</p></div>
+            </div>
+
+            <div class="faq-item">
+              <button type="button" class="faq-question">
+                What if the job I need isn't listed in your services?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div class="faq-answer"><p>Reach out anyway. There's a good chance it can still be handled, and if not, you'll get an honest answer and pointed in the right direction.</p></div>
+            </div>
+          </div>
+
+          <div class="faq-panel" role="tabpanel" id="faqPanel-3" aria-labelledby="faqTab-3" tabindex="0" hidden>
+            <div class="faq-item">
+              <button type="button" class="faq-question">
+                Do you guarantee your work?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div class="faq-answer"><p>Yes, work is guaranteed. Parts used are covered under whatever warranty the manufacturer sets, which can vary by part.</p></div>
+            </div>
+
+            <div class="faq-item">
+              <button type="button" class="faq-question">
+                What's your cancellation policy?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div class="faq-answer"><p>Plans change, and that's okay, just try to give as much notice as possible. A $50 cancellation fee may apply if a scheduled visit is cancelled the same day as the appointment.</p></div>
+            </div>
+
+            <div class="faq-item">
+              <button type="button" class="faq-question">
+                Do I need to be home while the work is being done?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div class="faq-answer"><p>For most jobs, yes, especially anything involving appliance diagnostics or work inside the home. For simple exterior or pre-arranged jobs, other arrangements can sometimes be made. Just ask when scheduling.</p></div>
+            </div>
+
+            <div class="faq-item">
+              <button type="button" class="faq-question">
+                Should pets be put away before you arrive?
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <div class="faq-answer"><p>Please keep pets secured during the visit. It keeps them safe and makes it easier to work around tools, open doors, and appliances.</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section id="closing" class="closing">
     <div class="wrap closing-inner">
       <p class="closing-eyebrow" data-reveal>Triple H Enterprises</p>
@@ -1847,139 +2003,6 @@
     Book
   </a>
 </nav>
-
-<div class="modal-overlay" id="faqOverlay">
-  <div class="modal modal-gallery" id="faqModal" role="dialog" aria-modal="true" aria-labelledby="faqTitle">
-    <button class="modal-close" id="faqClose" aria-label="Close">&times;</button>
-    <h3 id="faqTitle">Frequently Asked Questions</h3>
-    <p class="modal-intro">Answers to the questions that come up most.</p>
-    <div class="faq-list" id="faqList">
-        <h3 class="faq-category">Pricing & Payment</h3>
-        <div class="faq-item">
-          <button type="button" class="faq-question">
-            Do you offer estimates before starting work?
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="faq-answer"><p>Pricing is set once the problem has been diagnosed. Some jobs can be estimated over the phone, but many issues need an in-person look before a firm price can be given. Either way, you'll know the cost before any work begins.</p></div>
-        </div>
-
-        <div class="faq-item">
-          <button type="button" class="faq-question">
-            What payment methods do you accept?
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="faq-answer"><p>Cash, check, Venmo, and Cash App are all accepted, along with credit and debit cards via a secure Stripe invoice.</p></div>
-        </div>
-
-        <div class="faq-item">
-          <button type="button" class="faq-question">
-            Is there a trip fee?
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="faq-answer"><p>Jobs within 15 miles have no trip fee. Beyond 15 miles, a $25 trip fee is added to the total.</p></div>
-        </div>
-
-        <div class="faq-item">
-          <button type="button" class="faq-question">
-            Is a deposit required to book?
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="faq-answer"><p>No. Booking online never asks for payment information &mdash; you're only charged after the visit, based on the final invoice.</p></div>
-        </div>
-
-        <div class="faq-item">
-          <button type="button" class="faq-question">
-            Do you have a referral program?
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="faq-answer"><p>Yes. Refer someone and you'll get a $25 credit toward your next service once their job is complete and paid. Just have them mention your name when they book, or ask about it when scheduling.</p></div>
-        </div>
-
-        <h3 class="faq-category">Scheduling & Availability</h3>
-        <div class="faq-item">
-          <button type="button" class="faq-question">
-            How far in advance do I need to book?
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="faq-answer"><p>Availability can vary, so booking at least 7 days out is preferred when possible. If something can't wait, call or text <span class="js-phone-text">(435) 414-1667</span> directly instead of using the online scheduling options.</p></div>
-        </div>
-
-        <div class="faq-item">
-          <button type="button" class="faq-question">
-            Can I text instead of call?
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="faq-answer"><p>Yes, texting <span class="js-phone-text">(435) 414-1667</span> works great for quick questions, photos of the issue, or scheduling. Use the "Text Us" bubble on the site from a phone, or just text the number directly.</p></div>
-        </div>
-
-        <div class="faq-item">
-          <button type="button" class="faq-question">
-            Do you offer emergency or same-day service?
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="faq-answer"><p>Yes, for things that can't wait, like an active leak or a fridge that's failed. Call or text directly rather than booking online so it gets seen right away.</p></div>
-        </div>
-
-        <div class="faq-item">
-          <button type="button" class="faq-question">
-            What's the best way to schedule a job?
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="faq-answer"><p>Whichever is easiest for you. Use "Book Instantly" to pick an open time slot, fill out the request form for something more detailed, or just call or text <span class="js-phone-text">(435) 414-1667</span> directly.</p></div>
-        </div>
-
-        <h3 class="faq-category">Service Area & Coverage</h3>
-        <div class="faq-item">
-          <button type="button" class="faq-question">
-            What areas do you serve?
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="faq-answer"><p>St. George, Hurricane, Washington, Santa Clara, and the surrounding Southern Utah area. We can also take on larger jobs in Cedar City, Duck Creek, or Mesquite, NV by request, just contact us to check availability and scheduling.</p></div>
-        </div>
-
-        <div class="faq-item">
-          <button type="button" class="faq-question">
-            What if the job I need isn't listed in your services?
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="faq-answer"><p>Reach out anyway. There's a good chance it can still be handled, and if not, you'll get an honest answer and pointed in the right direction.</p></div>
-        </div>
-
-        <h3 class="faq-category">Policies</h3>
-        <div class="faq-item">
-          <button type="button" class="faq-question">
-            Do you guarantee your work?
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="faq-answer"><p>Yes, work is guaranteed. Parts used are covered under whatever warranty the manufacturer sets, which can vary by part.</p></div>
-        </div>
-
-        <div class="faq-item">
-          <button type="button" class="faq-question">
-            What's your cancellation policy?
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="faq-answer"><p>Plans change, and that's okay, just try to give as much notice as possible. A $50 cancellation fee may apply if a scheduled visit is cancelled the same day as the appointment.</p></div>
-        </div>
-
-        <div class="faq-item">
-          <button type="button" class="faq-question">
-            Do I need to be home while the work is being done?
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="faq-answer"><p>For most jobs, yes, especially anything involving appliance diagnostics or work inside the home. For simple exterior or pre-arranged jobs, other arrangements can sometimes be made. Just ask when scheduling.</p></div>
-        </div>
-
-        <div class="faq-item">
-          <button type="button" class="faq-question">
-            Should pets be put away before you arrive?
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="faq-answer"><p>Please keep pets secured during the visit. It keeps them safe and makes it easier to work around tools, open doors, and appliances.</p></div>
-        </div>
-      </div>
-  </div>
-</div>
 
 <div class="modal-overlay" id="termsOverlay">
   <div class="modal modal-gallery" id="termsModal" role="dialog" aria-modal="true" aria-labelledby="termsTitle">
@@ -2499,27 +2522,75 @@
     }
   };
 
-  // FAQ accordion -- pulled into a named function (rather than an
-  // inline loop that only ever runs once at page load) specifically so
-  // it can be re-run after the FAQ list content is dynamically
-  // replaced by the site_faq fetch further down. Binding click
-  // handlers to brand-new elements a second time is required -- the
-  // original static elements' listeners don't transfer to whatever
-  // replaces them.
-  function bindFaqAccordion() {
-    document.querySelectorAll('.faq-item').forEach((item, i) => {
+  // FAQ topic tabs + accordion (replaces the old #faqModal pop-up,
+  // 2026-11-03 -- Connor's sign-off on docs/ACTION-ITEMS.md item 19).
+  // Both sets of listeners are delegated onto the two containers that
+  // never themselves get replaced -- only their innerHTML does, when
+  // the live site_faq fetch further down rebuilds the tabs/panels --
+  // so a rebuild never needs to re-bind anything.
+  function faqAssignAnswerIds() {
+    document.querySelectorAll('#faqPanels .faq-item').forEach((item, i) => {
       const btn = item.querySelector('.faq-question');
       const answer = item.querySelector('.faq-answer');
       answer.id = answer.id || `faqAnswer${i}`;
-      btn.setAttribute('aria-expanded', 'false');
+      btn.setAttribute('aria-expanded', item.classList.contains('is-open') ? 'true' : 'false');
       btn.setAttribute('aria-controls', answer.id);
-      btn.addEventListener('click', () => {
-        const isOpen = item.classList.toggle('is-open');
-        btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-      });
     });
   }
-  bindFaqAccordion();
+  faqAssignAnswerIds();
+
+  (function bindFaqAccordion() {
+    const panelsEl = document.getElementById('faqPanels');
+    if (!panelsEl) return;
+    panelsEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('.faq-question');
+      if (!btn) return;
+      const item = btn.closest('.faq-item');
+      const isOpen = item.classList.toggle('is-open');
+      btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+  })();
+
+  // Standard ARIA tabs pattern (automatic activation): click or
+  // Left/Right/Home/End moves both focus and the active tab/panel.
+  function faqActivateTab(tabId) {
+    const tabsEl = document.getElementById('faqTabs');
+    const panelsEl = document.getElementById('faqPanels');
+    if (!tabsEl || !panelsEl) return;
+    tabsEl.querySelectorAll('.faq-tab').forEach((tab) => {
+      const selected = tab.id === tabId;
+      tab.classList.toggle('is-active', selected);
+      tab.setAttribute('aria-selected', selected ? 'true' : 'false');
+      tab.setAttribute('tabindex', selected ? '0' : '-1');
+    });
+    panelsEl.querySelectorAll('.faq-panel').forEach((panel) => {
+      panel.hidden = panel.getAttribute('aria-labelledby') !== tabId;
+    });
+  }
+
+  (function bindFaqTabs() {
+    const tabsEl = document.getElementById('faqTabs');
+    if (!tabsEl) return;
+    tabsEl.addEventListener('click', (e) => {
+      const tab = e.target.closest('.faq-tab');
+      if (!tab) return;
+      faqActivateTab(tab.id);
+    });
+    tabsEl.addEventListener('keydown', (e) => {
+      const tab = e.target.closest('.faq-tab');
+      if (!tab || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+      const tabs = Array.from(tabsEl.querySelectorAll('.faq-tab'));
+      const i = tabs.indexOf(tab);
+      let next;
+      if (e.key === 'ArrowRight') next = tabs[(i + 1) % tabs.length];
+      else if (e.key === 'ArrowLeft') next = tabs[(i - 1 + tabs.length) % tabs.length];
+      else if (e.key === 'Home') next = tabs[0];
+      else next = tabs[tabs.length - 1];
+      e.preventDefault();
+      faqActivateTab(next.id);
+      next.focus();
+    });
+  })();
 
   // Basic focus containment for this page's own modals (2026-09-07),
   // found missing from all of them: Gallery/FAQ/Terms below, the email
@@ -2604,7 +2675,6 @@
   }
 
   setupSimpleModal('galleryOverlay', 'galleryClose', ['navGalleryDesktop','navGalleryMobile','navGalleryFooter','recentWorkSeeAll']);
-  const faqModal = setupSimpleModal('faqOverlay', 'faqClose', ['navFaqDesktop','navFaqMobile','navFaqFooter','intentFaqMore']);
   const termsModal = setupSimpleModal('termsOverlay', 'termsClose', []);
 
   // Allow other pages (e.g. the city landing pages) to link straight to
@@ -2616,12 +2686,12 @@
   if (window.location.hash === '#terms' && termsModal) {
     termsModal.open();
   }
-  // Same pattern, added for the landing pages' new condensed FAQ
-  // section (audit item #18) -- its own "See all FAQs" link points
-  // here instead of duplicating this modal on every page.
-  if (window.location.hash === '#faq' && faqModal) {
-    faqModal.open();
-  }
+  // FAQ (navFaqDesktop/navFaqMobile/navFaqFooter/intentFaqMore, plus
+  // every /#faq link from the landing pages, about.html and
+  // our-work.html) used to be intercepted here to open #faqModal. It's
+  // now an inline page section (#faq, 2026-11-03), so these are plain
+  // anchor links again and the browser's own hash-scroll handles
+  // /#faq -- nothing to wire up on load.
 
   // email modal
   const emailOverlay = document.getElementById('emailOverlay');
@@ -3620,8 +3690,8 @@
   // FAQ content -- separate, independent fetch from the site content
   // block above, so a failure in one never blocks the other. Same
   // fail-silent philosophy: if this table is empty, unreachable, or the
-  // fetch times out, the 12 static FAQ items already in the HTML stay
-  // exactly as they are.
+  // fetch times out, the static FAQ tabs/panels already in the HTML
+  // stay exactly as they are.
   (function () {
     // Full absolute URL literal, not SUPABASE_URL glued to a REST v1 path --
     // see the LEADS_URL comment above for why (2026-10-26).
@@ -3640,15 +3710,14 @@
       .then(res => res.ok ? res.json() : [])
       .then(rows => {
         if (!Array.isArray(rows) || rows.length === 0) return; // keep the static fallback
-        const faqList = document.getElementById('faqList');
-        if (!faqList) return;
+        const tabsEl = document.getElementById('faqTabs');
+        const panelsEl = document.getElementById('faqPanels');
+        if (!tabsEl || !panelsEl) return;
 
-        // Grouped by category, same as the static fallback markup this
-        // replaces (h3.faq-category headers) -- previously this always
-        // flattened into one list the moment the fetch landed, silently
-        // dropping the categories a visitor sees only in the pre-fetch
-        // flash. Groups are ordered by each category's first appearance
-        // in sort_order, so no separate category-ordering column is
+        // Grouped by category -- one tab + one accordion panel per
+        // group, same idea as the static fallback markup this replaces.
+        // Groups are ordered by each category's first appearance in
+        // sort_order, so no separate category-ordering column is
         // needed -- the existing sort_order already encodes it.
         const categoryOrder = [];
         const byCategory = new Map();
@@ -3657,18 +3726,26 @@
           if (!byCategory.has(cat)) { byCategory.set(cat, []); categoryOrder.push(cat); }
           byCategory.get(cat).push(r);
         });
-        faqList.innerHTML = categoryOrder.map(cat => `
-        <h3 class="faq-category">${escapeFaqHtml(cat)}</h3>` + byCategory.get(cat).map(r => `
-        <div class="faq-item">
-          <button type="button" class="faq-question">
-            ${escapeFaqHtml(r.question)}
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="faq-answer"><p>${escapeFaqHtml(r.answer)}</p></div>
-        </div>`).join('')).join('');
-        // Re-bind the accordion's click handlers -- the ones attached
-        // at page load belonged to the static elements just replaced.
-        if (typeof bindFaqAccordion === 'function') bindFaqAccordion();
+
+        tabsEl.innerHTML = categoryOrder.map((cat, i) => `
+        <button type="button" class="faq-tab${i === 0 ? ' is-active' : ''}" role="tab" id="faqTab-${i}" aria-selected="${i === 0 ? 'true' : 'false'}" aria-controls="faqPanel-${i}" tabindex="${i === 0 ? '0' : '-1'}">${escapeFaqHtml(cat)}</button>`).join('');
+
+        panelsEl.innerHTML = categoryOrder.map((cat, i) => `
+        <div class="faq-panel" role="tabpanel" id="faqPanel-${i}" aria-labelledby="faqTab-${i}" tabindex="0"${i === 0 ? '' : ' hidden'}>` + byCategory.get(cat).map(r => `
+          <div class="faq-item">
+            <button type="button" class="faq-question">
+              ${escapeFaqHtml(r.question)}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="faq-answer"><p>${escapeFaqHtml(r.answer)}</p></div>
+          </div>`).join('') + `
+        </div>`).join('');
+
+        // Re-assign each item's answer id/aria-controls -- the delegated
+        // click/keydown listeners on #faqTabs and #faqPanels themselves
+        // never needed re-binding, since neither container was replaced,
+        // only their innerHTML.
+        if (typeof faqAssignAnswerIds === 'function') faqAssignAnswerIds();
 
         // Closes a real audit gap: the FAQPage JSON-LD in <head> used to
         // stay hardcoded regardless of this fetch, so an FAQ edited via

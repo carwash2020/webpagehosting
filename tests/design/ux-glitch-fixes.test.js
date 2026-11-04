@@ -39,11 +39,14 @@ test('site_content hour overrides update every .js-hours-* node, not only the fi
   assert.doesNotMatch(INDEX, /const el = document\.querySelector\('\.js-hours-' \+ day\);/);
 });
 
-test('homepage FAQ links point at #faq (the existing hash that opens the modal), not href="#"', () => {
+test('homepage FAQ links point at #faq (the inline FAQ section\'s own anchor), not href="#"', () => {
   assert.match(INDEX, /<a href="#faq" id="navFaqDesktop">FAQ<\/a>/);
   assert.match(INDEX, /<a href="#faq" id="navFaqMobile">FAQ<\/a>/);
   assert.match(INDEX, /<a href="#faq" id="navFaqFooter">FAQ<\/a>/);
-  assert.match(INDEX, /if \(window\.location\.hash === '#faq' && faqModal\)/);
+  // 2026-11-03 (item 19): #faqModal was replaced by an inline tabs +
+  // accordion section with id="faq", so /#faq is now a plain in-page
+  // anchor the browser scrolls to natively -- no JS hash interception.
+  assert.match(INDEX, /<section class="faq-section" id="faq"/);
 });
 
 test('homepage Terms & Conditions points at the real terms.html page, not href="#"', () => {

@@ -2259,6 +2259,53 @@
   }
   .faq-answer p em{color:var(--orange-text); font-style:normal;}
 
+  /* FAQ topic tabs (2026-11-03, replacing #faqModal -- item 19,
+     Connor's sign-off). Standard ARIA tabs look: an underline rail,
+     the active tab lifted in orange, same font-ui/letter-spacing
+     vocabulary as .page-jump just above so it reads as the same site,
+     not a bolted-on widget. */
+  .faq-tabs{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px 10px;
+    margin:0 0 24px;
+    padding-bottom:4px;
+    border-bottom:1px solid var(--border);
+  }
+  .faq-tab{
+    font-family:var(--font-ui);
+    font-size:14px;
+    font-weight:600;
+    letter-spacing:.3px;
+    padding:10px 18px;
+    min-height:44px;
+    background:none;
+    border:none;
+    border-bottom:2px solid transparent;
+    border-radius:8px 8px 0 0;
+    color:var(--text-dim);
+    cursor:pointer;
+    transition:color .15s ease, background .15s ease, border-color .15s ease;
+  }
+  .faq-tab:hover{color:var(--text);}
+  .faq-tab:focus-visible{outline:2px solid var(--orange-text-vivid); outline-offset:2px;}
+  .faq-tab.is-active{
+    color:var(--orange-text-vivid);
+    background:var(--orange-tint-soft);
+    border-bottom-color:var(--orange-text-vivid);
+  }
+  .faq-panel:focus-visible{outline:2px solid var(--orange-text-vivid); outline-offset:4px;}
+  @media (max-width:600px){
+    .faq-tabs{gap:6px; padding-bottom:0; border-bottom:0;}
+    .faq-tab{
+      padding:9px 14px;
+      font-size:13px;
+      border:1px solid var(--border);
+      border-radius:999px;
+    }
+    .faq-tab.is-active{border-color:var(--orange-tint-border);}
+  }
+
   /* Public chrome stack (documented 2026-09-17). Coordinate these
      rather than letting each layer pick its own bottom/z-index.
      Bottom of the viewport, low → high:
@@ -2361,7 +2408,7 @@
 
   /* Jump links for in-page sections. scroll-margin clears the sticky
      header (and, on desktop, the .page-jump rail under it). */
-  #services, #process, #reviews, #schedule, #about, #areas, #contact, #triage, #honest, #intent-faq{
+  #services, #process, #reviews, #schedule, #about, #areas, #contact, #triage, #honest, #intent-faq, #faq{
     scroll-margin-top:88px;
   }
 
@@ -2400,7 +2447,7 @@
   }
   @media (max-width:760px){
     .page-jump{display:none;}
-    #services, #process, #reviews, #schedule, #about, #areas, #contact, #triage, #honest{
+    #services, #process, #reviews, #schedule, #about, #areas, #contact, #triage, #honest, #faq{
       scroll-margin-top:80px;
     }
   }
@@ -2926,6 +2973,40 @@
     background:linear-gradient(180deg, var(--orange-tint-soft), rgba(255,128,0,0) 70%);
     border-top:1px solid var(--orange-tint-border);
   }
+  /* The real, live rating as its own prominent "big number" (item 19,
+     Connor's sign-off, 2026-11-03) -- not a small inline mention. Hooked
+     into js/review-stats.js's existing .js-review-rating-stat /
+     .js-review-count-stat / .js-review-star-label classes (also used by
+     the stats strip above), so it updates automatically with the real
+     Google rating and never goes stale. */
+  .reviews-rating-big{
+    max-width:420px;
+    margin:0 auto 36px;
+    text-align:center;
+  }
+  .reviews-rating-number{
+    display:flex;
+    align-items:baseline;
+    justify-content:center;
+    gap:6px;
+    margin:0;
+    font-family:var(--font-display);
+    font-size:clamp(56px, 10vw, 96px);
+    line-height:1;
+    color:var(--orange-text-vivid);
+    letter-spacing:.5px;
+  }
+  .reviews-rating-star{font-size:0.5em; color:var(--orange-text-vivid);}
+  .reviews-rating-sub{
+    margin:10px 0 2px;
+    font-family:var(--font-ui);
+    font-size:14px;
+    font-weight:600;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--text);
+  }
+  .reviews-rating-meta{margin:0; color:var(--text-dim); font-size:14px;}
   .reviews-wall{
     max-width:900px;
     margin:0 auto;
@@ -4076,8 +4157,8 @@
      live on ::before. :where() keeps the specificity low, so #reviews
      keeps its own tinted top rule. */
   body.page-home main{counter-reset:home-chapter;}
-  body.page-home main > :where(#honest, #process, #revealJob, #teardownStage, #reviews, #blog-teaser, #about, #areas, #schedule){border-top:0; position:relative; counter-increment:home-chapter;}
-  body.page-home main > :where(#honest, #process, #revealJob, #teardownStage, #reviews, #blog-teaser, #about, #areas, #schedule)::after{
+  body.page-home main > :where(#honest, #process, #revealJob, #teardownStage, #reviews, #blog-teaser, #about, #areas, #schedule, #faq){border-top:0; position:relative; counter-increment:home-chapter;}
+  body.page-home main > :where(#honest, #process, #revealJob, #teardownStage, #reviews, #blog-teaser, #about, #areas, #schedule, #faq)::after{
     content:counter(home-chapter, decimal-leading-zero);
     content:counter(home-chapter, decimal-leading-zero) / "";
     position:absolute;
@@ -4145,10 +4226,13 @@
   body.page-home #schedule{background:linear-gradient(180deg, transparent, var(--orange-tint-soft) 70%, transparent);}
   body.page-home #schedule .booking-grid{max-width:1000px; padding:28px; border:1px solid var(--orange-tint-border); border-radius:20px; background:linear-gradient(135deg, var(--bg-panel-2), var(--bg-panel)); box-shadow:var(--shadow-hover);}
   body.page-home #schedule .section-head h2{font-size:clamp(34px, 4.6vw, 58px);}
+  /* chapter 10: FAQ, a tight column (same idea as chapter 01) between
+     #schedule and the #closing peak moment it hands off into. */
+  body.page-home #faq > .wrap{max-width:880px;}
   body.page-home #closing{border-top:0;}
 
   @media (max-width:860px){
-    body.page-home main > :where(#honest, #process, #revealJob, #teardownStage, #reviews, #blog-teaser, #about, #areas, #schedule)::after{top:32px; font-size:13px;}
+    body.page-home main > :where(#honest, #process, #revealJob, #teardownStage, #reviews, #blog-teaser, #about, #areas, #schedule, #faq)::after{top:32px; font-size:13px;}
     body.page-home #revealJob #revealFrame{aspect-ratio:4 / 5; max-height:none;}
     body.page-home #reviews .reviews-wall > .review-card:first-child{padding:26px 22px;}
     body.page-home #schedule .booking-grid{padding:16px;}
