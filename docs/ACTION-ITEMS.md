@@ -208,9 +208,8 @@ click a setting by hand.
     follow-up. The hours are an attendance record, not pay: the business
     still pays per job.
 
-15. ~~**Decide who can save a card from portal Settings**~~ **Decided and
-    implemented (2026-11-03), PR open.** (2026-09-23 audit, finding #6,
-    MEDIUM).
+15. ~~**Decide who can save a card from portal Settings**~~ **Done
+    (2026-11-03), deployed.** (2026-09-23 audit, finding #6, MEDIUM).
     `manage-saved-card`'s `create_setup_intent` mode accepted any
     signed-in account. While public signup was on (#11), a stranger
     could sign up and use it to create Stripe Customers and
@@ -250,10 +249,16 @@ click a setting by hand.
       (an account with none of the 6 refused with a clear error; each
       of the 6 individually lets it through; the work-order case
       specifically; the gate runs before the signature check).
-    - **Not yet deployed as of this commit.** To be deployed via
-      `mcp__Supabase__deploy_edge_function` once CI is green on the PR,
-      with the deployed source verified against the PR branch's file
-      before this note is updated again.
+    - **Deployed (2026-11-04)** as `manage-saved-card` v16 on the live
+      project (`csvfqdjuobylgafgolho`), after CI went fully green on
+      [PR #576](https://github.com/carwash2020/webpagehosting/pull/576)
+      (test x2, CodeQL, Snyk, Repowise review, fix-versions, all
+      passed). Verified by reading the deployed source back with
+      `mcp__Supabase__get_edge_function` and comparing it byte-for-byte
+      against the PR branch's `edge-functions/manage-saved-card-index.ts`
+      -- identical sha256 (`f23ac3be...957c56b`) on both sides, so the
+      live function and the PR are not diverged. PR left open for
+      Connor, not merged.
 16. ~~**Webhook doesn't compare the amount paid to the invoice total**
     (2026-09-23 audit, finding #7, LOW).~~ **Done (2026-09-25), deployed.**
     `stripe-webhook` now compares `amount_received` to what the
