@@ -94,7 +94,7 @@ test('dashboard home pins Find client and Calendar directly under the Today hero
   assert.match(strip[0], />Find client</);
   assert.match(strip[0], />Calendar</);
   assert.equal((strip[0].match(/class="dash-primary-action"/g) || []).length, 2);
-  for (const gone of ['#add-job', 'invoice-generator.html#invoice', 'invoice-generator.html#pos', 'finance.html#expenses']) {
+  for (const gone of ['#add-job', 'invoice-generator.html#invoice', 'invoice-generator.html#pos', 'invoice-generator.html#charge', 'finance.html#expenses']) {
     assert.ok(!strip[0].includes(gone), gone + ' is in + New now, not the strip');
   }
   assert.doesNotMatch(strip[0], /Today's schedule/);
@@ -104,7 +104,7 @@ test('dashboard home pins Find client and Calendar directly under the Today hero
   const NAV = fs.readFileSync(repo('tools', 'tools-nav-pwa.js'), 'utf8');
   assert.match(NAV, /\{ label: 'Job',\s+hint: [^}]*href: '\/tools\/job-tracker\.html#add-job' \}/);
   assert.match(NAV, /\{ label: 'Invoice',\s+hint: [^}]*href: '\/tools\/invoice-generator\.html#invoice', perm: 'canManageInvoices' \}/);
-  assert.match(NAV, /\{ label: 'Quick charge', hint: [^}]*href: '\/tools\/invoice-generator\.html#pos', perm: 'canManageInvoices' \}/);
+  assert.match(NAV, /\{ label: 'Charge a card', hint: [^}]*href: '\/tools\/invoice-generator\.html#charge', perm: 'canManageInvoices' \}/);
   assert.match(NAV, /\{ label: 'Expense',\s+hint: [^}]*href: '\/tools\/finance\.html#expenses', perm: 'canViewFinance' \}/);
 
   const heroAt = WORKSPACE.indexOf('id="todayHero"');

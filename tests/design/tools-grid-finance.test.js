@@ -40,10 +40,11 @@ test('every destination the tile grid used to link is still reachable: the nav, 
   assert.match(WORKSPACE, /href="\/tools\/job-tracker\.html#calendar"/, 'Calendar is reached from the daily-action strip');
 });
 
-test('POS, a former tile, is the Quick charge tab inside Invoices since 2026-09-21 -- reached through the Invoices link; its old redirect stub was deleted outright on 2026-10-08', () => {
+test('POS, a former tile, became the Quick charge tab inside Invoices (2026-09-21) and is the Charge a card sheet since 2026-11-04; its old redirect stub was deleted outright on 2026-10-08', () => {
   assert.doesNotMatch(NAV, /\/tools\/pos\.html/);
   const invoice = fs.readFileSync(path.join(TOOLS_DIR, 'invoice-generator.html'), 'utf8');
-  assert.match(invoice, /data-tab="pos"[^>]*>Quick charge</);
+  assert.doesNotMatch(invoice, /data-tab="pos"/, 'no Quick charge tab any more');
+  assert.match(invoice, /<div class="cc-overlay" id="tab-pos" role="dialog" aria-modal="true" aria-labelledby="ccTitle" hidden>/);
   assert.ok(!fs.existsSync(path.join(TOOLS_DIR, 'pos.html')), 'pos.html should no longer exist');
 });
 

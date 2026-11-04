@@ -53,16 +53,16 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=7c03870603">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=b8d74bb802">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=3b1514fb8b">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=486abe5b22" defer></script>
-<script src="/tools/data-layer.js?v=462ceba807" defer></script>
+<script src="/tools/data-layer.js?v=9081e6e314" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=22ae1f4afa" defer></script>
-<script src="/tools/tools-command-palette.js?v=45864878c1" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=d56f1ed8e0" defer></script>
+<script src="/tools/tools-command-palette.js?v=15c76f6910" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -368,11 +368,10 @@
      overview sits on top; one ledger below it, filtered by chips (All /
      Income / Expenses / Profitability) instead of tabs. Income counts only
      when paid (handoff §4F). Log expense / Log income open the same add
-     forms as before; Charge a card arrives with 3.4c. -->
+     forms as before; Charge a card opens the sheet on Invoices (#charge). -->
 <nav class="th-v2-seg mn-seg" id="moneySeg" aria-label="Money">
   <a href="/tools/invoice-generator.html" class="mn-seg-cross" data-money-seg="invoices">Invoices</a>
   <a href="/tools/finance.html" class="is-active" data-money-seg="finance" aria-current="page">Money</a>
-  <a href="/tools/invoice-generator.html#pos" class="mn-seg-cross" data-money-seg="pos">Quick charge</a>
 </nav>
 
 <section class="mny-top" aria-labelledby="mnyKicker">
@@ -381,6 +380,7 @@
     <div class="mny-actions">
       <button type="button" class="secondary-btn" onclick="openFinanceLog('expenses')">Log expense</button>
       <button type="button" class="secondary-btn" onclick="openFinanceLog('income')">Log income</button>
+      <a href="/tools/invoice-generator.html#charge" class="secondary-btn" id="mnyChargeBtn" hidden>Charge a card</a>
     </div>
   </div>
 
@@ -732,6 +732,9 @@
     const rwLink = document.getElementById('mnyFullRunway');
     if (rwTile) rwTile.hidden = !canRunway;
     if (rwLink) rwLink.hidden = !canRunway;
+    // Charge a card opens the sheet on Invoices, for accounts that can bill.
+    const chargeBtn = document.getElementById('mnyChargeBtn');
+    if (chargeBtn) chargeBtn.hidden = !(typeof canManageInvoices === 'function' && canManageInvoices());
     if (canRunway) {
       const months = thRunwayMonthsCovered();
       const rw = document.getElementById('mnyRunway');
@@ -801,6 +804,10 @@
       '</tr>').join('') + '</tbody></table>';
   }
   function renderMoney() {
+    // A charge linked on Charge a card's paid screen waits for its income
+    // row (written by the server, arriving with sync; thApplyPosLinks in
+    // data-layer.js). renderIncomeEntries applies them too, before it reads.
+    if (typeof thApplyPosLinks === 'function') thApplyPosLinks();
     renderMoneyOverview();
     renderMoneyLedger();
   }
@@ -1035,6 +1042,7 @@
 
   function renderIncomeEntries() {
     backfillLegacyInvoicesIntoIncomeLog();
+    if (typeof thApplyPosLinks === 'function') thApplyPosLinks();
     let entries = [...thIncome.all()].sort((a, b) => new Date(b.date) - new Date(a.date));
     // Item #13 extended (2026-08-20): filters out any entry pending an
     // undoable delete, matching job-tracker.html's pattern -- storage
@@ -1064,7 +1072,7 @@
         <td data-label="Origin">${e.origin === 'invoice' ? '<span class="inline-note" style="margin:0;">Invoice</span>' : 'Manual'}</td>
         <td class="col-amount" data-label="Amount">${e.origin === 'invoice' && receivedOf(e) < (Number(e.amount) || 0)
           ? (receivedOf(e) === 0 ? `<span class="mny-unpaid">Not paid yet</span> <span class="mny-of">($${e.amount.toFixed(2)} invoiced)</span>` : `$${receivedOf(e).toFixed(2)} <span class="mny-of">of $${e.amount.toFixed(2)}</span>`)
-          : `$${e.amount.toFixed(2)}`}</td>
+          : e.appliedToInvoiceId ? `$${e.amount.toFixed(2)} <span class="mny-of">(counted on its invoice)</span>` : `$${e.amount.toFixed(2)}`}</td>
         <td>
           ${e.origin !== 'invoice' ? `<button class="small-btn" onclick="editIncomeEntry(${e.id})" aria-label="Edit entry" title="Edit entry">Edit</button>` : ''}
           <button class="small-btn danger" onclick="deleteIncomeEntry(${e.id})" aria-label="Delete entry" title="Delete entry">&times;</button>
@@ -1078,7 +1086,8 @@
         <tbody>${rows}</tbody>
       </table>`;
 
-    const manualTotal = entries.filter(e => e.origin !== 'invoice').reduce((sum, e) => sum + e.amount, 0);
+    // receivedOf: a card charge linked to an invoice counts on that invoice.
+    const manualTotal = entries.filter(e => e.origin !== 'invoice').reduce((sum, e) => sum + receivedOf(e), 0);
     const invoiceTotal = entries.filter(e => e.origin === 'invoice').reduce((sum, e) => sum + receivedOf(e), 0);
 
     document.getElementById('incomeTotalsRow').innerHTML = `

@@ -40,11 +40,12 @@ function iso(offsetDays) {
 test('the page opens on the list: Invoices is the first tab and the active panel, and the swipe order follows the strip', () => {
   const strip = INV.match(/<div class="tabs tabs-sticky">([\s\S]*?)<\/div>/)[1];
   const tabs = [...strip.matchAll(/data-tab="(\w+)"[^>]*>([^<]+)</g)].map(m => [m[1], m[2]]);
-  assert.deepEqual(tabs, [['recent', 'Invoices'], ['invoice', 'New invoice'], ['quote', 'New quote'], ['pos', 'Quick charge']]);
+  // Quick charge left the strip for the Charge a card sheet (2026-11-04).
+  assert.deepEqual(tabs, [['recent', 'Invoices'], ['invoice', 'New invoice'], ['quote', 'New quote']]);
   assert.match(strip, /<button class="tab-btn is-active" data-tab="recent"/);
   assert.match(INV, /<div class="tab-panel is-active" id="tab-recent">/);
   assert.match(INV, /<div class="tab-panel" id="tab-invoice">/);
-  assert.match(INV, /const GEN_TAB_ORDER = \['recent', 'invoice', 'quote', 'pos'\];/);
+  assert.match(INV, /const GEN_TAB_ORDER = \['recent', 'invoice', 'quote'\];/);
 });
 
 test('a link that brings something to invoice still lands on the form: ?jobRef= and ?client= are read before the helpers strip them; #hash wins after', () => {

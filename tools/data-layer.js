@@ -921,10 +921,66 @@ function thInvoiceIsOverdue(inv, now) {
 // money already received. invoices: the invoice log (thInvoices.all()).
 function thIncomeReceived(entry, invoices) {
   if (!entry) return 0;
+  // A card charge linked to an invoice (Charge a card > "To an unpaid
+  // invoice", 2026-11-04) is that invoice's payment: the invoice's own row
+  // counts it, so the charge row doesn't count it a second time.
+  if (entry.appliedToInvoiceId) return 0;
   if (entry.origin !== 'invoice') return Number(entry.amount) || 0;
   const inv = (invoices || []).find((i) => String(i.id) === String(entry.invoiceId));
   if (!inv) return 0;
   return Math.min(Number(entry.amount) || 0, thInvoicePaidAmount(inv));
+}
+
+// Charge a card > "Link it (optional)" (2026-11-04, approved design). The
+// charge's income row is written by the server (stripe-webhook /
+// create-pos-charge) and reaches this device with the next sync, so a link
+// chosen on the paid screen is kept here until that row arrives, then
+// applied: a job link fills jobRefId/jobRefTitle; an invoice link marks the
+// row appliedToInvoiceId (the invoice itself was marked paid when the link
+// was chosen). Matched by the PaymentIntent id when the page knows it (a new
+// card), otherwise by email + amount + day on a row not linked yet (a saved
+// card). This device only; a link that never finds its row is dropped
+// after 14 days.
+const TH_POS_LINKS_KEY = 'th_pos_links';
+function thReadPosLinks() {
+  try { const v = JSON.parse(localStorage.getItem(TH_POS_LINKS_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; }
+}
+function thWritePosLinks(links) {
+  try { localStorage.setItem(TH_POS_LINKS_KEY, JSON.stringify(links)); } catch (e) { /* storage blocked */ }
+}
+function thQueuePosLink(link) {
+  const links = thReadPosLinks();
+  links.push(Object.assign({ queuedAt: Date.now() }, link));
+  thWritePosLinks(links);
+  return thApplyPosLinks();
+}
+function thPosLinkMatches(link, e) {
+  if (!e || e.origin !== 'pos') return false;
+  if (link.paymentIntentId) return e.stripePaymentIntentId === link.paymentIntentId;
+  return !e.jobRefId && !e.appliedToInvoiceId &&
+    String(e.source || '').toLowerCase() === String(link.email || '').toLowerCase() &&
+    Math.round((Number(e.amount) || 0) * 100) === Math.round((Number(link.amount) || 0) * 100) &&
+    String(e.date || '') === String(link.date || '');
+}
+function thApplyPosLinks() {
+  const links = thReadPosLinks();
+  if (!links.length) return 0;
+  const income = thIncome.all();
+  let applied = 0;
+  const keep = [];
+  for (const link of links) {
+    const hit = income.filter((e) => thPosLinkMatches(link, e)).sort((a, b) => (b.id || 0) - (a.id || 0))[0];
+    if (!hit) {
+      if (Date.now() - (link.queuedAt || 0) < 14 * 86400000) keep.push(link);
+      continue;
+    }
+    if (link.jobRefId) { hit.jobRefId = String(link.jobRefId); hit.jobRefTitle = link.jobRefTitle || ''; }
+    if (link.invoiceId) hit.appliedToInvoiceId = link.invoiceId;
+    applied++;
+  }
+  if (applied) thIncome.replaceAll(income);
+  thWritePosLinks(keep);
+  return applied;
 }
 
 // Runway's own "months covered" (runway-dashboard.html renderRunwayHero:

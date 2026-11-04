@@ -59,7 +59,7 @@
     { title: 'Client portal admin', meta: 'Clients \u203a Portal: accounts, invites, referral credit, work orders', href: '/tools/clients.html#portal', keywords: 'portal invite referral work order', perm: 'canManageInvoices' },
     { title: 'Create invoice', meta: 'Invoices \u203a New invoice tab', href: '/tools/invoice-generator.html#invoice', keywords: 'bill send pdf', perm: 'canManageInvoices' },
     { title: 'New quote / estimate', meta: 'Invoices \u203a New quote tab', href: '/tools/invoice-generator.html#quote', keywords: 'price bid proposal cost lookup calculator tax', perm: 'canManageInvoices' },
-    { title: 'Quick charge', meta: 'Invoices \u203a charge a card on the spot, no invoice', href: '/tools/invoice-generator.html#pos', keywords: 'pos pay payment card stripe', perm: 'canManageInvoices' },
+    { title: 'Charge a card', meta: 'Invoices \u203a take a card on the spot, no invoice', href: '/tools/invoice-generator.html#charge', keywords: 'quick charge pos pay payment card stripe', perm: 'canManageInvoices' },
     { title: 'Invoices', meta: 'Who owes you, what is overdue, every invoice and quote', href: '/tools/invoice-generator.html#recent', keywords: 'log history paid unpaid overdue owed recent quotes', perm: 'canManageInvoices' },
     { title: 'Log expense', meta: 'Money \u203a Expenses', href: '/tools/finance.html#expenses', keywords: 'receipt cost part mileage fuel', perm: 'canViewFinance' },
     { title: 'Log income', meta: 'Money \u203a Income', href: '/tools/finance.html#income', keywords: 'payment paid revenue', perm: 'canViewFinance' },

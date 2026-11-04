@@ -259,14 +259,14 @@ test('invoice-generator.html: the invoice sheet, invoked end-to-end through the 
 
 // --- round 3 (2026-09-22, same day): the remaining real haptic gaps + voice dictation ---
 
-test('invoice-generator.html: showSuccess (Quick Charge) fires a success haptic -- the highest-frequency "money in hand" moment in the suite was silent even though its siblings (mark paid, invoice/estimate logged) already fire one', () => {
-  const fn = invoiceGenHtml.match(/function showSuccess\(amount\)[\s\S]*?\n  \}/)[0];
+test('invoice-generator.html: showSuccess (Charge a card, was Quick Charge) fires a success haptic -- the highest-frequency "money in hand" moment in the suite was silent even though its siblings (mark paid, invoice/estimate logged) already fire one', () => {
+  const fn = invoiceGenHtml.match(/function showSuccess\(amount, paymentIntentId\)[\s\S]*?\n  \}/)[0];
   assert.match(fn, /if \(typeof haptic === 'function'\) haptic\('success'\);/);
   // Both real callers (chargeSavedCard's success path and the Stripe
   // confirmPayment success branch) go through this one function, so a
   // single call here covers both without touching either call site.
   assert.match(invoiceGenHtml, /showSuccess\(fields\.amount\);/);
-  assert.match(invoiceGenHtml, /showSuccess\(parseFloat\(document\.getElementById\('posAmount'\)\.value\)\);/);
+  assert.match(invoiceGenHtml, /showSuccess\(parseFloat\(document\.getElementById\('posAmount'\)\.value\), paymentIntent\.id\);/);
 });
 
 test('review-request.html: logSentRequest fires a success haptic once, covering both the SMS and Copy Message send paths that funnel through it', () => {

@@ -53,17 +53,17 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=7c03870603">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=b8d74bb802">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=3b1514fb8b">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=486abe5b22" defer></script>
-<script src="/tools/data-layer.js?v=462ceba807" defer></script>
+<script src="/tools/data-layer.js?v=9081e6e314" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/signature-pad.js?v=f95f8e1d28" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=22ae1f4afa" defer></script>
-<script src="/tools/tools-command-palette.js?v=45864878c1" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=d56f1ed8e0" defer></script>
+<script src="/tools/tools-command-palette.js?v=15c76f6910" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <!-- U15/W18 fix (High-Impact Upgrades, Master Audit, 2026-09-08): the
      masthead/footer/totals-block drawing code below moved into this
@@ -414,10 +414,8 @@
   /* The tab strip: its Invoices and Quick charge buttons are the switch's
      own segments now, so it shows only the two builders -- and only while
      one of them is open. */
-  body.th-tool-page[data-th-page="invoice-generator"] .tabs .tab-btn[data-tab="recent"],
-  body.th-tool-page[data-th-page="invoice-generator"] .tabs .tab-btn[data-tab="pos"] { display: none; }
-  body.th-tool-page[data-th-page="invoice-generator"]:has(#tab-recent.is-active) .tabs,
-  body.th-tool-page[data-th-page="invoice-generator"]:has(#tab-pos.is-active) .tabs { display: none; }
+  body.th-tool-page[data-th-page="invoice-generator"] .tabs .tab-btn[data-tab="recent"] { display: none; }
+  body.th-tool-page[data-th-page="invoice-generator"]:has(#tab-recent.is-active) .tabs { display: none; }
   body.th-tool-page[data-th-page="invoice-generator"] .tabs,
   body.th-tool-page[data-th-page="invoice-generator"] .tabs.tabs-sticky {
     display: inline-flex; width: auto; max-width: 100%; gap: 4px; padding: 4px; margin: 0 0 14px;
@@ -591,8 +589,9 @@
   body.th-tool-page[data-th-page="invoice-generator"] .pos-card > * { margin-bottom: 0; }
   body.th-tool-page[data-th-page="invoice-generator"] .pos-kicker { order: 0; font-family: var(--font-ui); font-size: 11.5px; color: var(--text-dim); }
   body.th-tool-page[data-th-page="invoice-generator"] .pos-amount-field { order: 1; }
-  body.th-tool-page[data-th-page="invoice-generator"] .pos-card > .pos-field:not(.pos-amount-field) { order: 2; }
-  body.th-tool-page[data-th-page="invoice-generator"] .pos-keypad { order: 3; }
+  /* Charge a card (2026-11-04): amount, keypad, then who and what for. */
+  body.th-tool-page[data-th-page="invoice-generator"] .pos-keypad { order: 2; }
+  body.th-tool-page[data-th-page="invoice-generator"] .pos-card > .pos-field:not(.pos-amount-field) { order: 3; }
   body.th-tool-page[data-th-page="invoice-generator"] #posChargeArea { order: 4; }
   body.th-tool-page[data-th-page="invoice-generator"] #posError { order: 5; }
   body.th-tool-page[data-th-page="invoice-generator"] .pos-amount-field label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
@@ -624,6 +623,46 @@
   body.th-tool-page[data-th-page="invoice-generator"] .pos-saved-card-box,
   body.th-tool-page[data-th-page="invoice-generator"] .pos-auth-box { border-radius: 14px; }
   @media (min-width: 1024px) { body.th-tool-page[data-th-page="invoice-generator"] .pos-card, body.th-tool-page[data-th-page="invoice-generator"] .pos-intro { margin-left: 0; } }
+  /* ---- Charge a card sheet (2026-11-04, approved design): a bottom sheet
+     on a phone, a centred 480px dialog from 700px, over a dimmed page. ---- */
+  .cc-overlay {
+    position: fixed; inset: 0; z-index: 1200; display: flex; align-items: flex-end; justify-content: center;
+    background: rgba(0,0,0,.55); padding: 0;
+  }
+  .cc-overlay[hidden] { display: none; }
+  body.cc-open { overflow: hidden; }
+  .cc-sheet {
+    width: 100%; max-width: 480px; max-height: calc(100dvh - 24px); overflow-y: auto; overscroll-behavior: contain;
+    background: var(--bg-panel); border: 1px solid var(--border); border-bottom: 0;
+    border-radius: var(--th-radius-xl, 20px) var(--th-radius-xl, 20px) 0 0;
+    padding: 6px 0 calc(16px + env(safe-area-inset-bottom, 0px)); box-sizing: border-box;
+  }
+  .cc-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px 0; }
+  .cc-title { margin: 0; font-family: var(--font-ui); font-size: 17px; font-weight: 600; color: var(--text); }
+  .cc-title:focus { outline: none; }
+  .cc-close {
+    width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border); background: var(--th-field, var(--bg-panel-2));
+    color: var(--text); font-size: 22px; line-height: 1; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+  }
+  body.th-tool-page[data-th-page="invoice-generator"] .cc-sheet .pos-card { max-width: none; margin: 0; border: 0; border-radius: 0; background: none; padding: 12px 16px 0; }
+  .cc-links { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+  .cc-links[hidden] { display: none; }
+  .cc-links-label { font-family: var(--font-ui); font-size: 11.5px; color: var(--text-dim); }
+  .cc-link {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 48px; padding: 10px 14px;
+    border: 1px solid var(--border); border-radius: 12px; background: var(--th-field, var(--bg-panel-2)); color: var(--text);
+    font: inherit; font-size: 14px; text-align: left; cursor: pointer;
+  }
+  .cc-link:active { transform: scale(.98); }
+  @media (hover: hover) { .cc-link:hover { border-color: var(--orange-tint-border); } }
+  .cc-linked { margin-bottom: 14px; font-size: 14px; color: var(--tone-green-fg, #4caf78); }
+  .cc-linked[hidden] { display: none; }
+  /* Paid: the result and its links replace the form. */
+  .cc-overlay.is-paid .pos-card > :not(#posChargeArea):not(#posError) { display: none; }
+  @media (min-width: 700px) {
+    .cc-overlay { align-items: center; padding: 24px; }
+    .cc-sheet { border-bottom: 1px solid var(--border); border-radius: var(--th-radius-xl, 20px); padding-bottom: 16px; }
+  }
   /* Manage saved job types (redundancy pass item 11 follow-up,
      2026-10-31): the create/delete half of Finance's old Cost Lookup
      "Price Reference" list, reusing its .price-ref-chip rows. */
@@ -671,7 +710,7 @@
     <a href="/tools/workspace.html" class="help-btn" aria-label="Back to Workspace" title="Back to Workspace" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
   </div>
 </div>
-<p class="tool-sub">Who owes you and what has been paid, plus every new invoice, quote, and quick charge.
+<p class="tool-sub">Who owes you and what has been paid, plus every new invoice, quote, and card charge.
   <span class="realtime-badge" id="realtimeBadge" onclick="retryLiveSync()" title="Live sync"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span>
 </p>
 
@@ -687,13 +726,11 @@
 <nav class="th-v2-seg mn-seg" id="moneySeg" aria-label="Money">
   <button type="button" class="is-active" data-money-seg="invoices" aria-pressed="true" onclick="activateGenTab('recent')">Invoices</button>
   <a href="/tools/finance.html" class="mn-seg-cross" data-money-seg="finance">Money</a>
-  <button type="button" data-money-seg="pos" aria-pressed="false" onclick="activateGenTab('pos')">Quick charge</button>
 </nav>
 <div class="tabs tabs-sticky">
   <button class="tab-btn is-active" data-tab="recent" onclick="activateGenTab('recent')">Invoices</button>
   <button class="tab-btn" data-tab="invoice" onclick="openNewInvoice()">New invoice</button>
   <button class="tab-btn" data-tab="quote" onclick="activateGenTab('quote')">New quote</button>
-  <button class="tab-btn" data-tab="pos" onclick="activateGenTab('pos')">Quick charge</button>
 </div>
 
 <div class="tab-panel" id="tab-invoice">
@@ -1003,6 +1040,7 @@
     <div class="inv-log-head">
       <h3>Invoices</h3>
       <button class="small-btn" data-density-toggle onclick="toggleDensityPreference()" aria-pressed="false">Compact view</button>
+      <button type="button" class="mn-new-btn is-secondary" id="invChargeBtn" onclick="openChargeCard(this)">Charge a card</button>
       <button type="button" class="mn-new-btn" onclick="openNewInvoice()">+ New invoice</button>
     </div>
     <div class="inv-log-tools">
@@ -1047,34 +1085,45 @@
      Income entry. The tab just puts "get paid for a small job" on the
      same page as the two other ways of billing one. Markup is verbatim
      from pos.html; Stripe.js loads lazily (ensureStripeJs, below). -->
-<div class="tab-panel" id="tab-pos">
-  <p class="pos-intro">No invoice needed. A saved card charges in one tap.</p>
+<!-- Charge a card (2026-11-04, handoff §2: "Quick Charge survives, tab does
+     not"; approved "Charge a card" design). A sheet over whatever page
+     opened it -- the Invoices list, Money, the Dashboard (via #charge) --
+     not a tab. Same fields, ids and charge code as Quick charge; only the
+     order (amount first) and the paid screen's optional links are new. -->
+<div class="cc-overlay" id="tab-pos" role="dialog" aria-modal="true" aria-labelledby="ccTitle" hidden>
+  <div class="cc-sheet">
+  <div class="cc-head">
+    <h2 class="cc-title" id="ccTitle" tabindex="-1">Charge a card</h2>
+    <button type="button" class="cc-close" onclick="closeChargeCard()" aria-label="Close">&times;</button>
+  </div>
   <div class="pos-card">
-    <div class="pos-kicker" aria-hidden="true">Charge a card now</div>
-    <div class="pos-field">
-      <label for="posClientEmail">Client email</label>
-      <input type="email" id="posClientEmail" placeholder="client@example.com" autocomplete="off">
-    </div>
     <div class="pos-field pos-amount-field">
       <label for="posAmount">Amount</label>
       <input type="number" id="posAmount" placeholder="0.00" min="0.50" step="0.01" inputmode="decimal">
     </div>
-    <div class="pos-field">
-      <label for="posDescription">What's this for? <span class="label-hint">(optional)</span></label>
-      <input type="text" id="posDescription" placeholder="e.g. Furnace filter swap">
-    </div>
-    <!-- Keypad (2026-09-29, app redesign v2 §8.5): types into #posAmount
-         (and fires its input event, so the authorization preview follows)
-         without raising the phone keyboard. The field stays typeable. -->
     <div class="pos-keypad" id="posKeypad" role="group" aria-label="Amount keypad">
       <button type="button" onclick="posKeypadPress('1')">1</button><button type="button" onclick="posKeypadPress('2')">2</button><button type="button" onclick="posKeypadPress('3')">3</button>
       <button type="button" onclick="posKeypadPress('4')">4</button><button type="button" onclick="posKeypadPress('5')">5</button><button type="button" onclick="posKeypadPress('6')">6</button>
       <button type="button" onclick="posKeypadPress('7')">7</button><button type="button" onclick="posKeypadPress('8')">8</button><button type="button" onclick="posKeypadPress('9')">9</button>
       <button type="button" onclick="posKeypadPress('.')" aria-label="Decimal point">.</button><button type="button" onclick="posKeypadPress('0')">0</button><button type="button" onclick="posKeypadPress('back')" aria-label="Delete last digit">&#9003;</button>
     </div>
+    <div class="pos-field">
+      <label for="posClientName">Client <span class="label-hint">(optional)</span></label>
+      <input type="text" id="posClientName" list="posClientList" placeholder="Start typing a name" autocomplete="off">
+      <datalist id="posClientList"></datalist>
+    </div>
+    <div class="pos-field">
+      <label for="posClientEmail">Email the receipt to</label>
+      <input type="email" id="posClientEmail" placeholder="client@example.com" autocomplete="off">
+    </div>
+    <div class="pos-field">
+      <label for="posDescription">What's this for? <span class="label-hint">(optional)</span></label>
+      <input type="text" id="posDescription" placeholder="e.g. Furnace filter swap">
+    </div>
 
     <div id="posChargeArea"></div>
     <div class="pos-error" id="posError" style="display:none;"></div>
+  </div>
   </div>
 </div>
 
@@ -1813,11 +1862,12 @@
 
   // ---------- tab switching ----------
   function activateGenTab(tab) {
+    // Quick charge became the Charge a card sheet (2026-11-04).
+    if (tab === 'pos' || tab === 'charge') { openChargeCard(); return; }
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('is-active', b.dataset.tab === tab));
     document.getElementById('tab-invoice').classList.toggle('is-active', tab === 'invoice');
     document.getElementById('tab-quote').classList.toggle('is-active', tab === 'quote');
     document.getElementById('tab-recent').classList.toggle('is-active', tab === 'recent');
-    document.getElementById('tab-pos').classList.toggle('is-active', tab === 'pos');
     if (tab === 'recent' && typeof renderInvoiceLog === 'function') renderInvoiceLog();
     if (tab === 'recent' && typeof renderQuoteLog === 'function') renderQuoteLog();
     if (tab === 'recent' && typeof refreshPortalQuoteStatuses === 'function') refreshPortalQuoteStatuses();
@@ -1829,9 +1879,9 @@
   // list and both builders, Quick charge for the POS tab. Presentation only.
   // The header title follows the open screen too (Phase 3 review round 2,
   // 2026-10-31: it read "Invoices" over Quick charge).
-  const GEN_TAB_TITLES = { recent: 'Invoices', invoice: 'New invoice', quote: 'New quote', pos: 'Quick charge' };
+  const GEN_TAB_TITLES = { recent: 'Invoices', invoice: 'New invoice', quote: 'New quote' };
   function syncMoneySeg(tab) {
-    const current = tab === 'pos' ? 'pos' : 'invoices';
+    const current = 'invoices';
     document.querySelectorAll('#moneySeg [data-money-seg]').forEach(el => {
       const on = el.dataset.moneySeg === current;
       el.classList.toggle('is-active', on);
@@ -1843,7 +1893,7 @@
 
   // Same order as the tab strip, which the swipe follows. The list comes
   // first since 2026-09-22 (Workspace rework part 4).
-  const GEN_TAB_ORDER = ['recent', 'invoice', 'quote', 'pos'];
+  const GEN_TAB_ORDER = ['recent', 'invoice', 'quote'];
   // Without a hash the page opens on the list -- except when a link has
   // brought something to invoice: ?jobRef= (a job's Create invoice) or
   // ?client= (a client's Invoice button) always meant the invoice form.
@@ -1854,6 +1904,9 @@
   }
   function applyGenTabFromHash() {
     const tab = (window.location.hash || '').replace('#', '');
+    // #charge (and the old Quick charge #pos) open the Charge a card sheet
+    // over the list.
+    if (tab === 'charge' || tab === 'pos') { openChargeCard(); return; }
     if (!GEN_TAB_ORDER.includes(tab)) return;
     // #pos used to focus the Client email field here, which on a phone
     // raised the keyboard over the keypad the moment Quick charge opened
@@ -4307,7 +4360,7 @@
       '<div><div class="pos-card-label">' + escapeHtml(brandLabel) + ' ending in ' + escapeHtml(savedCardInfo.last4) + '</div>' +
       '<div class="pos-card-sub">Saved from a previous payment</div></div>' +
       '</div>' +
-      '<button class="primary-btn" id="posChargeSavedBtn" style="width:100%; justify-content:center;" onclick="chargeSavedCard()">Charge Saved Card</button>' +
+      '<button class="primary-btn" id="posChargeSavedBtn" style="width:100%; justify-content:center;" onclick="chargeSavedCard()">Charge ' + escapeHtml(brandLabel) + ' \u2022\u2022' + escapeHtml(savedCardInfo.last4) + chargeAmountSuffix() + '</button>' +
       '<button type="button" class="pos-use-different" onclick="renderNewCardOption()">Use a different card instead</button>';
   }
 
@@ -4338,7 +4391,7 @@
       '<span id="posSignatureStatus" class="pos-auth-label" style="margin:0;"></span>' +
       '</div>' +
       '</div>' +
-      '<button class="primary-btn" id="posNewCardBtn" style="width:100%; justify-content:center; margin-top:12px;" onclick="startNewCardCharge()">Enter Card &amp; Charge</button>';
+      '<button class="primary-btn" id="posNewCardBtn" style="width:100%; justify-content:center; margin-top:12px;" onclick="startNewCardCharge()">Enter card' + chargeAmountSuffix() + '</button>';
     updateAuthPreview();
     if (typeof sigPadInit === 'function') sigPadInit('posSignatureCanvas', 'posSignatureStatus');
   }
@@ -4361,6 +4414,14 @@
     descEl.textContent = description;
   }
   document.getElementById('posAmount').addEventListener('input', updateAuthPreview);
+  // The charge button names the amount ("Charge Visa \u2022\u20224242 \u00b7 $185.00");
+  // it follows the amount as it is typed.
+  document.getElementById('posAmount').addEventListener('input', () => {
+    const saved = document.getElementById('posChargeSavedBtn');
+    if (saved && savedCardInfo) saved.textContent = 'Charge ' + (savedCardInfo.brand || 'card').charAt(0).toUpperCase() + (savedCardInfo.brand || 'card').slice(1) + ' \u2022\u2022' + savedCardInfo.last4 + chargeAmountSuffix();
+    const fresh = document.getElementById('posNewCardBtn');
+    if (fresh) fresh.textContent = 'Enter card' + chargeAmountSuffix();
+  });
   document.getElementById('posDescription').addEventListener('input', updateAuthPreview);
 
   // The POS flow's own tiny escaping helper. It came over from pos.html,
@@ -4509,37 +4570,159 @@
         return;
       }
       if (paymentIntent && paymentIntent.status === 'succeeded') {
-        showSuccess(parseFloat(document.getElementById('posAmount').value));
+        showSuccess(parseFloat(document.getElementById('posAmount').value), paymentIntent.id);
       }
     });
   }
 
-  function showSuccess(amount) {
+  // The paid screen (approved "Charge a card" design): what was charged,
+  // where it went, and two optional links -- to one of today's jobs, or to
+  // an unpaid invoice (which marks that invoice paid by this amount). The
+  // income row itself is written by the server; the link waits for it on
+  // this device (thQueuePosLink in data-layer.js).
+  let lastCharge = null;
+  function showSuccess(amount, paymentIntentId) {
     // The sale is done: an identical one right after is a new charge.
     forgetPosRequestId('charge_saved');
     forgetPosRequestId('new_card');
-    // The highest-frequency real "money in hand" moment in this whole
-    // suite -- a card charge actually completing -- was silent, unlike
-    // this same file's mark-paid/invoice-logged/estimate-logged moments,
-    // which already fire this. One centralized call covers both real
-    // charge paths (chargeSavedCard() and the Stripe confirmPayment
-    // success branch), same reasoning as round 2's badge work: fix it
-    // once at the shared call site, not at each caller.
+    // One shared call covers both real charge paths (chargeSavedCard() and
+    // the Stripe confirmPayment success branch).
     if (typeof haptic === 'function') haptic('success');
+    const email = document.getElementById('posClientEmail').value.trim().toLowerCase();
+    const today = (typeof todayDateStrBusinessTz === 'function') ? todayDateStrBusinessTz() : new Date().toISOString().slice(0, 10);
+    lastCharge = { amount, email, date: today, paymentIntentId: paymentIntentId || null, linked: false };
+    document.getElementById('tab-pos').classList.add('is-paid');
+    const jobs = thJobs.all().filter(j => j.date === today).slice(0, 3);
+    const invoices = thInvoices.all().filter(i => thInvoiceBalance(i) > 0)
+      .sort((a, b) => (String(b.clientEmail || '').toLowerCase() === email) - (String(a.clientEmail || '').toLowerCase() === email))
+      .slice(0, 3);
+    const jobLinks = jobs.map(j => '<button type="button" class="cc-link" data-cc-job="' + escapeAttr(String(j.id)) + '">To a job: Today, ' + escapeHtml(j.title || 'job') + ' <span aria-hidden="true">\u203a</span></button>').join('');
+    const invLinks = invoices.map(i => '<button type="button" class="cc-link" data-cc-invoice="' + escapeAttr(String(i.id)) + '">To ' + escapeHtml(i.invoiceNumber || 'invoice') + (i.clientName ? ' \u00b7 ' + escapeHtml(i.clientName) : '') + ' (' + money(thInvoiceBalance(i)) + ' owed): marks it paid <span aria-hidden="true">\u203a</span></button>').join('');
     document.getElementById('posChargeArea').innerHTML =
       '<div class="pos-success">' +
         '<div class="pos-success-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></div>' +
-        '<div class="pos-success-amount">$' + amount.toFixed(2) + '</div>' +
-        '<div class="pos-success-sub">Charged and logged to Income</div>' +
+        '<div class="pos-success-amount">$' + amount.toFixed(2) + ' paid</div>' +
+        '<div class="pos-success-sub">Logged in Money as income. Receipt emailed.</div>' +
       '</div>' +
-      '<button class="secondary-btn" style="width:100%; justify-content:center;" onclick="resetPosForm()">New Charge</button>';
+      ((jobLinks || invLinks) ? '<div class="cc-links" id="ccLinks"><div class="cc-links-label">Link it (optional)</div>' + jobLinks + invLinks + '</div>' : '') +
+      '<div class="cc-linked" id="ccLinked" role="status" hidden></div>' +
+      '<button class="primary-btn" style="width:100%; justify-content:center;" onclick="finishCharge()">Done</button>';
   }
+  // The link buttons carry their id in a data attribute (no inline handler).
+  document.getElementById('posChargeArea').addEventListener('click', (e) => {
+    const btn = e.target.closest('.cc-link');
+    if (!btn) return;
+    if (btn.dataset.ccJob) linkChargeToJob(btn.dataset.ccJob);
+    else if (btn.dataset.ccInvoice) {
+      const inv = thInvoices.all().find(i => String(i.id) === btn.dataset.ccInvoice);
+      if (inv) linkChargeToInvoice(inv.id);
+    }
+  });
+  function chargeLinkBase() {
+    return lastCharge.paymentIntentId
+      ? { paymentIntentId: lastCharge.paymentIntentId }
+      : { email: lastCharge.email, amount: lastCharge.amount, date: lastCharge.date };
+  }
+  function markChargeLinked(text) {
+    lastCharge.linked = true;
+    const links = document.getElementById('ccLinks');
+    if (links) links.hidden = true;
+    const done = document.getElementById('ccLinked');
+    if (done) { done.textContent = text; done.hidden = false; }
+  }
+  function linkChargeToJob(jobId) {
+    if (!lastCharge || lastCharge.linked) return;
+    const job = thJobs.all().find(j => String(j.id) === String(jobId));
+    if (!job) return;
+    thQueuePosLink(Object.assign(chargeLinkBase(), { jobRefId: String(job.id), jobRefTitle: job.title || '' }));
+    markChargeLinked('Linked to ' + (job.title || 'the job') + '.');
+  }
+  // Marks the invoice paid by this charge (capped at its total), the way
+  // Mark paid does, and tells the income row it is that invoice's payment.
+  function linkChargeToInvoice(invoiceId) {
+    if (!lastCharge || lastCharge.linked) return;
+    const log = thInvoices.all();
+    const entry = log.find(i => i.id === invoiceId);
+    if (!entry) return;
+    const total = Number(entry.total) || 0;
+    const paidCents = Math.min(Math.round(total * 100), Math.round(thInvoicePaidAmount(entry) * 100) + Math.round(lastCharge.amount * 100));
+    entry.paidAmount = paidCents / 100;
+    entry.paid = paidCents >= Math.round(total * 100);
+    thInvoices.replaceAll(log);
+    if (typeof mirrorInvoiceToRelational === 'function') mirrorInvoiceToRelational(entry);
+    if (entry.paid && entry.jobRefId && typeof mirrorReferralEarnedForJob === 'function') mirrorReferralEarnedForJob(Number(entry.jobRefId));
+    if (entry.paid && typeof setAppBadgeDelta === 'function') setAppBadgeDelta(-1);
+    if (entry.paid && entry.clientEmail && typeof pushInvoicePaidToPortal === 'function') pushInvoicePaidToPortal(entry);
+    thQueuePosLink(Object.assign(chargeLinkBase(), { invoiceId: entry.id }));
+    if (typeof renderInvoiceLog === 'function') renderInvoiceLog();
+    markChargeLinked((entry.invoiceNumber || 'The invoice') + (entry.paid ? ' is marked paid.' : ' now shows ' + money(entry.paidAmount) + ' paid.'));
+  }
+  function finishCharge() {
+    resetPosForm();
+    closeChargeCard();
+  }
+  function chargeAmountSuffix() {
+    const v = parseFloat((document.getElementById('posAmount') || {}).value);
+    return v > 0 ? ' \u00b7 $' + v.toFixed(2) : '';
+  }
+
+  // Open / close the sheet. Focus goes in on open and back to the button
+  // that opened it on close; Escape closes it.
+  let chargeOpener = null;
+  function openChargeCard(opener) {
+    const sheet = document.getElementById('tab-pos');
+    if (!sheet) return;
+    chargeOpener = opener || document.activeElement;
+    fillChargeClientList();
+    sheet.hidden = false;
+    document.body.classList.add('cc-open');
+    const t = document.getElementById('ccTitle');
+    if (t) t.focus();
+  }
+  function closeChargeCard() {
+    const sheet = document.getElementById('tab-pos');
+    if (!sheet || sheet.hidden) return;
+    sheet.hidden = true;
+    document.body.classList.remove('cc-open');
+    if (/^#(charge|pos)$/.test(window.location.hash)) history.replaceState(null, '', window.location.pathname + window.location.search);
+    if (chargeOpener && typeof chargeOpener.focus === 'function') { try { chargeOpener.focus(); } catch (e) { /* gone */ } }
+    chargeOpener = null;
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !document.getElementById('tab-pos').hidden) closeChargeCard();
+  });
+  document.getElementById('tab-pos').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeChargeCard();
+  });
+
+  // Client (optional): the client list as suggestions; picking one with an
+  // email on file fills "Email the receipt to" when it is still empty.
+  function fillChargeClientList() {
+    const list = document.getElementById('posClientList');
+    if (!list || typeof thLoadClients !== 'function') return;
+    list.innerHTML = thLoadClients().filter(c => c && c.name).slice(0, 300)
+      .map(c => '<option value="' + escapeHtml(c.name) + '"></option>').join('');
+  }
+  document.getElementById('posClientName').addEventListener('change', () => {
+    const name = document.getElementById('posClientName').value.trim().toLowerCase();
+    const emailEl = document.getElementById('posClientEmail');
+    if (!name || emailEl.value.trim() || typeof thLoadClients !== 'function') return;
+    const c = thLoadClients().find(x => String(x.name || '').trim().toLowerCase() === name);
+    if (c && c.email) {
+      emailEl.value = c.email;
+      emailEl.dispatchEvent(new Event('input'));
+    }
+  });
 
   function resetPosForm() {
     document.getElementById('posClientEmail').value = '';
     document.getElementById('posAmount').value = '';
     document.getElementById('posDescription').value = '';
     document.getElementById('posChargeArea').innerHTML = '';
+    const nameEl = document.getElementById('posClientName');
+    if (nameEl) nameEl.value = '';
+    lastCharge = null;
+    document.getElementById('tab-pos').classList.remove('is-paid');
     showError('');
     savedCardInfo = null;
     lastCheckedEmail = null;
@@ -4584,7 +4767,7 @@
         <li><strong>From this job</strong> &mdash; open an invoice from a job (its Create invoice, Ready to invoice on the Dashboard, the Job done sheet, or by picking the job in the form) and a panel above the line items offers what's already logged: the hours on the job as Labor at your last labor rate, every receipt logged against it in Finance as a part at cost (add your markup in the price), and its mileage at your last mileage rate. Tick what to bill and tap Add; Undo puts the form back. If the client has an unbilled quote for that job, <strong>Bill the quote</strong> copies the quote's lines and discount instead, and marks the quote converted when you save.</li>
         <li><strong>New invoice tab</strong> &mdash; fill in <strong>Invoice Details</strong> and <strong>Bill To</strong>, then add each line item (labor, parts, etc.) in the line-items table. Uncheck "Tax?" on any row that's exempt (see the note above the totals for why some rows might not be taxable). Use Download PDF for a branded copy, or Send to Client to email it and post it to their portal.</li>
         <li><strong>New quote tab</strong> &mdash; same idea, before a job starts, including the same tax handling. Download an estimate PDF (clearly labeled as an estimate, not a bill), or tap <strong>Convert to Invoice</strong> once the work's done to copy everything straight over to the New invoice tab instead of re-typing it &mdash; including which rows were marked taxable.</li>
-        <li><strong>Quick charge tab</strong> &mdash; for a small job that doesn't need a real invoice: enter the client's email and an amount and charge their card on the spot. If that email has paid an invoice before, their card is already saved (this happens automatically the first time anyone pays an invoice) and you'll see a one-tap Charge button; otherwise you get a normal card form, and that card gets saved for next time too, after the client types their name as an authorization. Every POS sale shows up in your Income log the same way any other payment does, tagged so you can always tell it apart from an invoice &mdash; it never creates an invoice, a quote, or a portal record of any kind.</li>
+        <li><strong>Charge a card</strong> &mdash; the button on the Invoices list (also on Money and in + New): for a small job that doesn't need a real invoice, enter an amount and the client's email and charge their card on the spot. When it's paid you can link it to one of today's jobs, or to an unpaid invoice (which marks that invoice paid). If that email has paid an invoice before, their card is already saved (this happens automatically the first time anyone pays an invoice) and you'll see a one-tap Charge button; otherwise you get a normal card form, and that card gets saved for next time too, after the client types their name as an authorization. Every POS sale shows up in your Income log the same way any other payment does, tagged so you can always tell it apart from an invoice &mdash; it never creates an invoice, a quote, or a portal record of any kind.</li>
         <li>The sales tax rate is remembered &mdash; change it on one invoice or quote and the next one starts from it.</li>
         <li><strong>Saved job types</strong> &mdash; under the line items, <strong>Add From Saved Job Types</strong> adds one you use often as a labor line. Tap <strong>Manage saved job types</strong> to add a new one (name, hours, rate) or delete one.</li>
         <li>Everything generated here is saved automatically &mdash; invoices and estimates are logged on this device (and synced, if Cloud Sync is set up), and every invoice also flows into Finance's Income tab. Nothing needs re-entering elsewhere.</li>

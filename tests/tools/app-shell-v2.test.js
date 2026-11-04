@@ -60,7 +60,7 @@ test('the Create sheet deep-links into forms that already open themselves from t
     '/tools/job-tracker.html#add-job',
     '/tools/invoice-generator.html#invoice',
     '/tools/invoice-generator.html#quote',
-    '/tools/invoice-generator.html#pos',
+    '/tools/invoice-generator.html#charge',
     '/tools/finance.html#expenses',
     '/tools/finance.html#income',
     '/tools/clients.html#new',
@@ -69,7 +69,9 @@ test('the Create sheet deep-links into forms that already open themselves from t
   ]);
   // Each hash is one the target page actually handles.
   assert.match(read('job-tracker.html'), /'add-job'|#add-job/);
-  for (const tab of ['invoice', 'quote', 'pos']) assert.ok(read('invoice-generator.html').includes('data-tab="' + tab + '"'), 'invoice tab ' + tab);
+  for (const tab of ['invoice', 'quote']) assert.ok(read('invoice-generator.html').includes('data-tab="' + tab + '"'), 'invoice tab ' + tab);
+  // #charge opens the Charge a card sheet (2026-11-04; Quick charge was a tab).
+  assert.match(read('invoice-generator.html'), /if \(tab === 'charge' \|\| tab === 'pos'\) \{ openChargeCard\(\); return; \}/);
   for (const tab of ['expenses', 'income']) assert.ok(read('finance.html').includes('data-tab="' + tab + '"'), 'finance tab ' + tab);
   assert.match(read('clients.html'), /if \(location\.hash === '#new'\) openAddClient\(\);/);
   assert.ok(tiles.every(t => !t.hidden), 'an account with every permission sees every tile');

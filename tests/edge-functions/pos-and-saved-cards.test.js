@@ -216,17 +216,19 @@ test('POS never creates an invoice, quote, or portal record -- only a charge and
 
 // ---- workspace.html: the tile ----
 
-test('POS is the Quick charge tab inside Invoices (2026-09-21), so it rides the Invoices nav link and its can_manage_invoices gate; its old redirect stub (pos.html) was deleted outright on 2026-10-08', () => {
+test('POS was the Quick charge tab inside Invoices (2026-09-21) and is the Charge a card sheet there since 2026-11-04, so it rides the Invoices nav link and its can_manage_invoices gate; its old redirect stub (pos.html) was deleted outright on 2026-10-08', () => {
   const NAV = fs.readFileSync(repo('tools', 'tools-nav-pwa.js'), 'utf8');
   assert.doesNotMatch(NAV, /\/tools\/pos\.html/, 'POS must not be its own nav destination any more');
-  assert.match(POS_PAGE, /<button class="tab-btn" data-tab="pos" onclick="activateGenTab\('pos'\)">Quick charge<\/button>/);
-  assert.match(POS_PAGE, /<div class="tab-panel" id="tab-pos">/);
+  assert.doesNotMatch(POS_PAGE, /data-tab="pos"/, 'no Quick charge tab any more');
+  assert.match(POS_PAGE, /<div class="cc-overlay" id="tab-pos" role="dialog" aria-modal="true" aria-labelledby="ccTitle" hidden>/);
+  assert.match(POS_PAGE, /<button type="button" class="mn-new-btn is-secondary" id="invChargeBtn" onclick="openChargeCard\(this\)">Charge a card<\/button>/);
   // The invoice list leads the strip since 2026-09-22 (Workspace rework part 4).
-  assert.match(POS_PAGE, /GEN_TAB_ORDER = \['recent', 'invoice', 'quote', 'pos'\]/);
+  assert.match(POS_PAGE, /GEN_TAB_ORDER = \['recent', 'invoice', 'quote'\]/);
   assert.ok(!fs.existsSync(repo('tools', 'pos.html')), 'pos.html should no longer exist');
-  // No autofocus on Client email any more (Phase 3 review round 2,
-  // 2026-10-31): on a phone it raised the keyboard over the keypad.
-  assert.match(POS_PAGE, /function applyGenTabFromHash\(\) \{[\s\S]*?activateGenTab\(tab\);\n  \}/, 'the #pos deep link must open the tab');
+  // No autofocus on Client email (Phase 3 review round 2, 2026-10-31): on
+  // a phone it raised the keyboard over the keypad. #charge and the old
+  // #pos open the sheet, focus on its title.
+  assert.match(POS_PAGE, /function applyGenTabFromHash\(\) \{[\s\S]*?if \(tab === 'charge' \|\| tab === 'pos'\) \{ openChargeCard\(\); return; \}[\s\S]*?activateGenTab\(tab\);\n  \}/, 'the #charge / #pos deep link must open the sheet');
   assert.match(NAV, /'\/tools\/invoice-generator\.html': function \(\) \{ return typeof canManageInvoices === 'function' && canManageInvoices\(\); \}/);
   // clients.html left the nav's permission map on 2026-09-22 (it opens on
   // the client list now; its own Portal tab carries the canManageInvoices gate).

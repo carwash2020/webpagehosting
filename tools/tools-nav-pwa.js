@@ -190,8 +190,8 @@ function thNavEsc(v) {
   // Grouped Work / Money / Office. Labels match the short names on the
   // bottom bar. Calendar dropped out 2026-09-21 when it became a view
   // inside Job Tracker (/tools/job-tracker.html#calendar); POS the same
-  // day, as the Quick charge tab inside Invoices
-  // (/tools/invoice-generator.html#pos). Pages and permissions are
+  // day, as the Quick charge tab inside Invoices -- since 2026-11-04 the
+  // Charge a card sheet (/tools/invoice-generator.html#charge). Pages and permissions are
   // otherwise unchanged.
   // Website (2026-09-23) is the site content editor, which used to be
   // reachable only through Dev Tools > Content. hideUntilAllowed: shown
@@ -249,7 +249,7 @@ function thNavEsc(v) {
     { label: 'Job',          hint: 'Put it on the schedule',      icon: 'wrench',  href: '/tools/job-tracker.html#add-job' },
     { label: 'Invoice',      hint: 'Bill a finished job',         icon: 'receipt', href: '/tools/invoice-generator.html#invoice', perm: 'canManageInvoices' },
     { label: 'Quote',        hint: 'Price it before you start',   icon: 'clipboard', href: '/tools/invoice-generator.html#quote', perm: 'canManageInvoices' },
-    { label: 'Quick charge', hint: 'Take a card now',             icon: 'card',    href: '/tools/invoice-generator.html#pos', perm: 'canManageInvoices' },
+    { label: 'Charge a card', hint: 'Take a card now',            icon: 'card',    href: '/tools/invoice-generator.html#charge', perm: 'canManageInvoices' },
     { label: 'Expense',      hint: 'Snap the receipt',            icon: 'camera',  href: '/tools/finance.html#expenses', perm: 'canViewFinance' },
     { label: 'Income',       hint: 'Cash or check received',      icon: 'dollar',  href: '/tools/finance.html#income', perm: 'canViewFinance' },
     { label: 'Client',       hint: 'Add to your client list',     icon: 'user-plus', href: '/tools/clients.html#new' },

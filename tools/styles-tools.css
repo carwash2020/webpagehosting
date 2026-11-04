@@ -4570,7 +4570,7 @@ html body.th-tool-page[data-th-page="invoice-generator"] .mn-new-btn { font-fami
    header's + New invoice have nothing to act on (the empty state carries
    its own New invoice button). A filter or search with no matches keeps
    them, so it can be cleared. */
-html body.th-tool-page[data-th-page="invoice-generator"] .form-section:has(> #invoiceLogList > .inv-empty) :is(.inv-log-tools, [data-density-toggle], .inv-log-head > .mn-new-btn) { display: none; }
+html body.th-tool-page[data-th-page="invoice-generator"] .form-section:has(> #invoiceLogList > .inv-empty) :is(.inv-log-tools, [data-density-toggle], .inv-log-head > .mn-new-btn:not(#invChargeBtn)) { display: none; }
 /* No quotes at all (the inbox empty state, not a search miss): no search box. */
 html body.th-tool-page[data-th-page="invoice-generator"] .mn-quotes:has(> #quoteLogList > .empty-state-small use[href="#icon-inbox"]) .inv-log-tools { display: none; }
 

@@ -184,7 +184,7 @@ test('the nav lost Calendar and the phone bar gained Clients (12 sidebar destina
   assert.deepEqual(labels, ['Home', 'Jobs', 'New', 'Clients', 'Money']);
   const sidebar = NAV.match(/var SIDEBAR_DESTS = \[([\s\S]*?)\];/)[1];
   assert.equal((sidebar.match(/href: '/g) || []).length, 9, 'the nine (2026-11-04, handoff §2)');
-  assert.doesNotMatch(sidebar, /\/tools\/pos\.html/, 'POS is the Quick charge tab inside Invoices now');
+  assert.doesNotMatch(sidebar, /\/tools\/pos\.html/, 'POS is the Charge a card sheet on Invoices now');
   assert.doesNotMatch(NAV, /\/tools\/calendar\.html/);
   assert.doesNotMatch(TOUR, /\/tools\/calendar\.html/, 'the tour no longer visits a redirect stub');
   // First Impressions handoff (2026-09-29): the 6-step tour no longer
