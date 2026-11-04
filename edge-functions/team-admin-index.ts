@@ -192,6 +192,12 @@ async function pendingInvite(email: string): Promise<{ display_name: string | nu
   return rows.length ? rows[0] : null;
 }
 
+async function isDeactivated(email: string): Promise<boolean> {
+  const res = await rest(`account_roles_deactivated?email=eq.${encodeURIComponent(email)}&select=email&limit=1`);
+  if (!res.ok) return false;
+  return (await res.json()).length > 0;
+}
+
 async function callerCanManageTeam(email: string): Promise<boolean> {
   const res = await rest(`account_roles?email=eq.${encodeURIComponent(email)}&select=can_manage_roles&limit=1`);
   if (!res.ok) return false;
@@ -262,7 +268,11 @@ Deno.serve(async (req: Request) => {
 
     if (action === "deactivate") {
       const err = await rpcAsCaller(token, "team_deactivate", { p_email: email });
-      if (err) return json({ ok: false, error: err }, 400);
+      // A retry after the sign-in block failed: access is already gone (the
+      // row is in the archive), so finish the block. Only for a caller who
+      // can manage the team.
+      const retryingBlock = err !== null && (await callerCanManageTeam(inviter)) && (await isDeactivated(email));
+      if (err && !retryingBlock) return json({ ok: false, error: err }, 400);
       const userId = await authUserId(email);
       const banned = userId ? await setBan(userId, true) : true;
       if (!banned) {

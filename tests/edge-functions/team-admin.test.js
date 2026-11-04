@@ -35,6 +35,7 @@ function load(seed = {}) {
     linkOk: seed.linkOk !== undefined ? seed.linkOk : true,
     emailOk: seed.emailOk !== undefined ? seed.emailOk : true,
     banOk: seed.banOk !== undefined ? seed.banOk : true,
+    archived: seed.archived || [],
     log: [], emails: [], links: [],
   };
   const fetch = async (url, init = {}) => {
@@ -43,6 +44,7 @@ function load(seed = {}) {
     const body = init.body ? JSON.parse(init.body) : null;
     const auth = (init.headers || {}).Authorization || '';
     const q = (k) => decodeURIComponent((u.match(new RegExp(`${k}=eq\\.([^&]+)`)) || [])[1] || '');
+    if (u.includes('/rest/v1/account_roles_deactivated')) return j((st.archived || []).includes(q('email')) ? [{ email: q('email') }] : []);
     if (u.includes('/rest/v1/account_roles')) {
       assert.equal(auth, 'Bearer srk', 'reads of account_roles use the service role');
       const e = q('email');
@@ -174,6 +176,20 @@ test('deactivate: the row moves first (as the caller), then the sign-in ban; the
   const r3 = await banFail.call({ action: 'deactivate', email: TECH });
   assert.equal(r3.status, 502);
   assert.equal(r3.body.deactivated, true, 'access already stopped; says so and to try again');
+
+  // The retry: the database says they're no longer active (already moved),
+  // and the archive has them, so it goes straight to the sign-in block.
+  const retry = load({ users: { [TECH]: 'u-tech' }, archived: [TECH], rpcErrors: { team_deactivate: 'No active account with that email.' } });
+  const r4 = await retry.call({ action: 'deactivate', email: TECH });
+  assert.deepEqual(r4.body, { ok: true });
+  assert.deepEqual(retry.st.log.map((x) => x.slice(0, 3)), [['rpc', 'team_deactivate', 'Bearer ' + MANAGER_TOKEN], ['admin', 'PUT', 'u-tech']]);
+  // ...but not for someone who can't manage the team, and not for someone never deactivated.
+  const notMgr = load({ users: { [TECH]: 'u-tech' }, archived: [TECH], rpcErrors: { team_deactivate: "Not allowed: you can't manage the team." } });
+  assert.equal((await notMgr.call({ action: 'deactivate', email: TECH }, jwt({ role: 'authenticated', email: TECH }))).status, 400);
+  assert.equal(notMgr.st.log.filter((x) => x[0] === 'admin').length, 0);
+  const never = load({ users: { 'x@example.com': 'u-x' }, rpcErrors: { team_deactivate: 'No active account with that email.' } });
+  assert.equal((await never.call({ action: 'deactivate', email: 'x@example.com' })).status, 400);
+  assert.equal(never.st.log.filter((x) => x[0] === 'admin').length, 0);
 });
 
 test('reactivate: a team manager only; unban, then the row back; re-banned if the database refuses', async () => {
