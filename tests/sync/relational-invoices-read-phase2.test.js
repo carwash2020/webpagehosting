@@ -17,6 +17,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
+const DATA_LAYER_SEAM = () => fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'data-layer.js'), 'utf8');
 
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const TOOLS_DIR = repo('tools');
@@ -191,12 +192,14 @@ test('invoice-generator.html: list display uses getInvoicesForRead, writes still
   assert.match(displayFn, /getInvoicesForRead/);
   const renderFn = INVOICE_GEN.match(/function renderInvoiceLog\(\)[\s\S]*?\n  \}/)[0];
   assert.match(renderFn, /invoicesForDisplay\(\)/);
-  assert.doesNotMatch(renderFn, /loadInvoiceLog\(\)/, 'list display must not read the blob directly -- that skips the relational cache');
+  assert.doesNotMatch(renderFn, /thInvoices\.all\(\)/, 'list display must not read the blob directly -- that skips the relational cache');
 
-  const saveFn = INVOICE_GEN.match(/function saveInvoiceLog\(list\)[\s\S]*?\n  \}/)[0];
-  assert.match(saveFn, /localStorage\.setItem\(INVOICE_STORAGE_KEY/);
-  assert.match(saveFn, /invalidateRelationalInvoicesCache/);
-  assert.match(INVOICE_GEN, /function loadInvoiceLog\(\)/, 'write path helper must remain for line_items / toggle / delete');
+  // Writes go to the blob through thInvoices (data-layer.js, 2026-11-03),
+  // which drops the relational read cache on every write -- the same two
+  // things the page's own saveInvoiceLog() used to do.
+  assert.match(INVOICE_GEN, /thInvoices\.replaceAll\(/);
+  assert.match(INVOICE_GEN, /thInvoices\.all\(\)/, 'the write path still reads the blob for line_items / toggle / delete');
+  assert.match(DATA_LAYER_SEAM(), /key: TH_KEYS\.invoices[\s\S]*?invalidateRelationalInvoicesCache\(\)/);
 
   assert.match(INVOICE_GEN, /initSyncOnLoad\(\)\.then\(afterInitialSync\)\.catch\(afterInitialSync\)/);
   assert.match(INVOICE_GEN, /refreshRelationalInvoicesCache\(\)\.then\(\(\) => \{ if \(typeof renderInvoiceLog === 'function'\) renderInvoiceLog\(\); \}\)/);
@@ -209,13 +212,10 @@ test('workspace.html: Income list uses getInvoicesForRead, togglePaid still writ
   const renderFn = WORKSPACE.match(/function renderInvoicesList\(\)[\s\S]*?\n  \}/)[0];
   assert.match(renderFn, /invoicesForDisplay\(\)/);
 
-  const saveFn = WORKSPACE.match(/function saveInvoices\(list\)[\s\S]*?\n  \}/)[0];
-  assert.match(saveFn, /localStorage\.setItem\('th_invoices'/);
-  assert.match(saveFn, /invalidateRelationalInvoicesCache/);
   const togglePaidFn = WORKSPACE.match(/async function togglePaid\(id\)[\s\S]*?\n  \}/)[0];
-  assert.match(togglePaidFn, /loadInvoices\(\)/, 'write-back must read the blob, not the relational cache (no line_items there)');
+  assert.match(togglePaidFn, /thInvoices\.all\(\)/, 'write-back must read the blob, not the relational cache (no line_items there)');
   assert.doesNotMatch(togglePaidFn, /invoicesForDisplay\(\)/);
-  assert.match(togglePaidFn, /saveInvoices\(invoices\)/);
+  assert.match(togglePaidFn, /thInvoices\.replaceAll\(invoices\)/);
   assert.match(togglePaidFn, /mirrorInvoiceToRelational\(inv\)/);
 
   assert.match(WORKSPACE, /initSyncOnLoad\(\)\.then\(renderDashboard\)\.catch\(renderDashboard\)\.then\(\(\) => \{/);

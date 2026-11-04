@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const { JSDOM } = require('jsdom');
+const { jobActionsSandbox } = require('../job-actions-sandbox');
 
 const TOOLS = path.join(__dirname, '..', '..', 'tools');
 const read = (f) => fs.readFileSync(path.join(TOOLS, f), 'utf8');
@@ -182,6 +183,7 @@ test('job detail\'s Text, the Dashboard\'s On my way, and the Jobs sheet all ope
     thJobs: { get: (id) => [{ id: 1, title: 'A', client: 'Sarah <b>Miller</b>', phone: '1', status: 'not-started' }].find((j) => j.id === id) },
     escapeHtml: (x) => String(x).replace(/</g, '&lt;').replace(/>/g, '&gt;'), showQuickActionSheet: (t, a) => { shown = a.map(x => x.label); },
     thOpenTextSheet() {}, setJobStatus() {}, document: { getElementById: () => null }, location: {},
+    ...jobActionsSandbox(),
   };
   vm.createContext(ctx);
   vm.runInContext(extractFn(JT, 'openJobActions') + ';this.f = openJobActions;', ctx);

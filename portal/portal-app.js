@@ -12,6 +12,16 @@
 // (invoice-card, job-card, quote-card, wo-card, set-card), and
 // building a pixel-matched skeleton per page would be considerably
 // more work for a perceptual improvement that doesn't need it.
+// The portal's one HTML escaper (2026-11-03, handoff §2: one copy of each
+// helper). Seven pages each carried this exact function; portal-app.js
+// loads (not deferred) before every page's own script, so it is in scope
+// wherever they used it.
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = String(str == null ? '' : str);
+  return div.innerHTML;
+}
+
 function portalSkeletonCards(count) {
   const card =
     '<div class="skeleton-card">' +
@@ -34,12 +44,35 @@ function portalSkeletonLines(count) {
   return line.repeat(count);
 }
 
-// Offline indicator (2026-09-04), requested directly. Checks
-// navigator.onLine on init (in case a page loads while already
-// offline, e.g. opened from the installed app with no signal) and
-// listens for the browser's own online/offline events after that --
-// no polling, since those events fire reliably on every platform
-// this app targets.
+// Offline indicator (2026-09-04), requested directly. Honest since
+// 2026-11-04 (handoff §5: "a persistent 'You're offline. Showing saved
+// data.' banner even while online. Fix: the banner must reflect actual
+// connectivity, and must not persist when online"):
+//   * navigator.onLine === false is only a hint -- some VPNs, virtual
+//     network adapters and automated browsers report it while the network
+//     works. The banner shows only once a real request also fails.
+//   * The probe is a no-cors request to the portal's own server
+//     (cross-origin, so the service worker never answers it from cache);
+//     any answer at all means online.
+//   * While shown it re-checks every 15 seconds, and it hides the moment
+//     the browser says it's back online.
+//   * The words: the service worker never caches Supabase data, so nothing
+//     "saved" is being shown -- it says what is actually true.
+const PORTAL_PROBE_URL = 'https://csvfqdjuobylgafgolho.supabase.co/auth/v1/health';
+const PORTAL_OFFLINE_TEXT = "You're offline. New information won't load until you're back online.";
+let portalReallyOffline = false;
+function portalIsReallyOffline() { return portalReallyOffline; }
+function portalProbeOnline(timeoutMs) {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (v) => { if (!settled) { settled = true; resolve(v); } };
+    setTimeout(() => finish(false), timeoutMs || 5000);
+    try {
+      fetch(PORTAL_PROBE_URL + '?ping=' + Date.now(), { mode: 'no-cors', cache: 'no-store' })
+        .then(() => finish(true), () => finish(false));
+    } catch (e) { finish(false); }
+  });
+}
 function initOfflinePortalIndicator() {
   let banner = document.getElementById('offlinePortalBanner');
   if (!banner) {
@@ -47,17 +80,32 @@ function initOfflinePortalIndicator() {
     banner.id = 'offlinePortalBanner';
     banner.className = 'offline-banner';
     banner.setAttribute('role', 'status');
-    banner.textContent = "You're offline. Showing saved data.";
+    banner.textContent = PORTAL_OFFLINE_TEXT;
+    banner.hidden = true;
     document.body.appendChild(banner);
   }
 
-  function updateBanner() {
-    banner.classList.toggle('is-visible', !navigator.onLine);
+  let recheck = null;
+  function show(offline) {
+    portalReallyOffline = offline;
+    banner.hidden = !offline;
+    banner.classList.toggle('is-visible', offline);
+    clearInterval(recheck);
+    recheck = offline ? setInterval(check, 15000) : null;
+  }
+  let checking = false;
+  async function check() {
+    if (navigator.onLine !== false) { show(false); return; }
+    if (checking) return;
+    checking = true;
+    const online = await portalProbeOnline();
+    checking = false;
+    show(!online);
   }
 
-  window.addEventListener('online', updateBanner);
-  window.addEventListener('offline', updateBanner);
-  updateBanner();
+  window.addEventListener('online', () => show(false));
+  window.addEventListener('offline', check);
+  check();
 }
 
 // Self-initializing rather than requiring an explicit call on each
@@ -519,6 +567,32 @@ function portalFaceIdInsteadOfCode(email, onUseCode) {
     // browser that wants a tap first.
     attempt();
   });
+}
+
+// Back to where they were after signing in (2026-11-04, handoff §3D: "After
+// sign-in you go straight back to this contract, not the home screen").
+// A page that finds no session sends the visitor to portalLoginUrl(), which
+// carries ?return=<this page and #card>; login.html sends them there after
+// sign-in or Create account. Only these portal pages, with an optional
+// plain #anchor, are ever accepted -- never another site, never /tools/.
+const PORTAL_RETURN_PAGES = [
+  '/portal/home.html', '/portal/dashboard.html', '/portal/quotes.html', '/portal/jobs.html',
+  '/portal/contracts.html', '/portal/work-orders.html', '/portal/settings.html',
+];
+function portalReturnTarget(search) {
+  let r = '';
+  try { r = new URLSearchParams(search === undefined ? window.location.search : search).get('return') || ''; } catch (e) { return null; }
+  const m = /^(\/portal\/[a-z-]+\.html)(#[A-Za-z0-9_-]{1,80})?$/.exec(r);
+  return m && PORTAL_RETURN_PAGES.indexOf(m[1]) !== -1 ? r : null;
+}
+function portalAfterSignInUrl(search) {
+  return portalReturnTarget(search) || '/portal/home.html';
+}
+function portalLoginUrl() {
+  const here = window.location.pathname + (window.location.hash || '');
+  return portalReturnTarget('?return=' + encodeURIComponent(here))
+    ? '/portal/login.html?return=' + encodeURIComponent(here)
+    : '/portal/login.html';
 }
 
 // Every signed-in page's check that the second step isn't still owed.
@@ -1535,7 +1609,8 @@ async function portalLoadHeaderInitials(client, email) {
 // never touches a page's own load code. Pages opt in by having the v2 app
 // bar (.portal-appbar); the sign-in pages don't, so nothing mounts there.
 function portalStatusState() {
-  if (typeof navigator !== 'undefined' && navigator.onLine === false) return 'offline';
+  // Offline only once a real request has failed too (initOfflinePortalIndicator).
+  if (typeof portalIsReallyOffline === 'function' && portalIsReallyOffline()) return 'offline';
   const visible = (el) => !!(el && el.getClientRects().length);
   if ([].some.call(document.querySelectorAll('.empty-state.is-error'), visible)) return 'trouble';
   if ([].some.call(document.querySelectorAll('.skeleton-card, .skeleton-line'), visible)) return 'loading';
@@ -1544,7 +1619,7 @@ function portalStatusState() {
 var PORTAL_STATUS_LABELS = {
   ok: 'Up to date',
   loading: 'Loading',
-  offline: 'Offline. Showing saved data.',
+  offline: "Offline. New information won't load until you're back online.",
   trouble: "Couldn't load everything. Tap to try again.",
 };
 function portalRetryLoad() {

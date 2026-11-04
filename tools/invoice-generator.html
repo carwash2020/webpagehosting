@@ -52,24 +52,24 @@
     document.documentElement.style.colorScheme = saved === 'light' ? 'light' : 'dark';
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=ec3464c0ec">
+<link rel="stylesheet" href="/styles.css?v=7c03870603">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=f212452f48">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=11d0839316" defer></script>
-<script src="/tools/data-layer.js?v=b5758547dc" defer></script>
+<script src="/tools/sync.js?v=486abe5b22" defer></script>
+<script src="/tools/data-layer.js?v=bfaab0c44f" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/signature-pad.js?v=f95f8e1d28" defer></script>
-<script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
+<script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=2cf0b2f75c" defer></script>
-<script src="/tools/tools-command-palette.js?v=479d6a96e7" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=c189cd58b4" defer></script>
+<script src="/tools/tools-command-palette.js?v=66031659c7" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <!-- U15/W18 fix (High-Impact Upgrades, Master Audit, 2026-09-08): the
      masthead/footer/totals-block drawing code below moved into this
      shared file, now also used by job-detail.html's job sheet and
      contract-generator.html. -->
-<script src="/js/pdf-layout.js?v=4dca739ad1" defer></script>
+<script src="/js/pdf-layout.js?v=f56a0ea2a2" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" async></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -663,7 +663,7 @@
     <button type="button" class="help-btn" onclick="activateGenTab('recent')" aria-label="Back to Invoices" title="Back to Invoices"><svg class="th-icon" aria-hidden="true"><use href="#icon-chevron" xlink:href="#icon-chevron"></use></svg></button>
   </div>
   <div class="hub-header-left">
-    <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
+    <img src="/images/logo-signature-orange.webp?v=adc4d42660" alt="Triple H Enterprises">
     <span class="hub-title" id="mainContent">Invoices</span>
   </div>
   <div class="hub-header-right">
@@ -691,7 +691,7 @@
 </nav>
 <div class="tabs tabs-sticky">
   <button class="tab-btn is-active" data-tab="recent" onclick="activateGenTab('recent')">Invoices</button>
-  <button class="tab-btn" data-tab="invoice" onclick="activateGenTab('invoice')">New invoice</button>
+  <button class="tab-btn" data-tab="invoice" onclick="openNewInvoice()">New invoice</button>
   <button class="tab-btn" data-tab="quote" onclick="activateGenTab('quote')">New quote</button>
   <button class="tab-btn" data-tab="pos" onclick="activateGenTab('pos')">Quick charge</button>
 </div>
@@ -703,7 +703,7 @@
   <div class="tool-form-row">
     <div class="form-field">
       <label for="clientName">Client / Company Name</label>
-      <input type="text" id="clientName" list="knownContactsList" placeholder="Preferred Property Management" onchange="autofillFromContact('clientName', 'contact-1')">
+      <input type="text" id="clientName" list="knownContactsList" placeholder="Client or company name" autocomplete="off" onchange="autofillFromContact('clientName', 'contact-1')">
       <datalist id="knownContactsList"></datalist>
     </div>
   </div>
@@ -714,7 +714,7 @@
   <div class="tool-form-row">
     <div class="form-field">
       <label for="jobDescription">Job Description</label>
-      <input type="text" id="jobDescription" placeholder="GE Range/Stove Repair — Model JB256D M3WW">
+      <input type="text" id="jobDescription" placeholder="Appliance and repair, with model if known" autocomplete="off">
     </div>
   </div>
 </div>
@@ -852,7 +852,7 @@
   </div>
   <div class="form-field">
     <label for="paymentText">Payment text (shown at the bottom of the invoice)</label>
-  <textarea id="paymentText" aria-label="Payment text shown at the bottom of the invoice">We accept cash, check, and credit/debit cards via a secure Stripe invoice.</textarea>
+  <textarea id="paymentText" aria-label="Payment text shown at the bottom of the invoice">We accept cash, check, and credit/debit cards.</textarea>
   </div>
 </details>
 
@@ -926,7 +926,7 @@
   <div class="tool-form-row">
     <div class="form-field">
       <label for="quoteJobDescription">Job Description</label>
-      <input type="text" id="quoteJobDescription" placeholder="GE Range/Stove Repair — Model JB256D M3WW">
+      <input type="text" id="quoteJobDescription" placeholder="Appliance and repair, with model if known">
     </div>
     <div class="form-field">
       <label for="quoteJobRef">Link to job</label>
@@ -1003,7 +1003,7 @@
     <div class="inv-log-head">
       <h3>Invoices</h3>
       <button class="small-btn" data-density-toggle onclick="toggleDensityPreference()" aria-pressed="false">Compact view</button>
-      <button type="button" class="mn-new-btn" onclick="activateGenTab('invoice')">+ New invoice</button>
+      <button type="button" class="mn-new-btn" onclick="openNewInvoice()">+ New invoice</button>
     </div>
     <div class="inv-log-tools">
       <div class="th-search-field">
@@ -1084,11 +1084,11 @@
   // "Generated by" label to match this page's original tooltip text.
 
   function invoicesForDisplay() {
-    // List display only. Writes still go through loadInvoiceLog()/
-    // saveInvoiceLog() (the blob, which has line_items). Prefer the
+    // List display only. Writes still go through thInvoices.all()/
+    // thInvoices.replaceAll() (the blob, which has line_items). Prefer the
     // relational cache when it has loaded; fall back to th_invoices
     // while the cache is still null.
-    return (typeof getInvoicesForRead === 'function') ? getInvoicesForRead() : loadInvoiceLog();
+    return (typeof getInvoicesForRead === 'function') ? getInvoicesForRead() : thInvoices.all();
   }
 
   // One read of an invoice's money state for the list, the summary and
@@ -1282,10 +1282,10 @@
         ? '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg>No ' + (filterName ? filterName + ' ' : '') + 'invoices match "' + escapeHtml(searchTerm) + '".</div>'
         : log.length && filterName
           ? '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>No ' + filterName + ' invoices. <button type="button" class="small-btn" onclick="setInvoiceFilter(\'all\')">Show all</button></div>'
-          : '<div class="empty-state-small inv-empty"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>No invoices generated yet.<button type="button" class="primary-btn" onclick="activateGenTab(\'invoice\')">New invoice</button></div>';
+          : '<div class="empty-state-small inv-empty"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>No invoices generated yet.<button type="button" class="primary-btn" onclick="openNewInvoice()">New invoice</button></div>';
       return;
     }
-    const quoteLog = loadQuoteLog();
+    const quoteLog = thQuotes.all();
     container.innerHTML = rows.map(({ inv, st }) => {
       const sourceQuote = inv.sourceQuoteId ? quoteLog.find(q => q.id === inv.sourceQuoteId) : null;
       const sourceNote = sourceQuote
@@ -1331,7 +1331,7 @@
   // clients.html viewArchivedInvoicePdf). With no tab at all (popups fully
   // blocked) this tab goes to the PDF instead.
   async function viewInvoicePdf(id) {
-    const inv = invoicesForDisplay().find(i => i.id === id) || loadInvoiceLog().find(i => i.id === id);
+    const inv = invoicesForDisplay().find(i => i.id === id) || thInvoices.all().find(i => i.id === id);
     if (!inv || !inv.invoiceNumber) { showToast('Could not find that invoice.', { type: 'error' }); return; }
     const pdfWindow = window.open('', '_blank');
     if (pdfWindow) pdfWindow.opener = null;
@@ -1344,7 +1344,7 @@
     // actually issued.
     if (!url) {
       try {
-        const entry = loadInvoiceLog().find(i => i.id === id) || inv;
+        const entry = thInvoices.all().find(i => i.id === id) || inv;
         const doc = await rebuildInvoicePdf(entry);
         if (doc) url = doc.output('bloburl');
       } catch (e) {
@@ -1408,13 +1408,12 @@
     const rebuildTaxRate = Number(inv.subtotal) ? (Number(inv.tax) || 0) / Number(inv.subtotal) * 100 : 0;
     y = drawPdfTotalsBlock(doc, {
       y, pageW, subtotal, tax: Number(inv.tax) || 0, taxRatePct: rebuildTaxRate, discount: Number(inv.discount) || 0, discountLabel: 'Discount', totalLabel: 'TOTAL DUE', theme: 'inter',
-      cta: { heading: 'Pay this invoice', lines: ['See payment details below.', 'Questions? Call or text (435) 414-1667.'] },
+      cta: invoicePayCta({ link: inv.payToken ? payLinkFor(inv.invoiceNumber, inv.payToken) : null }),
     });
     const paymentText = (document.getElementById('paymentText') || {}).value || '';
-    y = pdfDrawNoteBox(doc, { y: y + 6, label: 'Payment', theme: 'inter', lines: [
-      paymentText,
-      { text: 'Please reference invoice ' + (inv.invoiceNumber || '') + ' with payment.', small: true },
-    ] });
+    y = pdfDrawNoteBox(doc, Object.assign({ y: y + 6, theme: 'inter' }, invoicePaymentNote({
+      link: inv.payToken, invoiceNumber: inv.invoiceNumber || '', paymentText,
+    })));
     pdfFinalize(doc, { message: 'Thank you for choosing Triple H Enterprises. Work guaranteed.', theme: 'inter' });
     return doc;
   }
@@ -1434,8 +1433,8 @@
     const id = invoiceId || quoteId;
     if (!id) return;
     const found = isInvoice
-      ? (invoicesForDisplay().find(i => i.id === id) || loadInvoiceLog().find(i => i.id === id))
-      : loadQuoteLog().find(q => q.id === id);
+      ? (invoicesForDisplay().find(i => i.id === id) || thInvoices.all().find(i => i.id === id))
+      : thQuotes.all().find(q => q.id === id);
     const keep = new URLSearchParams(window.location.search);
     keep.delete('invoice'); keep.delete('quote');
     const rest = keep.toString();
@@ -1494,7 +1493,7 @@
     };
   }
   function quoteRowMenu(id) {
-    const q = loadQuoteLog().find(x => x.id === id);
+    const q = thQuotes.all().find(x => x.id === id);
     if (!q) return null;
     const actions = [];
     actions.push({ kind: 'extra', icon: 'mail', label: q.clientEmail ? 'Resend' : 'Send to an email', onClick: () => resendQuoteToClient(id) });
@@ -1570,7 +1569,7 @@
   // email still needs sync-invoice-to-portal, since that's what actually
   // moves/creates the portal row.
   async function resendInvoiceToClient(invoiceId) {
-    const log = loadInvoiceLog();
+    const log = thInvoices.all();
     const inv = log.find(i => i.id === invoiceId);
     if (!inv) { showToast('Could not find that invoice in the log.', { type: 'error' }); return; }
     const oldEmail = (inv.clientEmail || '').trim();
@@ -1586,7 +1585,7 @@
     if (emailChanged) {
       if (oldEmail && !(await showConfirm(`Send invoice #${inv.invoiceNumber} to ${email} instead of ${oldEmail}? It moves to ${email}'s portal, and ${oldEmail} will no longer see it there.`, { confirmText: 'Send' }))) return;
       inv.clientEmail = email;
-      saveInvoiceLog(log);
+      thInvoices.replaceAll(log);
       if (typeof mirrorInvoiceToRelational === 'function') mirrorInvoiceToRelational(inv);
       if (typeof renderInvoiceLog === 'function') renderInvoiceLog();
     }
@@ -1610,6 +1609,7 @@
             description: inv.jobRefTitle || null,
             line_items: inv.line_items,
             total: inv.total,
+            pay_token: inv.payToken || null,
           }),
         });
         const result = await res.json().catch(() => ({}));
@@ -1633,6 +1633,9 @@
           invoice_number: inv.invoiceNumber,
           total: Number(inv.total),
           description: inv.jobRefTitle || null,
+          pay_token: inv.payToken || null,
+          due_date: (typeof thInvoiceDueDate === 'function' && thInvoiceDueDate(inv) && typeof thLocalDateStr === 'function') ? thLocalDateStr(thInvoiceDueDate(inv)) : null,
+          terms: inv.terms || null,
         }),
       });
       const result = await res.json().catch(() => ({}));
@@ -1668,7 +1671,7 @@
   // case -- that still needs sync-quote-to-portal to move the portal
   // row (and invite a genuinely new client), so that path is unchanged.
   async function resendQuoteToClient(quoteId) {
-    const log = loadQuoteLog();
+    const log = thQuotes.all();
     const q = log.find(x => x.id === quoteId);
     if (!q) { showToast('Could not find that quote in the log.', { type: 'error' }); return; }
     const oldEmail = (q.clientEmail || '').trim();
@@ -1684,7 +1687,7 @@
     if (emailChanged) {
       if (oldEmail && !(await showConfirm(`Send estimate #${q.quoteNumber} to ${email} instead of ${oldEmail}? It moves to ${email}'s portal, and ${oldEmail} will no longer see it there.`, { confirmText: 'Send' }))) return;
       q.clientEmail = email;
-      saveQuoteLog(log);
+      thQuotes.replaceAll(log);
       if (typeof mirrorQuoteToRelational === 'function') mirrorQuoteToRelational(q);
       if (typeof renderQuoteLog === 'function') renderQuoteLog();
     }
@@ -1751,7 +1754,7 @@
   // you can find in this log.
 
   function toggleInvoicePaid(id) {
-    const log = loadInvoiceLog();
+    const log = thInvoices.all();
     const entry = log.find(i => i.id === id);
     if (!entry) return;
     // Real bug (2026-09-22): this used to flip only the `paid` boolean.
@@ -1765,7 +1768,7 @@
     const nowPaid = !invoiceIsPaid(entry);
     entry.paidAmount = nowPaid ? (Number(entry.total) || 0) : 0;
     entry.paid = nowPaid;
-    saveInvoiceLog(log);
+    thInvoices.replaceAll(log);
     // The Recent list reads the relational table once its cache loads;
     // without this mirror the next refresh put the old status back.
     if (typeof mirrorInvoiceToRelational === 'function') mirrorInvoiceToRelational(entry);
@@ -1879,11 +1882,10 @@
       const activeBtn = document.querySelector('.tab-btn.is-active');
       const currentIndex = GEN_TAB_ORDER.indexOf(activeBtn ? activeBtn.dataset.tab : 'invoice');
       if (currentIndex === -1) return;
-      if (dx < 0 && currentIndex < GEN_TAB_ORDER.length - 1) {
-        activateGenTab(GEN_TAB_ORDER[currentIndex + 1]);
-      } else if (dx > 0 && currentIndex > 0) {
-        activateGenTab(GEN_TAB_ORDER[currentIndex - 1]);
-      }
+      const target = dx < 0 && currentIndex < GEN_TAB_ORDER.length - 1 ? GEN_TAB_ORDER[currentIndex + 1]
+        : dx > 0 && currentIndex > 0 ? GEN_TAB_ORDER[currentIndex - 1] : null;
+      if (target === 'invoice') openNewInvoice();
+      else if (target) activateGenTab(target);
       // Swiping right on the first tab intentionally does nothing --
       // removed the exit-to-Workspace behavior across every tabbed page
       // in the app, since landing back on the first tab and swiping
@@ -1984,11 +1986,6 @@
 
   assignNextNumber('invoiceNumber', 'next_invoice_number', 'INV-');
   assignNextNumber('quoteNumber', 'next_quote_number', 'EST-');
-
-  function loadJobs() {
-    try { return JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); }
-    catch (e) { return []; }
-  }
 
   const CARD_INFO = {
     salesTax: {
@@ -2111,7 +2108,7 @@
 
 
   function populateJobRefOptions() {
-    const jobs = loadJobs();
+    const jobs = thJobs.all();
     ['invoiceJobRef', 'quoteJobRef'].forEach(selectId => {
       const select = document.getElementById(selectId);
       if (!select) return;
@@ -2277,11 +2274,11 @@
   let jobFillState = null;
   function currentJobFillBillables() {
     const jobId = (document.getElementById('invoiceJobRef') || {}).value;
-    const job = jobId && typeof loadJobs === 'function' ? loadJobs().find(j => String(j.id) === jobId) : null;
+    const job = jobId && typeof thJobs !== 'undefined' ? thJobs.all().find(j => String(j.id) === jobId) : null;
     if (!job) return null;
     const rates = { labor: parseFloat(localStorage.getItem(LABOR_RATE_KEY)) || 0, mileage: parseFloat(localStorage.getItem(MILEAGE_RATE_KEY)) || 0 };
     const expenses = (typeof thRead === 'function') ? thRead(TH_KEYS.expenses, []) : [];
-    return { jobId, job, ...jobBillables(job, expenses, loadQuoteLog(), rates) };
+    return { jobId, job, ...jobBillables(job, expenses, thQuotes.all(), rates) };
   }
 
   function jobFillLineAmount(l) { return (Number(l.qty) || 0) * (Number(l.price) || 0); }
@@ -2411,7 +2408,7 @@
 
   function billJobQuote(quoteId) {
     const b = currentJobFillBillables();
-    const q = loadQuoteLog().find(x => x.id === quoteId);
+    const q = thQuotes.all().find(x => x.id === quoteId);
     if (!b || !q || !Array.isArray(q.line_items)) return;
     const starter = takeStarterRow();
     const rowIds = addRowsTrackingIds(q.line_items);
@@ -2607,7 +2604,7 @@
     // downloaded/saved, which is an equally valid workflow with nothing
     // to link back to.
     const currentQuoteNumber = document.getElementById('quoteNumber').value;
-    const matchingQuote = loadQuoteLog().find(q => q.quoteNumber === currentQuoteNumber);
+    const matchingQuote = thQuotes.all().find(q => q.quoteNumber === currentQuoteNumber);
     pendingSourceQuoteId = matchingQuote ? matchingQuote.id : null;
 
     document.getElementById('clientName').value = document.getElementById('quoteClientName').value;
@@ -2676,6 +2673,44 @@
   // actually became a real invoice would be worse than no linkage at
   // all. The quote only gets marked once the invoice is genuinely saved.
   let pendingSourceQuoteId = null;
+
+  // Guest pay link (2026-11-04, handoff §3A; Connor: pay "right from this
+  // email -- no account needed"). A sent invoice gets its own code, made
+  // here, saved on the invoice and on its portal row (pay_token), and
+  // printed on the PDF as /pay/<invoice number>-<code>. The code is the
+  // only key to /pay/, so it is random (crypto, not Math.random) and drawn
+  // from letters and digits without look-alikes (no 0/o, 1/l/i): 31^10,
+  // about 8e14 codes. edge-functions/guest-pay-index.ts accepts this shape.
+  function makePayToken() {
+    const ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789';
+    const bytes = new Uint8Array(10);
+    let out = '';
+    while (out.length < 10) {
+      crypto.getRandomValues(bytes);
+      for (let i = 0; i < bytes.length && out.length < 10; i++) {
+        // 248 = 31 * 8: dropping 248-255 keeps every letter equally likely.
+        if (bytes[i] < 248) out += ALPHABET[bytes[i] % 31];
+      }
+    }
+    return out;
+  }
+  function payLinkFor(invoiceNumber, token) {
+    const text = 'triplehenterprisesllc.biz/pay/' + encodeURIComponent(String(invoiceNumber || 'invoice')) + '-' + token;
+    return { text, url: 'https://www.' + text };
+  }
+  // The dark card beside the totals and the payment note under them (the
+  // approved PDF design): with a pay link the card carries one sentence
+  // ending in the address, and the note lists the other ways to pay;
+  // without one (a downloaded invoice, an invoice from before pay links)
+  // both are as they were.
+  function invoicePayCta({ link }) {
+    if (!link) return { heading: 'Pay this invoice', lines: ['See payment details below.', 'Questions? Call or text (435) 414-1667.'] };
+    return { heading: 'Pay this invoice online', lines: ['Pay by card or bank, no account needed, at'], link, after: ['Secure checkout by Stripe. Questions? Call or text (435) 414-1667.'] };
+  }
+  function invoicePaymentNote({ link, invoiceNumber, paymentText }) {
+    if (link) return { label: 'Other ways to pay', lines: ['Cash or check in person: please write ' + invoiceNumber + ' on the check. Cards: online at the address above.'] };
+    return { label: 'Payment', lines: [paymentText, { text: 'Please reference invoice ' + invoiceNumber + ' with payment.', small: true }] };
+  }
   // opts.send (2026-09-02): false = just produce the PDF for Connor;
   // true = also sync to the portal and email the client. Defaults to
   // FALSE deliberately -- any future caller that forgets to pass this
@@ -2706,6 +2741,17 @@
     const INVOICE_TYPE_LABELS = { standard: 'INVOICE', deposit: 'DEPOSIT INVOICE', balance: 'BALANCE DUE', progress: 'PROGRESS PAYMENT' };
     const invoiceTypeVal = (document.getElementById('invoiceType') || {}).value || 'standard';
     const invoiceNumberVal = document.getElementById('invoiceNumber').value;
+    const clientEmailVal = document.getElementById('clientEmail').value.trim();
+    // clientEmail's type="email" never gets native browser validation
+    // here -- this page has no <form> element at all, so
+    // reportValidity()/checkValidity() never fires. A malformed address
+    // previously only surfaced as a generic "Failed to send" alert once
+    // sync-invoice-to-portal actually tried and failed to email it.
+    const clientEmailLooksValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmailVal);
+    // Only an invoice that will really be emailed gets a pay code, so a
+    // downloaded copy never carries a link that leads nowhere.
+    const willSend = shouldSend && clientEmailLooksValid && typeof getAuthToken === 'function';
+    const payToken = willSend ? makePayToken() : null;
     const invoiceDateIso = document.getElementById('invoiceDate').value;
     const longDate = (d) => d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     const invoiceDateDisplay = invoiceDateIso ? longDate(new Date(invoiceDateIso + 'T00:00:00')) : '';
@@ -2772,13 +2818,12 @@
     const total = Math.round(Math.max(0, subtotal + tax - discount) * 100) / 100;
     y = drawPdfTotalsBlock(doc, {
       y, pageW, subtotal, tax, taxRatePct: taxRate, discount, discountLabel, totalLabel: 'TOTAL DUE', theme: 'inter',
-      cta: { heading: 'Pay this invoice', lines: ['See payment details below.', 'Questions? Call or text (435) 414-1667.'] },
+      cta: invoicePayCta({ link: payToken ? payLinkFor(invoiceNumberVal, payToken) : null }),
     });
 
-    y = pdfDrawNoteBox(doc, { y: y + 6, label: 'Payment', theme: 'inter', lines: [
-      document.getElementById('paymentText').value,
-      { text: 'Please reference invoice ' + invoiceNumberVal + ' with payment.', small: true },
-    ] });
+    y = pdfDrawNoteBox(doc, Object.assign({ y: y + 6, theme: 'inter' }, invoicePaymentNote({
+      link: payToken, invoiceNumber: invoiceNumberVal, paymentText: document.getElementById('paymentText').value,
+    })));
 
     // U17 fix (High-Impact Upgrades, 2026-09-07): "the thirty-day labour
     // warranty is already tracked internally... stating it on the job
@@ -2789,7 +2834,7 @@
     // claims a warranty that hasn't started yet.
     const linkedJobId = (document.getElementById('invoiceJobRef') || {}).value;
     if (linkedJobId) {
-      const linkedJob = loadJobs().find(jb => String(jb.id) === String(linkedJobId));
+      const linkedJob = thJobs.all().find(jb => String(jb.id) === String(linkedJobId));
       if (linkedJob && linkedJob.status === 'done' && linkedJob.date) {
         const completionDate = new Date(linkedJob.date + 'T00:00:00');
         if (!isNaN(completionDate.getTime())) {
@@ -2811,7 +2856,7 @@
     // closes). Every later reference to the invoice's id/number/etc.
     // in this function uses THIS captured value, never a bare
     // `newEntry` that was never actually in scope here.
-    const newEntry = logInvoice({ subtotal, tax, discount, total });
+    const newEntry = logInvoice({ subtotal, tax, discount, total, payToken });
 
     // Download PDF uses a plain save; only the explicit Send path
     // offers the OS share sheet (2026-09-02). Previously every press
@@ -2864,13 +2909,8 @@
         logClientError(`generatePDF(): could not base64-encode PDF for email attachment -- ${e.message || String(e)}`, 'invoice-generator.html', null, null, null);
       }
     }
-    const clientEmailVal = document.getElementById('clientEmail').value.trim();
-    // clientEmail's type="email" never gets native browser validation
-    // here -- this page has no <form> element at all, so
-    // reportValidity()/checkValidity() never fires. A malformed address
-    // previously only surfaced as a generic "Failed to send" alert once
-    // sync-invoice-to-portal actually tried and failed to email it.
-    const clientEmailLooksValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmailVal);
+    // (clientEmailVal / clientEmailLooksValid are worked out at the top,
+    // since whether this invoice gets a pay link depends on them.)
     if (shouldSend && !clientEmailVal) {
       await showAlert("No client email on this invoice, so there's nobody to send it to. Add one and use Resend from the Invoice Log.");
     } else if (shouldSend && clientEmailVal && !clientEmailLooksValid) {
@@ -2894,6 +2934,9 @@
             description: newEntry.jobRefTitle || null,
             line_items: getLineItems(),
             total: newEntry.total,
+            pay_token: payToken,
+            due_date: dueDate && typeof thLocalDateStr === 'function' ? thLocalDateStr(dueDate) : null,
+            terms: invoiceTermsVal || null,
             pdf_base64: pdfBase64,
             pdf_filename: filename,
           }),
@@ -2998,7 +3041,7 @@
   // a fresh page load -- a new random invoice number, today's date, one
   // empty contact row, one empty line item row -- rather than leaving the
   // just-generated invoice's details sitting in the form.
-  function resetInvoiceForm(){
+  function resetInvoiceForm(opts){
     document.getElementById('clientName').value = '';
     document.getElementById('clientAddress').value = '';
     document.getElementById('jobDescription').value = '';
@@ -3013,7 +3056,9 @@
     // Draws a genuinely new sequence number for the next invoice --
     // same collision-proof path as the initial page load above, not a
     // fresh random number.
-    assignNextNumber('invoiceNumber', 'next_invoice_number', 'INV-');
+    // keepNumber: opening a clean form over an unsent draft keeps the
+    // draft's never-used number rather than burning a new one.
+    if (!(opts && opts.keepNumber)) assignNextNumber('invoiceNumber', 'next_invoice_number', 'INV-');
     document.getElementById('invoiceTerms').value = 'Net 15';
     if (document.getElementById('invoiceType')) document.getElementById('invoiceType').value = 'standard';
     recalc();
@@ -3021,14 +3066,110 @@
     if (typeof renderJobFillPanel === 'function') renderJobFillPanel();
   }
 
+  // ---------- Opening a clean invoice (handoff 2026-11-03 §4F) ----------
+  // Every "New invoice" (the tab, + New invoice, the empty list's button,
+  // a swipe onto the form) opens a clean form. A half-finished invoice is
+  // never shown as if it were the new one: it is set aside, and comes back
+  // only from an explicit "Resume draft?" prompt that names its time.
+  // Quote conversion and ?jobRef=/?client= links still call
+  // activateGenTab('invoice') directly, because they fill the form on purpose.
+  // Held in memory for this page only, like the form itself always was.
+  let stashedInvoiceDraft = null;
+
+  function invoiceFormHasContent() {
+    const val = (id) => { const el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; };
+    if (val('clientName') || val('clientAddress') || val('jobDescription') || val('invoiceJobRef') || val('discountLabel')) return true;
+    if ((parseFloat(val('discountAmount')) || 0) !== 0) return true;
+    if (Array.from(document.querySelectorAll('#contactsContainer input')).some(i => i.value.trim())) return true;
+    return Array.from(document.querySelectorAll('#lineItemsBody tr')).some(r =>
+      (r.querySelector('.li-desc') && r.querySelector('.li-desc').value.trim()) || (r.querySelector('.li-price') && r.querySelector('.li-price').value.trim()));
+  }
+
+  function snapshotInvoiceForm() {
+    const fields = {};
+    document.querySelectorAll('#tab-invoice input[id], #tab-invoice select[id], #tab-invoice textarea[id]').forEach(el => {
+      if (el.closest('#lineItemsBody') || el.closest('#contactsContainer')) return;
+      fields[el.id] = el.type === 'checkbox' ? el.checked : el.value;
+    });
+    const contacts = Array.from(document.querySelectorAll('#contactsContainer .contact-block')).map(b => ({
+      name: b.querySelector('.contact-name').value, title: b.querySelector('.contact-title').value,
+      email: b.querySelector('.contact-email').value, phone: b.querySelector('.contact-phone').value,
+    }));
+    const lines = Array.from(document.querySelectorAll('#lineItemsBody tr')).map(r => ({
+      desc: r.querySelector('.li-desc').value, part: r.querySelector('.li-part').value,
+      qty: r.querySelector('.li-qty').value, price: r.querySelector('.li-price').value,
+      taxable: r.querySelector('.li-taxable').checked, type: r.querySelector('.li-type').value,
+    }));
+    return { savedAt: Date.now(), fields, contacts, lines, jobFillState, pendingSourceQuoteId };
+  }
+
+  function restoreInvoiceDraft(d) {
+    Object.keys(d.fields).forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (el.type === 'checkbox') el.checked = !!d.fields[id]; else el.value = d.fields[id];
+    });
+    const contactsEl = document.getElementById('contactsContainer');
+    contactsEl.innerHTML = '';
+    (d.contacts.length ? d.contacts : [{ name: '', title: '', email: '', phone: '' }]).forEach(c => {
+      addContact();
+      const block = contactsEl.lastElementChild; // values set as properties, never into markup
+      block.querySelector('.contact-name').value = c.name;
+      block.querySelector('.contact-title').value = c.title;
+      block.querySelector('.contact-email').value = c.email;
+      block.querySelector('.contact-phone').value = c.phone;
+    });
+    document.getElementById('lineItemsBody').innerHTML = '';
+    if (!d.lines.length) addLineItem();
+    d.lines.forEach(l => {
+      addLineItem(l.desc, l.part, l.qty, '', l.taxable, l.type);
+      document.querySelector('#lineItemsBody tr:last-child .li-price').value = l.price;
+    });
+    jobFillState = d.jobFillState;
+    pendingSourceQuoteId = d.pendingSourceQuoteId;
+    // The clean form may have used this number in the meantime.
+    const num = (d.fields.invoiceNumber || '').trim().toLowerCase();
+    if (num && thInvoices.all().some(inv => (inv.invoiceNumber || '').trim().toLowerCase() === num)) {
+      assignNextNumber('invoiceNumber', 'next_invoice_number', 'INV-');
+    }
+    recalc();
+    if (typeof renderJobFillPanel === 'function') renderJobFillPanel();
+  }
+
+  function offerInvoiceDraft() {
+    const d = stashedInvoiceDraft;
+    if (!d || typeof showUndoToast !== 'function') return;
+    const who = (d.fields.clientName || '').trim() || 'no client yet';
+    const when = new Date(d.savedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    showUndoToast('Resume draft? ' + who + ' · ' + when, () => {
+      if (stashedInvoiceDraft !== d) return;
+      // Anything typed into the clean form since is set aside in turn.
+      const current = invoiceFormHasContent() ? snapshotInvoiceForm() : null;
+      stashedInvoiceDraft = current;
+      restoreInvoiceDraft(d);
+      if (current) offerInvoiceDraft();
+    }, { actionLabel: 'Resume', duration: 10000 });
+  }
+
+  function openNewInvoice() {
+    const formTab = document.getElementById('tab-invoice');
+    if (formTab && formTab.classList.contains('is-active')) return; // already on it: never wipe
+    if (invoiceFormHasContent()) {
+      stashedInvoiceDraft = snapshotInvoiceForm();
+      resetInvoiceForm({ keepNumber: true });
+      pendingSourceQuoteId = null;
+    }
+    activateGenTab('invoice');
+    offerInvoiceDraft();
+  }
+
   // ---------- Invoice logging (feeds the Dashboard's revenue numbers) ----------
-  const INVOICE_STORAGE_KEY = 'th_invoices';
 
   function checkDuplicateInvoiceNumber() {
     const num = document.getElementById('invoiceNumber').value.trim();
     const warningEl = document.getElementById('duplicateInvoiceWarning');
     if (!num) { warningEl.style.display = 'none'; return; }
-    const match = loadInvoiceLog().find(inv => (inv.invoiceNumber || '').trim().toLowerCase() === num.toLowerCase());
+    const match = thInvoices.all().find(inv => (inv.invoiceNumber || '').trim().toLowerCase() === num.toLowerCase());
     if (match) {
       warningEl.textContent = `Heads up \u2014 invoice #${num} already exists in the log${match.clientName ? ' (for ' + match.clientName + ')' : ''}. Generating with this number won't overwrite that one, but you'll have two invoices sharing the same number.`;
       warningEl.style.display = 'block';
@@ -3038,19 +3179,14 @@
     }
   }
 
-  function loadInvoiceLog() { try { return JSON.parse(localStorage.getItem(INVOICE_STORAGE_KEY) || '[]'); } catch (e) { return []; } }
-  function saveInvoiceLog(list) {
-    localStorage.setItem(INVOICE_STORAGE_KEY, JSON.stringify(list));
-    // Writes stay on the blob. Drop the relational read-cache so the
-    // next list render sees this local write instead of stale rows.
-    if (typeof invalidateRelationalInvoicesCache === 'function') invalidateRelationalInvoicesCache();
-    if (typeof scheduleSync === 'function') scheduleSync();
-  }
+  // The invoice log's reads and writes go through thInvoices (data-layer.js):
+  // all() / replaceAll() / remove(), which also drop the relational read
+  // cache and schedule the sync on every write (2026-11-03, Item 1 Phase 2).
 
   const pendingDeleteInvoiceIds = new Map();
   async function deleteInvoiceLogEntry(id) {
-    const invoice = loadInvoiceLog().find(i => i.id === id);
-    const linkedIncome = loadIncomeEntriesRaw().filter(e => e.origin === 'invoice' && e.invoiceId === id);
+    const invoice = thInvoices.all().find(i => i.id === id);
+    const linkedIncome = thIncome.all().filter(e => e.origin === 'invoice' && e.invoiceId === id);
     const portalNote = (invoice && invoice.clientEmail) ? ' It will also be removed from their client portal.' : '';
     const incomeNote = linkedIncome.length ? ' The income entry this invoice created will be removed too, so your Business Snapshot stays accurate.' : '';
     const confirmed = await showConfirm('Delete this invoice from the log?' + incomeNote + portalNote, { danger: true, confirmText: 'Delete' });
@@ -3058,12 +3194,10 @@
     const row = document.querySelector('[data-invoice-id="' + id + '"]');
     await new Promise(resolve => animateRowExit(row, resolve));
 
-    const timer = setTimeout(() => {
+    const timer = thDeferDelete(() => {
       pendingDeleteInvoiceIds.delete(id);
-      const invoiceToDelete = loadInvoiceLog().find(i => i.id === id);
-      saveInvoiceLog(loadInvoiceLog().filter(i => i.id !== id));
-      if (typeof thAddInvoiceTombstone === 'function') thAddInvoiceTombstone(id);
-      if (typeof mirrorDelete === 'function') mirrorDelete('invoices', id);
+      const invoiceToDelete = thInvoices.all().find(i => i.id === id);
+      thInvoices.remove(id); // write + tombstone + relational mirrorDelete
       if (invoiceToDelete && typeof thAddToGraveyard === 'function') thAddToGraveyard('invoice', invoiceToDelete);
 
       // Remove the income entry this invoice CREATED (2026-09-02),
@@ -3092,22 +3226,18 @@
     pendingDeleteInvoiceIds.set(id, timer);
     renderInvoiceLog();
     showUndoToast('Invoice removed from log.', () => {
-      clearTimeout(pendingDeleteInvoiceIds.get(id));
+      thCancelDeferredDelete(pendingDeleteInvoiceIds.get(id));
       pendingDeleteInvoiceIds.delete(id);
       renderInvoiceLog();
     });
   }
 
-  function loadIncomeEntriesRaw() {
-    try { return JSON.parse(localStorage.getItem(INCOME_LOG_KEY) || '[]'); } catch (e) { return []; }
-  }
-
   function removeIncomeEntriesForInvoice(invoiceId) {
     try {
-      const all = loadIncomeEntriesRaw();
+      const all = thIncome.all();
       const toRemove = all.filter(e => e.origin === 'invoice' && e.invoiceId === invoiceId);
       if (!toRemove.length) return;
-      localStorage.setItem(INCOME_LOG_KEY, JSON.stringify(all.filter(e => !(e.origin === 'invoice' && e.invoiceId === invoiceId))));
+      thIncome.replaceAll(all.filter(e => !(e.origin === 'invoice' && e.invoiceId === invoiceId)));
       toRemove.forEach(e => { if (typeof thAddIncomeTombstone === 'function') thAddIncomeTombstone(e.id); });
       if (typeof scheduleSync === 'function') scheduleSync();
     } catch (e) { console.error('Could not remove linked income entries:', e); }
@@ -3132,10 +3262,9 @@
   // th_invoices stays exactly as it was (the actual invoice documents,
   // used for re-download/paid-status/client details) -- this is a
   // parallel, lighter-weight record purely for the income total.
-  const INCOME_LOG_KEY = 'th_income_log';
   function logInvoiceToIncomeLog(invoiceEntry) {
     try {
-      const list = JSON.parse(localStorage.getItem(INCOME_LOG_KEY) || '[]');
+      const list = thIncome.all();
       list.push({
         id: Date.now() + 1, // +1 avoids colliding with the invoice's own id, created in the same tick
         date: invoiceEntry.date,
@@ -3150,15 +3279,14 @@
         createdBy: invoiceEntry.generatedBy,
         lastEditedBy: invoiceEntry.generatedBy,
       });
-      localStorage.setItem(INCOME_LOG_KEY, JSON.stringify(list));
-      if (typeof scheduleSync === 'function') scheduleSync();
+      thIncome.replaceAll(list);
     } catch (e) { console.error('Could not log invoice to income log:', e); }
   }
 
   function logInvoice(totals) {
-    const list = loadInvoiceLog();
+    const list = thInvoices.all();
     const jobRefId = document.getElementById('invoiceJobRef').value;
-    const jobRefTitle = jobRefId ? (loadJobs().find(j => String(j.id) === jobRefId) || {}).title || '' : '';
+    const jobRefTitle = jobRefId ? (thJobs.all().find(j => String(j.id) === jobRefId) || {}).title || '' : '';
     const clientNameVal = document.getElementById('clientName').value;
     const clientId = (clientNameVal && typeof thEnsureClient === 'function')
       ? ((typeof thPresetClientId === 'function' && thPresetClientId(presetClientId, clientNameVal)) || (thEnsureClient(clientNameVal, {
@@ -3180,6 +3308,8 @@
       discount: totals.discount,
       total: totals.total,
       paid: false,
+      // The guest pay code (makePayToken), only on an invoice that was sent.
+      payToken: totals.payToken || null,
       jobRefId: jobRefId || '',
       jobRefTitle,
       // Saved to the internal log too (2026-09-06), requested
@@ -3198,19 +3328,19 @@
       sourceQuoteId: pendingSourceQuoteId || undefined,
     };
     list.push(newEntry);
-    saveInvoiceLog(list);
+    thInvoices.replaceAll(list);
     logInvoiceToIncomeLog(newEntry);
     // Best-effort relational mirror (code-health pass, 2026-09-08) -- see
     // sync.js's RELATIONAL MIRROR section. Never blocks or throws back here.
     if (typeof mirrorInvoiceToRelational === 'function') mirrorInvoiceToRelational(newEntry);
 
     if (pendingSourceQuoteId) {
-      const quotes = loadQuoteLog();
+      const quotes = thQuotes.all();
       const quote = quotes.find(q => q.id === pendingSourceQuoteId);
       if (quote) {
         quote.status = 'converted';
         quote.convertedToInvoiceId = newEntry.id;
-        saveQuoteLog(quotes);
+        thQuotes.replaceAll(quotes);
         if (typeof mirrorQuoteToRelational === 'function') mirrorQuoteToRelational(quote);
         if (typeof renderQuoteLog === 'function') renderQuoteLog();
       }
@@ -3237,12 +3367,7 @@
   }
 
   // ---------- Quote logging (separate from invoices) ----------
-  const QUOTE_STORAGE_KEY = 'th_quotes';
-  function loadQuoteLog() { try { return JSON.parse(localStorage.getItem(QUOTE_STORAGE_KEY) || '[]'); } catch (e) { return []; } }
-  function saveQuoteLog(list) {
-    localStorage.setItem(QUOTE_STORAGE_KEY, JSON.stringify(list));
-    if (typeof scheduleSync === 'function') scheduleSync();
-  }
+  // The quote log goes through thQuotes (data-layer.js): all() / replaceAll() / remove().
 
   const pendingDeleteQuoteIds = new Map();
   async function deleteQuoteLogEntry(id) {
@@ -3251,12 +3376,10 @@
     const row = document.querySelector('[data-quote-id="' + id + '"]');
     await new Promise(resolve => animateRowExit(row, resolve));
 
-    const timer = setTimeout(() => {
+    const timer = thDeferDelete(() => {
       pendingDeleteQuoteIds.delete(id);
-      const quoteToDelete = loadQuoteLog().find(q => q.id === id);
-      saveQuoteLog(loadQuoteLog().filter(q => q.id !== id));
-      if (typeof thAddQuoteTombstone === 'function') thAddQuoteTombstone(id);
-      if (typeof mirrorDelete === 'function') mirrorDelete('quotes', id);
+      const quoteToDelete = thQuotes.all().find(q => q.id === id);
+      thQuotes.remove(id); // write + tombstone + relational mirrorDelete
       if (quoteToDelete && typeof thAddToGraveyard === 'function') thAddToGraveyard('quote', quoteToDelete);
       renderQuoteLog();
     }, 6000);
@@ -3264,15 +3387,15 @@
     pendingDeleteQuoteIds.set(id, timer);
     renderQuoteLog();
     showUndoToast('Quote removed from log.', () => {
-      clearTimeout(pendingDeleteQuoteIds.get(id));
+      thCancelDeferredDelete(pendingDeleteQuoteIds.get(id));
       pendingDeleteQuoteIds.delete(id);
       renderQuoteLog();
     });
   }
   function logQuote(totals) {
-    const list = loadQuoteLog();
+    const list = thQuotes.all();
     const jobRefId = document.getElementById('quoteJobRef').value;
-    const jobRefTitle = jobRefId ? (loadJobs().find(j => String(j.id) === jobRefId) || {}).title || '' : '';
+    const jobRefTitle = jobRefId ? (thJobs.all().find(j => String(j.id) === jobRefId) || {}).title || '' : '';
     const quoteClientNameVal = document.getElementById('quoteClientName').value;
     const quoteClientId = (quoteClientNameVal && typeof thEnsureClient === 'function')
       ? ((typeof thPresetClientId === 'function' && thPresetClientId(presetClientId, quoteClientNameVal)) || (thEnsureClient(quoteClientNameVal, {
@@ -3308,7 +3431,7 @@
       status: 'pending',
     };
     list.push(newEntry);
-    saveQuoteLog(list);
+    thQuotes.replaceAll(list);
     // Best-effort relational mirror (code-health pass, 2026-09-08) -- see
     // sync.js's RELATIONAL MIRROR section. Never blocks or throws back here.
     if (typeof mirrorQuoteToRelational === 'function') mirrorQuoteToRelational(newEntry);
@@ -3324,7 +3447,7 @@
 
   function renderQuoteLog() {
     const searchTerm = (document.getElementById('quoteLogSearch')?.value || '').trim().toLowerCase();
-    let log = [...loadQuoteLog()].sort((a, b) => b.id - a.id);
+    let log = [...thQuotes.all()].sort((a, b) => b.id - a.id);
     if (pendingDeleteQuoteIds.size > 0) log = log.filter(q => !pendingDeleteQuoteIds.has(q.id));
     // Conversion rate -- computed over the full log (before the search
     // filter below narrows what's actually displayed), so searching for
@@ -3415,7 +3538,7 @@
   // A quote's sheet: its client and job, and Delete. (Turning a quote into
   // an invoice happens on the New quote form -- Convert to Invoice.)
   function openQuoteActions(id) {
-    const q = loadQuoteLog().find(x => x.id === id);
+    const q = thQuotes.all().find(x => x.id === id);
     if (!q) return;
     const actions = [];
     actions.push({ label: q.clientEmail ? 'Resend' : 'Send to an email', onClick: () => resendQuoteToClient(id) });
@@ -3723,14 +3846,10 @@
   // is deliberately left alone here rather than inventing data that
   // doesn't exist; only the Bill-To contact row (phone/email) gets
   // filled in, since that maps directly to what a Contact actually has.
-  function loadContactsForAutofill() {
-    try { return JSON.parse(localStorage.getItem('th_tracker_contacts') || '[]'); }
-    catch (e) { return []; }
-  }
   function populateKnownContactsList() {
     const list = document.getElementById('knownContactsList');
     if (!list) return;
-    list.innerHTML = loadContactsForAutofill().map(c => `<option value="${escapeAttr(c.name)}">`).join('');
+    list.innerHTML = thContacts.all().map(c => `<option value="${escapeAttr(c.name)}">`).join('');
   }
   // Push 6 (2026-08-20, structural item #35): selecting a job from the
   // "Link to Job" dropdown previously did nothing until save time --
@@ -3882,7 +4001,7 @@
     if (typeof thAutofillClientFields === 'function') {
       thAutofillClientFields(typedName, { email: 'clientEmail', address: 'clientAddress' });
     }
-    const match = loadContactsForAutofill().find(c => (c.name || '').toLowerCase() === typedName.toLowerCase());
+    const match = thContacts.all().find(c => (c.name || '').toLowerCase() === typedName.toLowerCase());
     if (!match) return;
     const row = document.getElementById(firstContactRowId);
     if (!row) return;
@@ -4185,7 +4304,7 @@
     const brandLabel = (savedCardInfo.brand || 'card').charAt(0).toUpperCase() + (savedCardInfo.brand || 'card').slice(1);
     area.innerHTML =
       '<div class="pos-saved-card-box">' +
-      '<div><div class="pos-card-label">' + escapeHtmlPos(brandLabel) + ' ending in ' + escapeHtmlPos(savedCardInfo.last4) + '</div>' +
+      '<div><div class="pos-card-label">' + escapeHtml(brandLabel) + ' ending in ' + escapeHtml(savedCardInfo.last4) + '</div>' +
       '<div class="pos-card-sub">Saved from a previous payment</div></div>' +
       '</div>' +
       '<button class="primary-btn" id="posChargeSavedBtn" style="width:100%; justify-content:center;" onclick="chargeSavedCard()">Charge Saved Card</button>' +
@@ -4248,12 +4367,6 @@
   // which loaded no shared script providing one; kept here rather than
   // swapped for tools-dialogs.js's escapeHtml() so the moved code stays
   // verbatim and its tests keep reading the same text.
-  function escapeHtmlPos(str) {
-    const div = document.createElement('div');
-    div.textContent = String(str == null ? '' : str);
-    return div.innerHTML;
-  }
-
   function readAmountAndDescription() {
     const email = document.getElementById('posClientEmail').value.trim();
     const amount = parseFloat(document.getElementById('posAmount').value);

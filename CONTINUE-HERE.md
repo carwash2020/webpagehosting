@@ -31,6 +31,15 @@ command and let `check-consistency` (which now checks all three, and
 runs on every push) confirm it.
 
 ### 1. Bump the stylesheet cache stamp, or your CSS never ships
+**Update 2026-11-03:** every `?v=` on a reference to a real file in this
+repo -- including images (`/images/*.webp?v=`), `portal-app.js`/`.css` and
+`tools/qrcode-lib.js`, which used to be hand-stamped timestamps -- is now
+that file's content hash, checked by `check-consistency` and rewritten by
+`npm run fix-versions` (`checkLocalStamps`/`fixLocalStamps`). The only
+version still set by hand is `BUILD` in `js/app-freshness.js` with
+`minBuild` in `version.json`: that is the deliberate "force every device to
+update" lever, not a cache stamp.
+
 Every public page references `/styles.css?v=HASH` (root, `tools/`,
 `portal/`, and `blog/` alike). GitHub Pages sits behind Fastly, which
 caches per-URL independently of the browser — a hard refresh and

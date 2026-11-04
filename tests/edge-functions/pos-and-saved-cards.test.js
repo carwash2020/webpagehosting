@@ -106,7 +106,7 @@ test('a synchronously-confirmed charge_saved charge is logged with its own Payme
   const fnMatch = POS_CHARGE.match(/async function logPosIncomeToWorkspaceSync\([\s\S]*?\n\}\n/);
   assert.ok(fnMatch, 'expected to isolate logPosIncomeToWorkspaceSync()');
   const body = fnMatch[0];
-  assert.match(body, /entry\.stripePaymentIntentId === stripePaymentIntentId/);
+  assert.match(body, /\((\w+): any\) => \1\.stripePaymentIntentId === stripePaymentIntentId/);
   assert.match(body, /stripePaymentIntentId,/, 'the logged entry must actually store the id it checks against');
   assert.match(POS_CHARGE, /await logPosIncomeToWorkspaceSync\(description, amount, normalizedEmail, claims\.email, pi\.id\);/);
 });

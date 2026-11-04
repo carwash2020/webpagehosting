@@ -221,6 +221,13 @@ click a setting by hand.
       saved-card purposes is an account with at least one invoice,
       quote, job, contract, checkup, OR a work order it submitted
       itself. Work orders count.
+    - **Revised (2026-11-04, Connor, option (a)): work orders no longer
+      count.** Portal Create account (Phase 3.3) lets anyone make an
+      account for their own email, and a client files work orders
+      themselves, so "has a work order" would let a stranger sign up,
+      file one and reach card setup. Only records Triple H created count:
+      invoices, quotes, jobs, contracts, checkups. Needs a redeploy of
+      `manage-saved-card` (in the Phase 3 batch).
     - **Implemented:** `edge-functions/manage-saved-card-index.ts`'s
       `create_setup_intent` mode now calls `accountHasBusinessRecord()`
       before anything else (before even asking for a signature), which

@@ -287,9 +287,19 @@ test('portal, migration not applied: "Trust this device" on, the code is still r
   assert.ok(!srv.calls.includes('rpc:use_trusted_device'));
 });
 
+test('portal: Remember me starts OFF (handoff §5), so the trust switch on the code step does too', async () => {
+  const srv = server();
+  const w = loadLogin(srv);
+  assert.equal(w.document.getElementById('rememberMe').checked, false);
+  await submitPassword(w);
+  await until(() => codeShown(w), 'the code step');
+  assert.equal(w.document.getElementById('portalTrustDevice').checked, false);
+});
+
 test('portal: a real failure trusting the device still signs in with the code, and is logged', async () => {
   const srv = server({ rpcFail: { trust_this_device: true } });
   const w = loadLogin(srv);
+  w.document.getElementById('rememberMe').checked = true; // trust on, so it is tried
   await submitPassword(w);
   await until(() => codeShown(w), 'the code step');
   w.document.getElementById('mfaChallengeCodeInput').value = '123456';

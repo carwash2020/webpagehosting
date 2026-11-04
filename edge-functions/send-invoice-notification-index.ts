@@ -35,13 +35,12 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const LEAD_EMAIL_FROM = Deno.env.get("LEAD_EMAIL_FROM") || "";
 const PORTAL_URL = "https://www.triplehenterprisesllc.biz/portal/dashboard.html";
-// Steve gets a copy whenever the actual invoice PDF goes out (2026-10-23,
-// requested directly) -- BCC'd on the same send, so it's the exact email
-// the client received, not a separate re-composed copy that could drift.
-// Deliberately only when hasPdf: a PDF-less fallback send (the
-// resend-to-same-email path, see the header comment) isn't "the invoice
-// emailed to the customer" in the sense meant here.
+// Steve and Connor get a copy of every invoice email (2026-11-04, handoff
+// §3A and the approved "Invoice email" design; this was Steve only, and
+// only when a PDF was attached) -- BCC'd on the same send, so it's the
+// exact email the client received, not a re-composed copy that could drift.
 const STEVE_EMAIL = "steve@triplehenterprisesllc.biz";
+const CONNOR_EMAIL = "connor@triplehenterprisesllc.biz";
 const LOGO_URL = "https://www.triplehenterprisesllc.biz/images/logo-signature-email.png";
 
 const ALLOWED_ORIGIN = "https://www.triplehenterprisesllc.biz";
@@ -149,18 +148,67 @@ function formatCurrency(n: number): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 }
 
-function buildEmailHtml(
-  clientName: string, invoiceNumber: string, total: number, description: string | null,
-  hasPdf: boolean, hasPortalAccount: boolean,
-): string {
-  const heading = hasPdf ? "Your invoice is attached" : "You have a new invoice";
-  const intro = hasPdf
-    ? "Your invoice from Triple H Enterprises is attached to this email as a PDF."
-    : "You have a new invoice from Triple H Enterprises.";
-  const cta = hasPortalAccount
+// The pay link (2026-11-04, handoff §3A, approved "Invoice email" design):
+// /pay/<invoice number>-<code>, the code made by the invoice generator and
+// stored on the portal row (pay_token). guest-pay checks it; a code of the
+// wrong shape is simply not linked.
+const PAY_BASE = "https://www.triplehenterprisesllc.biz/pay/";
+const PAY_TOKEN_SHAPE = /^[a-hjkmnp-z2-9]{10,40}$/;
+function payUrlFor(invoiceNumber: string, token: unknown): string | null {
+  if (typeof token !== "string" || !PAY_TOKEN_SHAPE.test(token)) return null;
+  return `${PAY_BASE}${encodeURIComponent(invoiceNumber)}-${token}`;
+}
+
+function longDate(iso: string | null): string {
+  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "";
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", { timeZone: "UTC", year: "numeric", month: "short", day: "numeric" });
+}
+function shortDate(iso: string | null): string {
+  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "";
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", { timeZone: "UTC", month: "short", day: "numeric" });
+}
+function firstName(name: string): string {
+  return String(name || "").trim().split(/\s+/)[0] || name;
+}
+
+type EmailParts = {
+  clientName: string; invoiceNumber: string; total: number; description: string | null;
+  hasPdf: boolean; hasPortalAccount: boolean; payUrl: string | null; dueDate: string | null; terms: string | null;
+};
+
+function emailSubject(p: EmailParts): string {
+  const due = shortDate(p.dueDate);
+  return `Invoice ${p.invoiceNumber} from Triple H Enterprises · ${formatCurrency(p.total)}${due ? ` due ${due}` : ""}`;
+}
+
+function buildEmailHtml(p: EmailParts): string {
+  const heading = "Your invoice from Triple H";
+  const intro = `Hi ${firstName(p.clientName)}, thanks for choosing us. Your invoice is below` +
+    (p.hasPdf ? " and attached as a PDF." : ".") +
+    (p.payUrl ? " You can pay it right from this email, no account needed." : "");
+  const font = "font-family: -apple-system, Helvetica, Arial, sans-serif;";
+  const row = (label: string, value: string, strong = false) =>
+    `<tr><td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #777; font-size: 14px; width: 110px; ${font}">${label}</td><td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; color: #222; ${strong ? "font-weight: 600;" : ""} ${font}">${value}</td></tr>`;
+  const due = longDate(p.dueDate);
+  const payText = p.payUrl ? p.payUrl.replace(/^https:\/\/www\./, "") : "";
+  const cta = p.payUrl
     ? `<tr>
-          <td align="center" style="padding: 24px 28px 28px;">
-            <a href="${PORTAL_URL}" style="display: inline-block; background: #ff8000; color: #ffffff; text-decoration: none; font-family: -apple-system, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: 600; padding: 14px 32px; border-radius: 8px;">View and Pay</a>
+          <td align="center" style="padding: 24px 28px 8px;">
+            <a href="${escapeHtml(p.payUrl)}" style="display: inline-block; background: #ff8000; color: #ffffff; text-decoration: none; ${font} font-size: 15px; font-weight: 600; padding: 14px 32px; border-radius: 8px;">Pay this invoice &middot; ${escapeHtml(formatCurrency(p.total))}</a>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 28px 0; ${font}">
+            <p style="color: #555; font-size: 13px; line-height: 1.5; margin: 0 0 10px; text-align: center;">Or copy this link into your browser: <a href="${escapeHtml(p.payUrl)}" style="color: #1a6fd1; text-decoration: underline; word-break: break-all;">${escapeHtml(payText)}</a></p>
+            <p style="color: #777; font-size: 12px; line-height: 1.5; margin: 0 0 4px; text-align: center;">No account needed: card or bank, secure checkout by Stripe. The last part of the link is this invoice's own code, so only you can open it.</p>
+          </td>
+        </tr>`
+    : p.hasPortalAccount
+    ? `<tr>
+          <td align="center" style="padding: 24px 28px 8px;">
+            <a href="${PORTAL_URL}" style="display: inline-block; background: #ff8000; color: #ffffff; text-decoration: none; ${font} font-size: 15px; font-weight: 600; padding: 14px 32px; border-radius: 8px;">View and Pay</a>
           </td>
         </tr>`
     : "";
@@ -184,28 +232,34 @@ function buildEmailHtml(
           </td>
         </tr>
         <tr>
-          <td style="padding: 32px 28px 8px; font-family: -apple-system, Helvetica, Arial, sans-serif;">
+          <td style="padding: 32px 28px 8px; ${font}">
             <h1 style="color: #ff8000; font-size: 22px; margin: 0 0 20px; text-align: center;">${escapeHtml(heading)}</h1>
-            <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 20px;">Hi ${escapeHtml(clientName)},</p>
             <p style="color: #222; font-size: 15px; line-height: 1.5; margin: 0 0 20px;">${escapeHtml(intro)}</p>
           </td>
         </tr>
         <tr>
           <td style="padding: 0 28px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-              <tr><td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #777; font-size: 14px; width: 100px;">Invoice</td><td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; color: #222;">${escapeHtml(invoiceNumber)}</td></tr>
-              ${description ? `<tr><td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #777; font-size: 14px;">For</td><td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; color: #222;">${escapeHtml(description)}</td></tr>` : ""}
-              <tr><td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #777; font-size: 14px;">Amount</td><td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; color: #222; font-weight: 600;">${escapeHtml(formatCurrency(total))}</td></tr>
+              ${row("Invoice", escapeHtml(p.invoiceNumber))}
+              ${p.description ? row("For", escapeHtml(p.description)) : ""}
+              ${due ? row("Due", escapeHtml(due + (p.terms ? ` (${p.terms})` : ""))) : ""}
+              ${row("Amount due", escapeHtml(formatCurrency(p.total)), true)}
             </table>
           </td>
         </tr>
         ${cta}
         <tr>
+          <td style="padding: 16px 28px 24px; ${font}">
+            <p style="color: #555; font-size: 13px; line-height: 1.5; margin: 0;">Prefer cash or check? Pay Steve in person and mention invoice ${escapeHtml(p.invoiceNumber)}. Questions? Call or text (435) 414-1667.</p>
+          </td>
+        </tr>
+        <tr>
           <td style="background: #ff8000; height: 4px; line-height: 4px; font-size: 1px;">&nbsp;</td>
         </tr>
         <tr>
-          <td align="center" style="padding: 16px 24px; font-family: -apple-system, Helvetica, Arial, sans-serif;">
-            <p style="color: #999; font-size: 12px; margin: 0;">(435) 414-1667 &middot; triplehenterprisesllc.biz</p>
+          <td align="center" style="padding: 16px 24px; ${font}">
+            <p style="color: #999; font-size: 12px; margin: 0;">Triple H Enterprises LLC &middot; St. George, Utah</p>
+            <p style="color: #999; font-size: 12px; margin: 4px 0 0;">(435) 414-1667 &middot; triplehenterprisesllc.biz</p>
           </td>
         </tr>
       </table>
@@ -216,26 +270,22 @@ function buildEmailHtml(
 </html>`;
 }
 
-function buildEmailText(
-  clientName: string, invoiceNumber: string, total: number, description: string | null,
-  hasPdf: boolean, hasPortalAccount: boolean,
-): string {
+function buildEmailText(p: EmailParts): string {
+  const due = longDate(p.dueDate);
   return [
-    `Hi ${clientName},`,
+    "Your invoice from Triple H Enterprises",
     "",
-    hasPdf
-      ? "Your invoice from Triple H Enterprises is attached to this email as a PDF."
-      : "You have a new invoice from Triple H Enterprises.",
+    `Hi ${firstName(p.clientName)},`,
+    p.hasPdf ? "Your invoice is attached to this email as a PDF." : "",
     "",
-    `Invoice: ${invoiceNumber}`,
-    description ? `For: ${description}` : "",
-    `Amount: ${formatCurrency(total)}`,
+    `Invoice ${p.invoiceNumber}${p.description ? ` · ${p.description}` : ""}`,
+    `Amount due: ${formatCurrency(p.total)}${due ? ` · Due ${due}` : ""}`,
     "",
-    hasPortalAccount ? `View and pay: ${PORTAL_URL}` : "",
+    p.payUrl ? `Pay this invoice (no account needed): ${p.payUrl}` : (p.hasPortalAccount ? `View and pay: ${PORTAL_URL}` : ""),
+    `Prefer cash or check? Pay Steve in person and mention invoice ${p.invoiceNumber}.`,
     "",
-    "Triple H Enterprises",
-    "(435) 414-1667, triplehenterprisesllc.biz",
-  ].filter(Boolean).join("\n");
+    "(435) 414-1667 · triplehenterprisesllc.biz",
+  ].filter((l, i, a) => l !== "" || (i > 0 && a[i - 1] !== "")).join("\n");
 }
 
 // Two-factor gate (2026-09-25, docs/ACTION-ITEMS.md #13). An internal
@@ -304,7 +354,7 @@ Deno.serve(async (req: Request) => {
 
     const {
       client_email, client_name, invoice_number, total, description,
-      pdf_base64, pdf_filename, has_portal_account,
+      pdf_base64, pdf_filename, has_portal_account, pay_token, due_date, terms,
     } = await req.json();
     if (
       typeof client_email !== "string" || !client_email.includes("@") ||
@@ -328,19 +378,25 @@ Deno.serve(async (req: Request) => {
       return json({ ok: true, skipped: "client opted out of invoice/quote emails" });
     }
 
+    const parts: EmailParts = {
+      clientName: displayName, invoiceNumber: invoice_number, total, description: description || null,
+      hasPdf, hasPortalAccount, payUrl: payUrlFor(invoice_number, pay_token),
+      dueDate: typeof due_date === "string" ? due_date : null,
+      terms: typeof terms === "string" && terms.trim() ? terms.trim().slice(0, 40) : null,
+    };
     const emailPayload: Record<string, unknown> = {
       from: `Triple H Enterprises <${LEAD_EMAIL_FROM}>`,
       to: client_email,
-      subject: hasPdf ? `Your invoice from Triple H Enterprises: ${invoice_number}` : `New invoice from Triple H Enterprises: ${invoice_number}`,
-      html: buildEmailHtml(displayName, invoice_number, total, description || null, hasPdf, hasPortalAccount),
-      text: buildEmailText(displayName, invoice_number, total, description || null, hasPdf, hasPortalAccount),
+      bcc: [STEVE_EMAIL, CONNOR_EMAIL],
+      subject: emailSubject(parts),
+      html: buildEmailHtml(parts),
+      text: buildEmailText(parts),
     };
     if (hasPdf) {
       emailPayload.attachments = [{
         filename: (typeof pdf_filename === "string" && pdf_filename.trim()) || `${invoice_number}.pdf`,
         content: pdf_base64,
       }];
-      emailPayload.bcc = STEVE_EMAIL;
     }
 
     const emailRes = await fetch("https://api.resend.com/emails", {

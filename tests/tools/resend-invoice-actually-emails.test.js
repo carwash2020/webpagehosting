@@ -32,6 +32,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
+const { installDataLayer } = require('../data-layer-harness');
 
 const TOOLS = path.join(__dirname, '..', '..', 'tools');
 const PAGE = fs.readFileSync(path.join(TOOLS, 'invoice-generator.html'), 'utf8');
@@ -45,6 +46,7 @@ const INVOICE = { id: 1790448758936, invoiceNumber: 'INV-2026-1051', clientName:
 function setup({ invoice = INVOICE, confirm = true, resendResult = { ok: true } } = {}) {
   const dom = new JSDOM('<!doctype html><body></body>', { url: 'https://example.com/tools/invoice-generator.html', runScripts: 'outside-only' });
   const w = dom.window;
+  installDataLayer(w); // the page reads/writes the log through thInvoices
   const out = { sent: [], mirrored: [], toasts: [], confirms: [], renders: 0 };
   w.localStorage.setItem('th_invoices', JSON.stringify([invoice]));
   w.SUPABASE_URL = 'https://x.supabase.co';
@@ -59,10 +61,7 @@ function setup({ invoice = INVOICE, confirm = true, resendResult = { ok: true } 
   w.eval(DIALOGS);
   w.showToast = (m, o) => out.toasts.push({ m, type: o && o.type });
   w.showConfirm = async (m) => { out.confirms.push(m); return confirm; };
-  w.eval(`var INVOICE_STORAGE_KEY = 'th_invoices';
-    function loadInvoiceLog() { try { return JSON.parse(localStorage.getItem(INVOICE_STORAGE_KEY) || '[]'); } catch (e) { return []; } }
-    function saveInvoiceLog(list) { localStorage.setItem(INVOICE_STORAGE_KEY, JSON.stringify(list)); }
-    ` + RESEND + '\nwindow.__r = resendInvoiceToClient;');
+  w.eval(RESEND + '\nwindow.__r = resendInvoiceToClient;');
   const field = () => w.document.getElementById('customDialogField0');
   const click = (text) => [...w.document.querySelectorAll('#customDialogButtons button')].find((b) => b.textContent === text).click();
   out.resend = async (email, button = 'Send') => {

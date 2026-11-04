@@ -45,6 +45,13 @@
 // here" -- set together, unconditionally). login.html is excluded: no
 // point navigating before you're signed in.
 // ---------------------------------------------------------------------------
+// One escaper for every sheet this file builds (2026-11-03, handoff §2:
+// one copy of each helper). Same output as tools-dialogs.js escapeAttr()
+// (& < > "), kept here so this file never depends on script order.
+function thNavEsc(v) {
+  return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 (function () {
   if (typeof document === 'undefined') return;
   var path = (window.location && window.location.pathname) || '';
@@ -734,7 +741,7 @@
     sidebar.setAttribute('aria-label', 'Main navigation');
     sidebar.innerHTML =
       '<a href="/tools/workspace.html" class="th-sidebar-brand">' +
-        '<img src="/images/logo-signature-orange.webp?v=202608142300" alt="">' +
+        '<img src="/images/logo-signature-orange.webp?v=adc4d42660" alt="">' +
         '<span>Triple H</span>' +
       '</a>' +
       // New (2026-09-22): the desktop door into the Create sheet -- the
@@ -1195,7 +1202,7 @@ function thStopClock(jobId) {
 }
 function thOpenClockStoppedSheet(r) {
   var job = r.job;
-  var esc = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  var esc = thNavEsc;
   var name = job.title || 'this job';
   var title = r.hours
     ? '<span class="th-clock-sheet-head"><strong>' + thClockDuration(r.ms) + '</strong>on ' + esc(name) + '</span>' +
@@ -1233,9 +1240,7 @@ function thOpenClockStoppedSheet(r) {
   'use strict';
   var tick = null;
 
-  function esc(v) {
-    return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
+  var esc = thNavEsc;
   function runningJob() {
     var jobs;
     try { jobs = JSON.parse(localStorage.getItem('th_tracker_jobs') || '[]'); } catch (e) { return null; }
@@ -1390,7 +1395,7 @@ function thOpenShiftSheet() {
     return false;
   }
   if (document.querySelector('.quick-actions-overlay.th-shift')) return true; // already open (a double tap)
-  var esc = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  var esc = thNavEsc;
   var hoursLabel = function (h) { return typeof thClockHoursLabel === 'function' ? thClockHoursLabel(h) : h + ' h'; };
   var dayLabel = function (ms) { return new Date(ms).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); };
   var opener = document.activeElement;
@@ -1650,7 +1655,7 @@ function thOpenReminderSheet(invoiceId) {
   if (typeof thInvoiceReminderText !== 'function' || typeof thRead !== 'function' || typeof TH_KEYS === 'undefined') return false;
   var inv = thRead(TH_KEYS.invoices, []).find(function (i) { return String(i.id) === String(invoiceId); });
   if (!inv) return false;
-  var esc = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  var esc = thNavEsc;
   var icon = function (name) { return '<svg class="th-icon" aria-hidden="true"><use href="#icon-' + name + '" xlink:href="#icon-' + name + '"></use></svg>'; };
   var msg = thInvoiceReminderText(inv);
   var sentBefore = thInvoiceReminders(inv).length;
@@ -1750,7 +1755,7 @@ function thOpenTextSheet(jobId, kind) {
   if (typeof thJobTextTemplates !== 'function' || typeof thRead !== 'function' || typeof TH_KEYS === 'undefined') return false;
   var job = thRead(TH_KEYS.jobs, []).find(function (j) { return String(j.id) === String(jobId); });
   if (!job) return false;
-  var esc = function (v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  var esc = thNavEsc;
   var icon = function (name) { return '<svg class="th-icon" aria-hidden="true"><use href="#icon-' + name + '" xlink:href="#icon-' + name + '"></use></svg>'; };
   var phone = job.phone || '';
   if (!phone) {

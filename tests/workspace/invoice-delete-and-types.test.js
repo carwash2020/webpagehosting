@@ -34,7 +34,7 @@ test('deleteInvoiceLogEntry calls the income cleanup inside the committed delete
   const fnMatch = SRC.match(/async function deleteInvoiceLogEntry\(id\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected deleteInvoiceLogEntry()');
   const body = fnMatch[0];
-  const timerIdx = body.indexOf('setTimeout(');
+  const timerIdx = body.indexOf('thDeferDelete(');
   const cleanupIdx = body.indexOf('removeIncomeEntriesForInvoice(id)');
   assert.ok(timerIdx !== -1 && cleanupIdx !== -1);
   // Inside the timer, not before it: undo must still be able to

@@ -96,7 +96,9 @@ test('the portal has a Home page that summarises rather than duplicating the lis
 test('login and set-password land on Home, not straight into the invoice list', () => {
   for (const page of ['login.html', 'set-password.html']) {
     const src = fs.readFileSync(repo('portal', page), 'utf8');
-    assert.match(src, /window\.location\.replace\('\/portal\/home\.html'\)/,
+    // login.html since 2026-11-04: Home unless a checked ?return= says
+    // otherwise (portalAfterSignInUrl() falls back to Home).
+    assert.match(src, page === 'login.html' ? /window\.location\.replace\(portalAfterSignInUrl\(\)\)/ : /window\.location\.replace\('\/portal\/home\.html'\)/,
       `${page}: should land on the Home hub`);
     assert.doesNotMatch(src, /window\.location\.replace\('\/portal\/dashboard\.html'\)/,
       `${page}: should no longer land straight on invoices`);

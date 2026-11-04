@@ -139,7 +139,7 @@ Deno.serve(async (req: Request) => {
     const {
       source_invoice_id, client_email, client_name,
       invoice_number, invoice_date, description, total, line_items,
-      pdf_base64, pdf_filename,
+      pdf_base64, pdf_filename, pay_token, due_date, terms,
     } = body;
 
     if (
@@ -157,6 +157,16 @@ Deno.serve(async (req: Request) => {
     // actually be an array, not some other JSON shape.
     if (line_items !== undefined && line_items !== null && !Array.isArray(line_items)) {
       return json({ ok: false, error: "line_items must be an array if provided." }, 400);
+    }
+
+    // The guest pay code (2026-11-04, handoff §3A): made by the invoice
+    // generator when the invoice is sent, the only key to /pay/ for this
+    // invoice (edge-functions/guest-pay-index.ts). Optional; a code of the
+    // wrong shape is refused rather than stored, and no code at all leaves
+    // whatever the row already has alone (a resend of an older invoice).
+    const PAY_TOKEN_SHAPE = /^[a-hjkmnp-z2-9]{10,40}$/;
+    if (pay_token !== undefined && pay_token !== null && (typeof pay_token !== "string" || !PAY_TOKEN_SHAPE.test(pay_token))) {
+      return json({ ok: false, error: "pay_token is not a valid pay code." }, 400);
     }
 
     const normalizedEmail = client_email.toLowerCase().trim();
@@ -180,7 +190,19 @@ Deno.serve(async (req: Request) => {
     const existingInvoiceRows = existingInvoiceRes.ok ? await existingInvoiceRes.json() : [];
     const isNewInvoice = existingInvoiceRows.length === 0;
 
-    const upsertRes = await fetch(
+    const row: Record<string, unknown> = {
+      source_invoice_id,
+      client_email: normalizedEmail,
+      client_name,
+      invoice_number,
+      invoice_date,
+      description: description || null,
+      total,
+      line_items: line_items || null,
+      updated_at: new Date().toISOString(),
+    };
+    if (pay_token) row.pay_token = pay_token;
+    const upsert = (r: Record<string, unknown>) => fetch(
       `${SUPABASE_URL}/rest/v1/client_portal_invoices?on_conflict=source_invoice_id`,
       {
         method: "POST",
@@ -190,19 +212,25 @@ Deno.serve(async (req: Request) => {
           "Content-Type": "application/json",
           Prefer: "resolution=merge-duplicates",
         },
-        body: JSON.stringify([{
-          source_invoice_id,
-          client_email: normalizedEmail,
-          client_name,
-          invoice_number,
-          invoice_date,
-          description: description || null,
-          total,
-          line_items: line_items || null,
-          updated_at: new Date().toISOString(),
-        }]),
+        body: JSON.stringify([r]),
       },
     );
+    let upsertRes = await upsert(row);
+    let payTokenStored = !!pay_token && upsertRes.ok;
+    // Before sql/payments/02_guest_pay_tokens.sql is applied there is no
+    // pay_token column (PostgREST answers 400, PGRST204). The invoice still
+    // goes out -- just without a pay link -- rather than failing the send.
+    if (!upsertRes.ok && pay_token && upsertRes.status === 400) {
+      const errText = await upsertRes.text();
+      if (/pay_token/.test(errText)) {
+        console.error("sync-invoice-to-portal: no pay_token column yet; sending without a pay link");
+        delete row.pay_token;
+        upsertRes = await upsert(row);
+        payTokenStored = false;
+      } else {
+        return json({ ok: false, error: `Database error: ${errText.slice(0, 300)}` }, 502);
+      }
+    }
 
     if (!upsertRes.ok) {
       const errText = await upsertRes.text();
@@ -227,6 +255,9 @@ Deno.serve(async (req: Request) => {
           client_email: normalizedEmail, client_name, invoice_number, total, description,
           pdf_base64: pdf_base64 || null, pdf_filename: pdf_filename || null,
           has_portal_account: !isNewClient,
+          pay_token: payTokenStored ? pay_token : null,
+          due_date: typeof due_date === "string" ? due_date : null,
+          terms: typeof terms === "string" ? terms : null,
         }),
       });
       emailResult = { type: "notification", ...(await notifyRes.json()) };

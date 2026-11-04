@@ -1585,3 +1585,21 @@ Steve couldn't finish the required two-factor setup on his iPhone. Three bugs, o
 On 2026-10-04 Steve's account had one unverified factor (created 04:34 UTC) and no verified one. The next sign-in after this deploy clears it automatically.
 
 Tests: `tests/tools/mfa-enroll-stuck-setup.test.js` (6). They run the real auth.js functions against a fake Supabase Auth, and the real login.html enrollment step in jsdom. `tests/tools/internal-mfa.test.js` was updated for the encoded data URI.
+
+## 2026-11-04 -- Saved-card gate: work orders no longer count (revises ACTION-ITEMS #15)
+
+Found while preparing the Phase 3 batch: the #15 gate (above) let a
+self-submitted work order count as a business record, on the premise that
+public signup is off and only invited accounts exist. Phase 3.3 adds portal
+Create account (`edge-functions/portal-signup-index.ts`; public signup in
+Supabase Auth stays off, but anyone can now make an account for an email
+they control). A stranger could then sign up, file a work order (its only
+INSERT policy is the client's own) and pass the gate to
+`create_setup_intent` -- the card-testing path #15 closed. Connor chose
+option (a): only records Triple H creates count (invoices, quotes, jobs,
+contracts, checkups). `BUSINESS_RECORD_TABLES` drops
+`client_portal_work_orders`; the 403 text now reads "...at least one
+invoice, quote, job, contract or checkup from Triple H first." Failing test
+written first (`tests/edge-functions/saved-card-business-record-gate.test.js`:
+a work order alone, in any status, is refused). **Not deployed**: goes with
+the Phase 3 batch, after Connor's OK.

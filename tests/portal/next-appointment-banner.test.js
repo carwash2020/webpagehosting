@@ -102,18 +102,26 @@ test('nothing scheduled at all renders nothing, not an empty-state message (the 
   assert.equal(runBanner([], '2026-09-07T00:00:00Z'), '');
 });
 
+// The countdown counts calendar days on the device's own clock, which is
+// right. Its old fixtures pinned "now" to UTC midnight, the evening before
+// in St. George, so under TZ=America/Denver (where Triple H and its clients
+// are) "Today" read "Tomorrow" -- the 3 September-snapshot failures (handoff
+// 2026-11-03 §6B), a test-environment artifact. These moments are mid-day
+// and fall on the same date in UTC and every US zone.
+const SAME_DAY_EVERYWHERE = '2026-09-07T15:00:00Z'; // 9 AM MDT, Sept 7
+
 test('the countdown says "Today" for a same-day appointment, not "In 0 days"', () => {
-  const html = runBanner([{ title: 'Fence repair', status: 'scheduled', scheduled_at: '2026-09-07T14:00:00Z' }], '2026-09-07T00:00:00Z');
+  const html = runBanner([{ title: 'Fence repair', status: 'scheduled', scheduled_at: '2026-09-07T20:00:00Z' }], SAME_DAY_EVERYWHERE);
   assert.match(html, />Today</);
 });
 
 test('the countdown says "Tomorrow" for a next-day appointment', () => {
-  const html = runBanner([{ title: 'Washer repair', status: 'scheduled', scheduled_at: '2026-09-08T10:00:00Z' }], '2026-09-07T00:00:00Z');
+  const html = runBanner([{ title: 'Washer repair', status: 'scheduled', scheduled_at: '2026-09-08T16:00:00Z' }], SAME_DAY_EVERYWHERE);
   assert.match(html, />Tomorrow</);
 });
 
 test('the countdown says "In N days" for anything further out', () => {
-  const html = runBanner([{ title: 'Washer repair', status: 'scheduled', scheduled_at: '2026-09-12T10:00:00Z' }], '2026-09-07T00:00:00Z');
+  const html = runBanner([{ title: 'Washer repair', status: 'scheduled', scheduled_at: '2026-09-12T16:00:00Z' }], SAME_DAY_EVERYWHERE);
   assert.match(html, />In 5 days</);
 });
 

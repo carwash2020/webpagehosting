@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en" style="background-color:#0a0a0a;">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Pay your invoice | Triple H Enterprises</title>
+<meta name="robots" content="noindex, nofollow">
+<!--
+  Guest pay page (2026-11-04, handoff §3A; Connor: pay "right from this
+  email -- no account needed"; approved "Pay an invoice, no account"
+  design). The invoice email's Pay button and the address printed on the
+  PDF open /pay/<invoice number>-<code>. GitHub Pages has no such file,
+  so 404.html sends the visitor here as /pay/?c=<invoice number>-<code>.
+
+  The code is the only key. This page sends it to the guest-pay edge
+  function, which answers with the invoice number, date, what it was for,
+  the amount, the due date and "T. Perides" -- never the client's email or
+  address -- and makes a one-time Stripe payment for the total. The card
+  form is Stripe's own (Payment Element), as in the portal. The payment
+  lands the way a portal payment does: stripe-webhook marks the invoice
+  paid, logs the income and tells Steve.
+
+  No sign-in, no Supabase SDK, no shared Workspace or portal scripts.
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.stripe.com; connect-src 'self' https://csvfqdjuobylgafgolho.supabase.co https://api.stripe.com; frame-src https://js.stripe.com https://hooks.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@500;600&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0a; --panel:#141414; --panel-2:#1a1a1a; --border:#2a2a2a; --rule:#1f1f1f;
+    --text:#f2f2f2; --text-2:#cfcfcf; --dim:#9a9a9a; --label:#bdbdbd;
+    --orange:#ff8000; --orange-light:#ffb347; --on-orange:#1a0d02;
+    --overdue:#ff6b5b; --ok:#3ad66b;
+    --display:'Anton', Impact, sans-serif; --ui:'Oswald', 'Arial Narrow', sans-serif;
+    --body:'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html{background:var(--bg);}
+  body{margin:0; min-height:100vh; min-height:100dvh; color:var(--text); font-family:var(--body); line-height:1.45; background:transparent;}
+  /* The public site's blueprint linework (styles.css .bg-blueprint, dark
+     values), copied because this page doesn't load styles.css -- the
+     same copy manage-job.html carries. */
+  .bg-blueprint{
+    position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background-color:var(--bg);
+    background-image:
+      radial-gradient(ellipse 62% 46% at 86% 4%, rgba(255,128,0,.085), transparent 62%),
+      radial-gradient(ellipse 58% 42% at 6% 72%, rgba(58,160,255,.070), transparent 62%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.026) 0 1px, transparent 1px 96px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.026) 0 1px, transparent 1px 96px),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.011) 0 1px, transparent 1px 24px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.011) 0 1px, transparent 1px 24px);
+  }
+  main{max-width:440px; margin:0 auto; padding:max(40px, env(safe-area-inset-top, 0px)) 22px max(28px, env(safe-area-inset-bottom, 0px)); display:flex; flex-direction:column; gap:14px;}
+  a{color:var(--orange-light);}
+  @media (hover:hover){a:hover{color:var(--orange);}}
+  a:focus-visible, button:focus-visible, input:focus-visible{outline:3px solid var(--orange-light); outline-offset:2px;}
+  .brand{font-family:var(--display); font-size:26px; letter-spacing:1px; color:#fff; text-decoration:none;}
+  .kicker{font-family:var(--ui); font-size:12px; letter-spacing:2px; color:var(--orange-light); text-transform:uppercase; margin:0;}
+  .amount{font-family:var(--display); font-size:52px; line-height:1; color:#fff; margin:0; font-weight:400;}
+  .due{font-size:14px; color:var(--dim); margin:0;}
+  .due.is-overdue{color:var(--overdue);}
+  .due.is-paid{color:var(--ok);}
+  .facts{background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:6px 16px; font-size:14px; margin:0;}
+  .facts div{display:flex; justify-content:space-between; gap:16px; padding:8px 0; border-bottom:1px solid var(--rule);}
+  .facts div:last-child{border-bottom:0;}
+  .facts dt{color:var(--dim);}
+  .facts dd{margin:0; text-align:right; overflow-wrap:anywhere;}
+  .facts button.linkish{background:none; border:0; padding:0; font:inherit; color:var(--orange-light); text-decoration:underline; cursor:pointer; min-height:24px;}
+  .section-label{font-family:var(--ui); font-size:12px; letter-spacing:1.5px; color:var(--label); text-transform:uppercase; margin:4px 0 0;}
+  .stripe-box{background:#fff; border-radius:8px; padding:14px; min-height:120px;}
+  .stripe-box .loading{color:#666; font-size:14px; margin:0;}
+  .receipt{display:flex; flex-direction:column; gap:6px; font-family:var(--ui); font-size:12px; letter-spacing:1.5px; color:var(--label); text-transform:uppercase;}
+  .receipt input{height:48px; background:var(--panel); border:1px solid var(--border); border-radius:8px; color:#fff; padding:0 14px; font-family:var(--body); font-size:16px; letter-spacing:normal; text-transform:none;}
+  .receipt input::placeholder{color:#8a8a8a;}
+  .receipt .hint{font-family:var(--body); font-size:12.5px; letter-spacing:normal; text-transform:none; color:var(--dim);}
+  .error{color:var(--overdue); font-size:14.5px; margin:0;}
+  .error:empty{display:none;}
+  .pay-btn{height:56px; border:0; border-radius:8px; background:var(--orange); color:var(--on-orange); font-family:var(--body); font-weight:700; font-size:18px; cursor:pointer; margin-top:6px;}
+  .pay-btn:disabled{opacity:.6; cursor:default;}
+  .note{font-size:12.5px; color:var(--dim); text-align:center; margin:0;}
+  .note a{white-space:nowrap;}
+  .done{display:flex; flex-direction:column; gap:16px; padding-top:40px;}
+  .done-check{width:96px; height:96px; border-radius:48px; background:var(--panel-2); border:2px solid var(--orange); display:flex; align-items:center; justify-content:center; align-self:center;}
+  .done h1{text-align:center; font-family:var(--display); font-size:40px; font-weight:400; color:#fff; margin:0; line-height:1.1;}
+  .done p.lead{text-align:center; font-size:15px; color:var(--text-2); line-height:1.55; margin:0;}
+  .card{background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:16px; font-size:14px; line-height:1.5; color:var(--text-2);}
+  .card strong{color:#fff;}
+  .card a.more{display:block; margin-top:10px; min-height:44px; line-height:44px; font-weight:600;}
+  .msg h1{font-family:var(--display); font-weight:400; font-size:34px; line-height:1.1; color:#fff; margin:8px 0 0;}
+  .msg p{color:var(--text-2); font-size:15px; margin:0;}
+  [hidden]{display:none !important;}
+  @media (prefers-reduced-motion: reduce){*{animation:none !important; transition:none !important;}}
+</style>
+</head>
+<body>
+<div class="bg-blueprint" aria-hidden="true"></div>
+<main id="main">
+  <a class="brand" href="/">TRIPLE H</a>
+
+  <div id="loadingView" role="status"><p class="due">Loading your invoice...</p></div>
+
+  <!-- A code that is missing, mistyped or not ours: one plain answer. -->
+  <section id="notFoundView" class="msg" hidden>
+    <h1>This pay link doesn't open an invoice</h1>
+    <p>Check that the whole link was copied from your email or invoice. Questions? Call or text <a href="tel:+14354141667">(435) 414-1667</a>.</p>
+  </section>
+
+  <section id="invoiceView" hidden aria-labelledby="amountDue">
+    <div style="display:flex; flex-direction:column; gap:14px;">
+      <p class="kicker" id="invoiceKicker"></p>
+      <h1 class="amount" id="amountDue"></h1>
+      <p class="due" id="dueLine"></p>
+      <dl class="facts">
+        <div><dt>For</dt><dd id="forLine"></dd></div>
+        <div><dt>Billed to</dt><dd id="billedTo"></dd></div>
+        <div><dt>Invoice PDF</dt><dd><button type="button" class="linkish" id="pdfBtn">Download</button></dd></div>
+      </dl>
+      <p class="error" id="pdfError" role="alert"></p>
+
+      <div id="payArea" style="display:flex; flex-direction:column; gap:14px;">
+        <p class="section-label" id="payLabel">Pay by card or bank</p>
+        <div class="stripe-box" role="group" aria-labelledby="payLabel">
+          <div id="paymentElement"><p class="loading">Loading the secure card form...</p></div>
+        </div>
+        <label class="receipt">Email my receipt to
+          <input type="email" id="receiptEmail" autocomplete="email" inputmode="email" placeholder="you@example.com">
+          <span class="hint">Leave it blank to send it to the email this invoice came to.</span>
+        </label>
+        <p class="error" id="payError" role="alert"></p>
+        <button type="button" class="pay-btn" id="payBtn" disabled>Pay</button>
+        <p class="note">No account needed. Questions? Call or text <a href="tel:+14354141667">(435) 414-1667</a>.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="doneView" class="done" hidden aria-live="polite">
+    <div class="done-check" aria-hidden="true">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ff8000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>
+    </div>
+    <h1 id="doneTitle">Paid. Thank you!</h1>
+    <p class="lead" id="doneLead"></p>
+    <div class="card">
+      <strong>Want everything in one place?</strong> Create a free portal account with this email to see past invoices, quotes and upcoming visits.
+      <a class="more" href="/portal/login.html">Create account &rsaquo;</a>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  const SUPABASE_URL = 'https://csvfqdjuobylgafgolho.supabase.co';
+  // The public anon key, the same one every public page carries; guest-pay
+  // runs with verify_jwt off and does its own checks on the code.
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs';
+  // Publishable (public) key, the same one portal/dashboard.html uses.
+  const STRIPE_PUBLISHABLE_KEY = 'pk_live_51TxzzNLJyq7HLm12tpc3XfPvsQK1vN7qHJ5KhvYhhi2YSFtPOqNXMTr2bTm7ADjwxtbUl2UmXg9kHGfzKve1izn700mFVhdVRo';
+  const TOKEN_SHAPE = /^[a-hjkmnp-z2-9]{10,40}$/;
+  const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const TZ = 'America/Denver';
+  const $ = (id) => document.getElementById(id);
+
+  // /pay/?c=INV-2026-1112-k7f3qm2xw9 -> the code is what follows the last dash.
+  function codeFromUrl(search) {
+    const c = new URLSearchParams(search).get('c') || '';
+    const token = c.slice(c.lastIndexOf('-') + 1).trim().toLowerCase();
+    return TOKEN_SHAPE.test(token) ? token : null;
+  }
+
+  function money(n) {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(n) || 0);
+  }
+  function isoParts(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
+    return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])) : null;
+  }
+  function shortDate(d, withYear) {
+    return d.toLocaleDateString('en-US', Object.assign({ timeZone: 'UTC', month: 'short', day: 'numeric' }, withYear ? { year: 'numeric' } : {}));
+  }
+  // Today in St. George, as a UTC-midnight date, to count whole days.
+  function todayUtc(now) {
+    const p = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now || new Date());
+    return isoParts(p);
+  }
+  // "Due Nov 15" / "Due today" / "Was due Oct 30 · 4 days overdue" / "Paid on Nov 4".
+  function dueText(inv, now) {
+    if (inv.paid) {
+      const paidAt = inv.paid_at ? new Date(inv.paid_at) : null;
+      if (!paidAt || isNaN(paidAt)) return { text: 'Paid', tone: 'is-paid' };
+      return { text: 'Paid on ' + paidAt.toLocaleDateString('en-US', { timeZone: TZ, month: 'short', day: 'numeric' }), tone: 'is-paid' };
+    }
+    const due = isoParts(inv.due_date);
+    if (!due) return { text: '', tone: '' };
+    const days = Math.round((todayUtc(now) - due) / 86400000);
+    if (days > 0) return { text: 'Was due ' + shortDate(due) + ' · ' + days + (days === 1 ? ' day' : ' days') + ' overdue', tone: 'is-overdue' };
+    if (days === 0) return { text: 'Due today', tone: '' };
+    return { text: 'Due ' + shortDate(due, true), tone: '' };
+  }
+
+  async function guestPay(body) {
+    const res = await fetch(SUPABASE_URL + '/functions/v1/guest-pay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    return Object.assign({ status: res.status }, data);
+  }
+
+  function show(id) {
+    ['loadingView', 'notFoundView', 'invoiceView', 'doneView'].forEach((v) => { $(v).hidden = v !== id; });
+  }
+
+  function showDone(inv, amount, email) {
+    $('doneLead').textContent = money(amount) + ' for invoice ' + inv.invoice_number + '. A receipt is on its way to ' +
+      (email || 'the email this invoice was sent to') + ', and Steve has been told.';
+    show('doneView');
+    $('doneTitle').setAttribute('tabindex', '-1');
+    $('doneTitle').focus();
+  }
+
+  function loadStripeJs() {
+    if (typeof Stripe === 'function') return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://js.stripe.com/v3/';
+      s.onload = () => (typeof Stripe === 'function' ? resolve() : reject(new Error('Stripe.js did not load')));
+      s.onerror = () => reject(new Error('Stripe.js did not load'));
+      document.head.appendChild(s);
+    });
+  }
+
+  function renderInvoice(inv) {
+    $('invoiceKicker').textContent = 'Invoice ' + inv.invoice_number;
+    $('amountDue').textContent = money(inv.paid ? 0 : inv.amount_due);
+    const due = dueText(inv);
+    $('dueLine').textContent = due.text;
+    $('dueLine').className = 'due ' + due.tone;
+    $('dueLine').hidden = !due.text;
+    const dated = isoParts(inv.invoice_date);
+    $('forLine').textContent = [inv.description, dated ? shortDate(dated) : ''].filter(Boolean).join(' · ') || '—';
+    $('billedTo').textContent = inv.billed_to || '—';
+    $('payArea').hidden = !!inv.paid;
+    if (inv.paid) $('amountDue').textContent = money(0);
+    show('invoiceView');
+  }
+
+  async function start() {
+    const token = codeFromUrl(location.search);
+    if (!token) { show('notFoundView'); return; }
+    let inv;
+    try {
+      inv = await guestPay({ action: 'view', token });
+    } catch (e) {
+      $('loadingView').innerHTML = '<p class="error">Could not reach the server. Check your connection and reload this page.</p>';
+      return;
+    }
+    if (!inv || !inv.ok) { show('notFoundView'); return; }
+    renderInvoice(inv);
+
+    $('pdfBtn').addEventListener('click', async () => {
+      $('pdfError').textContent = '';
+      const r = await guestPay({ action: 'pdf', token }).catch(() => ({}));
+      if (r && r.ok && r.url) window.location.href = r.url;
+      else $('pdfError').textContent = 'The PDF isn’t available here. It’s attached to the email this invoice came in.';
+    });
+
+    // Back from a bank or 3-D Secure step Stripe sent the payer to.
+    const back = new URLSearchParams(location.search);
+    if (back.get('redirect_status') === 'succeeded') { showDone(inv, inv.amount_due, back.get('receipt') || ''); return; }
+    if (inv.paid) return;
+
+    let pay;
+    try {
+      pay = await guestPay({ action: 'pay', token });
+    } catch (e) {
+      pay = { ok: false, error: 'Could not reach the server. Check your connection and reload this page.' };
+    }
+    if (!pay.ok) {
+      $('paymentElement').innerHTML = '';
+      $('payError').textContent = pay.error || 'The payment could not be started. Please call (435) 414-1667.';
+      if (pay.already_paid) { inv.paid = true; renderInvoice(inv); }
+      return;
+    }
+    try {
+      await loadStripeJs();
+    } catch (e) {
+      $('paymentElement').innerHTML = '<p class="loading">The secure card form didn’t load. Check your connection (or any ad blocker) and reload this page.</p>';
+      return;
+    }
+    const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+    const elements = stripe.elements({ clientSecret: pay.client_secret, appearance: { theme: 'stripe', variables: { colorPrimary: '#ff8000' } } });
+    $('paymentElement').innerHTML = '';
+    elements.create('payment').mount('#paymentElement');
+    const btn = $('payBtn');
+    btn.textContent = 'Pay ' + money(inv.amount_due);
+    btn.disabled = false;
+
+    btn.addEventListener('click', async () => {
+      $('payError').textContent = '';
+      const typed = $('receiptEmail').value.trim().toLowerCase();
+      if (typed && !EMAIL_SHAPE.test(typed)) {
+        $('payError').textContent = 'That email doesn’t look right. Fix it, or leave it blank.';
+        $('receiptEmail').focus();
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = 'Processing...';
+      const returnUrl = new URL(location.href);
+      ['payment_intent', 'payment_intent_client_secret', 'redirect_status', 'receipt'].forEach((k) => returnUrl.searchParams.delete(k));
+      if (typed) returnUrl.searchParams.set('receipt', typed);
+      const confirmParams = { return_url: returnUrl.toString() };
+      if (typed) confirmParams.receipt_email = typed;
+      const { error, paymentIntent } = await stripe.confirmPayment({ elements, confirmParams, redirect: 'if_required' });
+      if (error) {
+        $('payError').textContent = error.message || 'The payment didn’t go through. Please try again.';
+        btn.disabled = false;
+        btn.textContent = 'Pay ' + money(inv.amount_due);
+        return;
+      }
+      if (paymentIntent && (paymentIntent.status === 'succeeded' || paymentIntent.status === 'processing')) {
+        const amount = typeof paymentIntent.amount === 'number' ? paymentIntent.amount / 100 : inv.amount_due;
+        showDone(inv, amount, typed);
+        if (paymentIntent.status === 'processing') $('doneTitle').textContent = 'Payment sent. Thank you!';
+      }
+    });
+  }
+
+  // Exposed for tests only; nothing on the page reads it.
+  window.__thPay = { codeFromUrl, dueText };
+  start();
+})();
+</script>
+</body>
+</html>

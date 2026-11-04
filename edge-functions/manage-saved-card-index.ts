@@ -158,46 +158,30 @@ async function getOrCreateStripeCustomer(email: string): Promise<string> {
 }
 
 // Gate on who may save a card at all (docs/ACTION-ITEMS.md #15, decided
-// 2026-11-03). Public signup is already off (#11), so the only
-// remaining abuse case is an invited account with no real relationship
-// to the business using create_setup_intent to test stolen cards
-// through Stripe. The product decision: a "real client" for
-// saved-card purposes is an account with at least one of an invoice,
-// quote, job, contract, checkup, OR a work order it submitted itself.
+// 2026-11-03; revised 2026-11-04). The abuse case: an account with no real
+// relationship to the business using create_setup_intent to test stolen
+// cards through Stripe. A "real client" for saved-card purposes is an
+// account Triple H has created a record for: at least one invoice, quote,
+// job, contract or checkup.
 //
-// Checked directly against the relational tables with the service-role
-// key -- never against anything client-supplied -- because this
-// function runs server-side and a client-asserted "I have a job" is
-// worthless as a gate. Five of the six tables (invoices, quotes, jobs,
-// contracts, checkups) are one-way mirrors that only staff tooling or
-// other edge functions ever write (see docs/CLIENT-PORTAL.md); a row
-// existing there means Steve/Connor created a real record for this
-// client, which is exactly the signal wanted.
+// Checked directly against the tables with the service-role key -- never
+// against anything client-supplied -- because a client-asserted "I have a
+// job" is worthless as a gate. All five are one-way mirrors that only staff
+// tooling or other edge functions write (docs/CLIENT-PORTAL.md), so a row
+// there means Steve/Connor made a real record for this client.
 //
-// client_portal_work_orders is different, and that difference is what
-// makes "a work order THEY SUBMITTED THEMSELVES" checkable at all: its
-// RLS (sql/portal/create_client_portal_work_orders.sql) has an INSERT
-// policy only for the authenticated client, requiring
-// `client_email = auth.email()`, and there is no internal/staff INSERT
-// policy on this table at all -- staff tooling (tools/workspace.html,
-// tools/clients.html) only ever READS it (via the
-// internal_read_client_portal_work_orders RPC) or UPDATEs an existing
-// row's status (via internal_update_client_portal_work_order()), never
-// inserts one. Confirmed by grep across edge-functions/ and sql/: no
-// service-role or staff-attributed INSERT into this table exists
-// anywhere in this repo. So every row that exists in
-// client_portal_work_orders was, by construction, submitted by the
-// client it belongs to -- its mere existence already proves "submitted
-// by self," with no separate submitted_by/created_by column needed.
-// If a staff-initiated work-order creation path is ever added, this
-// comment and the gate below need to be revisited.
+// Work orders no longer count (2026-11-04, Connor, option (a)). They did on
+// 2026-11-03, when only invited accounts existed. Portal Create account
+// (Phase 3.3, edge-functions/portal-signup-index.ts) lets anyone make an
+// account for their own email, and a work order is something a client files
+// themselves (its only INSERT policy is the client's own), so "has a work
+// order" would let a stranger sign up, file one, and reach card setup.
 const BUSINESS_RECORD_TABLES = [
   "client_portal_invoices",
   "client_portal_quotes",
   "client_portal_jobs",
   "client_portal_contracts",
   "client_portal_checkups",
-  "client_portal_work_orders",
 ] as const;
 
 async function accountHasBusinessRecord(email: string): Promise<boolean> {
@@ -327,7 +311,7 @@ Deno.serve(async (req: Request) => {
       if (!(await accountHasBusinessRecord(claims.email.toLowerCase()))) {
         return json({
           ok: false,
-          error: "Saving a card isn't available on this account yet -- it needs at least one invoice, quote, job, contract, checkup, or work order first.",
+          error: "Saving a card isn't available on this account yet -- it needs at least one invoice, quote, job, contract or checkup from Triple H first.",
         }, 403);
       }
       // Same dispute-protection requirement as every other place a

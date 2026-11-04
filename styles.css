@@ -1108,7 +1108,7 @@
     background:
       linear-gradient(to bottom, rgba(8,8,8,0) 70%, rgba(8,8,8,.88) 100%),
       linear-gradient(100deg, rgba(8,8,8,0.78) 0%, rgba(8,8,8,0.58) 42%, rgba(8,8,8,0.32) 70%, rgba(8,8,8,0.16) 100%),
-      url('/images/hero-bg-canyon.webp?v=202608241900');
+      url('/images/hero-bg-canyon.webp?v=1d32496411');
     background-size: cover;
     background-position: center 70%;
   }
@@ -1391,7 +1391,7 @@
       background:
         linear-gradient(to bottom, rgba(8,8,8,0) 72%, rgba(8,8,8,.82) 100%),
         linear-gradient(to bottom, rgba(8,8,8,0.30) 0%, rgba(8,8,8,0.40) 40%, rgba(8,8,8,0.52) 72%, rgba(8,8,8,0.58) 100%),
-        url('/images/hero-bg-canyon-mobile.webp?v=202608241900');
+        url('/images/hero-bg-canyon-mobile.webp?v=bbe44ee17f');
       background-size: cover;
       background-position: center 70%;
       padding:28px 0 40px;
@@ -3497,7 +3497,7 @@
     background:
       linear-gradient(to bottom, rgba(8,8,8,0) 55%, rgba(8,8,8,.9) 100%),
       linear-gradient(100deg, rgba(8,8,8,.8) 0%, rgba(8,8,8,.58) 42%, rgba(8,8,8,.32) 70%, rgba(8,8,8,.18) 100%),
-      url('/images/hero-bg-canyon.webp?v=202608241900') center 70% / cover no-repeat;
+      url('/images/hero-bg-canyon.webp?v=1d32496411') center 70% / cover no-repeat;
   }
   body.page-home .hero::after{
     content:"";
@@ -3736,7 +3736,7 @@
       display:block;
       background:
         linear-gradient(to bottom, rgba(8,8,8,.35) 0%, rgba(8,8,8,.55) 60%, rgba(8,8,8,.85) 100%),
-        url('/images/hero-bg-canyon-mobile.webp?v=202608241900') center 70% / cover no-repeat;
+        url('/images/hero-bg-canyon-mobile.webp?v=bbe44ee17f') center 70% / cover no-repeat;
     }
     body.page-home .hero::after{display:block;}
     body.page-home .hero-grid{

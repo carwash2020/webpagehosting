@@ -28,8 +28,11 @@ test('all 7 relational-mirror functions are defined in sync.js', () => {
 
 test('job-tracker.html: saveJobs() mirrors every save, and both delete paths mirror the delete', () => {
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'job-tracker.html'), 'utf8');
-  const saveJobsFn = src.match(/function saveJobs\(jobs\)[\s\S]*?\n  \}/)[0];
-  assert.match(saveJobsFn, /mirrorJobsToRelational\(jobs\)/);
+  // saveJobs() became thJobs.replaceAll() (2026-11-03); the mirror moved with it.
+  assert.match(src, /thJobs\.replaceAll\(/);
+  assert.doesNotMatch(src, /function saveJobs\(/);
+  const replaceAllFn = fs.readFileSync(path.join(TOOLS_DIR, 'data-layer.js'), 'utf8').match(/replaceAll\(jobs\) \{[\s\S]*?\n  \}/)[0];
+  assert.match(replaceAllFn, /mirrorJobsToRelational\(jobs\)/);
   // Item 1 Phase 2a (2026-10-12): the single-job delete path (deleteJob())
   // moved its storage write behind the thJobs seam -- thJobs.remove(id) in
   // tools/data-layer.js calls mirrorDelete('jobs', id) internally now, so
@@ -49,8 +52,11 @@ test('invoice-generator.html: logInvoice()/logQuote() mirror on create, the quot
   const logQuoteFn = src.match(/function logQuote\(totals\)[\s\S]*?\n  \}/)[0];
   assert.match(logQuoteFn, /mirrorQuoteToRelational\(newEntry\)/);
   assert.match(src, /quote\.convertedToInvoiceId = newEntry\.id;[\s\S]*?mirrorQuoteToRelational\(quote\)/, 'converting a quote to an invoice should re-mirror the quote with its new converted status');
-  assert.match(src, /mirrorDelete\('invoices', id\)/);
-  assert.match(src, /mirrorDelete\('quotes', id\)/);
+  // Invoice delete: thInvoices.remove(id), whose seam mirrors the delete (2026-11-03).
+  assert.match(src, /thInvoices\.remove\(id\)/);
+  assert.match(fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'data-layer.js'), 'utf8'), /key: TH_KEYS\.invoices, tombstone: thAddInvoiceTombstone, mirrorTable: 'invoices'/);
+  assert.match(src, /thQuotes\.remove\(id\)/);
+  assert.match(fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'data-layer.js'), 'utf8'), /key: TH_KEYS\.quotes, tombstone: thAddQuoteTombstone, mirrorTable: 'quotes'/);
 });
 
 test('workspace.html: togglePaid() mirrors the updated invoice', () => {
@@ -61,8 +67,10 @@ test('workspace.html: togglePaid() mirrors the updated invoice', () => {
 
 test('contract-generator.html: contract creation mirrors the new entry, and delete mirrors the delete', () => {
   const src = fs.readFileSync(path.join(TOOLS_DIR, 'contract-generator.html'), 'utf8');
-  assert.match(src, /saveContractLog\(log\);\s*\n\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*if \(typeof mirrorContractToRelational === 'function'\) mirrorContractToRelational\(log\[log\.length - 1\]\)/);
-  assert.match(src, /mirrorDelete\('contracts', id\)/);
+  assert.match(src, /thContracts\.replaceAll\(log\);\s*\n\s*\/\/[^\n]*\n\s*\/\/[^\n]*\n\s*if \(typeof mirrorContractToRelational === 'function'\) mirrorContractToRelational\(log\[log\.length - 1\]\)/);
+  // Delete: thContracts.remove(id), whose seam mirrors the delete (2026-11-03).
+  assert.match(src, /thContracts\.remove\(id\)/);
+  assert.match(fs.readFileSync(path.join(TOOLS_DIR, 'data-layer.js'), 'utf8'), /key: TH_KEYS\.contracts, tombstone: thAddContractTombstone, mirrorTable: 'contracts'/);
 });
 
 // Functional test: mirrorUpsert's actual HTTP call shape, with a mocked

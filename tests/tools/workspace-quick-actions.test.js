@@ -8,6 +8,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
+const { installDataLayer } = require('../data-layer-harness');
 
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const WORKSPACE = fs.readFileSync(repo('tools', 'workspace.html'), 'utf8');
@@ -50,7 +51,7 @@ test('cancelling the Mark paid confirm leaves the invoice unpaid', async () => {
   const html = fs.readFileSync(repo('tools', 'workspace.html'), 'utf8');
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', url: 'https://example.com/tools/workspace.html',
-    beforeParse(w) {
+    beforeParse(w) { installDataLayer(w);
       w.requireAuth = () => {};
       w.SUPABASE_URL = 'https://example-project.supabase.co';
       w.SUPABASE_ANON_KEY = 'fake-anon-key';

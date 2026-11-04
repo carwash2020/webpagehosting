@@ -172,7 +172,9 @@ Deno.serve(async (req: Request) => {
           apikey: SERVICE_ROLE_KEY,
           Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
           "Content-Type": "application/json",
-          Prefer: "resolution=merge-duplicates",
+          // return=representation: the row's id, for the email's link
+          // straight to this contract (#contract-card-<id>).
+          Prefer: "resolution=merge-duplicates,return=representation",
         },
         body: JSON.stringify([{
           source_contract_id,
@@ -192,20 +194,25 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: `Database error: ${errText.slice(0, 300)}` }, 502);
     }
 
+    const upserted = await upsertRes.json().catch(() => []);
+    const portalContractId = Array.isArray(upserted) && upserted[0] && typeof upserted[0].id === "number" ? upserted[0].id : null;
+
+    // 2026-11-04 (handoff §3D; Connor: "Send the sign email"): every new
+    // contract gets the "Please sign" email, a brand-new client's first one
+    // included. That used to send only the "You've been invoiced" account
+    // invite -- no word of a contract, landing on the home screen. A new
+    // client now signs up themselves from the portal sign-in page (Create
+    // account), which the email tells them to do.
     let emailResult: unknown = null;
     try {
-      if (isNewClient) {
-        const inviteRes = await fetch(`${SUPABASE_URL}/functions/v1/send-invite`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: authHeader },
-          body: JSON.stringify({ client_email: normalizedEmail, client_name }),
-        });
-        emailResult = { type: "invite", ...(await inviteRes.json()) };
-      } else if (isNewContract) {
+      if (isNewContract) {
         const notifyRes = await fetch(`${SUPABASE_URL}/functions/v1/send-contract-notification`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: authHeader },
-          body: JSON.stringify({ client_email: normalizedEmail, client_name, contract_title }),
+          body: JSON.stringify({
+            client_email: normalizedEmail, client_name, contract_title,
+            portal_contract_id: portalContractId, has_portal_account: !isNewClient,
+          }),
         });
         emailResult = { type: "notification", ...(await notifyRes.json()) };
       }

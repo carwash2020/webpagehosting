@@ -202,7 +202,12 @@ test('pushSync and pullSync both use fetchWithRetry for their core fetch call, n
   const pushFn = src.match(/async function pushSync\(\)[\s\S]*?\n}\n/)[0];
   const pullFn = src.match(/async function pullSync\(\)[\s\S]*?\n}\n/)[0];
   assert.match(pushFn, /await fetchWithRetry\(/);
-  assert.match(pullFn, /await fetchWithRetry\(/);
+  // The read moved into fetchVisibleSyncRows() (scoped sync, 2026-11-03),
+  // which both call and which reads through fetchWithRetry too.
+  assert.match(pullFn, /await fetchVisibleSyncRows\(code\)/);
+  const visibleFn = src.match(/async function fetchVisibleSyncRows\(code\)[\s\S]*?\n}\n/)[0];
+  assert.match(visibleFn, /await fetchWithRetry\(/);
+  assert.doesNotMatch(visibleFn, /[^.]\bfetch\(/);
 });
 
 // The real architectural fix for "whole-blob last write wins" (code-health
@@ -215,9 +220,13 @@ test('pushSync and pullSync both use fetchWithRetry for their core fetch call, n
 test('pushSync fetches the current server row and merges it via applySyncData BEFORE building the payload it pushes, not just pullSync', () => {
   const src = fs.readFileSync(SYNC_JS_PATH, 'utf8');
   const pushFn = src.match(/async function pushSync\(\)[\s\S]*?\n}\n/)[0];
-  const getIndex = pushFn.search(/await fetchWithRetry\(`\$\{SUPABASE_URL\}\/rest\/v1\/\$\{SYNC_TABLE\}\?code=eq\./);
-  const applyIndex = pushFn.indexOf('applySyncData(');
-  const collectIndex = pushFn.indexOf('data: collectSyncData()');
+  // Scoped sync (2026-11-03): the GET is fetchVisibleSyncRows() (every row
+  // this account may see) and the merge is applyVisibleSyncRows(), which
+  // runs applySyncData() on each; the order below is unchanged.
+  const getIndex = pushFn.indexOf('await fetchVisibleSyncRows(code)');
+  const applyIndex = pushFn.indexOf('applyVisibleSyncRows(');
+  const collectIndex = pushFn.indexOf('const all = collectSyncData()');
+  assert.match(src.match(/function applyVisibleSyncRows\(visible\)[\s\S]*?\n}\n/)[0], /applySyncData\(/);
   const postIndex = pushFn.search(/method: 'POST'/);
   assert.notEqual(getIndex, -1, 'pushSync should fetch the current server row (a GET by code) before pushing');
   assert.notEqual(applyIndex, -1, 'pushSync should merge that row in via applySyncData, the same merge pullSync uses');

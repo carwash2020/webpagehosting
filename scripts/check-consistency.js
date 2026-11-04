@@ -30,16 +30,10 @@ const TOOLS_DIR = path.join(__dirname, '..', 'tools');
 // tools pages in ways they were never meant to.
 const ROOT_DIR = path.join(__dirname, '..');
 const PORTAL_DIR = path.join(__dirname, '..', 'portal');
-// portal-app.css/.js intentionally use the SAME manual-timestamp cache-bust
-// convention as the public site's styles.css (bumped by a human alongside a
-// meaningful change, not derived from content), not the content-hash
-// convention every other shared tools/portal file uses. Confirmed by their
-// real current values: 202609042100 / 202609042200 -- a 12-digit YYYYMMDDHHMM
-// timestamp, not a hex content hash, and there's no reason a real edit to
-// either file would ever make its hash equal a date string. Excluded from
-// the content-hash freshness check below so it doesn't flag them as "stale"
-// against a hash they were never meant to match in the first place.
-const PORTAL_TIMESTAMP_VERSIONED = new Set(['portal-app.css', 'portal-app.js']);
+// portal-app.css/.js used to be excluded here: they carried hand-bumped
+// 12-digit timestamps, copying what styles.css did at the time. styles.css
+// moved to a content hash long ago, and since 2026-11-03 (handoff §2/§7.2)
+// every local ?v= stamp is a content hash -- see checkLocalStamps() below.
 
 // Pages that are deliberately different, and why -- see the code review
 // this checker came out of for the full reasoning on each:
@@ -74,7 +68,7 @@ function readTool(filename) {
 // because the throw happens before the DOMContentLoaded listener can
 // even register, everything inside it (the tour, sync, error
 // reporting) silently never runs either.
-const DEFERRED_SCRIPT_FILES = ['tools-dialogs.js', 'tools-effects.js', 'tools-nav-pwa.js', 'tools-tour.js', 'tools-media-sharing.js'];
+const DEFERRED_SCRIPT_FILES = ['tools-dialogs.js', 'tools-effects.js', 'tools-nav-pwa.js', 'tools-tour.js', 'tools-media-sharing.js', 'data-layer.js'];
 
 function getDeferredFunctionNames() {
   const names = new Set();
@@ -458,7 +452,6 @@ function detectSharedScripts(dir) {
   const shared = [];
 
   for (const candidate of candidates) {
-    if (dir === PORTAL_DIR && PORTAL_TIMESTAMP_VERSIONED.has(candidate)) continue;
     const escaped = candidate.replace('.', '\\.');
     const pattern = new RegExp(escaped + '(\\?v=[a-zA-Z0-9]+)?["\']');
     const referencingPages = htmlFiles.filter(f => pattern.test(fs.readFileSync(path.join(dir, f), 'utf8')));
@@ -735,8 +728,109 @@ function fixCacheFingerprint(swPath) {
   return true;
 }
 
+// ---------------------------------------------------------------------------
+// EVERY LOCAL ?v= STAMP IS A CONTENT HASH (handoff 2026-11-03 §2/§7.2)
+//
+// The passes above cover shared scripts/stylesheets and the files listed in
+// GLOBAL_SHARED_FILES. What they never covered, so a human stamped them by
+// hand: portal-app.js/.css, tools/qrcode-lib.js (one page loads it, so it is
+// never "shared"), and ~230 image references (/images/x.webp?v=YYYYMMDDHHMM)
+// in pages, styles.css, tools-nav-pwa.js and both service workers -- a
+// replaced image kept its old URL and its old cached copy. This pass finds
+// every ?v= on a reference that resolves to a real file in this repo and
+// requires the stamp to be that file's content hash (sha256 of its bytes,
+// first 10 hex -- identical to currentContentHash() for any UTF-8 text file).
+// --fix-versions rewrites them, repeating until nothing changes, because a
+// stylesheet's own hash changes once the image stamps inside it do. A
+// reference to a file that doesn't exist is left alone (not this check's job).
+// Paths starting with / resolve from the repo root; a bare relative path
+// resolves next to the HTML file that holds it (JS/CSS/JSON only use absolute
+// paths here, since a relative URL in them resolves against the page, not
+// the file).
+const LOCAL_STAMP_SKIP_DIRS = new Set(['node_modules', 'tests', 'docs', 'scripts', 'backups', 'edge-functions', 'sql', '.git', '.github', 'fonts', 'images']);
+const LOCAL_STAMP_EXTS = new Set(['.html', '.js', '.css', '.json', '.webmanifest']);
+const LOCAL_STAMP_PATTERN = /(["'(\s=,])((?:\/|\.\.\/)?[A-Za-z0-9_][A-Za-z0-9_./-]*\.(?:png|webp|jpe?g|svg|ico|gif|avif|js|css|json|webmanifest|woff2?|ttf|pdf))\?v=([A-Za-z0-9]+)/g;
+
+function localStampFiles(root) {
+  const out = [];
+  (function walk(dir) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) {
+        if (!LOCAL_STAMP_SKIP_DIRS.has(entry.name) && !entry.name.startsWith('.')) walk(path.join(dir, entry.name));
+      } else if (entry.isFile() && LOCAL_STAMP_EXTS.has(path.extname(entry.name))) {
+        out.push(path.join(dir, entry.name));
+      }
+    }
+  })(root);
+  return out.sort();
+}
+
+function resolveLocalStampTarget(root, filePath, ref) {
+  let abs;
+  if (ref.startsWith('/')) abs = path.join(root, ref.slice(1));
+  else if (filePath.endsWith('.html')) abs = path.join(path.dirname(filePath), ref);
+  else return null;
+  const rel = path.relative(root, abs);
+  if (rel.startsWith('..') || path.isAbsolute(rel)) return null;
+  try { if (!fs.statSync(abs).isFile()) return null; } catch (e) { return null; }
+  return rel;
+}
+
+function localFileHash(root, rel) {
+  return crypto.createHash('sha256').update(fs.readFileSync(path.join(root, rel))).digest('hex').slice(0, 10);
+}
+
+// Every stamped local reference: { file, target, stamp } with repo-relative paths.
+function collectLocalStampRefs(root) {
+  const refs = [];
+  for (const filePath of localStampFiles(root)) {
+    const content = fs.readFileSync(filePath, 'utf8');
+    for (const m of content.matchAll(LOCAL_STAMP_PATTERN)) {
+      const target = resolveLocalStampTarget(root, filePath, m[2]);
+      if (target) refs.push({ file: path.relative(root, filePath), target, stamp: m[3] });
+    }
+  }
+  return refs;
+}
+
+function checkLocalStamps(root, problems) {
+  const hashes = new Map();
+  for (const r of collectLocalStampRefs(root)) {
+    if (!hashes.has(r.target)) hashes.set(r.target, localFileHash(root, r.target));
+    const real = hashes.get(r.target);
+    if (r.stamp !== real) {
+      problems.push(`${r.file} requests /${r.target}?v=${r.stamp}, but its real content hash right now is ${real} -- browsers may serve a STALE cached copy. Run "npm run fix-versions" to correct it automatically.`);
+    }
+  }
+}
+
+function fixLocalStamps(root) {
+  let changed = 0;
+  for (let pass = 0; pass < 10; pass++) {
+    let changedThisPass = 0;
+    const hashes = new Map();
+    for (const filePath of localStampFiles(root)) {
+      const content = fs.readFileSync(filePath, 'utf8');
+      const updated = content.replace(LOCAL_STAMP_PATTERN, (whole, lead, ref, stamp) => {
+        const target = resolveLocalStampTarget(root, filePath, ref);
+        if (!target) return whole;
+        if (!hashes.has(target)) hashes.set(target, localFileHash(root, target));
+        return lead + ref + '?v=' + hashes.get(target);
+      });
+      if (updated !== content) {
+        fs.writeFileSync(filePath, updated);
+        console.log(`  ${path.relative(root, filePath)}: local ?v= stamps -> content hashes`);
+        changedThisPass++;
+      }
+    }
+    changed += changedThisPass;
+    if (!changedThisPass) return changed;
+  }
+  throw new Error('fixLocalStamps: stamps did not settle after 10 passes (a file stamps its own URL?)');
+}
+
 if (require.main === module && process.argv.includes('--fix-versions')) {
-  const changedCount = fixVersions(TOOLS_DIR) + fixVersions(PORTAL_DIR) + fixGlobalSharedFiles() +
+  const changedCount = fixVersions(TOOLS_DIR) + fixVersions(PORTAL_DIR) + fixGlobalSharedFiles() + fixLocalStamps(ROOT_DIR) +
     (fixCacheFingerprint(path.join(ROOT_DIR, 'service-worker.js')) ? 1 : 0) +
     (fixCacheFingerprint(path.join(PORTAL_DIR, 'service-worker.js')) ? 1 : 0);
   if (changedCount === 0) {
@@ -756,6 +850,7 @@ function main() {
   checkVersionFreshness(TOOLS_DIR, problems);
   checkVersionFreshness(PORTAL_DIR, problems);
   checkGlobalSharedFileFreshness(problems);
+  checkLocalStamps(ROOT_DIR, problems);
   checkCacheFingerprint(path.join(ROOT_DIR, 'service-worker.js'), 'service-worker.js', problems);
   checkCacheFingerprint(path.join(PORTAL_DIR, 'service-worker.js'), 'portal/service-worker.js', problems);
   checkPrecacheCompleteness(problems);
@@ -901,4 +996,5 @@ function main() {
   console.log(`Consistency check passed -- ${files.length - Object.keys(EXEMPT).length} tool pages checked (full checks) plus ${portalFileCount} portal pages (cache-bust freshness only), all clean.`);
 }
 
-main();
+module.exports = { collectLocalStampRefs, checkLocalStamps, fixLocalStamps };
+if (require.main === module) main();

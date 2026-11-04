@@ -24,7 +24,7 @@ test('a job card shows View Receipt only when a linked invoice actually exists',
 });
 
 test('job-tracker.html looks up the linked invoice via the Invoice Log\'s own existing jobRefId, not a second separate mechanism', () => {
-  assert.match(JOB_TRACKER, /loadInvoicesForHistory\(\)\.find\(inv => String\(inv\.jobRefId\) === String\(savedJobId\)\)/);
+  assert.match(JOB_TRACKER, /thInvoices\.all\(\)\.find\(inv => String\(inv\.jobRefId\) === String\(savedJobId\)\)/);
   assert.match(JOB_TRACKER, /linked_invoice_number: linkedInvoiceNumber,/);
 });
 

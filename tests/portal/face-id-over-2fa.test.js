@@ -155,7 +155,7 @@ test('login.html: a signed-in session that still owes the code stays for the cod
   assert.match(onLoad, /if \(await portalSecondStepOwed\(email, client\)\) \{/);
   assert.match(onLoad, /const wantsCode = new URLSearchParams\(window\.location\.search\)\.get\('step'\) === 'code' \|\| !portalIsBiometricLockEnabled\(email\);/);
   assert.match(onLoad, /openMfaChallenge\(factorId\);\s*return;/);
-  assert.ok(onLoad.indexOf('openMfaChallenge(') < onLoad.indexOf("window.location.replace('/portal/home.html')"), 'the code comes before any redirect');
+  assert.ok(onLoad.indexOf('openMfaChallenge(') < onLoad.indexOf('window.location.replace(portalAfterSignInUrl())'), 'the code comes before any redirect');
   assert.match(onLoad, /await client\.auth\.signOut\(\{ scope: 'local' \}\);\s*return;\s*\}\s*\}\s*(?:\/\/[^\n]*\n\s*)*signingInEmail = email;\s*if \(await portalAccountIsStaff\(\)\) \{ await sendStaffToWorkspace\(false\); return; \}\s*window\.location\.replace/, 'no factor to ask for: stay on the form, never bounce back to home.html (which would send it straight back here)');
   const verify = LOGIN.slice(LOGIN.indexOf('async function verify()'), LOGIN.indexOf('async function cancel()'));
   assert.match(verify, /if \(signingInEmail\) portalMarkSignedIn\(signingInEmail\);\s*goHomeAfterSignIn\(\);/, 'password and code just done: no Face ID lock after');

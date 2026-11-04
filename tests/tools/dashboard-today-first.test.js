@@ -14,6 +14,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
+const { installDataLayer } = require('../data-layer-harness');
 
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const WORKSPACE = fs.readFileSync(repo('tools', 'workspace.html'), 'utf8');
@@ -98,7 +99,7 @@ test('the Money Owed rows render current invoices unhighlighted and overdue ones
   const iso = (offset) => { const d = new Date(today); d.setDate(d.getDate() + offset); return d.toISOString().slice(0, 10); };
   const dom = new JSDOM(WORKSPACE, {
     runScripts: 'dangerously', url: 'https://example.com/tools/workspace.html',
-    beforeParse(w) {
+    beforeParse(w) { installDataLayer(w);
       w.requireAuth = () => {};
       // A signed-in Owner: money on Home waits for a confirmed role with a
       // finance permission (2026-09-29), and auth.js isn't loaded here.
@@ -124,7 +125,10 @@ test('the Money Owed rows render current invoices unhighlighted and overdue ones
   assert.match(rows[1].textContent, /Current Client/);
   assert.ok(!rows[1].classList.contains('is-unread'), 'current row is plain');
   assert.match(rows[1].textContent, /Due in \d+ days/);
-  assert.equal(window.document.querySelectorAll('#todayOverdueList .paid-toggle-btn').length, 2);
+  // Counted by label: the overdue row also carries a Remind button, which
+  // shares the paid-toggle-btn class (it shows once the real data layer's
+  // reminder helpers are loaded, as on the live page).
+  assert.equal([...window.document.querySelectorAll('#todayOverdueList .paid-toggle-btn')].filter((b) => /Mark paid/.test(b.textContent)).length, 2);
   window.close();
 });
 
@@ -148,7 +152,7 @@ test('Mark paid on Money owed: one row per unpaid invoice, nothing listed twice 
   const iso = (offset) => { const d = new Date(today); d.setDate(d.getDate() + offset); return d.toISOString().slice(0, 10); };
   const dom = new JSDOM(WORKSPACE, {
     runScripts: 'dangerously', url: 'https://example.com/tools/workspace.html',
-    beforeParse(w) {
+    beforeParse(w) { installDataLayer(w);
       w.requireAuth = () => {};
       w.getCurrentUserRole = () => ({ roleName: 'Owner' });
       w.canManageInvoices = () => true;

@@ -72,7 +72,7 @@ test('workspace.html: loadAndRenderApplicants renders each application as a lead
 test('workspace.html: deleteApplicantFromDashboard is undoable, same 6-second-then-real-delete pattern as deleteLeadFromDashboard', () => {
   const fn = workspaceHtml.match(/async function deleteApplicantFromDashboard\(id\)[\s\S]*?\n  \}\n/)[0];
   assert.match(fn, /showConfirm\('Delete this application\?'/);
-  assert.match(fn, /setTimeout\(async \(\) => \{[\s\S]*?deleteJobApplication\(id\)/);
+  assert.match(fn, /thDeferDelete\(async \(\) => \{[\s\S]*?deleteJobApplication\(id\)/);
   assert.match(fn, /6000/);
   assert.match(fn, /showUndoToast\('Application deleted\.'/);
 });

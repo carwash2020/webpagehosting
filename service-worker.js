@@ -713,7 +713,7 @@
 // specificity) when there's nothing scheduled, and unhides it the
 // moment a real job exists again. workspace.html is precached. Same
 // reasoning as every prior bump in this file's history.
-const CACHE_NAME = 'th-workspace-v449'; // precache-fingerprint:00d7067927ae
+const CACHE_NAME = 'th-workspace-v464'; // precache-fingerprint:3902e1f723e4
 const PRECACHE_URLS = [
   '/tools/workspace.html', '/tools/job-tracker.html', '/tools/invoice-generator.html', '/tools/contract-generator.html',
   '/tools/route-planner.html', '/tools/review-request.html', '/tools/login.html',
@@ -775,7 +775,7 @@ const PRECACHE_URLS = [
   '/tools/qrcode-lib.js', '/tools/push-notifications.js',
   // With the ?v= every page uses (2026-09-30): precached bare, the copy
   // was never matched, ~57 KB fetched per install for nothing.
-  '/images/logo-signature-orange.webp?v=202608142300', '/images/icon-192.png', '/images/icon-512.png', '/images/apple-touch-icon.png',
+  '/images/logo-signature-orange.webp?v=adc4d42660', '/images/icon-192.png', '/images/icon-512.png', '/images/apple-touch-icon.png',
 ];
 
 self.addEventListener('install', (event) => {

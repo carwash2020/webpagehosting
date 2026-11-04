@@ -307,6 +307,99 @@ const SYNC_KNOWN_AT_KEY = 'th_sync_known_at';
 // Every device auto-uses this same fixed code so sync just works silently.
 const DEFAULT_SYNC_CODE = 'tripleh-workspace-2026';
 
+// ---------------------------------------------------------------------------
+// SCOPED SYNC (handoff 2026-11-03 §2, Phase 2.4; sql/sync/01_scoped_workspace_sync.sql)
+//
+// The blob is split into three rows and the DATABASE decides, per signed-in
+// person, which ones they can read or write: 'scope:ops' for any account in
+// account_roles, 'scope:money' (SYNC_MONEY_KEYS) only with can_view_finance
+// or can_manage_invoices, 'scope:runway' (SYNC_RUNWAY_KEYS: Runway
+// Dashboard's personal budget and debts, its own scope by Connor's call
+// 2026-11-03) only with can_view_runway. This file no longer asks for a row by a shared
+// code to find its data -- it reads every row RLS shows this account,
+// merges them, and writes each key back to its own scope's row.
+//
+// Transition, so no device's data is stranded:
+//   * Until the SQL is applied (no `scope` column yet) everything works
+//     exactly as before, on the old row alone.
+//   * Afterwards, an account that can see money AND Runway also keeps
+//     writing the old row (SYNC_LEGACY_DUAL_WRITE) so a device still on an
+//     older build, which only knows that row, stays in step. Any other
+//     account can't see the old row (it holds every key) and never writes
+//     it -- it doesn't hold all the keys, so its whole-blob write would
+//     blank the ones it lacks.
+//   * Reads merge the old row first, then the scoped rows, so whatever an
+//     older device wrote to the old row is never lost.
+// Retiring the old row (stop the dual-write, then remove it) is a later,
+// separate step, once every device is on this build.
+//
+// Must match public.workspace_sync_money_keys() / workspace_sync_runway_keys()
+// in the SQL (tests/sync/scoped-workspace-sync-db.test.js). Every other key is ops.
+const SYNC_MONEY_KEYS = [
+  'th_expense_tombstones', 'th_expense_log',
+  'th_income_tombstones', 'th_income_log',
+  'th_invoice_tombstones', 'th_invoices',
+  'th_quote_tombstones', 'th_quotes',
+  'th_tax_rate', 'th_tax_labor', 'th_tax_parts', 'th_setaside_rate',
+  'th_graveyard', 'th_sync_conflicts',
+];
+const SYNC_RUNWAY_KEYS = [
+  'rd_personal-expenses', 'rd_personal-income', 'rd_budget-settings',
+  'rd_business-months', 'rd_emergency-fund', 'rd_debts',
+];
+const SYNC_SCOPES = ['ops', 'money', 'runway'];
+const SYNC_SCOPE_CODES = { ops: 'scope:ops', money: 'scope:money', runway: 'scope:runway' };
+const SYNC_LEGACY_DUAL_WRITE = true;
+
+function syncScopeOfKey(k) { return SYNC_MONEY_KEYS.includes(k) ? 'money' : SYNC_RUNWAY_KEYS.includes(k) ? 'runway' : 'ops'; }
+function syncKeysOfScope(scope) { return SYNC_DATA_KEYS.filter(k => syncScopeOfKey(k) === scope); }
+function pickSyncKeys(data, keys) {
+  const out = {};
+  keys.forEach(k => { if (data[k] !== undefined) out[k] = data[k]; });
+  return out;
+}
+
+// Every workspace_sync row this account may see. Before the SQL is applied
+// the `scope` column doesn't exist, the request is a 400, and this falls
+// back to the old row by its code. Returns { ok, scoped (true once the
+// split rows exist), legacy (row or null), rows: { ops, money } }, or
+// { ok: false, error }.
+async function fetchVisibleSyncRows(code) {
+  const headers = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${getAuthToken()}` };
+  const legacyOnly = async () => {
+    const legacyRes = await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${SYNC_TABLE}?code=eq.${encodeURIComponent(code)}&select=data,updated_at`, { headers });
+    if (!legacyRes.ok) return { ok: false, error: 'http-' + legacyRes.status };
+    const legacyRows = await legacyRes.json();
+    return { ok: true, scoped: false, legacy: (Array.isArray(legacyRows) && legacyRows[0]) || null, rows: {} };
+  };
+  const res = await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${SYNC_TABLE}?select=code,scope,data,updated_at`, { headers });
+  if (res.status === 400) return legacyOnly(); // no `scope` column yet: the SQL isn't applied
+  if (!res.ok) return { ok: false, error: 'http-' + res.status };
+  const all = await res.json();
+  const rows = {};
+  (Array.isArray(all) ? all : []).forEach(r => { if (r && SYNC_SCOPES.includes(r.scope) && r.code === SYNC_SCOPE_CODES[r.scope]) rows[r.scope] = r; });
+  const legacy = (Array.isArray(all) ? all : []).find(r => r && r.code === code && !r.scope) || null;
+  // Nothing recognisable came back: ask for the old row by its code, the
+  // way this always worked, rather than conclude there's no data.
+  const anyScoped = SYNC_SCOPES.some(sc => rows[sc]);
+  if (!anyScoped && !legacy) return legacyOnly();
+  return { ok: true, scoped: anyScoped, legacy, rows };
+}
+
+// Old row first, then each scoped row's own keys only.
+function applyVisibleSyncRows(visible) {
+  if (visible.legacy) applySyncData(visible.legacy.data);
+  SYNC_SCOPES.forEach(scope => {
+    const r = visible.rows[scope];
+    if (r) applySyncData(r.data, syncKeysOfScope(scope));
+  });
+}
+
+function latestVisibleUpdatedAt(visible) {
+  const stamps = [visible.legacy].concat(SYNC_SCOPES.map(sc => visible.rows[sc])).filter(Boolean).map(r => r.updated_at).filter(Boolean);
+  return stamps.sort().pop() || null;
+}
+
 // typeof first (2026-09-30): if supabase-config.js didn't load, this says
 // "not configured" instead of throwing a ReferenceError out of every
 // fire-and-forget mirror call (the Graveyard restore's among them).
@@ -866,54 +959,46 @@ async function pushSync() {
     if (!fresh) { recordSyncStatus('push', false, 'session-expired'); return { ok: false, error: 'session-expired' }; }
   }
 
-  // Real fix for the whole-blob "last write wins" gap: this used to POST
-  // collectSyncData() -- local's current state, whatever it happened to
-  // be -- straight over the server row, unconditionally, with no merge
-  // of any kind. Two devices editing different records (or even different
-  // fields of the same record) without an intervening pull meant whichever
-  // one pushed last silently discarded everything the other had already
-  // gotten onto the server. Pulling and merging the current server row
-  // in first, the exact same per-record/per-field merge pullSync() itself
-  // uses, means a push now behaves like "sync," not "overwrite" -- the
-  // worst case left is two edits to the SAME field of the SAME record in
-  // the tiny window between this GET and the POST below, which is exactly
-  // what mergeRecordArrays' conflict log exists to make visible rather
-  // than eliminate outright.
+  // Merge what's on the server first (see the merge-before-write comment
+  // above), from every row this account may see (SCOPED SYNC, above).
+  let visible = null;
   try {
-    const currentRes = await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${SYNC_TABLE}?code=eq.${encodeURIComponent(code)}&select=data,updated_at`, {
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${getAuthToken()}`,
-      },
-    });
-    if (currentRes.ok) {
-      const currentRows = await currentRes.json();
-      if (currentRows.length) applySyncData(currentRows[0].data);
-    }
+    visible = await fetchVisibleSyncRows(code);
+    if (visible.ok) applyVisibleSyncRows(visible);
   } catch (e) {
-    // Couldn't reach the server to merge first -- fall back to pushing
-    // local's current state as-is rather than blocking the push entirely.
-    // Same risk as before this fix existed, not a new one introduced by it.
+    // A failed merge-read shouldn't block the write; same as before.
   }
 
   const nowIso = new Date().toISOString();
-  const body = [{ code, data: collectSyncData(), updated_at: nowIso }];
+  const all = collectSyncData();
+  const scoped = !!(visible && visible.ok && visible.scoped);
+  let body;
+  let pushedKeys;
+  if (!scoped) {
+    // Old server (no split rows yet) -- or the read failed: the old row, as before.
+    body = [{ code, data: all, updated_at: nowIso }];
+    pushedKeys = SYNC_DATA_KEYS;
+  } else {
+    body = [];
+    pushedKeys = [];
+    SYNC_SCOPES.forEach(scope => {
+      if (!visible.rows[scope]) return; // not this account's to write
+      const keys = syncKeysOfScope(scope);
+      body.push({ code: SYNC_SCOPE_CODES[scope], scope, data: pickSyncKeys(all, keys), updated_at: nowIso });
+      pushedKeys = pushedKeys.concat(keys);
+    });
+    // The old row holds every key: only an account that holds them all
+    // (sees every scoped row) may keep it in step.
+    if (SYNC_LEGACY_DUAL_WRITE && SYNC_SCOPES.every(sc => visible.rows[sc])) {
+      body.push({ code, scope: null, data: all, updated_at: nowIso });
+      pushedKeys = SYNC_DATA_KEYS;
+    }
+    if (!body.length) { recordSyncStatus('push', false, 'no-rows-visible'); return { ok: false, error: 'no-rows-visible' }; }
+  }
 
   try {
     const res = await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${SYNC_TABLE}?on_conflict=code`, {
       method: 'POST',
-      // NOT keepalive: true anymore -- that flag caps the total request
-      // body at a hard 64 KiB (part of the Fetch spec itself, not a
-      // Supabase or CSP thing), and the combined synced payload now
-      // regularly exceeds that once Appliance Wiki's data was added to
-      // it. Every push was silently failing with a generic "Failed to
-      // fetch" and zero console detail -- keepalive wasn't protecting
-      // anything at that point anyway, since the oversized request
-      // failed outright regardless of whether the tab was closing or
-      // not. The real tradeoff being accepted by removing it: a push
-      // that's in flight at the exact instant the tab closes may now
-      // get cancelled instead of completing in the background. That's
-      // a rare edge case; failing every single push was not.
       headers: {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_ANON_KEY,
@@ -923,16 +1008,11 @@ async function pushSync() {
       body: JSON.stringify(body),
     });
     if (!res.ok) { recordSyncStatus('push', false, 'http-' + res.status); return { ok: false, error: 'http-' + res.status }; }
-    saveSyncBaseFromPushed(body[0].data, SYNC_DATA_KEYS);
+    saveSyncBaseFromPushed(all, pushedKeys);
     localStorage.setItem(SYNC_KNOWN_AT_KEY, nowIso);
     recordSyncStatus('push', true);
     return { ok: true };
   } catch (e) {
-    // Was previously a hardcoded 'network' string for every possible
-    // failure -- a genuine outage, a CORS block, a CSP violation, a DNS
-    // failure, all looked identical and impossible to diagnose remotely.
-    // Capturing the real message means the next failure is actually
-    // readable instead of just "network."
     const detail = 'network: ' + (e && e.message ? e.message : String(e));
     recordSyncStatus('push', false, detail);
     return { ok: false, error: detail };
@@ -949,18 +1029,14 @@ async function pullSync() {
   }
 
   try {
-    const res = await fetchWithRetry(`${SUPABASE_URL}/rest/v1/${SYNC_TABLE}?code=eq.${encodeURIComponent(code)}&select=data,updated_at`, {
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${getAuthToken()}`,
-      },
-    });
-    if (!res.ok) { recordSyncStatus('pull', false, 'http-' + res.status); return { ok: false, error: 'http-' + res.status }; }
-    const rows = await res.json();
-    if (!rows.length) { recordSyncStatus('pull', false, 'no-data-yet'); return { ok: false, error: 'no-data-yet' }; }
+    // Every row this account may see (SCOPED SYNC, above), old row first.
+    const visible = await fetchVisibleSyncRows(code);
+    if (!visible.ok) { recordSyncStatus('pull', false, visible.error); return { ok: false, error: visible.error }; }
+    if (!visible.legacy && !visible.scoped) { recordSyncStatus('pull', false, 'no-data-yet'); return { ok: false, error: 'no-data-yet' }; }
 
-    applySyncData(rows[0].data);
-    localStorage.setItem(SYNC_KNOWN_AT_KEY, rows[0].updated_at);
+    applyVisibleSyncRows(visible);
+    const knownAt = latestVisibleUpdatedAt(visible);
+    if (knownAt) localStorage.setItem(SYNC_KNOWN_AT_KEY, knownAt);
     recordSyncStatus('pull', true);
     return { ok: true };
   } catch (e) {
@@ -1566,6 +1642,9 @@ async function deleteLead(id) {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/th_leads?id=eq.${id}`, {
       method: 'DELETE',
+      // A bodyless DELETE, so keepalive's 64 KiB cap can't bite: a delete
+      // finished on the way out of the page (thFlushDeferredDeletes) still lands.
+      keepalive: true,
       headers: {
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': `Bearer ${getAuthToken()}`,
@@ -1622,6 +1701,9 @@ async function deleteJobApplication(id) {
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/th_job_applications?id=eq.${id}`, {
       method: 'DELETE',
+      // A bodyless DELETE, so keepalive's 64 KiB cap can't bite: a delete
+      // finished on the way out of the page (thFlushDeferredDeletes) still lands.
+      keepalive: true,
       headers: {
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': `Bearer ${getAuthToken()}`,
@@ -2111,6 +2193,17 @@ const REALTIME_WATCHDOG_MS = 35000;
 // (and the removal awaited, because supabase-js drops it from its channel
 // list asynchronously) before ANY re-subscribe, for all six channels.
 // The first attempt has no old channel and runs synchronously.
+// REALTIME_SINGLE_RETRY_NOTE (handoff 2026-11-03 §4A): the guard above
+// was not enough on its own. supabase-js reports CHANNEL_ERROR on the
+// same channel more than once (its onError, the failed join, and each of
+// its own automatic rejoins), and every report used to queue a retry.
+// Two retries in flight both removed the same old channel and both
+// rebuilt it: one leaked a live, orphaned channel, or the second build
+// got the first one's already-subscribed channel back and threw the
+// "after subscribe()" error. Each start*Realtime() now keeps a
+// generation number and a retryScheduled flag, so a repeated report is
+// ignored while a retry is queued and a replaced channel's late reports
+// (including the CLOSED its own removal emits) are ignored entirely.
 function subscribeFreshChannel(client, existingChannel, build) {
   if (!existingChannel) { build(); return; }
   let removal = null;
@@ -2144,13 +2237,22 @@ function startRealtimeSync(onRemoteChange, onStatusChange) {
 
   // See the REALTIME_RETRY_DELAYS/REALTIME_BACKGROUND_RETRY_MS comment
   // above for the full explanation and the real evidence behind it.
+  // One retry in flight at a time, and only the current channel's
+  // reports count (handoff 2026-11-03 §4A -- see
+  // REALTIME_SINGLE_RETRY_NOTE above).
+  let generation = 0;
+  let retryScheduled = false;
   function attemptSubscribe(attempt) {
+    const myGeneration = ++generation;
+    retryScheduled = false;
     subscribeFreshChannel(client, _realtimeChannel, () => {
     _realtimeChannel = client
       .channel('workspace-sync-' + code)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'workspace_sync', filter: `code=eq.${code}` },
+        // Every workspace_sync row this account may see (RLS applies to
+        // Realtime too): the old row and both scoped rows (Phase 2.4).
+        { event: '*', schema: 'public', table: 'workspace_sync' },
         async (payload) => {
           // Wrapped in try/catch and logged explicitly, rather than
           // relying on the browser's own window.onerror to catch a
@@ -2176,11 +2278,14 @@ function startRealtimeSync(onRemoteChange, onStatusChange) {
         }
       )
       .subscribe((status) => {
+        if (myGeneration !== generation) return; // a replaced channel's late report
+        if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && retryScheduled) return; // repeated report; a retry is already queued
         if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && attempt < REALTIME_RETRY_DELAYS.length) {
           // Expected, self-recovering, intermediate retry -- not logged
           // (2026-09-05 finding, still true): logging every one of these
           // at error severity crowded out th_client_errors' own 20-entry
           // cap with non-actionable noise.
+          retryScheduled = true;
           setTimeout(() => attemptSubscribe(attempt + 1), REALTIME_RETRY_DELAYS[attempt]);
           return; // don't mark resolved or notify the page yet -- a retry is still in flight
         }
@@ -2198,6 +2303,7 @@ function startRealtimeSync(onRemoteChange, onStatusChange) {
           // requiring a manual reload after one bad stretch. Re-enters
           // this same exhausted branch every time (silently) rather
           // than restarting the fast foreground backoff.
+          retryScheduled = true;
           setTimeout(() => attemptSubscribe(REALTIME_RETRY_DELAYS.length), REALTIME_BACKGROUND_RETRY_MS);
           return;
         }
@@ -2237,7 +2343,14 @@ function startLeadsRealtime(onChange, onStatusChange) {
 
   // Same retry fix as startRealtimeSync above -- see that comment for
   // the full explanation, backed by this project's own Supabase logs.
+  // One retry in flight at a time, and only the current channel's
+  // reports count (handoff 2026-11-03 §4A -- see
+  // REALTIME_SINGLE_RETRY_NOTE above).
+  let generation = 0;
+  let retryScheduled = false;
   function attemptSubscribe(attempt) {
+    const myGeneration = ++generation;
+    retryScheduled = false;
     subscribeFreshChannel(client, _leadsRealtimeChannel, () => {
     _leadsRealtimeChannel = client
       .channel('leads-realtime')
@@ -2255,9 +2368,12 @@ function startLeadsRealtime(onChange, onStatusChange) {
         }
       )
       .subscribe((status) => {
+        if (myGeneration !== generation) return; // a replaced channel's late report
+        if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && retryScheduled) return; // repeated report; a retry is already queued
         if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && attempt < REALTIME_RETRY_DELAYS.length) {
           // Not logged as an error -- same reasoning as the
           // workspace_sync channel's own subscribe() above.
+          retryScheduled = true;
           setTimeout(() => attemptSubscribe(attempt + 1), REALTIME_RETRY_DELAYS[attempt]);
           return;
         }
@@ -2270,6 +2386,7 @@ function startLeadsRealtime(onChange, onStatusChange) {
             }
           }
           if (onStatusChange) onStatusChange(status);
+          retryScheduled = true;
           setTimeout(() => attemptSubscribe(REALTIME_RETRY_DELAYS.length), REALTIME_BACKGROUND_RETRY_MS);
           return;
         }
@@ -2299,7 +2416,14 @@ function startApplicantsRealtime(onChange, onStatusChange) {
 
   // Same retry fix as startLeadsRealtime above -- see that comment for
   // the full explanation, backed by this project's own Supabase logs.
+  // One retry in flight at a time, and only the current channel's
+  // reports count (handoff 2026-11-03 §4A -- see
+  // REALTIME_SINGLE_RETRY_NOTE above).
+  let generation = 0;
+  let retryScheduled = false;
   function attemptSubscribe(attempt) {
+    const myGeneration = ++generation;
+    retryScheduled = false;
     subscribeFreshChannel(client, _applicantsRealtimeChannel, () => {
     _applicantsRealtimeChannel = client
       .channel('applicants-realtime')
@@ -2317,7 +2441,10 @@ function startApplicantsRealtime(onChange, onStatusChange) {
         }
       )
       .subscribe((status) => {
+        if (myGeneration !== generation) return; // a replaced channel's late report
+        if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && retryScheduled) return; // repeated report; a retry is already queued
         if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && attempt < REALTIME_RETRY_DELAYS.length) {
+          retryScheduled = true;
           setTimeout(() => attemptSubscribe(attempt + 1), REALTIME_RETRY_DELAYS[attempt]);
           return;
         }
@@ -2330,6 +2457,7 @@ function startApplicantsRealtime(onChange, onStatusChange) {
             }
           }
           if (onStatusChange) onStatusChange(status);
+          retryScheduled = true;
           setTimeout(() => attemptSubscribe(REALTIME_RETRY_DELAYS.length), REALTIME_BACKGROUND_RETRY_MS);
           return;
         }
@@ -2371,7 +2499,14 @@ function startBookingsRealtime(onChange, onStatusChange) {
   let realtimeResolved = false;
   let loggedFailure = false;
 
+  // One retry in flight at a time, and only the current channel's
+  // reports count (handoff 2026-11-03 §4A -- see
+  // REALTIME_SINGLE_RETRY_NOTE above).
+  let generation = 0;
+  let retryScheduled = false;
   function attemptSubscribe(attempt) {
+    const myGeneration = ++generation;
+    retryScheduled = false;
     subscribeFreshChannel(client, _bookingsRealtimeChannel, () => {
     _bookingsRealtimeChannel = client
       .channel('bookings-realtime')
@@ -2389,9 +2524,12 @@ function startBookingsRealtime(onChange, onStatusChange) {
         }
       )
       .subscribe((status) => {
+        if (myGeneration !== generation) return; // a replaced channel's late report
+        if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && retryScheduled) return; // repeated report; a retry is already queued
         if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && attempt < REALTIME_RETRY_DELAYS.length) {
           // Not logged as an error -- same reasoning as the
           // workspace_sync channel's own subscribe() above.
+          retryScheduled = true;
           setTimeout(() => attemptSubscribe(attempt + 1), REALTIME_RETRY_DELAYS[attempt]);
           return;
         }
@@ -2404,6 +2542,7 @@ function startBookingsRealtime(onChange, onStatusChange) {
             }
           }
           if (onStatusChange) onStatusChange(status);
+          retryScheduled = true;
           setTimeout(() => attemptSubscribe(REALTIME_RETRY_DELAYS.length), REALTIME_BACKGROUND_RETRY_MS);
           return;
         }
@@ -2433,7 +2572,14 @@ function startJobsRealtime(onChange, onStatusChange) {
   let realtimeResolved = false;
   let loggedFailure = false;
 
+  // One retry in flight at a time, and only the current channel's
+  // reports count (handoff 2026-11-03 §4A -- see
+  // REALTIME_SINGLE_RETRY_NOTE above).
+  let generation = 0;
+  let retryScheduled = false;
   function attemptSubscribe(attempt) {
+    const myGeneration = ++generation;
+    retryScheduled = false;
     subscribeFreshChannel(client, _jobsRealtimeChannel, () => {
     _jobsRealtimeChannel = client
       .channel('jobs-realtime')
@@ -2451,7 +2597,10 @@ function startJobsRealtime(onChange, onStatusChange) {
         }
       )
       .subscribe((status) => {
+        if (myGeneration !== generation) return; // a replaced channel's late report
+        if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && retryScheduled) return; // repeated report; a retry is already queued
         if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && attempt < REALTIME_RETRY_DELAYS.length) {
+          retryScheduled = true;
           setTimeout(() => attemptSubscribe(attempt + 1), REALTIME_RETRY_DELAYS[attempt]);
           return;
         }
@@ -2464,6 +2613,7 @@ function startJobsRealtime(onChange, onStatusChange) {
             }
           }
           if (onStatusChange) onStatusChange(status);
+          retryScheduled = true;
           setTimeout(() => attemptSubscribe(REALTIME_RETRY_DELAYS.length), REALTIME_BACKGROUND_RETRY_MS);
           return;
         }
@@ -2494,7 +2644,14 @@ function startInvoicesRealtime(onChange, onStatusChange) {
   let realtimeResolved = false;
   let loggedFailure = false;
 
+  // One retry in flight at a time, and only the current channel's
+  // reports count (handoff 2026-11-03 §4A -- see
+  // REALTIME_SINGLE_RETRY_NOTE above).
+  let generation = 0;
+  let retryScheduled = false;
   function attemptSubscribe(attempt) {
+    const myGeneration = ++generation;
+    retryScheduled = false;
     subscribeFreshChannel(client, _invoicesRealtimeChannel, () => {
     _invoicesRealtimeChannel = client
       .channel('invoices-realtime')
@@ -2512,7 +2669,10 @@ function startInvoicesRealtime(onChange, onStatusChange) {
         }
       )
       .subscribe((status) => {
+        if (myGeneration !== generation) return; // a replaced channel's late report
+        if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && retryScheduled) return; // repeated report; a retry is already queued
         if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && attempt < REALTIME_RETRY_DELAYS.length) {
+          retryScheduled = true;
           setTimeout(() => attemptSubscribe(attempt + 1), REALTIME_RETRY_DELAYS[attempt]);
           return;
         }
@@ -2525,6 +2685,7 @@ function startInvoicesRealtime(onChange, onStatusChange) {
             }
           }
           if (onStatusChange) onStatusChange(status);
+          retryScheduled = true;
           setTimeout(() => attemptSubscribe(REALTIME_RETRY_DELAYS.length), REALTIME_BACKGROUND_RETRY_MS);
           return;
         }

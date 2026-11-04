@@ -52,17 +52,17 @@
     document.documentElement.style.colorScheme = saved === 'light' ? 'light' : 'dark';
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=ec3464c0ec">
+<link rel="stylesheet" href="/styles.css?v=7c03870603">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=f212452f48">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=11d0839316" defer></script>
-<script src="/tools/data-layer.js?v=b5758547dc" defer></script>
+<script src="/tools/sync.js?v=486abe5b22" defer></script>
+<script src="/tools/data-layer.js?v=bfaab0c44f" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
-<script src="/tools/tools-media-sharing.js?v=0c229c9353" defer></script>
+<script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=2cf0b2f75c" defer></script>
-<script src="/tools/tools-command-palette.js?v=479d6a96e7" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=c189cd58b4" defer></script>
+<script src="/tools/tools-command-palette.js?v=66031659c7" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -324,7 +324,7 @@
 
 <div class="hub-header">
   <div class="hub-header-left">
-    <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
+    <img src="/images/logo-signature-orange.webp?v=adc4d42660" alt="Triple H Enterprises">
     <span class="hub-title">Finance</span>
   </div>
   <div class="hub-header-right">
@@ -620,8 +620,8 @@
     // failed to load). This tab still doesn't own invoices -- read-only,
     // comparing against expenses this tab does own.
     const invoices = (typeof getInvoicesForRead === 'function') ? getInvoicesForRead() : thRead(TH_KEYS.invoices, []);
-    const expenses = loadExpenses();
-    const manualIncome = loadIncomeEntries().filter(e => e.origin !== 'invoice'); // invoices are already counted directly below -- this avoids double-counting the ones mirrored into the income log
+    const expenses = thExpenses.all();
+    const manualIncome = thIncome.all().filter(e => e.origin !== 'invoice'); // invoices are already counted directly below -- this avoids double-counting the ones mirrored into the income log
     const container = document.getElementById('profitabilityList');
     if (!container) return;
 
@@ -674,7 +674,6 @@
   // Bug fix (2026-08-20): same class of bug as TAX_RATE_KEY above --
   // used below but never declared. Confirmed against sync.js's
   // SYNC_DATA_KEYS before adding this.
-  const INCOME_STORAGE_KEY = 'th_income_log';
 
   // Bug fix (2026-08-20): same Push 4 extraction gap as
   // justAddedExpenseId -- both used extensively below but never
@@ -683,14 +682,13 @@
   let editingIncomeEntryId = null;
   let justAddedIncomeEntryId = null;
 
-  function loadIncomeEntries() { try { return JSON.parse(localStorage.getItem(INCOME_STORAGE_KEY) || '[]'); } catch (e) { return []; } }
   // Item #13 extended (2026-08-20): undoable-delete tracking for Income
   // and Expense entries, matching job-tracker.html's pattern -- id ->
   // the pending setTimeout that finalizes the real deletion if not undone.
   const pendingDeleteIncomeIds = new Map();
   const pendingDeleteExpenseIds = new Map();
 
-  function saveIncomeEntries(entries) { localStorage.setItem(INCOME_STORAGE_KEY, JSON.stringify(entries)); scheduleSync(); }
+  // Income and expense entries go through thIncome / thExpenses (data-layer.js).
 
   function populateIncomeJobRefOptions() {
     const select = document.getElementById('incomeJobRef');
@@ -711,7 +709,7 @@
     const jobRefId = document.getElementById('incomeJobRef').value;
     const jobRefTitle = jobRefId ? (thRead(TH_KEYS.jobs, []).find(j => String(j.id) === jobRefId) || {}).title || '' : '';
 
-    const entries = loadIncomeEntries();
+    const entries = thIncome.all();
     const fields = {
       date, desc, amount,
       source: document.getElementById('incomeSource').value.trim(),
@@ -729,7 +727,7 @@
       newId = Date.now();
       entries.push({ id: newId, ...fields, origin: 'manual', createdBy: currentUser, lastEditedBy: currentUser });
     }
-    saveIncomeEntries(entries);
+    thIncome.replaceAll(entries);
 
     document.getElementById('incomeSource').value = '';
     document.getElementById('incomeDesc').value = '';
@@ -742,7 +740,7 @@
   }
 
   function editIncomeEntry(id) {
-    const entry = loadIncomeEntries().find(e => e.id === id);
+    const entry = thIncome.all().find(e => e.id === id);
     if (!entry || entry.origin === 'invoice') return; // invoice-derived entries stay tied to their real document, not editable here
     editingIncomeEntryId = id;
     toggleFormSection('incomeFormSection', true);
@@ -770,7 +768,7 @@
   }
 
   async function deleteIncomeEntry(id) {
-    const entry = loadIncomeEntries().find(e => e.id === id);
+    const entry = thIncome.all().find(e => e.id === id);
     const msg = entry && entry.origin === 'invoice'
       ? 'This entry came from a generated invoice. Deleting it only removes it from this log \u2014 the invoice itself is untouched. Continue?'
       : 'Delete this income entry?';
@@ -780,10 +778,9 @@
     const row = document.querySelector('[data-income-id="' + id + '"]');
     await new Promise(resolve => animateRowExit(row, resolve));
 
-    const timer = setTimeout(() => {
+    const timer = thDeferDelete(() => {
       pendingDeleteIncomeIds.delete(id);
-      saveIncomeEntries(loadIncomeEntries().filter(e => e.id !== id));
-      if (typeof thAddIncomeTombstone === 'function') thAddIncomeTombstone(id);
+      thIncome.remove(id); // write + tombstone
       if (entry && typeof thAddToGraveyard === 'function') thAddToGraveyard('income', entry);
       renderIncomeEntries();
     }, 6000);
@@ -791,7 +788,7 @@
     pendingDeleteIncomeIds.set(id, timer);
     renderIncomeEntries();
     showUndoToast('Entry deleted.', () => {
-      clearTimeout(pendingDeleteIncomeIds.get(id));
+      thCancelDeferredDelete(pendingDeleteIncomeIds.get(id));
       pendingDeleteIncomeIds.delete(id);
       renderIncomeEntries();
     });
@@ -801,21 +798,19 @@
     const confirmed = await showConfirm('Delete every logged income entry, including ones from invoices? This cannot be undone and does not touch the invoices themselves.', { danger: true, confirmText: 'Delete All' });
     if (confirmed) {
       if (typeof thAddIncomeTombstone === 'function') {
-        loadIncomeEntries().forEach(e => {
+        thIncome.all().forEach(e => {
           thAddIncomeTombstone(e.id);
           if (typeof thAddToGraveyard === 'function') thAddToGraveyard('income', e);
         });
       }
-      saveIncomeEntries([]);
+      thIncome.replaceAll([]);
       renderIncomeEntries();
     }
   }
 
   function backfillLegacyInvoicesIntoIncomeLog() {
-    let invoices;
-    try { invoices = JSON.parse(localStorage.getItem('th_invoices') || '[]'); }
-    catch (e) { return; } // malformed data here shouldn't block the rest of page init
-    const incomeLog = loadIncomeEntries();
+    const invoices = thInvoices.all(); // [] for missing or malformed data, as before
+    const incomeLog = thIncome.all();
     const mirroredIds = new Set(incomeLog.filter(e => e.origin === 'invoice').map(e => e.invoiceId));
     const unmirrored = invoices.filter(i => !mirroredIds.has(i.id));
     if (unmirrored.length === 0) return;
@@ -834,12 +829,12 @@
         invoiceId: i.id,
       });
     });
-    saveIncomeEntries(incomeLog);
+    thIncome.replaceAll(incomeLog);
   }
 
   function renderIncomeEntries() {
     backfillLegacyInvoicesIntoIncomeLog();
-    let entries = [...loadIncomeEntries()].sort((a, b) => new Date(b.date) - new Date(a.date));
+    let entries = [...thIncome.all()].sort((a, b) => new Date(b.date) - new Date(a.date));
     // Item #13 extended (2026-08-20): filters out any entry pending an
     // undoable delete, matching job-tracker.html's pattern -- storage
     // stays untouched until the undo window actually expires.
@@ -895,7 +890,7 @@
     container.dataset.longPressWired = '1';
     attachLongPress(container, 'tr[data-income-id]', (rowEl) => {
       const id = Number(rowEl.dataset.incomeId);
-      const entry = loadIncomeEntries().find(e => e.id === id);
+      const entry = thIncome.all().find(e => e.id === id);
       if (!entry) return;
       const actions = [];
       if (entry.origin !== 'invoice') actions.push({ label: 'Edit', onClick: () => editIncomeEntry(id) });
@@ -905,7 +900,7 @@
   }
 
   function buildIncomeCSV() {
-    const entries = [...loadIncomeEntries()].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const entries = [...thIncome.all()].sort((a, b) => new Date(a.date) - new Date(b.date));
     let csv = 'Date,Source,Job,Description,Payment,Origin,Amount\n';
     entries.forEach(e => {
       const desc = '"' + e.desc.replace(/"/g, '""') + '"';
@@ -917,7 +912,7 @@
   }
 
   async function exportIncomeCSV() {
-    const entries = loadIncomeEntries();
+    const entries = thIncome.all();
     if (entries.length === 0) { await showAlert('Nothing to export yet.'); return; }
     const csv = buildIncomeCSV();
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -934,7 +929,6 @@
   // Bug fix (2026-08-20): same class of bug as TAX_RATE_KEY above --
   // used below but never declared. Confirmed against sync.js's
   // SYNC_DATA_KEYS before adding this.
-  const EXPENSE_STORAGE_KEY = 'th_expense_log';
   // Bug fix (2026-08-20), found via the visible error banner on a real
   // device: this drives the "just added" row-highlight animation
   // (list-row-enter), matching job-tracker.html's own justAddedJobId --
@@ -947,7 +941,6 @@
   // everything after it in that same async function all over again.
   let justAddedExpenseId = null;
 
-  function loadExpenses() { try { return JSON.parse(localStorage.getItem(EXPENSE_STORAGE_KEY) || '[]'); } catch (e) { return []; } }
   // Bug fix (2026-08-20): same Push 4 extraction gap as above --
   // editingExpenseId matches job-tracker.html's editingJobId
   // pattern; expenseSaveInProgress was actually found already
@@ -958,7 +951,6 @@
   let editingExpenseId = null;
   let expenseSaveInProgress = false;
 
-  function saveExpenses(entries) { localStorage.setItem(EXPENSE_STORAGE_KEY, JSON.stringify(entries)); scheduleSync(); }
 
   // Bug fix (2026-08-20): same class of bug as TAX_RATE_KEY above --
   // used below but never declared. Confirmed against sync.js's
@@ -996,7 +988,7 @@
     if (!date || !desc) { await showAlert('Date and description are required.'); return; }
 
     const wasEditing = !!editingExpenseId;
-    const existingEntry = wasEditing ? loadExpenses().find(e => e.id === editingExpenseId) : null;
+    const existingEntry = wasEditing ? thExpenses.all().find(e => e.id === editingExpenseId) : null;
     const existingReceiptPath = existingEntry ? existingEntry.receiptPath : '';
 
     const receiptFile = document.getElementById('entryReceipt').files[0];
@@ -1058,7 +1050,7 @@
       entry.receiptPath = result.path;
     }
 
-    const entries = loadExpenses();
+    const entries = thExpenses.all();
     if (wasEditing) {
       const idx = entries.findIndex(e => e.id === editingExpenseId);
       if (idx > -1) entries[idx] = entry;
@@ -1066,7 +1058,7 @@
     } else {
       entries.push(entry);
     }
-    saveExpenses(entries);
+    thExpenses.replaceAll(entries);
 
     document.getElementById('entryVendor').value = '';
     document.getElementById('entryDesc').value = '';
@@ -1096,7 +1088,7 @@
   document.getElementById('entryType').addEventListener('change', toggleExpenseTypeFields);
 
   function editExpense(id) {
-    const entry = loadExpenses().find(e => e.id === id);
+    const entry = thExpenses.all().find(e => e.id === id);
     if (!entry) return;
     editingExpenseId = id;
     toggleFormSection('expenseFormSection', true);
@@ -1142,27 +1134,29 @@
     const row = document.querySelector('[data-expense-id="' + id + '"]');
     await new Promise(resolve => animateRowExit(row, resolve));
 
-    const timer = setTimeout(async () => {
+    const timer = thDeferDelete(async () => {
       pendingDeleteExpenseIds.delete(id);
-      const entries = loadExpenses();
+      const entries = thExpenses.all();
       const entry = entries.find(e => e.id === id);
       // Snapshotted before the receipt cleanup below, which is
       // already irreversible -- restoring this from the graveyard
       // later brings back the expense's own fields, but not the
       // actual receipt image, since that file is really gone by now.
       if (entry && typeof thAddToGraveyard === 'function') thAddToGraveyard('expense', entry);
+      // The entry's own removal before the receipt cleanup's await
+      // (handoff 2026-11-03 §4B): on the way out of the page only the
+      // part before the first await is sure to finish.
+      thExpenses.remove(id); // write + tombstone
+      renderExpenses();
       if (entry && entry.receiptPath && typeof deleteReceipt === 'function') {
         await deleteReceipt(entry.receiptPath); // best-effort cleanup of the actual file too
       }
-      saveExpenses(entries.filter(e => e.id !== id));
-      if (typeof thAddExpenseTombstone === 'function') thAddExpenseTombstone(id);
-      renderExpenses();
     }, 6000);
 
     pendingDeleteExpenseIds.set(id, timer);
     renderExpenses();
     showUndoToast('Entry deleted.', () => {
-      clearTimeout(pendingDeleteExpenseIds.get(id));
+      thCancelDeferredDelete(pendingDeleteExpenseIds.get(id));
       pendingDeleteExpenseIds.delete(id);
       renderExpenses();
     });
@@ -1172,12 +1166,12 @@
     const confirmed = await showConfirm('Delete every logged entry? This cannot be undone.', { danger: true, confirmText: 'Delete All' });
     if (confirmed) {
       if (typeof thAddExpenseTombstone === 'function') {
-        loadExpenses().forEach(e => {
+        thExpenses.all().forEach(e => {
           thAddExpenseTombstone(e.id);
           if (typeof thAddToGraveyard === 'function') thAddToGraveyard('expense', e);
         });
       }
-      saveExpenses([]);
+      thExpenses.replaceAll([]);
       renderExpenses();
     }
   }
@@ -1185,14 +1179,14 @@
   // Part Cost Trend (closes a real audit gap: cost-per-part history was
   // implicit in the Expenses log's own Vendor/Part Number/Description
   // fields but never surfaced anywhere). Pure read-only search over
-  // loadExpenses() -- no new storage key, no schema change.
+  // thExpenses.all() -- no new storage key, no schema change.
   function renderPartCostTrend() {
     const container = document.getElementById('partTrendResults');
     if (!container) return;
     const term = (document.getElementById('partTrendSearch').value || '').trim().toLowerCase();
     if (!term) { container.innerHTML = ''; return; }
 
-    const allExpenses = loadExpenses().filter(e => e.type !== 'mileage');
+    const allExpenses = thExpenses.all().filter(e => e.type !== 'mileage');
     // Part Number match first (exact, case-insensitive) -- the more
     // reliable key when it's on file. Only falls back to a Description
     // substring match when nothing matched by part number, so a part
@@ -1250,7 +1244,7 @@
     // Same reasoning for the v2 "Spent this month" card (2026-09-29).
     if (typeof renderFinanceSpent === 'function') renderFinanceSpent();
 
-    let entries = [...loadExpenses()].sort((a, b) => new Date(b.date) - new Date(a.date));
+    let entries = [...thExpenses.all()].sort((a, b) => new Date(b.date) - new Date(a.date));
     if (pendingDeleteExpenseIds.size > 0) entries = entries.filter(e => !pendingDeleteExpenseIds.has(e.id));
     const container = document.getElementById('entriesTable');
 
@@ -1302,7 +1296,7 @@
     container.dataset.longPressWired = '1';
     attachLongPress(container, 'tr[data-expense-id]', (rowEl) => {
       const id = Number(rowEl.dataset.expenseId);
-      const entry = loadExpenses().find(e => e.id === id);
+      const entry = thExpenses.all().find(e => e.id === id);
       if (!entry) return;
       showQuickActionSheet(entry.vendor || entry.desc || 'Expense entry', [
         { label: 'Edit', onClick: () => editExpense(id) },
@@ -1326,7 +1320,7 @@
     if (!totalEl) return;
     const today = (typeof todayDateStrBusinessTz === 'function') ? todayDateStrBusinessTz() : new Date().toISOString().slice(0, 10);
     const monthKey = today.slice(0, 7);
-    let entries = loadExpenses().filter(e => (e.date || '').slice(0, 7) === monthKey);
+    let entries = thExpenses.all().filter(e => (e.date || '').slice(0, 7) === monthKey);
     if (pendingDeleteExpenseIds.size > 0) entries = entries.filter(e => !pendingDeleteExpenseIds.has(e.id));
     const amt = (e) => Number(e.amount) || 0;
     const total = entries.reduce((s, e) => s + amt(e), 0);
@@ -1383,7 +1377,7 @@
   // call. The rows keep their own long-press (initExpenseRowLongPress).
   function expenseRowMenu(row) {
     const id = Number(row.dataset.expenseId);
-    const entry = loadExpenses().find(e => e.id === id);
+    const entry = thExpenses.all().find(e => e.id === id);
     if (!entry) return null;
     const edit = row.querySelector('button[onclick^="editExpense"]');
     const del = row.querySelector('button[onclick^="deleteExpense"]');
@@ -1403,7 +1397,7 @@
   }
   function incomeRowMenu(row) {
     const id = Number(row.dataset.incomeId);
-    const entry = loadIncomeEntries().find(e => e.id === id);
+    const entry = thIncome.all().find(e => e.id === id);
     if (!entry) return null;
     const edit = row.querySelector('button[onclick^="editIncomeEntry"]');
     const del = row.querySelector('button[onclick^="deleteIncomeEntry"]');
@@ -1431,7 +1425,7 @@
   }
 
   function buildCSV() {
-    const entries = [...loadExpenses()].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const entries = [...thExpenses.all()].sort((a, b) => new Date(a.date) - new Date(b.date));
     // Note: this column holds the raw storage path, not a clickable URL.
     // A signed URL expires in an hour, so baking one into an exported
     // file meant to be opened again later (for taxes, bookkeeping, etc.)
@@ -1458,7 +1452,7 @@
   }
 
   async function exportCSV() {
-    const entries = loadExpenses();
+    const entries = thExpenses.all();
     if (entries.length === 0) { await showAlert('Nothing to export yet.'); return; }
 
     const csv = buildCSV();

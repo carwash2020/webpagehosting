@@ -27,10 +27,17 @@ settings, not just invoice payment:
 | `portal/contracts.html` | Pending e-sign and signed-contract history. Not a 6th tab -- reached from Home cards, the action inbox, and the desktop sidebar's Account links | No |
 | `portal/settings.html` | A six-row menu (Profile, Payment, Notifications, Sign-in & security, Refer a friend, App), each row with a live status line; a row opens that section alone (`#payment`, `#security`, ... -- linkable, Back closes it). Desktop shows menu and section side by side | No |
 
-There is **no public sign-up anywhere**. An account only ever exists
-because Triple H invoiced that client first, which triggers an invite
-email. A client can sign in or reset a password they already have,
-never self-register.
+**Create account (2026-11-04, handoff §2).** A client can now make their
+own account from the sign-in page: email + password, then a 6-digit code
+emailed to that address. Supabase's public sign-up stays **off**; accounts
+are made by the `portal-signup` edge function, and an account whose email
+isn't confirmed can't sign in or read a single row
+(`sql/portal/portal_self_signup_and_confirmed_email_lock.sql`). Invites
+from Triple H remain the separate path for when Steve sets someone up
+first. Details: `docs/portal-create-account-2026-11-04/README.md`.
+
+*(Before 2026-11-04: there was no public sign-up anywhere; an account only
+existed because Triple H invited the client.)*
 
 **Phone vs desktop (2026-09-22).** Below 1024px the portal is the phone
 app: the five-tab bar is fixed to the bottom of the screen. From 1024px

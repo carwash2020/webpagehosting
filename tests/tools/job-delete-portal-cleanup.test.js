@@ -34,16 +34,14 @@ function setup({ signedIn = true, undo = false } = {}) {
   w.SUPABASE_ANON_KEY = 'anon';
   if (signedIn) w.getAuthToken = () => 'tok';
   w.fetch = async (url, init) => { out.portal.push({ url, body: JSON.parse(init.body), auth: init.headers.Authorization }); return { ok: true }; };
-  w.loadJobs = () => out.jobs.map((j) => ({ ...j }));
-  w.saveJobs = (list) => { out.jobs = list; };
   w.thAddJobTombstone = (id) => out.tombstones.push(id);
   w.mirrorDelete = (table, id) => out.mirrored.push(id);
-  // deleteJob() now reads/removes through the thJobs seam (Item 1 Phase 2a)
-  // instead of calling loadJobs()/saveJobs()/thAddJobTombstone()/mirrorDelete()
-  // directly -- this stub reproduces that same end state against out.jobs so
-  // the rest of this test's assertions still hold. bulkDeleteJobs() is
-  // untouched by that change and still uses the plain stubs above.
+  // Both delete paths go through the thJobs seam (Item 1 Phase 2a; bulk
+  // delete's whole-list read/write moved to all()/replaceAll() 2026-11-03).
+  // This stub reproduces the real seam's end state against out.jobs.
   w.thJobs = {
+    all: () => out.jobs.map((j) => ({ ...j })),
+    replaceAll: (list) => { out.jobs = list; },
     get: (id) => out.jobs.find((j) => j.id === id) || null,
     remove: (id) => {
       if (!out.jobs.some((j) => j.id === id)) return false;
@@ -68,6 +66,10 @@ function setup({ signedIn = true, undo = false } = {}) {
   const timers = [];
   w.setTimeout = (fn) => { timers.push(fn); return timers.length; };
   w.clearTimeout = (t) => { timers[t - 1] = null; };
+  // The real thDeferDelete/thCancelDeferredDelete (tools-media-sharing.js) wrap
+  // exactly these, plus finishing on pagehide (tests/tools/deletion-survives-navigation.test.js).
+  w.thDeferDelete = (fn) => w.setTimeout(fn, 6000);
+  w.thCancelDeferredDelete = (t) => w.clearTimeout(t);
   w.showUndoToast = (msg, onUndo) => { if (undo) onUndo(); };
   w.eval(REMOVE + DELETE_ONE + DELETE_BULK + '\nwindow.__t = { deleteJob, bulkDeleteJobs, removeJobFromPortal };');
   out.flush = async () => { for (const fn of timers.splice(0)) if (fn) await fn(); };

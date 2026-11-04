@@ -154,12 +154,13 @@ test('invoice and quote numbers are drawn from the database sequence, never gene
 });
 
 test('every number-assignment site uses the sequence -- initial load and both form resets', () => {
-  // Three sites total: page load, the post-generate invoice reset, and
-  // the post-generate quote reset. Missing one would silently
-  // reintroduce random numbering on that path only.
+  // Page load, the post-generate invoice reset, and the post-generate
+  // quote reset -- plus (2026-11-03) a resumed invoice draft whose number
+  // the clean form already used. Missing one would silently reintroduce
+  // random numbering on that path only.
   const invoiceCalls = (INVOICE_GEN.match(/assignNextNumber\('invoiceNumber'/g) || []).length;
   const quoteCalls = (INVOICE_GEN.match(/assignNextNumber\('quoteNumber'/g) || []).length;
-  assert.equal(invoiceCalls, 2, 'expected invoice number drawn on page load and on form reset');
+  assert.equal(invoiceCalls, 3, 'expected invoice number drawn on page load, on form reset, and on a resumed draft whose number was used');
   assert.equal(quoteCalls, 2, 'expected quote number drawn on page load and on form reset');
 });
 

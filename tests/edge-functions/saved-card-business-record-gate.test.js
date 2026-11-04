@@ -6,6 +6,12 @@
 // saved-card purposes is an account with at least one invoice, quote, job,
 // contract, checkup, OR a work order it submitted itself.
 //
+// Revised 2026-11-04 (Connor, option (a)): portal Create account (Phase 3.3)
+// lets anyone make an account for their own email, and a work order is
+// something a client files themselves -- so "has a work order" no longer
+// proves any relationship. Only records Triple H created count: invoices,
+// quotes, jobs, contracts, checkups.
+//
 // Runs the REAL manage-saved-card-index.ts handler (Node type stripping,
 // fake Deno), same harness pattern as tests/payments/stripe-idempotency-
 // keys.test.js, with a fake Supabase REST layer answered from in-memory
@@ -19,13 +25,16 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..', '..');
 
+// Records Triple H creates: any one of these lets an account save a card.
 const TABLES = ['client_portal_invoices', 'client_portal_quotes', 'client_portal_jobs',
-  'client_portal_contracts', 'client_portal_checkups', 'client_portal_work_orders'];
+  'client_portal_contracts', 'client_portal_checkups'];
+// Kept in the fake database so the "work order alone" case can be shown.
+const ALL_TABLES = [...TABLES, 'client_portal_work_orders'];
 
 const st = {};
 function reset() {
   st.customers = [];
-  st.records = Object.fromEntries(TABLES.map((t) => [t, []]));
+  st.records = Object.fromEntries(ALL_TABLES.map((t) => [t, []]));
   st.setupIntents = 0;
 }
 reset();
@@ -59,7 +68,7 @@ async function fakeFetch(url, init = {}) {
 
   if (u.pathname === '/rest/v1/card_authorizations') return new Response(null, { status: 201 });
 
-  const table = TABLES.find((t) => u.pathname === `/rest/v1/${t}`);
+  const table = ALL_TABLES.find((t) => u.pathname === `/rest/v1/${t}`);
   if (table) {
     assert.equal(method, 'GET', `expected only a read of ${table}, got ${method}`);
     assert.equal(u.searchParams.get('select'), 'id');
@@ -98,12 +107,12 @@ async function createSetupIntent(email) {
   return { status: res.status, body: await res.json() };
 }
 
-test('an account with none of the 6 record types is refused with a clear error, not a silent no-op', async () => {
+test('an account with none of the 5 record types is refused with a clear error, not a silent no-op', async () => {
   reset();
   const r = await createSetupIntent('nobody@example.com');
   assert.equal(r.status, 403);
   assert.equal(r.body.ok, false);
-  assert.match(r.body.error, /invoice, quote, job, contract, checkup, or work order/);
+  assert.match(r.body.error, /it needs at least one invoice, quote, job, contract or checkup from Triple H first\./);
   assert.equal(st.setupIntents, 0, 'no SetupIntent should have been created');
 });
 
@@ -120,19 +129,27 @@ for (const table of TABLES) {
   });
 }
 
-test('a work order row is enough on its own -- "submitted by self" needs no extra check because the table structurally cannot hold anything else', async () => {
-  // client_portal_work_orders has no internal/staff INSERT policy at all
-  // (sql/portal/create_client_portal_work_orders.sql) -- the only way a row
-  // gets created is the client's own authenticated INSERT, enforced by RLS
-  // requiring client_email = auth.email(). So its mere existence already
-  // proves self-submission; this test documents that the gate does not (and
-  // need not) look for any separate "submitted_by"/"created_by" column.
+test('a self-submitted work order alone is NOT enough: a stranger who creates an account and files one still cannot save a card', async () => {
+  // The hole option (a) closes (2026-11-04): Create account + "Request
+  // work" would otherwise let anyone reach create_setup_intent and test
+  // stolen cards through Stripe.
   reset();
-  const email = 'submitted-own-work-order@example.com';
+  const email = 'stranger-with-own-work-order@example.com';
   st.records.client_portal_work_orders.push({ id: 1, client_email: email, status: 'submitted' });
   const r = await createSetupIntent(email);
-  assert.equal(r.status, 200, JSON.stringify(r.body));
-  assert.equal(r.body.ok, true);
+  assert.equal(r.status, 403, JSON.stringify(r.body));
+  assert.equal(r.body.ok, false);
+  assert.equal(st.setupIntents, 0, 'no SetupIntent should have been created');
+  for (const status of ['in_review', 'scheduled', 'completed']) {
+    st.records.client_portal_work_orders[0].status = status;
+    assert.equal((await createSetupIntent(email)).status, 403, `still refused with a work order ${status}`);
+  }
+});
+
+test('the gate never even asks about work orders', () => {
+  const src = fs.readFileSync(path.join(ROOT, 'edge-functions', 'manage-saved-card-index.ts'), 'utf8');
+  const list = src.slice(src.indexOf('const BUSINESS_RECORD_TABLES'), src.indexOf('] as const;'));
+  assert.doesNotMatch(list, /client_portal_work_orders/);
 });
 
 test('the gate runs before the signature requirement, so a gated account sees the real reason, not "needs_signature"', async () => {

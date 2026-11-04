@@ -11,6 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const { JSDOM } = require('jsdom');
+const { installDataLayer } = require('../data-layer-harness');
 
 const TOOLS = path.join(__dirname, '..', '..', 'tools');
 const read = (f) => fs.readFileSync(path.join(TOOLS, f), 'utf8');
@@ -106,6 +107,7 @@ function loadPage(invoices, extra) {
   const dom = new JSDOM(INV, {
     runScripts: 'dangerously', url: 'https://example.com/tools/invoice-generator.html',
     beforeParse(w) {
+      installDataLayer(w);
       w.requireAuth = () => {};
       w.canManageInvoices = () => true;
       w.localStorage.setItem('th_invoices', JSON.stringify(invoices));
@@ -143,7 +145,7 @@ test('toggleInvoicePaid writes paidAmount with the flag, mirrors to the relation
 
 test('the Dashboard Mark paid now tells the portal too (it never did), after the save and the mirror', () => {
   const fn = extractFn(WS, 'togglePaid');
-  const save = fn.indexOf('saveInvoices(invoices);');
+  const save = fn.indexOf('thInvoices.replaceAll(invoices);');
   const push = fn.indexOf('if (typeof pushInvoicePaidToPortal === \'function\') pushInvoicePaidToPortal(inv);');
   assert.ok(save > 0 && push > save);
 });
@@ -209,7 +211,7 @@ test('with no invoices at all the list says so and offers New invoice; the tiles
   const w = loadPage([]);
   w.setInvoiceFilter('all');
   assert.equal(w.document.getElementById('invoiceSummary').innerHTML, '');
-  assert.match(w.document.getElementById('invoiceLogList').innerHTML, /No invoices generated yet\.<button type="button" class="primary-btn" onclick="activateGenTab\('invoice'\)">New invoice<\/button>/);
+  assert.match(w.document.getElementById('invoiceLogList').innerHTML, /No invoices generated yet\.<button type="button" class="primary-btn" onclick="openNewInvoice\(\)">New invoice<\/button>/);
   w.close();
 });
 

@@ -25,7 +25,7 @@
 <link rel="shortcut icon" href="/favicon.ico">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="/images/favicon-192.png?v=202608010300">
+<link rel="icon" type="image/png" sizes="192x192" href="/images/favicon-192.png?v=8412b86ece">
 <link rel="manifest" href="/portal/manifest.json">
 <script>
   if ('serviceWorker' in navigator) {
@@ -35,12 +35,12 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Triple H">
-<link rel="apple-touch-icon" href="/images/apple-touch-icon.png?v=202608010300">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png?v=2612e812ab">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=ec3464c0ec">
-<link rel="stylesheet" href="/portal/portal-app.css?v=202609230030">
+<link rel="stylesheet" href="/styles.css?v=7c03870603">
+<link rel="stylesheet" href="/portal/portal-app.css?v=20c867dc42">
 <style>
   input, select, textarea { font-size: 16px; }
   @view-transition {
@@ -50,7 +50,7 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=f212452f48">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous"></script>
 <script src="/signature-pad.js?v=f95f8e1d28"></script>
-<script src="/portal/portal-app.js?v=202611011200"></script>
+<script src="/portal/portal-app.js?v=abb7e37c38"></script>
 <style>
   body { background: #0a0a0a; max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
   @media (min-width: 860px) {
@@ -138,7 +138,7 @@
 <div class="portal-header portal-appbar">
   <div class="portal-header-left">
     <a href="/portal/home.html" class="portal-icon-btn portal-back-btn" aria-label="Back to Home" title="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></a>
-    <img src="/images/logo-signature-orange.webp?v=202608142300" alt="Triple H Enterprises">
+    <img src="/images/logo-signature-orange.webp?v=adc4d42660" alt="Triple H Enterprises">
     <div>
       <div class="portal-kicker">Account</div>
       <div class="portal-title">Contracts</div>
@@ -162,7 +162,7 @@
      the five-tab bar and must stay exactly five links. -->
 <div class="portal-rail">
   <a class="portal-rail-brand" href="/portal/home.html">
-    <img src="/images/logo-signature-orange.webp?v=202608142300" alt="">
+    <img src="/images/logo-signature-orange.webp?v=adc4d42660" alt="">
     <span><span class="portal-rail-name">Triple H</span><span class="portal-rail-tag">Client portal</span></span>
   </a>
   <nav class="portal-nav" aria-label="Primary">
@@ -209,11 +209,7 @@
     return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = String(str == null ? '' : str);
-    return div.innerHTML;
-  }
+  // escapeHtml() lives in portal-app.js (one copy for every portal page).
 
   // Renders the resolved content blocks stored on client_portal_contracts
   // (the same block shape tools/contract-generator.html's PDF renderer
@@ -336,7 +332,9 @@
   async function renderContracts() {
     const { data: { session } } = await client.auth.getSession();
     if (!session) {
-      window.location.replace('/portal/login.html');
+      // Back to this contract after sign-in (2026-11-04, §3D): the email's
+      // Review & Sign button opens #contract-card-<id>; login.html returns here.
+      window.location.replace(portalLoginUrl());
       return;
     }
     document.getElementById('clientEmailDisplay').textContent = session.user.email;
@@ -389,7 +387,7 @@
 
   async function respondToContract(contractId, action, btnEl) {
     const { data: { session } } = await client.auth.getSession();
-    if (!session) { window.location.replace('/portal/login.html'); return; }
+    if (!session) { window.location.replace(portalLoginUrl()); return; }
 
     const errorEl = document.getElementById('contractError-' + contractId);
     errorEl.textContent = '';
@@ -432,6 +430,12 @@
         errorEl.textContent = result.error || 'Something went wrong. Please try again.';
         buttonsToDisable.forEach(b => { b.disabled = false; });
         return;
+      }
+      // 2026-11-04 (approved "Contract signing flow"): say what just happened.
+      if (typeof showToast === 'function') {
+        showToast(result.status === 'signed'
+          ? 'Signed' + (result.signed_on ? ' on ' + result.signed_on : '') + '. A copy is on its way to your email.'
+          : 'Declined. Triple H has been told.');
       }
       renderContracts();
     } catch (e) {

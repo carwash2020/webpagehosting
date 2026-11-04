@@ -61,6 +61,9 @@ function runGreetingBanner({ hour, jobs, firstName }) {
     console,
     Date: FixedDate,
     localStorage: { getItem: (k) => (k === 'th_tracker_jobs' ? JSON.stringify(jobs) : null) },
+    // getTodaysJobs() reads through the data layer since 2026-11-03; this is
+    // thJobs.all() over the same th_tracker_jobs data.
+    thJobs: { all: () => jobs.slice() },
     getCurrentUserFirstName: firstName === undefined ? undefined : (() => firstName),
     document: { getElementById: (id) => els[id] },
   };

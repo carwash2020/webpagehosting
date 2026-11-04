@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const { JSDOM } = require('jsdom');
+const { jobActionsSandbox } = require('../job-actions-sandbox');
 
 const TOOLS = path.join(__dirname, '..', '..', 'tools');
 const read = (f) => fs.readFileSync(path.join(TOOLS, f), 'utf8');
@@ -303,6 +304,7 @@ test('Jobs list: the sheet leads with Start / Stop the clock, the row says On th
     thJobs: { get: (id) => jobs.find((j) => j.id === id) }, escapeHtml: (v) => v, showQuickActionSheet: (t, a) => { shown = a.map(x => x.label); },
     thJobClockSince: (j) => (j.clockSince ? 1 : null), thJobClockElapsedMs: () => 65 * MIN, thStartClock() {}, thStopClock() {},
     setJobStatus() {}, document: { getElementById: () => null }, location: {},
+    ...jobActionsSandbox(),
   };
   const jobs = [{ id: 1, title: 'A', status: 'not-started' }, { id: 2, title: 'B', status: 'in-progress', clockSince: 'x' }, { id: 3, title: 'C', status: 'done' }];
   const ctx = Object.assign({ Math, String, Number }, stub);

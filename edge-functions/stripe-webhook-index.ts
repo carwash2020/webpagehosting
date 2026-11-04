@@ -216,19 +216,15 @@ async function recordEvent(event: Stripe.Event, refunds: unknown[] | null): Prom
 
 // POS income-log entry for a charge this delivery claimed first. Unchanged
 // from before apart from moving into its own function.
+// Rows holding the money keys (handoff 2026-11-03 Phase 2.4,
+// sql/sync/01_scoped_workspace_sync.sql): the old whole-blob row, which
+// devices on older builds still read, and the scoped money row. Every
+// money write goes to both while the old row is still in use; a row that
+// doesn't exist yet (the SQL not applied) is skipped. The entry written is
+// built once, so both rows carry the same record with the same id.
+const MONEY_SYNC_CODES = ["tripleh-workspace-2026", "scope:money"];
+
 async function logPosIncome(pi: Stripe.PaymentIntent) {
-  const syncRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026&select=data`,
-    { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
-  );
-  if (!syncRes.ok) {
-    console.error(`Failed to read workspace_sync for POS charge ${pi.id}: ${await syncRes.text().catch(() => "")}`);
-    return;
-  }
-  const syncRows = await syncRes.json();
-  if (!syncRows.length) return;
-  const blob = syncRows[0].data;
-  const incomeLog = JSON.parse(blob.th_income_log || "[]");
   // toISOString() is always UTC -- the business runs on America/Denver
   // time, so a POS sale after ~6pm local would silently log against
   // tomorrow's date in Finance. Same fix already applied to
@@ -238,7 +234,7 @@ async function logPosIncome(pi: Stripe.PaymentIntent) {
   }).formatToParts(new Date());
   const whDateMap: Record<string, string> = {};
   whParts.forEach((p) => { whDateMap[p.type] = p.value; });
-  incomeLog.push({
+  const entry = {
     id: Date.now(),
     date: `${whDateMap.year}-${whDateMap.month}-${whDateMap.day}`,
     desc: pi.metadata?.pos_description || pi.description || "POS sale",
@@ -251,14 +247,29 @@ async function logPosIncome(pi: Stripe.PaymentIntent) {
     stripePaymentIntentId: pi.id,
     createdBy: pi.metadata?.internal_account || "",
     lastEditedBy: pi.metadata?.internal_account || "",
-  });
-  blob.th_income_log = JSON.stringify(incomeLog);
-  const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026`, {
-    method: "PATCH",
-    headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ data: blob, updated_at: new Date().toISOString() }),
-  });
-  if (!patchRes.ok) console.error(`Failed to log POS income for ${pi.id}: ${await patchRes.text().catch(() => "")}`);
+  };
+  for (const code of MONEY_SYNC_CODES) {
+    const syncRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.${encodeURIComponent(code)}&select=data`,
+      { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+    );
+    if (!syncRes.ok) {
+      console.error(`Failed to read workspace_sync (${code}) for POS charge ${pi.id}: ${await syncRes.text().catch(() => "")}`);
+      continue;
+    }
+    const syncRows = await syncRes.json();
+    if (!syncRows.length) continue;
+    const blob = syncRows[0].data || {};
+    const incomeLog = JSON.parse(blob.th_income_log || "[]");
+    incomeLog.push(entry);
+    blob.th_income_log = JSON.stringify(incomeLog);
+    const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.${encodeURIComponent(code)}`, {
+      method: "PATCH",
+      headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ data: blob, updated_at: new Date().toISOString() }),
+    });
+    if (!patchRes.ok) console.error(`Failed to log POS income (${code}) for ${pi.id}: ${await patchRes.text().catch(() => "")}`);
+  }
 }
 
 // Mark the invoices this payment just paid as paid in the workspace_sync
@@ -267,42 +278,44 @@ async function logPosIncome(pi: Stripe.PaymentIntent) {
 // failing the webhook here would make Stripe redeliver an event the ledger
 // will now (correctly) skip as a duplicate anyway.
 async function markPaidInWorkspaceBlob(piId: string, marked: any[]) {
-  const syncRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026&select=data`,
-    { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
-  );
-  if (!syncRes.ok) {
-    console.error(`Failed to read workspace_sync for PaymentIntent ${piId}: ${await syncRes.text().catch(() => "")}`);
-    return;
+  for (const code of MONEY_SYNC_CODES) {
+    const syncRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.${encodeURIComponent(code)}&select=data`,
+      { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+    );
+    if (!syncRes.ok) {
+      console.error(`Failed to read workspace_sync (${code}) for PaymentIntent ${piId}: ${await syncRes.text().catch(() => "")}`);
+      continue;
+    }
+    const syncRows = await syncRes.json();
+    if (!syncRows.length) continue;
+    const blob = syncRows[0].data || {};
+    const invoices = JSON.parse(blob.th_invoices || "[]");
+    const portalTotal = new Map(marked.map((inv: any) => [inv.source_invoice_id, Number(inv.total) || 0]));
+    let changed = false;
+    invoices.forEach((inv: any) => {
+      if (!portalTotal.has(inv.id)) return;
+      // Paid in full means paidAmount = total, the same as Mark paid in the
+      // app (workspace.html togglePaid, invoice-generator.html). Setting only
+      // `paid` flipped back to unpaid on the next sync, because every device
+      // recomputes `paid` from paidAmount (sync.js deriveInvoicePaid).
+      const total = Number(inv.total ?? portalTotal.get(inv.id)) || 0;
+      const paidCents = Math.round((Number(inv.paidAmount) || 0) * 100);
+      const fullyRecorded = inv.paid === true && inv.paidAmount != null && paidCents >= Math.round(total * 100);
+      if (fullyRecorded) return;
+      inv.paid = true;
+      inv.paidAmount = total;
+      changed = true;
+    });
+    if (!changed) continue;
+    blob.th_invoices = JSON.stringify(invoices);
+    const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.${encodeURIComponent(code)}`, {
+      method: "PATCH",
+      headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ data: blob, updated_at: new Date().toISOString() }),
+    });
+    if (!patchRes.ok) console.error(`Failed to mark workspace_sync (${code}) th_invoices paid for ${piId}: ${await patchRes.text().catch(() => "")}`);
   }
-  const syncRows = await syncRes.json();
-  if (!syncRows.length) return;
-  const blob = syncRows[0].data;
-  const invoices = JSON.parse(blob.th_invoices || "[]");
-  const portalTotal = new Map(marked.map((inv: any) => [inv.source_invoice_id, Number(inv.total) || 0]));
-  let changed = false;
-  invoices.forEach((inv: any) => {
-    if (!portalTotal.has(inv.id)) return;
-    // Paid in full means paidAmount = total, the same as Mark paid in the
-    // app (workspace.html togglePaid, invoice-generator.html). Setting only
-    // `paid` flipped back to unpaid on the next sync, because every device
-    // recomputes `paid` from paidAmount (sync.js deriveInvoicePaid).
-    const total = Number(inv.total ?? portalTotal.get(inv.id)) || 0;
-    const paidCents = Math.round((Number(inv.paidAmount) || 0) * 100);
-    const fullyRecorded = inv.paid === true && inv.paidAmount != null && paidCents >= Math.round(total * 100);
-    if (fullyRecorded) return;
-    inv.paid = true;
-    inv.paidAmount = total;
-    changed = true;
-  });
-  if (!changed) return;
-  blob.th_invoices = JSON.stringify(invoices);
-  const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.tripleh-workspace-2026`, {
-    method: "PATCH",
-    headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ data: blob, updated_at: new Date().toISOString() }),
-  });
-  if (!patchRes.ok) console.error(`Failed to mark workspace_sync th_invoices paid for ${piId}: ${await patchRes.text().catch(() => "")}`);
 }
 
 Deno.serve(async (req: Request) => {
