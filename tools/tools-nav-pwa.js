@@ -708,7 +708,7 @@ function thNavEsc(v) {
     sw.setAttribute('aria-label', 'Money');
     sw.innerHTML = [
       { href: MONEY_PAGES[0], label: 'Invoices' },
-      { href: MONEY_PAGES[1], label: 'Finance' }
+      { href: MONEY_PAGES[1], label: 'Money' }
     ].map(function (s) {
       var on = s.href === path;
       return '<a href="' + s.href + '" class="th-money-seg' + (on ? ' is-active' : '') + '"' + (on ? ' aria-current="page"' : '') + '>' + s.label + '</a>';

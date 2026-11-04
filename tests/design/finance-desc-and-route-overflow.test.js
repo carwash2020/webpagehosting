@@ -24,12 +24,14 @@ const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const FINANCE = fs.readFileSync(repo('tools', 'finance.html'), 'utf8');
 const ROUTE_PLANNER = fs.readFileSync(repo('tools', 'route-planner.html'), 'utf8');
 
-test('F04: finance.html\'s page description is user-facing, not an internal dev changelog note', () => {
-  const desc = FINANCE.match(/<p class="tool-sub">([^<]*)<\/p>/);
-  assert.ok(desc, 'expected a .tool-sub description paragraph');
-  assert.doesNotMatch(desc[1], /moved out of Job Tracker/);
-  assert.doesNotMatch(desc[1], /2026-08-20/);
-  assert.equal(desc[1], 'Quote a job, track what it actually cost, and log income and expenses.');
+test('F04: the Money page (finance.html) opens with user-facing copy, never an internal dev changelog note', () => {
+  // 2026-11-04: the approved Money design replaced the .tool-sub line with
+  // the "Money \u00b7 <month>" kicker and the Runway overview.
+  assert.doesNotMatch(FINANCE, /<p class="tool-sub">/);
+  const top = FINANCE.slice(FINANCE.indexOf('<section class="mny-top"'), FINANCE.indexOf('<div class="mny-chips"'));
+  assert.match(top, /<p class="mny-kicker" id="mnyKicker">Money<\/p>/);
+  assert.match(top, /Paid only\. An unpaid invoice is not income\./);
+  assert.doesNotMatch(top, /moved out of Job Tracker|2026-\d\d-\d\d(?![^<]*-->)/);
 });
 
 test('F05: .stop-row\'s address input has min-width:0 so it can actually shrink within its flex row', () => {

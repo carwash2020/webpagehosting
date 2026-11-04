@@ -34,7 +34,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <meta name="robots" content="noindex, nofollow">
-<title>Finance | Triple H Enterprises (Internal Tool)</title>
+<title>Money | Triple H Enterprises (Internal Tool)</title>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,16 +53,16 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=7c03870603">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=2bf7e2b669">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=b8d74bb802">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=486abe5b22" defer></script>
-<script src="/tools/data-layer.js?v=bfaab0c44f" defer></script>
+<script src="/tools/data-layer.js?v=462ceba807" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=a10b595ddd" defer></script>
-<script src="/tools/tools-command-palette.js?v=07b30f3624" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=22ae1f4afa" defer></script>
+<script src="/tools/tools-command-palette.js?v=45864878c1" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -195,35 +195,61 @@
   @media (max-width: 1023px) { body.th-tool-page.th-money-switch-on.th-money-page[data-th-page="finance"] .hub-header-left .hub-title { display: block; } }
 
   /* ---- Spent this month: Anton 44, a stacked bar, the legend, two actions ---- */
-  body.th-tool-page[data-th-page="finance"] .fin-spent {
-    display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 0 0 16px; padding: 16px 18px;
-    background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--th-radius-xl);
-  }
-  body.th-tool-page[data-th-page="finance"] .fin-spent-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-  body.th-tool-page[data-th-page="finance"] .fin-spent-title { font-family: var(--font-ui); font-size: 13px; font-weight: 500; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text); }
-  body.th-tool-page[data-th-page="finance"] .fin-spent-month { margin-left: auto; font-size: 12.5px; color: var(--text-dim); }
-  body.th-tool-page[data-th-page="finance"] .fin-spent-total { font-family: var(--font-display); font-weight: 400; font-size: 44px; line-height: 1; letter-spacing: .3px; color: var(--text); font-variant-numeric: tabular-nums; }
-  body.th-tool-page[data-th-page="finance"] .fin-spent-bar { display: flex; gap: 2px; height: 12px; border-radius: 6px; overflow: hidden; background: var(--th-hairline); }
-  body.th-tool-page[data-th-page="finance"] .fin-spent-seg { flex-basis: 0; min-width: 4px; }
-  body.th-tool-page[data-th-page="finance"] .fin-spent-seg.is-orange, body.th-tool-page[data-th-page="finance"] .fin-spent-dot.is-orange { background: var(--orange); }
-  body.th-tool-page[data-th-page="finance"] .fin-spent-seg.is-blue, body.th-tool-page[data-th-page="finance"] .fin-spent-dot.is-blue { background: var(--tone-blue-fg); }
-  body.th-tool-page[data-th-page="finance"] .fin-spent-seg.is-purple, body.th-tool-page[data-th-page="finance"] .fin-spent-dot.is-purple { background: var(--tone-purple-fg); }
-  body.th-tool-page[data-th-page="finance"] .fin-spent-seg.is-green, body.th-tool-page[data-th-page="finance"] .fin-spent-dot.is-green { background: var(--tone-green-fg); }
-  body.th-tool-page[data-th-page="finance"] .fin-spent-seg.is-idle, body.th-tool-page[data-th-page="finance"] .fin-spent-dot.is-idle { background: var(--text-faint); }
-  body.th-tool-page[data-th-page="finance"] .fin-spent-legend { display: flex; flex-direction: column; gap: 8px; }
-  body.th-tool-page[data-th-page="finance"] .fin-spent-key { display: flex; align-items: center; gap: 10px; font-size: 14px; min-width: 0; }
-  body.th-tool-page[data-th-page="finance"] .fin-spent-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
-  body.th-tool-page[data-th-page="finance"] .fin-spent-key-label { flex: 1; min-width: 0; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  body.th-tool-page[data-th-page="finance"] .fin-spent-key-value { font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
-  body.th-tool-page[data-th-page="finance"] .fin-spent-empty { font-size: 13.5px; color: var(--text-dim); }
-  body.th-tool-page[data-th-page="finance"] .fin-spent-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-  body.th-tool-page[data-th-page="finance"] .fin-spent-actions > button { flex: 1 1 140px; min-height: 46px; border-radius: 14px; font-size: 14px; letter-spacing: .8px; margin: 0; }
-  body.th-tool-page[data-th-page="finance"] .fin-spent-actions > .secondary-btn { background: var(--th-field); }
-  @media (min-width: 900px) {
-    body.th-tool-page[data-th-page="finance"] .fin-spent { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); column-gap: 28px; align-items: start; }
-    body.th-tool-page[data-th-page="finance"] .fin-spent-head, body.th-tool-page[data-th-page="finance"] .fin-spent-total, body.th-tool-page[data-th-page="finance"] .fin-spent-bar { grid-column: 1; }
-    body.th-tool-page[data-th-page="finance"] .fin-spent-legend { grid-column: 2; grid-row: 1 / span 3; }
-    body.th-tool-page[data-th-page="finance"] .fin-spent-actions { grid-column: 1 / -1; }
+  /* ---- Money (2026-11-04, approved "Money" design) ---------------------
+     Runway overview tiles, the 6-month chart, chips and the All ledger.
+     Tokens only, like the rest of this block. */
+  body.th-tool-page[data-th-page="finance"] .mny-top { margin: 4px 0 18px; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+  body.th-tool-page[data-th-page="finance"] .mny-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  body.th-tool-page[data-th-page="finance"] .mny-kicker { margin: 0; font-family: var(--font-ui); font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--orange-light); }
+  body.th-tool-page[data-th-page="finance"] .mny-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  body.th-tool-page[data-th-page="finance"] .mny-overview-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  body.th-tool-page[data-th-page="finance"] .mny-label { margin: 0; font-family: var(--font-ui); font-size: 12px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="finance"] .mny-link { color: var(--orange-light); font-size: 13.5px; text-decoration: none; }
+  @media (hover: hover) { body.th-tool-page[data-th-page="finance"] .mny-link:hover { color: var(--orange); } }
+  body.th-tool-page[data-th-page="finance"] .mny-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+  body.th-tool-page[data-th-page="finance"] .mny-tile { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; min-width: 0; }
+  body.th-tool-page[data-th-page="finance"] .mny-tile-label { font-family: var(--font-ui); font-size: 11.5px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="finance"] .mny-tile-value { font-family: var(--font-display); font-weight: 400; font-size: 32px; line-height: 1.1; margin-top: 6px; color: var(--text); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  body.th-tool-page[data-th-page="finance"] .mny-tile-value.is-in { color: var(--tone-green-fg); }
+  body.th-tool-page[data-th-page="finance"] .mny-tile-sub { margin-top: 4px; font-size: 12.5px; line-height: 1.4; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="finance"] .mny-tile-sub.is-late { color: var(--tone-red-fg); }
+  body.th-tool-page[data-th-page="finance"] .mny-chart { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; }
+  body.th-tool-page[data-th-page="finance"] .mny-chart-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="finance"] .mny-chart-title { color: var(--text); font-weight: 600; }
+  body.th-tool-page[data-th-page="finance"] .mny-key { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin: 0 4px 0 10px; vertical-align: -1px; }
+  body.th-tool-page[data-th-page="finance"] .mny-key.is-in, body.th-tool-page[data-th-page="finance"] .mny-bar.is-in { background: var(--orange); }
+  body.th-tool-page[data-th-page="finance"] .mny-key.is-cost, body.th-tool-page[data-th-page="finance"] .mny-bar.is-cost { background: var(--text-dim); opacity: .55; }
+  body.th-tool-page[data-th-page="finance"] .mny-bars { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-top: 12px; }
+  body.th-tool-page[data-th-page="finance"] .mny-bar-group { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+  body.th-tool-page[data-th-page="finance"] .mny-bar-pair { display: flex; align-items: flex-end; gap: 3px; height: 96px; width: 100%; justify-content: center; }
+  body.th-tool-page[data-th-page="finance"] .mny-bar { display: block; width: 38%; max-width: 18px; min-height: 2px; border-radius: 3px 3px 0 0; }
+  body.th-tool-page[data-th-page="finance"] .mny-bar-month { font-size: 12px; color: var(--text-dim); }
+  body.th-tool-page[data-th-page="finance"] .mny-bar-net { font-size: 11.5px; color: var(--text); font-variant-numeric: tabular-nums; }
+  body.th-tool-page[data-th-page="finance"] .mny-bar-net.is-neg { color: var(--tone-red-fg); }
+  body.th-tool-page[data-th-page="finance"] .mny-chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 12px; }
+  body.th-tool-page[data-th-page="finance"] .mny-chips .mny-chip { min-height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg-panel); color: var(--text); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; flex: 0 0 auto; }
+  body.th-tool-page[data-th-page="finance"] .mny-chips .mny-chip.is-active { background: var(--orange); border-color: var(--orange); color: var(--th-ink-on-orange, #1a0d02); }
+  body.th-tool-page[data-th-page="finance"] .mny-ledger-head { margin: 0 0 10px; }
+  body.th-tool-page[data-th-page="finance"] .mny-ledger { width: 100%; border-collapse: collapse; font-size: 14px; }
+  body.th-tool-page[data-th-page="finance"] .mny-ledger th { text-align: left; font-family: var(--font-ui); font-size: 11.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-dim); font-weight: 500; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  body.th-tool-page[data-th-page="finance"] .mny-ledger td { padding: 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  body.th-tool-page[data-th-page="finance"] .mny-ledger tr.is-income .col-amount { color: var(--tone-green-fg); }
+  body.th-tool-page[data-th-page="finance"] .mny-unpaid { color: var(--text-dim); font-style: italic; }
+  body.th-tool-page[data-th-page="finance"] .mny-of { color: var(--text-dim); font-size: 12px; }
+  @media (max-width: 600px) {
+    body.th-tool-page[data-th-page="finance"] .mny-tiles { grid-template-columns: 1fr 1fr; }
+    body.th-tool-page[data-th-page="finance"] .mny-tile-value { font-size: 26px; }
+    body.th-tool-page[data-th-page="finance"] .mny-ledger thead { display: none; }
+    body.th-tool-page[data-th-page="finance"] .mny-ledger, body.th-tool-page[data-th-page="finance"] .mny-ledger tbody, body.th-tool-page[data-th-page="finance"] .mny-ledger tr, body.th-tool-page[data-th-page="finance"] .mny-ledger td { display: block; width: 100%; }
+    body.th-tool-page[data-th-page="finance"] .mny-ledger tr { border-bottom: 1px solid var(--border); padding: 10px 0; display: grid; grid-template-columns: max-content max-content 1fr auto; gap: 3px 10px; }
+    body.th-tool-page[data-th-page="finance"] .mny-ledger td { border: 0; padding: 0; }
+    body.th-tool-page[data-th-page="finance"] .mny-ledger td[data-label="What"] { grid-column: 1 / 4; grid-row: 1; font-weight: 600; }
+    body.th-tool-page[data-th-page="finance"] .mny-ledger td.col-amount { grid-column: 4; grid-row: 1; text-align: right; font-weight: 600; }
+    body.th-tool-page[data-th-page="finance"] .mny-ledger td[data-label="Date"], body.th-tool-page[data-th-page="finance"] .mny-ledger td[data-label="Job"], body.th-tool-page[data-th-page="finance"] .mny-ledger td[data-label="Kind"] { grid-row: 2; font-size: 12.5px; color: var(--text-dim); width: auto; }
+    body.th-tool-page[data-th-page="finance"] .mny-ledger td[data-label="Date"] { grid-column: 1; }
+    body.th-tool-page[data-th-page="finance"] .mny-ledger td[data-label="Job"] { grid-column: 2; }
+    body.th-tool-page[data-th-page="finance"] .mny-ledger td[data-label="Kind"] { grid-column: 3; }
+    body.th-tool-page[data-th-page="finance"] .mny-ledger td.is-none { display: none; }
   }
 
   /* ---- The tabs as one segmented track ----
@@ -312,7 +338,7 @@
 
 <div id="roleBlockedOverlay" class="role-blocked-overlay" data-rb role="alert">
   <div class="th-rb-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
-  <h1>Finance</h1>
+  <h1>Money</h1>
   <p class="th-rb-body">This page isn’t part of your account’s access. <span class="th-rb-who"></span> If you need something from here, ask Steve.</p>
   <div class="th-rb-actions">
     <a href="/tools/workspace.html" class="primary-btn">Back to Home</a>
@@ -325,7 +351,7 @@
 <div class="hub-header">
   <div class="hub-header-left">
     <img src="/images/logo-signature-orange.webp?v=adc4d42660" alt="Triple H Enterprises">
-    <span class="hub-title">Finance</span>
+    <span class="hub-title">Money</span>
   </div>
   <div class="hub-header-right">
     <a href="/tools/workspace.html" class="help-btn" aria-label="Back to Workspace" title="Back to Workspace" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center;">&#8617;</a>
@@ -337,36 +363,74 @@
      had neither, so a failed backup here showed nothing. -->
 <p class="hub-sub"><span class="realtime-badge" id="realtimeBadge" onclick="retryLiveSync()" title="Live sync" style="margin-left:0;"><span class="realtime-dot" id="realtimeDot"></span><span id="realtimeText">Live sync: connecting...</span></span></p>
 
-<p class="tool-sub">Quote a job, track what it actually cost, and log income and expenses.</p>
-
-<!-- Money switch v2 (2026-09-29, app redesign v2 §8.5): the same three
-     segments as the Invoices page. Invoices and Quick charge only show when
-     the account can open both Money pages (th-money-switch-on). -->
+<!-- Money (2026-11-04, handoff §2; approved "Money" design): one page
+     instead of Finance's three tabs plus a separate Runway page. The Runway
+     overview sits on top; one ledger below it, filtered by chips (All /
+     Income / Expenses / Profitability) instead of tabs. Income counts only
+     when paid (handoff §4F). Log expense / Log income open the same add
+     forms as before; Charge a card arrives with 3.4c. -->
 <nav class="th-v2-seg mn-seg" id="moneySeg" aria-label="Money">
   <a href="/tools/invoice-generator.html" class="mn-seg-cross" data-money-seg="invoices">Invoices</a>
-  <a href="/tools/finance.html" class="is-active" data-money-seg="finance" aria-current="page">Finance</a>
+  <a href="/tools/finance.html" class="is-active" data-money-seg="finance" aria-current="page">Money</a>
   <a href="/tools/invoice-generator.html#pos" class="mn-seg-cross" data-money-seg="pos">Quick charge</a>
 </nav>
 
-<!-- Spent this month (2026-09-29, app redesign v2 §8.5): a read of the same
-     Expenses log the Expenses tab lists, drawn by renderFinanceSpent() every
-     time renderExpenses() runs. Log expense / Log income open the tabs' own
-     add forms (the W1 sheets). -->
-<div class="fin-spent" id="finSpentCard">
-  <div class="fin-spent-head"><span class="fin-spent-title">Spent this month</span><span class="fin-spent-month" id="finSpentMonth"></span></div>
-  <div class="fin-spent-total" id="finSpentTotal">$0</div>
-  <div class="fin-spent-bar" id="finSpentBar" aria-hidden="true"></div>
-  <div class="fin-spent-legend" id="finSpentLegend"></div>
-  <div class="fin-spent-actions">
-    <button type="button" class="primary-btn" onclick="openFinanceLog('expenses')">Log expense</button>
-    <button type="button" class="secondary-btn" onclick="openFinanceLog('income')">Log income</button>
+<section class="mny-top" aria-labelledby="mnyKicker">
+  <div class="mny-head">
+    <p class="mny-kicker" id="mnyKicker">Money</p>
+    <div class="mny-actions">
+      <button type="button" class="secondary-btn" onclick="openFinanceLog('expenses')">Log expense</button>
+      <button type="button" class="secondary-btn" onclick="openFinanceLog('income')">Log income</button>
+    </div>
   </div>
-</div>
 
-<div class="tabs tabs-sticky">
-  <button class="tab-btn is-active" data-tab="expenses">Expenses</button>
-  <button class="tab-btn" data-tab="income">Income</button>
-  <button class="tab-btn" data-tab="profitability">Profitability</button>
+  <div class="mny-overview-head">
+    <h2 class="mny-label">Runway overview</h2>
+    <a href="/tools/runway-dashboard.html" class="mny-link" id="mnyFullRunway" hidden>Full Runway: budget, net worth, reports &rsaquo;</a>
+  </div>
+  <div class="mny-tiles">
+    <div class="mny-tile">
+      <div class="mny-tile-label">Owed to you</div>
+      <div class="mny-tile-value" id="mnyOwed">$0.00</div>
+      <div class="mny-tile-sub" id="mnyOwedSub">Nothing owed</div>
+    </div>
+    <div class="mny-tile">
+      <div class="mny-tile-label">Paid in, this month</div>
+      <div class="mny-tile-value is-in" id="mnyPaidIn">$0.00</div>
+      <div class="mny-tile-sub">Paid only. An unpaid invoice is not income.</div>
+    </div>
+    <div class="mny-tile" id="finSpentCard">
+      <div class="mny-tile-label">Spent, this month</div>
+      <div class="mny-tile-value" id="finSpentTotal">$0</div>
+      <div class="mny-tile-sub">Parts, mileage, other</div>
+    </div>
+    <div class="mny-tile" id="mnyRunwayTile" hidden>
+      <div class="mny-tile-label">Runway</div>
+      <div class="mny-tile-value" id="mnyRunway">&mdash;</div>
+      <div class="mny-tile-sub">From Runway's own numbers</div>
+    </div>
+  </div>
+
+  <div class="mny-chart" id="mnyChart" aria-label="Net profit, last 6 months">
+    <div class="mny-chart-head">
+      <span class="mny-chart-title">Net profit, last 6 months</span>
+      <span class="mny-chart-key"><span class="mny-key is-in" aria-hidden="true"></span>Income <span class="mny-key is-cost" aria-hidden="true"></span>Costs</span>
+    </div>
+    <div class="mny-chart-body" id="mnyChartBody"></div>
+  </div>
+</section>
+
+<div class="mny-chips" role="group" aria-label="Show">
+  <button class="tab-btn mny-chip is-active" data-tab="all">All</button>
+  <button class="tab-btn mny-chip" data-tab="income">Income</button>
+  <button class="tab-btn mny-chip" data-tab="expenses">Expenses</button>
+  <button class="tab-btn mny-chip" data-tab="profitability">Profitability</button>
+</div>
+<h2 class="mny-label mny-ledger-head" id="mnyLedgerHead">All activity</h2>
+
+<!-- ALL: one ledger of this month's money in and out -->
+<div class="tab-panel" id="tab-all">
+  <div id="mnyAllLedger"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div></div>
 </div>
 
 <!-- Cost lookup and Inventory tabs (redundancy pass, 2026-10-31).
@@ -583,7 +647,7 @@
   }
 
   // cost and inventory left with their tabs (redundancy pass, 2026-10-31).
-  const TAB_HASHES = { profitability: 'profitability', income: 'income', expenses: 'expenses' };
+  const TAB_HASHES = { all: 'all', profitability: 'profitability', income: 'income', expenses: 'expenses' };
   const FINANCE_TAB_KEY = 'th_finance_tab'; // last tab used on this device (2026-09-22)
 
   // #cost (Cost Lookup, gone 2026-10-31) -> New quote, for an account that
@@ -603,8 +667,145 @@
     if (tabName === 'expenses') populateJobRefOptions();
     if (tabName === 'income') populateIncomeJobRefOptions();
     if (tabName === 'profitability') renderJobProfitability();
+    if (tabName === 'all') renderMoneyLedger();
+    // The heading follows the chip (handoff §4F: the header read "SPENT
+    // THIS MONTH" while the Income tab was selected).
+    const head = document.getElementById('mnyLedgerHead');
+    if (head) head.textContent = MONEY_CHIP_HEADS[tabName] ? MONEY_CHIP_HEADS[tabName]() : '';
     try { localStorage.setItem(FINANCE_TAB_KEY, tabName); } catch (e) { /* storage blocked */ }
   }
+
+  // ---- Money (2026-11-04, approved "Money" design) ------------------------
+  // Overview tiles, the 6-month chart and the All ledger. Income is what was
+  // actually received (thIncomeReceived: an invoice row counts only what that
+  // invoice has been paid, handoff §4F); costs are the expense log.
+  function moneyMonthKey() {
+    const today = (typeof todayDateStrBusinessTz === 'function') ? todayDateStrBusinessTz() : new Date().toISOString().slice(0, 10);
+    return today.slice(0, 7);
+  }
+  function moneyMonthName(key, withYear) {
+    return new Date(key + '-15T12:00:00').toLocaleDateString('en-US', withYear ? { month: 'long', year: 'numeric' } : { month: 'long' });
+  }
+  const MONEY_CHIP_HEADS = {
+    all: () => 'All activity \u00b7 ' + moneyMonthName(moneyMonthKey()),
+    income: () => 'Income \u00b7 every entry',
+    expenses: () => 'Expenses \u00b7 every entry',
+    profitability: () => 'Profitability \u00b7 by job',
+  };
+  function moneyFmt(n) {
+    return '$' + (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function moneyIncomeRows() {
+    const invoices = thInvoices.all();
+    let entries = thIncome.all();
+    if (pendingDeleteIncomeIds.size > 0) entries = entries.filter(e => !pendingDeleteIncomeIds.has(e.id));
+    return entries.map(e => ({ e, received: thIncomeReceived(e, invoices) })).filter(r => r.received > 0);
+  }
+  function moneyExpenseRows() {
+    let entries = thExpenses.all();
+    if (pendingDeleteExpenseIds.size > 0) entries = entries.filter(e => !pendingDeleteExpenseIds.has(e.id));
+    return entries;
+  }
+  function renderMoneyOverview() {
+    const key = moneyMonthKey();
+    const kicker = document.getElementById('mnyKicker');
+    if (kicker) kicker.textContent = 'Money \u00b7 ' + moneyMonthName(key, true);
+    // Owed: the same balances and overdue rule as the Invoices list
+    // (thInvoiceBalance / thInvoiceIsOverdue), so the two always agree.
+    const open = thInvoices.all().filter(i => thInvoiceBalance(i) > 0);
+    const owed = open.reduce((s, i) => s + thInvoiceBalance(i), 0);
+    const overdue = open.filter(i => thInvoiceIsOverdue(i)).length;
+    const owedEl = document.getElementById('mnyOwed');
+    if (owedEl) owedEl.textContent = moneyFmt(owed);
+    const owedSub = document.getElementById('mnyOwedSub');
+    if (owedSub) {
+      owedSub.textContent = !open.length ? 'Nothing owed'
+        : open.length + ' invoice' + (open.length === 1 ? '' : 's') + (overdue ? ', ' + (overdue === open.length ? (open.length === 1 ? 'overdue' : (open.length === 2 ? 'both' : 'all') + ' overdue') : overdue + ' overdue') : '');
+      owedSub.classList.toggle('is-late', overdue > 0);
+    }
+    const paidIn = moneyIncomeRows().filter(r => (r.e.date || '').slice(0, 7) === key).reduce((s, r) => s + r.received, 0);
+    const paidEl = document.getElementById('mnyPaidIn');
+    if (paidEl) paidEl.textContent = moneyFmt(paidIn);
+    // Runway: only for an account that can open Runway, from its own numbers.
+    const canRunway = typeof canViewRunway === 'function' && canViewRunway();
+    const rwTile = document.getElementById('mnyRunwayTile');
+    const rwLink = document.getElementById('mnyFullRunway');
+    if (rwTile) rwTile.hidden = !canRunway;
+    if (rwLink) rwLink.hidden = !canRunway;
+    if (canRunway) {
+      const months = thRunwayMonthsCovered();
+      const rw = document.getElementById('mnyRunway');
+      if (rw) rw.textContent = months === null ? '\u2014' : months.toFixed(1) + ' months';
+    }
+    renderMoneyChart();
+  }
+  function renderMoneyChart() {
+    const body = document.getElementById('mnyChartBody');
+    if (!body) return;
+    const now = moneyMonthKey();
+    const [y, m] = now.split('-').map(Number);
+    const keys = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(Date.UTC(y, m - 1 - i, 15));
+      keys.push(d.toISOString().slice(0, 7));
+    }
+    const income = moneyIncomeRows();
+    const costs = moneyExpenseRows();
+    const data = keys.map(k => ({
+      k,
+      inc: income.filter(r => (r.e.date || '').slice(0, 7) === k).reduce((s, r) => s + r.received, 0),
+      cost: costs.filter(e => (e.date || '').slice(0, 7) === k).reduce((s, e) => s + (Number(e.amount) || 0), 0),
+    }));
+    const max = Math.max(1, ...data.map(d => Math.max(d.inc, d.cost)));
+    body.innerHTML = '<div class="mny-bars">' + data.map(d => {
+      const net = d.inc - d.cost;
+      const label = new Date(d.k + '-15T12:00:00').toLocaleDateString('en-US', { month: 'short' });
+      return '<div class="mny-bar-group" title="' + label + ': net ' + moneyFmt(net) + '">' +
+        '<div class="mny-bar-pair">' +
+          '<span class="mny-bar is-in" style="height:' + Math.round((d.inc / max) * 100) + '%"></span>' +
+          '<span class="mny-bar is-cost" style="height:' + Math.round((d.cost / max) * 100) + '%"></span>' +
+        '</div>' +
+        '<span class="mny-bar-month">' + label + '</span>' +
+        '<span class="mny-bar-net' + (net < 0 ? ' is-neg' : '') + '">' + (net < 0 ? '\u2212' : '') + '$' + Math.abs(Math.round(net)).toLocaleString('en-US') + '</span>' +
+      '</div>';
+    }).join('') + '</div>';
+  }
+  function renderMoneyLedger() {
+    const host = document.getElementById('mnyAllLedger');
+    if (!host) return;
+    const key = moneyMonthKey();
+    const rows = [];
+    moneyIncomeRows().filter(r => (r.e.date || '').slice(0, 7) === key).forEach(({ e, received }) => {
+      const method = e.origin === 'invoice' ? 'Invoice paid' : (PAYMENT_LABEL[e.payment] || 'Payment');
+      rows.push({ date: e.date || '', what: method + (e.source ? ' \u00b7 ' + e.source : (e.desc ? ' \u00b7 ' + e.desc : '')), job: e.jobRefTitle || '', kind: 'Income', amount: received });
+    });
+    moneyExpenseRows().filter(e => (e.date || '').slice(0, 7) === key).forEach(e => {
+      const what = e.type === 'mileage'
+        ? 'Mileage \u00b7 ' + (Number(e.miles) || 0) + ' mi'
+        : (e.desc || 'Expense') + (e.vendor ? ' \u00b7 ' + e.vendor : '');
+      rows.push({ date: e.date || '', what, job: e.jobRefTitle || '', kind: 'Expense', amount: -(Number(e.amount) || 0) });
+    });
+    rows.sort((a, b) => b.date.localeCompare(a.date));
+    if (!rows.length) {
+      host.innerHTML = '<div class="empty-state">Nothing in or out in ' + escapeHtml(moneyMonthName(key)) + ' yet. Log an expense or income above, or mark an invoice paid.</div>';
+      return;
+    }
+    const shortDate = (d) => { const t = new Date(d + 'T12:00:00'); return isNaN(t) ? escapeHtml(d) : t.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); };
+    host.innerHTML = '<table class="mny-ledger"><thead><tr><th>Date</th><th>What</th><th>Job</th><th>Kind</th><th class="col-amount">Amount</th></tr></thead><tbody>' +
+      rows.map(r => '<tr class="is-' + r.kind.toLowerCase() + '">' +
+        '<td data-label="Date">' + shortDate(r.date) + '</td>' +
+        '<td data-label="What">' + escapeHtml(r.what) + '</td>' +
+        (r.job ? '<td data-label="Job">' + escapeHtml(r.job) + '</td>' : '<td data-label="Job" class="is-none">\u2014</td>') +
+        '<td data-label="Kind">' + r.kind + '</td>' +
+        '<td class="col-amount" data-label="Amount">' + (r.amount < 0 ? '\u2212' : '+') + moneyFmt(Math.abs(r.amount)) + '</td>' +
+      '</tr>').join('') + '</tbody></table>';
+  }
+  function renderMoney() {
+    renderMoneyOverview();
+    renderMoneyLedger();
+  }
+  // The Runway tile and link wait on the role (canViewRunway).
+  window.addEventListener('th-role-loaded', () => renderMoneyOverview());
 
   document.querySelectorAll('.tab-btn[data-tab]').forEach(btn => {
     btn.addEventListener('click', () => activateTab(btn.dataset.tab));
@@ -847,15 +1048,23 @@
       return;
     }
 
+    // Income counts only when paid (2026-11-04, handoff §4F): an invoice row
+    // shows what that invoice has actually been paid; an unpaid one says so
+    // and adds nothing to the totals.
+    const invoicesForIncome = thInvoices.all();
+    const receivedOf = (e) => thIncomeReceived(e, invoicesForIncome);
+    if (typeof renderMoney === 'function') renderMoney();
     let rows = entries.map(e => `
-      <tr class="${e.id === justAddedIncomeEntryId ? 'list-row-enter' : ''}" data-income-id="${e.id}">
+      <tr class="${e.id === justAddedIncomeEntryId ? 'list-row-enter' : ''}${e.origin === 'invoice' && receivedOf(e) === 0 ? ' is-unpaid' : ''}" data-income-id="${e.id}">
         <td data-label="Date">${e.date}</td>
         <td data-label="Source">${escapeHtml(e.source || '\u2014')}</td>
         <td data-label="Job">${e.jobRefTitle ? escapeHtml(e.jobRefTitle) : '\u2014'}</td>
         <td data-label="Description">${personDot(e.lastEditedBy, 'Last edited by')}${escapeHtml(e.desc)}</td>
         <td data-label="Payment">${PAYMENT_LABEL[e.payment] || '\u2014'}</td>
         <td data-label="Origin">${e.origin === 'invoice' ? '<span class="inline-note" style="margin:0;">Invoice</span>' : 'Manual'}</td>
-        <td class="col-amount" data-label="Amount">$${e.amount.toFixed(2)}</td>
+        <td class="col-amount" data-label="Amount">${e.origin === 'invoice' && receivedOf(e) < (Number(e.amount) || 0)
+          ? (receivedOf(e) === 0 ? `<span class="mny-unpaid">Not paid yet</span> <span class="mny-of">($${e.amount.toFixed(2)} invoiced)</span>` : `$${receivedOf(e).toFixed(2)} <span class="mny-of">of $${e.amount.toFixed(2)}</span>`)
+          : `$${e.amount.toFixed(2)}`}</td>
         <td>
           ${e.origin !== 'invoice' ? `<button class="small-btn" onclick="editIncomeEntry(${e.id})" aria-label="Edit entry" title="Edit entry">Edit</button>` : ''}
           <button class="small-btn danger" onclick="deleteIncomeEntry(${e.id})" aria-label="Delete entry" title="Delete entry">&times;</button>
@@ -870,11 +1079,11 @@
       </table>`;
 
     const manualTotal = entries.filter(e => e.origin !== 'invoice').reduce((sum, e) => sum + e.amount, 0);
-    const invoiceTotal = entries.filter(e => e.origin === 'invoice').reduce((sum, e) => sum + e.amount, 0);
+    const invoiceTotal = entries.filter(e => e.origin === 'invoice').reduce((sum, e) => sum + receivedOf(e), 0);
 
     document.getElementById('incomeTotalsRow').innerHTML = `
       <div>Manual entries: <strong>$${manualTotal.toFixed(2)}</strong></div>
-      <div>From invoices: <strong>$${invoiceTotal.toFixed(2)}</strong></div>
+      <div>From paid invoices: <strong>$${invoiceTotal.toFixed(2)}</strong></div>
       <div>Combined total: <strong>$${(manualTotal + invoiceTotal).toFixed(2)}</strong></div>`;
   }
 
@@ -1243,6 +1452,7 @@
     renderPartCostTrend();
     // Same reasoning for the v2 "Spent this month" card (2026-09-29).
     if (typeof renderFinanceSpent === 'function') renderFinanceSpent();
+    if (typeof renderMoney === 'function') renderMoney();
 
     let entries = [...thExpenses.all()].sort((a, b) => new Date(b.date) - new Date(a.date));
     if (pendingDeleteExpenseIds.size > 0) entries = entries.filter(e => !pendingDeleteExpenseIds.has(e.id));
@@ -1311,10 +1521,11 @@
   // their existing handlers.
   // ---------------------------------------------------------------------------
   // "Spent this month": this month's Expenses-log entries (expenses and
-  // mileage, the same two the Expenses tab totals), split by vendor with
-  // mileage as its own slice. Entries waiting out an undo are left out,
-  // exactly as the log itself leaves them out.
-  const FIN_SPENT_TONES = ['orange', 'blue', 'purple', 'green', 'idle'];
+  // mileage, the same two the Expenses tab totals). Entries waiting out an
+  // undo are left out, exactly as the log itself leaves them out.
+  // Spent this month: the Money overview's "Spent, this month" tile
+  // (2026-11-04). It used to be its own card with a per-vendor bar and
+  // legend; the approved Money design keeps just the total.
   function renderFinanceSpent() {
     const totalEl = document.getElementById('finSpentTotal');
     if (!totalEl) return;
@@ -1322,33 +1533,8 @@
     const monthKey = today.slice(0, 7);
     let entries = thExpenses.all().filter(e => (e.date || '').slice(0, 7) === monthKey);
     if (pendingDeleteExpenseIds.size > 0) entries = entries.filter(e => !pendingDeleteExpenseIds.has(e.id));
-    const amt = (e) => Number(e.amount) || 0;
-    const total = entries.reduce((s, e) => s + amt(e), 0);
-    const byVendor = new Map();
-    entries.filter(e => e.type !== 'mileage').forEach(e => {
-      const key = (e.vendor || '').trim() || 'No vendor';
-      byVendor.set(key, (byVendor.get(key) || 0) + amt(e));
-    });
-    const vendors = [...byVendor].sort((a, b) => b[1] - a[1]);
-    const segs = vendors.slice(0, 3).map(([label, value]) => ({ label, value }));
-    const rest = vendors.slice(3).reduce((s, [, v]) => s + v, 0);
-    if (rest > 0) segs.push({ label: 'Everything else', value: rest });
-    const mileage = entries.filter(e => e.type === 'mileage').reduce((s, e) => s + amt(e), 0);
-    if (mileage > 0) segs.push({ label: 'Mileage', value: mileage });
-    const shown = segs.filter(s => s.value > 0);
-    shown.forEach((s, i) => { s.tone = FIN_SPENT_TONES[Math.min(i, FIN_SPENT_TONES.length - 1)]; });
-    const monthName = new Date(monthKey + '-15T12:00:00').toLocaleDateString('en-US', { month: 'long' });
+    const total = entries.reduce((s, e) => s + (Number(e.amount) || 0), 0);
     totalEl.textContent = '$' + Math.round(total).toLocaleString('en-US');
-    const monthEl = document.getElementById('finSpentMonth');
-    if (monthEl) monthEl.textContent = monthName + ' · ' + entries.length + ' entr' + (entries.length === 1 ? 'y' : 'ies');
-    const bar = document.getElementById('finSpentBar');
-    if (bar) bar.innerHTML = shown.map(s => '<span class="fin-spent-seg is-' + s.tone + '" style="flex-grow:' + s.value.toFixed(2) + '"></span>').join('');
-    const legend = document.getElementById('finSpentLegend');
-    if (legend) {
-      legend.innerHTML = shown.length
-        ? shown.map(s => '<div class="fin-spent-key"><span class="fin-spent-dot is-' + s.tone + '" aria-hidden="true"></span><span class="fin-spent-key-label">' + escapeHtml(s.label) + '</span><span class="fin-spent-key-value">$' + s.value.toFixed(2) + '</span></div>').join('')
-        : '<div class="fin-spent-empty">Nothing logged in ' + escapeHtml(monthName) + ' yet.</div>';
-    }
   }
 
   // Log expense / Log income: the tab, then its own add form (the W1 sheet).
@@ -1535,7 +1721,7 @@
       const initialHash = (location.hash || '').replace('#', '');
       let rememberedTab = null;
       try { rememberedTab = localStorage.getItem(FINANCE_TAB_KEY); } catch (e) { rememberedTab = null; }
-      activateTab(TAB_HASHES[initialHash] ? initialHash : (TAB_HASHES[rememberedTab] ? rememberedTab : 'expenses'));
+      activateTab(TAB_HASHES[initialHash] ? initialHash : (TAB_HASHES[rememberedTab] ? rememberedTab : 'all'));
       window.addEventListener('hashchange', () => {
         const h = (location.hash || '').replace('#', '');
         if (redirectRetiredFinanceHash(h)) return;
@@ -1641,7 +1827,7 @@
         // occurrence becomes actionable diagnostic data.
         const errorBanner = document.createElement('div');
         errorBanner.style.cssText = 'background:#3a1414; border:1px solid #e05252; border-radius:8px; padding:14px 16px; margin:16px 0; color:#ffb3b3; font-size:13.5px; font-family:monospace; white-space:pre-wrap; word-break:break-word;';
-        errorBanner.textContent = 'Finance page failed to load properly.\n\nError: ' + (initError && initError.message ? initError.message : String(initError)) + '\n\nStack: ' + (initError && initError.stack ? initError.stack : 'unavailable') + '\n\nPlease screenshot this and share it.';
+        errorBanner.textContent = 'Money page failed to load properly.\n\nError: ' + (initError && initError.message ? initError.message : String(initError)) + '\n\nStack: ' + (initError && initError.stack ? initError.stack : 'unavailable') + '\n\nPlease screenshot this and share it.';
         document.body.insertBefore(errorBanner, document.body.firstChild);
         if (typeof logClientError === 'function') {
           logClientError('finance.html init failed: ' + (initError && initError.message), 'finance.html', initError && initError.stack, null, null);

@@ -912,6 +912,55 @@ function thInvoiceIsOverdue(inv, now) {
   return due < today;
 }
 
+// Income counts only when paid (2026-11-04, handoff §4F: "Finance income
+// log books UNPAID invoices as income ... unpaid invoices are NOT income").
+// An income-log row made from an invoice (origin 'invoice') is worth what
+// that invoice has actually been paid -- nothing while unpaid, part of it
+// while part-paid -- by the same paidAmount rule as everywhere else
+// (thInvoicePaidAmount). A manual row (cash, check, a card charge) is
+// money already received. invoices: the invoice log (thInvoices.all()).
+function thIncomeReceived(entry, invoices) {
+  if (!entry) return 0;
+  if (entry.origin !== 'invoice') return Number(entry.amount) || 0;
+  const inv = (invoices || []).find((i) => String(i.id) === String(entry.invoiceId));
+  if (!inv) return 0;
+  return Math.min(Number(entry.amount) || 0, thInvoicePaidAmount(inv));
+}
+
+// Runway's own "months covered" (runway-dashboard.html renderRunwayHero:
+// savings / monthly bills), for the Money screen's Runway tile -- the same
+// keys and the same math, so the two can't disagree
+// (tests/workspace/money-screen.test.js runs both on the same data).
+// null when no bills are set up (Runway then says "add your bills").
+function thRunwayMonthlyEquiv(amount, freq) {
+  amount = Number(amount) || 0;
+  switch (freq) {
+    case 'weekly': return amount * 52 / 12;
+    case 'biweekly': return amount * 26 / 12;
+    case 'semimonthly': return amount * 2;
+    case 'quarterly': return amount / 3;
+    case 'annually': return amount / 12;
+    default: return amount;
+  }
+}
+function thRunwayItemMonthly(item) {
+  if (item && item.variable) {
+    const actuals = item.actuals || {};
+    const last3 = Object.keys(actuals).sort().reverse().slice(0, 3);
+    if (last3.length === 0) return Number(item.min) || 0;
+    return last3.reduce((s, m) => s + (Number(actuals[m]) || 0), 0) / last3.length;
+  }
+  return thRunwayMonthlyEquiv(item && item.min, item && item.frequency);
+}
+function thRunwayMonthsCovered() {
+  let bills = [];
+  let balance = 0;
+  try { bills = JSON.parse(localStorage.getItem('rd_personal-expenses') || '[]') || []; } catch (e) { bills = []; }
+  try { balance = Number((JSON.parse(localStorage.getItem('rd_emergency-fund') || 'null') || {}).balance) || 0; } catch (e) { balance = 0; }
+  const monthly = (Array.isArray(bills) ? bills : []).reduce((s, b) => s + thRunwayItemMonthly(b), 0);
+  return monthly > 0 ? balance / monthly : null;
+}
+
 function thLocalDateStr(d) {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }

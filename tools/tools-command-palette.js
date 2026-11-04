@@ -61,9 +61,10 @@
     { title: 'New quote / estimate', meta: 'Invoices \u203a New quote tab', href: '/tools/invoice-generator.html#quote', keywords: 'price bid proposal cost lookup calculator tax', perm: 'canManageInvoices' },
     { title: 'Quick charge', meta: 'Invoices \u203a charge a card on the spot, no invoice', href: '/tools/invoice-generator.html#pos', keywords: 'pos pay payment card stripe', perm: 'canManageInvoices' },
     { title: 'Invoices', meta: 'Who owes you, what is overdue, every invoice and quote', href: '/tools/invoice-generator.html#recent', keywords: 'log history paid unpaid overdue owed recent quotes', perm: 'canManageInvoices' },
-    { title: 'Log expense', meta: 'Finance \u203a Expenses tab', href: '/tools/finance.html#expenses', keywords: 'receipt cost part mileage fuel', perm: 'canViewFinance' },
-    { title: 'Log income', meta: 'Finance \u203a Income tab', href: '/tools/finance.html#income', keywords: 'payment paid revenue', perm: 'canViewFinance' },
-    { title: 'Profitability', meta: 'Finance \u203a what each job made', href: '/tools/finance.html#profitability', keywords: 'profit margin', perm: 'canViewFinance' },
+    { title: 'Log expense', meta: 'Money \u203a Expenses', href: '/tools/finance.html#expenses', keywords: 'receipt cost part mileage fuel', perm: 'canViewFinance' },
+    { title: 'Log income', meta: 'Money \u203a Income', href: '/tools/finance.html#income', keywords: 'payment paid revenue', perm: 'canViewFinance' },
+    { title: 'Money', meta: 'Runway overview, money in and out, profitability', href: '/tools/finance.html', keywords: 'finance ledger income expenses spent owed', perm: 'canViewFinance' },
+    { title: 'Profitability', meta: 'Money \u203a what each job made', href: '/tools/finance.html#profitability', keywords: 'profit margin', perm: 'canViewFinance' },
     // Cost lookup and Inventory left with their Finance tabs (redundancy
     // pass, 2026-10-31): pricing a job is New quote's job, and nothing read
     // the inventory list. Plan a route shows once you type (typedOnly):

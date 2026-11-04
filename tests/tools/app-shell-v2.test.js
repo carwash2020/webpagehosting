@@ -131,12 +131,12 @@ test('Money opens Invoices by default, then whichever Money page was used last o
   assert.ok(w.document.querySelector('.th-bn-money').classList.contains('is-active'));
 });
 
-test('on both Money pages a two-segment Invoices | Finance switch joins the header, shown only to accounts that can open both', () => {
+test('on both Money pages a two-segment Invoices | Money switch joins the header, shown only to accounts that can open both (Finance is "Money" since 2026-11-04)', () => {
   let w = shellOn('invoice-generator.html', { perms: ALL });
   w.dispatchEvent(new w.CustomEvent('th-role-loaded'));
   const sw = w.document.querySelector('.hub-header-left .th-money-switch');
   assert.ok(sw && !sw.hidden);
-  assert.deepEqual([...sw.querySelectorAll('a')].map(a => [a.textContent, a.classList.contains('is-active')]), [['Invoices', true], ['Finance', false]]);
+  assert.deepEqual([...sw.querySelectorAll('a')].map(a => [a.textContent, a.classList.contains('is-active')]), [['Invoices', true], ['Money', false]]);
   assert.ok(w.document.body.classList.contains('th-money-switch-on'));
 
   w = shellOn('finance.html', { perms: { canViewFinance: true } });

@@ -4564,22 +4564,8 @@ html body.th-tool-page:is([data-th-page="invoice-generator"], [data-th-page="fin
 ) { text-transform: none; letter-spacing: .2px; }
 html body.th-tool-page[data-th-page="invoice-generator"] .mn-new-btn { font-family: var(--font-app); font-size: 14px; font-weight: 400; }
 
-/* Log expense / Log income are one pair (the Home pair's rule, PR #543
-   round 3 item 4): the same 48px box, a 1px border on both, no lip, the
-   same type (weight 400, the flat primary from PR #544; review round 2).
-   Orange fill vs outline still says primary vs secondary. */
-html body.th-tool-page[data-th-page="finance"] .fin-spent-actions > :is(.primary-btn, .secondary-btn) {
-  height: 48px; min-height: 48px; padding: 0 12px; box-sizing: border-box; border: 1px solid transparent; box-shadow: none; transform: none;
-  font-family: var(--font-app); font-size: 14px; font-weight: 400; line-height: 1.2; letter-spacing: .2px;
-}
-html body.th-tool-page[data-th-page="finance"] .fin-spent-actions > .secondary-btn { border-color: var(--border); }
-html body.th-tool-page[data-th-page="finance"] .fin-spent-actions > :is(.primary-btn, .secondary-btn):active { transform: scale(.97); }
 
 /* Empty states: say so once, without dead controls. */
-/* Spent this month with nothing logged: no "$0" over an empty bar, no
-   "0 entries"; the card's own "Nothing logged in <month> yet." line and
-   the two Log buttons. */
-html body.th-tool-page[data-th-page="finance"] .fin-spent:has(.fin-spent-empty) :is(.fin-spent-total, .fin-spent-bar, .fin-spent-month) { display: none; }
 /* No invoices at all: the search, the filter chips, Compact view and the
    header's + New invoice have nothing to act on (the empty state carries
    its own New invoice button). A filter or search with no matches keeps

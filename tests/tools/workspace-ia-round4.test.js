@@ -100,11 +100,11 @@ test('tabbed pages take a #tab deep link and follow a same-document hash change 
   assert.match(jt, /window\.addEventListener\('hashchange', \(\) => \{[\s\S]*?if \(TAB_HASHES\[h\]\) \{ activateTab\(h\); return; \}[\s\S]*?setJobViewMode\('calendar'\);[\s\S]*?toggleFormSection\('jobFormSection', true\)/);
 });
 
-test('Finance reopens on the last tab used on this device: hash > memory > Expenses (Cost Lookup was the default until it left, 2026-10-31)', () => {
+test('Money reopens on the last chip used on this device: hash > memory > All (All is the default since 2026-11-04)', () => {
   const fin = read('finance.html');
   assert.match(fin, /const FINANCE_TAB_KEY = 'th_finance_tab';/);
   assert.match(fin, /try \{ localStorage\.setItem\(FINANCE_TAB_KEY, tabName\); \}/);
-  assert.match(fin, /activateTab\(TAB_HASHES\[initialHash\] \? initialHash : \(TAB_HASHES\[rememberedTab\] \? rememberedTab : 'expenses'\)\);/);
+  assert.match(fin, /activateTab\(TAB_HASHES\[initialHash\] \? initialHash : \(TAB_HASHES\[rememberedTab\] \? rememberedTab : 'all'\)\);/);
 });
 
 test('the Dashboard strip is down to the two actions + New does not have; Quick charge and Log expense live in + New, deep-linked and gated like their pages (redundancy pass, 2026-10-31)', () => {
