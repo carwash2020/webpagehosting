@@ -1,6 +1,6 @@
 // Dev Tools' Full Backup / Restore covers every synced key (2026-10-01).
 // It used to keep its own hand-written list of 17 keys, which had drifted
-// from the 49 that sync: a backup left out the client registry, every
+// from the 49 that synced then (50 since th_addons): a backup left out the client registry, every
 // tombstone, review requests, the shift log, Runway's data and the whole
 // Appliance Wiki, so a restore could lose them or bring deleted records
 // back. The list now comes from sync.js's SYNC_DATA_KEYS + WIKI_SYNC_KEYS.
@@ -68,7 +68,7 @@ function setup({ withSync = true, store = {}, confirm = true } = {}) {
 test('the backup covers every key sync.js syncs, including the wiki, in sync order', () => {
   const { api } = setup();
   const keys = Array.from(api.fullBackupKeys());
-  assert.equal(SYNC_KEYS.length, 49, 'sanity: the sync list this test reads');
+  assert.equal(SYNC_KEYS.length, 50, 'sanity: the sync list this test reads (50 since th_addons, 2026-11-04)');
   assert.deepEqual(keys, SYNC_KEYS.concat(WIKI_KEYS));
   for (const k of ['th_clients', 'th_client_tombstones', 'th_job_tombstones', 'th_review_requests_log', 'th_shift_log',
     'rd_debts', 'th_parts_reference_units', 'th_pr_unit_tombstones']) {
@@ -92,7 +92,7 @@ test('Download writes every key with a format marker', () => {
   assert.equal(file.th_client_tombstones, '[{"id":"c_old"}]');
   assert.equal(file.th_parts_reference_units, '[]');
   for (const k of SYNC_KEYS.concat(WIKI_KEYS)) assert.ok(k in file, k + ' is in the file, even when empty on this device');
-  assert.match(out.toasts[0].msg, /Backup downloaded \(52 kinds of data\)/);
+  assert.match(out.toasts[0].msg, /Backup downloaded \(53 kinds of data\)/);
 });
 
 test("if sync.js hasn't loaded, Download refuses instead of saving a partial backup", () => {
@@ -113,11 +113,11 @@ test('a full backup restores every key, tombstones before their lists, and syncs
   assert.doesNotMatch(out.confirms[0], /older backup/);
   assert.equal(w.localStorage.getItem('th_clients'), '"th_clients"');
   assert.equal(w.localStorage.getItem('th_parts_reference_units'), '"th_parts_reference_units"');
-  assert.equal(out.writes.length, 52);
+  assert.equal(out.writes.length, 53); // 53 since th_addons (2026-11-04)
   assert.ok(out.writes.indexOf('th_client_tombstones') < out.writes.indexOf('th_clients'));
   assert.equal(out.syncs, 1);
   assert.equal(out.wikiSyncs, 1);
-  assert.match(out.alerts[0], /Backup restored \(52 kinds of data\)/);
+  assert.match(out.alerts[0], /Backup restored \(53 kinds of data\)/);
 });
 
 test('an older 17-key backup still restores, says so, and leaves the client list it never had alone', async () => {
