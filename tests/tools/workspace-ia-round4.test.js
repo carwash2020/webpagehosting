@@ -55,10 +55,10 @@ test('the tour engine calls onShow before highlighting, picks the first VISIBLE 
 
 test('the command palette lists every action before you type, filters them by title or keyword, and gates the finance-domain ones the way the nav does', () => {
   assert.match(PALETTE, /var ACTIONS = \[/);
-  for (const href of ['/tools/job-tracker.html#add-job', '/tools/job-tracker.html#calendar', '/tools/job-tracker.html#contacts', '/tools/invoice-generator.html#quote', '/tools/invoice-generator.html#pos', '/tools/invoice-generator.html#recent', '/tools/finance.html#expenses', '/tools/finance.html#income', '/tools/finance.html#profitability', '/tools/route-planner.html', '/tools/contract-generator.html', '/tools/review-request.html', '/tools/parts-reference.html', '/tools/runway-dashboard.html#runway', '/tools/settings.html', '/tools/workspace.html?tour=1']) {
+  for (const href of ['/tools/job-tracker.html#add-job', '/tools/job-tracker.html#calendar', '/tools/job-tracker.html#contacts', '/tools/invoice-generator.html#quote', '/tools/invoice-generator.html#charge', '/tools/invoice-generator.html#recent', '/tools/finance.html#expenses', '/tools/finance.html#income', '/tools/finance.html#profitability', '/tools/contract-generator.html', '/tools/review-request.html', '/tools/runway-dashboard.html#runway', '/tools/settings.html', '/tools/workspace.html?tour=1']) {
     assert.ok(PALETTE.includes("href: '" + href + "'"), `palette should link to ${href}`);
   }
-  for (const [href, perm] of [['/tools/finance.html#expenses', 'canViewFinance'], ['/tools/invoice-generator.html#pos', 'canManageInvoices'], ['/tools/contract-generator.html', 'canManageContracts'], ['/tools/review-request.html', 'canManageReviews'], ['/tools/runway-dashboard.html#runway', 'canViewRunway']]) {
+  for (const [href, perm] of [['/tools/finance.html#expenses', 'canViewFinance'], ['/tools/invoice-generator.html#charge', 'canManageInvoices'], ['/tools/contract-generator.html', 'canManageContracts'], ['/tools/review-request.html', 'canManageReviews'], ['/tools/runway-dashboard.html#runway', 'canViewRunway']]) {
     assert.match(PALETTE, new RegExp("href: '" + href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "'[^\\n]*perm: '" + perm + "'"), `${href} gated by ${perm}`);
   }
   // Live: an Employee-style account (no finance permissions) never sees a Finance action.
@@ -72,23 +72,26 @@ test('the command palette lists every action before you type, filters them by ti
   const hrefs = () => [...window.document.querySelectorAll('#thCmdkResults a')].map(a => a.getAttribute('href'));
   assert.ok(hrefs().includes('/tools/job-tracker.html#add-job'), 'New job listed before typing');
   assert.ok(hrefs().includes('/tools/contract-generator.html'));
-  // Redundancy pass (2026-10-31): Route Planner is a More / Search
-  // destination -- not in the before-you-type list, found the moment you
-  // type (below). Cost lookup and Inventory left with their Finance tabs.
-  assert.ok(!hrefs().includes('/tools/route-planner.html'), 'Plan a route waits for typing');
+  // Route Planner and the Appliance Wiki are add-ons (2026-11-04): Route
+  // Planner is never in Search; the Wiki only while its add-on is on (off
+  // here; tests/workspace/addons.test.js). Cost lookup and Inventory left
+  // with their Finance tabs.
+  assert.ok(!PALETTE.includes("href: '/tools/route-planner.html"));
+  assert.ok(!hrefs().includes('/tools/parts-reference.html'), 'Look up a part hidden while the Wiki add-on is off');
   assert.ok(!PALETTE.includes("href: '/tools/finance.html#cost'") && !PALETTE.includes("href: '/tools/finance.html#inventory'"));
   assert.ok(!hrefs().some(h => /finance\.html|invoice-generator\.html|runway/.test(h)), 'gated actions hidden: ' + hrefs().join(','));
   const input = window.document.getElementById('thCmdkInput');
-  input.value = 'rout'; input.dispatchEvent(new window.Event('input'));
-  assert.deepEqual(hrefs(), ['/tools/route-planner.html'], 'typing filters to the matching action');
+  input.value = 'contract'; input.dispatchEvent(new window.Event('input'));
+  assert.deepEqual(hrefs(), ['/tools/contract-generator.html'], 'typing filters to the matching action');
 });
 
 test('tabbed pages take a #tab deep link and follow a same-document hash change (the palette and the tour link straight to tabs)', () => {
   const ig = read('invoice-generator.html');
   assert.match(ig, /function applyGenTabFromHash\(\)/);
   assert.match(ig, /window\.addEventListener\('hashchange', applyGenTabFromHash\)/);
-  // #pos opens Quick charge without focusing Client email: on a phone that
-  // raised the keyboard over the keypad (Phase 3 review round 2, 2026-10-31).
+  // #pos (now the Charge a card sheet, #charge) never focuses an email
+  // field: on a phone that raised the keyboard over the keypad (Phase 3
+  // review round 2, 2026-10-31).
   const hashFn = ig.match(/function applyGenTabFromHash\(\) \{[\s\S]*?\n  \}\n/)[0];
   assert.match(hashFn, /activateGenTab\(tab\);/);
   assert.doesNotMatch(hashFn, /\.focus\(/);
@@ -100,25 +103,25 @@ test('tabbed pages take a #tab deep link and follow a same-document hash change 
   assert.match(jt, /window\.addEventListener\('hashchange', \(\) => \{[\s\S]*?if \(TAB_HASHES\[h\]\) \{ activateTab\(h\); return; \}[\s\S]*?setJobViewMode\('calendar'\);[\s\S]*?toggleFormSection\('jobFormSection', true\)/);
 });
 
-test('Finance reopens on the last tab used on this device: hash > memory > Expenses (Cost Lookup was the default until it left, 2026-10-31)', () => {
+test('Money reopens on the last chip used on this device: hash > memory > All (All is the default since 2026-11-04)', () => {
   const fin = read('finance.html');
   assert.match(fin, /const FINANCE_TAB_KEY = 'th_finance_tab';/);
   assert.match(fin, /try \{ localStorage\.setItem\(FINANCE_TAB_KEY, tabName\); \}/);
-  assert.match(fin, /activateTab\(TAB_HASHES\[initialHash\] \? initialHash : \(TAB_HASHES\[rememberedTab\] \? rememberedTab : 'expenses'\)\);/);
+  assert.match(fin, /activateTab\(TAB_HASHES\[initialHash\] \? initialHash : \(TAB_HASHES\[rememberedTab\] \? rememberedTab : 'all'\)\);/);
 });
 
-test('the Dashboard strip is down to the two actions + New does not have; Quick charge and Log expense live in + New, deep-linked and gated like their pages (redundancy pass, 2026-10-31)', () => {
+test('the Dashboard strip is down to the two actions + New does not have; Charge a card (was Quick charge) and Log expense live in + New, deep-linked and gated like their pages (redundancy pass, 2026-10-31)', () => {
   const ws = read('workspace.html');
   const strip = ws.match(/<nav class="dash-primary-strip"[\s\S]*?<\/nav>/)[0];
   assert.equal((strip.match(/class="dash-primary-action"/g) || []).length, 2);
-  assert.doesNotMatch(strip, /Quick charge|Log expense/);
+  assert.doesNotMatch(strip, /Quick charge|Charge a card|Log expense/);
   const nav = read('tools-nav-pwa.js');
-  assert.match(nav, /\{ label: 'Quick charge', hint: [^}]*href: '\/tools\/invoice-generator\.html#pos', perm: 'canManageInvoices' \}/);
+  assert.match(nav, /\{ label: 'Charge a card', hint: [^}]*href: '\/tools\/invoice-generator\.html#charge', perm: 'canManageInvoices' \}/);
   assert.match(nav, /\{ label: 'Expense',\s+hint: [^}]*href: '\/tools\/finance\.html#expenses', perm: 'canViewFinance' \}/);
   assert.match(ws, /\.dash-primary-strip \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   const help = ws.match(/<div class="help-modal-body">([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>\s*<script>/)[1];
   assert.match(help, /Search anywhere/);
-  assert.match(help, /Quick charge/);
+  assert.match(help, /Charge a card/);
 });
 
 test('the Settings copy describes the tutorial honestly (every page and tab, about two minutes)', () => {

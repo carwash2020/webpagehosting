@@ -60,7 +60,7 @@ test('the Create sheet deep-links into forms that already open themselves from t
     '/tools/job-tracker.html#add-job',
     '/tools/invoice-generator.html#invoice',
     '/tools/invoice-generator.html#quote',
-    '/tools/invoice-generator.html#pos',
+    '/tools/invoice-generator.html#charge',
     '/tools/finance.html#expenses',
     '/tools/finance.html#income',
     '/tools/clients.html#new',
@@ -69,7 +69,9 @@ test('the Create sheet deep-links into forms that already open themselves from t
   ]);
   // Each hash is one the target page actually handles.
   assert.match(read('job-tracker.html'), /'add-job'|#add-job/);
-  for (const tab of ['invoice', 'quote', 'pos']) assert.ok(read('invoice-generator.html').includes('data-tab="' + tab + '"'), 'invoice tab ' + tab);
+  for (const tab of ['invoice', 'quote']) assert.ok(read('invoice-generator.html').includes('data-tab="' + tab + '"'), 'invoice tab ' + tab);
+  // #charge opens the Charge a card sheet (2026-11-04; Quick charge was a tab).
+  assert.match(read('invoice-generator.html'), /if \(tab === 'charge' \|\| tab === 'pos'\) \{ openChargeCard\(\); return; \}/);
   for (const tab of ['expenses', 'income']) assert.ok(read('finance.html').includes('data-tab="' + tab + '"'), 'finance tab ' + tab);
   assert.match(read('clients.html'), /if \(location\.hash === '#new'\) openAddClient\(\);/);
   assert.ok(tiles.every(t => !t.hidden), 'an account with every permission sees every tile');
@@ -131,12 +133,12 @@ test('Money opens Invoices by default, then whichever Money page was used last o
   assert.ok(w.document.querySelector('.th-bn-money').classList.contains('is-active'));
 });
 
-test('on both Money pages a two-segment Invoices | Finance switch joins the header, shown only to accounts that can open both', () => {
+test('on both Money pages a two-segment Invoices | Money switch joins the header, shown only to accounts that can open both (Finance is "Money" since 2026-11-04)', () => {
   let w = shellOn('invoice-generator.html', { perms: ALL });
   w.dispatchEvent(new w.CustomEvent('th-role-loaded'));
   const sw = w.document.querySelector('.hub-header-left .th-money-switch');
   assert.ok(sw && !sw.hidden);
-  assert.deepEqual([...sw.querySelectorAll('a')].map(a => [a.textContent, a.classList.contains('is-active')]), [['Invoices', true], ['Finance', false]]);
+  assert.deepEqual([...sw.querySelectorAll('a')].map(a => [a.textContent, a.classList.contains('is-active')]), [['Invoices', true], ['Money', false]]);
   assert.ok(w.document.body.classList.contains('th-money-switch-on'));
 
   w = shellOn('finance.html', { perms: { canViewFinance: true } });
@@ -152,7 +154,7 @@ test('on both Money pages a two-segment Invoices | Finance switch joins the head
 });
 
 test('Search and More are header buttons on every page; runway (no shared header) gets them pinned to its own header', () => {
-  const w = shellOn('parts-reference.html', { perms: ALL });
+  const w = shellOn('contract-generator.html', { perms: ALL });
   const actions = w.document.querySelector('.hub-header-right > .th-hdr-actions');
   assert.ok(actions);
   let opened = 0;
@@ -161,7 +163,7 @@ test('Search and More are header buttons on every page; runway (no shared header
   assert.equal(opened, 1);
   actions.querySelector('.th-hdr-menu').click();
   assert.ok(!w.document.getElementById('thMoreSheet').hasAttribute('hidden'));
-  assert.ok(actions.querySelector('.th-hdr-menu').classList.contains('is-active'), 'the Wiki lives in More, so the More button carries the you-are-here dot');
+  assert.ok(actions.querySelector('.th-hdr-menu').classList.contains('is-active'), 'Contracts lives in More on a phone, so the More button carries the you-are-here dot');
 
   const r = shellOn('runway-dashboard.html', { perms: ALL });
   assert.ok(r.document.querySelector('header#mainContent > .th-hdr-actions.is-floating'));
@@ -175,7 +177,8 @@ test('the More drawer is an app grid of the remaining pages plus two utility row
   // manage site content -- see website-nav-entry.test.js.
   // Insights (v2, 2026-09-28) is Home's #insights view: a sidebar row
   // ("Analytics") the drawer derives a tile from, like every other page.
-  assert.deepEqual(labels, ['Route Planner', 'Runway Dashboard', 'Insights', 'Contracts', 'Reviews', 'Appliance Wiki', 'Website', 'Dev Tools', 'Settings']);
+  // 2026-11-04: the nav is the nine, so More holds the four the bar doesn't.
+  assert.deepEqual(labels, ['Contracts', 'Reviews', 'Team', 'Settings']);
   let helped = 0;
   w.openHelpModal = () => { helped++; };
   sheet.querySelector('[data-th-util="help"]').click();

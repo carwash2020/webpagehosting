@@ -236,7 +236,7 @@ test('B6: the no-access screen says who is signed in, or that access could not b
 
 test('B6: all 7 gated pages use the new screen, each keeping its own permission check for Try again', () => {
   const PAGES = {
-    'finance.html': ['roleBlockedOverlay', 'Finance', 'canViewFinance'],
+    'finance.html': ['roleBlockedOverlay', 'Money', 'canViewFinance'], // Finance is "Money" since 2026-11-04
     'invoice-generator.html': ['roleBlockedOverlay', 'Invoices', 'canManageInvoices'],
     'contract-generator.html': ['roleBlockedOverlay', 'Contracts', 'canManageContracts'],
     'review-request.html': ['roleBlockedOverlay', 'Reviews', 'canManageReviews'],

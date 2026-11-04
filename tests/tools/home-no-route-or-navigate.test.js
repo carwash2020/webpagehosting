@@ -35,8 +35,12 @@ function dropBlocks(src, open, close) {
 const code = (src) => dropBlocks(dropBlocks(src, '<!--', '-->'), '/*', '*/')
   .split('\n').filter((line) => !line.trim().startsWith('//')).join('\n');
 
-test('Home has no map, route or navigation link of any kind', () => {
-  const ws = code(WORKSPACE);
+test('Home has no map, route or navigation link of any kind -- except the Route planner add-on\'s one button, hidden unless the add-on is on (2026-11-04, approved design)', () => {
+  // The one exception: <a id="dashRouteBtn"> into Route Planner (#today).
+  const btn = '<a href="/tools/route-planner.html#today" class="dash-route-btn" id="dashRouteBtn" hidden><svg class="th-icon" aria-hidden="true"><use href="#icon-map" xlink:href="#icon-map"></use></svg>Plan today&rsquo;s route</a>';
+  assert.equal(WORKSPACE.split(btn).length, 2, 'exactly one Plan today\'s route button, hidden by default');
+  assert.match(WORKSPACE, /routeBtn\.hidden = !\(todaysJobs\.length > 0 && typeof thAddonOn === 'function' && thAddonOn\('routePlanner'\)\);/);
+  const ws = code(WORKSPACE.replace(btn, ''));
   assert.doesNotMatch(ws, /google\.com\/maps|maps\.google\.|maps\.apple\.com|geo:/, 'no Maps URL is built or linked on Home');
   assert.doesNotMatch(ws, /#icon-navigate|#icon-map"/, 'no navigate/map icon on Home');
   assert.doesNotMatch(ws, /id="todayRouteCard"|id="todayRoute"|id="todayRouteAll"|id="todayRouteCount"|class="today-route/, 'Today\'s route is gone');
@@ -57,16 +61,17 @@ test('Job detail keeps its own Directions (one job) untouched', () => {
   assert.match(JOB_DETAIL, /if \(j\.address\) quick\.push\(\['https:\/\/www\.google\.com\/maps\/dir\/\?api=1&destination=' \+ encodeURIComponent\(j\.address\), 'navigate', 'Directions', true\]\);/);
 });
 
-test('Route Planner still routes the whole day, and is reachable from More and Search', () => {
+test('Route Planner still routes the whole day; since 2026-11-04 it is an add-on whose one way in is My Day\'s Plan today\'s route (not the nav, not Search)', () => {
   assert.match(ROUTE_PLANNER, /onclick="pullTodaysJobs\(\)">Pull today's jobs</);
   assert.match(ROUTE_PLANNER, /id="openRouteBtn"[^>]*>Open full route in Google Maps</);
-  assert.match(NAV, /href: '\/tools\/route-planner\.html',\s+icon: 'map',\s+label: 'Route Planner', sidebar: false \}/, 'in the More drawer (sidebar: false only hides it from the desktop sidebar list)');
-  assert.match(PALETTE, /title: 'Plan a route', meta: 'Route Planner', href: '\/tools\/route-planner\.html'/, 'and Ctrl+K "route"');
+  assert.match(ROUTE_PLANNER, /if \(window\.location\.hash === '#today'\) pullTodaysJobs\(\);/, '#today pulls the day straight away');
+  assert.doesNotMatch(NAV, /href: '\/tools\/route-planner\.html'/, 'not in the nav or More');
+  assert.doesNotMatch(PALETTE, /href: '\/tools\/route-planner\.html/, 'not in Search');
 });
 
-test('Home\'s help sends you to Job detail and Route Planner for driving, not to a Home button', () => {
+test('Home\'s help sends you to Job detail for one job\'s directions, and to the Route planner add-on for the whole day', () => {
   const help = WORKSPACE.match(/<div class="help-modal-body">([\s\S]*?)<\/div>\s*<\/div>\s*<\/div>\s*<script>/)[1];
   assert.doesNotMatch(help, /Today's route|Route all|Navigate/);
   assert.match(help, /directions are there/);
-  assert.match(help, /Pull today's jobs<\/strong>, then <strong>Open full route in Google Maps/);
+  assert.match(help, /turn on the <strong>Route planner<\/strong> add-on in Settings &gt; Add-ons: <strong>Plan today's route<\/strong> then shows under Next Job/);
 });

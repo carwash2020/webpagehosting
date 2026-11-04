@@ -85,7 +85,7 @@ test('the Stripe card: three figures and a link to Finance for Finance roles, no
   assert.match(on.el.innerHTML, /\$1234\.56<\/div><div class="stripe-balance-label">Available/);
   assert.match(on.el.innerHTML, /\$78\.00<\/div><div class="stripe-balance-label">Pending/);
   assert.match(on.el.innerHTML, /\$987\.65<\/div><div class="stripe-balance-label">Next payout, /);
-  assert.match(on.el.innerHTML, /<a class="th-v2-link" href="\/tools\/finance\.html">Open Finance<\/a>/);
+  assert.match(on.el.innerHTML, /<a class="th-v2-link" href="\/tools\/finance\.html">Open Money<\/a>/);
   for (const c of [{ finance: false, data: BAL }, { finance: true, moneyState: 'hidden', data: BAL }]) {
     const off = renderCard(c);
     assert.equal(off.el.hidden, true); assert.equal(off.el.innerHTML, ''); assert.equal(off.fetches.length, 0);

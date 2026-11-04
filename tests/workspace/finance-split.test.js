@@ -144,12 +144,12 @@ test('job-tracker.html\'s tab bar only has Jobs, Contacts, and Notes as in-page 
   assert.match(src, /href="\/tools\/finance\.html"/, 'should have a real link to the new Finance page');
 });
 
-test('finance.html has its 3 tabs, Expenses first, and none of the Jobs/Contacts/Notes tabs', () => {
+test('Money (finance.html) has its 4 chips, All first, and none of the Jobs/Contacts/Notes tabs', () => {
   const src = fs.readFileSync(FINANCE_PATH, 'utf8');
   const tabButtons = [...src.matchAll(/data-tab="(\w+)"/g)].map(m => m[1]);
-  // Cost lookup and Inventory left in the redundancy pass (2026-10-31);
-  // Expenses, now the default, leads.
-  assert.deepEqual(tabButtons, ['expenses', 'income', 'profitability']);
+  // Cost lookup and Inventory left in the redundancy pass (2026-10-31).
+  // Money (2026-11-04): All / Income / Expenses / Profitability chips, All first.
+  assert.deepEqual(tabButtons, ['all', 'income', 'expenses', 'profitability']);
 });
 
 test('job-detail.html\'s Expenses link points at finance.html, not the old job-tracker.html location', () => {
@@ -1007,7 +1007,7 @@ test('Finance is no longer styled as a tab -- it\'s visually distinct from the r
   const tabsBlock = src.match(/<div class="tabs[^"]*">[\s\S]*?<\/div>/);
   assert.ok(tabsBlock, 'tabs block not found');
   assert.doesNotMatch(tabsBlock[0], /finance\.html/, 'Finance should not be inside the tabs container styled like Jobs/Contacts/Notes');
-  assert.match(src, /Pricing, income, and expenses are on Finance/, 'a clearly-distinct link to Finance should still exist nearby');
+  assert.match(src, /Pricing, income, and expenses are on Money/, 'a clearly-distinct link to Money (was Finance) should still exist nearby');
 });
 
 // Log Expense from Job Tracker (redundancy pass, 2026-10-31). The
@@ -1161,30 +1161,34 @@ test('finance.html\'s DOMContentLoaded init actually runs to completion and rend
 // rendered as bare floating buttons with no container background --
 // exactly matching what the reported screenshots showed.
 
-test('the bottom nav has Finance instead of Routes, and Route Planner is still reachable from the Workspace (More / Search)', () => {
+test('the bottom nav has Finance instead of Routes, and Route Planner is still reachable from the Workspace (My Day, while its add-on is on)', () => {
   const navSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'tools-nav-pwa.js'), 'utf8');
-  assert.match(navSrc, /href:\s*'\/tools\/finance\.html'.*icon:\s*'dollar'.*label:\s*'Finance'/s);
+  assert.match(navSrc, /href:\s*'\/tools\/finance\.html'.*icon:\s*'dollar'.*label:\s*'Money'/s, 'Finance is "Money" since 2026-11-04 (the nine)');
   assert.doesNotMatch(navSrc, /label:\s*'Routes'/);
   // Route Planner used to be reached from the dashboard's tile grid;
   // since 2026-09-21 the grid is gone and the sidebar / More sheet
   // (SIDEBAR_DESTS) carry it instead -- still reachable, one tap.
-  assert.match(navSrc, /href: '\/tools\/route-planner\.html',\s+icon: 'map',\s+label: 'Route Planner'/, 'Route Planner must still be linked from somewhere, or it becomes unreachable');
+  // 2026-11-04: out of the nav (the nine) and Search; an add-on whose one
+  // way in is My Day's Plan today's route (Settings > Add-ons).
   const wsSrc = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'workspace.html'), 'utf8');
+  assert.match(wsSrc, /<a href="\/tools\/route-planner\.html#today" class="dash-route-btn" id="dashRouteBtn" hidden>/, 'Route Planner must still be linked from somewhere, or it becomes unreachable');
+  assert.match(fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'settings.html'), 'utf8'), /data-addon="routePlanner"/, 'and its switch is in Settings');
   // Redundancy pass (2026-10-31): the Next Job card's own Route today
   // left. Cross-surface pass, round 2 (2026-10-31): Today's route's Route
   // all left Home too, so Route Planner is the one way to route the day.
   assert.doesNotMatch(wsSrc, /id="todayRouteLink"|id="todayRouteAll"/, 'no route link on Home');
 });
 
-test('finance.html uses the shared .tabs class (not the old, unstyled tab-row) and gets the sticky modifier', () => {
+test('Money (finance.html) uses filter chips, not tabs (handoff §2: "as filter chips ... not tabs inside tabs"), and never the unstyled tab-row', () => {
   const src = fs.readFileSync(FINANCE_PATH, 'utf8');
   assert.doesNotMatch(src, /class="tab-row"/, 'tab-row had zero CSS anywhere -- this was the real bug behind the reported blank-looking tab bar');
-  assert.match(src, /class="tabs tabs-sticky"/);
+  assert.match(src, /<div class="mny-chips" role="group" aria-label="Show">/);
+  assert.match(src, /\.mny-chips \.mny-chip \{/, 'the chips are styled');
 });
 
-test('the 4 real primary-nav tab bars (Finance, Job Tracker, Invoice Generator, Review Request) all have tabs-sticky', () => {
+test('the 3 real primary-nav tab bars (Job Tracker, Invoice Generator, Review Request) all have tabs-sticky (Money uses chips since 2026-11-04)', () => {
   for (const [file, label] of [
-    ['finance.html', 'Finance'], ['job-tracker.html', 'Job Tracker'],
+    ['job-tracker.html', 'Job Tracker'],
     ['invoice-generator.html', 'Invoice Generator'], ['review-request.html', 'Review Request'],
   ]) {
     const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', file), 'utf8');
@@ -1336,7 +1340,7 @@ test('the jump-nav no longer points at the removed combined section', () => {
 // synchronized in two separate places is exactly the kind of fragile
 // coupling that caused this bug on finance.html in the first place.
 
-test('finance.html shows its default tab (Expenses, since Cost Lookup left on 2026-10-31) on a completely normal, hash-less page load -- not just that nothing throws', async () => {
+test('Money (finance.html) shows its default chip (All, since 2026-11-04) on a completely normal, hash-less page load -- not just that nothing throws', async () => {
   const { JSDOM } = require('jsdom');
   const html = fs.readFileSync(FINANCE_PATH, 'utf8');
   const dom = new JSDOM(html, {
@@ -1358,9 +1362,9 @@ test('finance.html shows its default tab (Expenses, since Cost Lookup left on 20
   window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
   await new Promise(resolve => setTimeout(resolve, 100));
 
-  assert.ok(window.document.getElementById('tab-expenses').classList.contains('is-active'),
+  assert.ok(window.document.getElementById('tab-all').classList.contains('is-active'),
     'the default tab panel must actually be visible on a normal visit -- this is the exact bug that made the page look broken even after content was computed correctly');
-  for (const id of ['tab-profitability', 'tab-income']) {
+  for (const id of ['tab-profitability', 'tab-income', 'tab-expenses']) {
     assert.equal(window.document.getElementById(id).classList.contains('is-active'), false, id + ' should NOT be active by default');
   }
 });
@@ -1425,7 +1429,8 @@ test('an old finance.html#cost (account without Invoices) or #inventory link, or
       assert.ok(navigations.length >= 1, '#cost with Invoices navigates away');
       assert.deepEqual(active, [], '#cost with Invoices stops before picking a tab');
     } else {
-      const want = url.endsWith('#income') ? 'tab-income' : 'tab-expenses';
+      // Money (2026-11-04): an unknown or retired hash falls back to All.
+      const want = url.endsWith('#income') ? 'tab-income' : 'tab-all';
       assert.deepEqual(active, [want], url + ' (remembered: ' + remembered + ', canInvoice: ' + canInvoice + ')');
       assert.equal(navigations.length, 0, url + ' stays on Finance');
     }
@@ -1472,8 +1477,8 @@ test('both pages use the unconditional activateTab(...) fallback pattern now, no
   const finSrc = fs.readFileSync(FINANCE_PATH, 'utf8');
   const jtSrc = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
   // Finance gained per-device tab memory on 2026-09-22: hash > remembered > default, still one unconditional call.
-  // The default is Expenses since Cost lookup left (2026-10-31).
-  assert.match(finSrc, /activateTab\(TAB_HASHES\[initialHash\] \? initialHash : \(TAB_HASHES\[rememberedTab\] \? rememberedTab : 'expenses'\)\)/);
+  // The default is All since Money replaced Finance's tabs (2026-11-04).
+  assert.match(finSrc, /activateTab\(TAB_HASHES\[initialHash\] \? initialHash : \(TAB_HASHES\[rememberedTab\] \? rememberedTab : 'all'\)\)/);
   assert.match(jtSrc, /activateTab\(TAB_HASHES\[initialHash\] \? initialHash : 'jobs'\)/);
   assert.doesNotMatch(finSrc, /if \(TAB_HASHES\[initialHash\]\) activateTab\(initialHash\);/);
   assert.doesNotMatch(jtSrc, /if \(TAB_HASHES\[initialHash\]\) activateTab\(initialHash\);/);
@@ -1526,7 +1531,7 @@ test('the error banner actually appears and shows the real error message when in
 
   const banner = window.document.body.firstElementChild;
   assert.ok(banner, 'an error banner should have been inserted');
-  assert.match(banner.textContent, /Finance page failed to load properly/);
+  assert.match(banner.textContent, /Money page failed to load properly/);
   assert.match(banner.textContent, /Error:/);
 });
 

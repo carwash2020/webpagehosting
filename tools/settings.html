@@ -54,15 +54,15 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=7c03870603">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=f212452f48">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=3b1514fb8b">
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=c189cd58b4" defer></script>
-<script src="/tools/tools-command-palette.js?v=66031659c7" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=24587c0be7" defer></script>
+<script src="/tools/tools-command-palette.js?v=210664ba23" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
-<script src="/tools/sync.js?v=486abe5b22" defer></script>
+<script src="/tools/sync.js?v=66c2196d60" defer></script>
 <script src="/tools/push-notifications.js?v=3c123334a6" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -322,6 +322,95 @@
       </div>
     </div>
   </div>
+
+  <!-- Add-ons (2026-11-04, approved "Route planner add-on" design). Website
+       editing is here because the nav no longer lists it (handoff §2: nine
+       items). Route planner and Appliance Wiki are off by default and,
+       while off, shown nowhere in the app. Website editing shows only to
+       accounts allowed to open it. -->
+  <div class="settings-section" id="settingsAddons">
+    <h2>Add-ons</h2>
+    <p class="settings-desc">Extra tools for this account. Add-ons are shared by every device on the account.</p>
+    <div class="th-set-card">
+      <div class="settings-row th-addon-row">
+        <span class="th-v2-icon-tile" aria-hidden="true"><svg class="th-icon"><use href="#icon-map" xlink:href="#icon-map"></use></svg></span>
+        <div class="th-set-row-main">
+          <div class="settings-row-label" id="addonRouteLabel">Route planner</div>
+          <div class="settings-row-sub" id="addonRouteSub">Adds &ldquo;Plan today&rsquo;s route&rdquo; to My Day: today&rsquo;s jobs in order, mileage cost and a suggested trip charge, then open in Google Maps.</div>
+          <div class="settings-row-sub th-addon-off">Off: shown nowhere in the app, not in the menu or search either.</div>
+        </div>
+        <button type="button" class="th-toggle" role="switch" aria-checked="false" data-addon="routePlanner" aria-labelledby="addonRouteLabel" aria-describedby="addonRouteSub"></button>
+      </div>
+      <div class="settings-row th-addon-row">
+        <span class="th-v2-icon-tile" aria-hidden="true"><svg class="th-icon"><use href="#icon-book" xlink:href="#icon-book"></use></svg></span>
+        <div class="th-set-row-main">
+          <div class="settings-row-label" id="addonWikiLabel">Appliance Wiki</div>
+          <div class="settings-row-sub" id="addonWikiSub">Adds &ldquo;Look up a part&rdquo; to Search, and &ldquo;Look Up in Wiki&rdquo; to invoice and quote line items.</div>
+          <div class="settings-row-sub th-addon-off">Off: shown nowhere in the app, not in the menu or search either.</div>
+        </div>
+        <button type="button" class="th-toggle" role="switch" aria-checked="false" data-addon="applianceWiki" aria-labelledby="addonWikiLabel" aria-describedby="addonWikiSub"></button>
+      </div>
+      <div class="settings-row" id="settingsWebsiteRow" hidden>
+        <span class="th-v2-icon-tile" aria-hidden="true"><svg class="th-icon"><use href="#icon-globe" xlink:href="#icon-globe"></use></svg></span>
+        <div class="th-set-row-main">
+          <div class="settings-row-label">Website editing</div>
+          <div class="settings-row-sub">Edit the public site's hours, banners, FAQ and terms from here.</div>
+        </div>
+        <a href="/tools/site-content.html" class="secondary-btn th-set-chev" style="text-decoration:none;">Open</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dev Tools (2026-11-04): out of the nav, opened from here and from
+       Search. Shown only to accounts with Dev Tools access. -->
+  <div class="settings-section" id="settingsDevToolsSection" hidden>
+    <h2>Dev Tools</h2>
+    <p class="settings-desc">Diagnostics, data, accounts and system checks.</p>
+    <div class="th-set-card">
+      <div class="settings-row">
+        <span class="th-v2-icon-tile" aria-hidden="true"><svg class="th-icon"><use href="#icon-terminal" xlink:href="#icon-terminal"></use></svg></span>
+        <div class="th-set-row-main">
+          <div class="settings-row-label">Open Dev Tools</div>
+          <div class="settings-row-sub">Health log, backups, account permissions and more.</div>
+        </div>
+        <a href="/tools/dev-tools.html" class="secondary-btn th-set-chev" style="text-decoration:none;">Open</a>
+      </div>
+    </div>
+  </div>
+  <script>
+    // Show each row only to an account allowed to open it -- the same
+    // auth.js checks the nav and Search use.
+    (function () {
+      function apply() {
+        var site = typeof canManageSiteContent === 'function' && canManageSiteContent();
+        var dev = typeof hasDevToolsAccess === 'function' && hasDevToolsAccess();
+        document.getElementById('settingsWebsiteRow').hidden = !site;
+        document.getElementById('settingsDevToolsSection').hidden = !dev;
+      }
+      window.addEventListener('th-role-loaded', apply);
+      if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', apply); else apply();
+    })();
+    // Add-on switches (thAddonOn / thSetAddon in tools-nav-pwa.js). They
+    // follow a change synced from another device too.
+    (function () {
+      function paint() {
+        document.querySelectorAll('.th-toggle[data-addon]').forEach(function (btn) {
+          var on = typeof thAddonOn === 'function' && thAddonOn(btn.dataset.addon);
+          btn.setAttribute('aria-checked', on ? 'true' : 'false');
+        });
+      }
+      document.querySelectorAll('.th-toggle[data-addon]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          if (typeof thSetAddon !== 'function') return;
+          thSetAddon(btn.dataset.addon, btn.getAttribute('aria-checked') !== 'true');
+          paint();
+        });
+      });
+      window.addEventListener('th-addons-changed', paint);
+      window.addEventListener('storage', function (e) { if (e.key === 'th_addons') paint(); });
+      if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', paint); else paint();
+    })();
+  </script>
 
   <div class="settings-section">
     <h2>Notifications</h2>

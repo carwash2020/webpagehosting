@@ -58,16 +58,16 @@ test('injecting the sidebar on a real page produces the correct number of links,
 
   const activeLink = sidebar.querySelector('.is-active');
   assert.ok(activeLink, 'no active link found');
-  assert.match(activeLink.textContent, /Job Tracker/);
+  assert.match(activeLink.textContent, /Jobs/);
   assert.equal(activeLink.getAttribute('aria-current'), 'page');
 
   assert.equal(window.document.body.classList.contains('th-has-sidebar'), true);
 });
 
-test('Route Planner is off the desktop sidebar but still in the More drawer (and Search), not deleted (redundancy pass, 2026-10-31)', () => {
+test('Route Planner is in neither the sidebar nor the More drawer (2026-11-04: an add-on, Settings > Add-ons), and the page itself stays', () => {
   const html = fs.readFileSync(path.join(TOOLS_DIR, 'job-tracker.html'), 'utf8');
   const navSrc = fs.readFileSync(NAV_PWA_PATH, 'utf8');
-  assert.match(navSrc, /href: '\/tools\/route-planner\.html',\s+icon: 'map',\s+label: 'Route Planner', sidebar: false \}/);
+  assert.doesNotMatch(navSrc, /href: '\/tools\/route-planner\.html'/);
   const dom = new JSDOM(html, {
     runScripts: 'dangerously', url: 'https://example.com/tools/job-tracker.html',
     beforeParse(w) { w.requireAuth = () => {}; },
@@ -81,7 +81,7 @@ test('Route Planner is off the desktop sidebar but still in the More drawer (and
   assert.ok(sidebarHrefs.includes('/tools/clients.html'));
   assert.ok(!sidebarHrefs.includes('/tools/route-planner.html'), 'not a primary sidebar slot');
   const moreHrefs = [...window.document.querySelectorAll('.th-more-sheet-link')].map(a => a.getAttribute('href'));
-  assert.ok(moreHrefs.includes('/tools/route-planner.html'), 'still one tap away in More');
+  assert.ok(!moreHrefs.includes('/tools/route-planner.html'), 'not in More either');
   assert.ok(fs.existsSync(path.join(TOOLS_DIR, 'route-planner.html')), 'the page itself stays');
 });
 
@@ -142,7 +142,8 @@ test('runway-dashboard.html now loads tools-nav-pwa.js like every other tool pag
 
   const activeLink = sidebar.querySelector('.is-active');
   assert.ok(activeLink);
-  assert.match(activeLink.textContent, /Runway Dashboard/);
+  // Runway left the nav (2026-11-04); it opens from Money, so Money is marked.
+  assert.match(activeLink.textContent, /Money/);
   assert.equal(window.document.body.classList.contains('th-has-sidebar'), true);
 
   // The actual defect F18 describes: this page never had a mobile bottom

@@ -271,7 +271,7 @@
 // invoices/jobs/quotes/contracts/requests, not just its own; see
 // docs/specialist-logs/security.md, 2026-09-29). All seven are in
 // PRECACHE_URLS.
-const CACHE_NAME = 'th-portal-v217'; // precache-fingerprint:4680f5653317
+const CACHE_NAME = 'th-portal-v220'; // precache-fingerprint:ab13b90fb962
 const PRECACHE_URLS = [
   '/portal/home.html', '/portal/dashboard.html', '/portal/jobs.html', '/portal/quotes.html',
   '/portal/work-orders.html', '/portal/settings.html', '/portal/login.html', '/portal/set-password.html',

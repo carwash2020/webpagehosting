@@ -912,6 +912,111 @@ function thInvoiceIsOverdue(inv, now) {
   return due < today;
 }
 
+// Income counts only when paid (2026-11-04, handoff §4F: "Finance income
+// log books UNPAID invoices as income ... unpaid invoices are NOT income").
+// An income-log row made from an invoice (origin 'invoice') is worth what
+// that invoice has actually been paid -- nothing while unpaid, part of it
+// while part-paid -- by the same paidAmount rule as everywhere else
+// (thInvoicePaidAmount). A manual row (cash, check, a card charge) is
+// money already received. invoices: the invoice log (thInvoices.all()).
+function thIncomeReceived(entry, invoices) {
+  if (!entry) return 0;
+  // A card charge linked to an invoice (Charge a card > "To an unpaid
+  // invoice", 2026-11-04) is that invoice's payment: the invoice's own row
+  // counts it, so the charge row doesn't count it a second time.
+  if (entry.appliedToInvoiceId) return 0;
+  if (entry.origin !== 'invoice') return Number(entry.amount) || 0;
+  const inv = (invoices || []).find((i) => String(i.id) === String(entry.invoiceId));
+  if (!inv) return 0;
+  return Math.min(Number(entry.amount) || 0, thInvoicePaidAmount(inv));
+}
+
+// Charge a card > "Link it (optional)" (2026-11-04, approved design). The
+// charge's income row is written by the server (stripe-webhook /
+// create-pos-charge) and reaches this device with the next sync, so a link
+// chosen on the paid screen is kept here until that row arrives, then
+// applied: a job link fills jobRefId/jobRefTitle; an invoice link marks the
+// row appliedToInvoiceId (the invoice itself was marked paid when the link
+// was chosen). Matched by the PaymentIntent id when the page knows it (a new
+// card), otherwise by email + amount + day on a row not linked yet (a saved
+// card). This device only; a link that never finds its row is dropped
+// after 14 days.
+const TH_POS_LINKS_KEY = 'th_pos_links';
+function thReadPosLinks() {
+  try { const v = JSON.parse(localStorage.getItem(TH_POS_LINKS_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; }
+}
+function thWritePosLinks(links) {
+  try { localStorage.setItem(TH_POS_LINKS_KEY, JSON.stringify(links)); } catch (e) { /* storage blocked */ }
+}
+function thQueuePosLink(link) {
+  const links = thReadPosLinks();
+  links.push(Object.assign({ queuedAt: Date.now() }, link));
+  thWritePosLinks(links);
+  return thApplyPosLinks();
+}
+function thPosLinkMatches(link, e) {
+  if (!e || e.origin !== 'pos') return false;
+  if (link.paymentIntentId) return e.stripePaymentIntentId === link.paymentIntentId;
+  return !e.jobRefId && !e.appliedToInvoiceId &&
+    String(e.source || '').toLowerCase() === String(link.email || '').toLowerCase() &&
+    Math.round((Number(e.amount) || 0) * 100) === Math.round((Number(link.amount) || 0) * 100) &&
+    String(e.date || '') === String(link.date || '');
+}
+function thApplyPosLinks() {
+  const links = thReadPosLinks();
+  if (!links.length) return 0;
+  const income = thIncome.all();
+  let applied = 0;
+  const keep = [];
+  for (const link of links) {
+    const hit = income.filter((e) => thPosLinkMatches(link, e)).sort((a, b) => (b.id || 0) - (a.id || 0))[0];
+    if (!hit) {
+      if (Date.now() - (link.queuedAt || 0) < 14 * 86400000) keep.push(link);
+      continue;
+    }
+    if (link.jobRefId) { hit.jobRefId = String(link.jobRefId); hit.jobRefTitle = link.jobRefTitle || ''; }
+    if (link.invoiceId) hit.appliedToInvoiceId = link.invoiceId;
+    applied++;
+  }
+  if (applied) thIncome.replaceAll(income);
+  thWritePosLinks(keep);
+  return applied;
+}
+
+// Runway's own "months covered" (runway-dashboard.html renderRunwayHero:
+// savings / monthly bills), for the Money screen's Runway tile -- the same
+// keys and the same math, so the two can't disagree
+// (tests/workspace/money-screen.test.js runs both on the same data).
+// null when no bills are set up (Runway then says "add your bills").
+function thRunwayMonthlyEquiv(amount, freq) {
+  amount = Number(amount) || 0;
+  switch (freq) {
+    case 'weekly': return amount * 52 / 12;
+    case 'biweekly': return amount * 26 / 12;
+    case 'semimonthly': return amount * 2;
+    case 'quarterly': return amount / 3;
+    case 'annually': return amount / 12;
+    default: return amount;
+  }
+}
+function thRunwayItemMonthly(item) {
+  if (item && item.variable) {
+    const actuals = item.actuals || {};
+    const last3 = Object.keys(actuals).sort().reverse().slice(0, 3);
+    if (last3.length === 0) return Number(item.min) || 0;
+    return last3.reduce((s, m) => s + (Number(actuals[m]) || 0), 0) / last3.length;
+  }
+  return thRunwayMonthlyEquiv(item && item.min, item && item.frequency);
+}
+function thRunwayMonthsCovered() {
+  let bills = [];
+  let balance = 0;
+  try { bills = JSON.parse(localStorage.getItem('rd_personal-expenses') || '[]') || []; } catch (e) { bills = []; }
+  try { balance = Number((JSON.parse(localStorage.getItem('rd_emergency-fund') || 'null') || {}).balance) || 0; } catch (e) { balance = 0; }
+  const monthly = (Array.isArray(bills) ? bills : []).reduce((s, b) => s + thRunwayItemMonthly(b), 0);
+  return monthly > 0 ? balance / monthly : null;
+}
+
 function thLocalDateStr(d) {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
@@ -1237,6 +1342,39 @@ function thFinishJob(jobId, now) {
   if (!thSaveClockJobs(jobs)) return null;
   thClockChanged(job.id);
   return job;
+}
+
+// ---------- Review request on Mark done (2026-11-04) ----------
+// Handoff §2: "Review requests: trigger automatically when a job is marked
+// done, not a screen someone must remember to visit." The owner's choice:
+// marking a job done opens the review request, prefilled for that client.
+// It is still built in the browser and sent from your own text or email
+// app (Review Request Sender's local-only model). An account without the
+// Reviews permission stays where it is. While the job is still unbilled,
+// the review page offers Create the invoice (?invoiceJob=), since the Job
+// done sheet that used to offer it is skipped.
+function thCanSendReviews() {
+  return typeof canManageReviews !== 'function' || canManageReviews() || !(typeof getCurrentUserRole === 'function' && getCurrentUserRole());
+}
+function thJobUnbilledForMe(job) {
+  const canInvoice = typeof canManageInvoices !== 'function' || canManageInvoices() || !(typeof getCurrentUserRole === 'function' && getCurrentUserRole());
+  if (!canInvoice) return false;
+  const income = thRead(TH_KEYS.income, []).filter(e => e.origin !== 'invoice');
+  return thJobMoneyStage(Object.assign({}, job, { status: 'done' }), thRead(TH_KEYS.invoices, []), income).stage === 'to-invoice';
+}
+function thReviewRequestHref(job, opts) {
+  const params = new URLSearchParams();
+  if (job.client) params.set('name', String(job.client).split(' ')[0]);
+  if (job.title) params.set('job', job.title);
+  if (job.phone) params.set('phone', job.phone);
+  if (opts && opts.unbilled) params.set('invoiceJob', String(job.id));
+  return '/tools/review-request.html?' + params.toString();
+}
+// Returns true when it is leaving for the review request.
+function thOpenReviewOnDone(job) {
+  if (!job || !thCanSendReviews()) return false;
+  window.location.href = thReviewRequestHref(job, { unbilled: thJobUnbilledForMe(job) });
+  return true;
 }
 
 // ---------- Payment reminders (2026-09-23, Workspace rework part 10) ----------

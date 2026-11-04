@@ -38,18 +38,19 @@ test('showSuccess renders a checkmark badge, not just coloured text', () => {
 
 test('the amount is still the visually dominant element, just larger', () => {
   const fn = extractFn(POS, 'showSuccess');
-  assert.match(fn, /class="pos-success-amount">\$' \+ amount\.toFixed\(2\) \+ '<\/div>/);
+  assert.match(fn, /class="pos-success-amount">\$' \+ amount\.toFixed\(2\) \+ ' paid<\/div>/);
   const rule = POS.match(/\.pos-success-amount \{[^}]*\}/)[0];
   assert.match(rule, /font-size: 30px/);
 });
 
-test('the underlying charge flow is untouched -- same amount, same "logged to Income" fact, same reset wiring', () => {
-  assert.match(POS, /function showSuccess\(amount\) \{/);
-  assert.match(POS, /Charged and logged to Income/);
-  assert.match(POS, /onclick="resetPosForm\(\)"/);
+test('the underlying charge flow is untouched -- same amount, the "logged" fact (now "Logged in Money as income", 2026-11-04), same reset wiring via Done', () => {
+  assert.match(POS, /function showSuccess\(amount, paymentIntentId\) \{/);
+  assert.match(POS, /Logged in Money as income\. Receipt emailed\./);
+  assert.match(POS, /onclick="finishCharge\(\)">Done</);
+  assert.match(extractFn(POS, 'finishCharge'), /resetPosForm\(\);\s*closeChargeCard\(\);/);
   // showSuccess is still called with the real charged amount, from the
   // real Stripe confirmation branch -- not a new, separate code path.
-  assert.match(POS, /paymentIntent\.status === 'succeeded'\) \{\s*showSuccess\(parseFloat\(document\.getElementById\('posAmount'\)\.value\)\);/);
+  assert.match(POS, /paymentIntent\.status === 'succeeded'\) \{\s*showSuccess\(parseFloat\(document\.getElementById\('posAmount'\)\.value\), paymentIntent\.id\);/);
 });
 
 test('the success card visually distinguishes itself from the plain .pos-error text above it', () => {

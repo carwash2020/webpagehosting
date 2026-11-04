@@ -59,27 +59,36 @@
     { title: 'Client portal admin', meta: 'Clients \u203a Portal: accounts, invites, referral credit, work orders', href: '/tools/clients.html#portal', keywords: 'portal invite referral work order', perm: 'canManageInvoices' },
     { title: 'Create invoice', meta: 'Invoices \u203a New invoice tab', href: '/tools/invoice-generator.html#invoice', keywords: 'bill send pdf', perm: 'canManageInvoices' },
     { title: 'New quote / estimate', meta: 'Invoices \u203a New quote tab', href: '/tools/invoice-generator.html#quote', keywords: 'price bid proposal cost lookup calculator tax', perm: 'canManageInvoices' },
-    { title: 'Quick charge', meta: 'Invoices \u203a charge a card on the spot, no invoice', href: '/tools/invoice-generator.html#pos', keywords: 'pos pay payment card stripe', perm: 'canManageInvoices' },
+    { title: 'Charge a card', meta: 'Invoices \u203a take a card on the spot, no invoice', href: '/tools/invoice-generator.html#charge', keywords: 'quick charge pos pay payment card stripe', perm: 'canManageInvoices' },
     { title: 'Invoices', meta: 'Who owes you, what is overdue, every invoice and quote', href: '/tools/invoice-generator.html#recent', keywords: 'log history paid unpaid overdue owed recent quotes', perm: 'canManageInvoices' },
-    { title: 'Log expense', meta: 'Finance \u203a Expenses tab', href: '/tools/finance.html#expenses', keywords: 'receipt cost part mileage fuel', perm: 'canViewFinance' },
-    { title: 'Log income', meta: 'Finance \u203a Income tab', href: '/tools/finance.html#income', keywords: 'payment paid revenue', perm: 'canViewFinance' },
-    { title: 'Profitability', meta: 'Finance \u203a what each job made', href: '/tools/finance.html#profitability', keywords: 'profit margin', perm: 'canViewFinance' },
+    { title: 'Log expense', meta: 'Money \u203a Expenses', href: '/tools/finance.html#expenses', keywords: 'receipt cost part mileage fuel', perm: 'canViewFinance' },
+    { title: 'Log income', meta: 'Money \u203a Income', href: '/tools/finance.html#income', keywords: 'payment paid revenue', perm: 'canViewFinance' },
+    { title: 'Money', meta: 'Runway overview, money in and out, profitability', href: '/tools/finance.html', keywords: 'finance ledger income expenses spent owed', perm: 'canViewFinance' },
+    { title: 'Profitability', meta: 'Money \u203a what each job made', href: '/tools/finance.html#profitability', keywords: 'profit margin', perm: 'canViewFinance' },
     // Cost lookup and Inventory left with their Finance tabs (redundancy
     // pass, 2026-10-31): pricing a job is New quote's job, and nothing read
-    // the inventory list. Plan a route shows once you type (typedOnly):
-    // Route Planner is a More / Search destination now, not a top item.
-    { title: 'Plan a route', meta: 'Route Planner', href: '/tools/route-planner.html', keywords: 'directions maps drive stops mileage', typedOnly: true },
+    // the inventory list. Route Planner is an add-on since 2026-11-04: its
+    // one way in is My Day's "Plan today's route", so it is not here.
     { title: 'New contract', meta: 'Contract Generator', href: '/tools/contract-generator.html', keywords: 'work order agreement sign', perm: 'canManageContracts' },
     { title: 'Send review request', meta: 'Review Request Sender', href: '/tools/review-request.html', keywords: 'google yelp text qr', perm: 'canManageReviews' },
-    { title: 'Look up a part', meta: 'Appliance Wiki', href: '/tools/parts-reference.html', keywords: 'manual model brand appliance wiki' },
+    // Appliance Wiki is an add-on (2026-11-04): listed only while it is on
+    // (the owner's call; it is never in the nav). Route Planner is never
+    // here: its one way in is My Day's Plan today's route.
+    { title: 'Look up a part', meta: 'Appliance Wiki', href: '/tools/parts-reference.html', keywords: 'manual model brand appliance wiki', addon: 'applianceWiki' },
     { title: 'Runway Dashboard', meta: 'Personal budget and business runway', href: '/tools/runway-dashboard.html#runway', keywords: 'budget net worth draw', perm: 'canViewRunway' },
     { title: 'Dashboard', meta: 'Home \u203a today, money owed, needs attention', href: '/tools/workspace.html', keywords: 'home today inbox' },
+    // Out of the nav since 2026-11-04 (nine items), so Search keeps them reachable.
+    { title: 'Analytics', meta: 'Dashboard \u203a Insights', href: '/tools/workspace.html#insights', keywords: 'insights snapshot report funnel stats' },
+    { title: 'Team', meta: 'Dev Tools \u203a account permissions', href: '/tools/dev-tools.html#team', keywords: 'accounts people staff permissions access roles', perm: 'hasDevToolsAccess' },
+    { title: 'Dev Tools', meta: 'Health log, backups, accounts, system', href: '/tools/dev-tools.html', keywords: 'developer diagnostics health log backup admin', perm: 'hasDevToolsAccess' },
+    { title: 'Website', meta: 'Edit the public site: hours, banners, FAQ, terms', href: '/tools/site-content.html', keywords: 'site content cms hours banner faq terms', perm: 'canManageSiteContent' },
     { title: 'Settings', meta: 'Account, theme, notifications, backup', href: '/tools/settings.html', keywords: 'backup restore theme password notifications' },
     { title: 'Replay the tour', meta: 'Two-minute walkthrough of every page', href: '/tools/workspace.html?tour=1', keywords: 'help tutorial guide how to' }
   ];
   function actionItems(term) {
     return ACTIONS.filter(function (a) {
       if (a.perm && !allowed(a.perm)) return false;
+      if (a.addon && !(typeof window.thAddonOn === 'function' && window.thAddonOn(a.addon))) return false;
       if (!term) return !a.typedOnly;
       return (a.title + ' ' + a.meta + ' ' + (a.keywords || '')).toLowerCase().indexOf(term) > -1;
     }).map(function (a) { return { title: a.title, meta: a.meta, href: a.href }; });

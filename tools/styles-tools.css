@@ -898,6 +898,24 @@ td { padding: 10px 8px; font-size: 14px; color: var(--white); border-bottom: 1px
    item shrink below its content's natural size; without it, flexbox
    defaults to min-width:auto, which is the real cause of the overflow. */
 .form-field input[type="date"] { min-width: 0; max-width: 100%; }
+/* iOS Safari date fields overflowing their card (2026-11-04, Connor's
+   report: New quote > Estimate Details, #quoteDate sticks out past the
+   card's right edge at phone width while Estimate Number fits; the
+   invoice tab's #invoiceDate is the same pattern). The rule above only
+   lets the input shrink. The overflow was padding-plus-border wide: with
+   its native appearance, iOS Safari draws a date input at its own width
+   and ignores box-sizing: border-box, so width:100% + padding + border
+   spills over. appearance:none makes Safari size it like every other
+   field (the native date picker still opens on tap); the value is kept
+   left-aligned, since iOS centres it without the native appearance. */
+.form-field input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+.form-field input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 /* :focus-visible above already gives keyboard users a blue outline: this
    is deliberately separate -- :focus-visible's own browser heuristics
    often don't fire for a plain tap/click, which on a touch-primary tool
@@ -4546,27 +4564,13 @@ html body.th-tool-page:is([data-th-page="invoice-generator"], [data-th-page="fin
 ) { text-transform: none; letter-spacing: .2px; }
 html body.th-tool-page[data-th-page="invoice-generator"] .mn-new-btn { font-family: var(--font-app); font-size: 14px; font-weight: 400; }
 
-/* Log expense / Log income are one pair (the Home pair's rule, PR #543
-   round 3 item 4): the same 48px box, a 1px border on both, no lip, the
-   same type (weight 400, the flat primary from PR #544; review round 2).
-   Orange fill vs outline still says primary vs secondary. */
-html body.th-tool-page[data-th-page="finance"] .fin-spent-actions > :is(.primary-btn, .secondary-btn) {
-  height: 48px; min-height: 48px; padding: 0 12px; box-sizing: border-box; border: 1px solid transparent; box-shadow: none; transform: none;
-  font-family: var(--font-app); font-size: 14px; font-weight: 400; line-height: 1.2; letter-spacing: .2px;
-}
-html body.th-tool-page[data-th-page="finance"] .fin-spent-actions > .secondary-btn { border-color: var(--border); }
-html body.th-tool-page[data-th-page="finance"] .fin-spent-actions > :is(.primary-btn, .secondary-btn):active { transform: scale(.97); }
 
 /* Empty states: say so once, without dead controls. */
-/* Spent this month with nothing logged: no "$0" over an empty bar, no
-   "0 entries"; the card's own "Nothing logged in <month> yet." line and
-   the two Log buttons. */
-html body.th-tool-page[data-th-page="finance"] .fin-spent:has(.fin-spent-empty) :is(.fin-spent-total, .fin-spent-bar, .fin-spent-month) { display: none; }
 /* No invoices at all: the search, the filter chips, Compact view and the
    header's + New invoice have nothing to act on (the empty state carries
    its own New invoice button). A filter or search with no matches keeps
    them, so it can be cleared. */
-html body.th-tool-page[data-th-page="invoice-generator"] .form-section:has(> #invoiceLogList > .inv-empty) :is(.inv-log-tools, [data-density-toggle], .inv-log-head > .mn-new-btn) { display: none; }
+html body.th-tool-page[data-th-page="invoice-generator"] .form-section:has(> #invoiceLogList > .inv-empty) :is(.inv-log-tools, [data-density-toggle], .inv-log-head > .mn-new-btn:not(#invChargeBtn)) { display: none; }
 /* No quotes at all (the inbox empty state, not a search miss): no search box. */
 html body.th-tool-page[data-th-page="invoice-generator"] .mn-quotes:has(> #quoteLogList > .empty-state-small use[href="#icon-inbox"]) .inv-log-tools { display: none; }
 

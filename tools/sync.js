@@ -141,6 +141,9 @@ const SYNC_DATA_KEYS = [
   'th_note_tombstones',
   'th_tracker_notes_v2',
   'th_mileage_rate',
+  // Add-ons on/off (2026-11-04): one small object, a plain overwrite like
+  // the settings keys. Shared by every device on the account.
+  'th_addons',
   'th_price_ref_tombstones',
   'th_price_reference',
   // Parts inventory (closes a real audit gap: Appliance Wiki only ever
