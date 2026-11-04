@@ -35,7 +35,10 @@
 //                as every other place a new card gets saved
 //                (create-payment-intent, create-bulk-payment-intent,
 //                create-pos-charge) -- see recordCardAuthorization()
-//                below.
+//                below. Gated (2026-11-03, ACTION-ITEMS #15) on the
+//                account having at least one real business record --
+//                see accountHasBusinessRecord() below for the rule
+//                and why it's checked this way.
 //
 // Uses its own dedicated Stripe secret (STRIPE_CLIENT_CARDS_SECRET_KEY),
 // matching the "one key one function" practice already established
@@ -154,6 +157,62 @@ async function getOrCreateStripeCustomer(email: string): Promise<string> {
   return customer.id;
 }
 
+// Gate on who may save a card at all (docs/ACTION-ITEMS.md #15, decided
+// 2026-11-03). Public signup is already off (#11), so the only
+// remaining abuse case is an invited account with no real relationship
+// to the business using create_setup_intent to test stolen cards
+// through Stripe. The product decision: a "real client" for
+// saved-card purposes is an account with at least one of an invoice,
+// quote, job, contract, checkup, OR a work order it submitted itself.
+//
+// Checked directly against the relational tables with the service-role
+// key -- never against anything client-supplied -- because this
+// function runs server-side and a client-asserted "I have a job" is
+// worthless as a gate. Five of the six tables (invoices, quotes, jobs,
+// contracts, checkups) are one-way mirrors that only staff tooling or
+// other edge functions ever write (see docs/CLIENT-PORTAL.md); a row
+// existing there means Steve/Connor created a real record for this
+// client, which is exactly the signal wanted.
+//
+// client_portal_work_orders is different, and that difference is what
+// makes "a work order THEY SUBMITTED THEMSELVES" checkable at all: its
+// RLS (sql/portal/create_client_portal_work_orders.sql) has an INSERT
+// policy only for the authenticated client, requiring
+// `client_email = auth.email()`, and there is no internal/staff INSERT
+// policy on this table at all -- staff tooling (tools/workspace.html,
+// tools/clients.html) only ever READS it (via the
+// internal_read_client_portal_work_orders RPC) or UPDATEs an existing
+// row's status (via internal_update_client_portal_work_order()), never
+// inserts one. Confirmed by grep across edge-functions/ and sql/: no
+// service-role or staff-attributed INSERT into this table exists
+// anywhere in this repo. So every row that exists in
+// client_portal_work_orders was, by construction, submitted by the
+// client it belongs to -- its mere existence already proves "submitted
+// by self," with no separate submitted_by/created_by column needed.
+// If a staff-initiated work-order creation path is ever added, this
+// comment and the gate below need to be revisited.
+const BUSINESS_RECORD_TABLES = [
+  "client_portal_invoices",
+  "client_portal_quotes",
+  "client_portal_jobs",
+  "client_portal_contracts",
+  "client_portal_checkups",
+  "client_portal_work_orders",
+] as const;
+
+async function accountHasBusinessRecord(email: string): Promise<boolean> {
+  const checks = await Promise.all(BUSINESS_RECORD_TABLES.map(async (table) => {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/${table}?client_email=eq.${encodeURIComponent(email)}&select=id&limit=1`,
+      { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+    );
+    if (!res.ok) return false;
+    const rows = await res.json();
+    return Array.isArray(rows) && rows.length > 0;
+  }));
+  return checks.some(Boolean);
+}
+
 // Same dispute-protection reasoning as every other place a new card
 // gets saved (create-payment-intent, create-bulk-payment-intent,
 // create-pos-charge) -- see any of those for the full background.
@@ -262,6 +321,15 @@ Deno.serve(async (req: Request) => {
     }
 
     if (mode === "create_setup_intent") {
+      // Who-can-save-a-card gate (ACTION-ITEMS #15) -- checked first,
+      // before asking anyone to sign anything, so a gated account gets
+      // a clear explanation instead of a pointless signature prompt.
+      if (!(await accountHasBusinessRecord(claims.email.toLowerCase()))) {
+        return json({
+          ok: false,
+          error: "Saving a card isn't available on this account yet -- it needs at least one invoice, quote, job, contract, checkup, or work order first.",
+        }, 403);
+      }
       // Same dispute-protection requirement as every other place a
       // new card gets saved -- see recordCardAuthorization()'s own
       // comment for the reasoning. No amount here (a SetupIntent

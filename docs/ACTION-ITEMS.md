@@ -208,23 +208,57 @@ click a setting by hand.
     follow-up. The hours are an attendance record, not pay: the business
     still pays per job.
 
-15. **Decide who can save a card from portal Settings** (2026-09-23
-    audit, finding #6, MEDIUM). `manage-saved-card`'s
-    `create_setup_intent` mode accepts any signed-in account. While
-    public signup was on (#11), a stranger could sign up and use it to
-    create Stripe Customers and SetupIntents, a common way to test
-    stolen cards.
+15. ~~**Decide who can save a card from portal Settings**~~ **Done
+    (2026-11-03), deployed.** (2026-09-23 audit, finding #6, MEDIUM).
+    `manage-saved-card`'s `create_setup_intent` mode accepted any
+    signed-in account. While public signup was on (#11), a stranger
+    could sign up and use it to create Stripe Customers and
+    SetupIntents, a common way to test stolen cards.
     - **Stranger case closed (2026-09-25):** signup is off (#11), so only
-      invited clients and staff can sign in. What's left is an invited
+      invited clients and staff can sign in. What's left was an invited
       account misusing it.
-    - **The code fix needs a product call:** who counts as a real client?
-      "Has an invoice, quote, job, contract or checkup" would block a
-      client whose only item is a work order they submitted themselves.
-      `client_account_codes` can't be the marker, because it's empty for
-      every current client account.
-    - **Next step:** once you decide, ask a new chat to gate
-      `edge-functions/manage-saved-card-index.ts` on that rule, and
-      deploy it.
+    - **Connor's decision (2026-11-03):** a "real client" for
+      saved-card purposes is an account with at least one invoice,
+      quote, job, contract, checkup, OR a work order it submitted
+      itself. Work orders count.
+    - **Implemented:** `edge-functions/manage-saved-card-index.ts`'s
+      `create_setup_intent` mode now calls `accountHasBusinessRecord()`
+      before anything else (before even asking for a signature), which
+      checks `client_portal_invoices`, `client_portal_quotes`,
+      `client_portal_jobs`, `client_portal_contracts`,
+      `client_portal_checkups` and `client_portal_work_orders` directly
+      with the service-role key for a row with `client_email` equal to
+      the caller's own verified session email. No row in any of the
+      six -> a clear 403 ("Saving a card isn't available on this
+      account yet..."), never a silent no-op.
+    - **"Submitted themselves," resolved without guessing:**
+      `client_portal_work_orders` has no internal/staff INSERT policy
+      at all (`sql/portal/create_client_portal_work_orders.sql`) --
+      its only INSERT policy is the client's own, requiring
+      `client_email = auth.email()`. Staff tooling only ever reads it
+      (via `internal_read_client_portal_work_orders`) or updates an
+      existing row's status (via
+      `internal_update_client_portal_work_order()`); grepping
+      `edge-functions/` and `sql/` found no service-role or
+      staff-attributed insert into this table anywhere in the repo. So
+      a row's mere existence already proves it was submitted by that
+      client themselves -- no separate `submitted_by` column exists or
+      is needed. If a staff-initiated work-order creation path is ever
+      added, this gate needs to be revisited.
+    - **Tests:** `tests/edge-functions/saved-card-business-record-gate.test.js`
+      (an account with none of the 6 refused with a clear error; each
+      of the 6 individually lets it through; the work-order case
+      specifically; the gate runs before the signature check).
+    - **Deployed (2026-11-04)** as `manage-saved-card` v16 on the live
+      project (`csvfqdjuobylgafgolho`), after CI went fully green on
+      [PR #576](https://github.com/carwash2020/webpagehosting/pull/576)
+      (test x2, CodeQL, Snyk, Repowise review, fix-versions, all
+      passed). Verified by reading the deployed source back with
+      `mcp__Supabase__get_edge_function` and comparing it byte-for-byte
+      against the PR branch's `edge-functions/manage-saved-card-index.ts`
+      -- identical sha256 (`f23ac3be...957c56b`) on both sides, so the
+      live function and the PR are not diverged. PR left open for
+      Connor, not merged.
 16. ~~**Webhook doesn't compare the amount paid to the invoice total**
     (2026-09-23 audit, finding #7, LOW).~~ **Done (2026-09-25), deployed.**
     `stripe-webhook` now compares `amount_received` to what the

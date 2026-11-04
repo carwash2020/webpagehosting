@@ -1554,6 +1554,24 @@ Connor's review of #563: item B said "additive migrations only", but `let_truste
 
 **Not done:** applying anything live; deploying anything. **Open:** until the migration is applied, the switch copy ("Skip the code here for 30 days") promises more than the server can do. It is harmless (the code is asked for next time) but slightly misleading.
 
+## 2026-11-04 -- Gated who can save a card (ACTION-ITEMS #15), deployed
+
+Connor's decision on the pending product call from the 2026-09-23 audit (finding #6, MEDIUM): a "real client" for saved-card purposes is an account with at least one invoice, quote, job, contract, checkup, OR a work order it submitted itself. Public signup was already off (#11), closing the stranger-signs-up case; what was left was an invited account with no real relationship to the business misusing `manage-saved-card`'s `create_setup_intent` to create Stripe Customers/SetupIntents, a common way to test stolen cards.
+
+**Why this mattered enough to act on now, at this scale:** an invited account is still a credential Steve/Connor handed out, and Stripe card-testing abuse generates real downside (Stripe risk flags, disputes, potential account review) even at a handful of fraudulent attempts -- this isn't a theoretical attack requiring physical access, it's a thing any invited email address could already do with normal portal access. Worth the fix now rather than deferring further, same as the original audit finding said.
+
+**Implementation:** `edge-functions/manage-saved-card-index.ts` gained `accountHasBusinessRecord(email)`, called first inside the `create_setup_intent` branch (before the signature requirement), checking `client_portal_invoices`/`quotes`/`jobs`/`contracts`/`checkups`/`work_orders` directly with the service-role key for a `client_email` match. No match -> a clear 403, never a silent no-op.
+
+**"Submitted themselves," resolved from the schema, not guessed:** `client_portal_work_orders` has no internal/staff INSERT policy at all (`sql/portal/create_client_portal_work_orders.sql`) -- its only INSERT policy is the client's own authenticated one (`client_email = auth.email()`). Grepped `edge-functions/` and `sql/` for any service-role or staff-attributed insert into this table: there is none anywhere in the repo. Staff tooling only reads it (`internal_read_client_portal_work_orders`) or updates status (`internal_update_client_portal_work_order()`). So a row's mere existence already proves it was submitted by that client -- no separate `submitted_by` column exists or is needed. Flagged in the code comment: if a staff-initiated work-order creation path is ever added, this reasoning (and the gate) needs revisiting.
+
+**Invite-vs-signup distinction kept separate on purpose:** this gate is about whether the account has a real business record, not about how the account was created. An invite-provisioned account with genuinely nothing yet is correctly gated the same as anyone else -- that's the intended behavior, not a side effect to work around. "How accounts get created" (public signup disabled) was already a separately-solved problem (#11) and nothing here reopens or depends on that distinction.
+
+**Tests:** new `tests/edge-functions/saved-card-business-record-gate.test.js` runs the real edge-function handler (Node type-stripping + fake Deno/fetch) covering: no record -> refused with a clear error and no SetupIntent created; each of the 6 record types individually lets it through; the work-order case specifically, with the reasoning documented in the test; gate runs before the signature check. Updated `tests/payments/stripe-idempotency-keys.test.js`'s existing `create_setup_intent` test to give its test account a qualifying record.
+
+**Verified:** full suite (`cd tests && node --test --test-concurrency=1`) 4931/4931 pass. `check-consistency`, `check-undefined-vars`, `eslint .`, `check-links` all pass clean. CI green on [PR #576](https://github.com/carwash2020/webpagehosting/pull/576) (test x2, CodeQL, Snyk, Repowise review, fix-versions).
+
+**Deployed (2026-11-04)** as `manage-saved-card` v16 on the live project (`csvfqdjuobylgafgolho`), after CI went green. Verified by reading the deployed source back with `mcp__Supabase__get_edge_function` and diffing it byte-for-byte against the PR branch file -- identical sha256 (`f23ac3be...957c56b`), so production and the PR are not diverged. PR left open, not merged, per Connor's own call on this one.
+
 <!-- Add new entries above this line -->
 
 ## 2026-10-04 -- Two-factor setup could lock an account out
