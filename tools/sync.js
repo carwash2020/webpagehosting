@@ -869,15 +869,24 @@ function applySyncData(obj, keysToApply) {
       if (k === 'th_invoices' && typeof invalidateRelationalInvoicesCache === 'function') {
         invalidateRelationalInvoicesCache();
       }
-      // New converged state for this key becomes the base the NEXT merge
-      // three-way-diffs against -- skipped for th_sync_conflicts itself
+      // What the SERVER now holds for this key becomes the base the NEXT
+      // merge three-way-diffs against (bug fix, 2026-11-05). This used to
+      // save the merged result instead, which is only true of the server
+      // once a push follows. When this device held an edit the server
+      // lacked (a push cut off, or one that failed), the merged copy became
+      // the base, the server's older copy then looked like the newer change,
+      // and the next merge -- the very next push's own pre-push read --
+      // reverted the edit: the Nov 3 test note went up as "Untitled Note".
+      // After a successful push, saveSyncBaseFromPushed() moves the base to
+      // what was pushed, as before.
+      // Skipped for th_sync_conflicts itself
       // (folded in separately below, and diffing a conflict LOG against
       // a base has no meaning) and for the specialty merges above, which
       // don't consume a base in the first place.
       // Same four keys as SYNC_BASE_SKIPPED_KEYS (kept inline so this
       // function stands alone; a test keeps the two lists equal).
       if (!['th_sync_conflicts', 'th_parts_reference_units', 'th_client_errors', 'th_graveyard'].includes(k)) {
-        saveSyncBaseForKey(k, finalArr);
+        saveSyncBaseForKey(k, remoteArr);
       }
     } catch (e) {
       // remoteArr/localArr are both guaranteed valid arrays by this
@@ -953,7 +962,26 @@ async function fetchWithRetry(url, options, maxRetries = 2, delayMs = 1500) {
   throw lastError;
 }
 
-async function pushSync() {
+// One push at a time (bug fix, 2026-11-05). A Job Tracker note made at
+// 9:05pm and renamed seconds later reached the server as "Untitled Note":
+// the rename's push started while the first was still waiting on a slow
+// phone connection, the rename landed first, then the older push landed on
+// top of it and saved its own (older) copy as this device's merge base, so
+// nothing here looked unsent either. Now a push asked for while one is in
+// flight runs once more after it, collecting the data at that point, and an
+// older payload can never land last.
+let _pushInFlight = null;
+let _pushQueued = null;
+function pushSync() {
+  if (_pushInFlight) {
+    if (!_pushQueued) _pushQueued = _pushInFlight.then(() => { _pushQueued = null; return pushSync(); });
+    return _pushQueued;
+  }
+  _pushInFlight = pushSyncOnce().finally(() => { _pushInFlight = null; });
+  return _pushInFlight;
+}
+
+async function pushSyncOnce() {
   if (!isSyncConfigured()) return { ok: false, error: 'not-configured' };
   const code = getSyncCode();
   if (!code) return { ok: false, error: 'no-code' };
@@ -973,6 +1001,7 @@ async function pushSync() {
   }
 
   const nowIso = new Date().toISOString();
+  const collectedAt = Date.now();
   const all = collectSyncData();
   const scoped = !!(visible && visible.ok && visible.scoped);
   let body;
@@ -1013,6 +1042,7 @@ async function pushSync() {
     if (!res.ok) { recordSyncStatus('push', false, 'http-' + res.status); return { ok: false, error: 'http-' + res.status }; }
     saveSyncBaseFromPushed(all, pushedKeys);
     localStorage.setItem(SYNC_KNOWN_AT_KEY, nowIso);
+    clearUnpushedMarkIfCovered(collectedAt);
     recordSyncStatus('push', true);
     return { ok: true };
   } catch (e) {
@@ -1526,8 +1556,41 @@ function setSyncPending(pending) {
 }
 function hasPendingLocalChanges() { return _hasPendingLocalChanges; }
 
+// Unsent edits survive a reload (bug fix, 2026-11-05). The pending flag
+// above lives in memory, and a page load only pulls, so an edit whose push
+// never landed (the page closed mid-push, the phone slept, a failed push)
+// stayed on this device for good unless something else was edited later.
+// This device-only mark (never synced: not in SYNC_DATA_KEYS) holds the
+// time of the last edit; a push clears it only if it collected its data
+// after that edit. Load and coming back to the page push anything marked.
+const SYNC_UNPUSHED_KEY = 'th_sync_unpushed_at';
+function markUnpushedLocalChanges() {
+  try { localStorage.setItem(SYNC_UNPUSHED_KEY, String(Date.now())); } catch (e) { /* storage full: the in-memory flag still covers this visit */ }
+}
+function hasUnpushedLocalChanges() {
+  try { return !!localStorage.getItem(SYNC_UNPUSHED_KEY); } catch (e) { return false; }
+}
+function clearUnpushedMarkIfCovered(collectedAt) {
+  try {
+    const at = Number(localStorage.getItem(SYNC_UNPUSHED_KEY));
+    if (!at || at <= collectedAt) localStorage.removeItem(SYNC_UNPUSHED_KEY);
+  } catch (e) { /* best-effort bookkeeping */ }
+}
+// One catch-up push per device, for edits stranded before the mark above
+// existed (the Nov 3 test note): a push merges first, so it only sends what
+// this device has that the server lacks.
+const SYNC_CATCHUP_KEY = 'th_sync_catchup_2026_11_05';
+function pushUnsentOnLoad() {
+  let catchUp = false;
+  try { catchUp = !localStorage.getItem(SYNC_CATCHUP_KEY); } catch (e) { catchUp = false; }
+  if (!catchUp && !hasUnpushedLocalChanges()) return;
+  try { localStorage.setItem(SYNC_CATCHUP_KEY, new Date().toISOString()); } catch (e) { /* try again next load */ }
+  scheduleSync();
+}
+
 function scheduleSync() {
   if (!isSyncConfigured() || !getSyncCode()) return;
+  markUnpushedLocalChanges();
   setSyncPending(true);
   clearTimeout(_syncTimer);
   _syncTimer = setTimeout(() => {
@@ -1538,7 +1601,7 @@ function scheduleSync() {
       // existing warnIfSyncFailed() toast already covers alerting on
       // the failure itself; this indicator is a separate, quieter signal
       // for "is there anything not yet backed up right now."
-      if (result && result.ok) setSyncPending(false);
+      if (result && result.ok) setSyncPending(hasUnpushedLocalChanges());
       warnIfSyncFailed(result);
     });
   }, 2500);
@@ -1582,7 +1645,7 @@ function flushSyncNow() {
     clearTimeout(_syncTimer);
     _syncTimer = null;
     pushSync().then((result) => {
-      if (result && result.ok) setSyncPending(false);
+      if (result && result.ok) setSyncPending(hasUnpushedLocalChanges());
       warnIfSyncFailed(result);
     });
   }
@@ -1598,6 +1661,8 @@ function flushSyncNow() {
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') flushSyncNow();
+    // Back on the page: send anything a cut-off push left behind.
+    else if (document.visibilityState === 'visible' && !_syncTimer && !_pushInFlight && hasUnpushedLocalChanges()) scheduleSync();
   });
 }
 if (typeof window !== 'undefined') {
@@ -2163,6 +2228,7 @@ async function initSyncOnLoad() {
   if (typeof loadCurrentUserRole === 'function') { await loadCurrentUserRole(); }
   if (!isSyncConfigured() || !getSyncCode()) return;
   await pullSync();
+  pushUnsentOnLoad();
 }
 
 // Appliance Wiki's own load-time pull (2026-08-27) -- separate from

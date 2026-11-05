@@ -1619,3 +1619,37 @@ This is the exact same failure shape documented in the entry above (resendInvoic
 **Known side effect, not a regression to fix separately:** a brand-new client's referral account code used to be generated automatically the moment `send-invite` fired on their first invoice (see `tests/referrals/account-codes.test.js`). Since invoices no longer auto-invite, that code isn't created until Steve explicitly sends a portal invite. Flagged in the PR for Connor's awareness.
 
 Tests: `tests/edge-functions/quote-pdf-email-not-invite.test.js` and `tests/edge-functions/invoice-pdf-email-not-invite.test.js` (17 tests total, real vm-executed handlers) -- a brand-new client never triggers `send-invite`; the PDF attaches and the copy says "attached" when given one; the PDF-less fallback copy still works for the resend path (which doesn't regenerate the PDF); the online-review/pay CTA only appears when `has_portal_account` is true; a failed Resend send is still reported as a failure. Full relevant suite passing, plus `check-consistency.js` (CACHE_NAME bumped -- both `invoice-generator.html` and the edge functions are precached/deployed), `check-undefined-vars.js`, `check-links.py` clean.
+
+## 2026-11-05 -- sync: a renamed note never reached the server (Phase 5 close-out sync check)
+
+- **Report:** a Job Tracker note made Nov 3 at 9:05pm and renamed seconds
+  later ("Testing sync" / "Test test") showed on the device but was in no
+  `workspace_sync` row. The server had it as "Untitled Note", pushed at
+  9:06:00 by the new scoped code (all four rows share that timestamp, so the
+  device was on the new sync.js).
+- **Causes (three, together):**
+  1. Two pushes could run at once. On a slow phone connection the creation's
+     push was still in flight when the rename's push started; the rename
+     landed first, then the older payload landed on top, and its success
+     saved the older copy as the merge base.
+  2. After every pull `applySyncData()` saved the *merged* result as the
+     base, which is only true of the server once a push follows. With an
+     edit the server lacked, the server's older copy then looked like the
+     newer change and won the next merge -- including the next push's own
+     pre-push read. Reproduced: two pulls in a row revert the edit.
+  3. Nothing re-sent an edit whose push was lost: the pending flag was
+     in-memory only and a page load only pulls.
+- **Fix (`tools/sync.js`):** `pushSync()` runs one push at a time (a push asked
+  for mid-flight runs once more afterwards, collecting data then); the base
+  after a pull is the server's copy (`remoteArr`); a device-only mark
+  (`th_sync_unpushed_at`) survives reloads and is cleared only by a push that
+  collected after the last edit; load and returning to the page push anything
+  marked; one catch-up push per device (`th_sync_catchup_2026_11_05`) sends
+  edits stranded before the mark existed.
+- **Test:** `tests/sync/push-one-at-a-time-and-unsent.test.js` (6) -- all fail
+  on the previous code. Pins in `sync-merge.test.js` and
+  `merge-base-and-note-tombstones.test.js` follow the moved code
+  (`pushSyncOnce`, `saveSyncBaseForKey(k, remoteArr)`).
+- **Gotcha:** a fake-server test seeded with no merge base will always lose a
+  local edit (no base = "remote wins" by design); seed the base a real synced
+  device would have.
