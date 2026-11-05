@@ -1123,9 +1123,13 @@ function thChannelLabel(rec, opts) {
   if (a.utmCampaign && !ignoreCampaign) return a.utmCampaign.slice(0, 60);
   if (s === 'google' && ['cpc', 'ppc', 'paid', 'paid_search'].includes(m)) return 'Google Ads';
   if (a.utmSource) return a.utmSource.slice(0, 60);
-  if (a.source === 'Google Search' || /(^|\.)google\.[a-z.]+$/.test(ref)) return 'Google search';
-  if (a.source === 'Social Media' || /(^|\.)(facebook|instagram|nextdoor|tiktok|twitter|x|linkedin|youtube|pinterest)\.com$/.test(ref) || ref === 't.co') return 'Social';
-  if (/(^|\.)(bing|duckduckgo|yahoo|ecosia)\.com$/.test(ref)) return 'Other search';
+  // Host checks by label, not regex (the host came from a visitor's browser).
+  const labels = ref ? ref.slice(0, 253).split('.') : [];
+  const gi = labels.indexOf('google');
+  const dotCom = (names) => labels.length >= 2 && labels[labels.length - 1] === 'com' && names.includes(labels[labels.length - 2]);
+  if (a.source === 'Google Search' || (gi > -1 && gi < labels.length - 1)) return 'Google search';
+  if (a.source === 'Social Media' || dotCom(['facebook', 'instagram', 'nextdoor', 'tiktok', 'twitter', 'x', 'linkedin', 'youtube', 'pinterest']) || ref === 't.co') return 'Social';
+  if (dotCom(['bing', 'duckduckgo', 'yahoo', 'ecosia'])) return 'Other search';
   if (a.source) return a.source.slice(0, 60);
   return 'Not known';
 }

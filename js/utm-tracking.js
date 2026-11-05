@@ -97,7 +97,7 @@
     var host = '';
     try { host = document.referrer ? new URL(document.referrer).hostname.toLowerCase() : ''; } catch (e) { host = ''; }
     if (!host || host === window.location.hostname.toLowerCase() || OWN_HOSTS.test(host)) return;
-    if (!/^[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?$/.test(host)) return;
+    if (host.length > 253 || !/^[a-z0-9.-]+$/.test(host) || host.charAt(0) === '.' || host.charAt(0) === '-') return;
     try {
       var prev = JSON.parse(localStorage.getItem(REFERRER_KEY) || 'null');
       if (prev && typeof prev.captured_at === 'number' && Date.now() - prev.captured_at <= MAX_AGE_MS) return;

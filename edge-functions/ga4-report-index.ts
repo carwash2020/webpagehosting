@@ -72,7 +72,7 @@ function channelFor(sourceRaw: string, mediumRaw: string, campaignRaw: string): 
   if (s === "(direct)") return "Direct";
   if (campaign && !campaign.startsWith("(")) return campaign.slice(0, 60);
   if (s === "google" && ["cpc", "ppc", "paid", "paid_search"].includes(m)) return "Google Ads";
-  if (m === "organic" && /(^|\.)google(\.|$)/.test(s)) return "Google search";
+  if (m === "organic" && s.split(".").includes("google")) return "Google search";
   if (SOCIAL.test(s) || m === "social" || m === "organic_social") return "Social";
   if (m === "organic") return "Other search";
   if (m === "referral") return "Other websites";
@@ -85,40 +85,51 @@ const met = (r: Row, i: number) => Number(r.metricValues && r.metricValues[i] ? 
 
 // "Book online | Triple H Enterprises" and "Triple H Enterprises | Book
 // online" both read "Book online".
+// Split on the separators without a regex: page titles come from Google, and
+// a whitespace-run pattern is slow on hostile input.
 function cleanTitle(t: string): string {
-  const parts = (t || "").split(/\s+[|–—-]\s+/).map((x) => x.trim()).filter((x) => x && !/^Triple H( Enterprises)?( LLC)?$/i.test(x));
-  return (parts[0] || (t || "").trim()).slice(0, 80);
+  const raw = String(t || "").slice(0, 300);
+  let parts = [raw];
+  for (const sep of [" | ", " \u2013 ", " \u2014 ", " - "]) parts = parts.flatMap((x) => x.split(sep));
+  const own = ["triple h", "triple h enterprises", "triple h enterprises llc", "triple h llc"];
+  const kept = parts.map((x) => x.trim()).filter((x) => x && !own.includes(x.toLowerCase()));
+  return (kept[0] || raw.trim()).slice(0, 80);
 }
 
 function buildReport(period: string, days: number, reports: Array<{ rows?: Row[] }>) {
   const [totals, sources, pages, events] = reports;
   const t = (totals && totals.rows && totals.rows[0]) || {};
-  const channels: Record<string, number> = {};
+  // Maps, not plain objects: every key here is a string Google sent back.
+  const channels = new Map<string, number>();
   for (const r of (sources && sources.rows) || []) {
     const name = channelFor(dim(r, 0), dim(r, 1), dim(r, 2));
-    channels[name] = (channels[name] || 0) + met(r, 0);
+    channels.set(name, (channels.get(name) || 0) + met(r, 0));
   }
-  const byPath: Record<string, { path: string; title: string; views: number }> = {};
+  const byPath = new Map<string, { path: string; title: string; views: number }>();
   for (const r of (pages && pages.rows) || []) {
-    const p = dim(r, 0) || "/";
-    if (!byPath[p]) byPath[p] = { path: p, title: cleanTitle(dim(r, 1)), views: 0 };
-    byPath[p].views += met(r, 0);
+    const p = (dim(r, 0) || "/").slice(0, 300);
+    const row = byPath.get(p) || { path: p, title: cleanTitle(dim(r, 1)), views: 0 };
+    row.views += met(r, 0);
+    byPath.set(p, row);
   }
-  const ev: Record<string, number> = {};
-  for (const r of (events && events.rows) || []) ev[dim(r, 0)] = met(r, 0);
+  const evCount = (name: string) => {
+    let n = 0;
+    for (const r of (events && events.rows) || []) if (dim(r, 0) === name) n += met(r, 0);
+    return n;
+  };
   return {
     period,
     days,
     sessions: met(t as Row, 0),
     users: met(t as Row, 1),
-    calls: ev.phone_click || 0,
-    texts: ev.text_click || 0,
-    emails: ev.email_click || 0,
-    booking_clicks: ev.book_cta_click || 0,
-    bookings: ev.booking_completed || 0,
-    lead_forms: ev.lead_form_submitted || 0,
-    channels: Object.entries(channels).map(([name, sessions]) => ({ name, sessions })).sort((a, b) => b.sessions - a.sessions),
-    pages: Object.values(byPath).sort((a, b) => b.views - a.views).slice(0, 10),
+    calls: evCount("phone_click"),
+    texts: evCount("text_click"),
+    emails: evCount("email_click"),
+    booking_clicks: evCount("book_cta_click"),
+    bookings: evCount("booking_completed"),
+    lead_forms: evCount("lead_form_submitted"),
+    channels: Array.from(channels, ([name, sessions]) => ({ name, sessions })).sort((a, b) => b.sessions - a.sessions),
+    pages: Array.from(byPath.values()).sort((a, b) => b.views - a.views).slice(0, 10),
   };
 }
 

@@ -237,3 +237,27 @@ test('ga4-conversion: the daily retry sends every pending row and leaves sent on
   assert.deepEqual(await res.json(), { ok: true, results: { sent: 2 } });
   assert.deepEqual(st.sent.map((s) => s.body.events[0].params.transaction_id), ['invoice-1', 'invoice-3']);
 });
+
+test('ga4-report: keys from Google can never reach an object prototype, and hostile titles stay fast', async () => {
+  const st = { asked: [], saved: [] };
+  const evil = [
+    { rows: [row([], [1, 1])] },
+    { rows: [row(['__proto__', 'referral', '(referral)'], [5]), row(['constructor', 'organic', '(organic)'], [3])] },
+    { rows: [row(['__proto__', 'x'.repeat(5000) + ' '.repeat(20000) + '!'], [7]), row(['/', 'Home | Triple H Enterprises'], [4])] },
+    { rows: [row(['__proto__'], [9]), row(['phone_click'], [2])] },
+  ];
+  const f = load('ga4-report', ENV, async (url, init) => {
+    if (url.startsWith('https://analyticsdata.googleapis.com/')) return j({ reports: evil });
+    return reportFetch(st)(url, init);
+  });
+  const t0 = Date.now();
+  await f.handler(post({}));
+  assert.ok(Date.now() - t0 < 2000, 'no slow pattern on a long hostile title');
+  const r = st.saved[0].report;
+  assert.equal(({}).polluted, undefined);
+  assert.equal(Object.getPrototypeOf({}), Object.prototype);
+  assert.equal(r.calls, 2);
+  assert.deepEqual(Array.from(r.pages, (p) => p.path), ['__proto__', '/'], 'a page literally named __proto__ is just a row');
+  assert.equal(r.pages[1].title, 'Home');
+  assert.ok(r.pages[0].title.length <= 80);
+});
