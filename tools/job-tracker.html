@@ -1490,7 +1490,7 @@
     const params = new URLSearchParams(location.search);
     const fromQuickAdd = params.get('qa') !== null;
     let changed = applyQuickAddFields(params);
-    if (jtApplyFromLead(params)) changed = true;
+    if (typeof jtApplyFromLead === 'function' && jtApplyFromLead(params)) changed = true;
     const record = (typeof thClientFromParams === 'function') ? thClientFromParams(params) : null;
     const name = record ? record.name : params.get('client');
     if (name) {

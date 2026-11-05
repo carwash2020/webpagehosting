@@ -2939,9 +2939,7 @@
         // separate from the manual "source" dropdown above. Never present
         // (getStoredUtmParams returns null) if the visitor never arrived
         // via a UTM-tagged link, or if that attribution has aged out.
-        // Phase 5: the first outside site that sent them, and the Google
-        // Analytics visit ID only if they accepted analytics cookies
-        // (utm-tracking.js getStoredAttributionExtras).
+        // + first referrer, GA visit ID only with consent (Phase 5)
       }, (typeof window.getStoredUtmParams === 'function' && window.getStoredUtmParams()) || {},
         (typeof window.getStoredAttributionExtras === 'function' && window.getStoredAttributionExtras()) || {})]),
     })
