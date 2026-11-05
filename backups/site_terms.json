@@ -23,9 +23,9 @@
     {
         "id": 4,
         "heading": "3. Payment Terms",
-        "body": "Payment is due upon completion of the work unless otherwise agreed in advance. Cash, check, Venmo, Cash App, and credit or debit cards (via a secure Stripe invoice) are accepted.",
+        "body": "Payment is due upon completion of the work unless otherwise agreed in advance. Cash, check, Venmo, Cash App, and credit or debit cards (in person, or online through the secure pay link on your invoice; card payments are processed by Stripe) are accepted.",
         "sort_order": 4,
-        "updated_at": "2026-08-13T22:56:22.50122+00:00"
+        "updated_at": "2026-11-04T18:00:28.358072+00:00"
     },
     {
         "id": 5,
