@@ -98,7 +98,7 @@ test('staff-side source labels match the database (same cases as insights_channe
   assert.equal(w.thCameFrom({}).known, false);
   assert.deepEqual(Array.from(w.TH_SOURCE_CHOICES), ['Google Search', 'Yelp / Online Reviews', 'Referral (friend or family)', 'Repeat Customer', 'Saw Our Vehicle or Sign', 'Social Media', 'Other'], 'the same choices as the public forms');
   const idx = fs.readFileSync(repo('index.html'), 'utf8');
-  for (const c of w.TH_SOURCE_CHOICES) assert.ok(idx.includes('<option>' + c.replace('&', '&') + '</option>'), c);
+  for (const c of w.TH_SOURCE_CHOICES) assert.ok(idx.includes('<option>' + c + '</option>'), c);
 });
 
 // ------------------------------------------------------------ Jobs form
