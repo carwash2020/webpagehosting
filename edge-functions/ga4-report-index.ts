@@ -90,7 +90,7 @@ const met = (r: Row, i: number) => Number(r.metricValues && r.metricValues[i] ? 
 function cleanTitle(t: string): string {
   const raw = String(t || "").slice(0, 300);
   let parts = [raw];
-  for (const sep of [" | ", " \u2013 ", " \u2014 ", " - "]) parts = parts.flatMap((x) => x.split(sep));
+  for (const sep of [" | ", " – ", " — ", " - "]) parts = parts.flatMap((x) => x.split(sep));
   const own = ["triple h", "triple h enterprises", "triple h enterprises llc", "triple h llc"];
   const kept = parts.map((x) => x.trim()).filter((x) => x && !own.includes(x.toLowerCase()));
   return (kept[0] || raw.trim()).slice(0, 80);
