@@ -199,7 +199,7 @@ test('fetchWithRetry re-throws the original exception once retries are exhausted
 
 test('pushSync and pullSync both use fetchWithRetry for their core fetch call, not a bare fetch', () => {
   const src = fs.readFileSync(SYNC_JS_PATH, 'utf8');
-  const pushFn = src.match(/async function pushSync\(\)[\s\S]*?\n}\n/)[0];
+  const pushFn = src.match(/async function pushSyncOnce\(\)[\s\S]*?\n}\n/)[0] /* the push itself; pushSync() runs one at a time (2026-11-05) */;
   const pullFn = src.match(/async function pullSync\(\)[\s\S]*?\n}\n/)[0];
   assert.match(pushFn, /await fetchWithRetry\(/);
   // The read moved into fetchVisibleSyncRows() (scoped sync, 2026-11-03),
@@ -219,7 +219,7 @@ test('pushSync and pullSync both use fetchWithRetry for their core fetch call, n
 // of any kind on the push side (only pullSync ever merged anything).
 test('pushSync fetches the current server row and merges it via applySyncData BEFORE building the payload it pushes, not just pullSync', () => {
   const src = fs.readFileSync(SYNC_JS_PATH, 'utf8');
-  const pushFn = src.match(/async function pushSync\(\)[\s\S]*?\n}\n/)[0];
+  const pushFn = src.match(/async function pushSyncOnce\(\)[\s\S]*?\n}\n/)[0] /* the push itself; pushSync() runs one at a time (2026-11-05) */;
   // Scoped sync (2026-11-03): the GET is fetchVisibleSyncRows() (every row
   // this account may see) and the merge is applyVisibleSyncRows(), which
   // runs applySyncData() on each; the order below is unchanged.
