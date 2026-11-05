@@ -53,10 +53,10 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=7c03870603">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=c98fed7b3e">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=1a061bc473">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=66c2196d60" defer></script>
-<script src="/tools/data-layer.js?v=34e05d4fce" defer></script>
+<script src="/tools/sync.js?v=6ea51d0d1e" defer></script>
+<script src="/tools/data-layer.js?v=a098577eb4" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
@@ -604,6 +604,15 @@
     return '<span class="badge badge-warranty is-expired" title="30-day labor warranty, based on this job\'s date">Warranty expired</span>';
   }
 
+  // Where the job came from (Phase 5): copied from its lead or booking,
+  // or picked by hand on the Jobs form. "Not known" says so plainly.
+  function jobSourceChipsHtml(j) {
+    if (typeof thCameFrom !== 'function') return '';
+    const cf = thCameFrom(j);
+    return '<div class="th-source-chips"><span>Came from: ' + escapeHtml(cf.known ? cf.label : 'not known') + '</span>' +
+      (cf.campaign ? '<span>' + escapeHtml(cf.campaign) + '</span>' : '') + '</div>';
+  }
+
   function renderJobDetail(bundle) {
     const j = bundle.job;
     document.title = j.title + ' | Triple H Enterprises (Internal Tool)';
@@ -680,6 +689,7 @@
         '<span class="badge badge-when">' + escapeHtml(whenPill) + '</span>' +
         warrantyBadgeHtml(j) +
       '</div>' +
+      jobSourceChipsHtml(j) +
       jobTrackHtml(bundle, allowed) +
       jobClockHtml(j) +
       quickHtml +

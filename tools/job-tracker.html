@@ -53,10 +53,10 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=7c03870603">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=c98fed7b3e">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=1a061bc473">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=66c2196d60" defer></script>
-<script src="/tools/data-layer.js?v=34e05d4fce" defer></script>
+<script src="/tools/sync.js?v=6ea51d0d1e" defer></script>
+<script src="/tools/data-layer.js?v=a098577eb4" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
@@ -944,6 +944,16 @@
         <p class="tool-sub" id="jobFirstTimeNudge" style="display:none; color:var(--orange); margin-top:4px;">First-time customer -- worth asking who referred them, if you haven't already.</p>
       </div>
     </div>
+    <!-- Came from (Phase 5, 2026-11-04): a job made from a lead or booking
+         keeps that source and shows it read-only (#jobCameFrom below). A job
+         added by hand picks one here; until then it reads "not known" on
+         Insights. -->
+    <div class="tool-form-row" id="jobSourceRow">
+      <div class="form-field">
+        <label for="jobSource">Came from</label>
+        <select id="jobSource"></select>
+      </div>
+    </div>
     <div class="tool-form-row">
       <div class="form-field"><label for="jobPriority">Priority</label>
         <select id="jobPriority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select>
@@ -985,6 +995,7 @@
     </div>
     </details>
     <div class="edit-mode-note" id="jobEditNote" style="display:none;"></div>
+    <p class="tool-sub jt-came-from" id="jobCameFrom" hidden></p>
     <button class="primary-btn" id="addJobBtn" onclick="addJob()">Add Job</button>
     <button class="secondary-btn" id="cancelJobEditBtn" style="display:none;" onclick="cancelJobEdit()">Cancel</button>
     </div>
@@ -1428,10 +1439,58 @@
   // ?clientId= (registry ID, what Clients sends now: two clients can share
   // a name) or the older ?client=<name>, which still works.
   let presetClientId = null;
+
+  // Make a job (Phase 5, approved design "A lead becomes a job and keeps
+  // its source"): ?fromLead=<id> fills the usual form from the lead the
+  // Dashboard handed over (sessionStorage, this tab only). Saving copies the
+  // lead's source onto the job and links the lead to it.
+  let jtFromLead = null;
+  function jtApplyFromLead(params) {
+    const id = params.get('fromLead');
+    if (!id) return false;
+    params.delete('fromLead');
+    let lead = null;
+    try { lead = JSON.parse(sessionStorage.getItem('th_job_from_lead') || 'null'); } catch (e) { lead = null; }
+    if (!lead || String(lead.id) !== String(id)) return true;
+    jtFromLead = lead;
+    const fill = (fid, v) => { const el = document.getElementById(fid); if (el && v && !el.value.trim()) el.value = v; };
+    fill('jobClient', lead.name);
+    fill('jobTitle', lead.service || 'Service request');
+    fill('jobPhone', lead.phone);
+    fill('jobClientEmail', lead.email);
+    fill('jobReferredBy', lead.referred_by);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(lead.preferred_date || '')) fill('jobDate', lead.preferred_date);
+    const wants = [lead.preferred_date && !/^\d{4}-\d{2}-\d{2}$/.test(lead.preferred_date) ? 'Wants ' + lead.preferred_date : '', lead.preferred_time ? 'Time: ' + lead.preferred_time : ''].filter(Boolean).join(' \u00b7 ');
+    fill('jobNotes', [wants, lead.details].filter(Boolean).join('\n\n'));
+    jtShowCameFrom(lead, 'the lead');
+    if (typeof showToast === 'function') showToast('Filled in from the lead — check it, then Add Job.', { duration: 3200 });
+    return true;
+  }
+
+  // The source picker (hand-made jobs) and the read-only line (jobs that
+  // came from a lead or booking). rec null: a fresh hand-made job.
+  function jtShowCameFrom(rec, fromWhat) {
+    const line = document.getElementById('jobCameFrom');
+    const row = document.getElementById('jobSourceRow');
+    const sel = document.getElementById('jobSource');
+    if (sel && !sel.options.length && typeof TH_SOURCE_CHOICES !== 'undefined') {
+      sel.innerHTML = '<option value="">Not known</option>' + TH_SOURCE_CHOICES.map(c => '<option>' + escapeHtml(c) + '</option>').join('');
+    }
+    const linked = !!(rec && fromWhat);
+    if (row) row.hidden = linked;
+    if (sel) sel.value = (!linked && rec && TH_SOURCE_CHOICES.includes(rec.source)) ? rec.source : '';
+    if (!line) return;
+    if (!linked || typeof thCameFrom !== 'function') { line.hidden = true; line.textContent = ''; return; }
+    const cf = thCameFrom(rec);
+    line.textContent = 'Came from: ' + (cf.known ? cf.label : 'not known') + (cf.campaign ? ' \u00b7 ' + cf.campaign : '') + ' (from ' + fromWhat + ')';
+    line.hidden = false;
+  }
+
   function applyPresetClientFromUrl() {
     const params = new URLSearchParams(location.search);
     const fromQuickAdd = params.get('qa') !== null;
     let changed = applyQuickAddFields(params);
+    if (typeof jtApplyFromLead === 'function' && jtApplyFromLead(params)) changed = true;
     const record = (typeof thClientFromParams === 'function') ? thClientFromParams(params) : null;
     const name = record ? record.name : params.get('client');
     if (name) {
@@ -1487,6 +1546,11 @@
   // ---- Assignee and Field / Office view (Phase 4, 2026-11-04) ----------
   let jtAssigneeFilterValue = 'all'; // 'all' | 'unassigned' | an email
   function jtOffice() { return typeof thViewMode === 'function' && thViewMode() === 'office'; }
+  function jtCameFromChip(job) {
+    if (typeof thCameFrom !== 'function') return '';
+    const cf = thCameFrom(job);
+    return cf.known ? ' <span class="th-assignee-chip jt-source-chip" title="Came from">' + escapeHtml(cf.label) + '</span>' : '';
+  }
   function jtAssigneeChip(job) {
     if (!jtOffice()) return '';
     const owner = typeof thJobOwner === 'function' ? thJobOwner(job) : '';
@@ -1549,6 +1613,7 @@
   });
   document.addEventListener('DOMContentLoaded', () => {
     if (typeof thMountViewSwitch === 'function') thMountViewSwitch(document.querySelector('.hub-header'));
+    if (!jtFromLead) jtShowCameFrom(null);
   });
 
   async function addJob() {
@@ -1585,6 +1650,17 @@
       hoursWorked: parseFloat(document.getElementById('jobHoursWorked').value) || null,
     };
     const wasEditing = !!editingJobId;
+    // Where it came from (Phase 5). From a lead: copied, once, on creation.
+    // A job that came from a lead or booking never has its source edited
+    // here; a hand-made one takes whatever the picker says.
+    const editingJob = wasEditing ? thJobs.get(editingJobId) : null;
+    const fromLead = !wasEditing ? jtFromLead : null;
+    if (fromLead && typeof thJobAttributionFrom === 'function') {
+      Object.assign(fields, thJobAttributionFrom(fromLead), { sourceFrom: 'lead' });
+    } else if (!(editingJob && editingJob.sourceFrom)) {
+      const sel = document.getElementById('jobSource');
+      if (sel) fields.source = sel.value || null;
+    }
     // Who it's for (Phase 4): picked in Office view; otherwise a new job is
     // yours and an edit leaves it with whoever has it.
     const assigneeEmail = typeof jtAssigneeFromForm === 'function' ? jtAssigneeFromForm() : undefined;
@@ -1616,6 +1692,16 @@
       mirrorReferralCreated({ id: newId, client: clientName, phone, referredBy });
     }
     const savedJobId = wasEditing ? editingJobId : newId;
+    if (fromLead) {
+      jtFromLead = null;
+      try { sessionStorage.removeItem('th_job_from_lead'); } catch (e) { /* nothing kept */ }
+      if (typeof linkLeadToJob === 'function') {
+        linkLeadToJob(fromLead.id, newId).then((r) => {
+          if (r && !r.ok && typeof showToast === 'function') showToast('Job added, but the lead couldn\'t be marked as done (' + r.error + ') — it may still show on the Dashboard.', { type: 'error', duration: 5000 });
+        }).catch(() => {});
+      }
+    }
+    jtShowCameFrom(null);
     ['jobTitle','jobClient','jobPhone','jobAddress','jobClientEmail','jobNotes','jobReferredBy','jobHoursWorked'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('jobDate').value = '';
     document.getElementById('jobPriority').value = 'medium';
@@ -1719,6 +1805,7 @@
     document.getElementById('jobNotes').value = job.notes || '';
     document.getElementById('jobReferredBy').value = job.referredBy || '';
     document.getElementById('jobHoursWorked').value = job.hoursWorked || '';
+    if (typeof jtShowCameFrom === 'function') jtShowCameFrom(job, job.sourceFrom === 'lead' ? 'the lead' : job.sourceFrom === 'booking' ? 'the online booking' : '');
     if (typeof jtFillAssigneePicker === 'function') jtFillAssigneePicker(typeof thJobOwner === 'function' ? thJobOwner(job) : (job.assignee || null));
     updateFirstTimeNudge(job.client || '');
     if (typeof jtSyncMore === 'function') jtSyncMore(true);
@@ -1733,6 +1820,7 @@
 
   function cancelJobEdit() {
     editingJobId = null;
+    if (!jtFromLead) jtShowCameFrom(null);
     document.getElementById('addJobBtn').textContent = 'Add Job';
     document.getElementById('cancelJobEditBtn').style.display = 'none';
     document.getElementById('jobEditNote').style.display = 'none';
@@ -2501,7 +2589,7 @@
         ${jobSelectionMode ? `<label class="job-card-select"><input type="checkbox" ${selectedJobIds.has(job.id) ? 'checked' : ''} onchange="toggleJobSelected(${job.id}, this.checked)"></label>` : ''}
         ${jcTimeHtml}
         <div class="job-card-top">
-          <h4 class="job-card-title ${isDone ? 'is-done-text' : ''}">${personDot(job.lastEditedBy, 'Last edited by')}<a href="/tools/job-detail.html?id=${job.id}" style="color:inherit; text-decoration:none;">${escapeHtml(job.title)}</a>${typeof jtAssigneeChip === 'function' ? jtAssigneeChip(job) : ''}</h4>
+          <h4 class="job-card-title ${isDone ? 'is-done-text' : ''}">${personDot(job.lastEditedBy, 'Last edited by')}<a href="/tools/job-detail.html?id=${job.id}" style="color:inherit; text-decoration:none;">${escapeHtml(job.title)}</a>${typeof jtAssigneeChip === 'function' ? jtAssigneeChip(job) : ''}${typeof jtCameFromChip === 'function' ? jtCameFromChip(job) : ''}</h4>
           <div class="job-badges">
             <span class="badge badge-${job.priority}">${job.priority}</span>
             ${opts.showStatusBadge ? `<span class="badge badge-status status-${job.status}">${STATUS_LABEL[job.status]}</span>` : ''}

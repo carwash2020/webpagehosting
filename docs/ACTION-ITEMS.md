@@ -1469,3 +1469,39 @@ For Connor to decide (none of these were built):
    "Jobs" since 3.4).
 
 <!-- Add new bug-lane questions above this line -->
+
+## Phase 5: built, and what it deliberately doesn't do (2026-11-04)
+
+Built: Dashboard > Insights rebuilt (From first visit to paid, By source,
+The website), Make a job on a lead, jobs and invoices showing where they
+came from, the Google Analytics visit ID saved only with analytics consent,
+and the paid-invoice sale sent to Google Analytics from the server. Live:
+migrations `phase5_attribution_and_ga4` and
+`phase5_revoke_th_clean_attribution`, edge functions `ga4-report` and
+`ga4-conversion` (all approved).
+
+Waiting on Connor:
+
+1. **Google keys.** Save the Edge Function secrets `GA4_SERVICE_ACCOUNT_JSON`,
+   `GA4_PROPERTY_ID` and `GA4_MP_API_SECRET`. Until then the website card
+   says it is waiting for the first update and paid sales stay queued (and
+   expire after Google's 72-hour window).
+2. **The daily schedule** (`sql/infra/phase5_ga4_cron.sql`) is a DB change:
+   apply it only after the keys are in, or the cron watchdog alerts daily.
+
+For Connor to decide (not built):
+
+1. **Tag the Google Business Profile website link** with
+   `?utm_source=google&utm_medium=organic&utm_campaign=gbp`. Without it,
+   profile visits read as Google search; nothing in code can tell them apart.
+2. **A "paid on" date** (already on the post-3.4 backlog). Insights puts an
+   invoice in the period it was created, not the one it was paid.
+3. **Jobs made before Phase 5.** Insights counts them under the source of the
+   booking or lead that made them, but their job cards (stored on the device)
+   read "not known" until someone picks a source. A one-time backfill of the
+   device copy would fix the cards; not done, since it rewrites existing jobs.
+4. **Visit IDs start now.** Leads and bookings from before Phase 5, and from
+   anyone who declined or hasn't answered the cookie banner, never send a sale
+   to Google Analytics. Insights' own By source table still counts them.
+5. **Visits vs leads periods.** Website numbers run through yesterday (GA's
+   settled day); leads, jobs and money run through now.

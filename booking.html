@@ -920,7 +920,7 @@
      above it. -->
 <script src="/js/booking-flow.js?v=cb314f0828"></script>
 <script src="/js/cookie-consent.js?v=14d2625000" defer></script>
-<script src="/js/utm-tracking.js?v=5aa2d867e3" defer></script>
+<script src="/js/utm-tracking.js?v=6829298ac5" defer></script>
 </head>
 <body>
 <div class="bg-blueprint" aria-hidden="true"></div>
@@ -1927,7 +1927,10 @@
       source: formData.get('source') || null,
       // Automatic UTM campaign attribution (utm-tracking.js) -- see
       // index.html's own identical addition for the full reasoning.
-    }, (typeof window.getStoredUtmParams === 'function' && window.getStoredUtmParams()) || {});
+      // Phase 5: first outside site + GA visit ID (only with analytics
+      // consent), utm-tracking.js getStoredAttributionExtras.
+    }, (typeof window.getStoredUtmParams === 'function' && window.getStoredUtmParams()) || {},
+      (typeof window.getStoredAttributionExtras === 'function' && window.getStoredAttributionExtras()) || {});
 
     submitBooking(bookingPayload)
       .then(function (result) {

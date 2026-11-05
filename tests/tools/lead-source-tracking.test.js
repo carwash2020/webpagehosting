@@ -59,20 +59,13 @@ test('the source field is genuinely optional -- no required attribute, unlike na
   assert.doesNotMatch(bookingHtml, /<select id="bSource" name="source" required>/);
 });
 
-test('workspace.html has a Lead Sources breakdown, reusing the leads already fetched for the Leads Inbox rather than a second query', () => {
-  assert.match(workspaceHtml, /<div class="analytics-subheading">Lead Sources/);
-  assert.match(workspaceHtml, /<div id="leadSources"><\/div>/);
-  const fnMatch = workspaceHtml.match(/async function loadAndRenderLeads\(\) \{[\s\S]*?\n  \}\n/);
-  assert.ok(fnMatch, 'expected to isolate loadAndRenderLeads()');
-  assert.match(fnMatch[0], /renderLeadSources\(visibleLeads\)/, 'expected renderLeadSources to be called with the already-fetched leads array');
-  // Confirm no second fetchLeads()/th_leads call inside renderLeadSources itself.
-  const renderFnMatch = workspaceHtml.match(/function renderLeadSources\(leads\) \{[\s\S]*?\n  \}\n/);
-  assert.ok(renderFnMatch, 'expected to isolate renderLeadSources()');
-  assert.doesNotMatch(renderFnMatch[0], /fetchLeads|th_leads/);
-});
-
-test('a lead with no source recorded is grouped as "Not specified", not silently dropped from the count', () => {
-  const renderFnMatch = workspaceHtml.match(/function renderLeadSources\(leads\) \{[\s\S]*?\n  \}\n/);
-  assert.ok(renderFnMatch);
-  assert.match(renderFnMatch[0], /l\.source \|\| 'Not specified'/);
+// Phase 5 (2026-11-04, Connor's call: "replace the lead/UTM lists with GA
+// data and the source -> paid funnel"): the most-recent-50 Lead Sources list
+// gave way to Insights' By source table, which counts every lead in the
+// period server-side (insights_source_funnel). A lead with no source still
+// counts, as "Not known" (tests/security/phase5-attribution-db.test.js).
+test('the old Lead Sources list is replaced by the By source table, which reads the whole period from the database', () => {
+  assert.doesNotMatch(workspaceHtml, /Lead Sources|id="leadSources"|function renderLeadSources/);
+  assert.match(workspaceHtml, /id="insBySource"/);
+  assert.match(workspaceHtml, /fetchInsightsFunnel\(since\)/);
 });
