@@ -1,5 +1,7 @@
--- Cron for daily-digest. NOT APPLIED. Apply only after the migration
--- (add_daily_digest.sql) and the function deploy. Safe to apply while
+-- Cron for daily-digest. APPLIED 2026-11-06 (migration add_daily_digest_cron,
+-- cron job 17), after the function deploy (daily-digest v1) and a dry run.
+-- Originally: apply only after the migration (add_daily_digest.sql) and the
+-- function deploy. Safe to apply while
 -- digest_settings.enabled = false: the function returns without sending.
 --
 -- Hourly; the function itself only sends when the America/Denver local hour
