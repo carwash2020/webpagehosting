@@ -6068,3 +6068,22 @@ Fix plan FP4.2 (D11; approved design EmailAliases). A client can add other email
   - The helper fails closed: if the alias table can't be read, only the sign-in email counts.
   - `ensure-my-referral-code` was left as is: it only looks up a display name.
 - Tests: `tests/security/fp4-email-aliases-db.test.js` (8, PGlite), `tests/edge-functions/portal-email-alias.test.js` (9), `tests/edge-functions/fp4-alias-ownership.test.js` (3) and `tests/portal/fp4-email-aliases-ui.test.js` (8).
+
+## What changed, 2026-11-06 -- Group 3: FP5 customer-facing fixes, plus a linear email check everywhere
+
+Fix plan Group 3 (FP5 + FP6; decisions D4, D5, D6; approved design Group3Screens).
+
+- **FP5.1 License row opens in place (D4).** A city license row used to be a dead tap next to a Remove button. Now the row is one button showing the city and a status badge (Active / Renews in N days / Expired / No expiry on file). Tapping it opens the license number, the expiry date with days left, and the city. Remove sits inside the open row, and one row is open at a time.
+- **FP5.2 Calendar centering (D5).** Job Tracker day numbers center under their weekday, and the job dots center at the bottom of the cell.
+- **FP5.3 FAQ sliver.** A closed FAQ answer is now 0px tall in Chromium (it was 20px): the bottom padding applies only when the answer is open. Measured in Chromium before and after.
+- **FP5.4 Microwaves (D6).** "Microwaves" joins the Appliance Repair description and a Microwave row joins the symptom checker. Steve's three symptoms: runs but won't heat, turntable or buttons not working, door won't latch. The wording follows the checker's rules (no prices, no percentages) and adds a warning not to open a microwave yourself. Microwaves were also added to the homepage services card and the washer/dryer service pages, with FAQ schema and visible text kept in step.
+- **FP5.5 Version label.** Settings shows "Triple H Homebase V1.0", a fixed label that never follows the cache stamp. The build stamp moved to Dev Tools → Health ("Build vNNN on this device").
+- **FP5.7 Portal logo.** The portal's desktop rail shows the real Triple H logo instead of a CSS-drawn orange hexagon.
+- **Linear email check.** The email-format check in `portal-signup`, `guest-pay`, `send-invite` and `team-admin`, and earlier in `portal-email-alias`, could backtrack polynomially on a crafted string. Two of those functions need no session. All now use a linear pattern with the length cap checked first, and all were deployed with Connor's OK. A test keeps the old pattern out of every edge function.
+- **FP6:** nothing to build.
+  - FP6.1: the digest has been live since #588.
+  - FP6.2 (D8): the Salt Lake Valley pages stay unlinked.
+  - FP6.3 (D9): TEST records are deleted once A3 is verified, in Group 6.
+  - FP6.4 (D12): both funnels stay.
+  - FP6.5 and FP6.6: parked until Connor asks.
+- Tests: `tests/design/fp5-group3.test.js` (10). Updated: triage symptom grid (6 appliances), round-3 icons, and settings check-for-updates (the product label).
