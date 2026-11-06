@@ -32,7 +32,9 @@ const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_CLIENT_CARDS_SECRET_KEY") || "";
 const LOGO_URL = "https://www.triplehenterprisesllc.biz/images/logo-signature-email.png";
 const PORTAL_SETTINGS_URL = "https://www.triplehenterprisesllc.biz/portal/settings.html";
 
-const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Linear-time: domain labels are separated by single dots, so no two
+// repeats can match the same characters (no polynomial backtracking).
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 const CODE_SHAPE = /^\d{6}$/;
 const TOKEN_SHAPE = /^[a-f0-9]{48}$/;
 const CODE_MINUTES = 15;
@@ -293,7 +295,7 @@ Deno.serve(async (req: Request) => {
 
       if (action === "staff_add") {
         const email = cleanEmail(body.email);
-        if (!EMAIL_SHAPE.test(email) || email.length > 254) return fail("Enter a valid email address.");
+        if (email.length > 254 || !EMAIL_SHAPE.test(email)) return fail("Enter a valid email address.");
         if (email === accountEmail) return fail("That is already this client's sign-in email.");
         const blocked = await blockedOutcome(email, accountId);
         if (blocked === "own_account") return fail("That email has its own portal account. Merge the two accounts instead.", 409, { outcome: "own_account" });
@@ -357,7 +359,7 @@ Deno.serve(async (req: Request) => {
 
     if (action === "add") {
       const email = cleanEmail(body.email);
-      if (!EMAIL_SHAPE.test(email) || email.length > 254) return fail("Enter a valid email address.");
+      if (email.length > 254 || !EMAIL_SHAPE.test(email)) return fail("Enter a valid email address.");
       if (email === me) return fail("That's the email you sign in with. It's already yours.");
       const mine = await aliasesOf(userId);
       const existing = mine.find((a) => a.email === email);

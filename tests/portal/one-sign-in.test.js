@@ -58,7 +58,7 @@ test('staff with an authenticator: the Workspace code step, and NOTHING is store
   input.dispatchEvent(new g.w.Event('input'));
   await until(() => g.done.length, 'success');
   assert.equal(g.calls.verify, 1);
-  assert.match(JSON.parse(stored(g.w)).access_token, new RegExp('^h\\.' + b64({ sub: 'u-staff', email: 'staff@example.com', aal: 'aal2' })));
+  assert.ok(JSON.parse(stored(g.w)).access_token.startsWith('h.' + b64({ sub: 'u-staff', email: 'staff@example.com', aal: 'aal2' })), 'the verified (aal2) session is the one stored');
   assert.equal(g.calls.setSession.length, 0);
 });
 
