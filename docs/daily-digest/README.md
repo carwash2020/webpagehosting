@@ -3,6 +3,13 @@
 Edge function `daily-digest` emails the owners one summary each evening.
 **It ships disabled. Merging the PR sends nothing, applies nothing, deploys nothing.**
 
+**Status (2026-11-06, fix plan FP6.1): live.** Function `daily-digest` v1 deployed
+(`verify_jwt = true`); dry run checked (all sections load, Stripe live mode);
+recipients set to Connor and Steve; `enabled = true`; cron `daily-digest-hourly`
+applied (job 17). Known issue, listed for a decision: the Money section can show
+an already-paid payout as "Next payout" (the Stripe payouts list does not accept
+`status=in_transit`).
+
 ![Sample digest (sample data)](sample-email.png)
 
 Sample data only; regenerate with `node scripts/render-daily-digest-sample.js`.
