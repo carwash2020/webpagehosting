@@ -35,7 +35,7 @@ const QUOTE = { id: 1790448760000, quoteNumber: 'EST-2026-0042', clientName: 'Si
   clientEmail: 'old@example.com', date: '2026-10-20', total: 340.5, jobRefTitle: 'Dryer vent cleaning',
   line_items: [{ desc: 'Labor', amount: 340.5 }] };
 
-function setup({ quote = QUOTE, confirm = true, resendResult = { ok: true } } = {}) {
+function setup({ quote = QUOTE, confirm = true, resendResult = { ok: true }, inPortal = true } = {}) {
   const dom = new JSDOM('<!doctype html><body></body>', { url: 'https://example.com/tools/invoice-generator.html', runScripts: 'outside-only' });
   const w = dom.window;
   installDataLayer(w); // the page reads/writes the log through thQuotes
@@ -53,6 +53,9 @@ function setup({ quote = QUOTE, confirm = true, resendResult = { ok: true } } = 
   w.eval(DIALOGS);
   w.showToast = (m, o) => out.toasts.push({ m, type: o && o.type });
   w.showConfirm = async (m) => { out.confirms.push(m); return confirm; };
+  // RP1.2 (D16): these cases are about an estimate already in the portal.
+  w.eval('var portalQuoteStatusKnown = true; var portalQuoteInfoBySourceId = {}; function refreshPortalQuoteStatuses() {}');
+  if (inPortal) w.eval('portalQuoteInfoBySourceId[' + JSON.stringify(String(quote.id)) + '] = { status: "pending" };');
   w.eval(RESEND + '\nwindow.__r = resendQuoteToClient;');
   const field = () => w.document.getElementById('customDialogField0');
   const click = (text) => [...w.document.querySelectorAll('#customDialogButtons button')].find((b) => b.textContent === text).click();
@@ -156,4 +159,13 @@ test('a quote with no clientEmail yet prompts with an empty field', async () => 
   w.__r(noEmailQuote.id);
   await new Promise((r) => setTimeout(r, 0));
   assert.equal(field().value, '');
+});
+
+test('RP1.2: unchanged email on an estimate that was never sent to the portal: it syncs instead of only emailing', async () => {
+  const { out } = setup({ inPortal: false });
+  await out.resend(undefined);
+  assert.equal(out.sent.length, 1);
+  assert.match(out.sent[0].url, /\/functions\/v1\/sync-quote-to-portal$/);
+  assert.equal(out.sent[0].body.source_quote_id, QUOTE.id);
+  assert.match(out.toasts[0].m, /sent to the portal and emailed to old@example\.com/);
 });

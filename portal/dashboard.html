@@ -674,7 +674,19 @@
   function invoiceRefundLine(inv) {
     if (inv.refund_status !== 'partial' && inv.refund_status !== 'full') return '';
     const amount = Number(inv.refunded_amount) || 0;
-    return amount > 0 ? `<div class="invoice-desc invoice-refunded">${formatCurrency(amount)} refunded</div>` : '';
+    if (!(amount > 0)) return '';
+    // RP1.9: on a partial refund the big number is the net, so the original total is named here.
+    return inv.refund_status === 'partial'
+      ? `<div class="invoice-desc invoice-refunded">${formatCurrency(amount)} refunded of ${formatCurrency(inv.total)}</div>`
+      : `<div class="invoice-desc invoice-refunded">${formatCurrency(amount)} refunded</div>`;
+  }
+  // Fix plan RP1.9 (2026-11-06): after a partial refund the card's amount is
+  // what the client actually paid in the end (total - refunded), not the
+  // original total.
+  function invoiceShownTotal(inv) {
+    const refunded = Number(inv.refunded_amount) || 0;
+    if (inv.refund_status === 'partial' && refunded > 0) return Math.max(0, Math.round((Number(inv.total) - refunded) * 100) / 100);
+    return inv.total;
   }
 
   function renderInvoiceCard(inv) {
@@ -687,7 +699,7 @@
             <div class="invoice-desc">${inv.description ? `<span class="invoice-number">${escapeHtml(inv.invoice_number)}</span> &middot; ` : ''}Invoiced ${formatDate(inv.invoice_date)}</div>
           </div>
           <div class="invoice-card-amount">
-            <div class="invoice-total">${formatCurrency(inv.total)}</div>
+            <div class="invoice-total">${formatCurrency(invoiceShownTotal(inv))}</div>
             ${invoiceStatusPill(inv)}
             ${inv.paid && inv.paid_at ? `<div class="invoice-desc invoice-paid-on">Paid ${formatDate(inv.paid_at.slice(0, 10))}</div>` : ''}
             ${invoiceRefundLine(inv)}

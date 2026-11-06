@@ -986,10 +986,15 @@
 
   async function deleteIncomeEntry(id) {
     const entry = thIncome.all().find(e => e.id === id);
-    const msg = entry && entry.origin === 'invoice'
-      ? 'This entry came from a generated invoice. Deleting it only removes it from this log \u2014 the invoice itself is untouched. Continue?'
-      : 'Delete this income entry?';
-    const confirmed = await showConfirm(msg, { danger: true, confirmText: 'Delete' });
+    // Fix plan RP1.5 (2026-11-06): an invoice's income row follows the
+    // invoice -- it is rebuilt from it on every render, so deleting it here
+    // only looked like it worked. Point at the invoice instead.
+    if (entry && entry.origin === 'invoice') {
+      const go = await showConfirm('This income comes from ' + (entry.desc || 'an invoice') + ' and follows it: it updates when the invoice is paid, changed or deleted. To remove it, delete or edit the invoice.', { confirmText: 'Open Invoices' });
+      if (go) window.location.href = '/tools/invoice-generator.html';
+      return;
+    }
+    const confirmed = await showConfirm('Delete this income entry?', { danger: true, confirmText: 'Delete' });
     if (!confirmed) return;
     if (editingIncomeEntryId === id) cancelIncomeEntryEdit();
     const row = document.querySelector('[data-income-id="' + id + '"]');
@@ -1199,6 +1204,30 @@
   const RATE_STORAGE_KEY = 'th_mileage_rate';
 
   function getMileageRate() { return parseFloat(document.getElementById('mileageRate').value) || 0; }
+  // Fix plan RP1.12 (2026-11-06): the IRS business mileage rate depends on
+  // the trip's date, so each trip is priced by its own date and keeps that
+  // rate. Known periods below (2026 verified against IRS Announcement
+  // 2026-11 / IR-2026-29); any date outside them uses the rate set above.
+  const IRS_MILEAGE_RATES = [
+    { from: '2024-01-01', to: '2024-12-31', rate: 0.67 },
+    { from: '2025-01-01', to: '2025-12-31', rate: 0.70 },
+    { from: '2026-01-01', to: '2026-06-30', rate: 0.725 },
+    { from: '2026-07-01', to: '2026-12-31', rate: 0.76 },
+  ];
+  function mileageRateForDate(dateStr) {
+    const d = String(dateStr || '').slice(0, 10);
+    const known = IRS_MILEAGE_RATES.find((r) => d >= r.from && d <= r.to);
+    return known ? known.rate : getMileageRate();
+  }
+  // RP1.12: the totals row names a single rate only when every trip shares it.
+  function mileageRateNote(list) {
+    const rates = [...new Set(list.filter((e) => e.type === 'mileage').map((e) => {
+      if (e.rate !== undefined && e.rate !== null) return Number(e.rate);
+      return e.miles ? Math.round((e.amount / e.miles) * 1000) / 1000 : null;
+    }).filter((r) => r !== null))];
+    if (rates.length === 1) return ' at $' + rates[0] + '/mi';
+    return rates.length ? ', each trip at the rate for its date' : '';
+  }
 
   function saveMileageRate() { localStorage.setItem(RATE_STORAGE_KEY, document.getElementById('mileageRate').value); scheduleSync(); }
 
@@ -1266,7 +1295,8 @@
     entry.lastEditedBy = currentUser;
     if (type === 'mileage') {
       entry.miles = parseFloat(document.getElementById('entryMiles').value) || 0;
-      entry.amount = Math.round(entry.miles * getMileageRate() * 100) / 100;
+      entry.rate = mileageRateForDate(entry.date);
+      entry.amount = Math.round(entry.miles * entry.rate * 100) / 100;
     } else {
       entry.amount = parseFloat(document.getElementById('entryAmount').value) || 0;
       entry.miles = 0;
@@ -1526,7 +1556,7 @@
 
     document.getElementById('totalsRowMoney').innerHTML = `
       <div>Expenses: <strong>$${expenseTotal.toFixed(2)}</strong></div>
-      <div>Mileage: <strong>${totalMiles.toFixed(1)} mi</strong> (<strong>$${mileageTotal.toFixed(2)}</strong> at $${getMileageRate()}/mi)</div>
+      <div>Mileage: <strong>${totalMiles.toFixed(1)} mi</strong> (<strong>$${mileageTotal.toFixed(2)}</strong>${mileageRateNote(entries)})</div>
       <div>Combined total: <strong>$${(expenseTotal + mileageTotal).toFixed(2)}</strong></div>`;
   }
 
@@ -1566,7 +1596,7 @@
     let entries = thExpenses.all().filter(e => (e.date || '').slice(0, 7) === monthKey);
     if (pendingDeleteExpenseIds.size > 0) entries = entries.filter(e => !pendingDeleteExpenseIds.has(e.id));
     const total = entries.reduce((s, e) => s + (Number(e.amount) || 0), 0);
-    totalEl.textContent = '$' + Math.round(total).toLocaleString('en-US');
+    totalEl.textContent = money(total); // RP1.11: one money format, cents included
   }
 
   // Log expense / Log income: the tab, then its own add form (the W1 sheet).

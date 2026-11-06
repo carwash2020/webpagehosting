@@ -1553,9 +1553,9 @@
 
     <div class="metrics-grid">
       <div class="metric-card metric-card-hero" id="netHeroCard">
-        <div class="metric-label">Net Profit (Revenue &minus; Expenses)</div>
+        <div class="metric-label">Net Profit (Money received &minus; Expenses)</div>
         <div class="metric-value" id="metricNet">$0.00</div>
-        <div class="metric-sub">Before mileage cost</div>
+        <div class="metric-sub">Before mileage cost &middot; unpaid invoices don't count</div>
       </div>
       <div class="metric-card">
         <div class="metric-label">Revenue Invoiced</div>
@@ -1999,7 +1999,13 @@
 
     const revenue = invoices.reduce((sum, i) => sum + (i.total || 0), 0);
     const expenseTotal = expenses.filter(e => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0);
-    const net = revenue - expenseTotal;
+    // Fix plan RP1.7 (D21, 2026-11-06): Net and the tax set-aside are on money
+    // RECEIVED in the period (the Income log, the same paid-only rule Finance
+    // uses), never on invoiced totals that may not be paid. "Revenue
+    // Invoiced" stays what its label says.
+    const allInvoices = thInvoices.all();
+    const received = thIncome.all().filter(e => inRange(e.date, range)).reduce((sum, e) => sum + thIncomeReceived(e, allInvoices), 0);
+    const net = received - expenseTotal;
 
     // Item #2 (2026-08-17): count-up animation for the hero currency
     // numbers, but ONLY on this dashboard's very first render. Animating

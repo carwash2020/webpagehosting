@@ -1038,7 +1038,8 @@ test('Finance\'s Expenses form -- now the only expense form -- keeps the receipt
   for (const field of ['id:', 'date, type, desc', 'vendor:', 'payment:', 'jobRefId:', 'jobRefTitle', 'receiptPath:', 'partNumber:', 'entry.createdBy', 'entry.lastEditedBy', 'entry.miles', 'entry.amount']) {
     assert.ok(fn[0].includes(field), 'missing field: ' + field);
   }
-  assert.match(fn[0], /entry\.amount = Math\.round\(entry\.miles \* getMileageRate\(\) \* 100\) \/ 100;/, 'mileage priced from the stored per-mile rate');
+  // RP1.12 (2026-11-06): priced at the rate for the trip's own date, kept on the entry.
+  assert.match(fn[0], /entry\.rate = mileageRateForDate\(entry\.date\);\s*entry\.amount = Math\.round\(entry\.miles \* entry\.rate \* 100\) \/ 100;/, 'mileage priced from the rate for its date');
   assert.match(fn[0], /await uploadReceipt\(receiptFile, entry\.id\)/);
 });
 

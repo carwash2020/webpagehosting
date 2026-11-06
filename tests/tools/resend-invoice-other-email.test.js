@@ -37,6 +37,8 @@ function setup({ invoice = INVOICE, confirm = true } = {}) {
   w.eval(DIALOGS);
   w.showToast = (m, o) => out.toasts.push({ m, type: o && o.type });
   w.showConfirm = async (m) => { out.confirms.push(m); return confirm; };
+  // RP1.2 (D16): these cases are about an invoice already in the portal.
+  w.eval('var portalInvoiceStatusKnown = true; var portalInvoiceInfoBySourceId = {}; portalInvoiceInfoBySourceId[' + JSON.stringify(String(invoice.id)) + '] = true; window.__portalCache = portalInvoiceInfoBySourceId; function refreshPortalInvoiceStatuses() {}');
   w.eval(RESEND + '\nwindow.__r = resendInvoiceToClient;');
   const field = () => w.document.getElementById('customDialogField0');
   const click = (text) => [...w.document.querySelectorAll('#customDialogButtons button')].find((b) => b.textContent === text).click();
