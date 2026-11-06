@@ -35,32 +35,37 @@ One static repo serves three things from that domain:
 - Owner-editable content (rating, banners, hours, FAQ, Terms) published from the Workspace without a deploy.
 
 ### Client portal (`/portal/`)
-- Invite-based accounts: a client sets a password from an emailed invite, then signs in.
+- **Accounts two ways:** a client creates their own account with **Create account** (the email is confirmed with a 6-digit code, and they see the invoices, quotes and jobs sent to that email), or Triple H sends an invite. Sending an invoice never creates an account by itself.
 - **Quotes**: review, ask questions, approve and self-schedule.
-- **Invoices**: view and pay by card through Stripe, with saved cards.
+- **Invoices**: view and pay by card through Stripe, with saved cards. Every invoice email carries a **Pay this invoice** link to a guest pay page (`/pay/`) that needs no account.
 - **Jobs**: history, warranty and check-up reminders.
 - **Work orders**: request work and message the business two ways.
-- **Contracts**: review and respond.
+- **Contracts**: review and sign in the portal, from the link in the email.
 - Notification preferences and push notifications.
 - **Referral program**: every client gets a shareable referral code.
 
 ### Workspace (`/tools/`)
-An installable, phone-first app for running the business:
+An installable, phone-first app for running the business. The nav has nine
+items: Dashboard, Jobs, Clients, Invoices, Money, Contracts, Reviews, Team and
+Settings.
 
-- **Dashboard** (`workspace.html`): today's next job, money owed, and a "Needs attention" inbox for leads, bookings, work requests and unpaid invoices.
-- **Jobs** (`job-tracker.html`, `job-detail.html`): list, board and calendar views, a job clock, photos, and one tap from "done" to an invoice.
+- **Dashboard** (`workspace.html`): today's next job, money owed, **Charge a card**, and a "Needs attention" inbox for leads, bookings, work requests and unpaid invoices. A lead turns into a job with **Make a job**.
+- **Insights** (Dashboard > Insights): Business Snapshot, the source-to-paid funnel (visits, leads and bookings, jobs, invoiced, paid) with a **By source** table, and **The website** (visits, calls tapped, bookings, traffic sources, top pages) from a once-a-day Google Analytics copy read server-side.
+- **Jobs** (`job-tracker.html`, `job-detail.html`): list, board and calendar views, a job clock, photos, an assignee, where the job came from, and one tap from "done" to an invoice. **Field view** shows only your own jobs; **Office view** (for accounts that can manage jobs for others) shows everyone's.
 - **Clients** (`clients.html`, `client-detail.html`): full history per client, with duplicate detection.
-- **Invoices and quotes** (`invoice-generator.html`): branded PDFs, quote-to-invoice conversion, and Quick charge for card payments on the spot.
-- **Finance** (`tools/finance.html`): expenses with receipts, income, and profitability.
-- **Runway Dashboard**, **Contract Generator**, **Route Planner**, **Review Request Sender** and the **Appliance Wiki** (`parts-reference.html`).
+- **Invoices and quotes** (`invoice-generator.html`): branded PDFs with a pay link, one invoice email (to the client, Steve and Connor), quote-to-invoice conversion, and **Charge a card** for card payments on the spot.
+- **Money** (`tools/finance.html`, formerly Finance): the Runway overview on top, then one ledger with All / Income / Expenses / Profitability chips. Income counts only once it is paid; receipt photos are optional. The full **Runway Dashboard** opens from there.
+- **Contracts** (Contract Generator), **Reviews** (Review Request Sender, opened automatically when a job is marked done) and **Team** (`team.html`: roster, invite / resend / revoke, deactivate and reactivate, and per-person capability switches).
+- **Add-ons** in Settings, off by default: the **Route Planner** (one "Plan today's route" button in My Day) and the **Appliance Wiki** (`parts-reference.html`). When off, they appear nowhere.
 - **Site Content** (`site-content.html`): edit the public site's changeable text, with history and undo, and review the gallery queue.
-- **Settings** (theme, notifications, MFA, backup and restore) and **Dev Tools** (role-gated diagnostics: health, data integrity, sync, notifications, ops, reports, access).
-- Cross-device sync through Supabase, with per-record merge, deletion tombstones and a restorable Graveyard.
+- **Settings** (theme, notifications, MFA, add-ons, backup and restore) and **Dev Tools** (role-gated diagnostics grouped into sections: health, data, sync, notifications, ops, reports, access, content, with tool search and recents).
+- Cross-device sync through Supabase, per signed-in account with row-level security (ops, money and runway data in separate rows), per-record merge, deletion tombstones and a restorable Graveyard.
 - Two-factor sign-in for internal accounts, enforced server-side for every table, bucket and edge function once an authenticator is set up.
 
 ### Automation
 - Email and push notifications for bookings, leads, quotes, invoices, payment and appointment reminders, and job status changes (Resend for email, Web Push for push).
-- Scheduled jobs in Supabase `pg_cron`: daily business checks and a weekly digest.
+- Scheduled jobs in Supabase `pg_cron`: daily business checks, a weekly digest, and the daily Google Analytics report (`ga4-report`).
+- **Google Analytics, server-side only:** the website numbers come from the GA4 Data API through an Edge Function, never from page JavaScript, and GA stays off `/tools/` and `/portal/`. When an invoice is paid, `ga4-conversion` reports the sale to GA (Measurement Protocol) for visitors who accepted analytics cookies, with only an anonymous visit ID and the amount.
 - GitHub Actions: tests on every push, nightly backups, uptime checks every 10 minutes, link checks, Lighthouse scoring, edge-function drift detection, and automatic cache-bust fixes.
 
 ## Tech stack
@@ -107,7 +112,7 @@ work on the site itself, since every page is a static file.
 ```bash
 npm install            # dev-only tooling; the deployed site has no dependencies
 
-npm test               # full test suite (~4,600 tests, a few minutes)
+npm test               # full test suite (~5,200 tests, 10-20 minutes)
 npm run verify         # everything below, then the test suite: run before every push
 
 npm run check-consistency     # cache-bust stamps, service-worker precache list, cross-file rules
