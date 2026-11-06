@@ -919,7 +919,7 @@
       <div class="form-field"><label for="jobTitle">Job Title / Description</label><input type="text" id="jobTitle" placeholder="Fix leaking kitchen faucet"></div>
       <div class="form-field"><label for="jobDate">Due date</label><input type="date" id="jobDate"></div>
     </div>
-    <details class="jt-more" id="jobMore"><summary>More details</summary>
+    <details class="jt-more" id="jobMore" open><summary>More details</summary>
     <div class="tool-form-row">
       <div class="form-field"><label for="jobPhone">Client Phone</label><input type="tel" id="jobPhone" placeholder="(435) 555-0123"></div>
       <div class="form-field"><label for="jobAddress">Address</label><input type="text" id="jobAddress" placeholder="123 Main St, St. George"></div>
@@ -1374,6 +1374,10 @@
   // The job form shows client, job and date; everything else sits under
   // More details. Open it whenever a hidden field holds something (an edit,
   // a registry autofill, a quick-add link) so nothing is saved unseen.
+  // More details starts open (fix plan FP3.2, 2026-11-06): adding a job
+  // never hides Phone, Address, Client email, Referred by, Came from,
+  // Priority, Status, Assigned to or Notes. This still re-opens it (after
+  // someone collapsed it) when a hidden field already holds something.
   function jtSyncMore(force) {
     const d = document.getElementById('jobMore'); if (!d) return;
     const filled = ['jobPhone','jobAddress','jobClientEmail','jobReferredBy','jobHoursWorked','jobNotes']
