@@ -83,7 +83,7 @@
     { title: 'Dev Tools', meta: 'Health log, backups, accounts, system', href: '/tools/dev-tools.html', keywords: 'developer diagnostics health log backup admin', perm: 'hasDevToolsAccess' },
     { title: 'Website', meta: 'Edit the public site: hours, banners, FAQ, terms', href: '/tools/site-content.html', keywords: 'site content cms hours banner faq terms', perm: 'canManageSiteContent' },
     { title: 'Settings', meta: 'Account, theme, notifications, backup', href: '/tools/settings.html', keywords: 'backup restore theme password notifications' },
-    { title: 'Replay the tour', meta: 'Two-minute walkthrough of every page', href: '/tools/workspace.html?tour=1', keywords: 'help tutorial guide how to' }
+    { title: 'Replay the tour', meta: 'The core loop: add a job, track it, invoice it, get paid', href: '/tools/workspace.html?tour=1', keywords: 'help tutorial guide how to' }
   ];
   function actionItems(term) {
     return ACTIONS.filter(function (a) {

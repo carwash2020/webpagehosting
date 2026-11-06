@@ -5960,3 +5960,48 @@ Screenshots (390x844, the 3 screens actually changed): `docs/corrections-pack-20
 Accessibility: the tabs use the standard ARIA tabs pattern (`role="tablist"/"tab"/"tabpanel"`, `aria-selected`, `aria-controls`/`aria-labelledby`, roving `tabindex`); the accordion keeps its existing `aria-expanded`/`aria-controls`. Verified keyboard-only and at 390x844 and 1440 widths, no horizontal overflow.
 
 Screenshots: `docs/homepage-faq-reviews-2026-11-03/`. Tests: `tests/seo/faq-schema-sync.test.js` (rewritten for the tabs/panels structure), `tests/design/homepage-faq-tabs.test.js` (new -- tab switching, keyboard nav, accordion toggle, content preserved), `tests/site-content/review-stats-public.test.js` (updated hook counts + new live-update test), plus small updates to `tests/design/ux-glitch-fixes.test.js`, `tests/design/conversion-polish-sticky-sms-faq.test.js` and `tests/seo/landing-page-faq-schema.test.js` to match the new markup. `docs/ACTION-ITEMS.md` item 19 is fully closed. Details: `docs/specialist-logs/features.md` and `docs/specialist-logs/visual.md`.
+
+## What changed, 2026-11-06 -- Fix Phase 1: a person's name and title belong to the person
+
+Fix plan FP1.1–FP1.8 (approved design: "A person's name and title"). Every place that says who someone is now shows their own name and title. It never shows the preset the account started from or a whole email address.
+
+- **`title` on `account_roles`** (`sql/security/fp1_person_title.sql`). A title is a free-text label: it grants nothing, and the switches still decide access. Name is capped at 120 characters and title at 60. `team_roster()` returns the title, including a deactivated person's (from the archived row). `role_name` stays as audit history and is no longer shown as anyone's role.
+- **Team**: Name and Title fields on each person's sheet ("Save name and title"), saved under the existing manager-only policy. Each roster row shows the title under the name, or "No title yet".
+- **Who you are**:
+  - Greeting, sidebar chip, Settings and Dev Tools badge, and the "isn't part of your access" screens all use the same chain: `display_name`, then the two known names, then the email prefix capitalized.
+  - The no-access screen reads "You're signed in as Steve, Owner."
+  - With no title, the sidebar's second line is the email.
+- **Dev Tools**:
+  - The account picker reads "Name · Title — email"; the "(started from X)" suffix is gone.
+  - "Who can open what" is now "Starting templates".
+  - "Start from a preset" is now "Start from a template", and the help text says a template is a starting point, not a role.
+- **Backfill (FP1.7)**: Connor "Connor" / "Developer", Steve "Steve" / "Owner". D1 makes those titles; the names stay the first names.
+- Tests: `tests/security/fp1-person-title-db.test.js` (PGlite, runs the real migration twice) and `tests/workspace/fp1-names-and-titles.test.js`. Three older tests that pinned the preset wording were updated.
+- **Order matters:** the migration must be live before this code is, because the role check now reads `title`.
+
+## What changed, 2026-11-06 -- Fix Phase 2: access coherence (group 1, with FP1)
+
+Fix plan FP2.1–FP2.9, plus RP6.6 and RP6.7, which the plan ships with the FP2.4 tour rework. Nothing an account can't open shows, even for a moment, and the tour never walks anyone into a wall.
+
+- **FP2.1 No flash before the role loads** (`tools/tools-nav-pwa.js`):
+  - Every gated destination in the sidebar, the More drawer and the bottom bar is now added to the page hidden. It shows only once its own check passes.
+  - The bottom bar's Clients and Money tabs keep their slot while they wait, so an owner's bar doesn't shift. For an account without them, the slot drops out.
+  - Settings' Website and Dev Tools rows already started hidden, and that was confirmed and pinned by a test.
+- **FP2.2 Empty group headers:** a sidebar or More header (Work / Money / Office) shows only while a link under it does. A field tech no longer sees a MONEY header over nothing.
+- **FP2.3 Fail-closed job filtering:**
+  - Until the role is confirmed, the job lists act as Field view: your own jobs only, never anyone else's. If the list is empty meanwhile, it reads "Loading your jobs…".
+  - Create invoice (the Job done sheet) and the client Quote / Invoice actions now need a confirmed Invoices permission; they no longer show while the role is unknown.
+- **FP2.4 Role-aware tour** (`tools/tools-tour.js`):
+  - Steps about Invoices or Money show only to accounts that can open them. A field-only tour is Add a job, Track it, Help.
+  - A tour page waits for the role before picking steps. A role that can't be confirmed counts as no permissions.
+- **RP6.7:** "Invoice from the job" highlights the job list when no job is waiting for an invoice.
+- **RP6.6:** the Settings and Search copy now says what the tour is: "the core loop: add a job, track it, invoice it, get paid."
+- **FP2.5 Dev password prompt above sheets:** one rule, `#devPasswordOverlay { z-index: 1300 }`, puts it above every sheet tier (Team's invite sheet is 1200) on all four pages that have it.
+- **FP2.6:** the bottom bar's New label is uppercase on Dashboard too.
+- **FP2.8:** on Money's income log, invoices not paid at all move into a separate "Not paid yet (not income)" group. Totals are unchanged.
+- **FP2.9 Dashboard on a computer** (approved design): at 1024px and up, Your week moves to the bottom of the left column, so both columns end at about the same height. Phone and tablet order are unchanged.
+- **FP2.7** is closed with no code change: D10 says the box is a focus highlight.
+- Tests:
+  - new: `tests/tools/fp2-nav-before-role.test.js`, `tests/tools/fp2-role-aware-tour.test.js` and `tests/tools/fp2-dev-password-above-sheets.test.js`;
+  - added cases in `money-screen`, `job-money-pipeline` and `field-office-view`;
+  - job-list and tour harnesses that assumed "show everything before the role" now load as an owner.

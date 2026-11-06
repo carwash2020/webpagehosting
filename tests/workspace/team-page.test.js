@@ -172,5 +172,5 @@ test('names in the roster are escaped, and the roster is cached for assignee nam
   const g = await page({ rows: [{ ...OWNER, ...ALL_ON, display_name: '<img src=x onerror=alert(1)>' }] });
   assert.equal(g.$('teamList').querySelectorAll('img').length, 0);
   const cache = JSON.parse(g.w.localStorage.getItem('th_team_roster_cache'));
-  assert.deepEqual(cache, [{ email: 'owner@example.com', display_name: '<img src=x onerror=alert(1)>', status: 'active' }]);
+  assert.deepEqual(cache, [{ email: 'owner@example.com', display_name: '<img src=x onerror=alert(1)>', title: null, status: 'active' }]);
 });

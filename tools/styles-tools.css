@@ -182,6 +182,12 @@ label .col-hint,
   padding:20px;
 }
 .help-modal-overlay.is-open{ display:flex; animation: helpOverlayFadeIn .15s ease; }
+/* Fix plan FP2.5 (2026-11-06): the Dev Tools password prompt is asked FROM
+   inside sheets (Team's invite sheet is 1200), so it sits above every
+   sheet tier -- once, here, for every page that has it -- and stays below
+   only the first-paint splash (9999) and toasts (10001). It rendered
+   behind the invite sheet, invisible and untappable (2026-11-04). */
+#devPasswordOverlay{ z-index:1300; }
 @keyframes helpOverlayFadeIn{ from{ background:rgba(0,0,0,0); } to{ background:rgba(0,0,0,0.6); } }
 .help-modal-overlay.is-open .help-modal{ animation: helpModalPopIn .18s ease; }
 @keyframes helpModalPopIn{ from{ opacity:0; transform:scale(0.95) translateY(8px); } to{ opacity:1; transform:scale(1) translateY(0); } }

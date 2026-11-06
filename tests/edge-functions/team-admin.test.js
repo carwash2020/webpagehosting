@@ -50,6 +50,7 @@ function load(seed = {}) {
       const e = q('email');
       if (u.includes('invited_at=not.is.null')) return j(st.pending[e] ? [st.pending[e]] : []);
       if (u.includes('select=can_manage_roles')) return j(st.staff[e] ? [st.staff[e]] : []);
+      if (u.includes('select=display_name')) return j(st.staff[e] ? [{ display_name: st.staff[e].display_name || null }] : []);
       return j(st.staff[e] ? [{ email: e }] : []);
     }
     if (u.endsWith('/rest/v1/rpc/check_internal_mfa_for_edge_function')) return j(st.mfa);
@@ -110,7 +111,7 @@ test('invite: the database adds them first (as the caller), then a set-password 
   assert.equal(g.st.emails.length, 1);
   assert.equal(g.st.emails[0].to, 'new@example.com');
   assert.equal(g.st.emails[0].subject, "You're invited to the Triple H Workspace");
-  assert.match(g.st.emails[0].html, /Hi New, owner@example\.com added you to the team\./);
+  assert.match(g.st.emails[0].html, /Hi New, Owner added you to the team\./, 'the inviter by name, never their email (fix plan FP1)');
   assert.match(g.st.emails[0].html, /href="https:\/\/example\.supabase\.co\/verify\?t=abc"/);
 });
 
@@ -220,4 +221,24 @@ test('the invite link lands on the Workspace set-password page, which accepts ty
   assert.match(page, /const isInvite = tokenType === 'invite';\n  if \(!recoveryToken \|\| \(tokenType !== 'recovery' && !isInvite\)\) \{/);
   assert.match(page, /isInvite \? 'Set Your Password' : 'Set a New Password'/);
   assert.match(page, /Choose a password to finish joining the Triple H Workspace\./);
+});
+
+// Fix plan FP1 follow-up (2026-11-06, Connor: "fix the invite email"): the
+// email names the person who sent it by their name, never their email.
+test('the invite email names the inviter by their Team name; with no name saved, the email prefix capitalized -- never the address', async () => {
+  const named = load({ staff: { [MANAGER]: { can_manage_roles: true, display_name: 'Pat Owner' } } });
+  await named.call({ action: 'invite', email: 'new@example.com', name: 'New Person' });
+  const e = named.st.emails[0];
+  assert.match(e.html, /Hi New, Pat Owner added you to the team\./);
+  assert.match(e.text, /Pat Owner added you to the Triple H Workspace team\./);
+  assert.doesNotMatch(e.html + e.text, /owner@example\.com/);
+
+  const unnamed = load();
+  await unnamed.call({ action: 'invite', email: 'new@example.com', name: 'New Person' });
+  assert.match(unnamed.st.emails[0].html, /Owner added you to the team\./);
+  assert.doesNotMatch(unnamed.st.emails[0].html + unnamed.st.emails[0].text, /owner@example\.com/);
+
+  const escaped = load({ staff: { [MANAGER]: { can_manage_roles: true, display_name: '<b>Pat</b>' } } });
+  await escaped.call({ action: 'invite', email: 'new@example.com', name: 'New' });
+  assert.match(escaped.st.emails[0].html, /&lt;b&gt;Pat&lt;\/b&gt; added you/);
 });

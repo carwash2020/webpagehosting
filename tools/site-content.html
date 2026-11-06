@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=9445ba2176"></script>
+<script src="/tools/auth.js?v=a4f7f4597e"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -53,15 +53,15 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=7c03870603">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=1a061bc473">
-<script src="/tools/data-layer.js?v=a098577eb4" defer></script>
-<script src="/tools/dev-tools-shared.js?v=ffcb14381f" defer></script>
+<link rel="stylesheet" href="/tools/styles-tools.css?v=a038f9f7de">
+<script src="/tools/data-layer.js?v=e736cf54f5" defer></script>
+<script src="/tools/dev-tools-shared.js?v=c57edc22d2" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=fe9cdc1e0f" defer></script>
-<script src="/tools/tools-command-palette.js?v=ac4de65287" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=05f55fda07" defer></script>
+<script src="/tools/tools-command-palette.js?v=8cde9621ed" defer></script>
 <script src="/tools/sync.js?v=92a4047864" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -1063,6 +1063,9 @@
   async function cmsLoad() {
     if (typeof ensureFreshToken === 'function') await ensureFreshToken();
     const keys = SITE_CONTENT_FIELDS.map(f => f.key).join(',');
+    // Team names for the history lines (cmsWho). Never blocks or fails the
+    // load: on any error it keeps this device's copy.
+    const teamNames = typeof thRefreshTeamMembers === 'function' ? Promise.resolve().then(thRefreshTeamMembers).catch(() => null) : null;
     const [liveRes, histRes] = await Promise.all([
       fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content?select=key,value&key=in.(' + keys + ')', 8000, { headers: cmsHeaders(false) }),
       fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content_history?select=id,key,old_value,new_value,changed_by,changed_at,action,batch_id,undo_of&key=in.(' + keys + ')&order=id.desc&limit=300', 8000, { headers: cmsHeaders(false) }),
@@ -1074,6 +1077,7 @@
     cmsLive = live;
     cmsHistory = histRes.ok ? (await histRes.json()) : [];
     if (!Array.isArray(cmsHistory)) cmsHistory = [];
+    if (teamNames) await teamNames;
   }
 
   function cmsErrorMessage(res, verb) {
@@ -1129,10 +1133,18 @@
     const d = new Date(iso);
     return isNaN(d) ? '' : d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   }
+  // Who saved, by name (fix plan FP1 follow-up, 2026-11-06): their Team
+  // name, then the known names, then the part of the email before the @,
+  // capitalized. Never the whole address.
   function cmsWho(email) {
     if (!email) return 'Setup';
-    const known = typeof KNOWN_USER_NAMES === 'object' && KNOWN_USER_NAMES ? KNOWN_USER_NAMES[String(email).toLowerCase()] : null;
-    return known || email;
+    const e = String(email).toLowerCase();
+    const onTeam = typeof thTeamMembers === 'function' ? thTeamMembers().find(p => p.email === e) : null;
+    if (onTeam && onTeam.display_name) return onTeam.display_name;
+    const known = typeof KNOWN_USER_NAMES === 'object' && KNOWN_USER_NAMES ? KNOWN_USER_NAMES[e] : null;
+    if (known) return known;
+    const local = e.split('@')[0];
+    return local ? local.charAt(0).toUpperCase() + local.slice(1) : 'Someone';
   }
 
   // The latest save (one batch) that can be undone: made by a person, and

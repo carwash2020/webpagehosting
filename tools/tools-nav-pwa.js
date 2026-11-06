@@ -145,22 +145,43 @@ function thNavEsc(v) {
   // where the role never loads. Only the shell's own links are touched,
   // so a page's own link to the same place (Dev Tools' Content jump link)
   // is left alone.
+  //
+  // Fix plan FP2.1 (2026-11-06): every gated destination now works that
+  // way in the shell (sidebar, More drawer, bottom bar), so nothing an
+  // account can't open shows while the role is loading. FP2.2: a group
+  // header (Work / Money / Office) shows only while a link under it does.
   function hideRestrictedNavLinks() {
     Object.keys(NAV_PERMISSION_CHECKS).forEach(function (href) {
       var allowed = NAV_PERMISSION_CHECKS[href]();
-      if (HIDDEN_UNTIL_ALLOWED[href]) {
-        document.querySelectorAll('a.th-sidebar-link[href="' + href + '"], a.th-more-sheet-link[href="' + href + '"]').forEach(function (el) {
-          el.style.display = allowed ? '' : 'none';
-        });
-        return;
-      }
+      document.querySelectorAll(SHELL_LINK_SELECTOR.split(', ').map(function (sel) { return sel + '[href="' + href + '"]'; }).join(', ')).forEach(function (el) {
+        revealShellLink(el, allowed);
+      });
       if (allowed) return;
       document.querySelectorAll('a[href="' + href + '"]:not(.th-bn-money)').forEach(function (el) {
         el.style.display = 'none';
       });
     });
     applyMoneyPermissions();
+    refreshNavGroups();
     refreshCreateSheet();
+  }
+  function revealShellLink(el, allowed) {
+    el.style.visibility = '';
+    el.style.display = allowed ? '' : 'none';
+    if (el.closest('.th-bottom-nav')) { el.removeAttribute('aria-hidden'); el.removeAttribute('tabindex'); }
+  }
+  // The shell's own links: the only ones injected hidden and revealed.
+  var SHELL_LINK_SELECTOR = 'a.th-sidebar-link, a.th-more-sheet-link, .th-bottom-nav a';
+  // A group header shows only when at least one link under it (up to the
+  // next header) is showing.
+  function refreshNavGroups() {
+    document.querySelectorAll('.th-sidebar-group').forEach(function (head) {
+      var any = false;
+      for (var el = head.nextElementSibling; el && !el.classList.contains('th-sidebar-group'); el = el.nextElementSibling) {
+        if (el.tagName === 'A' && el.style.display !== 'none') { any = true; break; }
+      }
+      head.style.display = any ? '' : 'none';
+    });
   }
   window.addEventListener('th-role-loaded', hideRestrictedNavLinks);
 
@@ -169,9 +190,10 @@ function thNavEsc(v) {
     var canFinance = NAV_PERMISSION_CHECKS['/tools/finance.html']();
     var tab = document.querySelector('.th-bn-money');
     if (tab) {
-      if (!canInvoices && !canFinance) tab.style.display = 'none';
-      else if (!canInvoices) tab.setAttribute('href', MONEY_PAGES[1]);
-      else if (!canFinance) tab.setAttribute('href', MONEY_PAGES[0]);
+      // Injected hidden (FP2.1); shown once either Money page is allowed.
+      revealShellLink(tab, canInvoices || canFinance);
+      if (canInvoices && !canFinance) tab.setAttribute('href', MONEY_PAGES[0]);
+      else if (!canInvoices && canFinance) tab.setAttribute('href', MONEY_PAGES[1]);
     }
     var sw = document.querySelector('.th-money-switch');
     if (sw) {
@@ -229,8 +251,11 @@ function thNavEsc(v) {
     { group: 'Office', href: '/tools/team.html',               icon: 'user-plus', label: 'Team' },
     { group: 'Office', href: '/tools/settings.html',           icon: 'gear',     label: 'Settings' }
   ];
+  // Injected hidden, shown once allowed (FP2.1): a destination marked
+  // hideUntilAllowed, and every destination with a permission check.
   var HIDDEN_UNTIL_ALLOWED = {};
   SIDEBAR_DESTS.forEach(function (d) { if (d.hideUntilAllowed) HIDDEN_UNTIL_ALLOWED[d.href] = true; });
+  Object.keys(NAV_PERMISSION_CHECKS).forEach(function (href) { HIDDEN_UNTIL_ALLOWED[href] = true; });
 
   // Everything the sidebar lists that the bar does not -- the bar's own
   // links plus both Money pages (the Money tab covers them) -- goes in
@@ -305,7 +330,7 @@ function thNavEsc(v) {
       var here = destIsHere(d);
       var active = here ? ' is-active' : '';
       var current = here ? ' aria-current="page"' : '';
-      var hidden = d.hideUntilAllowed ? ' style="display: none"' : '';
+      var hidden = (d.hideUntilAllowed || HIDDEN_UNTIL_ALLOWED[d.href]) ? ' style="display: none"' : '';
       html += '<a href="' + d.href + '" class="th-sidebar-link' + active + '"' + current + hidden + '>' +
         '<span class="th-hex-icon">' + iconSvg(d.icon) + '</span>' +
         '<span>' + d.label + '</span></a>';
@@ -790,24 +815,23 @@ function thNavEsc(v) {
     fillSidebarAccount();
   }
 
-  var ROLE_WORDS = { owner: 'Owner', developer: 'Developer', employee: 'Employee', admin: 'Admin', office: 'Office', tech: 'Tech' };
+  // The account chip (fix plan FP1.3, 2026-11-06): the person's own name and
+  // title from their account_roles row (auth.js), never the preset the
+  // account started from. No title yet: the second line is their email.
   function fillSidebarAccount() {
     var chip = document.querySelector('.th-sidebar-account');
     if (!chip) return;
     var email = '';
     try { var s = (typeof getStoredSession === 'function') ? getStoredSession() : null; email = (s && s.email) || ''; } catch (e) { /* ignore */ }
-    var first = '';
-    try { first = (typeof getCurrentUserFirstName === 'function' && getCurrentUserFirstName()) || ''; } catch (e) { /* ignore */ }
-    if (first && first.indexOf('@') > -1) first = first.split('@')[0];
-    var name = first || (email ? email.split('@')[0] : '');
-    var roleInfo = null;
-    try { roleInfo = (typeof getCurrentUserRole === 'function') ? getCurrentUserRole() : null; } catch (e) { /* ignore */ }
-    var roleKey = roleInfo && (typeof roleInfo === 'string' ? roleInfo : roleInfo.roleName);
-    var role = roleKey ? (ROLE_WORDS[String(roleKey).toLowerCase()] || String(roleKey)) : '';
+    var name = '';
+    try { name = (typeof getCurrentUserDisplayName === 'function' && getCurrentUserDisplayName()) || ''; } catch (e) { /* ignore */ }
+    if (!name && email) { var local = email.split('@')[0]; name = local.charAt(0).toUpperCase() + local.slice(1); }
+    var title = '';
+    try { title = (typeof getCurrentUserTitle === 'function' && getCurrentUserTitle()) || ''; } catch (e) { /* ignore */ }
     chip.hidden = !name;
     chip.querySelector('.th-sidebar-account-avatar').textContent = name ? name.slice(0, 2).toUpperCase() : '';
     chip.querySelector('.th-sidebar-account-name').textContent = name;
-    chip.querySelector('.th-sidebar-account-role').textContent = role || email;
+    chip.querySelector('.th-sidebar-account-role').textContent = title || email;
   }
   window.addEventListener('th-role-loaded', fillSidebarAccount);
 
@@ -845,7 +869,11 @@ function thNavEsc(v) {
     // "true", not "page": the link goes to the list, not this screen.
     var isParent = !isHere && !d.money && TAB_PARENT[path] === d.href;
     var cls = (d.money ? 'th-bn-money' : '') + ((isHere || isParent) ? ' is-active' : '');
-    return '<a href="' + href + '" class="' + cls.trim() + '"' + (isHere ? ' aria-current="page"' : (isParent ? ' aria-current="true"' : '')) + '>' +
+    // Gated tabs (Clients, Money) wait for the role, like the sidebar
+    // (FP2.1). They keep their slot while waiting so the bar doesn't shift
+    // for an account that has them; one that doesn't sees the slot go.
+    var gated = d.money || HIDDEN_UNTIL_ALLOWED[d.href];
+    return '<a href="' + href + '" class="' + cls.trim() + '"' + (isHere ? ' aria-current="page"' : (isParent ? ' aria-current="true"' : '')) + (gated ? ' style="visibility: hidden" aria-hidden="true" tabindex="-1"' : '') + '>' +
       '<span class="th-bn-icon th-hex-icon" aria-hidden="true">' + iconSvg(d.icon) + '</span>' +
       '<span>' + d.label + '</span></a>';
   }
@@ -968,6 +996,7 @@ function thNavEsc(v) {
     document.body.appendChild(nav);
     injectMoreSheet();
     injectCreateSheet();
+    refreshNavGroups();
     var createBtn = nav.querySelector('.th-bn-create');
     if (createBtn) createBtn.addEventListener('click', function () { openCreate(this); });
     // A role that loaded before the shell was built fired th-role-loaded

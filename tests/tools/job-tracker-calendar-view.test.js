@@ -64,6 +64,9 @@ function loadJobTracker(jobs, url) {
     s.textContent = fs.readFileSync(path.join(TOOLS_DIR, name), 'utf8');
     window.document.head.appendChild(s);
   }
+  // An owner in Office view: the list shows everyone's jobs only once
+  // "manage jobs for others" is confirmed (fail-closed since FP2.3).
+  window.canManageOthersJobs = () => true;
   window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
   window.applyJobViewMode();
   window.renderJobs();

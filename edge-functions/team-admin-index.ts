@@ -198,6 +198,22 @@ async function isDeactivated(email: string): Promise<boolean> {
   return (await res.json()).length > 0;
 }
 
+// The name the invite email gives for whoever sent it (fix plan FP1,
+// 2026-11-06): their Team name, else the part of their email before the @,
+// capitalized. Never the whole address.
+async function inviterName(email: string): Promise<string> {
+  try {
+    const res = await rest(`account_roles?email=eq.${encodeURIComponent(email)}&select=display_name&limit=1`);
+    if (res.ok) {
+      const rows = await res.json();
+      const name = rows.length ? String(rows[0].display_name || "").trim() : "";
+      if (name) return name;
+    }
+  } catch (_e) { /* fall back below */ }
+  const local = email.split("@")[0] || "";
+  return local ? local.charAt(0).toUpperCase() + local.slice(1) : "Someone on the team";
+}
+
 async function callerCanManageTeam(email: string): Promise<boolean> {
   const res = await rest(`account_roles?email=eq.${encodeURIComponent(email)}&select=can_manage_roles&limit=1`);
   if (!res.ok) return false;
@@ -236,7 +252,7 @@ Deno.serve(async (req: Request) => {
       const existing = (await authUserId(email)) !== null;
       const link = await setPasswordLink(email, existing);
       if (!link) return json({ ok: false, invited: true, error: "They're on the team as Invite pending, but the link couldn't be made. Use Resend." }, 502);
-      if (!(await sendInviteEmail(email, name, inviter, link, false))) {
+      if (!(await sendInviteEmail(email, name, await inviterName(inviter), link, false))) {
         return json({ ok: false, invited: true, error: "They're on the team as Invite pending, but the email didn't send. Use Resend." }, 502);
       }
       return json({ ok: true });
@@ -248,7 +264,7 @@ Deno.serve(async (req: Request) => {
       if (!pending) return json({ ok: false, error: "No pending invite for that email." }, 404);
       const existing = (await authUserId(email)) !== null;
       const link = await setPasswordLink(email, existing);
-      if (!link || !(await sendInviteEmail(email, pending.display_name || "", inviter, link, true))) {
+      if (!link || !(await sendInviteEmail(email, pending.display_name || "", await inviterName(inviter), link, true))) {
         return json({ ok: false, error: "The new link couldn't be sent. Try again in a minute." }, 502);
       }
       return json({ ok: true });

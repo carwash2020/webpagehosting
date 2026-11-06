@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=9445ba2176"></script>
+<script src="/tools/auth.js?v=a4f7f4597e"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -53,15 +53,15 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=7c03870603">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=1a061bc473">
-<script src="/tools/data-layer.js?v=a098577eb4" defer></script>
-<script src="/tools/dev-tools-shared.js?v=ffcb14381f" defer></script>
+<link rel="stylesheet" href="/tools/styles-tools.css?v=a038f9f7de">
+<script src="/tools/data-layer.js?v=e736cf54f5" defer></script>
+<script src="/tools/dev-tools-shared.js?v=c57edc22d2" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=fe9cdc1e0f" defer></script>
-<script src="/tools/tools-command-palette.js?v=ac4de65287" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=05f55fda07" defer></script>
+<script src="/tools/tools-command-palette.js?v=8cde9621ed" defer></script>
 <script src="/tools/sync.js?v=92a4047864" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -603,7 +603,7 @@
       <button type="button" class="dt-tile" data-dt-tile="notifications"><span class="dt-tile-head"><span class="dt-tile-name">Notifications</span></span><span class="dt-tile-sub">Test sends, what went out<span data-dt-count="notifications"></span></span></button>
       <button type="button" class="dt-tile" data-dt-tile="ops"><span class="dt-tile-head"><span class="dt-tile-name">Ops</span></span><span class="dt-tile-sub">Deploys, to-dos, shortcuts<span data-dt-count="ops"></span></span></button>
       <button type="button" class="dt-tile" data-dt-tile="reports"><span class="dt-tile-head"><span class="dt-tile-name">Reports</span></span><span class="dt-tile-sub">Last 8 weeks<span data-dt-count="reports"></span></span></button>
-      <button type="button" class="dt-tile" data-dt-tile="access"><span class="dt-tile-head"><span class="dt-tile-name">Access</span></span><span class="dt-tile-sub">Who can open what · Team<span data-dt-count="access"></span></span></button>
+      <button type="button" class="dt-tile" data-dt-tile="access"><span class="dt-tile-head"><span class="dt-tile-name">Access</span></span><span class="dt-tile-sub">Account switches · Starting templates · Team<span data-dt-count="access"></span></span></button>
       <a class="dt-tile" href="/tools/site-content.html"><span class="dt-tile-head"><span class="dt-tile-name">Content</span></span><span class="dt-tile-sub">Website editing ›</span></a>
     </nav>
     <p class="dt-recent" id="dtRecent" hidden></p>
@@ -1301,7 +1301,7 @@
       <label style="display:block; margin-bottom:8px;">Add an account
         <input type="email" id="newAccountEmail" placeholder="name@example.com" style="margin-top:4px;">
       </label>
-      <label style="display:block; margin-bottom:10px; font-size:13px; color:var(--text-dim);">Start from a preset (optional)
+      <label style="display:block; margin-bottom:10px; font-size:13px; color:var(--text-dim);">Start from a template (optional)
         <select id="newAccountPreset" style="margin-top:4px;"><option value="">None -- start with everything unchecked</option></select>
       </label>
       <button class="secondary-btn" onclick="addAccount()">Add account</button>
@@ -1312,7 +1312,7 @@
        read-only, drawn from the same rows the editor above loaded
        (_cachedAccountsData). Changing a box still happens above. -->
   <div class="th-v2-card th-dt-matrix-card dev-panel-wide" id="dtPermMatrixCard" hidden>
-    <div class="th-v2-card-head"><p class="th-v2-card-title">Who can open what</p><span class="th-v2-card-note" id="dtPermMatrixNote"></span></div>
+    <div class="th-v2-card-head"><p class="th-v2-card-title">Starting templates</p><span class="th-v2-card-note" id="dtPermMatrixNote"></span></div>
     <div class="th-dt-matrix-wrap" id="dtPermMatrix"></div>
   </div>
 
@@ -2345,7 +2345,7 @@
     // needed. can_manage_business_finances (the old, broader
     // checkbox) no longer exists as a column at all.
     const res = await fetchWithTimeout(
-      SUPABASE_URL + '/rest/v1/account_roles?select=email,role_name,can_manage_roles,can_access_dev_tools,can_access_dev_tools_full,can_manage_site_content,can_manage_invoices,can_manage_contracts,can_view_finance,can_view_runway,can_manage_reviews&order=email',
+      SUPABASE_URL + '/rest/v1/account_roles?select=email,role_name,display_name,title,can_manage_roles,can_access_dev_tools,can_access_dev_tools_full,can_manage_site_content,can_manage_invoices,can_manage_contracts,can_view_finance,can_view_runway,can_manage_reviews&order=email',
       8000,
       { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
     );
@@ -2672,7 +2672,7 @@
       const presetSelect = document.getElementById('newAccountPreset');
       if (presetSelect) {
         presetSelect.innerHTML = '<option value="">None -- start with everything unchecked</option>' +
-          roleDefs.map(r => '<option value="' + escapeAttr(r.name) + '">' + escapeHtml(r.name) + ' preset</option>').join('');
+          roleDefs.map(r => '<option value="' + escapeAttr(r.name) + '">' + escapeHtml(r.name) + ' template</option>').join('');
       }
       const addForm = document.getElementById('addAccountForm');
       if (addForm) addForm.style.display = manager ? 'block' : 'none';
@@ -2682,9 +2682,13 @@
       accountsEl.innerHTML = '<label style="display:block;">Account' +
         '<select id="permAccountSelect" onchange="selectPermAccount(this.value)" style="margin-top:4px; width:auto; min-width:260px;">' +
         accounts.map(a => {
-          const suffix = a.role_name ? ' (started from ' + a.role_name + ')' : '';
+          // Name · title — email (fix plan FP1.4). role_name (the template the
+          // account was created from) is history, never shown as a role.
+          const local = String(a.email || '').split('@')[0];
+          const name = (a.display_name || '').trim() || (local ? local.charAt(0).toUpperCase() + local.slice(1) : a.email);
+          const label = name + ((a.title || '').trim() ? ' \u00b7 ' + a.title.trim() : '') + ' \u2014 ' + a.email;
           const selected = a.email === _selectedPermEmail ? ' selected' : '';
-          return '<option value="' + escapeAttr(a.email) + '"' + selected + '>' + escapeHtml(a.email + suffix) + '</option>';
+          return '<option value="' + escapeAttr(a.email) + '"' + selected + '>' + escapeHtml(label) + '</option>';
         }).join('') +
         '</select></label>';
 
@@ -2857,7 +2861,7 @@
     const role = typeof getCurrentUserRole === 'function' ? getCurrentUserRole() : null;
     if (!email) return; // no session -- the page gate will have handled this already
     el.innerHTML = 'Signed in as <strong>' + escapeHtml(name || email) + '</strong>' +
-      (role && role.roleName ? '<span class="dev-role-tag">' + escapeHtml(role.roleName) + '</span>' : '');
+      (role && role.title ? '<span class="dev-role-tag">' + escapeHtml(role.title) + '</span>' : '');
     el.style.display = 'inline-flex';
   }
 
@@ -4486,7 +4490,7 @@
           return '<td><span class="th-dt-mark' + (on ? ' is-on' : '') + '" aria-label="' + (on ? 'Yes' : 'No') + '">' + (on ? '✓' : '–') + '</span></td>';
         }).join('') + '</tr>').join('') + '</tbody></table>';
       const note = byId('dtPermMatrixNote');
-      if (note) note.textContent = 'By preset · each account’s own boxes are above';
+      if (note) note.textContent = 'What a new account starts with. Not people: each person’s switches are their own, on Team.';
       card.hidden = false;
     }
 

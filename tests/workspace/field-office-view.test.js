@@ -56,9 +56,12 @@ test('with it, Office view is the default and shows every job; Field view narrow
   assert.deepEqual(titles(w), [1, 2]);
 });
 
-test('before the account\'s permissions have loaded (or if they couldn\'t), nothing is hidden: every job shows, as before Phase 4', () => {
-  const w = env({ roleLoaded: false, others: false });
-  assert.deepEqual(titles(w), [1, 2, 3, 4]);
+// Fix plan FP2.3 (2026-11-06): fail-closed. Before the permissions load (or
+// if they couldn't) it is Field view -- your own jobs, never anyone else's.
+test('before the account\'s permissions have loaded (or if they couldn\'t), it is Field view: your jobs only, never someone else\'s', () => {
+  const w = env({ roleLoaded: false, others: false, saved: 'office' });
+  assert.equal(w.thViewMode(), 'field');
+  assert.deepEqual(titles(w), [1, 2]);
 });
 
 test('the Field / Office switch exists only for accounts with the capability, and flips the view', () => {

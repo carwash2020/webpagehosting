@@ -85,7 +85,15 @@ function loadDigest(state) {
       if (p === 'payment_intents') return j({ data: state.stripe.payment_intents, has_more: false });
       if (p === 'refunds') return j({ data: state.stripe.refunds, has_more: false });
       if (p === 'disputes') return j({ data: state.stripe.disputes, has_more: false });
-      if (p === 'payouts') return j({ data: state.stripe.payouts[u.searchParams.get('status')] || [] });
+      if (p === 'payouts') {
+        // Like Stripe: the list filters by status only for pending, paid,
+        // failed and canceled; any other value (in_transit) doesn't filter,
+        // so the newest payouts of every status come back. Newest first.
+        const all = Object.values(state.stripe.payouts).flat().sort((x, y) => y.arrival_date - x.arrival_date);
+        const st = u.searchParams.get('status');
+        const list = ['pending', 'paid', 'failed', 'canceled'].includes(st) ? all.filter((x) => x.status === st) : all;
+        return j({ data: list.slice(0, Number(u.searchParams.get('limit') || 10)) });
+      }
       return j({}, 404);
     }
     const table = u.pathname.replace('/rest/v1/', '');

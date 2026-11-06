@@ -215,7 +215,8 @@ test('B6: auth.js settles body[data-role-state] once the role check ends', () =>
 function blockedDom(role) {
   const dom = new JSDOM('<!doctype html><body><div data-rb><h1>Finance</h1><p><span class="th-rb-who"></span></p></div></body>', { runScripts: 'outside-only' });
   const w = dom.window;
-  w.eval(`var __role = ${JSON.stringify(role)}; function getCurrentUserRole() { return __role; } function getCurrentUserEmail() { return 'jake@triplehenterprisesllc.biz'; } function getCurrentUserFirstName() { return 'jake@triplehenterprisesllc.biz'; }`);
+  // Fix plan FP1.8: the person's own name and title (auth.js), never the preset.
+  w.eval(`var __role = ${JSON.stringify(role)}; function getCurrentUserRole() { return __role; } function getCurrentUserEmail() { return 'jake@triplehenterprisesllc.biz'; } function getCurrentUserDisplayName() { return 'Jake'; } function getCurrentUserTitle() { return (__role && __role.title) || ''; }`);
   w.eval(extractFn(AUTH, 'fillRoleBlockedScreens'));
   w.fillRoleBlockedScreens();
   return w.document.querySelector('[data-rb]');
@@ -223,7 +224,9 @@ function blockedDom(role) {
 
 test('B6: the no-access screen says who is signed in, or that access could not be confirmed', () => {
   const known = blockedDom(EMPLOYEE);
-  assert.equal(known.querySelector('.th-rb-who').textContent, 'You’re signed in as Jake (Employee).');
+  assert.equal(known.querySelector('.th-rb-who').textContent, 'You’re signed in as Jake.', 'no title yet: just the name, never the preset');
+  const titled = blockedDom({ ...EMPLOYEE, title: 'Field tech' });
+  assert.equal(titled.querySelector('.th-rb-who').textContent, 'You’re signed in as Jake, Field tech.');
   assert.ok(!known.classList.contains('is-unconfirmed'));
   const unknown = blockedDom(null);
   assert.ok(unknown.classList.contains('is-unconfirmed'));

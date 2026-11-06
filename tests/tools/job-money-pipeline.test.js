@@ -228,6 +228,7 @@ test('Jobs: marking a job done opens the Job done sheet -- Create invoice first 
     URLSearchParams, localStorage: { getItem: (k) => (k === 'th_invoices' ? JSON.stringify([{ jobRefId: '2', total: 5, paidAmount: 0 }]) : '[]') },
     showQuickActionSheet: (title, actions) => { shown = { title, labels: Array.from(actions, a => a.label), actions }; },
     escapeHtml: (x) => String(x).replace(/</g, '&lt;').replace(/>/g, '&gt;'), setJobNoCharge: (id, v) => noCharge.push([id, v]), window: { location: {} },
+    canManageInvoices: () => true, // a confirmed Invoices permission (fail-closed since FP2.3)
   });
   await openJobDoneSheet({ id: 1, title: 'Sink <trap>', client: 'Sarah Miller', status: 'done' });
   assert.equal(shown.title, 'Done: Sink &lt;trap&gt;');
@@ -332,4 +333,20 @@ test('the help says it', () => {
   assert.match(TOUR, /Invoice from the job/);
   assert.match(WS, /<strong>Ready to invoice<\/strong> &mdash; jobs finished in the last 60 days with no invoice and no payment logged/);
   assert.match(JT, /the <strong>To invoice<\/strong> filter lists them all/);
+});
+
+// Fix plan FP2.3 (2026-11-06): Create invoice is offered only on a
+// confirmed Invoices permission -- not while the role is still loading,
+// and not when it couldn't be confirmed.
+test('Jobs: the Job done sheet offers Create invoice only once Invoices is confirmed (fail-closed)', async () => {
+  for (const ctx of [{}, { canManageInvoices: () => false, getCurrentUserRole: () => null }, { canManageInvoices: () => false, getCurrentUserRole: () => ({ roleName: 'Employee' }) }]) {
+    let shown = null;
+    const { openJobDoneSheet } = jtFns(['openJobDoneSheet', 'reviewRequestHref'], {
+      URLSearchParams, localStorage: { getItem: () => '[]' },
+      showQuickActionSheet: (title, actions) => { shown = Array.from(actions, a => a.label); },
+      escapeHtml: (x) => String(x), setJobNoCharge: () => {}, window: { location: {} }, ...ctx,
+    });
+    await openJobDoneSheet({ id: 1, title: 'Sink', status: 'done' });
+    assert.ok(!shown.includes('Create invoice'), JSON.stringify(Object.keys(ctx)));
+  }
 });

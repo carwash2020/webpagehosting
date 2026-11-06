@@ -269,11 +269,18 @@ async function gatherDigest(settings: any, today: Win, tomorrow: Win) {
   });
 
   const payouts = section("stripe_payouts", async () => {
-    const pending = (await stripe("payouts?limit=3&status=pending")).data || [];
-    const transit = (await stripe("payouts?limit=3&status=in_transit")).data || [];
-    const upcoming = [...transit, ...pending].sort((a: any, b: any) => a.arrival_date - b.arrival_date);
+    // Stripe's payout list filters by status only for pending, paid, failed
+    // and canceled -- "in_transit" doesn't filter, which once showed a payout
+    // that had already arrived as "next" (2026-11-06). So read the newest
+    // payouts once and keep only the ones still on their way.
+    const recent = (await stripe("payouts?limit=10")).data || [];
+    const upcoming = recent.filter((p: any) => p.status === "pending" || p.status === "in_transit")
+      .sort((a: any, b: any) => a.arrival_date - b.arrival_date);
     let lastPaid: any = null;
-    if (!upcoming.length) lastPaid = ((await stripe("payouts?limit=1&status=paid")).data || [])[0] || null;
+    if (!upcoming.length) {
+      lastPaid = recent.find((p: any) => p.status === "paid")
+        || ((await stripe("payouts?limit=1&status=paid")).data || [])[0] || null;
+    }
     const fmt = (p: any) => p && ({ amount: p.amount, arrival: ymdInZone(p.arrival_date * 1000, "UTC"), status: p.status });
     return { upcoming: upcoming.map(fmt), lastPaid: fmt(lastPaid) };
   });
