@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=9445ba2176"></script>
+<script src="/tools/auth.js?v=a4f7f4597e"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -78,12 +78,12 @@
      manage-booking.html, portal/quotes.html, and portal/jobs.html use. -->
 <script src="/js/business-hours.js?v=e0e3b29210"></script>
 <script src="/tools/push-notifications.js?v=3c123334a6" defer></script>
-<script src="/tools/data-layer.js?v=a098577eb4" defer></script>
+<script src="/tools/data-layer.js?v=b539097b1f" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=fe9cdc1e0f" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=6e1e657683" defer></script>
 <script src="/tools/tools-command-palette.js?v=ac4de65287" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
 <style>
@@ -3717,7 +3717,9 @@
   let weekCardTick = null;
   function shiftPersonName(email) {
     const me = typeof thShiftEmail === 'function' ? thShiftEmail() : null;
-    if (me && email === me && typeof getCurrentUserFirstName === 'function' && getCurrentUserFirstName() && getCurrentUserFirstName() !== me) return getCurrentUserFirstName();
+    if (me && email === me && typeof getCurrentUserDisplayName === 'function' && getCurrentUserDisplayName()) return getCurrentUserDisplayName();
+    const onTeam = typeof thTeamMembers === 'function' ? thTeamMembers().find(p => p.email === String(email || '').toLowerCase()) : null;
+    if (onTeam && onTeam.display_name) return onTeam.display_name;
     const local = String(email || '').split('@')[0].split(/[._-]+/)[0];
     return local ? local.charAt(0).toUpperCase() + local.slice(1) : email;
   }
@@ -4619,6 +4621,9 @@
     // Money can show as soon as the role is confirmed, from this device's
     // copy, without waiting for the pull to finish.
     window.addEventListener('th-role-loaded', () => { try { renderMetrics(); renderInvoicesList(); } catch (e) { reportHomeRenderError('money redraw on role load', e); } });
+    // The greeting's name is the person's own (fix plan FP1.2): redraw it once
+    // their account row has loaded.
+    window.addEventListener('th-role-loaded', () => { try { renderGreetingBanner(); } catch (e) { reportHomeRenderError('greeting redraw on role load', e); } });
     const syncStartedAt = Date.now();
     // Set by handleIncomingSearch() below for an old ?search= link.
     let showMoneyCardAfterRender = false;

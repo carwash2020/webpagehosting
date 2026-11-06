@@ -1075,7 +1075,7 @@ async function thRefreshTeamMembers() {
     });
     if (!res.ok) return thTeamMembers();
     const rows = await res.json();
-    const slim = (Array.isArray(rows) ? rows : []).map(r => ({ email: String(r.email || '').toLowerCase(), display_name: r.display_name || null, status: r.status }));
+    const slim = (Array.isArray(rows) ? rows : []).map(r => ({ email: String(r.email || '').toLowerCase(), display_name: r.display_name || null, title: r.title || null, status: r.status }));
     try { localStorage.setItem(TH_TEAM_CACHE_KEY, JSON.stringify(slim)); } catch (e) { /* storage blocked */ }
     return thTeamMembers();
   } catch (e) { return thTeamMembers(); }

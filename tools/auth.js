@@ -379,18 +379,35 @@ function getCurrentUserEmail() {
   return (s && s.email) || null;
 }
 
-// Just the two of you right now, so a plain lookup table beats trying to
-// derive a name generically from an email address. Falls back to the
-// email itself if an unrecognized account ever logs in, rather than
-// showing nothing.
+// Who is signed in, by name (fix plan FP1, 2026-11-06). A person's name
+// and title belong to the person: display_name and title on their own
+// account_roles row, set on the Team screen. The name falls back to the
+// two known names (so the greeting is right before the role loads), then
+// to the part of the email before the @, capitalized -- never the whole
+// email address. The title is only a label; it never decides access.
 const KNOWN_USER_NAMES = {
   'connor@triplehenterprisesllc.biz': 'Connor',
   'steve@triplehenterprisesllc.biz': 'Steve',
 };
-function getCurrentUserFirstName() {
+function thNameFromEmail(email) {
+  const local = String(email || '').split('@')[0];
+  return local ? local.charAt(0).toUpperCase() + local.slice(1) : '';
+}
+function getCurrentUserDisplayName() {
   const email = getCurrentUserEmail();
   if (!email) return null;
-  return KNOWN_USER_NAMES[email.toLowerCase()] || email;
+  const role = _cachedRoleInfo;
+  if (role && role.displayName) return role.displayName;
+  return KNOWN_USER_NAMES[email.toLowerCase()] || thNameFromEmail(email) || null;
+}
+// Kept for its callers (greeting, Settings, Dev Tools, the week card): the
+// same name as getCurrentUserDisplayName().
+function getCurrentUserFirstName() {
+  return getCurrentUserDisplayName();
+}
+function getCurrentUserTitle() {
+  const role = _cachedRoleInfo;
+  return (role && role.title) || '';
 }
 
 // ---------------------------------------------------------------------------
@@ -402,8 +419,10 @@ function getCurrentUserFirstName() {
 // row, not inherited from a shared role tier. role_definitions still
 // exists, but only as PRESETS for the management UI's convenience --
 // nothing reads it to decide what an account can actually do anymore.
-// role_name on account_roles is now just a display label ("started from
-// the Owner preset"), never authoritative.
+// role_name on account_roles is audit history only (the preset the account
+// was created from): it is never authoritative and never shown as anyone's
+// role (fix plan FP1). A person's own name and title are display_name and
+// title.
 //
 // loadCurrentUserRole() is called from initSyncOnLoad() in sync.js, so
 // by the time any page's own load logic runs, the synchronous
@@ -551,7 +570,7 @@ async function loadCurrentUserRole(overrideAccessToken, overrideEmail) {
           // the caller's own afterward costs nothing extra RLS
           // wasn't already allowing.
           res = await fetch(
-            `${SUPABASE_URL}/rest/v1/account_roles?select=email,role_name,can_manage_roles,can_access_dev_tools,can_access_dev_tools_full,can_manage_site_content,can_manage_invoices,can_manage_contracts,can_view_finance,can_view_runway,can_manage_reviews,can_manage_clients,can_manage_others_jobs`,
+            `${SUPABASE_URL}/rest/v1/account_roles?select=email,role_name,display_name,title,can_manage_roles,can_access_dev_tools,can_access_dev_tools_full,can_manage_site_content,can_manage_invoices,can_manage_contracts,can_view_finance,can_view_runway,can_manage_reviews,can_manage_clients,can_manage_others_jobs`,
             {
               headers: {
                 'apikey': SUPABASE_ANON_KEY,
@@ -607,6 +626,10 @@ async function loadCurrentUserRole(overrideAccessToken, overrideEmail) {
       const row = rows[0];
       const roleInfo = {
         roleName: row.role_name,
+        // Fix plan FP1 (sql/security/fp1_person_title.sql): the person's own
+        // name and title. Labels only.
+        displayName: (row.display_name || '').trim(),
+        title: (row.title || '').trim(),
         canManageRoles: !!row.can_manage_roles,
         canAccessDevTools: !!row.can_access_dev_tools,
         canAccessDevToolsFull: !!row.can_access_dev_tools_full,
@@ -793,16 +816,15 @@ function fillRoleBlockedScreens() {
   const boxes = document.querySelectorAll('[data-rb]');
   if (!boxes.length) return;
   const role = getCurrentUserRole();
-  const email = getCurrentUserEmail() || '';
-  const first = getCurrentUserFirstName() || '';
-  const local = email.split('@')[0] || '';
-  const name = first && first.indexOf('@') === -1 ? first : (local ? local.charAt(0).toUpperCase() + local.slice(1) : 'this account');
+  // Name and title (fix plan FP1.8), never the preset the account started from.
+  const name = getCurrentUserDisplayName() || 'this account';
+  const title = getCurrentUserTitle();
   boxes.forEach((box) => {
     box.classList.toggle('is-unconfirmed', !role);
     const who = box.querySelector('.th-rb-who');
     if (!who) return;
     who.textContent = role
-      ? 'You\u2019re signed in as ' + name + (role.roleName ? ' (' + role.roleName + ')' : '') + '.'
+      ? 'You\u2019re signed in as ' + name + (title ? ', ' + title : '') + '.'
       : 'We couldn\u2019t confirm this account\u2019s access just now \u2014 check your connection and try again.';
   });
 }

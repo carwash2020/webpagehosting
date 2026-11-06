@@ -54,7 +54,7 @@ test('loadCurrentUserRole() queries all 9 permission booleans directly off accou
   const endIdx = AUTH_JS.indexOf('\n}', startIdx);
   assert.ok(endIdx !== -1, 'expected to find the function\'s closing brace');
   const body = AUTH_JS.slice(startIdx, endIdx);
-  assert.match(body, /select=email,role_name,can_manage_roles,can_access_dev_tools,can_access_dev_tools_full,can_manage_site_content,can_manage_invoices,can_manage_contracts,can_view_finance,can_view_runway,can_manage_reviews/);
+  assert.match(body, /select=email,role_name,display_name,title,can_manage_roles,can_access_dev_tools,can_access_dev_tools_full,can_manage_site_content,can_manage_invoices,can_manage_contracts,can_view_finance,can_view_runway,can_manage_reviews/);
   // Checks the actual fetch URL specifically, not the whole function
   // body -- a legitimate historical comment elsewhere in this function
   // (explaining the 2026-09-02 retry fix) still mentions

@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=9445ba2176"></script>
+<script src="/tools/auth.js?v=a4f7f4597e"></script>
 <script src="/trusted-device.js?v=255d86a600"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
@@ -59,11 +59,11 @@
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=fe9cdc1e0f" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=6e1e657683" defer></script>
 <script src="/tools/tools-command-palette.js?v=ac4de65287" defer></script>
 <script src="/tools/tools-tour.js?v=9763411289" defer></script>
-<script src="/tools/data-layer.js?v=a098577eb4" defer></script>
-<script src="/tools/dev-tools-shared.js?v=ffcb14381f" defer></script>
+<script src="/tools/data-layer.js?v=b539097b1f" defer></script>
+<script src="/tools/dev-tools-shared.js?v=c57edc22d2" defer></script>
 <script src="/tools/sync.js?v=92a4047864" defer></script>
 <style>
   @view-transition {
@@ -114,6 +114,13 @@
   .team-sheet-x { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border); background: var(--bg-panel-2); color: var(--text); font-size: 20px; cursor: pointer; }
   .team-sheet-hint { font-size: 13px; line-height: 1.45; color: var(--text-dim); padding: 10px 12px; border-radius: 10px; background: var(--bg-panel-2); }
   .team-error { color: #ff8a80; font-size: 13.5px; }
+  /* Name and title (fix plan FP1.1, 2026-11-06, approved "A person's name
+     and title" design). The title is only a label. */
+  .team-title { font-size: 12.5px; color: var(--tone-orange-fg); overflow-wrap: anywhere; }
+  .team-title.is-empty { color: var(--text-dim); }
+  .team-ident { margin: 0 16px; padding: 14px; border-radius: 12px; background: var(--bg-panel); border: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
+  .team-ident .form-field { margin: 0; }
+  .team-ident-save { min-height: 46px; }
   @media (min-width: 700px) { .team-sheet { align-items: center; } .team-sheet-card { border-radius: 20px; } }
 </style>
 </head>
@@ -153,6 +160,20 @@
     <button type="button" class="secondary-btn" id="teamBackBtn" aria-label="Back to Team">&lsaquo; Team</button>
     <div class="team-who"><div class="team-name" id="teamPersonName"></div><div class="team-email" id="teamPersonMeta"></div></div>
   </div>
+  <div class="team-section-label" id="teamIdentLabel">Name and title</div>
+  <form class="team-ident" id="teamIdentForm" novalidate>
+    <div class="form-field">
+      <label for="teamIdentName">Name</label>
+      <input type="text" id="teamIdentName" autocomplete="off" maxlength="120" placeholder="First and last name">
+    </div>
+    <div class="form-field">
+      <label for="teamIdentTitle">Title</label>
+      <input type="text" id="teamIdentTitle" autocomplete="off" maxlength="60" placeholder="For example: Owner, Field tech">
+    </div>
+    <p class="team-note" style="margin:0;">Shown on the dashboard greeting, the sidebar, job chips and the roster. A title is just a label: it never changes what they can do.</p>
+    <div class="team-error" id="teamIdentError" role="alert"></div>
+    <button type="submit" class="primary-btn team-ident-save" id="teamIdentSave">Save name and title</button>
+  </form>
   <div class="team-section-label" id="teamPersonCapsLabel">What they can do</div>
   <p class="team-note" style="margin-top:0;">Always: their own assigned jobs, log hours and parts, mark done.</p>
   <div class="team-caps" id="teamCaps"></div>
@@ -232,6 +253,10 @@
     const local = String(p.email || '').split('@')[0];
     return local ? local.charAt(0).toUpperCase() + local.slice(1) : p.email;
   }
+  function teamTitleHtml(p) {
+    const t = String(p.title || '').trim();
+    return t ? '<span class="team-title" style="display:block;">' + escapeHtml(t) + '</span>' : '<span class="team-title is-empty" style="display:block;">No title yet</span>';
+  }
   function teamInitials(p) {
     const parts = teamDisplayName(p).split(/\s+/).filter(Boolean);
     return ((parts[0] || '?')[0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
@@ -272,7 +297,7 @@
     return '<div class="team-row' + (p.status === 'deactivated' ? ' is-deactivated' : '') + '">' +
       '<button type="button" class="team-open" data-team-open="' + email + '"' + (p.status === 'deactivated' ? ' disabled' : '') + '>' +
         '<span class="team-avatar" aria-hidden="true">' + escapeHtml(teamInitials(p)) + '</span>' +
-        '<span class="team-who"><span class="team-name" style="display:block;">' + escapeHtml(teamDisplayName(p)) + '</span><span class="team-email" style="display:block;">' + escapeHtml(p.email) + '</span></span>' +
+        '<span class="team-who"><span class="team-name" style="display:block;">' + escapeHtml(teamDisplayName(p)) + '</span>' + teamTitleHtml(p) + '</span>' +
         '<span class="team-status is-' + escapeAttr(p.status) + '">' + escapeHtml(TEAM_STATUS_LABEL[p.status] || p.status) + '</span>' +
       '</button>' +
       (tags ? '<div class="team-tags">' + tags + '</div>' : '') +
@@ -294,7 +319,17 @@
     const p = teamRoster.find(x => x.email === teamSelected);
     if (!p) { teamShowRoster(); return; }
     document.getElementById('teamPersonName').textContent = teamDisplayName(p);
-    document.getElementById('teamPersonMeta').textContent = p.email + ' · ' + (TEAM_STATUS_LABEL[p.status] || p.status);
+    const title = String(p.title || '').trim();
+    document.getElementById('teamPersonMeta').textContent = (title ? title + ' · ' : '') + p.email + ' · ' + (TEAM_STATUS_LABEL[p.status] || p.status);
+    // Fill the fields only when a different person opens, so a reload
+    // never wipes something half-typed.
+    const form = document.getElementById('teamIdentForm');
+    if (form.getAttribute('data-email') !== p.email) {
+      form.setAttribute('data-email', p.email);
+      document.getElementById('teamIdentName').value = p.display_name || '';
+      document.getElementById('teamIdentTitle').value = title;
+      document.getElementById('teamIdentError').textContent = '';
+    }
     document.getElementById('teamPersonCapsLabel').textContent = 'What ' + teamDisplayName(p).split(' ')[0] + ' can do';
     document.getElementById('teamCaps').innerHTML = TEAM_CAPS.map(cap => {
       const st = teamCapState(p, cap);
@@ -319,6 +354,7 @@
   }
   function teamShowPerson(email) {
     teamSelected = email;
+    document.getElementById('teamIdentForm').removeAttribute('data-email');
     document.getElementById('teamRosterView').hidden = true;
     document.getElementById('teamPersonView').hidden = false;
     teamRenderPerson();
@@ -330,7 +366,7 @@
     try {
       teamRoster = await teamFetchRoster();
       // Names for assignee chips and the Assigned to picker elsewhere.
-      try { localStorage.setItem('th_team_roster_cache', JSON.stringify(teamRoster.map(r => ({ email: String(r.email).toLowerCase(), display_name: r.display_name || null, status: r.status })))); } catch (e2) { /* storage blocked */ }
+      try { localStorage.setItem('th_team_roster_cache', JSON.stringify(teamRoster.map(r => ({ email: String(r.email).toLowerCase(), display_name: r.display_name || null, title: r.title || null, status: r.status })))); } catch (e2) { /* storage blocked */ }
     } catch (e) {
       document.getElementById('teamList').innerHTML = '<p class="team-error">Couldn’t load the team (' + escapeHtml(e.message || String(e)) + '). Try again in a minute.</p>';
       return;
@@ -378,6 +414,49 @@
     Object.assign(p, patch);
     teamRenderPerson();
     showToast(cap.label + (next ? ' on' : ' off') + ' for ' + teamDisplayName(p) + '.');
+  }
+
+  // Name and title (fix plan FP1.1): a PATCH on the person's own
+  // account_roles row, under the same rule as the switches (only accounts
+  // that can manage the team; the database refuses anyone else). Empty
+  // fields are saved as no name / no title.
+  async function teamSaveIdent(e) {
+    e.preventDefault();
+    const p = teamRoster.find(x => x.email === teamSelected);
+    if (!p) return;
+    const err = document.getElementById('teamIdentError');
+    const name = document.getElementById('teamIdentName').value.replace(/\s+/g, ' ').trim();
+    const title = document.getElementById('teamIdentTitle').value.replace(/\s+/g, ' ').trim();
+    err.textContent = '';
+    if (name.length > 120) { err.textContent = 'Keep the name to 120 characters.'; return; }
+    if (title.length > 60) { err.textContent = 'Keep the title to 60 characters.'; return; }
+    if (typeof confirmDevPassword === 'function' && !(await confirmDevPassword())) return;
+    const patch = { display_name: name || null, title: title || null };
+    const btn = document.getElementById('teamIdentSave');
+    btn.disabled = true; btn.textContent = 'Saving…';
+    let res = null;
+    let rows = [];
+    try {
+      res = await fetch(SUPABASE_URL + '/rest/v1/account_roles?email=eq.' + encodeURIComponent(p.email), {
+        method: 'PATCH',
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + getAuthToken(), 'Content-Type': 'application/json', Prefer: 'return=representation' },
+        body: JSON.stringify(patch),
+      });
+      try { rows = await res.json(); } catch (e2) { /* none */ }
+    } catch (e3) { res = null; }
+    btn.disabled = false; btn.textContent = 'Save name and title';
+    if (!res || !res.ok || !Array.isArray(rows) || rows.length !== 1) {
+      err.textContent = 'That didn’t save. Check your connection and try again.';
+      return;
+    }
+    Object.assign(p, patch);
+    document.getElementById('teamIdentForm').removeAttribute('data-email');
+    teamRenderPerson();
+    try { localStorage.setItem('th_team_roster_cache', JSON.stringify(teamRoster.map(r => ({ email: String(r.email).toLowerCase(), display_name: r.display_name || null, title: r.title || null, status: r.status })))); } catch (e4) { /* storage blocked */ }
+    showToast('Saved for ' + teamDisplayName(p) + '.');
+    // Your own name: the sidebar and greeting pick it up now, not next load.
+    const me = typeof getCurrentUserEmail === 'function' ? String(getCurrentUserEmail() || '').toLowerCase() : '';
+    if (p.email.toLowerCase() === me && typeof loadCurrentUserRole === 'function') loadCurrentUserRole();
   }
 
   async function teamAction(act, email) {
@@ -438,6 +517,7 @@
   document.getElementById('teamInviteSheet').addEventListener('click', (e) => { if (e.target === e.currentTarget) teamCloseInvite(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !document.getElementById('teamInviteSheet').hidden) teamCloseInvite(); });
   document.getElementById('teamBackBtn').addEventListener('click', teamShowRoster);
+  document.getElementById('teamIdentForm').addEventListener('submit', teamSaveIdent);
   document.addEventListener('click', (e) => {
     const open = e.target.closest('[data-team-open]');
     if (open && !open.disabled) { teamShowPerson(open.getAttribute('data-team-open')); return; }

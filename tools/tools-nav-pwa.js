@@ -790,24 +790,23 @@ function thNavEsc(v) {
     fillSidebarAccount();
   }
 
-  var ROLE_WORDS = { owner: 'Owner', developer: 'Developer', employee: 'Employee', admin: 'Admin', office: 'Office', tech: 'Tech' };
+  // The account chip (fix plan FP1.3, 2026-11-06): the person's own name and
+  // title from their account_roles row (auth.js), never the preset the
+  // account started from. No title yet: the second line is their email.
   function fillSidebarAccount() {
     var chip = document.querySelector('.th-sidebar-account');
     if (!chip) return;
     var email = '';
     try { var s = (typeof getStoredSession === 'function') ? getStoredSession() : null; email = (s && s.email) || ''; } catch (e) { /* ignore */ }
-    var first = '';
-    try { first = (typeof getCurrentUserFirstName === 'function' && getCurrentUserFirstName()) || ''; } catch (e) { /* ignore */ }
-    if (first && first.indexOf('@') > -1) first = first.split('@')[0];
-    var name = first || (email ? email.split('@')[0] : '');
-    var roleInfo = null;
-    try { roleInfo = (typeof getCurrentUserRole === 'function') ? getCurrentUserRole() : null; } catch (e) { /* ignore */ }
-    var roleKey = roleInfo && (typeof roleInfo === 'string' ? roleInfo : roleInfo.roleName);
-    var role = roleKey ? (ROLE_WORDS[String(roleKey).toLowerCase()] || String(roleKey)) : '';
+    var name = '';
+    try { name = (typeof getCurrentUserDisplayName === 'function' && getCurrentUserDisplayName()) || ''; } catch (e) { /* ignore */ }
+    if (!name && email) { var local = email.split('@')[0]; name = local.charAt(0).toUpperCase() + local.slice(1); }
+    var title = '';
+    try { title = (typeof getCurrentUserTitle === 'function' && getCurrentUserTitle()) || ''; } catch (e) { /* ignore */ }
     chip.hidden = !name;
     chip.querySelector('.th-sidebar-account-avatar').textContent = name ? name.slice(0, 2).toUpperCase() : '';
     chip.querySelector('.th-sidebar-account-name').textContent = name;
-    chip.querySelector('.th-sidebar-account-role').textContent = role || email;
+    chip.querySelector('.th-sidebar-account-role').textContent = title || email;
   }
   window.addEventListener('th-role-loaded', fillSidebarAccount);
 
