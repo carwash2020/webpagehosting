@@ -1618,3 +1618,15 @@ One page now signs in both kinds of account, which raised two ways to get this w
 - The precached `tools/login.html` is only a forward now, so opening the Workspace app offline and signed out shows the browser's offline page instead of a sign-in form that couldn't work offline anyway.
 
 **Still to apply live:** `sql/security/fp4_signin_account_kind.sql`. It is held for Connor's OK. Until it is applied, the page fails safe: every account reads as a client, so staff would be routed to the portal. The page must not ship before the function is live.
+
+## 2026-11-06 -- FP4.2 verified email aliases: what widened, and why it's safe
+
+This change widens what a client can read: records on any email they have proved they own. The risks I weighed:
+
+- **Claiming someone else's records.** An alias links only after a code sent to that address (or a staff link opened while signed in as the account). Nothing matches on name or phone. The table has no client access, and the only writer is the edge function with the service key. `add` answers the same for every address, so it can't be used to learn who has an account. Codes are stored as an HMAC, last 15 minutes, lock after 5 wrong tries, and one address gets at most 5 an hour.
+- **Two accounts seeing the same records.** A confirmed alias has one owner (a unique index). An address with its own portal account is never linked by the client. Merging is staff-only (Workspace, two-factor, Clients), previewed, and confirmed. The merged account is locked and its saved cards are detached, so no second login can see or charge against A's history.
+- **Spoofing as the alias.** Messages, read marks and quote questions still require the sign-in email as sender (`sender_email = auth.email()`), so a client can read alias threads but never write as the alias. This is pinned in the PGlite test.
+- **Edge functions** that check "is this record yours?" use one helper. It returns the sign-in email plus confirmed aliases, and fails closed to the sign-in email alone. Stripe customers and card authorizations stay keyed to the payer's sign-in email.
+- **Case-insensitive matching** (`lower(client_email)`) is a small, deliberate broadening: a record sent to `Sam@Example.com` now shows for `sam@example.com`. Email addresses are case-insensitive in practice, and every live client email is lower-case today.
+
+**Not live yet:** `sql/security/fp4_email_aliases.sql`, the new `portal-email-alias` function and the 9 edited functions all wait for Connor's OK. The edited functions are safe to deploy before the SQL (the helper reads nothing and falls back), and the portal card stays hidden until the function answers.

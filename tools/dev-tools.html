@@ -1333,16 +1333,18 @@
   // (no CSP, manifest or PWA meta) since 2026-09-21, so "Run full health
   // check" reported 1 ISSUE on every run. Retired stubs belong in
   // check-consistency.js's EXEMPT list, not here.
+  // login.html left this list in fix plan FP4.1 (2026-11-06): it only
+  // forwards to the one sign-in, /portal/login.html.
   const TOOL_PAGES_TO_CHECK = [
     'workspace.html', 'contract-generator.html', 'invoice-generator.html',
-    'job-tracker.html', 'login.html', 'review-request.html', 'route-planner.html',
+    'job-tracker.html', 'review-request.html', 'route-planner.html',
     'parts-reference.html', 'runway-dashboard.html', 'dev-tools.html',
   ];
   // Pages that are deliberately different -- kept in sync with
-  // scripts/check-consistency.js's EXEMPT list. login.html has no auth
-  // gate to check (it IS the gate), and runway-dashboard.html doesn't
-  // load /styles.css at all.
-  const NO_AUTH_CHECK = ['login.html'];
+  // scripts/check-consistency.js's EXEMPT list. runway-dashboard.html
+  // doesn't load /styles.css at all. (None skip the auth gate since
+  // login.html left the list.)
+  const NO_AUTH_CHECK = [];
   const NO_STYLES_VERSION_CHECK = ['runway-dashboard.html'];
 
 

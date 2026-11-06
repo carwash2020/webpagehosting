@@ -40,7 +40,7 @@ const CORS_HEADERS: Record<string, string> = {
 // HTML file; if that constant ever changes there, change it here too.
 const MIN_LEAD_HOURS = 2;
 
-function decodeJwtPayload(token: string): { email?: string; role?: string } {
+function decodeJwtPayload(token: string): { email?: string; role?: string; sub?: string } {
   try {
     const payload = token.split(".")[1];
     const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
@@ -48,6 +48,23 @@ function decodeJwtPayload(token: string): { email?: string; role?: string } {
   } catch {
     return {};
   }
+}
+
+// Fix plan FP4.2 (2026-11-06, D11): the caller's sign-in email plus the
+// emails they have proved they own (client_email_aliases, confirmed only).
+// Any failure -- including the table not existing yet -- means the sign-in
+// email alone, never more.
+async function callerEmails(claims: { email?: string; sub?: string }): Promise<string[]> {
+  const out = [String(claims.email || "").toLowerCase()];
+  if (!claims.sub) return out;
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/client_email_aliases?user_id=eq.${encodeURIComponent(claims.sub)}&status=eq.confirmed&select=email`,
+      { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+    );
+    if (res.ok) for (const r of await res.json()) if (r && typeof r.email === "string") out.push(r.email.toLowerCase());
+  } catch { /* the sign-in email alone */ }
+  return out;
 }
 
 Deno.serve(async (req: Request) => {
@@ -105,7 +122,7 @@ Deno.serve(async (req: Request) => {
     }
     const quote = rows[0];
 
-    if (quote.client_email.toLowerCase() !== claims.email.toLowerCase()) {
+    if (!(await callerEmails(claims)).includes(String(quote.client_email).toLowerCase())) {
       return json({ ok: false, error: "That quote doesn't belong to this account." }, 403);
     }
     if (quote.status !== "approved") {

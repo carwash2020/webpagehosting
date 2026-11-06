@@ -6042,3 +6042,29 @@ Fix plan FP4.1 (D14; approved design OneSignIn). One sign-in page for everyone: 
   - new: `tests/portal/one-sign-in.test.js` (13), `tests/security/fp4-signin-account-kind-db.test.js` (3), and the shared jsdom harness `tests/signin-harness.js`;
   - 18 older sign-in test files ported to the one page (staff ids `staff*`), every safety assertion kept.
 - `scripts/signin-browser-check.js` was ported and run in Chromium: all checks pass, including axe WCAG 2.2 AA on every state. The screenshots in `docs/screenshots/signin/` were regenerated.
+
+## What changed, 2026-11-06 -- FP4.2 Verified email aliases
+
+Fix plan FP4.2 (D11; approved design EmailAliases). A client can add other email addresses they've used with Triple H. Invoices, quotes, jobs, contracts and checkups sent to any of them show up in their portal.
+
+- **Proof of ownership, never a guess:**
+  - The client adds an email (portal → Settings → Profile → Emails) and gets a 6-digit code at that address. It works for 15 minutes and allows 5 wrong tries; each address gets at most 5 codes an hour. Only the right code links the email. Never matched on name or phone.
+  - "Add" reads the same for every address. What happens to a staff address, an address with its own portal account, or one already linked elsewhere is said only after the right code, and none of those is ever linked.
+- **An email with its own portal account is a staff-assisted merge** (Workspace → client record → Portal emails, accounts with Clients, after a preview):
+  1. B is locked and can't sign in again.
+  2. B's saved cards are detached from B's Stripe customer. A card can't move between Stripe customers, so the client adds a card again at their next payment.
+  3. B's email and B's other confirmed emails become A's, so A sees B's history. Nothing is deleted, and each step is safe to retry.
+- **Staff can start an add** from the client record. We email a link to that address, and it links only when someone opens it while signed in to that client's portal account. It works for 7 days.
+- **Database** (`sql/security/fp4_email_aliases.sql`):
+  - `client_email_aliases`: no client access at all.
+  - `client_portal_my_emails()`: the caller's sign-in email plus confirmed aliases.
+  - The 13 client policies that matched `auth.email() = client_email` now match any of my emails, case-insensitively. The "Confirmed email only" policies are unchanged.
+  - Rows that belong to the person themselves stay keyed to the sign-in email: profile, notification settings, read marks, the sender of a message, and the asker of a quote question.
+  - `get_portal_unread_counts()` counts alias threads and uses the reader's own read marks.
+- **Edge functions:**
+  - New: `portal-email-alias`.
+  - `respond-to-quote`, `respond-to-contract`, `schedule-quote-job`, `schedule-checkup-visit`, `cancel-work-order`, `get-job-photo-urls`, `create-payment-intent` and `create-bulk-payment-intent` accept a record on any confirmed email. Cards stay on the payer's own Stripe customer.
+  - The saved-card gate in `manage-saved-card` counts records on a confirmed email.
+  - The helper fails closed: if the alias table can't be read, only the sign-in email counts.
+  - `ensure-my-referral-code` was left as is: it only looks up a display name.
+- Tests: `tests/security/fp4-email-aliases-db.test.js` (8, PGlite), `tests/edge-functions/portal-email-alias.test.js` (9), `tests/edge-functions/fp4-alias-ownership.test.js` (3) and `tests/portal/fp4-email-aliases-ui.test.js` (8).

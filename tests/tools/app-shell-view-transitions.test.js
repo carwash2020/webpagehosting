@@ -23,10 +23,12 @@ const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 // which has no real content to transition between -- the retired
 // redirect stubs that used to need excluding here too, contact-card.html,
 // job-cost-lookup.html, expense-logger.html, calendar.html and pos.html,
-// were deleted outright on 2026-10-08, old bookmarks now just 404).
+// were deleted outright on 2026-10-08, old bookmarks now just 404). login.html
+// left in FP4.1 (2026-11-06): it only forwards to the one sign-in,
+// portal/login.html, which opts in itself (tests/portal/view-transitions.test.js).
 const TOOL_PAGES = [
   'client-detail', 'clients', 'contract-generator', 'dev-tools',
-  'finance', 'invoice-generator', 'job-detail', 'job-tracker', 'login',
+  'finance', 'invoice-generator', 'job-detail', 'job-tracker',
   'parts-reference', 'reset-password', 'review-request',
   'route-planner', 'runway-dashboard', 'settings', 'site-content', 'workspace',
 ];

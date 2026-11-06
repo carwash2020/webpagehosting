@@ -50,7 +50,8 @@ test('cancelled has a real client-facing status label and badge style, not a raw
 
 test('the edge function only allows cancelling from \'submitted\', and only the request\'s own owner', () => {
   assert.match(CANCEL_FN, /workOrder\.status !== "submitted"/);
-  assert.match(CANCEL_FN, /workOrder\.client_email\.toLowerCase\(\) !== claims\.email\.toLowerCase\(\)/);
+  // FP4.2: the caller's sign-in email or one they proved they own (confirmed alias).
+  assert.match(CANCEL_FN, /if \(!\(await callerEmails\(claims\)\)\.includes\(String\(workOrder\.client_email\)\.toLowerCase\(\)\)\) \{/);
   assert.match(CANCEL_FN, /status: "cancelled"/);
 });
 

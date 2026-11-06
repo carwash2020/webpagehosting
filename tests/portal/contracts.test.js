@@ -144,7 +144,8 @@ test('sync-contract-to-portal gates on can_manage_contracts, not can_manage_invo
 });
 
 test('respond-to-contract verifies the contract belongs to the caller before writing, and requires a signature to sign', () => {
-  assert.match(respondFnSrc, /contract\.client_email\.toLowerCase\(\) !== claims\.email\.toLowerCase\(\)/);
+  // FP4.2: the caller's sign-in email or one they proved they own (confirmed alias).
+  assert.match(respondFnSrc, /if \(!\(await callerEmails\(claims\)\)\.includes\(String\(contract\.client_email\)\.toLowerCase\(\)\)\) \{/);
   assert.match(respondFnSrc, /looksLikeSignatureDataUrl/);
   assert.match(respondFnSrc, /if \(contract\.status !== "pending"\)/);
 });
