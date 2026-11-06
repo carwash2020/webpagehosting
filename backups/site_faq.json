@@ -34,9 +34,9 @@
     {
         "id": 5,
         "question": "What payment methods do you accept?",
-        "answer": "Cash, check, Venmo, and Cash App are all accepted, along with credit and debit cards via a secure Stripe invoice.",
+        "answer": "Cash, check, Venmo, and Cash App are all accepted, along with credit and debit cards: in person when the job is done, or online through the secure pay link on your invoice. Card payments are processed by Stripe.",
         "sort_order": 5,
-        "updated_at": "2026-08-13T22:56:04.175908+00:00",
+        "updated_at": "2026-11-04T18:00:28.358072+00:00",
         "category": "Pricing & Payment"
     },
     {
