@@ -215,3 +215,31 @@ test('plain-text part has no HTML tags or entities, and keeps line breaks', asyn
   assert.match(body.text, /Available \$1,284\.50 · Pending \$605\.00/);
   assert.match(body.text, /3:00 PM MDT\n1 job\(s\) skipped/);
 });
+
+// The digest's payout line (2026-11-06, Connor: "fix ... digest"). The first
+// live dry run said "Next payout: $353.45 arriving 2026-10-07 (paid)": a
+// payout that had already arrived. Only a pending or in-transit payout is
+// ever "next"; with none, it says so and names the last paid one.
+test('payouts: a payout that already arrived is never shown as next', async () => {
+  const day = (iso) => Date.parse(iso) / 1000;
+  const s = sampleState();
+  s.stripe.payouts = { pending: [], in_transit: [], paid: [{ id: 'po_old', amount: 35345, arrival_date: day('2026-10-07T12:00:00Z'), status: 'paid' }] };
+  const r = await loadDigest(s).call({ dry_run: true });
+  assert.doesNotMatch(r.body.html, /Next payout/);
+  assert.doesNotMatch(r.body.html, /\(paid\)/);
+  assert.match(r.body.html, /No payout scheduled yet/);
+  assert.match(r.body.html, /Last paid payout: \$353\.45 on 2026-10-07/);
+});
+
+test('payouts: the soonest in-transit or pending payout is next, and an old paid one is ignored', async () => {
+  const day = (iso) => Date.parse(iso) / 1000;
+  const s = sampleState();
+  s.stripe.payouts = {
+    paid: [{ id: 'po_old', amount: 35345, arrival_date: day('2026-10-07T12:00:00Z'), status: 'paid' }],
+    in_transit: [{ id: 'po_t', amount: 20000, arrival_date: day('2026-11-06T12:00:00Z'), status: 'in_transit' }],
+    pending: [{ id: 'po_p', amount: 10000, arrival_date: day('2026-11-09T12:00:00Z'), status: 'pending' }],
+  };
+  const r = await loadDigest(s).call({ dry_run: true });
+  assert.match(r.body.html, /Next payout: <b>\$200\.00<\/b> arriving 2026-11-06 \(in transit\)/);
+  assert.doesNotMatch(r.body.html, /353\.45/);
+});
