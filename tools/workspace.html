@@ -69,7 +69,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=7c03870603">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=1a061bc473">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=a038f9f7de">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=92a4047864" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -78,14 +78,14 @@
      manage-booking.html, portal/quotes.html, and portal/jobs.html use. -->
 <script src="/js/business-hours.js?v=e0e3b29210"></script>
 <script src="/tools/push-notifications.js?v=3c123334a6" defer></script>
-<script src="/tools/data-layer.js?v=b539097b1f" defer></script>
+<script src="/tools/data-layer.js?v=e736cf54f5" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=6e1e657683" defer></script>
-<script src="/tools/tools-command-palette.js?v=ac4de65287" defer></script>
-<script src="/tools/tools-tour.js?v=9763411289" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=05f55fda07" defer></script>
+<script src="/tools/tools-command-palette.js?v=8cde9621ed" defer></script>
+<script src="/tools/tools-tour.js?v=f8c0b490ba" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -975,19 +975,20 @@
   body.th-tool-page[data-th-page="workspace"] .stripe-balance-note { grid-column: 1 / -1; font-size: 12.5px; color: var(--text-dim); }
 
   /* P4: sentence case for the shared pieces Home shows (header kicker, tip
-     kicker, sheet titles, bottom-nav create label), and one bold element:
+     kicker, sheet titles), and one bold element:
      Start my day / End my day. Everything else in the greeting band and the
      Today columns is regular or medium weight. */
   body.th-tool-page[data-th-page="workspace"] :is(h1, h2, h3, h4, th),
   body.th-tool-page[data-th-page="workspace"] .th-kicker,
   body.th-tool-page[data-th-page="workspace"] .th-page-tip-kicker,
   body.th-tool-page[data-th-page="workspace"] .th-sheet-title,
-  body.th-tool-page[data-th-page="workspace"] .th-bn-create-label,
   body.th-tool-page[data-th-page="workspace"] .section-heading-title,
   body.th-tool-page[data-th-page="workspace"] .ops-lane-label,
   body.th-tool-page[data-th-page="workspace"] .today-money-label,
   body.th-tool-page[data-th-page="workspace"] .week-label,
   body.th-tool-page[data-th-page="workspace"] label { text-transform: none; letter-spacing: 0; }
+  /* The bottom bar's New label keeps the shared uppercase, as on every other
+     page (fix plan FP2.6, 2026-11-06). */
   body.th-tool-page[data-th-page="workspace"] #greetingBanner *:not([data-shift-open]),
   body.th-tool-page[data-th-page="workspace"] #todayCols *:not([data-shift-open]) { font-weight: 500; }
   /* ---- Business: an Anton header with an orange rule, two cards ---- */

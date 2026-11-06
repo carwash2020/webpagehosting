@@ -5978,3 +5978,28 @@ Fix plan FP1.1–FP1.8 (approved design: "A person's name and title"). Every pla
 - **Backfill (FP1.7)**: Connor "Connor" / "Developer", Steve "Steve" / "Owner". D1 makes those titles; the names stay the first names.
 - Tests: `tests/security/fp1-person-title-db.test.js` (PGlite, runs the real migration twice) and `tests/workspace/fp1-names-and-titles.test.js`. Three older tests that pinned the preset wording were updated.
 - **Order matters:** the migration must be live before this code is, because the role check now reads `title`.
+
+## What changed, 2026-11-06 -- Fix Phase 2: access coherence (group 1, with FP1)
+
+Fix plan FP2.1–FP2.6 and FP2.8, plus RP6.6 and RP6.7, which the plan ships with the FP2.4 tour rework. Nothing an account can't open shows, even for a moment, and the tour never walks anyone into a wall. FP2.7 waits on D10 (an on-device check). FP2.9 waits on a design pass.
+
+- **FP2.1 No flash before the role loads** (`tools/tools-nav-pwa.js`):
+  - Every gated destination in the sidebar, the More drawer and the bottom bar is now added to the page hidden. It shows only once its own check passes.
+  - The bottom bar's Clients and Money tabs keep their slot while they wait, so an owner's bar doesn't shift. For an account without them, the slot drops out.
+  - Settings' Website and Dev Tools rows already started hidden, and that was confirmed and pinned by a test.
+- **FP2.2 Empty group headers:** a sidebar or More header (Work / Money / Office) shows only while a link under it does. A field tech no longer sees a MONEY header over nothing.
+- **FP2.3 Fail-closed job filtering:**
+  - Until the role is confirmed, the job lists act as Field view: your own jobs only, never anyone else's. If the list is empty meanwhile, it reads "Loading your jobs…".
+  - Create invoice (the Job done sheet) and the client Quote / Invoice actions now need a confirmed Invoices permission; they no longer show while the role is unknown.
+- **FP2.4 Role-aware tour** (`tools/tools-tour.js`):
+  - Steps about Invoices or Money show only to accounts that can open them. A field-only tour is Add a job, Track it, Help.
+  - A tour page waits for the role before picking steps. A role that can't be confirmed counts as no permissions.
+- **RP6.7:** "Invoice from the job" highlights the job list when no job is waiting for an invoice.
+- **RP6.6:** the Settings and Search copy now says what the tour is: "the core loop: add a job, track it, invoice it, get paid."
+- **FP2.5 Dev password prompt above sheets:** one rule, `#devPasswordOverlay { z-index: 1300 }`, puts it above every sheet tier (Team's invite sheet is 1200) on all four pages that have it.
+- **FP2.6:** the bottom bar's New label is uppercase on Dashboard too.
+- **FP2.8:** on Money's income log, invoices not paid at all move into a separate "Not paid yet (not income)" group. Totals are unchanged.
+- Tests:
+  - new: `tests/tools/fp2-nav-before-role.test.js`, `tests/tools/fp2-role-aware-tour.test.js` and `tests/tools/fp2-dev-password-above-sheets.test.js`;
+  - added cases in `money-screen`, `job-money-pipeline` and `field-office-view`;
+  - job-list and tour harnesses that assumed "show everything before the role" now load as an owner.

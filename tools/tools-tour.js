@@ -18,6 +18,15 @@
 // function is self-correcting -- if the stored step doesn't match the
 // page you're actually on, it finds whichever step DOES belong here.
 
+// Role-aware (fix plan FP2.4, 2026-11-06): a step with a `perm` rule (in
+// APP_TOUR_STEP_RULES below) shows only
+// when at least one of those auth.js checks passes -- the same checks the
+// nav uses -- so the tour never walks an account into a page it can't
+// open. A field-only account's tour is Add a job, Track it, Help. Every
+// tour page waits for the role before picking steps (initAppTour below),
+// and a role that couldn't be confirmed counts as no permissions.
+// fallbackSelector (RP6.7): what to highlight when the main target isn't
+// on screen -- no job waiting for an invoice yet, so the job list.
 const APP_TOUR_STEPS = [
   { page: '/tools/workspace.html', highlightSelector: '.th-sidebar-new, .th-bn-create', title: 'Add a job', body: 'Tap + to add a job. A client, an address and what\u2019s wrong is all it needs.' },
   { page: '/tools/job-tracker.html', highlightSelector: '.status-select', title: 'Track it', body: 'Start the clock when you arrive. Jobs move from Booked to Working to Done.' },
@@ -26,6 +35,37 @@ const APP_TOUR_STEPS = [
   { page: '/tools/workspace.html', highlightSelector: '#todayMoney', title: 'Money owed', body: 'Everything unpaid and overdue in one card. Tap Remind to nudge a client.' },
   { page: '/tools/workspace.html', highlightSelector: '[onclick="openHelpModal()"]', title: 'Help lives here', body: 'Tap ? on any page. Each page also shows one short tip the first time you open it.' },
 ];
+// Per-step rules, by title. perm: the step shows only when at least one
+// of these auth.js checks passes. fallbackSelector: what to highlight
+// when the step's own target isn't on the page.
+const APP_TOUR_STEP_RULES = {
+  'Invoice from the job': { perm: ['canManageInvoices'], fallbackSelector: '#jobsList, #jobsTableWrap' },
+  'Get paid': { perm: ['canManageInvoices'] },
+  'Money owed': { perm: ['canManageInvoices', 'canViewFinance'] },
+};
+
+function appTourStepRule(step) {
+  return APP_TOUR_STEP_RULES[step.title] || {};
+}
+function appTourStepAllowed(step) {
+  const perm = appTourStepRule(step).perm;
+  if (!perm) return true;
+  return perm.some(fn => {
+    try { return typeof window[fn] === 'function' && window[fn]() === true; } catch (e) { return false; }
+  });
+}
+// The steps this account sees, in order. Indexes stored in localStorage
+// point into this list.
+function appTourSteps() {
+  return APP_TOUR_STEPS.filter(appTourStepAllowed);
+}
+// True while the role is still on its way on a page that loads it: the
+// tour waits rather than choosing steps from permissions not yet known.
+function appTourRolePending() {
+  if (typeof getCurrentUserRole !== 'function' || typeof loadCurrentUserRole !== 'function') return false;
+  if (getCurrentUserRole()) return false;
+  return !(document.body && document.body.getAttribute('data-role-state') === 'none');
+}
 
 const APP_TOUR_STEP_KEY = 'th_app_tour_step';
 const APP_TOUR_STEP_STARTED_AT_KEY = 'th_app_tour_step_started_at';
@@ -72,7 +112,7 @@ function startAppTour() {
     localStorage.setItem(APP_TOUR_STEP_KEY, '0');
     localStorage.setItem(APP_TOUR_STEP_STARTED_AT_KEY, String(Date.now()));
   } catch (e) { /* ignore */ }
-  const firstPage = APP_TOUR_STEPS[0].page;
+  const firstPage = appTourSteps()[0].page;
   if (window.location.pathname === firstPage) {
     renderAppTourStep(0);
   } else {
@@ -81,6 +121,11 @@ function startAppTour() {
 }
 
 function initAppTour() {
+  if (appTourRolePending()) {
+    window.addEventListener('th-role-loaded', () => initAppTour(), { once: true });
+    return;
+  }
+  const APP_TOUR_STEPS = appTourSteps();
   // ?tour=1 forces the tour to (re)start regardless of the seen-flag --
   // this is what Settings' "Replay tour" button links to.
   const forceStart = new URLSearchParams(window.location.search).get('tour') === '1';
@@ -177,6 +222,7 @@ function dismissAppTour() {
 }
 
 function goToAppTourStep(nextIndex) {
+  const APP_TOUR_STEPS = appTourSteps();
   try {
     localStorage.setItem(APP_TOUR_STEP_KEY, String(nextIndex));
     localStorage.setItem(APP_TOUR_STEP_STARTED_AT_KEY, String(Date.now()));
@@ -209,7 +255,9 @@ function pickVisibleTourTarget(selector) {
 }
 
 function renderAppTourStep(stepIndex) {
+  const APP_TOUR_STEPS = appTourSteps();
   const step = APP_TOUR_STEPS[stepIndex];
+  if (!step) return;
   clearAppTourHighlight(); // remove whatever the PREVIOUS step highlighted, if anything
   // onShow (2026-09-22): put the tab this step describes on screen first,
   // via the page's own switch function by name -- no eval, no CSP change.
@@ -224,7 +272,8 @@ function renderAppTourStep(stepIndex) {
 // querySelector, not getElementById -- highlightSelector can be an
     // id, a class/attribute selector, or a comma-separated list (see
     // pickVisibleTourTarget), so a single field covers every case.
-    const el = pickVisibleTourTarget(step.highlightSelector);
+    const fallback = appTourStepRule(step).fallbackSelector;
+    const el = pickVisibleTourTarget(step.highlightSelector) || (fallback ? pickVisibleTourTarget(fallback) : null);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       el.classList.add(TOUR_HIGHLIGHT_CLASS);

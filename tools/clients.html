@@ -49,18 +49,18 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=7c03870603">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=1a061bc473">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=a038f9f7de">
 <!-- data-layer.js (2026-09-22): the client registry and the directory
      query (thGetClientDirectory) the Clients tab now lists from. Loaded
      before the shared files below, same order as every other page. -->
-<script src="/tools/data-layer.js?v=b539097b1f" defer></script>
+<script src="/tools/data-layer.js?v=e736cf54f5" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=6e1e657683" defer></script>
-<script src="/tools/tools-command-palette.js?v=ac4de65287" defer></script>
-<script src="/tools/tools-tour.js?v=9763411289" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=05f55fda07" defer></script>
+<script src="/tools/tools-command-palette.js?v=8cde9621ed" defer></script>
+<script src="/tools/tools-tour.js?v=f8c0b490ba" defer></script>
 <!-- supabase-js (2026-09-22): the client list follows live changes from other devices
      (startRealtimeSync), which needs the realtime client this page never loaded before. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
@@ -1825,7 +1825,8 @@
     // Links carry the client's ID, not the name: two clients can share one.
     const idParam = 'clientId=' + encodeURIComponent(r.id);
     const actions = [];
-    if (typeof canManageInvoices !== 'function' || canManageInvoices() || !getCurrentUserRole()) {
+    // Fail-closed (FP2.3): only a confirmed Invoices permission offers these.
+    if (typeof canManageInvoices === 'function' && canManageInvoices()) {
       actions.push({ label: 'Quote', icon: 'note', kind: 'extra', onClick: () => { location.href = '/tools/invoice-generator.html?' + idParam + '#quote'; } });
       actions.push({ label: 'Invoice', icon: 'receipt', kind: 'extra', onClick: () => { location.href = '/tools/invoice-generator.html?' + idParam + '#invoice'; } });
     }

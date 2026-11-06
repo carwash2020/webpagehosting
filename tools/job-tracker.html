@@ -53,17 +53,17 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=7c03870603">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=1a061bc473">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=a038f9f7de">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=92a4047864" defer></script>
-<script src="/tools/data-layer.js?v=b539097b1f" defer></script>
+<script src="/tools/data-layer.js?v=e736cf54f5" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=6e1e657683" defer></script>
-<script src="/tools/tools-command-palette.js?v=ac4de65287" defer></script>
-<script src="/tools/tools-tour.js?v=9763411289" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=05f55fda07" defer></script>
+<script src="/tools/tools-command-palette.js?v=8cde9621ed" defer></script>
+<script src="/tools/tools-tour.js?v=f8c0b490ba" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -1944,7 +1944,8 @@
     const stage = (typeof thJobMoneyStage === 'function')
       ? thJobMoneyStage(job, thRead(TH_KEYS.invoices, []), thRead(TH_KEYS.income, []).filter(e => e.origin !== 'invoice')).stage
       : null;
-    const canInvoice = typeof canManageInvoices !== 'function' || canManageInvoices() || !(typeof getCurrentUserRole === 'function' && getCurrentUserRole());
+    // Fail-closed (FP2.3): only a confirmed Invoices permission offers it.
+    const canInvoice = typeof canManageInvoices === 'function' && canManageInvoices();
     if (typeof showQuickActionSheet !== 'function') {
       const goSend = await showConfirm(`"${job.title}" marked Done. Send a review request${job.client ? ' to ' + job.client : ''} now?`, { confirmText: 'Send Request' });
       if (goSend) window.location.href = reviewRequestHref(job);
@@ -2701,8 +2702,13 @@
     if (jobs.length === 0) {
       const totalJobsEverAdded = thJobs.list({ pageSize: Infinity }).rows.length;
       let emptyHtml;
+      const rolePending = typeof isRoleLoaded === 'function' && !isRoleLoaded() && document.body.getAttribute('data-role-state') !== 'none';
       if (searchTerm) {
         emptyHtml = '<div class="empty-state"><svg class="th-icon" aria-hidden="true"><use href="#icon-search" xlink:href="#icon-search"></use></svg> No jobs match "' + escapeHtml(searchTerm) + '".</div>';
+      } else if (rolePending && totalJobsEverAdded > 0) {
+        // FP2.3: until the role arrives only your own jobs show; say so
+        // rather than "No jobs" while everyone else's are still to come.
+        emptyHtml = '<div class="empty-state" data-jt-role-pending>Loading your jobs…</div>';
       } else if (totalJobsEverAdded > 0) {
         // Item #6 (2026-08-16): this used to say "No jobs yet -- add one
         // above" even when jobs clearly exist, just none match the

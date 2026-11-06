@@ -53,17 +53,17 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=7c03870603">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=1a061bc473">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=a038f9f7de">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=92a4047864" defer></script>
-<script src="/tools/data-layer.js?v=b539097b1f" defer></script>
+<script src="/tools/data-layer.js?v=e736cf54f5" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=6e1e657683" defer></script>
-<script src="/tools/tools-command-palette.js?v=ac4de65287" defer></script>
-<script src="/tools/tools-tour.js?v=9763411289" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=05f55fda07" defer></script>
+<script src="/tools/tools-command-palette.js?v=8cde9621ed" defer></script>
+<script src="/tools/tools-tour.js?v=f8c0b490ba" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -235,6 +235,9 @@
   body.th-tool-page[data-th-page="finance"] .mny-ledger td { padding: 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
   body.th-tool-page[data-th-page="finance"] .mny-ledger tr.is-income .col-amount { color: var(--tone-green-fg); }
   body.th-tool-page[data-th-page="finance"] .mny-unpaid { color: var(--text-dim); font-style: italic; }
+  /* FP2.8: unpaid invoices sit apart from income, under their own label. */
+  body.th-tool-page[data-th-page="finance"] .fin-unpaid-group { margin-top: 18px; padding-top: 12px; border-top: 1px dashed var(--border); }
+  body.th-tool-page[data-th-page="finance"] .fin-unpaid-head { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: var(--text-dim); text-transform: none; letter-spacing: 0; }
   body.th-tool-page[data-th-page="finance"] .mny-of { color: var(--text-dim); font-size: 12px; }
   @media (max-width: 600px) {
     body.th-tool-page[data-th-page="finance"] .mny-tiles { grid-template-columns: 1fr 1fr; }
@@ -1068,7 +1071,11 @@
     const invoicesForIncome = thInvoices.all();
     const receivedOf = (e) => thIncomeReceived(e, invoicesForIncome);
     if (typeof renderMoney === 'function') renderMoney();
-    let rows = entries.map(e => `
+    // FP2.8 (2026-11-06): an invoice not paid at all isn't income, so its
+    // row moves out of the log into its own group below, labeled that way.
+    // The totals below are unchanged (an unpaid row already added $0).
+    const isUnpaidInvoiceRow = (e) => e.origin === 'invoice' && receivedOf(e) === 0;
+    const rowHtml = e => `
       <tr class="${e.id === justAddedIncomeEntryId ? 'list-row-enter' : ''}${e.origin === 'invoice' && receivedOf(e) === 0 ? ' is-unpaid' : ''}" data-income-id="${e.id}">
         <td data-label="Date">${e.date}</td>
         <td data-label="Source">${escapeHtml(e.source || '\u2014')}</td>
@@ -1083,14 +1090,24 @@
           ${e.origin !== 'invoice' ? `<button class="small-btn" onclick="editIncomeEntry(${e.id})" aria-label="Edit entry" title="Edit entry">Edit</button>` : ''}
           <button class="small-btn danger" onclick="deleteIncomeEntry(${e.id})" aria-label="Delete entry" title="Delete entry">&times;</button>
         </td>
-      </tr>`).join('');
+      </tr>`;
+    const head = '<thead><tr><th>Date</th><th>Source</th><th>Job</th><th>Description</th><th>Payment</th><th>Origin</th><th class="col-amount">Amount</th><th></th></tr></thead>';
+    const received = entries.filter(e => !isUnpaidInvoiceRow(e));
+    const unpaid = entries.filter(isUnpaidInvoiceRow);
+    const rows = received.map(rowHtml).join('');
+    const unpaidRows = unpaid.map(rowHtml).join('');
     justAddedIncomeEntryId = null;
 
-    container.innerHTML = `
-      <table>
-        <thead><tr><th>Date</th><th>Source</th><th>Job</th><th>Description</th><th>Payment</th><th>Origin</th><th class="col-amount">Amount</th><th></th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>`;
+    container.innerHTML =
+      (received.length
+        ? `<table>${head}<tbody>${rows}</tbody></table>`
+        : '<div class="empty-state">No income received yet.</div>') +
+      (unpaid.length
+        ? `<div class="fin-unpaid-group" data-fin-unpaid-group>
+            <h4 class="fin-unpaid-head">Not paid yet <span class="mny-of">(not income: ${unpaid.length} invoice${unpaid.length === 1 ? '' : 's'})</span></h4>
+            <table>${head}<tbody>${unpaidRows}</tbody></table>
+          </div>`
+        : '');
 
     // receivedOf: a card charge linked to an invoice counts on that invoice.
     const manualTotal = entries.filter(e => e.origin !== 'invoice').reduce((sum, e) => sum + receivedOf(e), 0);

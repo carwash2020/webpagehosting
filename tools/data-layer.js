@@ -1048,10 +1048,11 @@ function thJobOwner(job) {
   return String((job && (job.assignee || job.createdBy)) || '').toLowerCase();
 }
 function thJobInView(job, mode) {
-  // Until this account's permissions have loaded (or if they couldn't),
-  // nothing is filtered: every job shows, as before Phase 4. Once known,
-  // Field view narrows to your own jobs.
-  if (!mode && !(typeof isRoleLoaded === 'function' && isRoleLoaded())) return true;
+  // Fail-closed (fix plan FP2.3, 2026-11-06): until this account's
+  // permissions have loaded, or if they couldn't, it is Field view -- your
+  // own jobs only -- because Office view needs a confirmed "manage jobs for
+  // others" (thViewMode() is 'field' until then). Nobody sees someone
+  // else's jobs on the strength of a role that hasn't arrived.
   if ((mode || thViewMode()) === 'office') return true;
   const me = thMyEmail();
   return !!me && thJobOwner(job) === me;

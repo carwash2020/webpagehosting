@@ -194,3 +194,29 @@ test('the chip heading never picks a function by name: a hash or stored tab like
     assert.equal(el.textContent, want, tab);
   }
 });
+
+// Fix plan FP2.8 (2026-11-06): an invoice that hasn't been paid at all isn't
+// income, so it sits in its own "Not paid yet" group under the log instead
+// of among the income rows. Part-paid invoices and manual entries stay in
+// the log; the totals are exactly what they were.
+test('FP2.8: unpaid invoices move out of the income log into a "Not paid yet (not income)" group; totals unchanged', () => {
+  const { w, $ } = page();
+  w.renderIncomeEntries();
+  const log = $('incomeTable').querySelector(':scope > table');
+  const group = $('incomeTable').querySelector('[data-fin-unpaid-group]');
+  const ids = (el) => [...el.querySelectorAll('tr[data-income-id]')].map((r) => Number(r.getAttribute('data-income-id')));
+  assert.deepEqual(ids(log).sort(), [13, 14, 16], 'paid, cash and part-paid stay in the log');
+  assert.deepEqual(ids(group).sort(), [11, 12], 'the two unpaid invoices');
+  assert.match(group.querySelector('.fin-unpaid-head').textContent.replace(/\s+/g, ' '), /Not paid yet \(not income: 2 invoices\)/);
+  const totals = $('incomeTotalsRow').textContent.replace(/\s+/g, ' ');
+  assert.match(totals, /From paid invoices: \$235\.00/);
+  assert.match(totals, /Combined total: \$355\.00/);
+});
+
+test('FP2.8: with nothing received yet, the log says so and the unpaid invoices still show, apart', () => {
+  const data = { ...SAMPLE, th_income_log: SAMPLE.th_income_log.filter((e) => e.id === 11) };
+  const { w, $ } = page({ data });
+  w.renderIncomeEntries();
+  assert.match($('incomeTable').textContent, /No income received yet\./);
+  assert.equal($('incomeTable').querySelectorAll('[data-fin-unpaid-group] tr[data-income-id]').length, 1);
+});

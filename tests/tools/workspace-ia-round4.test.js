@@ -36,6 +36,7 @@ test('the tour engine calls onShow before highlighting, picks the first VISIBLE 
   });
   const { window } = dom;
   window.getCurrentUserEmail = () => null;
+  window.canManageInvoices = () => true; // an owner (role-aware tour, FP2.4)
   window.HTMLElement.prototype.scrollIntoView = () => {};
   const calls = [];
   window.activateGenTab = (t) => calls.push(t);
@@ -124,6 +125,10 @@ test('the Dashboard strip is down to the two actions + New does not have; Charge
   assert.match(help, /Charge a card/);
 });
 
-test('the Settings copy describes the tutorial honestly (every page and tab, about two minutes)', () => {
-  assert.match(read('settings.html'), /where everything is and how to use it, tab by tab/);
+// RP6.6 (2026-11-06): the tour is 6 steps on 3 pages, not every page and
+// tab -- the copy now says what it is.
+test('the Settings copy describes the tutorial honestly (the core loop, only what this account can open)', () => {
+  assert.match(read('settings.html'), /A short walkthrough of the core loop: add a job, track it, invoice it, get paid\. It shows once automatically the first time you open the Dashboard, and covers only what your account can open\./);
+  assert.doesNotMatch(read('settings.html'), /every page in this app/);
+  assert.match(read('tools-command-palette.js'), /meta: 'The core loop: add a job, track it, invoice it, get paid'/);
 });

@@ -1810,6 +1810,9 @@ function loadTourInWindow(url, email) {
   const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', { url, runScripts: 'dangerously' });
   const { window } = dom;
   window.getCurrentUserEmail = () => email || null;
+  // An owner: the money steps are role-aware since FP2.4 (2026-11-06).
+  window.canManageInvoices = () => true;
+  window.canViewFinance = () => true;
   const script = window.document.createElement('script');
   script.textContent = src;
   window.document.head.appendChild(script);
@@ -1938,7 +1941,8 @@ test('every one of the 11 target pages actually loads tools-tour.js and calls in
 test('settings.html\'s tour description reflects the real, expanded scope, not the old 3-step Dashboard-only wording', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'settings.html'), 'utf8');
   assert.doesNotMatch(src, /3-step Dashboard walkthrough/);
-  assert.match(src, /walkthrough of every page/);
+  // RP6.6 (2026-11-06): the honest scope -- the core loop, not every page.
+  assert.match(src, /walkthrough of the core loop: add a job, track it, invoice it, get paid/);
 });
 
 // Check-links false-positive fix (2026-08-20), after a real CI failure
@@ -2459,6 +2463,9 @@ function testTopLevelInitNoLongerThrows(pageFile, pagePath, tourStepIndex, extra
         window.attachVoiceDictation = () => {};
         window.showToast = () => {};
         window.getCurrentUserEmail = () => null;
+        // An owner: the tour's money steps are role-aware since FP2.4.
+        window.canManageInvoices = () => true;
+        window.canViewFinance = () => true;
         window.initSyncOnLoad = () => Promise.resolve();
         window.startRealtimeSync = () => {};
         window.updateRealtimeBadge = () => {};
@@ -2939,6 +2946,9 @@ function loadWorkspaceWithTour(setupFn) {
     beforeParse(w) {
       w.requireAuth = () => {};
       w.getCurrentUserEmail = () => 'connor@triplehenterprisesllc.biz';
+      // An owner: the tour's money steps are role-aware since FP2.4.
+      w.canManageInvoices = () => true;
+      w.canViewFinance = () => true;
       w.Element.prototype.scrollIntoView = () => {};
       if (setupFn) setupFn(w);
     },
