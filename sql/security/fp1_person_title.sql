@@ -13,6 +13,14 @@
 -- update assignments" policy (Team & Settings) -- no new write path.
 --
 -- Re-runnable.
+--
+-- APPLIED 2026-11-06 to the live project (run as one transaction through the
+-- SQL tool; the migration tool's confirmation prompt never reached Connor).
+-- Checked live: title column, both length checks, team_roster() returns
+-- title, anon can't run it, a non-manager's update changes 0 rows, and the
+-- REST select the Workspace sends returns 200.
+-- Backfill (FP1.7, D1): connor@ -> 'Connor' / 'Developer',
+-- steve@ -> 'Steve' / 'Owner'. No switch changed.
 
 begin;
 
