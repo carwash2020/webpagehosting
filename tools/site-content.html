@@ -1063,6 +1063,9 @@
   async function cmsLoad() {
     if (typeof ensureFreshToken === 'function') await ensureFreshToken();
     const keys = SITE_CONTENT_FIELDS.map(f => f.key).join(',');
+    // Team names for the history lines (cmsWho). Never blocks or fails the
+    // load: on any error it keeps this device's copy.
+    const teamNames = typeof thRefreshTeamMembers === 'function' ? Promise.resolve().then(thRefreshTeamMembers).catch(() => null) : null;
     const [liveRes, histRes] = await Promise.all([
       fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content?select=key,value&key=in.(' + keys + ')', 8000, { headers: cmsHeaders(false) }),
       fetchWithTimeout(SUPABASE_URL + '/rest/v1/site_content_history?select=id,key,old_value,new_value,changed_by,changed_at,action,batch_id,undo_of&key=in.(' + keys + ')&order=id.desc&limit=300', 8000, { headers: cmsHeaders(false) }),
@@ -1074,6 +1077,7 @@
     cmsLive = live;
     cmsHistory = histRes.ok ? (await histRes.json()) : [];
     if (!Array.isArray(cmsHistory)) cmsHistory = [];
+    if (teamNames) await teamNames;
   }
 
   function cmsErrorMessage(res, verb) {
@@ -1129,10 +1133,18 @@
     const d = new Date(iso);
     return isNaN(d) ? '' : d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   }
+  // Who saved, by name (fix plan FP1 follow-up, 2026-11-06): their Team
+  // name, then the known names, then the part of the email before the @,
+  // capitalized. Never the whole address.
   function cmsWho(email) {
     if (!email) return 'Setup';
-    const known = typeof KNOWN_USER_NAMES === 'object' && KNOWN_USER_NAMES ? KNOWN_USER_NAMES[String(email).toLowerCase()] : null;
-    return known || email;
+    const e = String(email).toLowerCase();
+    const onTeam = typeof thTeamMembers === 'function' ? thTeamMembers().find(p => p.email === e) : null;
+    if (onTeam && onTeam.display_name) return onTeam.display_name;
+    const known = typeof KNOWN_USER_NAMES === 'object' && KNOWN_USER_NAMES ? KNOWN_USER_NAMES[e] : null;
+    if (known) return known;
+    const local = e.split('@')[0];
+    return local ? local.charAt(0).toUpperCase() + local.slice(1) : 'Someone';
   }
 
   // The latest save (one batch) that can be undone: made by a person, and

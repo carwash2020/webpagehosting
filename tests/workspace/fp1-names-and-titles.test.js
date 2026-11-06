@@ -236,3 +236,18 @@ test('FP1.1: reopening a person shows their saved values, not something left hal
   g.w.document.querySelector('[data-team-open="owner@example.com"]').click();
   assert.equal(g.$('teamIdentTitle').value, 'Developer');
 });
+
+// Connor, 2026-11-06: "fix the site content history too". Site Content's
+// history and "Last save" lines name the person, never their email.
+test('Site Content history names who saved: Team name, then the known names, then the email prefix -- never the address', () => {
+  const SC = read('tools', 'site-content.html');
+  const w = new JSDOM('', { runScripts: 'outside-only' }).window;
+  w.__team = [{ email: 'tess@example.com', display_name: 'Tess Tech', status: 'active' }];
+  w.eval('function thTeamMembers() { return window.__team; }');
+  w.eval(KNOWN.replace('const ', 'var '));
+  w.eval(extractFn(SC, 'cmsWho'));
+  assert.equal(w.cmsWho('Tess@Example.com'), 'Tess Tech');
+  assert.equal(w.cmsWho('steve@triplehenterprisesllc.biz'), 'Steve');
+  assert.equal(w.cmsWho('elucidhealertwitch@gmail.com'), 'Elucidhealertwitch');
+  assert.equal(w.cmsWho(null), 'Setup');
+});
