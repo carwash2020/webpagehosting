@@ -2248,15 +2248,20 @@
     transition:grid-template-rows .25s ease;
   }
   .faq-item.is-open .faq-answer{grid-template-rows:1fr;}
+  /* Fix plan FP5.3 (2026-11-06): the bottom padding lives only on the open
+     answer. On the grid item itself it kept a ~20px sliver showing in
+     Chromium when closed (a 0fr row still holds its item's padding). */
   .faq-answer p{
     min-height:0;
     overflow:hidden;
-    padding:0 22px 20px;
+    padding:0 22px;
     margin:0;
     color:var(--text-dim);
     font-size:14.5px;
     line-height:1.6;
+    transition:padding-bottom .25s ease;
   }
+  .faq-item.is-open .faq-answer p{padding-bottom:20px;}
   .faq-answer p em{color:var(--orange-text); font-style:normal;}
 
   /* FAQ topic tabs (2026-11-03, replacing #faqModal -- item 19,

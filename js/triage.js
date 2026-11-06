@@ -64,16 +64,26 @@
         { q: 'Temperature is way off', v: 'Often just the sensor',
           a: "Baking that comes out consistently wrong is frequently the oven temperature sensor. Worth ruling out before anything larger gets replaced." },
         { q: "Won't turn on", v: 'Power or control board',
-          a: "Frequently the power supply to the unit, or the control board." } ] }
+          a: "Frequently the power supply to the unit, or the control board." } ] },
+      // Fix plan FP5.4 (2026-11-06; D6, Steve's symptom list). Same rules as
+      // the rest: what a symptom commonly indicates, no prices or numbers.
+      microwave: { label: 'Microwave', symptoms: [
+        { q: "Runs but won't heat", v: 'Usually one high-voltage part',
+          a: "A microwave that lights up and turns but doesn't heat most often has a failed magnetron, diode or high-voltage fuse. Please don't open it yourself: those parts hold a dangerous charge even after it's unplugged." },
+        { q: 'Turntable or buttons not working', v: 'Often a small part',
+          a: "A turntable that won't turn is commonly the turntable motor or its coupler. Unresponsive buttons usually point to the touchpad or the control board. Both are standard parts." },
+        { q: "Door won't latch, or it stops when you touch the door", v: 'Usually the latch or its switches',
+          a: "The door switches are a safety system: if one is worn or the latch is broken, the microwave won't run, or stops mid-cook. This is a common, fixable repair, and one to have done properly rather than worked around." } ] }
     };
 
     // U02 fix (High-Impact Upgrades, 2026-09-08): exposed so the
     // symptom-first entry grid below can build its buttons FROM this
     // one source of truth, rather than a second, driftable copy of
-    // the same 20 symptom labels.
+    // the same 23 symptom labels (20, plus the 3 microwave ones from FP5.4).
     window.TRIAGE_DATA = DATA;
 
-    // Design feedback (2026-09-08): the 5 appliance rows read as a flat,
+    // Design feedback (2026-09-08): the appliance rows (5 then; 6 with the
+    // microwave since FP5.4) read as a flat,
     // undifferentiated list of text bars. One small line icon per
     // appliance, same stroke style as every other icon on the site
     // (24x24, stroke-width 2, round caps), gives each row something to
@@ -84,6 +94,7 @@
       dishwasher: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="8" x2="21" y2="8"/><line x1="8" y1="12" x2="8" y2="19"/><line x1="12" y1="12" x2="12" y2="19"/><line x1="16" y1="12" x2="16" y2="19"/></svg>',
       refrigerator: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="5" y1="9" x2="19" y2="9"/><line x1="15" y1="4" x2="15" y2="6.5"/><line x1="15" y1="11" x2="15" y2="14"/></svg>',
       range: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="7.5" r="1"/><circle cx="16" cy="7.5" r="1"/><circle cx="8" cy="11.5" r="1"/><circle cx="16" cy="11.5" r="1"/><rect x="6" y="14" width="12" height="6" rx="1"/></svg>',
+      microwave: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><rect x="5" y="8" width="10" height="8" rx="1"/><line x1="18" y1="9" x2="18" y2="9.01"/><line x1="18" y1="12" x2="18" y2="12.01"/><line x1="18" y1="15" x2="18" y2="15.01"/></svg>',
     };
 
     const gridEl = document.getElementById('triageSymptomGrid');
