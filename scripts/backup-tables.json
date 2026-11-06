@@ -51,7 +51,8 @@
     "quote_questions": "id",
     "portal_bug_reports": "id",
     "portal_client_errors": "id",
-    "digest_settings": "id"
+    "digest_settings": "id",
+    "client_email_aliases": "id"
   },
   "public_elsewhere": {
     "site_content": "backup-cms-content.yml",
