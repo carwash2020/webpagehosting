@@ -151,12 +151,16 @@ test('login.html: after the password, a Face ID device gets Face ID instead of t
 });
 
 test('login.html: a signed-in session that still owes the code stays for the code on load -- refreshing no longer skips it', () => {
-  const onLoad = LOGIN.slice(LOGIN.indexOf('client.auth.getSession().then(async'), LOGIN.indexOf('async function verifiedTotpFactorId()'));
+  // One sign-in (FP4.1): the on-load check reads the portal session, then
+  // shows "You're signed in" instead of redirecting on its own.
+  const onLoad = LOGIN.slice(LOGIN.indexOf('const { data } = await client.auth.getSession();'), LOGIN.indexOf('async function verifiedTotpFactorId()'));
+  assert.ok(onLoad.length > 0, 'on-load check found');
   assert.match(onLoad, /if \(await portalSecondStepOwed\(email, client\)\) \{/);
   assert.match(onLoad, /const wantsCode = new URLSearchParams\(window\.location\.search\)\.get\('step'\) === 'code' \|\| !portalIsBiometricLockEnabled\(email\);/);
   assert.match(onLoad, /openMfaChallenge\(factorId\);\s*return;/);
-  assert.ok(onLoad.indexOf('openMfaChallenge(') < onLoad.indexOf('window.location.replace(portalAfterSignInUrl())'), 'the code comes before any redirect');
-  assert.match(onLoad, /await client\.auth\.signOut\(\{ scope: 'local' \}\);\s*return;\s*\}\s*\}\s*(?:\/\/[^\n]*\n\s*)*signingInEmail = email;\s*if \(await portalAccountIsStaff\(\)\) \{ await sendStaffToWorkspace\(false\); return; \}\s*window\.location\.replace/, 'no factor to ask for: stay on the form, never bounce back to home.html (which would send it straight back here)');
+  assert.ok(onLoad.indexOf('openMfaChallenge(') < onLoad.indexOf("showSignedIn('client'"), 'the code comes before any way on');
+  assert.doesNotMatch(onLoad, /window\.location\.(replace|href)/, 'on load, nothing sends the visitor on by itself');
+  assert.match(onLoad, /await client\.auth\.signOut\(\{ scope: 'local' \}\);\s*return;\s*\}\s*\}\s*(?:\/\/[^\n]*\n\s*)*signingInEmail = email;\s*if \(\(await accountKind\(client\)\) === 'staff'\) \{ await client\.auth\.signOut\(\{ scope: 'local' \}\); return; \}\s*showSignedIn\('client', '', email\);/, 'no factor to ask for: stay on the form, never bounce back to home.html (which would send it straight back here)');
   const verify = LOGIN.slice(LOGIN.indexOf('async function verify()'), LOGIN.indexOf('async function cancel()'));
   assert.match(verify, /if \(signingInEmail\) portalMarkSignedIn\(signingInEmail\);\s*goHomeAfterSignIn\(\);/, 'password and code just done: no Face ID lock after');
 });

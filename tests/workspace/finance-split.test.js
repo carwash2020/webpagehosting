@@ -347,11 +347,12 @@ test('all 4 files that replaced it exist and each is syntactically valid on its 
   }
 });
 
-test('every one of the 14 real pages that used to load tools-common.js now loads all 4 replacement files in the correct order (calendar.html is a redirect stub since 2026-09-21)', () => {
+test('every one of the 13 real pages that used to load tools-common.js (login.html forwards since FP4.1) now loads all 4 replacement files in the correct order (calendar.html is a redirect stub since 2026-09-21)', () => {
   const pages = [
     'client-detail.html', 'contract-generator.html', 'dev-tools.html',
     'finance.html', 'invoice-generator.html', 'job-detail.html', 'job-tracker.html',
-    'login.html', 'parts-reference.html', 'reset-password.html', 'review-request.html',
+    // login.html left this list in FP4.1 (2026-11-06): it only forwards to /portal/login.html.
+    'parts-reference.html', 'reset-password.html', 'review-request.html',
     'route-planner.html', 'settings.html', 'workspace.html',
   ];
   const order = ['tools-effects.js', 'tools-dialogs.js', 'tools-media-sharing.js', 'tools-nav-pwa.js'];
@@ -468,7 +469,8 @@ test('every tool page loads styles-tools.css after styles.css, preserving the or
   const pages = [
     'client-detail.html', 'contract-generator.html', 'dev-tools.html',
     'finance.html', 'invoice-generator.html', 'job-detail.html', 'job-tracker.html',
-    'login.html', 'parts-reference.html', 'reset-password.html', 'review-request.html',
+    // login.html left this list in FP4.1 (2026-11-06): it only forwards to /portal/login.html.
+    'parts-reference.html', 'reset-password.html', 'review-request.html',
     'route-planner.html', 'settings.html', 'workspace.html',
   ];
   for (const page of pages) {

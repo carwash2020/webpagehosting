@@ -8,7 +8,8 @@
 //     anyway: "factor_id must be an UUID".
 // Runs the real mfaQrImageSrc(), mfaClearUnverifiedTotpFactors(),
 // mfaEnroll() and mfaUnenroll() from tools/auth.js against a fake Supabase
-// Auth, and the real login.html enrollment step in jsdom.
+// Auth, and the real sign-in's enrollment step in jsdom (the staff half of
+// portal/login.html since fix plan FP4.1, 2026-11-06).
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -19,7 +20,7 @@ const { JSDOM } = require('jsdom');
 
 const TOOLS = path.join(__dirname, '..', '..', 'tools');
 const AUTH = fs.readFileSync(path.join(TOOLS, 'auth.js'), 'utf8');
-const LOGIN = fs.readFileSync(path.join(TOOLS, 'login.html'), 'utf8');
+const LOGIN = fs.readFileSync(path.join(TOOLS, '..', 'portal', 'login.html'), 'utf8');
 const grab = (src, start, end) => { const i = src.indexOf(start); assert.ok(i >= 0, start); return src.slice(i, src.indexOf(end, i)); };
 const AUTH_FNS = grab(AUTH, '// An <img src> for the QR code.', 'async function mfaChallenge(') +
   grab(AUTH, 'async function mfaUnenroll(', '// ---- Recovery codes');
@@ -105,24 +106,24 @@ test('enroll still reports a real failure plainly, and returns no factor id with
   assert.deepEqual({ ok: r.ok, error: r.error, factorId: r.factorId }, { ok: false, error: 'MFA enroll is disabled for TOTP', factorId: undefined });
 });
 
-// --- login.html: the enrollment step ---------------------------------------
-const START = grab(LOGIN, '  let lastEnrollOptions;', '  // Shared clipboard helper');
-const VERIFY = grab(LOGIN, "  document.getElementById('mfaEnrollVerifyBtn').addEventListener('click', async () => {", "  document.getElementById('mfaEnrollCancelLink')");
+// --- the sign-in: the enrollment step (staff) ------------------------------
+const START = grab(LOGIN, '  let staffLastEnrollOptions;', '  async function staffCopyText(');
+const VERIFY = grab(LOGIN, "  document.getElementById('staffEnrollVerify').addEventListener('click', async () => {", "  document.getElementById('staffEnrollCancel')");
 
 function loginPage(enrollResults) {
   const dom = new JSDOM('<!doctype html><body>' +
-    '<div id="mfaEnrollTitle">Set up two-factor authentication</div><div id="mfaEnrollSub">sub</div>' +
-    '<img id="mfaEnrollQrImg"><div id="mfaEnrollSecretFallback"></div><button id="mfaEnrollCopySecretBtn"></button>' +
-    '<input id="mfaEnrollCodeInput"><div id="mfaEnrollError"></div><button id="mfaEnrollVerifyBtn">Verify &amp; Continue</button>' +
+    '<div id="staffEnrollTitle">Set up two-factor authentication</div><div id="staffEnrollSub">sub</div>' +
+    '<img id="staffEnrollQr"><div id="staffEnrollSecret"></div><button id="staffEnrollCopy"></button>' +
+    '<input id="staffEnrollCode"><div id="staffEnrollError"></div><button id="staffEnrollVerify">Verify &amp; Continue</button>' +
     '</body>', { runScripts: 'outside-only' });
   const w = dom.window;
   const out = { enrolls: 0, verifies: [] };
-  w.pendingSession = { access_token: 'tok' };
-  w.showStep = () => {};
+  w.staffPending = { access_token: 'tok' };
+  w.staffShow = () => {};
   w.mfaEnroll = async () => { out.enrolls++; return enrollResults.shift(); };
   w.mfaChallengeAndVerify = async (t, id, code) => { out.verifies.push([id, code]); return { ok: false, error: 'Invalid code' }; };
-  w.copyTextToClipboard = async () => true;
-  w.eval('var pendingFactorId = null;\nvar MFA_ENROLL_COPY = { title: "Set up two-factor authentication", sub: "sub" };\n' + START + VERIFY + '\nwindow.__start = startMandatoryEnrollment;');
+  w.staffCopyText = async () => true;
+  w.eval('var staffFactorId = null;\nvar STAFF_ENROLL_COPY = { title: "Set up two-factor authentication", sub: "sub" };\n' + START + VERIFY + '\nwindow.__start = staffStartEnrollment;');
   const $ = (id) => w.document.getElementById(id);
   return { w, out, $ };
 }
@@ -134,25 +135,25 @@ test('setup that fails to start shows the error and a Try again button -- never 
     { ok: true, factorId: 'f-2', totp: { qr_code: 'data:image/svg+xml;charset=utf-8,%3Csvg%3E', secret: 'ABC' } },
   ]);
   await w.__start();
-  assert.equal($('mfaEnrollError').textContent, 'A factor with the friendly name "" for this user already exists');
-  assert.equal($('mfaEnrollVerifyBtn').textContent, 'Try again');
-  assert.equal($('mfaEnrollVerifyBtn').disabled, false);
-  $('mfaEnrollCodeInput').value = '788888';
-  $('mfaEnrollVerifyBtn').click();
+  assert.equal($('staffEnrollError').textContent, 'A factor with the friendly name "" for this user already exists');
+  assert.equal($('staffEnrollVerify').textContent, 'Try again');
+  assert.equal($('staffEnrollVerify').disabled, false);
+  $('staffEnrollCode').value = '788888';
+  $('staffEnrollVerify').click();
   await tick(); await tick();
   assert.equal(out.verifies.length, 0, 'no verify call without a factor id');
   assert.equal(out.enrolls, 2, 'Try again started setup over');
-  assert.equal($('mfaEnrollVerifyBtn').textContent, 'Verify & Continue');
-  assert.equal($('mfaEnrollQrImg').getAttribute('src'), 'data:image/svg+xml;charset=utf-8,%3Csvg%3E');
-  assert.match($('mfaEnrollSecretFallback').textContent, /Enter this code manually: ABC/);
-  assert.equal($('mfaEnrollError').textContent, '');
+  assert.equal($('staffEnrollVerify').textContent, 'Verify & Continue');
+  assert.equal($('staffEnrollQr').getAttribute('src'), 'data:image/svg+xml;charset=utf-8,%3Csvg%3E');
+  assert.match($('staffEnrollSecret').textContent, /Enter this code manually: ABC/);
+  assert.equal($('staffEnrollError').textContent, '');
 });
 
 test('once setup has started, Verify sends the code with the real factor id', async () => {
   const { w, out, $ } = loginPage([{ ok: true, factorId: 'f-1', totp: { qr_code: 'data:x', secret: 'S' } }]);
   await w.__start();
-  $('mfaEnrollCodeInput').value = '123456';
-  $('mfaEnrollVerifyBtn').click();
+  $('staffEnrollCode').value = '123456';
+  $('staffEnrollVerify').click();
   await tick(); await tick();
   assert.deepEqual(out.verifies, [['f-1', '123456']]);
 });

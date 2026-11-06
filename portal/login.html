@@ -17,8 +17,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<title>Client Portal | Triple H Enterprises</title>
-<meta name="description" content="Sign in to view and pay your Triple H Enterprises invoices online.">
+<title>Sign in | Triple H Homebase</title>
+<meta name="description" content="Sign in to Triple H Homebase: clients see and pay their invoices, the Triple H team opens the Workspace.">
 <link rel="canonical" href="https://www.triplehenterprisesllc.biz/portal/login.html">
 <!--
   Client Portal login (2026-08-31, rebuilt from magic-link to
@@ -121,9 +121,14 @@
   }
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=32b0b6ede8">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- One sign-in (fix plan FP4.1, 2026-11-06): supabase-js is pinned and
+     integrity-checked here, as on the Workspace pages, and auth.js comes
+     along for the staff path (the Workspace's two-factor helpers and its
+     own session store). Nothing in auth.js runs on its own on this page. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous"></script>
+<script src="/tools/auth.js?v=f6476e7a83"></script>
 <script src="/portal/portal-app.js?v=abb7e37c38"></script>
-<script src="/trusted-device.js?v=255d86a600"></script>
+<script src="/trusted-device.js?v=9ed57ff363"></script>
 <style>
   body { background: #0a0a0a; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
   .login-box { max-width: 380px; width: 100%; text-align: center; }
@@ -191,6 +196,26 @@
   #signupCodeInput.th-code-real-input,
   #mfaChallengeCodeInput.th-code-real-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; margin: 0; padding: 0; letter-spacing: 0; text-align: left; }
   .th-code-hint { font-size: 13px; color: var(--text-dim); margin: 0 0 12px; }
+  /* Staff steps (fix plan FP4.1), in the same step shell as the portal's. */
+  #staffCodeInput.th-code-real-input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; margin: 0; padding: 0; letter-spacing: 0; text-align: left; }
+  #staffCodeView:not(.is-recovery) .th-recovery-only { display: none; }
+  #staffCodeView.is-recovery .th-code-only { display: none; }
+  .staff-recovery-field { font-family: monospace; font-size: 20px !important; letter-spacing: 3px !important; min-height: 56px; margin-bottom: 12px !important; }
+  .th-code-boxes-wrap.is-shaking .th-code-boxes { animation: staff-code-shake .3s ease; }
+  @keyframes staff-code-shake { 0%,100%{ transform:translateX(0);} 20%{ transform:translateX(-6px);} 40%{ transform:translateX(6px);} 60%{ transform:translateX(-4px);} 80%{ transform:translateX(4px);} }
+  .staff-qr-wrap { text-align: center; margin-bottom: 16px; }
+  .staff-qr-wrap img { display: block; margin: 0 auto; width: 180px; height: 180px; background: #fff; border-radius: 8px; padding: 8px; }
+  .staff-secret-row { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; }
+  .staff-secret { font-size: 12px; color: var(--text-dim); word-break: break-all; }
+  .staff-secret-row .btn { padding: 4px 10px; font-size: 12px; flex: 0 0 auto; }
+  .staff-codes-list { background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; font-family: monospace; font-size: 15px; line-height: 1.9; color: var(--white); text-align: center; margin-bottom: 4px; }
+  #signedInView .login-btn { display: flex; width: 100%; }
+  .staff-faceid-scrim { position: fixed; inset: 0; background: rgba(0,0,0,.56); display: flex; align-items: flex-end; justify-content: center; z-index: 1200; }
+  .staff-faceid-sheet { width: 100%; max-width: 460px; box-sizing: border-box; background: var(--bg-panel); border-top: 1px solid var(--border); border-radius: 28px 28px 0 0; padding: 22px 24px 34px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
+  .staff-faceid-title { font-family: var(--font-display); font-size: 28px; line-height: 1.05; text-transform: uppercase; color: var(--text); }
+  .staff-faceid-body { font-size: 14.5px; line-height: 1.5; color: var(--text-dim); margin: 0; }
+  .staff-faceid-foot { font-size: 12.5px; color: var(--text-dim); margin: 0; }
+  .staff-faceid-sheet .login-btn { display: flex; width: 100%; }
 </style>
 <link rel="stylesheet" href="/portal/portal-polish.css?v=f0d57c5e20">
 <!-- Sign-in rebuild (2026-10-31): ghost logo, Bricolage Grotesque + Geist, brand orange on ink.
@@ -198,7 +223,7 @@
 <link rel="preload" href="/fonts/signin/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/signin/geist-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/signin.css?v=09922ecfc6">
-<script src="/signin-ui.js?v=557e91d779"></script>
+<script src="/signin-ui.js?v=8c2abbadef"></script>
 <script>
   // Sign-in must never depend on a cosmetic script. If /signin-ui.js did not
   // load (offline, stale cache), fall back to plain behaviour: same busy
@@ -221,9 +246,9 @@
 <div class="login-box">
   <!-- Sign-in rebuild (2026-10-31): restyle + Show/Hide, Remember me and the
        success animation. Every id, field, handler and step is unchanged. -->
-  <div class="login-kicker">Triple H client portal</div>
+  <div class="login-kicker">Triple H Homebase</div>
   <h1 class="login-title" id="pageTitle">Sign in</h1>
-  <p class="login-sub" id="loginSub">See your invoices, estimates and visits, and pay in a tap.</p>
+  <p class="login-sub" id="loginSub">For Triple H clients and the Triple H team.</p>
   <!-- Create account (2026-11-04, handoff §2): next to Sign in, as in the
        approved "Portal create account" design. -->
   <div class="si-tabs" id="modeTabs" role="group" aria-label="Sign in or create an account">
@@ -343,8 +368,105 @@
     </div>
   </div>
 </div>
+
+<!-- Already signed in (fix plan FP4.1, approved "One sign-in"): who this
+     device is signed in as, and the ways on. "Sign in as a different
+     account" and "Create a client account" sign this one out first, so a
+     device only ever holds one session. -->
+<div class="report-bug-overlay" id="signedInView" style="display:none;">
+  <div class="report-bug-modal">
+    <div class="login-kicker">Triple H Homebase</div>
+    <h1 class="report-bug-title">You're signed in</h1>
+    <p class="report-bug-sub" id="signedInWho"></p>
+    <button class="btn orange login-btn" id="signedInContinue" type="button">Continue</button>
+    <button class="btn secondary-btn login-btn" id="signedInSwitch" type="button" style="margin-top:10px;">Sign in as a different account</button>
+    <button class="btn secondary-btn login-btn" id="signedInCreate" type="button" style="margin-top:10px;">Create a client account</button>
+    <p class="login-hint" id="signedInNote" style="margin-top:12px;">Both of these sign you out of this account first.</p>
+  </div>
+</div>
+
+<!-- Staff two-factor steps (fix plan FP4.1): the Workspace's own steps,
+     moved here from tools/login.html unchanged in order and in every auth
+     call -- trusted device, the authenticator code or a recovery code,
+     required setup with recovery codes, then the Face ID offer. Nothing is
+     stored until the second step clears (the session is held in memory),
+     and the session that results lives only in the Workspace's store. -->
+<div class="report-bug-overlay" id="staffCodeView" style="display:none;">
+  <div class="report-bug-modal mfa-challenge-modal">
+    <h1 class="report-bug-title th-code-only">Enter your code</h1>
+    <p class="report-bug-sub th-code-only">Open your authenticator app and enter the 6-digit code for Triple H.</p>
+    <h1 class="report-bug-title th-recovery-only">Use a recovery code</h1>
+    <p class="report-bug-sub th-recovery-only">Enter one of the one-time codes you saved when you set up two-factor. Each code works once.</p>
+    <div class="th-code-boxes-wrap th-code-only" id="staffCodeBoxesWrap">
+      <div class="th-code-boxes" id="staffCodeBoxes" aria-hidden="true">
+        <span class="th-code-box"></span><span class="th-code-box"></span><span class="th-code-box"></span>
+        <span class="th-code-box"></span><span class="th-code-box"></span><span class="th-code-box"></span>
+      </div>
+      <input type="text" id="staffCodeInput" aria-label="6-digit code from your authenticator app" class="th-code-real-input" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" placeholder="123456" maxlength="6">
+    </div>
+    <p class="th-code-hint th-code-only">Paste works too. It checks as soon as the sixth digit is in.</p>
+    <input type="text" id="staffRecoveryInput" aria-label="Recovery code" class="staff-recovery-field th-recovery-only" placeholder="XXXX-XXXX" autocomplete="off">
+    <p class="th-code-hint th-recovery-only">Using a code removes your old authenticator. You'll set up a new one next.</p>
+    <label class="si-switch" for="staffTrustDevice">
+      <input type="checkbox" id="staffTrustDevice" role="switch" checked>
+      <span class="si-switch-text login-hint">
+        <span class="si-switch-label login-hint">Trust this device for 30 days</span>
+        <span class="si-switch-hint login-hint">Skip the code here for 30 days. You still sign in with your password. Leave off on a shared computer.</span>
+      </span>
+    </label>
+    <div class="report-bug-error" id="staffCodeError" role="alert"></div>
+    <div class="report-bug-actions">
+      <button class="btn secondary-btn" id="staffCodeCancel" type="button">Cancel</button>
+      <button class="btn orange" id="staffCodeSubmit" type="button">Verify</button>
+    </div>
+    <button type="button" class="forgot-link" id="staffRecoveryToggle">Use a recovery code instead</button>
+  </div>
+</div>
+
+<div class="report-bug-overlay" id="staffEnrollView" style="display:none;">
+  <div class="report-bug-modal mfa-challenge-modal">
+    <h1 class="report-bug-title" id="staffEnrollTitle">Set up two-factor authentication</h1>
+    <p class="report-bug-sub" id="staffEnrollSub">Your account requires two-factor authentication before you can continue. Scan this code with an authenticator app (Google Authenticator, Authy, 1Password, etc.), then enter the 6-digit code it shows.</p>
+    <div class="staff-qr-wrap">
+      <img id="staffEnrollQr" alt="Scan this QR code with your authenticator app">
+      <div class="staff-secret-row">
+        <div class="staff-secret" id="staffEnrollSecret"></div>
+        <button type="button" class="btn secondary-btn" id="staffEnrollCopy" style="display:none;">Copy</button>
+      </div>
+    </div>
+    <input type="text" id="staffEnrollCode" aria-label="6-digit code from your authenticator app" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" placeholder="123456" maxlength="6">
+    <div class="report-bug-error" id="staffEnrollError" role="alert"></div>
+    <div class="report-bug-actions">
+      <button class="btn secondary-btn" id="staffEnrollCancel" type="button">Cancel</button>
+      <button class="btn orange" id="staffEnrollVerify" type="button">Verify &amp; Continue</button>
+    </div>
+  </div>
+</div>
+
+<div class="report-bug-overlay" id="staffCodesView" style="display:none;">
+  <div class="report-bug-modal">
+    <h1 class="report-bug-title">Save your recovery codes</h1>
+    <p class="report-bug-sub">If you ever lose access to your authenticator app, use one of these one-time codes to sign in instead.</p>
+    <p class="report-bug-sub" style="color:var(--orange-light,#ffb347); font-weight:600;">Save these now -- each code works once, and they will not be shown again after you leave this page.</p>
+    <div class="staff-codes-list" id="staffCodesList"></div>
+    <div class="report-bug-actions">
+      <button class="btn secondary-btn" id="staffCodesCopy" type="button">Copy all</button>
+      <button class="btn secondary-btn" id="staffCodesDownload" type="button">Download codes</button>
+    </div>
+    <button class="btn orange login-btn" id="staffCodesContinue" type="button" style="margin-top:12px;">I've saved these -- Continue</button>
+  </div>
+</div>
 </div>
 </main>
+<div class="staff-faceid-scrim" id="staffFaceIdScrim" style="display:none;">
+  <div class="staff-faceid-sheet" role="dialog" aria-modal="true" aria-labelledby="staffFaceIdTitle">
+    <div class="staff-faceid-title" id="staffFaceIdTitle">Use Face ID next time?</div>
+    <p class="staff-faceid-body">Skip the password and code on this phone. If Face ID fails, your 6-digit code is one tap away.</p>
+    <button type="button" class="btn orange login-btn" id="staffFaceIdOn">Turn on Face ID</button>
+    <button type="button" class="btn secondary-btn login-btn" id="staffFaceIdNotNow">Not now</button>
+    <p class="staff-faceid-foot">You can change this later in Settings.</p>
+  </div>
+</div>
 
 <script>
   const { createClient } = supabase;
@@ -358,44 +480,91 @@
     { auth: { storage: portalAuthStorage() } }
   );
 
-  // Runs the ~600ms success animation (logo un-ghosts, form settles), then
-  // goes where every successful sign-in has always gone.
-  // One sign-in for everyone (2026-10-31): a staff account that signs in here
-  // (password and any two-factor code done) has an internal role. It gets no
-  // portal session: this one is cleared and they're sent to the Workspace
-  // sign-in, which enforces the team's own two-factor rules. Nothing is
-  // handed across. A role that can't be read counts as a client, so this
-  // only ever sends someone away on a positive answer.
-  async function portalAccountIsStaff() {
+  // ---- One sign-in for everyone (fix plan FP4.1, 2026-11-06; approved
+  // "One sign-in: Triple H Homebase") -------------------------------------
+  // The password is checked once, through a client that keeps the session
+  // in memory only (signinClient). Then one question to the database --
+  // signin_account_kind(), about this account only -- decides the path:
+  //   staff:  the Workspace's own two-factor steps (staff* below, moved here
+  //           from tools/login.html), then the session goes to the
+  //           Workspace's store (auth.js persistSession) and nowhere else;
+  //   client: the session moves into the portal's store and the portal's own
+  //           steps run (trusted device, Face ID, the portal's two-factor).
+  // No second sign-in (fixes A1), and a device only ever holds one of the
+  // two sessions. If the answer can't be read, the person is a client:
+  // never the Workspace on a guess. Every Workspace page still checks staff
+  // access and two-factor itself; this page decides only where to go next.
+  const memoryStore = (() => { const m = {}; return { getItem: (k) => (k in m ? m[k] : null), setItem: (k, v) => { m[k] = String(v); }, removeItem: (k) => { delete m[k]; } }; })();
+  const signinClient = createClient(
+    'https://csvfqdjuobylgafgolho.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzdmZxZGp1b2J5bGdhZmdvbGhvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNTQ3MjcsImV4cCI6MjEwMDkzMDcyN30.6GlvK-DfXf2lppS1kciZtsl4wHOpZz_yKtwsS1lyjrs',
+    { auth: { storage: memoryStore, persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
+  );
+  async function accountKind(rpcClient) {
     try {
-      const { data, error } = await client.from('account_roles').select('email').limit(1);
-      return !error && Array.isArray(data) && data.length > 0;
-    } catch (e) { return false; }
-  }
-  // Staff who signed in here: no portal session; on to the Workspace sign-in.
-  async function sendStaffToWorkspace(animate) {
-    try { sessionStorage.setItem('th_signin_email_hint', signingInEmail || ''); } catch (e) { /* ignore */ }
-    await client.auth.signOut({ scope: 'local' });
-    if (animate) ThSignin.success(() => window.location.replace('/tools/login.html'));
-    else window.location.replace('/tools/login.html');
-  }
-  // Home, or back to the page that sent them here (?return=, checked
-  // against a fixed list of portal pages by portalAfterSignInUrl()).
-  async function goHomeAfterSignIn() {
-    if (await portalAccountIsStaff()) { await sendStaffToWorkspace(true); return; }
-    ThSignin.success(() => window.location.replace(portalAfterSignInUrl()));
+      const { data, error } = await rpcClient.rpc('signin_account_kind');
+      return !error && data === 'staff' ? 'staff' : 'client';
+    } catch (e) { return 'client'; }
   }
 
-  // Sent here from the Workspace sign-in: this email is a client account.
-  (function () {
-    let hint = '';
-    try { hint = sessionStorage.getItem('th_signin_email_hint') || ''; sessionStorage.removeItem('th_signin_email_hint'); } catch (e) { /* ignore */ }
-    if (hint) {
-      document.getElementById('clientEmail').value = hint;
-      document.getElementById('loginSub').textContent = 'That email is a client account. Sign in here to see your invoices.';
-      document.getElementById('loginSub').dataset.hinted = '1';
-    }
-  })();
+  // Where a client goes after signing in: Home, or back to the portal page
+  // that sent them here (?return=, checked by portalAfterSignInUrl()).
+  async function goHomeAfterSignIn() {
+    ThSignin.success(() => window.location.replace(portalAfterSignInUrl()));
+  }
+  // Where staff go: the Workspace, or back to the Workspace page that sent
+  // them here. Only ever a known Workspace page -- an explicit allowlist, so
+  // ?return= can never become an open redirect (same list tools/login.html
+  // used: every page that calls requireAuth()).
+  const STAFF_RETURN_PATHS = new Set([
+    '/tools/client-detail.html', '/tools/clients.html',
+    '/tools/contract-generator.html', '/tools/dev-tools.html',
+    '/tools/finance.html', '/tools/invoice-generator.html',
+    '/tools/job-detail.html', '/tools/job-tracker.html', '/tools/parts-reference.html',
+    '/tools/review-request.html', '/tools/route-planner.html', '/tools/runway-dashboard.html',
+    '/tools/settings.html', '/tools/site-content.html', '/tools/team.html', '/tools/workspace.html',
+  ]);
+  function staffAfterSignInUrl() {
+    const r = new URLSearchParams(window.location.search).get('return');
+    return STAFF_RETURN_PATHS.has(r) ? r : '/tools/workspace.html';
+  }
+
+  // Already signed in: say as whom, and offer the way on. Switching (or
+  // creating a client account) signs this session out first -- both stores,
+  // so the two never collide.
+  async function signOutEverywhereHere() {
+    try {
+      const ws = typeof getStoredSession === 'function' ? getStoredSession() : null;
+      if (ws && ws.access_token) {
+        await fetch(SUPABASE_URL + '/auth/v1/logout?scope=local', { method: 'POST', headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + ws.access_token } }).catch(() => {});
+      }
+    } catch (e) { /* the local copy is cleared below either way */ }
+    if (typeof clearStoredSession === 'function') clearStoredSession();
+    try { await client.auth.signOut({ scope: 'local' }); } catch (e) { /* ignore */ }
+  }
+  function showSignedIn(kind, name, email) {
+    setPortalStepChromeHidden(true);
+    document.getElementById('signedInWho').textContent = 'as ' + (name ? name + ' · ' : '') + email;
+    const cont = document.getElementById('signedInContinue');
+    cont.textContent = kind === 'staff' ? 'Continue to Homebase' : 'Continue to your portal';
+    cont.onclick = () => window.location.replace(kind === 'staff' ? staffAfterSignInUrl() : portalAfterSignInUrl());
+    document.getElementById('signedInView').style.display = 'flex';
+  }
+  document.getElementById('signedInSwitch').addEventListener('click', async () => {
+    await signOutEverywhereHere();
+    document.getElementById('signedInView').style.display = 'none';
+    setPortalStepChromeHidden(false);
+    setCreateMode(false);
+    document.getElementById('clientEmail').value = '';
+    document.getElementById('clientEmail').focus();
+  });
+  document.getElementById('signedInCreate').addEventListener('click', async () => {
+    await signOutEverywhereHere();
+    document.getElementById('signedInView').style.display = 'none';
+    setPortalStepChromeHidden(false);
+    setCreateMode(true);
+    document.getElementById('clientEmail').focus();
+  });
 
   let forgotPasswordMode = false;
 
@@ -409,7 +578,14 @@
   // for the account, in which case home.html's own check asks for Face
   // ID instead. ?step=code (the Face ID step's "Use my 2FA code
   // instead") always asks for the code.
-  client.auth.getSession().then(async ({ data }) => {
+  (async () => {
+    // A Workspace session on this device: staff, signed in.
+    if (typeof hasValidSession === 'function' && hasValidSession()) {
+      const ws = getStoredSession();
+      showSignedIn('staff', typeof KNOWN_USER_NAMES === 'object' ? KNOWN_USER_NAMES[String(ws.email || '').toLowerCase()] : '', ws.email || '');
+      return;
+    }
+    const { data } = await client.auth.getSession();
     if (!data.session) return;
     const email = data.session.user.email;
     if (await portalSecondStepOwed(email, client)) {
@@ -432,12 +608,13 @@
         return;
       }
     }
-    // Already signed in (and past any second step): staff go to the Workspace
-    // sign-in, everyone else straight on to Home as before, no animation.
+    // Already signed in, past any second step. A portal session that belongs
+    // to a staff account (left from before one sign-in) is cleared: staff
+    // sign in to the Workspace's own store. Otherwise, signed in as a client.
     signingInEmail = email;
-    if (await portalAccountIsStaff()) { await sendStaffToWorkspace(false); return; }
-    window.location.replace(portalAfterSignInUrl());
-  });
+    if ((await accountKind(client)) === 'staff') { await client.auth.signOut({ scope: 'local' }); return; }
+    showSignedIn('client', '', email);
+  })();
 
   // Trusted devices (2026-11-01). The same database functions and browser
   // helper (/trusted-device.js) the Workspace uses; this is the portal's way
@@ -479,7 +656,7 @@
   // code; the right code confirms it, and then this page signs in with the
   // password just chosen. An unconfirmed account can't sign in and, in the
   // database, can't see a single row.
-  const SIGN_IN_SUB = 'See your invoices, estimates and visits, and pay in a tap.';
+  const SIGN_IN_SUB = 'For Triple H clients and the Triple H team.';
   const CREATE_SUB = "Use the email address Triple H sends your invoices and quotes to. We'll match you to them automatically.";
   // Opened from a contract email (?return=/portal/contracts.html...): say so.
   const CONTRACT_SUB = 'A contract is waiting for your signature. Sign in or create your account and it opens right away.';
@@ -619,7 +796,7 @@
     document.getElementById('pageTitle').textContent = forgotPasswordMode ? 'Reset your password' : 'Sign in';
     document.getElementById('loginSub').textContent = forgotPasswordMode
       ? "Enter your email and we'll send you a link to choose a new password."
-      : 'See your invoices, estimates and visits, and pay in a tap.';
+      : (returningToContract ? CONTRACT_SUB : SIGN_IN_SUB);
     document.getElementById('loginSubmitBtn').textContent = forgotPasswordMode ? 'Send Reset Link' : 'Sign In';
     document.getElementById('forgotLink').textContent = forgotPasswordMode ? 'Back to sign in' : 'Forgot your password?';
     document.getElementById('loginError').textContent = '';
@@ -657,12 +834,14 @@
 
     if (forgotPasswordMode) {
       ThSignin.setBusy(btn, true, 'Sending...', 'Send Reset Link');
-      const { error } = await client.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + '/portal/set-password.html',
-      });
+      // One reset page for everyone (FP4.1): tools/reset-password.html sets
+      // the new password without signing in, then sends people back here,
+      // where the sign-in routes them by account. (Client invites still use
+      // portal/set-password.html.)
+      const reset = await requestPasswordReset(email);
       ThSignin.setBusy(btn, false, '', 'Send Reset Link');
-      if (error) {
-        errorEl.textContent = 'Something went wrong. ' + (error.message || 'Please try again.');
+      if (!reset.ok) {
+        errorEl.textContent = 'Something went wrong. ' + (reset.error || 'Please try again.');
         return;
       }
       document.getElementById('loginForm').querySelectorAll('.login-field, .si-switch, #loginSubmitBtn, #forgotLink').forEach(el => el.style.display = 'none');
@@ -674,11 +853,10 @@
     }
 
     const password = passwordInput.value;
-    // Decide where this session will live BEFORE it is created: ON = this
-    // device stays signed in for 30 days, OFF = ends when the browser closes.
-    portalSetRemember(document.getElementById('rememberMe').checked);
+    const rememberMe = document.getElementById('rememberMe').checked;
     ThSignin.setBusy(btn, true, 'Signing in...', 'Sign In');
-    const { error } = await client.auth.signInWithPassword({ email, password });
+    // The password, checked once, held in memory (see signinClient above).
+    const { data: signedIn, error } = await signinClient.auth.signInWithPassword({ email, password });
 
     if (error) {
       // A dropped connection is not a wrong password; say which it is.
@@ -693,6 +871,33 @@
         passwordInput.focus();
         passwordInput.select();
       }
+      return;
+    }
+
+    const session = signedIn && signedIn.session;
+    if (!session || !session.access_token) {
+      errorEl.textContent = 'Something went wrong. Please try again.';
+      ThSignin.setBusy(btn, false, '', 'Sign In');
+      return;
+    }
+    if ((await accountKind(signinClient)) === 'staff') {
+      ThSignin.setBusy(btn, false, '', 'Sign In');
+      await staffContinueSignIn({
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+        expires_at: session.expires_at,
+        email: (session.user && session.user.email) || email,
+      }, rememberMe);
+      return;
+    }
+    // A client: decide where this session lives BEFORE it is stored (ON =
+    // this device stays signed in for 30 days, OFF = ends when the browser
+    // closes), then hand it to the portal's own client.
+    portalSetRemember(rememberMe);
+    const moved = await client.auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token });
+    if (moved.error) {
+      errorEl.textContent = "Can't reach the server. Check your connection and try again.";
+      ThSignin.setBusy(btn, false, '', 'Sign In');
       return;
     }
 
@@ -730,10 +935,290 @@
     goHomeAfterSignIn();
   });
 
+  // ---- Staff path (fix plan FP4.1): the Workspace's own sign-in steps,
+  // moved here from tools/login.html. Same order, same auth.js calls:
+  // trusted device -> authenticator code or recovery code -> required setup
+  // with recovery codes -> Face ID offer -> the Workspace. `staffPending`
+  // is a password-checked session held in memory ONLY; nothing is stored
+  // until the second step clears, so a password alone never signs a staff
+  // account with (or required to have) two-factor into anything.
+  let staffPending = null;
+  let staffRememberMe = false;
+  let staffFactorId = null;
+  let staffRecoveryMode = false;
+  const STAFF_STEPS = ['staffCodeView', 'staffEnrollView', 'staffCodesView'];
+  function staffShow(id) {
+    setPortalStepChromeHidden(true);
+    STAFF_STEPS.forEach((stepId) => { document.getElementById(stepId).style.display = stepId === id ? 'flex' : 'none'; });
+  }
+  function staffBackToSignIn() {
+    staffPending = null; staffFactorId = null; staffRecoveryMode = false;
+    STAFF_STEPS.forEach((stepId) => { document.getElementById(stepId).style.display = 'none'; });
+    document.getElementById('clientPassword').value = '';
+    document.getElementById('staffCodeError').textContent = '';
+    document.getElementById('staffEnrollError').textContent = '';
+    setPortalStepChromeHidden(false);
+  }
+  // Staff are signed in: offer Face ID once per device and account, then the
+  // Workspace (or the Workspace page that sent them here).
+  function staffFaceIdKey(kind, email) { return 'th_workspace_' + kind + '_' + String(email || '').toLowerCase(); }
+  function staffFinish() {
+    const email = (staffPending && staffPending.email) || '';
+    const go = () => ThSignin.success(() => { window.location.href = staffAfterSignInUrl(); });
+    const webAuthn = typeof window.PublicKeyCredential !== 'undefined' && typeof navigator.credentials !== 'undefined';
+    let offered = null;
+    try { offered = localStorage.getItem(staffFaceIdKey('faceid_offered', email)); } catch (e) { /* ignore */ }
+    if (!webAuthn || !email || offered) { go(); return; }
+    document.getElementById('staffFaceIdScrim').style.display = 'flex';
+    document.getElementById('staffFaceIdOn').onclick = async () => {
+      try {
+        await navigator.credentials.create({
+          publicKey: {
+            challenge: new Uint8Array(32),
+            rp: { name: 'Triple H Workspace' },
+            user: { id: new Uint8Array(16), name: email, displayName: email },
+            pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
+            authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+            timeout: 60000,
+          },
+        });
+        localStorage.setItem(staffFaceIdKey('biometric_lock', email), '1');
+      } catch (e) { /* declined or unsupported: not fatal */ }
+      try { localStorage.setItem(staffFaceIdKey('faceid_offered', email), '1'); } catch (e) { /* ignore */ }
+      go();
+    };
+    document.getElementById('staffFaceIdNotNow').onclick = () => {
+      try { localStorage.setItem(staffFaceIdKey('faceid_offered', email), '1'); } catch (e) { /* ignore */ }
+      go();
+    };
+  }
+  function staffStoreAndFinish(session) {
+    persistSession(session, staffRememberMe);
+    staffFinish();
+  }
+
+  async function staffContinueSignIn(pending, rememberMe) {
+    staffPending = pending;
+    staffRememberMe = rememberMe;
+    // Already has a verified factor: always the second step, whatever the role.
+    const factor = await mfaListVerifiedTotpFactor(staffPending.access_token);
+    if (factor) {
+      if (await staffSignInOnTrustedDevice()) return;
+      staffFactorId = factor.id;
+      staffRecoveryMode = false;
+      document.getElementById('staffCodeInput').value = '';
+      document.getElementById('staffRecoveryInput').value = '';
+      document.getElementById('staffCodeError').textContent = '';
+      document.getElementById('staffRecoveryToggle').textContent = 'Use a recovery code instead';
+      document.getElementById('staffCodeView').classList.remove('is-recovery');
+      // The trust switch on the code step starts from Remember me.
+      document.getElementById('staffTrustDevice').checked = rememberMe;
+      staffPaintBoxes();
+      staffShow('staffCodeView');
+      document.getElementById('staffCodeInput').focus();
+      return;
+    }
+    // No factor yet: does this account's role require one? (auth.js)
+    const roleInfo = await loadCurrentUserRole(staffPending.access_token, staffPending.email);
+    if (requiresMfaForRole(roleInfo)) { await staffStartEnrollment(); return; }
+    staffStoreAndFinish(staffPending);
+  }
+
+  // Trusted device: skips the code only when the database accepts this
+  // device's token for this account AND the Workspace's two-factor gate
+  // accepts the session (the same check every Workspace page makes).
+  async function staffSignInOnTrustedDevice() {
+    if (typeof ThTrustedDevice === 'undefined') return false;
+    const token = staffPending.access_token;
+    const rpc = ThTrustedDevice.fetchRpc(SUPABASE_URL, SUPABASE_ANON_KEY, token);
+    if (!(await ThTrustedDevice.tryUse(rpc, ThTrustedDevice.userIdFromJwt(token)))) return false;
+    let status = null;
+    try { status = await rpc('internal_mfa_session_status', {}); } catch (e) { status = null; }
+    if (status && status.blocked === true) return false;
+    staffStoreAndFinish(staffPending);
+    return true;
+  }
+
+  function staffPaintBoxes() {
+    const val = document.getElementById('staffCodeInput').value || '';
+    document.querySelectorAll('#staffCodeBoxes .th-code-box').forEach((box, i) => {
+      box.textContent = val[i] || '';
+      box.classList.toggle('is-filled', !!val[i]);
+      box.classList.toggle('is-current', i === Math.min(val.length, 5) && val.length < 6);
+    });
+  }
+  function staffShakeBoxes() {
+    const wrap = document.getElementById('staffCodeBoxesWrap');
+    wrap.classList.remove('is-shaking'); void wrap.offsetWidth; wrap.classList.add('is-shaking');
+    wrap.classList.add('is-invalid');
+    document.getElementById('staffCodeInput').value = '';
+    staffPaintBoxes();
+    document.getElementById('staffCodeInput').focus();
+  }
+  document.getElementById('staffRecoveryToggle').addEventListener('click', () => {
+    staffRecoveryMode = !staffRecoveryMode;
+    document.getElementById('staffRecoveryInput').value = '';
+    document.getElementById('staffCodeInput').value = '';
+    document.getElementById('staffCodeError').textContent = '';
+    document.getElementById('staffRecoveryToggle').textContent = staffRecoveryMode ? 'Use your authenticator app instead' : 'Use a recovery code instead';
+    document.getElementById('staffCodeView').classList.toggle('is-recovery', staffRecoveryMode);
+    staffPaintBoxes();
+    document.getElementById(staffRecoveryMode ? 'staffRecoveryInput' : 'staffCodeInput').focus();
+  });
+  document.getElementById('staffCodeInput').addEventListener('input', (e) => {
+    document.getElementById('staffCodeBoxesWrap').classList.remove('is-invalid');
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    staffPaintBoxes();
+    if (/^\d{6}$/.test(e.target.value)) document.getElementById('staffCodeSubmit').click();
+  });
+  document.getElementById('staffCodeSubmit').addEventListener('click', async () => {
+    const btn = document.getElementById('staffCodeSubmit');
+    const errorEl = document.getElementById('staffCodeError');
+    errorEl.textContent = '';
+    if (!staffPending) return;
+    // "Trust this device for 30 days" also chooses where the session lives:
+    // on = 30 days on this device, off = until the browser closes.
+    staffRememberMe = document.getElementById('staffTrustDevice').checked;
+    if (staffRecoveryMode) {
+      const code = document.getElementById('staffRecoveryInput').value.trim();
+      if (!code) { errorEl.textContent = 'Enter a recovery code.'; return; }
+      btn.disabled = true; btn.textContent = 'Checking...';
+      const result = await redeemRecoveryCode(staffPending.access_token, code);
+      btn.disabled = false; btn.textContent = 'Verify';
+      if (!result.ok || !result.valid) {
+        errorEl.textContent = (result.ok === false && result.error) ? result.error : 'That recovery code is invalid or already used.';
+        return;
+      }
+      // Redeeming a code removed the authenticator (and signed out every
+      // other device). If the role requires two-factor, set a new one up now.
+      const stillEnrolled = await mfaListVerifiedTotpFactor(staffPending.access_token);
+      if (!stillEnrolled) {
+        const roleInfo = await loadCurrentUserRole(staffPending.access_token, staffPending.email);
+        if (requiresMfaForRole(roleInfo)) { await staffStartEnrollment({ afterRecovery: true }); return; }
+      }
+      staffStoreAndFinish(staffPending);
+      return;
+    }
+    const code = document.getElementById('staffCodeInput').value.trim();
+    if (!/^\d{6}$/.test(code)) { errorEl.textContent = 'Enter the 6-digit code from your authenticator app.'; return; }
+    btn.disabled = true; btn.textContent = 'Verifying...';
+    const result = await mfaChallengeAndVerify(staffPending.access_token, staffFactorId, code);
+    btn.disabled = false; btn.textContent = 'Verify';
+    if (!result.ok) { errorEl.textContent = result.error; staffShakeBoxes(); return; }
+    if (document.getElementById('staffTrustDevice').checked && typeof ThTrustedDevice !== 'undefined') {
+      await ThTrustedDevice.remember(ThTrustedDevice.fetchRpc(SUPABASE_URL, SUPABASE_ANON_KEY, result.access_token), ThTrustedDevice.userIdFromJwt(result.access_token), 'tools');
+    }
+    staffPending = { access_token: result.access_token, refresh_token: result.refresh_token, expires_at: result.expires_at, email: result.email || staffPending.email };
+    staffStoreAndFinish(staffPending);
+  });
+  document.getElementById('staffCodeCancel').addEventListener('click', staffBackToSignIn);
+
+  // Required setup (the role needs two-factor and none is set up yet).
+  const STAFF_ENROLL_COPY = { title: document.getElementById('staffEnrollTitle').textContent, sub: document.getElementById('staffEnrollSub').textContent };
+  let staffLastEnrollOptions;
+  async function staffStartEnrollment(options) {
+    staffLastEnrollOptions = options;
+    const afterRecovery = !!(options && options.afterRecovery);
+    document.getElementById('staffEnrollTitle').textContent = afterRecovery ? 'Set up a new authenticator' : STAFF_ENROLL_COPY.title;
+    document.getElementById('staffEnrollSub').textContent = afterRecovery
+      ? 'Recovery code accepted. Your old authenticator was removed and your other devices were signed out. Scan this code with an authenticator app on the phone you have now, then enter the 6-digit code it shows. The old "Triple H Workspace" entry in your previous app no longer works.'
+      : STAFF_ENROLL_COPY.sub;
+    const errorEl = document.getElementById('staffEnrollError');
+    const verifyBtn = document.getElementById('staffEnrollVerify');
+    errorEl.textContent = '';
+    staffFactorId = null;
+    document.getElementById('staffEnrollQr').removeAttribute('src');
+    document.getElementById('staffEnrollSecret').textContent = '';
+    staffShow('staffEnrollView');
+    verifyBtn.disabled = true; verifyBtn.textContent = 'Setting up...';
+    const result = await mfaEnroll(staffPending.access_token);
+    verifyBtn.disabled = false;
+    if (!result.ok) {
+      // Nothing to verify a code against: the button starts setup over.
+      errorEl.textContent = result.error;
+      verifyBtn.textContent = 'Try again';
+      return;
+    }
+    verifyBtn.textContent = 'Verify & Continue';
+    staffFactorId = result.factorId;
+    document.getElementById('staffEnrollQr').src = result.totp.qr_code;
+    const copyBtn = document.getElementById('staffEnrollCopy');
+    document.getElementById('staffEnrollSecret').textContent = result.totp.secret ? ("Can't scan? Enter this code manually: " + result.totp.secret) : '';
+    copyBtn.style.display = result.totp.secret ? '' : 'none';
+    copyBtn.onclick = async () => {
+      const ok = await staffCopyText(result.totp.secret);
+      copyBtn.textContent = ok ? 'Copied!' : 'Copy failed';
+      setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+    };
+    document.getElementById('staffEnrollCode').value = '';
+    document.getElementById('staffEnrollCode').focus();
+  }
+  async function staffCopyText(text) {
+    try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(text); return true; } } catch (e) { /* fall through */ }
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+      document.body.appendChild(ta); ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    } catch (e) { return false; }
+  }
+  document.getElementById('staffEnrollCode').addEventListener('input', (e) => {
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    if (/^\d{6}$/.test(e.target.value)) document.getElementById('staffEnrollVerify').click();
+  });
+  document.getElementById('staffEnrollVerify').addEventListener('click', async () => {
+    const btn = document.getElementById('staffEnrollVerify');
+    const errorEl = document.getElementById('staffEnrollError');
+    const code = document.getElementById('staffEnrollCode').value.trim();
+    errorEl.textContent = '';
+    if (btn.disabled) return;
+    if (!staffFactorId) { staffStartEnrollment(staffLastEnrollOptions); return; }
+    if (!/^\d{6}$/.test(code)) { errorEl.textContent = 'Enter the 6-digit code from your authenticator app.'; return; }
+    btn.disabled = true; btn.textContent = 'Verifying...';
+    const result = await mfaChallengeAndVerify(staffPending.access_token, staffFactorId, code);
+    if (!result.ok) { btn.disabled = false; btn.textContent = 'Verify & Continue'; errorEl.textContent = result.error; return; }
+    staffPending = { access_token: result.access_token, refresh_token: result.refresh_token, expires_at: result.expires_at, email: result.email || staffPending.email };
+    const codes = await generateRecoveryCodes(staffPending.access_token, 10);
+    btn.disabled = false; btn.textContent = 'Verify & Continue';
+    // Two-factor is on either way; Settings can make codes again later.
+    if (!codes.ok) { staffStoreAndFinish(staffPending); return; }
+    document.getElementById('staffCodesList').innerHTML = codes.codes.map((c) => String(c).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]))).join('<br>');
+    staffShow('staffCodesView');
+  });
+  document.getElementById('staffEnrollCancel').addEventListener('click', () => {
+    if (staffFactorId && staffPending) mfaUnenroll(staffPending.access_token, staffFactorId).catch(() => {});
+    staffBackToSignIn();
+  });
+  document.getElementById('staffCodesCopy').addEventListener('click', async () => {
+    const btn = document.getElementById('staffCodesCopy');
+    const ok = await staffCopyText(document.getElementById('staffCodesList').innerText);
+    btn.textContent = ok ? 'Copied!' : 'Copy failed';
+    setTimeout(() => { btn.textContent = 'Copy all'; }, 1500);
+  });
+  document.getElementById('staffCodesDownload').addEventListener('click', () => {
+    const text = document.getElementById('staffCodesList').innerText;
+    const blob = new Blob(['Triple H Workspace -- two-factor recovery codes\n', 'Each code works once. Keep this somewhere safe.\n\n', text + '\n'], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'triple-h-workspace-recovery-codes.txt';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  });
+  document.getElementById('staffCodesContinue').addEventListener('click', () => staffStoreAndFinish(staffPending));
+
+  // Sent here by checkInternalMfaSession() (auth.js): this session only
+  // passed the password, and the account has an authenticator.
+  if (new URLSearchParams(window.location.search).get('reason') === 'mfa') {
+    document.getElementById('loginSub').textContent = 'For your security, sign in again with your authenticator code.';
+    document.getElementById('loginSub').dataset.hinted = '1';
+  }
+
   // First Impressions handoff (2026-09-29): the step-1 form/footer/link
   // hide while a step (report-a-problem, the 2FA challenge) is shown, so
   // nothing ever stacks on top of the sign-in card -- one step replaces
-  // the last, the same pattern tools/login.html uses.
+  // the last, the same pattern the Workspace steps use.
   function setPortalStepChromeHidden(hidden) {
     document.getElementById('loginForm').style.display = hidden ? 'none' : '';
     document.querySelectorAll('.login-box > .login-foot').forEach((el) => { el.style.display = hidden ? 'none' : ''; });

@@ -1603,3 +1603,18 @@ invoice, quote, job, contract or checkup from Triple H first." Failing test
 written first (`tests/edge-functions/saved-card-business-record-gate.test.js`:
 a work order alone, in any status, is refused). **Not deployed**: goes with
 the Phase 3 batch, after Connor's OK.
+
+## 2026-11-06 -- FP4.1 one sign-in: how staff and client sessions stay apart
+
+One page now signs in both kinds of account, which raised two ways to get this wrong.
+
+**1. Misrouting a client into the Workspace.** The staff/client answer comes from `signin_account_kind()` (SECURITY DEFINER; checks `account_roles` for the caller's JWT email; `authenticated` only). The page treats only an explicit `'staff'` as staff. A missing function, an error, or a dropped connection all mean client. Even a wrong "staff" answer grants nothing: the Workspace still loads the role from `account_roles` under RLS, and the two-factor gate is unchanged.
+
+**2. A password-only session landing somewhere usable.** The password is checked on a supabase-js client with in-memory storage, so nothing reaches disk. Staff tokens stay in memory until the code, a recovery code, or required setup clears; only then does `persistSession()` run, and the page has exactly one call to it. A client's session moves into the portal store by one `setSession()` call. The staff branch returns before that line, so a staff account never gets a portal session. Refresh tokens rotate, so a session must never sit in both stores; switching accounts signs out both first.
+
+**Risk accepted, with reasons:**
+- Remember me now starts off for staff too. This is a public page, the safer default; staff turn it on once per device.
+- Staff sign-in errors now go to the portal error log, the one this page loads, instead of the Workspace's.
+- The precached `tools/login.html` is only a forward now, so opening the Workspace app offline and signed out shows the browser's offline page instead of a sign-in form that couldn't work offline anyway.
+
+**Still to apply live:** `sql/security/fp4_signin_account_kind.sql`. It is held for Connor's OK. Until it is applied, the page fails safe: every account reads as a client, so staff would be routed to the portal. The page must not ship before the function is live.

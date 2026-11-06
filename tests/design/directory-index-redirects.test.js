@@ -23,11 +23,12 @@ test('portal/index.html redirects to portal/login.html without a white first pai
   assert.doesNotMatch(html, /background:#fff|background:\s*white|background-color:\s*#fff/i);
 });
 
-test('tools/index.html redirects to tools/login.html without a white first paint', () => {
+// One sign-in since FP4.1 (2026-11-06): /tools/ lands on the same page as /portal/.
+test('tools/index.html redirects to the one sign-in, portal/login.html, without a white first paint', () => {
   const html = readLanding('tools/index.html');
-  assert.match(html, /<meta http-equiv="refresh" content="0; url=\/tools\/login\.html">/);
-  assert.match(html, /location\.replace\('\/tools\/login\.html'\)/);
-  assert.match(html, /href="\/tools\/login\.html"/);
+  assert.match(html, /<meta http-equiv="refresh" content="0; url=\/portal\/login\.html">/);
+  assert.match(html, /location\.replace\('\/portal\/login\.html'\)/);
+  assert.match(html, /href="\/portal\/login\.html"/);
   assert.match(html, /<meta name="color-scheme" content="dark">/);
   assert.match(html, /<html lang="en" style="background-color:#0a0a0a;">/);
   assert.doesNotMatch(html, /background:#fff|background:\s*white|background-color:\s*#fff/i);

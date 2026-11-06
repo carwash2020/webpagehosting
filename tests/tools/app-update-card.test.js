@@ -30,8 +30,10 @@ const ROOT = path.join(__dirname, '..', '..');
 const TOOLS = path.join(ROOT, 'tools');
 const NAV = fs.readFileSync(path.join(TOOLS, 'tools-nav-pwa.js'), 'utf8');
 const CSS = fs.readFileSync(path.join(TOOLS, 'styles-tools.css'), 'utf8');
-const PAGE_PATH = '/tools/login.html';
-const PAGE_HTML = fs.readFileSync(path.join(TOOLS, 'login.html'), 'utf8');
+// A light Workspace page that carries the card. Was login.html until fix plan
+// FP4.1 (2026-11-06) made that page a forward to the one sign-in.
+const PAGE_PATH = '/tools/reset-password.html';
+const PAGE_HTML = fs.readFileSync(path.join(TOOLS, 'reset-password.html'), 'utf8');
 const LIVE_CACHE_NAME = fs.readFileSync(path.join(ROOT, 'service-worker.js'), 'utf8').match(/const CACHE_NAME = '([^']+)'/)[1];
 
 const tick = (ms = 30) => new Promise((r) => setTimeout(r, ms));
@@ -96,7 +98,7 @@ async function openApp(device, server, { typed = true } = {}) {
     pretendToBeVisual: true,
     virtualConsole,
     beforeParse(w) {
-      w.hasValidSession = () => false; // auth.js isn't loaded; login.html's inline code asks it
+      w.hasValidSession = () => false; // auth.js isn't loaded; the page's inline code may ask it
       installFakeServiceWorker(w, device, server);
     },
   });

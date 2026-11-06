@@ -1,6 +1,8 @@
 #!/usr/bin/env node
-// Real-browser check of the Triple H sign-in screens (portal/login.html and
-// tools/login.html), added with the 2026-10-31 sign-in rebuild.
+// Real-browser check of the Triple H sign-in, added with the 2026-10-31
+// sign-in rebuild. Since fix plan FP4.1 (2026-11-06) there is one page,
+// portal/login.html, for clients and staff; tools/login.html only forwards
+// to it. "portal" below is the client path, "tools" the staff path.
 //
 // What it does, against a local static server and a MOCKED Supabase (no real
 // account, no network to the live project):
@@ -65,6 +67,11 @@ const USERS = {
   'client2fa@example.com': { password: 'correct-horse', factors: [FACTOR] },
   'steve@triplehenterprisesllc.biz': { password: 'correct-horse', factors: [FACTOR], role: true },
   'newhire@triplehenterprisesllc.biz': { password: 'correct-horse', factors: [], role: true },
+  // Staff whose permissions don't require two-factor: straight in.
+  'helper@triplehenterprisesllc.biz': { password: 'correct-horse', factors: [], role: true },
+};
+const emailOfBearer = (req) => {
+  try { return JSON.parse(Buffer.from(String(req.headers().authorization || '').split(' ')[1].split('.')[1], 'base64url').toString()).email; } catch (e) { return null; }
 };
 function sessionBody(email, aal) {
   const u = USERS[email];
@@ -110,7 +117,12 @@ async function mockSupabase(page, ctl) {
     }
     if (p === '/auth/v1/recover') return json(200, {});
     if (p.startsWith('/rest/v1/account_roles')) {
-      return json(200, [{ email: 'steve@triplehenterprisesllc.biz', role_name: 'Owner', can_manage_roles: true, can_manage_invoices: true }, { email: 'newhire@triplehenterprisesllc.biz', role_name: 'Employee', can_manage_invoices: true }]);
+      return json(200, [{ email: 'steve@triplehenterprisesllc.biz', role_name: 'Owner', can_manage_roles: true, can_manage_invoices: true }, { email: 'newhire@triplehenterprisesllc.biz', role_name: 'Employee', can_manage_invoices: true }, { email: 'helper@triplehenterprisesllc.biz', role_name: 'Employee', can_manage_clients: true }]);
+    }
+    // The one sign-in's staff-or-client question (sql/security/fp4_signin_account_kind.sql).
+    if (p === '/rest/v1/rpc/signin_account_kind') {
+      const u = USERS[emailOfBearer(req)];
+      return json(200, u && u.role ? 'staff' : 'client');
     }
     if (p === '/rest/v1/rpc/generate_internal_recovery_codes') return json(200, ['K7QM-4XD2', 'R9TB-6HNW', 'C3LA-8PZV', 'W5YE-2JGF', 'D8NS-7KUQ', 'M2VH-9BRX', 'T6FC-3ZAE', 'Q4JP-5WLD', 'H1XU-8MNG', 'B7RZ-2YKT']);
     return json(200, []);
@@ -138,8 +150,12 @@ async function newPage(browser, base, vp, ctl, extra) {
   return { context, page, base };
 }
 
-const PORTAL = { name: 'portal', path: '/portal/login.html', email: '#clientEmail', pw: '#clientPassword', submit: '#loginSubmitBtn', err: '#loginError', remember: '#rememberMe', forgot: '#forgotLink', dest: '/portal/home.html' };
-const TOOLS = { name: 'tools', path: '/tools/login.html', email: '#loginEmail', pw: '#loginPassword', submit: '#loginBtn', err: '#loginError', remember: '#rememberMe', forgot: '#forgotPasswordLink', dest: '/tools/workspace.html' };
+const PORTAL = { name: 'portal', path: '/portal/login.html', email: '#clientEmail', pw: '#clientPassword', submit: '#loginSubmitBtn', err: '#loginError', remember: '#rememberMe', forgot: '#forgotLink', dest: '/portal/home.html', user: 'client@example.com', user2fa: 'client2fa@example.com', trust: '#portalTrustDevice', code: '#mfaChallengeCodeInput', codeErr: '#mfaChallengeError' };
+const TOOLS = { name: 'tools', path: '/portal/login.html', email: '#clientEmail', pw: '#clientPassword', submit: '#loginSubmitBtn', err: '#loginError', remember: '#rememberMe', forgot: '#forgotLink', dest: '/tools/workspace.html', user: 'helper@triplehenterprisesllc.biz', user2fa: 'steve@triplehenterprisesllc.biz', trust: '#staffTrustDevice', code: '#staffCodeInput', codeErr: '#staffCodeError' };
+// Remember me starts OFF (handoff 2026-11-03 §5): set it to what a check wants.
+async function setRemember(page, on) {
+  if ((await page.isChecked('#rememberMe')) !== on) await page.click('label[for="rememberMe"]');
+}
 
 async function fill(page, s, email, pw) {
   await page.fill(s.email, email);
@@ -235,37 +251,33 @@ async function runScreen(browser, base, S, vp) {
   await page.waitForTimeout(80);
   await shot(page, vp, `${pre}06-forgot-password`);
   await axeScan(page, S.name + ' forgot password');
-  if (S.name === 'portal') {
-    await page.click(S.submit);
-  } else {
-    await page.click('#sendResetBtn');
-  }
+  await page.click(S.submit);
   await page.waitForTimeout(250);
   await shot(page, vp, `${pre}07-reset-link-sent`);
   await context.close();
 
   // -- 2FA step (account with a verified factor)
-  const twoFaUser = S.name === 'portal' ? 'client2fa@example.com' : 'steve@triplehenterprisesllc.biz';
+  const twoFaUser = S.user2fa;
   const c2 = { tokenCalls: 0 };
   ({ page, context } = await newPage(browser, base, vp, c2));
   await page.goto(base + S.path);
   await page.waitForLoadState('networkidle');
   await fill(page, S, twoFaUser, 'correct-horse');
   await page.click(S.submit);
-  const trustSel = S.name === 'portal' ? '#portalTrustDevice' : '#thTrustDevice';
+  const trustSel = S.trust;
   await page.waitForSelector(trustSel, { state: 'visible' });
   const trustLabel = await page.evaluate((s) => document.querySelector(s).closest('label').textContent.replace(/\s+/g, ' ').trim(), trustSel);
   check('2FA step has "Trust this device for 30 days"', /Trust this device for 30 days/.test(trustLabel), trustLabel);
-  await targetSizes(page, [trustSel, '#mfaChallengeCodeInput'].filter(() => true).slice(0, 1), '2FA trust switch');
+  await targetSizes(page, [trustSel], '2FA trust switch');
   await page.waitForTimeout(80);
   await shot(page, vp, `${pre}08-2fa-code`);
   await axeScan(page, S.name + ' 2FA step');
-  await page.type('#mfaChallengeCodeInput', '123', { delay: 10 });
+  await page.type(S.code, '123', { delay: 10 });
   await shot(page, vp, `${pre}09-2fa-code-typing`);
-  await page.fill('#mfaChallengeCodeInput', '');
-  await page.type('#mfaChallengeCodeInput', '000000', { delay: 10 });
+  await page.fill(S.code, '');
+  await page.type(S.code, '000000', { delay: 10 });
   if (S.name === 'portal') await page.click('#mfaChallengeSubmit');
-  await page.waitForFunction(() => document.querySelector('#mfaChallengeError').textContent.trim().length > 0);
+  await page.waitForFunction((sel) => document.querySelector(sel).textContent.trim().length > 0, S.codeErr);
   await page.waitForTimeout(50);
   await shot(page, vp, `${pre}10-2fa-wrong-code`);
   await context.close();
@@ -277,9 +289,9 @@ async function runScreen(browser, base, S, vp) {
   await page.addInitScript(() => { const st = window.setTimeout; window.setTimeout = (fn, ms, ...rest) => (ms === 600 ? 0 : st(fn, ms, ...rest)); });
   await page.goto(base + S.path);
   await page.waitForLoadState('networkidle');
-  await fill(page, S, 'client@example.com', 'correct-horse');
-  if (S.name === 'tools') await page.evaluate(() => { localStorage.setItem('th_workspace_faceid_offered_client@example.com', '1'); });
-  // Tools: this fake account has no role row requiring 2FA, so it goes straight through.
+  await fill(page, S, S.user, 'correct-horse');
+  await page.evaluate((u) => { localStorage.setItem('th_workspace_faceid_offered_' + u, '1'); }, S.user);
+  // Staff: this fake account's permissions don't require 2FA, so it goes straight through.
   await page.click(S.submit);
   await page.waitForFunction(() => document.body.classList.contains('is-success'));
   await page.evaluate(() => document.getAnimations().forEach((a) => { a.pause(); a.currentTime = 300; }));
@@ -296,14 +308,14 @@ async function runScreen(browser, base, S, vp) {
     await page.waitForLoadState('networkidle');
     await fill(page, S, 'newhire@triplehenterprisesllc.biz', 'correct-horse');
     await page.click(S.submit);
-    await page.waitForSelector('#mfaEnrollView', { state: 'visible' });
-    await page.waitForFunction(() => document.querySelector('#mfaEnrollQrImg').getAttribute('src'));
+    await page.waitForSelector('#staffEnrollView', { state: 'visible' });
+    await page.waitForFunction(() => document.querySelector('#staffEnrollQr').getAttribute('src'));
     check('employee without 2FA is forced into setup (mandatory)', true);
     await page.waitForTimeout(150);
     await shot(page, vp, 't13-mandatory-2fa-setup');
     await axeScan(page, 'tools mandatory setup');
-    await page.fill('#mfaEnrollCodeInput', '123456');
-    await page.waitForSelector('#mfaRecoveryCodesView', { state: 'visible' });
+    await page.fill('#staffEnrollCode', '123456');
+    await page.waitForSelector('#staffCodesView', { state: 'visible' });
     await page.waitForTimeout(100);
     await shot(page, vp, 't14-recovery-codes');
     await context.close();
@@ -319,7 +331,7 @@ async function runBehaviour(browser, base) {
     const { page, context } = await newPage(browser, base, vp, ctl);
     await page.goto(base + PORTAL.path);
     await page.waitForLoadState('networkidle');
-    if (!remember) await page.click('label[for="rememberMe"]');
+    await setRemember(page, remember);
     check(`remember switch is ${remember ? 'on' : 'off'} as set`, (await page.isChecked('#rememberMe')) === remember);
     await fill(page, PORTAL, 'client@example.com', 'correct-horse');
     const t0 = Date.now();
@@ -345,8 +357,14 @@ async function runBehaviour(browser, base) {
     const again = await newPage(browser, base, vp, ctl2, { storageState: state });
     await again.page.goto(base + PORTAL.path);
     await again.page.waitForTimeout(700);
-    const landedHome = /\/portal\/home\.html$/.test(again.page.url());
-    check(remember ? 'ON: after browser restart still signed in (goes straight to Home)' : 'OFF: after browser restart signed out (sign-in form shown)', remember ? landedHome : !landedHome && (await again.page.isVisible('#loginForm')));
+    // One sign-in (FP4.1, approved design): a signed-in visitor sees "You're
+    // signed in" with Continue, rather than being sent on silently.
+    const signedIn = await again.page.isVisible('#signedInView');
+    check(remember ? 'ON: after browser restart still signed in ("You\'re signed in", Continue)' : 'OFF: after browser restart signed out (sign-in form shown)', remember ? signedIn && /client@example\.com/.test(await again.page.textContent('#signedInWho')) : !signedIn && (await again.page.isVisible('#loginForm')));
+    if (remember) {
+      await Promise.all([again.page.waitForURL('**/portal/home.html'), again.page.click('#signedInContinue')]);
+      check('ON: Continue goes on to Home', true);
+    }
     if (remember) {
       // 31 days later the cutoff has passed: the stored session must be refused
       const expired = JSON.parse(JSON.stringify(state));
@@ -365,6 +383,8 @@ async function runBehaviour(browser, base) {
     const ctl = { tokenCalls: 0 };
     const seed = await newPage(browser, base, vp, ctl);
     await seed.page.goto(base + PORTAL.path);
+    await seed.page.waitForLoadState('networkidle');
+    await setRemember(seed.page, true);
     await fill(seed.page, PORTAL, 'client@example.com', 'correct-horse');
     await Promise.all([seed.page.waitForURL('**/portal/home.html'), seed.page.click(PORTAL.submit)]);
     const token = await store(seed.page, 'localStorage', STORAGE_KEY);
@@ -373,7 +393,7 @@ async function runBehaviour(browser, base) {
     const old = await newPage(browser, base, vp, { tokenCalls: 0 }, { storageState: legacy });
     await old.page.goto(base + PORTAL.path);
     await old.page.waitForTimeout(700);
-    check('session with no cutoff record (pre-existing) still lands on Home', /\/portal\/home\.html$/.test(old.page.url()));
+    check('session with no cutoff record (pre-existing) is still signed in', await old.page.isVisible('#signedInView'));
     await old.context.close();
   }
 
@@ -383,7 +403,7 @@ async function runBehaviour(browser, base) {
     const { page, context } = await newPage(browser, base, vp, ctl);
     await page.goto(base + PORTAL.path);
     await page.waitForLoadState('networkidle');
-    if (!remember) await page.click('label[for="rememberMe"]');
+    await setRemember(page, remember);
     await fill(page, PORTAL, 'client2fa@example.com', 'correct-horse');
     await page.click(PORTAL.submit);
     await page.waitForSelector('#portalTrustDevice', { state: 'visible' });
@@ -405,19 +425,21 @@ async function runBehaviour(browser, base) {
     const { page, context } = await newPage(browser, base, vp, ctl);
     await page.goto(base + TOOLS.path);
     await page.waitForLoadState('networkidle');
-    if (!remember) await page.click('label[for="rememberMe"]');
+    await setRemember(page, remember);
     await page.evaluate(() => localStorage.setItem('th_workspace_faceid_offered_steve@triplehenterprisesllc.biz', '1'));
     await fill(page, TOOLS, 'steve@triplehenterprisesllc.biz', 'correct-horse');
     await page.click(TOOLS.submit);
-    await page.waitForSelector('#thTrustDevice', { state: 'visible' });
+    await page.waitForSelector('#staffTrustDevice', { state: 'visible' });
     check('employee with 2FA is always asked for the code', true);
     check('nothing stored before the code is verified', !(await store(page, 'localStorage', 'th_auth_session')) && !(await store(page, 'sessionStorage', 'th_auth_session')));
-    if ((await page.isChecked('#thTrustDevice')) !== trust) await page.click('label[for="thTrustDevice"]');
-    await page.type('#mfaChallengeCodeInput', '123456', { delay: 10 });
+    check('and no portal session either (one store per sign-in)', !(await store(page, 'localStorage', STORAGE_KEY)) && !(await store(page, 'sessionStorage', STORAGE_KEY)));
+    if ((await page.isChecked('#staffTrustDevice')) !== trust) await page.click('label[for="staffTrustDevice"]');
+    await page.type('#staffCodeInput', '123456', { delay: 10 });
     await page.waitForURL('**/tools/workspace.html');
     const inLocal = await store(page, 'localStorage', 'th_auth_session');
     const inSession = await store(page, 'sessionStorage', 'th_auth_session');
     check(`tools remember=${remember} trust=${trust}: session in ${trust ? 'localStorage (30d)' : 'sessionStorage'}`, trust ? !!inLocal && !inSession : !inLocal && !!inSession);
+    check('staff sign-in left no portal session behind', !(await store(page, 'localStorage', STORAGE_KEY)) && !(await store(page, 'sessionStorage', STORAGE_KEY)));
     await context.close();
   }
   console.log('\n== reduced motion + success timing');
@@ -430,8 +452,8 @@ async function runBehaviour(browser, base) {
     // styles.css's global reduced-motion rule reports 1e-06s for 'none'; anything under a millisecond is no motion.
     const seconds = (v) => Math.max(...v.split(',').map((x) => parseFloat(x)));
     check(`${S.name}: reduced motion removes the ghost/form transitions`, seconds(t.dur) < 0.001 && seconds(t.card) < 0.001, t);
-    await fill(page, S, 'client@example.com', 'correct-horse');
-    if (S.name === 'tools') await page.evaluate(() => localStorage.setItem('th_workspace_faceid_offered_client@example.com', '1'));
+    await fill(page, S, S.user, 'correct-horse');
+    await page.evaluate((u) => localStorage.setItem('th_workspace_faceid_offered_' + u, '1'), S.user);
     const t0 = Date.now();
     await Promise.all([page.waitForURL('**' + S.dest), page.click(S.submit)]);
     check(`${S.name}: reduced motion redirects without the 600ms animation`, Date.now() - t0 < 550, Date.now() - t0);
@@ -443,8 +465,8 @@ async function runBehaviour(browser, base) {
     await page.addInitScript(() => { const st = window.setTimeout; window.setTimeout = (fn, ms, ...rest) => (ms === 600 ? 0 : st(fn, ms, ...rest)); });
     await page.goto(base + S.path);
     await page.waitForLoadState('networkidle');
-    await fill(page, S, 'client@example.com', 'correct-horse');
-    if (S.name === 'tools') await page.evaluate(() => localStorage.setItem('th_workspace_faceid_offered_client@example.com', '1'));
+    await fill(page, S, S.user, 'correct-horse');
+    await page.evaluate((u) => localStorage.setItem('th_workspace_faceid_offered_' + u, '1'), S.user);
     await page.click(S.submit);
     await page.waitForFunction(() => document.body.classList.contains('is-success'));
     const op = await page.evaluate(() => new Promise((r) => setTimeout(() => r(getComputedStyle(document.querySelector('.si-ghost')).opacity), 650)));
@@ -452,15 +474,17 @@ async function runBehaviour(browser, base) {
     await context.close();
   }
 
-  console.log('\n== tools: ?return= still honoured');
+  console.log('\n== tools: the old address forwards here, and ?return= is still honoured');
   {
     const ctl = { tokenCalls: 0 };
     const { page, context } = await newPage(browser, base, vp, ctl);
     await page.route((u) => u.pathname === '/tools/finance.html', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: 'finance' }));
     await page.goto(base + '/tools/login.html?return=/tools/finance.html');
+    await page.waitForURL('**/portal/login.html?return=/tools/finance.html');
+    check('tools/login.html forwards to the one sign-in with its query', true);
     await page.waitForLoadState('networkidle');
-    await page.evaluate(() => localStorage.setItem('th_workspace_faceid_offered_client@example.com', '1'));
-    await fill(page, TOOLS, 'client@example.com', 'correct-horse');
+    await page.evaluate(() => localStorage.setItem('th_workspace_faceid_offered_helper@triplehenterprisesllc.biz', '1'));
+    await fill(page, TOOLS, 'helper@triplehenterprisesllc.biz', 'correct-horse');
     await Promise.all([page.waitForURL('**/tools/finance.html'), page.click(TOOLS.submit)]);
     check('post-login redirect honours an allowed ?return= path', true);
     await context.close();

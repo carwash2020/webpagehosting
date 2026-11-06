@@ -72,7 +72,7 @@ const SHARED_SCRIPT_FILES = [
   'tools/dev-tools-shared.js',
   'tools/qrcode-lib.js',
   'tools/push-notifications.js',
-  // Sign-in helpers shared by portal/login.html and tools/login.html (2026-10-31).
+  // Sign-in helpers (2026-10-31), used by the one sign-in, portal/login.html (FP4.1).
   'signin-ui.js',
   // Trusted devices (2026-11-01): the browser half shared by both sign-in
   // pages, both Settings pages and both password-reset pages.

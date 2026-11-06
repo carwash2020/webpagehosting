@@ -81,10 +81,15 @@ test('settings.html initializes the 2FA card on load, alongside the existing bio
 });
 
 test('login.html checks the real assurance level after a correct password, not just the password itself', () => {
-  assert.match(LOGIN, /const \{ error \} = await client\.auth\.signInWithPassword\(\{ email, password \}\);/);
-  const signInIdx = LOGIN.indexOf('await client.auth.signInWithPassword(');
-  const aalIdx = LOGIN.indexOf('client.auth.mfa.getAuthenticatorAssuranceLevel()');
-  assert.ok(aalIdx > signInIdx, 'expected the AAL check to happen after signInWithPassword, not before');
+  // One sign-in (FP4.1): the password is checked once on an in-memory
+  // client, a client's session moves into the portal store, and only then
+  // is the assurance level read -- from that stored session.
+  assert.match(LOGIN, /const \{ data: signedIn, error \} = await signinClient\.auth\.signInWithPassword\(\{ email, password \}\);/);
+  const signInIdx = LOGIN.indexOf('await signinClient.auth.signInWithPassword(');
+  const moveIdx = LOGIN.indexOf('await client.auth.setSession(', signInIdx);
+  const aalIdx = LOGIN.indexOf('client.auth.mfa.getAuthenticatorAssuranceLevel()', signInIdx);
+  assert.ok(signInIdx > 0 && moveIdx > signInIdx, 'the session moves after the password check');
+  assert.ok(aalIdx > moveIdx, 'expected the AAL check to happen after signInWithPassword, not before');
 });
 
 test('login.html only redirects immediately when no step-up to aal2 is required', () => {

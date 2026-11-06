@@ -20,7 +20,8 @@ const vm = require('vm');
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const AUTH_JS = fs.readFileSync(repo('tools', 'auth.js'), 'utf8');
-const LOGIN = fs.readFileSync(repo('tools', 'login.html'), 'utf8');
+// One sign-in since fix plan FP4.1 (2026-11-06): the Workspace steps live here.
+const LOGIN = fs.readFileSync(repo('portal', 'login.html'), 'utf8');
 const SETTINGS = fs.readFileSync(repo('tools', 'settings.html'), 'utf8');
 const SQL = fs.readFileSync(repo('sql', 'security', 'add_internal_mfa_recovery_codes.sql'), 'utf8');
 const SEARCH_PATH_FIX_SQL = fs.readFileSync(repo('sql', 'security', 'fix_internal_mfa_recovery_codes_search_path.sql'), 'utf8');
@@ -38,8 +39,15 @@ test('auth.js defines raw-fetch MFA helpers (enroll/challenge/verify/unenroll/li
   assert.match(AUTH_JS, /async function mfaUnenroll\(accessToken, factorId\)/);
 });
 
-test('login.html does not load @supabase/supabase-js as a <script> for this feature -- raw fetch() only, matching auth.js', () => {
-  assert.doesNotMatch(LOGIN, /<script[^>]*supabase-js/);
+test('the sign-in makes every Workspace two-factor call with raw fetch() (auth.js); supabase-js only checks the password, in memory, pinned with SRI', () => {
+  // One sign-in since FP4.1 (2026-11-06): portal/login.html. supabase-js is
+  // the portal's; for staff it only runs the password check on a client
+  // that stores nothing (persistSession: false).
+  assert.match(LOGIN, /<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@\d+\.\d+\.\d+\/dist\/umd\/supabase\.js" integrity="sha384-[^"]+" crossorigin="anonymous"><\/script>/);
+  const staff = LOGIN.slice(LOGIN.indexOf('// ---- Staff path'), LOGIN.indexOf('// Sent here by checkInternalMfaSession()'));
+  assert.ok(staff.length > 1000, 'the staff section was found');
+  assert.doesNotMatch(staff, /signinClient\.|client\.auth\.mfa/, 'the staff steps never use supabase-js');
+  assert.match(staff, /mfaChallengeAndVerify\(staffPending\.access_token/);
 });
 
 test('mfaEnroll() calls the real Supabase Auth REST endpoint with factor_type totp', () => {
@@ -125,71 +133,67 @@ test('requiresMfaForRole() behaves correctly for real account shapes (executed, 
 });
 
 // ---------------------------------------------------------------------------
-// login.html -- the mandatory gate and the challenge flow
+// The sign-in's staff steps -- the mandatory gate and the challenge flow
+// (moved from tools/login.html to portal/login.html in FP4.1, 2026-11-06)
 // ---------------------------------------------------------------------------
 
-test('login.html never persists a session before checking MFA -- signIn is called with skipPersist', () => {
-  assert.match(LOGIN, /await signIn\(email, password, rememberMe, \{ skipPersist: true \}\);/);
+test('sign-in never persists a staff session before checking MFA -- the password session is held in memory only', () => {
+  assert.match(LOGIN, /\{ auth: \{ storage: memoryStore, persistSession: false, autoRefreshToken: false, detectSessionInUrl: false \} \}/);
+  assert.equal((LOGIN.match(/persistSession\(/g) || []).length, 1, 'one place stores a Workspace session');
+  assert.match(LOGIN, /function staffStoreAndFinish\(session\) \{\s*persistSession\(session, staffRememberMe\);/);
 });
 
-test('login.html challenges for an already-enrolled factor before ever redirecting', () => {
-  assert.match(LOGIN, /const factor = await mfaListVerifiedTotpFactor\(pendingSession\.access_token\);/);
-  const factorCheckIdx = LOGIN.indexOf('const factor = await mfaListVerifiedTotpFactor(');
-  // First Impressions handoff (2026-09-29): the literal redirect was
-  // replaced by finishSignInFlow(), which offers Face ID once per
-  // device/account and then calls the same redirectAfterLogin() --
-  // still gated on the factor check exactly as before.
-  const redirectIdx = LOGIN.indexOf('persistSession(pendingSession, pendingRememberMe);\n    finishSignInFlow();');
-  assert.ok(redirectIdx > factorCheckIdx, 'the unconditional success redirect must come after the factor check, not before it');
+test('sign-in challenges for an already-enrolled factor before ever storing or redirecting', () => {
+  const cont = LOGIN.slice(LOGIN.indexOf('async function staffContinueSignIn('), LOGIN.indexOf('async function staffSignInOnTrustedDevice('));
+  assert.match(cont, /const factor = await mfaListVerifiedTotpFactor\(staffPending\.access_token\);/);
+  const factorCheckIdx = cont.indexOf('const factor = await mfaListVerifiedTotpFactor(');
+  const storeIdx = cont.lastIndexOf('staffStoreAndFinish(staffPending);');
+  assert.ok(storeIdx > factorCheckIdx, 'the unconditional store-and-go must come after the factor check, not before it');
+  assert.match(cont, /staffShow\('staffCodeView'\);\s*document\.getElementById\('staffCodeInput'\)\.focus\(\);\s*return;/, 'with a factor, the code step returns first');
 });
 
-test('login.html forces enrollment for a role that requires MFA and has none enrolled yet, before granting access', () => {
-  assert.match(LOGIN, /const roleInfo = await loadCurrentUserRole\(pendingSession\.access_token, pendingSession\.email\);/);
-  assert.match(LOGIN, /if \(requiresMfaForRole\(roleInfo\)\) \{\s*\n\s*await startMandatoryEnrollment\(\);\s*\n\s*return;\s*\n\s*\}/);
+test('sign-in forces enrollment for a role that requires MFA and has none enrolled yet, before granting access', () => {
+  assert.match(LOGIN, /const roleInfo = await loadCurrentUserRole\(staffPending\.access_token, staffPending\.email\);\s*if \(requiresMfaForRole\(roleInfo\)\) \{ await staffStartEnrollment\(\); return; \}\s*staffStoreAndFinish\(staffPending\);/);
 });
 
-test('login.html shows a real challenge view and verifies via Supabase before persisting a session', () => {
-  assert.match(LOGIN, /id="mfaChallengeView"/);
-  assert.match(LOGIN, /const result = await mfaChallengeAndVerify\(pendingSession\.access_token, pendingFactorId, code\);/);
-  const submitStart = LOGIN.indexOf("document.getElementById('mfaChallengeSubmitBtn').addEventListener");
-  const cancelStart = LOGIN.indexOf("document.getElementById('mfaChallengeCancelLink').addEventListener");
+test('sign-in shows a real challenge view and verifies via Supabase before persisting a session', () => {
+  assert.match(LOGIN, /id="staffCodeView"/);
+  const submitStart = LOGIN.indexOf("document.getElementById('staffCodeSubmit').addEventListener");
+  const cancelStart = LOGIN.indexOf("document.getElementById('staffCodeCancel').addEventListener");
   const body = LOGIN.slice(submitStart, cancelStart);
-  // First Impressions handoff (2026-09-29): a wrong code also shakes the
-  // new 6-box grid (shakeCodeBoxes()) -- purely visual, added alongside
-  // the same error-then-return the test already pinned.
-  assert.match(body, /if \(!result\.ok\) \{ errorEl\.textContent = result\.error; shakeCodeBoxes\(\); return; \}/);
-  assert.match(body, /persistSession\(\{/);
+  assert.match(body, /const result = await mfaChallengeAndVerify\(staffPending\.access_token, staffFactorId, code\);/);
+  assert.match(body, /if \(!result\.ok\) \{ errorEl\.textContent = result\.error; staffShakeBoxes\(\); return; \}/);
+  assert.match(body, /staffPending = \{ access_token: result\.access_token,[^\n]*\};\s*staffStoreAndFinish\(staffPending\);/);
 });
 
-test('login.html offers a recovery-code path for a lost authenticator device', () => {
-  assert.match(LOGIN, /id="mfaRecoveryCodeInput"/);
-  assert.match(LOGIN, /const result = await redeemRecoveryCode\(pendingSession\.access_token, code\);/);
+test('sign-in offers a recovery-code path for a lost authenticator device', () => {
+  assert.match(LOGIN, /id="staffRecoveryInput"/);
+  assert.match(LOGIN, /const result = await redeemRecoveryCode\(staffPending\.access_token, code\);/);
   assert.match(LOGIN, /if \(!result\.ok \|\| !result\.valid\)/);
 });
 
-test("login.html's challenge/enroll Cancel discards the pending (never-persisted) session rather than leaving it half-authenticated", () => {
-  assert.match(LOGIN, /function cancelPendingLoginAndReset\(\)/);
-  const start = LOGIN.indexOf('function cancelPendingLoginAndReset()');
-  const body = LOGIN.slice(start, start + 400);
-  assert.match(body, /pendingSession = null;/);
+test("sign-in's challenge/enroll Cancel discards the pending (never-persisted) session rather than leaving it half-authenticated", () => {
+  const start = LOGIN.indexOf('function staffBackToSignIn()');
+  assert.ok(start > 0);
+  assert.match(LOGIN.slice(start, start + 200), /staffPending = null;/);
   // Enrollment's Cancel additionally unenrolls the just-created factor so a
   // dead, unverified one doesn't linger on the account.
-  assert.match(LOGIN, /mfaUnenroll\(pendingSession\.access_token, pendingFactorId\)\.catch\(\(\) => \{\}\);/);
+  assert.match(LOGIN, /mfaUnenroll\(staffPending\.access_token, staffFactorId\)\.catch\(\(\) => \{\}\);\s*staffBackToSignIn\(\);/);
 });
 
-test('login.html generates and displays recovery codes exactly once, right after a first-time mandatory enrollment', () => {
-  assert.match(LOGIN, /id="mfaRecoveryCodesView"/);
-  const enrollVerifyStart = LOGIN.indexOf("document.getElementById('mfaEnrollVerifyBtn').addEventListener");
-  const cancelLinkStart = LOGIN.indexOf("document.getElementById('mfaEnrollCancelLink').addEventListener");
-  const body = LOGIN.slice(enrollVerifyStart, cancelLinkStart);
-  assert.match(body, /const codesResult = await generateRecoveryCodes\(pendingSession\.access_token, 10\);/);
-  assert.match(body, /showStep\('mfaRecoveryCodesView'\);/);
+test('sign-in generates and displays recovery codes exactly once, right after a first-time mandatory enrollment', () => {
+  assert.match(LOGIN, /id="staffCodesView"/);
+  const enrollVerifyStart = LOGIN.indexOf("document.getElementById('staffEnrollVerify').addEventListener");
+  const cancelStart = LOGIN.indexOf("document.getElementById('staffEnrollCancel').addEventListener");
+  const body = LOGIN.slice(enrollVerifyStart, cancelStart);
+  assert.match(body, /const codes = await generateRecoveryCodes\(staffPending\.access_token, 10\);/);
+  assert.match(body, /staffShow\('staffCodesView'\);/);
 });
 
-test('login.html does not add any new external origins to the CSP for this feature', () => {
+test('sign-in does not add any new external origins to the CSP for this feature', () => {
   const cspMatch = LOGIN.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)">/);
   assert.ok(cspMatch);
-  assert.match(cspMatch[1], /connect-src 'self' https:\/\/\*\.supabase\.co;/);
+  assert.match(cspMatch[1], /connect-src 'self' https:\/\/csvfqdjuobylgafgolho\.supabase\.co;/);
 });
 
 // ---------------------------------------------------------------------------

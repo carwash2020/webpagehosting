@@ -243,7 +243,7 @@ async function refreshSession() {
 
 function signOut() {
   clearStoredSession();
-  window.location.href = '/tools/login.html';
+  window.location.href = '/portal/login.html';
 }
 
 // Call this at the top of every protected page, before rendering
@@ -284,7 +284,7 @@ async function requireAuth() {
     }
   }
   const returnTo = encodeURIComponent(window.location.pathname);
-  window.location.href = '/tools/login.html?return=' + returnTo;
+  window.location.href = '/portal/login.html?return=' + returnTo;
   return false;
 }
 
@@ -325,7 +325,7 @@ async function checkInternalMfaSession() {
     const status = await res.json();
     if (!status || status.blocked !== true) return false;
     clearStoredSession();
-    window.location.href = '/tools/login.html?reason=mfa&return=' + encodeURIComponent(window.location.pathname);
+    window.location.href = '/portal/login.html?reason=mfa&return=' + encodeURIComponent(window.location.pathname);
     return true;
   } catch (e) {
     return false;

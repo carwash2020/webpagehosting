@@ -14,7 +14,8 @@
 //   1. Settings enrollment keeps a remembered session in localStorage with
 //      its original remember_until, and keeps a this-session-only one in
 //      sessionStorage without adding one.
-//   2. login.html's explicit choice still wins: unchecked goes to
+//   2. the sign-in's explicit choice still wins (portal/login.html's staff
+//      steps since FP4.1): unchecked goes to
 //      sessionStorage (and clears an old remembered session), checked goes
 //      to localStorage with a fresh 30-day remember_until.
 
@@ -143,49 +144,51 @@ test('Settings: turning on two-factor keeps a this-session-only sign-in in sessi
   assert.equal(w.localStorage.getItem(KEY), null, 'not promoted to localStorage');
 });
 
-// ---- 2. login.html: an explicit Remember me choice still decides ----------
+// ---- 2. The sign-in: an explicit Remember me choice still decides --------
+// One sign-in since FP4.1 (2026-11-06): the Workspace's steps run on
+// /portal/login.html (staff half); the shared harness drives the real page.
+
+const SIGNIN = require('../signin-harness');
+after(SIGNIN.closeAll);
+const AAL2 = SIGNIN.jwt({ sub: 'u-staff', email: 'staff@example.com', aal: 'aal2' });
 
 async function signInWithMfa({ remember, local }) {
-  const supabase = fakeSupabase({ enrolled: true });
-  const w = openPage('login.html', { local, supabase });
-  const doc = w.document;
-  doc.getElementById('loginEmail').value = 'steve@example.com';
-  doc.getElementById('loginPassword').value = 'correct horse';
-  doc.getElementById('rememberMe').checked = remember;
-  doc.getElementById('loginForm').dispatchEvent(new w.Event('submit', { cancelable: true }));
-  await until(() => doc.getElementById('mfaChallengeView').style.display === '', 'the MFA challenge step');
-  assert.notEqual((stored(w.localStorage) || {}).access_token, 'aal1-token', 'nothing is stored before the code clears');
-  assert.equal(w.sessionStorage.getItem(KEY), null, 'nothing is stored before the code clears');
-  doc.getElementById('mfaChallengeCodeInput').value = '123456';
-  doc.getElementById('mfaChallengeSubmitBtn').click();
-  await until(() => (stored(w.localStorage) || stored(w.sessionStorage) || {}).access_token === 'aal2-token', 'the verified session to be stored');
-  return w;
+  const g = SIGNIN.open(SIGNIN.URL_, { kind: 'staff', factor: true, workspaceSession: local || null });
+  await SIGNIN.signIn(g, 'staff@example.com', 'right-password', remember);
+  await SIGNIN.until(() => g.d.getElementById('staffCodeView').style.display === 'flex', 'the Workspace code step');
+  const before = JSON.parse(g.w.localStorage.getItem(KEY) || 'null');
+  assert.ok(!before || before.access_token === (local && local.access_token), 'nothing new is stored before the code clears');
+  assert.equal(g.w.sessionStorage.getItem(KEY), null, 'nothing is stored before the code clears');
+  g.d.getElementById('staffCodeInput').value = '123456';
+  g.d.getElementById('staffCodeSubmit').click();
+  await SIGNIN.until(() => (stored(g.w.localStorage) || stored(g.w.sessionStorage) || {}).access_token === AAL2, 'the verified session to be stored');
+  return g.w;
 }
 
-test('login.html: signing in with "Remember me" unchecked stores the session in sessionStorage only', async () => {
+test('sign-in: "Remember me" unchecked stores the Workspace session in sessionStorage only', async () => {
   const w = await signInWithMfa({ remember: false });
   const s = stored(w.sessionStorage);
-  assert.equal(s.access_token, 'aal2-token');
+  assert.equal(s.access_token, AAL2);
   assert.equal('remember_until' in s, false);
   assert.equal(w.localStorage.getItem(KEY), null);
 });
 
-test('login.html: unchecked "Remember me" also clears an old remembered session instead of keeping its store', async () => {
-  // An expired remembered session, so login.html shows the form rather
-  // than redirecting straight to the Workspace.
+test('sign-in: unchecked "Remember me" also clears an old remembered session instead of keeping its store', async () => {
+  // An expired remembered session, so the page shows the form rather than
+  // "You're signed in".
   const old = aal1({ access_token: 'old-token', expires_at: Math.floor(Date.now() / 1000) - 60, remember_until: Date.now() + 5 * DAY });
-  const w = await signInWithMfa({ remember: false, local: { [KEY]: old } });
+  const w = await signInWithMfa({ remember: false, local: old });
   assert.equal(w.localStorage.getItem(KEY), null, 'the old remembered session is gone');
   const s = stored(w.sessionStorage);
-  assert.equal(s.access_token, 'aal2-token');
+  assert.equal(s.access_token, AAL2);
   assert.equal('remember_until' in s, false, 'remember_until is not carried over from the old session');
 });
 
-test('login.html: signing in with "Remember me" checked stores the session in localStorage with a fresh 30-day remember_until', async () => {
+test('sign-in: "Remember me" checked stores the Workspace session in localStorage with a fresh 30-day remember_until', async () => {
   const before = Date.now();
   const w = await signInWithMfa({ remember: true });
   const s = stored(w.localStorage);
-  assert.equal(s.access_token, 'aal2-token');
+  assert.equal(s.access_token, AAL2);
   assert.ok(s.remember_until >= before + 30 * DAY && s.remember_until <= Date.now() + 30 * DAY, 'remember_until is 30 days from sign-in');
   assert.equal(w.sessionStorage.getItem(KEY), null);
 });
