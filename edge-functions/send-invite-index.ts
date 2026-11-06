@@ -280,7 +280,8 @@ Deno.serve(async (req: Request) => {
     // @x) through to auth.admin.generateLink() below, which only fails
     // there with a raw Supabase error message -- caught here instead
     // with a clear, expected 400.
-    if (typeof client_email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(client_email)) {
+    // Linear-time email shape (fix plan Group 3, 2026-11-06).
+    if (typeof client_email !== "string" || client_email.length > 254 || !/^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(client_email)) {
       return json({ ok: false, error: "Missing or invalid client_email." }, 400);
     }
 

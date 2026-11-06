@@ -35,7 +35,9 @@ const STRIPE_SECRET_KEY = Deno.env.get("STRIPE_SECRET_KEY");
 // 10-40 long (the invoice generator makes 10: 31^10, about 8e14, so not
 // guessable) -- the shape tools/invoice-generator.html makes.
 const TOKEN_SHAPE = /^[a-hjkmnp-z2-9]{10,40}$/;
-const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Linear-time email shape (fix plan Group 3, 2026-11-06): domain labels are
+// separated by single dots, so the pattern can never backtrack polynomially.
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 
 const ALLOWED_ORIGIN = "https://www.triplehenterprisesllc.biz";
 const CORS_HEADERS: Record<string, string> = {
@@ -201,7 +203,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const typed = typeof receipt_email === "string" ? receipt_email.trim().toLowerCase() : "";
-    const receiptTo = EMAIL_SHAPE.test(typed) ? typed : invoice.client_email;
+    const receiptTo = typed.length <= 254 && EMAIL_SHAPE.test(typed) ? typed : invoice.client_email;
     const params = new URLSearchParams({
       amount: String(amountCents),
       currency: "usd",

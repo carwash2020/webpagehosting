@@ -48,7 +48,9 @@ const SR_HEADERS: Record<string, string> = {
 // About 100 years: Supabase Auth's way of saying "until unbanned".
 const BAN_DURATION = "876000h";
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Linear-time email shape (fix plan Group 3, 2026-11-06): domain labels are
+// separated by single dots, so the pattern can never backtrack polynomially.
+const EMAIL_RE = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 
 function escapeHtml(value: unknown): string {
   const s = value === null || value === undefined ? "" : String(value);

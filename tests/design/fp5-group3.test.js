@@ -130,3 +130,27 @@ test('FP5.5: Settings shows "Triple H Homebase V1.0", never the cache stamp; Dev
   assert.match(dev, /<div class="dev-health-run-note" id="devBuildStamp">Build: checking&hellip;<\/div>/);
   assert.match(dev, /el\.textContent = v \? 'Build ' \+ v \+ ' on this device' : 'Build: not available on this device';/);
 });
+
+test('Group 3 (Connor: "fix and add"): microwaves appear wherever the appliance list does', () => {
+  assert.match(read('index.html'), /Washing machines, dryers, dishwashers, refrigerators, ranges, and microwaves\./);
+  const wd = read('services', 'washer-dryer-repair.html');
+  assert.equal((wd.match(/Do you repair dishwashers, refrigerators, ranges, and microwaves too\?/g) || []).length, 3, 'FAQ schema, Q&A block and details stay in step');
+  assert.equal((wd.match(/dishwashers, refrigerators, ranges\/ovens, and microwaves the same way/g) || []).length, 3);
+  assert.match(read('services', 'washer-dryer-repair-st-george-ut.html'), /Dishwashers, refrigerators, ranges\/ovens, and microwaves the same way/);
+});
+
+test('Group 3: no edge function keeps the polynomial email pattern; the linear one rejects hostile input fast', () => {
+  const dir = repo('edge-functions');
+  for (const f of fs.readdirSync(dir).filter((n) => n.endsWith('.ts'))) {
+    assert.doesNotMatch(fs.readFileSync(path.join(dir, f), 'utf8'), /\[\^\\s@\]\+@\[\^\\s@\]\+\\\.\[\^\\s@\]\+/, f);
+  }
+  const re = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
+  for (const f of ['portal-signup-index.ts', 'portal-email-alias-index.ts', 'guest-pay-index.ts', 'team-admin-index.ts', 'send-invite-index.ts']) {
+    assert.ok(fs.readFileSync(path.join(dir, f), 'utf8').includes(re.source), f);
+  }
+  const t = Date.now();
+  re.test('a@' + 'b.'.repeat(50000) + '@');
+  assert.ok(Date.now() - t < 200, 'linear on a hostile 100k-character string');
+  for (const ok of ['a@b.co', 'sam.work@example.com', 'x@sub.domain.co.uk']) assert.ok(re.test(ok), ok);
+  for (const bad of ['a@b', 'a@.b', 'a@b.', 'a@@b.c', 'a b@c.d']) assert.ok(!re.test(bad), bad);
+});
