@@ -5981,7 +5981,7 @@ Fix plan FP1.1–FP1.8 (approved design: "A person's name and title"). Every pla
 
 ## What changed, 2026-11-06 -- Fix Phase 2: access coherence (group 1, with FP1)
 
-Fix plan FP2.1–FP2.6 and FP2.8, plus RP6.6 and RP6.7, which the plan ships with the FP2.4 tour rework. Nothing an account can't open shows, even for a moment, and the tour never walks anyone into a wall. FP2.7 waits on D10 (an on-device check). FP2.9 waits on a design pass.
+Fix plan FP2.1–FP2.9, plus RP6.6 and RP6.7, which the plan ships with the FP2.4 tour rework. Nothing an account can't open shows, even for a moment, and the tour never walks anyone into a wall.
 
 - **FP2.1 No flash before the role loads** (`tools/tools-nav-pwa.js`):
   - Every gated destination in the sidebar, the More drawer and the bottom bar is now added to the page hidden. It shows only once its own check passes.
@@ -5999,6 +5999,8 @@ Fix plan FP2.1–FP2.6 and FP2.8, plus RP6.6 and RP6.7, which the plan ships wit
 - **FP2.5 Dev password prompt above sheets:** one rule, `#devPasswordOverlay { z-index: 1300 }`, puts it above every sheet tier (Team's invite sheet is 1200) on all four pages that have it.
 - **FP2.6:** the bottom bar's New label is uppercase on Dashboard too.
 - **FP2.8:** on Money's income log, invoices not paid at all move into a separate "Not paid yet (not income)" group. Totals are unchanged.
+- **FP2.9 Dashboard on a computer** (approved design): at 1024px and up, Your week moves to the bottom of the left column, so both columns end at about the same height. Phone and tablet order are unchanged.
+- **FP2.7** is closed with no code change: D10 says the box is a focus highlight.
 - Tests:
   - new: `tests/tools/fp2-nav-before-role.test.js`, `tests/tools/fp2-role-aware-tour.test.js` and `tests/tools/fp2-dev-password-above-sheets.test.js`;
   - added cases in `money-screen`, `job-money-pipeline` and `field-office-view`;

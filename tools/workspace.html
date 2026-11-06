@@ -3754,6 +3754,29 @@
     }
   }
 
+  // Fix plan FP2.9 (2026-11-06, approved "Dashboard on a computer"): on a
+  // computer (1024px and up) Your week sits at the bottom of the left
+  // column, under Find client / Calendar, so the two columns end at about
+  // the same height instead of leaving the left one empty. Below 1024px it
+  // stays last in the right-hand column (one column on a phone, same order
+  // as before). Moves the element itself: its id and contents don't change.
+  const WEEK_CARD_WIDE = '(min-width: 1024px)';
+  function placeWeekCard() {
+    const card = document.getElementById('weekCard');
+    const main = document.querySelector('#todayCols .today-col-main');
+    const side = document.querySelector('#todayCols .today-col-side');
+    if (!card || !main || !side) return;
+    const wide = typeof window.matchMedia === 'function' && window.matchMedia(WEEK_CARD_WIDE).matches;
+    const home = wide ? main : side;
+    if (card.parentNode !== home || card !== home.lastElementChild) home.appendChild(card);
+  }
+  placeWeekCard();
+  if (typeof window.matchMedia === 'function') {
+    const weekMq = window.matchMedia(WEEK_CARD_WIDE);
+    if (weekMq.addEventListener) weekMq.addEventListener('change', placeWeekCard);
+    else if (weekMq.addListener) weekMq.addListener(placeWeekCard);
+  }
+
   function renderWeekCard() {
     const el = document.getElementById('weekCard');
     if (!el || typeof thWeekSummary !== 'function') return;
