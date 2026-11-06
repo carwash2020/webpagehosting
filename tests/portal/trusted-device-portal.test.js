@@ -58,6 +58,7 @@ function stubClient(srv) {
       if (ok) srv.trustedSessions.add(srv.session.id);
       return ok;
     },
+    signin_account_kind: () => 'client',
     current_session_is_trusted: () => !!srv.session && srv.trustedSessions.has(srv.session.id)
       && [...Object.values(srv.devices)].some((d) => !d.revoked && !d.expired),
     trust_this_device: (a) => {
@@ -85,6 +86,9 @@ function stubClient(srv) {
         srv.session = { id: 's' + (++srv.sessionSeq), aal: 'aal1' };
         return { data: { session: sessionObj() }, error: null };
       },
+      // One sign-in (FP4.1): the password is checked on an in-memory client and
+      // the session handed to the portal's own; both are this one fake.
+      setSession: async () => { srv.calls.push('setSession'); return { data: { session: sessionObj() }, error: null }; },
       getSession: async () => ({ data: { session: sessionObj() } }),
       getUser: async () => ({ data: { user: sessionObj() && sessionObj().user } }),
       mfa: {

@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=a4f7f4597e"></script>
+<script src="/tools/auth.js?v=f6476e7a83"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -53,7 +53,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=7c03870603">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=a038f9f7de">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=32b0b6ede8">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=92a4047864" defer></script>
 <script src="/tools/data-layer.js?v=e736cf54f5" defer></script>
@@ -61,8 +61,8 @@
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=05f55fda07" defer></script>
-<script src="/tools/tools-command-palette.js?v=8cde9621ed" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=a7791bfe4b" defer></script>
+<script src="/tools/tools-command-palette.js?v=1acf1175ac" defer></script>
 <script src="/tools/tools-tour.js?v=f8c0b490ba" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -919,7 +919,7 @@
       <div class="form-field"><label for="jobTitle">Job Title / Description</label><input type="text" id="jobTitle" placeholder="Fix leaking kitchen faucet"></div>
       <div class="form-field"><label for="jobDate">Due date</label><input type="date" id="jobDate"></div>
     </div>
-    <details class="jt-more" id="jobMore"><summary>More details</summary>
+    <details class="jt-more" id="jobMore" open><summary>More details</summary>
     <div class="tool-form-row">
       <div class="form-field"><label for="jobPhone">Client Phone</label><input type="tel" id="jobPhone" placeholder="(435) 555-0123"></div>
       <div class="form-field"><label for="jobAddress">Address</label><input type="text" id="jobAddress" placeholder="123 Main St, St. George"></div>
@@ -1374,6 +1374,10 @@
   // The job form shows client, job and date; everything else sits under
   // More details. Open it whenever a hidden field holds something (an edit,
   // a registry autofill, a quick-add link) so nothing is saved unseen.
+  // More details starts open (fix plan FP3.2, 2026-11-06): adding a job
+  // never hides Phone, Address, Client email, Referred by, Came from,
+  // Priority, Status, Assigned to or Notes. This still re-opens it (after
+  // someone collapsed it) when a hidden field already holds something.
   function jtSyncMore(force) {
     const d = document.getElementById('jobMore'); if (!d) return;
     const filled = ['jobPhone','jobAddress','jobClientEmail','jobReferredBy','jobHoursWorked','jobNotes']
@@ -1603,6 +1607,8 @@
     renderJobs();
   });
   function jtOnViewChange() {
+    // Field view has no Board (FP3.1): fall back to the list.
+    if (typeof window.thFieldViewActive === 'function' && window.thFieldViewActive() && loadJobViewMode() === 'board') setJobViewMode('list');
     if (!editingJobId) jtFillAssigneePicker(null);
     renderJobs();
   }
@@ -2191,7 +2197,8 @@
     });
     const actions = [
       opt('List', 'note', mode === 'list', () => setJobViewMode('list')),
-      opt('Board', 'grid', mode === 'board', () => setJobViewMode('board')),
+      // No Board in Field view (FP3.1).
+      ...(typeof window.thFieldViewActive === 'function' && window.thFieldViewActive() ? [] : [opt('Board', 'grid', mode === 'board', () => setJobViewMode('board'))]),
       opt('Calendar', 'calendar', mode === 'calendar', () => setJobViewMode('calendar')),
     ];
     if (mode !== 'calendar') {

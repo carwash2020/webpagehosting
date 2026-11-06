@@ -109,11 +109,11 @@
     navigation: auto;
   }
 </style>
-<link rel="stylesheet" href="/tools/styles-tools.css?v=a038f9f7de">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=32b0b6ede8">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous"></script>
 <script src="/signature-pad.js?v=f95f8e1d28"></script>
 <script src="/portal/portal-app.js?v=abb7e37c38"></script>
-<script src="/trusted-device.js?v=255d86a600"></script>
+<script src="/trusted-device.js?v=9ed57ff363"></script>
 <script>
   // Stripe.js is only needed once a client opens the card sheet, never to
   // paint the page -- so it no longer blocks parsing. It starts a few
@@ -341,6 +341,23 @@
   .set-msg { font-size: 13px; margin-top: 10px; line-height: 1.5; }
   .set-msg.is-error { color: #ff8a80; }
   .set-msg.is-ok { color: #4caf78; }
+  /* Your emails (FP4.2). */
+  .my-emails { list-style: none; margin: 0 0 14px; padding: 0; }
+  .my-emails li { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--border); }
+  .my-emails li:first-child { border-top: 0; }
+  .my-emails-text { flex: 1; min-width: 0; }
+  .my-emails-addr { display: block; color: var(--white); word-break: break-all; }
+  .my-emails-note { display: block; color: var(--text-dim); font-size: 12px; margin-top: 2px; }
+  .my-emails-chip { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; border-radius: 4px; padding: 2px 6px; white-space: nowrap; color: var(--text-dim); background: rgba(255,255,255,0.08); }
+  .my-emails-chip.is-confirmed { color: #4caf78; background: rgba(76,175,120,0.15); }
+  .my-emails-chip.is-pending { color: var(--orange-light); background: rgba(255,128,0,0.14); }
+  .my-emails-remove { background: none; border: 0; color: var(--text-dim); font: inherit; font-size: 13px; text-decoration: underline; cursor: pointer; min-height: 44px; padding: 0 4px; }
+  .my-emails-result { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; line-height: 1.5; }
+  .my-emails-result strong { display: block; color: var(--white); margin-bottom: 4px; }
+  .my-emails-result a { color: var(--orange-light); }
+  .my-emails-add { margin-top: 4px; }
+  .my-emails-code { letter-spacing: 6px; font-family: Menlo, Consolas, monospace; }
+  .my-emails-cancel { margin-top: 8px; }
   /* Add a Card signature step (2026-09-04). */
   .pay-auth-box {
     background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); border-radius: 8px;
@@ -539,6 +556,31 @@
         </div>
         <button class="btn blue set-action" id="saveDetailsBtn">Save details</button>
         <div class="set-msg" id="detailsMsg" style="display:none;"></div>
+      </div>
+      <!-- Your emails (fix plan FP4.2, 2026-11-06; D11; approved design
+           EmailAliases). Other emails the client has used with Triple H,
+           each proved with a code sent to it. Hidden until the list loads,
+           so it never shows half-working. -->
+      <div class="set-card" id="myEmailsCard" hidden>
+        <span class="set-card-title">Emails</span>
+        <p class="set-card-sub">Invoices, quotes and jobs sent to any of these emails show up in your portal.</p>
+        <ul class="my-emails" id="myEmailsList"></ul>
+        <div class="my-emails-result" id="myEmailsResult" role="status" hidden></div>
+        <button class="secondary-btn set-action" id="myEmailsAddBtn" type="button">Add another email</button>
+        <form class="my-emails-add" id="myEmailsAddForm" hidden>
+          <div class="set-field" id="myEmailsAddStep">
+            <label for="myEmailsAddInput">Email you used with Triple H</label>
+            <input type="email" id="myEmailsAddInput" autocomplete="email" inputmode="email" placeholder="you@example.com">
+          </div>
+          <div class="set-field" id="myEmailsCodeStep" hidden>
+            <p class="set-hint" id="myEmailsCodeHint"></p>
+            <label for="myEmailsCodeInput">6-digit code</label>
+            <input type="text" id="myEmailsCodeInput" class="my-emails-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456">
+          </div>
+          <button class="btn blue set-action" id="myEmailsSubmit" type="submit">Send a code</button>
+          <button class="secondary-btn set-action my-emails-cancel" id="myEmailsCancel" type="button">Cancel</button>
+          <div class="set-msg is-error" id="myEmailsMsg" role="alert"></div>
+        </form>
       </div>
     </div>
 
@@ -1006,6 +1048,147 @@
     }).join('');
   }
 
+
+  // ---- Your emails (fix plan FP4.2, 2026-11-06; D11) ----
+  // Every change goes through portal-email-alias: an email links only once
+  // the code sent TO it is entered (or, when Triple H started it, the link
+  // sent to it is opened while signed in here). Nothing about another
+  // person's email is shown until its code is right.
+  const EMAIL_ALIAS_URL = 'https://csvfqdjuobylgafgolho.supabase.co/functions/v1/portal-email-alias';
+  let myEmailsPending = '';
+  async function emailAliasCall(body) {
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) return { ok: false, error: 'Sign in again to change your emails.' };
+    const res = await fetch(EMAIL_ALIAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': PORTAL_ERROR_LOG_ANON_KEY, 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify(body),
+    });
+    return res.json().catch(() => ({ ok: false, error: 'Something went wrong. Please try again.' }));
+  }
+  function myEmailsDate(iso) {
+    try { return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); } catch (e) { return ''; }
+  }
+  function renderMyEmails(signin, emails) {
+    const rows = [`<li><span class="my-emails-text"><span class="my-emails-addr">${escapeHtml(signin)}</span><span class="my-emails-note">You sign in with this one</span></span><span class="my-emails-chip">Sign-in</span></li>`];
+    for (const e of emails) {
+      const confirmed = e.status === 'confirmed';
+      const note = confirmed
+        ? (e.added_by === 'merge' ? 'Added by Triple H when your accounts were merged' : 'Added ' + myEmailsDate(e.confirmed_at || e.added_at))
+        : (e.added_by === 'staff' ? 'Triple H sent a link to this email. Open it while signed in here.' : 'Waiting for the code we sent');
+      rows.push(`<li><span class="my-emails-text"><span class="my-emails-addr">${escapeHtml(e.email)}</span><span class="my-emails-note">${escapeHtml(note)}</span></span>`
+        + `<span class="my-emails-chip ${confirmed ? 'is-confirmed' : 'is-pending'}">${confirmed ? 'Confirmed' : 'Pending'}</span>`
+        + `<button type="button" class="my-emails-remove" data-email="${escapeHtml(e.email)}" aria-label="Remove ${escapeHtml(e.email)}">Remove</button></li>`);
+    }
+    document.getElementById('myEmailsList').innerHTML = rows.join('');
+  }
+  async function loadMyEmails() {
+    let result;
+    try { result = await emailAliasCall({ action: 'list' }); } catch (e) { return; }
+    if (!result || !result.ok) return; // not available yet: the card stays hidden
+    renderMyEmails(result.signin, result.emails || []);
+    document.getElementById('myEmailsCard').hidden = false;
+    await confirmEmailFromLink();
+  }
+  function myEmailsShowResult(html) {
+    const box = document.getElementById('myEmailsResult');
+    box.innerHTML = html;
+    box.hidden = !html;
+  }
+  function myEmailsRecordsLine(records) {
+    const parts = [];
+    const names = { invoice: ['invoice', 'invoices'], quote: ['quote', 'quotes'], job: ['job', 'jobs'], contract: ['contract', 'contracts'], checkup: ['checkup', 'checkups'] };
+    for (const k of Object.keys(names)) if (records && records[k]) parts.push(records[k] + ' ' + names[k][records[k] === 1 ? 0 : 1]);
+    if (!parts.length) return 'Anything Triple H sends to it from now on will show up here.';
+    const list = parts.length === 1 ? parts[0] : parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1];
+    return list + ' sent to it ' + (parts.length === 1 && /^1 /.test(parts[0]) ? 'is' : 'are') + ' now in your portal.';
+  }
+  function myEmailsOutcome(result) {
+    if (result.outcome === 'confirmed') {
+      if (result.emails) renderMyEmails(document.querySelector('#myEmailsList .my-emails-addr').textContent, result.emails);
+      myEmailsShowResult(`<strong>${escapeHtml(result.email)} is confirmed</strong>${escapeHtml(myEmailsRecordsLine(result.records))}`);
+    } else if (result.outcome === 'own_account' || result.outcome === 'linked_elsewhere') {
+      myEmailsShowResult(`<strong>That email has its own portal account</strong>To put them together, ask Triple H: they'll merge them for you. Nothing was moved. <a href="sms:+14354141667">Message Triple H</a>`);
+    } else {
+      myEmailsShowResult(`<strong>That email can't be added here</strong>Nothing was moved. Questions? <a href="sms:+14354141667">Message Triple H</a>`);
+    }
+  }
+  function myEmailsResetForm() {
+    myEmailsPending = '';
+    document.getElementById('myEmailsAddForm').hidden = true;
+    document.getElementById('myEmailsAddBtn').hidden = false;
+    document.getElementById('myEmailsAddStep').hidden = false;
+    document.getElementById('myEmailsCodeStep').hidden = true;
+    document.getElementById('myEmailsAddInput').value = '';
+    document.getElementById('myEmailsCodeInput').value = '';
+    document.getElementById('myEmailsMsg').textContent = '';
+    document.getElementById('myEmailsSubmit').textContent = 'Send a code';
+  }
+  document.getElementById('myEmailsAddBtn').addEventListener('click', () => {
+    myEmailsShowResult('');
+    document.getElementById('myEmailsAddBtn').hidden = true;
+    document.getElementById('myEmailsAddForm').hidden = false;
+    document.getElementById('myEmailsAddInput').focus();
+  });
+  document.getElementById('myEmailsCancel').addEventListener('click', myEmailsResetForm);
+  document.getElementById('myEmailsAddForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('myEmailsSubmit');
+    const msg = document.getElementById('myEmailsMsg');
+    msg.textContent = '';
+    btn.disabled = true;
+    try {
+      if (!myEmailsPending) {
+        const email = document.getElementById('myEmailsAddInput').value.trim().toLowerCase();
+        const result = await emailAliasCall({ action: 'add', email });
+        if (!result.ok) { msg.textContent = result.error || 'Something went wrong. Please try again.'; return; }
+        myEmailsPending = email;
+        document.getElementById('myEmailsAddStep').hidden = true;
+        document.getElementById('myEmailsCodeStep').hidden = false;
+        document.getElementById('myEmailsCodeHint').textContent = `We sent a 6-digit code to ${email}. It works for 15 minutes.`;
+        btn.textContent = 'Confirm';
+        document.getElementById('myEmailsCodeInput').focus();
+        return;
+      }
+      const code = document.getElementById('myEmailsCodeInput').value.trim();
+      const result = await emailAliasCall({ action: 'verify', email: myEmailsPending, code });
+      if (!result.ok) { msg.textContent = result.error || 'That code didn\'t work.'; return; }
+      myEmailsResetForm();
+      myEmailsOutcome(result);
+      if (result.outcome !== 'confirmed') loadMyEmailsList();
+    } catch (err) {
+      msg.textContent = 'Can\'t reach the server. Check your connection and try again.';
+    } finally {
+      btn.disabled = false;
+    }
+  });
+  async function loadMyEmailsList() {
+    const result = await emailAliasCall({ action: 'list' }).catch(() => null);
+    if (result && result.ok) renderMyEmails(result.signin, result.emails || []);
+  }
+  document.getElementById('myEmailsList').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.my-emails-remove');
+    if (!btn) return;
+    const email = btn.dataset.email;
+    if (!confirm(`Remove ${email}? Anything sent to it will stop showing here. You can add it again later.`)) return;
+    btn.disabled = true;
+    const result = await emailAliasCall({ action: 'remove', email }).catch(() => null);
+    if (result && result.ok) { myEmailsShowResult(''); await loadMyEmailsList(); } else btn.disabled = false;
+  });
+  // A link Triple H sent to another email (?confirm_email=...): it links
+  // only for the account signed in here; the server checks that.
+  async function confirmEmailFromLink() {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('confirm_email');
+    if (!token) return;
+    params.delete('confirm_email');
+    const rest = params.toString();
+    history.replaceState(history.state, '', window.location.pathname + (rest ? '?' + rest : '') + window.location.hash);
+    openSettingsSection('profile');
+    const result = await emailAliasCall({ action: 'confirm_link', token }).catch(() => null);
+    if (result && result.ok) myEmailsOutcome(result);
+    else myEmailsShowResult(`<strong>That link didn't work</strong>${escapeHtml((result && result.error) || 'Please try again.')}`);
+  }
 
   // Saved card management (2026-09-03), requested directly: "Saved
   // card management (view/remove)." Loaded once on page load -- this
@@ -1842,6 +2025,7 @@
     renderSettingsProfile(name, email);
 
     loadSavedCards();
+    loadMyEmails();
     loadAuthorizations();
     loadNotificationPreferences();
     loadReferralLink(email);

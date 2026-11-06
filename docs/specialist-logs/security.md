@@ -1603,3 +1603,34 @@ invoice, quote, job, contract or checkup from Triple H first." Failing test
 written first (`tests/edge-functions/saved-card-business-record-gate.test.js`:
 a work order alone, in any status, is refused). **Not deployed**: goes with
 the Phase 3 batch, after Connor's OK.
+
+## 2026-11-06 -- FP4.1 one sign-in: how staff and client sessions stay apart
+
+One page now signs in both kinds of account, which raised two ways to get this wrong.
+
+**1. Misrouting a client into the Workspace.** The staff/client answer comes from `signin_account_kind()` (SECURITY DEFINER; checks `account_roles` for the caller's JWT email; `authenticated` only). The page treats only an explicit `'staff'` as staff. A missing function, an error, or a dropped connection all mean client. Even a wrong "staff" answer grants nothing: the Workspace still loads the role from `account_roles` under RLS, and the two-factor gate is unchanged.
+
+**2. A password-only session landing somewhere usable.** The password is checked on a supabase-js client with in-memory storage, so nothing reaches disk. Staff tokens stay in memory until the code, a recovery code, or required setup clears; only then does `persistSession()` run, and the page has exactly one call to it. A client's session moves into the portal store by one `setSession()` call. The staff branch returns before that line, so a staff account never gets a portal session. Refresh tokens rotate, so a session must never sit in both stores; switching accounts signs out both first.
+
+**Risk accepted, with reasons:**
+- Remember me now starts off for staff too. This is a public page, the safer default; staff turn it on once per device.
+- Staff sign-in errors now go to the portal error log, the one this page loads, instead of the Workspace's.
+- The precached `tools/login.html` is only a forward now, so opening the Workspace app offline and signed out shows the browser's offline page instead of a sign-in form that couldn't work offline anyway.
+
+**Applied live 2026-11-06 (Connor's OK):** `sql/security/fp4_signin_account_kind.sql`. Checked live: a staff email at password-only reads as staff in any letter case, while that caller still sees 0 `account_roles` rows; the TEST client reads as client; anon cannot call it.
+
+## 2026-11-06 -- FP4.2 verified email aliases: what widened, and why it's safe
+
+This change widens what a client can read: records on any email they have proved they own. The risks I weighed:
+
+- **Claiming someone else's records.** An alias links only after a code sent to that address (or a staff link opened while signed in as the account). Nothing matches on name or phone. The table has no client access, and the only writer is the edge function with the service key. `add` answers the same for every address, so it can't be used to learn who has an account. Codes are stored as an HMAC, last 15 minutes, lock after 5 wrong tries, and one address gets at most 5 an hour.
+- **Two accounts seeing the same records.** A confirmed alias has one owner (a unique index). An address with its own portal account is never linked by the client. Merging is staff-only (Workspace, two-factor, Clients), previewed, and confirmed. The merged account is locked and its saved cards are detached, so no second login can see or charge against A's history.
+- **Spoofing as the alias.** Messages, read marks and quote questions still require the sign-in email as sender (`sender_email = auth.email()`), so a client can read alias threads but never write as the alias. This is pinned in the PGlite test.
+- **Edge functions** that check "is this record yours?" use one helper. It returns the sign-in email plus confirmed aliases, and fails closed to the sign-in email alone. Stripe customers and card authorizations stay keyed to the payer's sign-in email.
+- **Case-insensitive matching** (`lower(client_email)`) is a small, deliberate broadening: a record sent to `Sam@Example.com` now shows for `sam@example.com`. Email addresses are case-insensitive in practice, and every live client email is lower-case today.
+
+**Live 2026-11-06 (Connor's OK for each step):**
+- Applied: `sql/security/fp4_email_aliases.sql`. The TEST client sees exactly the same rows as before (1 invoice, 1 card authorization). 13 policies are widened, and all 14 "Confirmed email only" restrictive policies remain. The alias table is closed to clients and anon. The Supabase security advisor shows nothing new for anon; the new findings are intentional (a service-only table, and functions that answer only about the caller).
+- Deployed: `portal-email-alias` (`verify_jwt` on; a call with no session gets 401), plus the 9 edited functions. All are byte-identical to the repo, and `verify_jwt` is unchanged (true).
+- CodeQL then flagged the email-format regex in `portal-email-alias` as a polynomial ReDoS: its domain part `[^\s@]+\.[^\s@]+` is ambiguous. It is now linear (`[^\s@.]+(?:\.[^\s@.]+)+`), with the length cap checked first. Connor approved the redeploy of the fixed function.
+- **Out of scope, worth a later look:** `edge-functions/portal-signup-index.ts` carries the same old pattern. It is reachable without a session, but behind a per-IP limit.

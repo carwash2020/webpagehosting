@@ -1,5 +1,5 @@
-// Triple H sign-in: small shared helpers for portal/login.html and
-// tools/login.html (Show/Hide password, busy buttons, wrong-entry state, and
+// Triple H sign-in: small helpers for the sign-in, portal/login.html (one
+// page for clients and staff since FP4.1): Show/Hide password, busy buttons, wrong-entry state, and
 // the ~600ms success animation). No auth logic lives here -- every Supabase
 // call stays in the page that makes it.
 // The one shared global: a top-level var, so it is also window.ThSignin.

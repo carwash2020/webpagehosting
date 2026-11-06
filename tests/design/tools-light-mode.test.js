@@ -17,15 +17,16 @@ const STYLES_TOOLS_CSS_PATH = path.join(TOOLS_DIR, 'styles-tools.css');
 // Every real tool page that should carry the anti-flash snippet --
 // the 4 retired redirect stubs (contact-card, expense-logger,
 // job-cost-lookup, and calendar as of 2026-09-21) are deliberately
-// excluded, since they have no real UI to theme.
+// excluded, since they have no real UI to theme. So is login.html since
+// FP4.1 (2026-11-06): it only forwards to the one sign-in, /portal/login.html.
 const PAGES_LOADING_SHARED_CSS = [
   'client-detail.html', 'contract-generator.html', 'dev-tools.html',
   'finance.html', 'invoice-generator.html', 'job-detail.html', 'job-tracker.html',
-  'login.html', 'parts-reference.html', 'reset-password.html', 'review-request.html',
+  'parts-reference.html', 'reset-password.html', 'review-request.html',
   'route-planner.html', 'settings.html', 'site-content.html', 'workspace.html',
 ];
 
-test('every real tool page (except the 4 retired redirect stubs) has the anti-flash theme snippet, positioned before any stylesheet loads', () => {
+test('every real tool page (except the retired redirect stubs) has the anti-flash theme snippet, positioned before any stylesheet loads', () => {
   for (const page of PAGES_LOADING_SHARED_CSS) {
     const src = fs.readFileSync(path.join(TOOLS_DIR, page), 'utf8');
     const snippetIndex = src.indexOf("localStorage.getItem('th_tools_theme')");

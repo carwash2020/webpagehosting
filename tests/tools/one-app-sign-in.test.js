@@ -1,8 +1,10 @@
 // One app (2026-10-31): after sign-in the role decides where you land.
-// Clients go to the portal, staff to the Workspace. Password sign-in and the
-// two-factor rules are unchanged, and nothing is handed between the two
-// sign-in stacks: the wrong door clears its own session and sends the person
-// to the right one.
+// Clients go to the portal, staff to the Workspace. Since fix plan FP4.1
+// (2026-11-06) there is one door, /portal/login.html: the password is checked
+// once, on a client that stores nothing, and the session goes to exactly one
+// store -- the portal's for a client, the Workspace's for staff (after its
+// two-factor step). The behaviour is driven end to end in
+// tests/portal/one-sign-in.test.js; these pin the shape.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -12,7 +14,6 @@ const vm = require('vm');
 
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const AUTH = fs.readFileSync(repo('tools', 'auth.js'), 'utf8');
-const TOOLS_LOGIN = fs.readFileSync(repo('tools', 'login.html'), 'utf8');
 const PORTAL_LOGIN = fs.readFileSync(repo('portal', 'login.html'), 'utf8');
 
 function extractFn(src, name) {
@@ -48,66 +49,57 @@ test('isInternalAccount: true for an account with a role row, false for none, nu
   assert.equal(await isInternalWith(reply([]), { email: '' })(), null, 'no signed-in email: unknown');
 });
 
-test('Workspace sign-in: a client account (no role) never keeps a Workspace session and is sent to the portal; unknown counts as staff', () => {
-  const fn = extractFn(TOOLS_LOGIN, 'finishSignInFlow');
-  assert.match(fn, /if \(\(await isInternalAccount\(\)\) === false\) \{ await handOffClientToPortal\(email\); return; \}/);
-  const hand = extractFn(TOOLS_LOGIN, 'handOffClientToPortal');
-  assert.match(hand, /clearStoredSession\(\);/);
-  assert.match(hand, /window\.location\.href = '\/portal\/login\.html'/);
-  assert.doesNotMatch(hand, /access_token|refresh_token/, 'no token is handed across');
-});
-
-test('Workspace sign-in: password and two-factor are unchanged -- the role check runs only after the session is stored, i.e. after MFA / mandatory enrollment', () => {
-  // Every finishSignInFlow() call comes right after persistSession().
-  const calls = [...TOOLS_LOGIN.matchAll(/finishSignInFlow\(\);/g)].map((m) => TOOLS_LOGIN.slice(Math.max(0, m.index - 500), m.index));
-  assert.ok(calls.length >= 4);
-  for (const before of calls.filter((c) => !/async function|redirectAfterLogin/.test(c))) assert.match(before, /persistSession\(/);
-  assert.match(TOOLS_LOGIN, /requiresMfaForRole\(roleInfo\)\) \{\s*await startMandatoryEnrollment\(\);/);
-  assert.match(TOOLS_LOGIN, /mfaListVerifiedTotpFactor\(pendingSession\.access_token\)/);
-  assert.match(TOOLS_LOGIN, /signIn\(email, password, rememberMe, \{ skipPersist: true \}\)/);
-});
-
-test('the return= allowlist is kept, and unlisted paths still fall back to the Workspace', () => {
-  const fn = extractFn(TOOLS_LOGIN, 'redirectAfterLogin');
-  assert.match(fn, /ALLOWED_RETURN_PATHS\.has\(returnTo\) \? returnTo : '\/tools\/workspace\.html'/);
-  assert.match(TOOLS_LOGIN, /'\/tools\/workspace\.html',\n  \]\);/);
-});
-
-test('portal sign-in: a staff account (positive role read) gets no portal session and is sent to the Workspace sign-in; failures count as a client', async () => {
-  const fn = extractFn(PORTAL_LOGIN, 'goHomeAfterSignIn');
-  assert.match(fn, /portalAccountIsStaff\(\)/);
-  assert.match(fn, /sendStaffToWorkspace\(true\)/);
-  assert.match(fn, /window\.location\.replace\(portalAfterSignInUrl\(\)\)/);
-  const staff = extractFn(PORTAL_LOGIN, 'sendStaffToWorkspace');
-  assert.match(staff, /client\.auth\.signOut\(\{ scope: 'local' \}\)/);
-  assert.match(staff, /window\.location\.replace\('\/tools\/login\.html'\)/);
-  const run = async (result) => {
-    const ctx = { Array, client: { from: () => ({ select: () => ({ limit: async () => result }) }) } };
+test('one door: the role is asked of the server, and only a positive "staff" answer counts as staff', async () => {
+  const run = async (rpcClient) => {
+    const ctx = {};
     vm.createContext(ctx);
-    vm.runInContext(extractFn(PORTAL_LOGIN, 'portalAccountIsStaff') + ';this.f = portalAccountIsStaff;', ctx);
-    return ctx.f();
+    vm.runInContext(extractFn(PORTAL_LOGIN, 'accountKind') + ';this.f = accountKind;', ctx);
+    return ctx.f(rpcClient);
   };
-  assert.equal(await run({ data: [{ email: 'a@b.c' }], error: null }), true);
-  assert.equal(await run({ data: [], error: null }), false, 'RLS hides account_roles from a client');
-  assert.equal(await run({ data: null, error: { message: 'x' } }), false);
+  const answering = (result) => ({ rpc: async (name) => { assert.equal(name, 'signin_account_kind'); return result; } });
+  assert.equal(await run(answering({ data: 'staff', error: null })), 'staff');
+  assert.equal(await run(answering({ data: 'client', error: null })), 'client');
+  assert.equal(await run(answering({ data: null, error: { message: 'missing function' } })), 'client', 'an error is never "staff"');
+  assert.equal(await run({ rpc: async () => { throw new Error('offline'); } }), 'client');
 });
 
-test('portal sign-in: every path home goes through the role check, the already-signed-in one included', () => {
-  // Fresh sign-ins (password, then any code, Face ID, or a trusted device
-  // that skipped the code -- 2026-11-01; Create account's confirmed code --
-  // 2026-11-04) all end in goHomeAfterSignIn().
-  assert.equal((PORTAL_LOGIN.match(/goHomeAfterSignIn\(\);/g) || []).length, 5);
-  assert.match(extractFn(PORTAL_LOGIN, 'confirmSignupCode'), /goHomeAfterSignIn\(\);/, 'a brand-new account takes the same role-checked way in');
+test('one door: the password is checked on a client that stores nothing, and each kind of account gets exactly one store', () => {
+  assert.match(PORTAL_LOGIN, /const signinClient = createClient\([\s\S]*?\{ auth: \{ storage: memoryStore, persistSession: false, autoRefreshToken: false, detectSessionInUrl: false \} \}/);
+  assert.match(PORTAL_LOGIN, /await signinClient\.auth\.signInWithPassword\(\{ email, password \}\)/);
+  // Only one place stores a Workspace session, and only one hands a session to the portal store.
+  assert.equal((PORTAL_LOGIN.match(/persistSession\(/g) || []).length, 1);
+  assert.equal((PORTAL_LOGIN.match(/client\.auth\.setSession\(/g) || []).length, 1);
+  const submit = PORTAL_LOGIN.slice(PORTAL_LOGIN.indexOf('await signinClient.auth.signInWithPassword('), PORTAL_LOGIN.indexOf('// ---- Staff path'));
+  const staffAt = submit.indexOf("if ((await accountKind(signinClient)) === 'staff') {");
+  const staffEnd = submit.indexOf('return;', staffAt);
+  assert.ok(staffAt > 0 && staffAt < submit.indexOf('client.auth.setSession('), 'staff branch off before anything reaches the portal store');
+  assert.doesNotMatch(submit.slice(staffAt, staffEnd), /setSession|portalSetRemember/, 'staff never get a portal session');
+});
+
+test('Workspace two-factor is unchanged: the Workspace session is stored only after the code, a recovery code, or required setup', () => {
+  const store = extractFn(PORTAL_LOGIN, 'staffStoreAndFinish');
+  assert.match(store, /persistSession\(session, staffRememberMe\);/);
+  const cont = extractFn(PORTAL_LOGIN, 'staffContinueSignIn');
+  assert.match(cont, /const factor = await mfaListVerifiedTotpFactor\(staffPending\.access_token\);/);
+  assert.match(cont, /if \(requiresMfaForRole\(roleInfo\)\) \{ await staffStartEnrollment\(\); return; \}/);
+  assert.ok(cont.indexOf('staffShow(\'staffCodeView\')') < cont.lastIndexOf('staffStoreAndFinish(staffPending)'), 'with a factor, the code step returns before any store');
+});
+
+test('the Workspace return= allowlist is kept, and unlisted paths still fall back to the Workspace', () => {
+  const fn = extractFn(PORTAL_LOGIN, 'staffAfterSignInUrl');
+  assert.match(fn, /STAFF_RETURN_PATHS\.has\(r\) \? r : '\/tools\/workspace\.html'/);
+  assert.match(PORTAL_LOGIN, /'\/tools\/workspace\.html',\n  \]\);/);
+});
+
+test('a leftover portal session that belongs to staff is signed out, and every path home for a client is the same one', () => {
+  assert.match(PORTAL_LOGIN, /if \(\(await accountKind\(client\)\) === 'staff'\) \{ await client\.auth\.signOut\(\{ scope: 'local' \}\); return; \}/);
+  assert.match(extractFn(PORTAL_LOGIN, 'confirmSignupCode'), /goHomeAfterSignIn\(\);/, 'a brand-new account takes the same way in');
   const trusted = PORTAL_LOGIN.match(/async function portalSignInOnTrustedDevice\(email\) \{[\s\S]*?\n  \}\n/)[0];
-  assert.match(trusted, /goHomeAfterSignIn\(\);/, 'a trusted-device sign-in takes the same role-checked way home');
-  // A visitor who is already signed in is checked too, and goes straight on (no animation) if not staff.
-  assert.match(PORTAL_LOGIN, /signingInEmail = email;\n    if \(await portalAccountIsStaff\(\)\) \{ await sendStaffToWorkspace\(false\); return; \}\n    window\.location\.replace\(portalAfterSignInUrl\(\)\);\n  \}\);/);
+  assert.match(trusted, /goHomeAfterSignIn\(\);/);
 });
 
-test('each door pre-fills the email for the other, through sessionStorage (not the URL)', () => {
-  assert.match(TOOLS_LOGIN, /sessionStorage\.getItem\('th_signin_email_hint'\)/);
-  assert.match(PORTAL_LOGIN, /sessionStorage\.getItem\('th_signin_email_hint'\)/);
-  assert.match(TOOLS_LOGIN, /sessionStorage\.setItem\('th_signin_email_hint'/);
-  assert.match(PORTAL_LOGIN, /sessionStorage\.setItem\('th_signin_email_hint'/);
-  assert.doesNotMatch(TOOLS_LOGIN + PORTAL_LOGIN, /login\.html\?email=/);
+test('the two-door hand-off is gone: no email hint between pages, nothing in the URL', () => {
+  assert.doesNotMatch(PORTAL_LOGIN, /th_signin_email_hint|portalAccountIsStaff|sendStaffToWorkspace/);
+  assert.doesNotMatch(PORTAL_LOGIN, /login\.html\?email=/);
+  assert.doesNotMatch(PORTAL_LOGIN, /location\.(replace|href)\s*=?\s*\(?'\/tools\/login\.html/);
 });

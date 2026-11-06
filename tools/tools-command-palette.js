@@ -79,7 +79,9 @@
     { title: 'Dashboard', meta: 'Home \u203a today, money owed, needs attention', href: '/tools/workspace.html', keywords: 'home today inbox' },
     // Out of the nav since 2026-11-04 (nine items), so Search keeps them reachable.
     { title: 'Analytics', meta: 'Dashboard \u203a Insights', href: '/tools/workspace.html#insights', keywords: 'insights snapshot report funnel stats' },
-    { title: 'Team', meta: 'People, invites and what each person can do', href: '/tools/team.html', keywords: 'accounts people staff permissions access roles invite deactivate', perm: 'canManageRoles' },
+    // Everyone on the team since FP3.6 (D13): a read-only directory unless
+    // they can manage it.
+    { title: 'Team', meta: 'Who\u2019s on the team; invites and switches for managers', href: '/tools/team.html', keywords: 'accounts people staff permissions access roles invite deactivate directory names titles' },
     { title: 'Dev Tools', meta: 'Health log, backups, accounts, system', href: '/tools/dev-tools.html', keywords: 'developer diagnostics health log backup admin', perm: 'hasDevToolsAccess' },
     { title: 'Website', meta: 'Edit the public site: hours, banners, FAQ, terms', href: '/tools/site-content.html', keywords: 'site content cms hours banner faq terms', perm: 'canManageSiteContent' },
     { title: 'Settings', meta: 'Account, theme, notifications, backup', href: '/tools/settings.html', keywords: 'backup restore theme password notifications' },

@@ -43,8 +43,10 @@ test('the tools theme snippet flips color-scheme to light when that preference i
   }
 });
 
-test('tools login and reset-password paint a dark body before CSS, matching the portal login contract', () => {
-  for (const page of ['login.html', 'reset-password.html']) {
+// tools/login.html only forwards to /portal/login.html since FP4.1
+// (2026-11-06); reset-password is the one Workspace sign-in-style card left.
+test('tools reset-password paints a dark body before CSS, matching the portal login contract', () => {
+  for (const page of ['reset-password.html']) {
     const src = fs.readFileSync(path.join(TOOLS_DIR, page), 'utf8');
     assert.match(src, /body \{ background: #0a0a0a;/, `${page}: body should set its own background`);
     assert.match(src, /class="login-box"/, `${page}: expected the login card`);

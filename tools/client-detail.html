@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=a4f7f4597e"></script>
+<script src="/tools/auth.js?v=f6476e7a83"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -53,7 +53,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=7c03870603">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=a038f9f7de">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=32b0b6ede8">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=92a4047864" defer></script>
 <script src="/tools/data-layer.js?v=e736cf54f5" defer></script>
@@ -61,8 +61,8 @@
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=05f55fda07" defer></script>
-<script src="/tools/tools-command-palette.js?v=8cde9621ed" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=a7791bfe4b" defer></script>
+<script src="/tools/tools-command-palette.js?v=1acf1175ac" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -308,6 +308,18 @@
   html body.th-tool-page[data-th-page="client-detail"] .client-stat-label { text-transform: none; letter-spacing: 0; font-size: 15px; }
   html body.th-tool-page[data-th-page="client-detail"] #clientContent > .section-block { padding: 16px 18px 8px; }
   html body.th-tool-page[data-th-page="client-detail"] #clientContent > .section-block.client-delete-zone { padding: 14px 18px; }
+  /* Portal emails (FP4.2). */
+  .client-portal-emails .portal-email-note { display: block; color: var(--text-dim); font-size: 12px; margin-top: 2px; }
+  .client-portal-emails .portal-email-chip { font-size: 12px; font-weight: 600; border-radius: 4px; padding: 2px 6px; white-space: nowrap; color: var(--text-dim); background: rgba(255,255,255,0.08); }
+  .client-portal-emails .portal-email-chip.is-confirmed { color: #4caf78; background: rgba(76,175,120,0.15); }
+  .client-portal-emails .portal-email-chip.is-pending { color: var(--orange-light, #ffb347); background: rgba(255,128,0,0.14); }
+  .client-portal-emails .portal-email-form { margin-top: 14px; }
+  .client-portal-emails .portal-email-form label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .client-portal-emails .portal-email-row { display: flex; gap: 8px; }
+  .client-portal-emails .portal-email-row input { flex: 1; min-width: 0; font-size: 16px; }
+  .client-portal-emails .portal-email-hint { color: var(--text-dim); font-size: 12.5px; line-height: 1.5; margin-top: 6px; }
+  .client-portal-emails .portal-email-msg { font-size: 13px; margin-top: 10px; color: #4caf78; }
+  .client-portal-emails .portal-email-msg.is-error { color: #ff8a80; }
   body.th-tool-page[data-th-page="client-detail"] .client-records-empty { font-size: 13.5px; color: var(--text-dim); padding: 6px 0 12px; }
   body.th-tool-page[data-th-page="client-detail"] .quick-actions-title,
   body.th-tool-page[data-th-page="client-detail"] .quick-actions-btn { text-transform: none; letter-spacing: 0; }
@@ -627,6 +639,13 @@
       '<div class="th-v2-card-head"><span class="th-v2-card-title">Details</span></div>' +
       (detailLines.length ? '<div class="client-details-list">' + detailLines.join('') + '</div>' : '<div class="client-records-empty">No email or address on file.</div>') +
       '</div>';
+    // Portal emails (fix plan FP4.2, 2026-11-06; D11): accounts with Clients.
+    if (c.email && typeof canManageClients === 'function' && canManageClients()) {
+      html += '<div class="client-portal-emails th-v2-card" id="portalEmailsCard">' +
+        '<div class="th-v2-card-head"><span class="th-v2-card-title">Portal emails</span></div>' +
+        '<div id="portalEmailsBody"><div class="client-records-empty">Loading&hellip;</div></div>' +
+        '</div>';
+    }
     html += '<div class="client-stat-row">' +
         '<div class="client-stat"><div class="client-stat-value">' + money(bundle.revenue) + '</div><div class="client-stat-label">Lifetime revenue</div></div>' +
         '<div class="client-stat"><div class="client-stat-value">' + bundle.jobs.length + '</div><div class="client-stat-label">Jobs' + (openJobs ? ' (' + openJobs + ' open)' : '') + '</div></div>' +
@@ -650,6 +669,108 @@
 
     document.getElementById('clientContent').innerHTML = html;
     loadReferralLink(c);
+    if (document.getElementById('portalEmailsCard')) loadPortalEmails(c.email);
+  }
+
+  // ---- Portal emails (fix plan FP4.2, 2026-11-06; D11; approved design
+  // EmailAliases) ----
+  // Staff start; the client proves it. Adding sends a link to that email,
+  // which links only when it is opened while signed in to this client's
+  // portal account. An email with its own portal account is a merge, done
+  // only when the client asks, after a preview of what moves.
+  let portalEmailsAccount = '';
+  async function portalEmailCall(body) {
+    if (typeof ensureFreshToken === 'function') await ensureFreshToken();
+    const session = getStoredSession();
+    const res = await fetch(SUPABASE_URL + '/functions/v1/portal-email-alias', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + (session ? session.access_token : '') },
+      body: JSON.stringify(body),
+    });
+    return res.json().catch(() => ({ ok: false, error: 'Something went wrong (HTTP ' + res.status + ').' }));
+  }
+  function portalEmailsRender(result) {
+    const body = document.getElementById('portalEmailsBody');
+    if (!body) return;
+    const fmtDay = (iso) => { try { return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); } catch (e) { return ''; } };
+    const rows = ['<div class="client-detail-line"><span>' + escapeHtml(result.signin) + '<span class="portal-email-note">Signs in with this</span></span><span class="portal-email-chip">Portal</span></div>'];
+    for (const e of result.emails || []) {
+      const pending = e.status !== 'confirmed';
+      const note = pending
+        ? (e.added_by === 'staff' ? 'Link sent ' + fmtDay(e.added_at) + ' · waiting for the client' : 'Code sent ' + fmtDay(e.added_at) + ' · waiting for the client')
+        : (e.added_by === 'merge' ? 'Merged ' + fmtDay(e.confirmed_at) : 'Confirmed ' + fmtDay(e.confirmed_at));
+      rows.push('<div class="client-detail-line"><span>' + escapeHtml(e.email) + '<span class="portal-email-note">' + escapeHtml(note) + '</span></span>' +
+        '<span class="portal-email-chip ' + (pending ? 'is-pending' : 'is-confirmed') + '">' + (pending ? 'Pending' : 'Confirmed') + '</span>' +
+        '<button type="button" class="small-btn" data-portal-email-remove="' + escapeAttr(e.email) + '">Remove</button></div>');
+    }
+    body.innerHTML = '<div class="client-details-list">' + rows.join('') + '</div>' +
+      '<form class="portal-email-form" id="portalEmailAddForm"><label for="portalEmailAddInput">Add an email for this client</label>' +
+        '<div class="portal-email-row"><input type="email" id="portalEmailAddInput" placeholder="other@example.com" autocomplete="off"><button type="submit" class="secondary-btn">Send link</button></div></form>' +
+      '<div class="portal-email-hint">Sends a link to that email. It links only once the client opens it while signed in to their portal. Never matched on name or phone.</div>' +
+      '<form class="portal-email-form" id="portalEmailMergeForm"><label for="portalEmailMergeInput">Merge another portal account into this one</label>' +
+        '<div class="portal-email-row"><input type="email" id="portalEmailMergeInput" placeholder="their other sign-in email" autocomplete="off"><button type="submit" class="secondary-btn">Review merge</button></div></form>' +
+      '<div class="portal-email-hint">Only when the client asks. The other account is signed out and locked, its saved cards are removed, and its history shows here.</div>' +
+      '<div class="portal-email-msg" id="portalEmailMsg" role="status"></div>';
+    document.getElementById('portalEmailAddForm').addEventListener('submit', portalEmailAdd);
+    document.getElementById('portalEmailMergeForm').addEventListener('submit', portalEmailMerge);
+    body.querySelectorAll('[data-portal-email-remove]').forEach((b) => b.addEventListener('click', () => portalEmailRemove(b.getAttribute('data-portal-email-remove'))));
+  }
+  function portalEmailMsg(text, isError) {
+    const el = document.getElementById('portalEmailMsg');
+    if (!el) return;
+    el.textContent = text;
+    el.classList.toggle('is-error', !!isError);
+  }
+  async function loadPortalEmails(email) {
+    portalEmailsAccount = String(email || '').trim().toLowerCase();
+    const body = document.getElementById('portalEmailsBody');
+    let result;
+    try { result = await portalEmailCall({ action: 'staff_list', account_email: portalEmailsAccount }); } catch (e) { result = null; }
+    if (!body) return;
+    if (!result || !result.ok) {
+      body.innerHTML = '<div class="client-records-empty">' + escapeHtml((result && result.error) || 'Could not load portal emails right now.') + '</div>';
+      return;
+    }
+    portalEmailsRender(result);
+  }
+  async function portalEmailAdd(e) {
+    e.preventDefault();
+    const email = document.getElementById('portalEmailAddInput').value.trim();
+    if (!email) return;
+    const result = await portalEmailCall({ action: 'staff_add', account_email: portalEmailsAccount, email }).catch(() => null);
+    if (!result || !result.ok) { portalEmailMsg((result && result.error) || 'Could not send the link.', true); return; }
+    portalEmailsRender({ signin: portalEmailsAccount, emails: result.emails });
+    portalEmailMsg('Link sent to ' + email + '. It links once the client opens it while signed in.');
+  }
+  async function portalEmailRemove(email) {
+    if (!confirm('Remove ' + email + ' from this client\'s portal? Anything sent to it stops showing there.')) return;
+    const result = await portalEmailCall({ action: 'staff_remove', account_email: portalEmailsAccount, email }).catch(() => null);
+    if (!result || !result.ok) { portalEmailMsg((result && result.error) || 'Could not remove it.', true); return; }
+    portalEmailsRender({ signin: portalEmailsAccount, emails: result.emails });
+  }
+  async function portalEmailMerge(e) {
+    e.preventDefault();
+    const mergeEmail = document.getElementById('portalEmailMergeInput').value.trim().toLowerCase();
+    if (!mergeEmail) return;
+    const p = await portalEmailCall({ action: 'merge_preview', account_email: portalEmailsAccount, merge_email: mergeEmail }).catch(() => null);
+    if (!p || !p.ok) { portalEmailMsg((p && p.error) || 'Could not check that account.', true); return; }
+    const r = p.records || {};
+    const recordsLine = ['invoice', 'quote', 'job', 'contract', 'checkup'].filter((k) => r[k]).map((k) => r[k] + ' ' + k + (r[k] === 1 ? '' : 's')).join(', ') || 'no records';
+    const lines = [
+      'Merge ' + mergeEmail + ' into ' + portalEmailsAccount + '?',
+      '',
+      '- ' + mergeEmail + ' is signed out and can no longer sign in.',
+      '- Its history (' + recordsLine + ') shows in ' + portalEmailsAccount + '\'s portal.',
+      p.saved_cards ? '- It has ' + p.saved_cards + ' saved card' + (p.saved_cards === 1 ? '' : 's') + '. Cards can\'t move between accounts, so ' + (p.saved_cards === 1 ? 'it is' : 'they are') + ' removed. The client adds a card again at their next payment.' : '- It has no saved cards.',
+      (p.their_emails && p.their_emails.length) ? '- Its other emails move too: ' + p.their_emails.join(', ') + '.' : null,
+      '',
+      'Nothing is deleted. Only do this when the client asks.',
+    ].filter((x) => x !== null);
+    if (!confirm(lines.join('\n'))) return;
+    const m = await portalEmailCall({ action: 'merge', account_email: portalEmailsAccount, merge_email: mergeEmail, confirm: true }).catch(() => null);
+    if (!m || !m.ok) { portalEmailMsg((m && m.error) || 'The merge did not finish. It is safe to try again.', true); return; }
+    portalEmailsRender({ signin: portalEmailsAccount, emails: m.emails });
+    portalEmailMsg('Merged. ' + mergeEmail + ' is locked' + (m.saved_cards ? ', and ' + m.detached_cards + ' of ' + m.saved_cards + ' saved cards were removed' : '') + '.');
   }
 
   // Delete (2026-09-24), requested directly: there was no way to delete a

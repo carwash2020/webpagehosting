@@ -9,7 +9,8 @@ const path = require('path');
 const TOOLS = path.join(__dirname, '..', '..', 'tools');
 const WIKI = fs.readFileSync(path.join(TOOLS, 'parts-reference.html'), 'utf8');
 const RUNWAY = fs.readFileSync(path.join(TOOLS, 'runway-dashboard.html'), 'utf8');
-const LOGIN = fs.readFileSync(path.join(TOOLS, 'login.html'), 'utf8');
+// The Workspace return-path list moved to the one sign-in in FP4.1 (2026-11-06).
+const LOGIN = fs.readFileSync(path.join(TOOLS, '..', 'portal', 'login.html'), 'utf8');
 
 test('Appliance Wiki: the search box is the first thing in the list view, above the quick-access strip; the disclaimer moved into the help modal', () => {
   const view = WIKI.slice(WIKI.indexOf('<div id="prListView">'));
@@ -37,7 +38,7 @@ test('Runway Dashboard: remembers the last tab per device and honors a #hash, de
 });
 
 test('login: every real, gated tool page is an allowed return path (clients.html was missing; pos.html was later deleted outright as a retired redirect stub)', () => {
-  const list = LOGIN.match(/const ALLOWED_RETURN_PATHS = new Set\(\[([\s\S]*?)\]\);/)[1];
+  const list = LOGIN.match(/const STAFF_RETURN_PATHS = new Set\(\[([\s\S]*?)\]\);/)[1];
   for (const page of ['clients', 'invoice-generator', 'job-tracker', 'finance', 'settings', 'workspace']) {
     assert.ok(list.includes("'/tools/" + page + ".html'"), page + ' should be an allowed return path');
   }

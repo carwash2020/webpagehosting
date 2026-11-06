@@ -26,7 +26,6 @@ const { JSDOM } = require('jsdom');
 
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const AUTH_JS = fs.readFileSync(repo('tools', 'auth.js'), 'utf8');
-const LOGIN = fs.readFileSync(repo('tools', 'login.html'), 'utf8');
 
 const b64url = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const token = (aal, extra = {}) => `${b64url({ alg: 'HS256' })}.${b64url({ sub: 'u1', email: 'connor@triplehenterprisesllc.biz', role: 'authenticated', aal, ...extra })}.sig`;
@@ -79,7 +78,7 @@ test('a password-only session the server refuses is cleared and sent to sign in 
   assert.equal(calls[0].init.method, 'POST');
   assert.equal(calls[0].init.headers.Authorization, `Bearer ${token('aal1')}`);
   assert.equal(sandbox.localStorage.getItem('th_auth_session'), null, 'session cleared');
-  assert.equal(location.href, '/tools/login.html?reason=mfa&return=%2Ftools%2Finvoice-generator.html');
+  assert.equal(location.href, '/portal/login.html?reason=mfa&return=%2Ftools%2Finvoice-generator.html', 'the one sign-in (FP4.1)');
 });
 
 test('a password-only session the server still accepts (no authenticator, or the dry run) is left alone', async () => {
@@ -137,7 +136,7 @@ test('redeemRecoveryCode calls the new RPC, and falls back to the old name only 
   assert.equal(seen.length, 1, 'no fallback for a real error, only for a missing function');
 });
 
-// ---- login.html, end to end in jsdom --------------------------------------------------
+// ---- the sign-in's staff steps, end to end in jsdom --------------------------------------------------
 
 const EMAIL = 'connor@triplehenterprisesllc.biz';
 const sessionReply = (aal, refresh) => reply({ access_token: token(aal), refresh_token: refresh, expires_at: Math.floor(Date.now() / 1000) + 3600, user: { email: EMAIL } });
@@ -207,18 +206,12 @@ function fakeSupabase({ factorVerified = true, redeemRemovesFactor = true, role 
   return state;
 }
 
-function loadLogin(backend, url = 'https://www.triplehenterprisesllc.biz/tools/login.html') {
-  const html = LOGIN
-    .replace(/<script src="\/tools\/auth\.js\?v=[^"]*"><\/script>/, () => '<script>' + AUTH_JS + '</script>')
-    .replace(/<script src="\/tools\/tools-[a-z-]+\.js\?v=[^"]*" defer><\/script>/g, '');
-  const dom = new JSDOM(html, {
-    runScripts: 'dangerously', url,
-    beforeParse(w) { w.fetch = backend.fetch; },
-  });
-  const w = dom.window;
-  w.__redirects = 0;
-  w.redirectAfterLogin = () => { w.__redirects++; };
-  return w;
+// The one sign-in (fix plan FP4.1, 2026-11-06): the Workspace steps are the
+// staff half of portal/login.html, run here on this file's fake backend.
+const SIGNIN = require('../signin-harness');
+require('node:test').after(SIGNIN.closeAll);
+function loadLogin(backend, url = SIGNIN.URL_) {
+  return SIGNIN.openOnBackend(backend.fetch, { url });
 }
 const visible = (w, id) => w.document.getElementById(id).style.display !== 'none';
 async function until(check, what) {
@@ -229,35 +222,36 @@ async function until(check, what) {
   assert.fail(`timed out waiting for: ${what}`);
 }
 async function signInAndOfferRecovery(w) {
-  w.document.getElementById('loginEmail').value = 'connor@triplehenterprisesllc.biz';
-  w.document.getElementById('loginPassword').value = 'correct horse';
+  w.document.getElementById('clientEmail').value = 'connor@triplehenterprisesllc.biz';
+  w.document.getElementById('clientPassword').value = 'correct horse';
   w.document.getElementById('loginForm').dispatchEvent(new w.Event('submit', { cancelable: true }));
-  await until(() => visible(w, 'mfaChallengeView'), 'the code prompt');
-  w.document.getElementById('mfaUseRecoveryCodeLink').click();
-  assert.ok(visible(w, 'mfaRecoveryCodeInput'));
+  await until(() => visible(w, 'staffCodeView'), 'the code prompt');
+  w.document.getElementById('staffRecoveryToggle').click();
+  assert.ok(w.document.getElementById('staffCodeView').classList.contains('is-recovery'), 'the recovery-code field is the one showing');
 }
-const storedSession = (w) => JSON.parse(w.localStorage.getItem('th_auth_session') || 'null');
+// Remember me starts off on the one sign-in, so the session is in sessionStorage.
+const storedSession = (w) => JSON.parse(w.localStorage.getItem('th_auth_session') || w.sessionStorage.getItem('th_auth_session') || 'null');
 
-test('login.html: a lost-phone recovery redeems the code, sets up a new authenticator, and only then stores a verified session', async () => {
+test('sign-in (staff): a lost-phone recovery redeems the code, sets up a new authenticator, and only then stores a verified session', async () => {
   const backend = fakeSupabase();
   const w = loadLogin(backend);
   await signInAndOfferRecovery(w);
   assert.equal(storedSession(w), null, 'nothing stored after the password alone');
 
-  w.document.getElementById('mfaRecoveryCodeInput').value = 'ABCD-1234';
-  w.document.getElementById('mfaChallengeSubmitBtn').click();
-  await until(() => visible(w, 'mfaEnrollView'), 'the new-authenticator step');
-  assert.equal(w.document.getElementById('mfaEnrollTitle').textContent, 'Set up a new authenticator');
-  assert.match(w.document.getElementById('mfaEnrollSub').textContent, /Recovery code accepted\. Your old authenticator was removed and your other devices were signed out\./);
+  w.document.getElementById('staffRecoveryInput').value = 'ABCD-1234';
+  w.document.getElementById('staffCodeSubmit').click();
+  await until(() => visible(w, 'staffEnrollView'), 'the new-authenticator step');
+  assert.equal(w.document.getElementById('staffEnrollTitle').textContent, 'Set up a new authenticator');
+  assert.match(w.document.getElementById('staffEnrollSub').textContent, /Recovery code accepted\. Your old authenticator was removed and your other devices were signed out\./);
   assert.equal(storedSession(w), null, 'still nothing stored: the new authenticator comes first');
   assert.equal(w.__redirects, 0);
 
-  w.document.getElementById('mfaEnrollCodeInput').value = '123456';
-  w.document.getElementById('mfaEnrollVerifyBtn').click();
-  await until(() => visible(w, 'mfaRecoveryCodesView'), 'the new recovery codes');
-  assert.match(w.document.getElementById('mfaRecoveryCodesList').textContent, /NEW1-AAAA/);
+  w.document.getElementById('staffEnrollCode').value = '123456';
+  w.document.getElementById('staffEnrollVerify').click();
+  await until(() => visible(w, 'staffCodesView'), 'the new recovery codes');
+  assert.match(w.document.getElementById('staffCodesList').textContent, /NEW1-AAAA/);
 
-  w.document.getElementById('mfaRecoveryCodesContinueBtn').click();
+  w.document.getElementById('staffCodesContinue').click();
   // The role check (staff or client?) now runs before the redirect.
   await until(() => w.__redirects === 1, 'the redirect');
   const s = storedSession(w);
@@ -266,58 +260,56 @@ test('login.html: a lost-phone recovery redeems the code, sets up a new authenti
   assert.ok(!backend.log.some((l) => l.includes('verify_and_consume')), 'the new RPC was there, so no fallback');
 });
 
-test('login.html: a wrong recovery code shows an error and stores nothing', async () => {
+test('sign-in (staff): a wrong recovery code shows an error and stores nothing', async () => {
   const w = loadLogin(fakeSupabase());
   await signInAndOfferRecovery(w);
-  w.document.getElementById('mfaRecoveryCodeInput').value = 'WRNG-0000';
-  w.document.getElementById('mfaChallengeSubmitBtn').click();
-  await until(() => w.document.getElementById('mfaChallengeError').textContent, 'an error');
-  assert.equal(w.document.getElementById('mfaChallengeError').textContent, 'That recovery code is invalid or already used.');
+  w.document.getElementById('staffRecoveryInput').value = 'WRNG-0000';
+  w.document.getElementById('staffCodeSubmit').click();
+  await until(() => w.document.getElementById('staffCodeError').textContent, 'an error');
+  assert.equal(w.document.getElementById('staffCodeError').textContent, 'That recovery code is invalid or already used.');
   assert.equal(storedSession(w), null);
   assert.equal(w.__redirects, 0);
-  assert.ok(visible(w, 'mfaChallengeView'));
+  assert.ok(visible(w, 'staffCodeView'));
 });
 
-test('login.html: an account whose permissions do not require two-factor goes straight in after a recovery code', async () => {
+test('sign-in (staff): an account whose permissions do not require two-factor goes straight in after a recovery code', async () => {
   const backend = fakeSupabase({ role: { can_manage_roles: false } });
   const w = loadLogin(backend);
   await signInAndOfferRecovery(w);
-  w.document.getElementById('mfaRecoveryCodeInput').value = 'ABCD-1234';
-  w.document.getElementById('mfaChallengeSubmitBtn').click();
+  w.document.getElementById('staffRecoveryInput').value = 'ABCD-1234';
+  w.document.getElementById('staffCodeSubmit').click();
   await until(() => w.__redirects === 1, 'the redirect');
   assert.equal(storedSession(w).access_token, token('aal1'), 'no authenticator left, so the server accepts this session');
-  assert.ok(!visible(w, 'mfaEnrollView'));
+  assert.ok(!visible(w, 'staffEnrollView'));
 });
 
-test('login.html: if the database is rolled back to consume-only codes (authenticator kept), recovery signs in exactly as before', async () => {
+test('sign-in (staff): if the database is rolled back to consume-only codes (authenticator kept), recovery signs in exactly as before', async () => {
   const backend = fakeSupabase({ redeemRemovesFactor: false });
   const w = loadLogin(backend);
   await signInAndOfferRecovery(w);
-  w.document.getElementById('mfaRecoveryCodeInput').value = 'ABCD-1234';
-  w.document.getElementById('mfaChallengeSubmitBtn').click();
+  w.document.getElementById('staffRecoveryInput').value = 'ABCD-1234';
+  w.document.getElementById('staffCodeSubmit').click();
   await until(() => w.__redirects === 1, 'the redirect');
-  assert.ok(!visible(w, 'mfaEnrollView'), 'no attempt to enroll a second authenticator (GoTrue would refuse it)');
+  assert.ok(!visible(w, 'staffEnrollView'), 'no attempt to enroll a second authenticator (GoTrue would refuse it)');
   assert.ok(!backend.log.includes('POST /auth/v1/factors'));
   assert.equal(storedSession(w).access_token, token('aal1'));
 });
 
-test('login.html: a normal first-time mandatory enrollment keeps its original wording', async () => {
+test('sign-in (staff): a normal first-time mandatory enrollment keeps its original wording', async () => {
   const backend = fakeSupabase({ factorVerified: false });
   const w = loadLogin(backend);
-  w.document.getElementById('loginEmail').value = 'connor@triplehenterprisesllc.biz';
-  w.document.getElementById('loginPassword').value = 'correct horse';
+  w.document.getElementById('clientEmail').value = 'connor@triplehenterprisesllc.biz';
+  w.document.getElementById('clientPassword').value = 'correct horse';
   w.document.getElementById('loginForm').dispatchEvent(new w.Event('submit', { cancelable: true }));
-  await until(() => visible(w, 'mfaEnrollView'), 'the enrollment step');
-  assert.equal(w.document.getElementById('mfaEnrollTitle').textContent, 'Set up two-factor authentication');
-  assert.match(w.document.getElementById('mfaEnrollSub').textContent, /^Your account requires two-factor authentication/);
+  await until(() => visible(w, 'staffEnrollView'), 'the enrollment step');
+  assert.equal(w.document.getElementById('staffEnrollTitle').textContent, 'Set up two-factor authentication');
+  assert.match(w.document.getElementById('staffEnrollSub').textContent, /^Your account requires two-factor authentication/);
 });
 
-test('login.html: arriving from a refused session explains why, and a normal visit does not', () => {
-  const sent = loadLogin(fakeSupabase(), 'https://www.triplehenterprisesllc.biz/tools/login.html?reason=mfa&return=%2Ftools%2Fjobs.html');
+test('sign-in (staff): arriving from a refused session explains why, and a normal visit does not', () => {
+  const sent = loadLogin(fakeSupabase(), SIGNIN.URL_ + '?reason=mfa&return=%2Ftools%2Fjobs.html');
   assert.equal(sent.document.querySelector('.login-sub').textContent, 'For your security, sign in again with your authenticator code.');
   const normal = loadLogin(fakeSupabase());
-  // First Impressions handoff (2026-09-29): step-1 subtitle copy changed
-  // from "Sign in to continue." to the app's one-line pitch -- a
-  // deliberate copy change (README "Step 1 - Sign in"), not a regression.
-  assert.equal(normal.document.querySelector('.login-sub').textContent, 'Jobs, invoices and money, all in one place.');
+  // One sign-in (FP4.1, approved OneSignIn design): one line for everyone.
+  assert.equal(normal.document.querySelector('.login-sub').textContent, 'For Triple H clients and the Triple H team.');
 });

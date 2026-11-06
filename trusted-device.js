@@ -2,9 +2,9 @@
 // client portal and the Workspace. "Trust this device for 30 days" on the
 // 2FA step lets a correct PASSWORD skip the code on this device for 30 days.
 //
-// The server half is sql/security/add_trusted_devices.sql. One system, two
-// sign-in pages: portal/login.html calls it through supabase-js, and
-// tools/login.html through raw fetch (auth.js), each passing its own
+// The server half is sql/security/add_trusted_devices.sql. One system, one
+// sign-in page (fix plan FP4.1): portal/login.html calls it through
+// supabase-js for clients and through raw fetch (auth.js) for staff, each passing its own
 // `rpc(name, args)` function here. Nothing in this file can let anyone skip
 // anything by itself: the token kept below is only ever sent to
 // use_trusted_device(), which compares it with a bcrypt hash in a table no

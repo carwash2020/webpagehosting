@@ -6005,3 +6005,66 @@ Fix plan FP2.1–FP2.9, plus RP6.6 and RP6.7, which the plan ships with the FP2.
   - new: `tests/tools/fp2-nav-before-role.test.js`, `tests/tools/fp2-role-aware-tour.test.js` and `tests/tools/fp2-dev-password-above-sheets.test.js`;
   - added cases in `money-screen`, `job-money-pipeline` and `field-office-view`;
   - job-list and tour harnesses that assumed "show everything before the role" now load as an owner.
+
+## What changed, 2026-11-06 -- Group 2, part 1: FP3 (Field view everywhere, new-invite defaults, team directory)
+
+Fix plan FP3.1–FP3.6 (decisions D2, D3, D13; approved designs FieldViewEverywhere and TeamDirectoryAndInvite).
+
+- **FP3.1 Field view everywhere** (`tools/tools-nav-pwa.js`, `tools/styles-tools.css`):
+  - Field view is a screen filter for an account that can also use Office view: your own jobs and today's work only.
+  - The office sections (Clients, Invoices, Money, Contracts, Reviews, Team) leave the nav. Opening one shows "X is in Office view", with Switch to Office.
+  - Dashboard drops Money owed, Insights and Business; Jobs drops Board and the money column.
+  - It never decides access. An account without Office view is untouched: a field tech with Clients keeps Clients.
+  - The view switch now also shows on Clients, Invoices and Money.
+- **FP3.2:** Job details' More details section starts open.
+- **FP3.3 (D3):** new invites get Clients on (`sql/security/fp3_invite_defaults_and_templates.sql`, applied 2026-11-06). The role templates gain `can_manage_clients` and `can_manage_others_jobs`.
+- **FP3.4–3.5:** Dev Tools shows all 11 permission switches, with a new Work group (Clients, Others' jobs). The "None" preset now reads "own jobs and Clients only".
+- **FP3.6 (D13):** Team is a read-only directory (names and titles) for everyone signed in to the Workspace. Managing the team still needs Roles.
+- Tests: `tests/tools/fp3-field-view-everywhere.test.js`, `tests/tools/fp3-defaults-and-switches.test.js`, `tests/security/fp3-invite-defaults-db.test.js`, `tests/workspace/fp3-team-directory.test.js`.
+
+## What changed, 2026-11-06 -- FP4.1 One sign-in: Triple H Homebase
+
+Fix plan FP4.1 (D14; approved design OneSignIn). One sign-in page for everyone: **`/portal/login.html`, "Triple H Homebase"**.
+
+- **Why that address, not the planned `/signin.html`:** the portal's installed app covers `/portal/` and the Workspace's covers `/`. Only `/portal/` is inside both, so neither app drops out into a browser to sign in. The portal's own guards and links already point there.
+- **How it works** (`portal/login.html`):
+  1. The password is checked once, on a supabase-js client that stores nothing (`persistSession: false`).
+  2. `signin_account_kind()` (new, `sql/security/fp4_signin_account_kind.sql`) answers staff or client. Only an explicit `'staff'` counts as staff; an error or no answer is a client, never the Workspace.
+  3. **Staff:** the Workspace's own steps, moved here unchanged in order and in every `auth.js` call: trusted device, then the authenticator code or a recovery code, or required setup with recovery codes, then the Face ID offer. Nothing is stored until the second step clears. The session goes to the Workspace's store (`th_auth_session`) and nowhere else.
+  4. **Client:** the session moves into the portal's store, then the portal's own steps run as before.
+- **One sign-in, never two (A1):** the old hand-off between two pages (sign in, get sent to the other page, sign in again) is gone, along with its email hint.
+- **Already signed in:** "You're signed in as …", with Continue, Sign in as a different account, and Create a client account. Both of the last two sign this device out of both stores first, so two sessions never collide.
+- **`?return=`** is checked per kind of account: staff only to Workspace pages (`STAFF_RETURN_PATHS`), clients only to portal pages.
+- **Forgot password:** one reset link for everyone, to `/tools/reset-password.html`, which now ends back at the one sign-in.
+- **The old address:** `tools/login.html` forwards to `/portal/login.html` and keeps `?return=` and `?reason=`, so bookmarks and the installed app keep working. `tools/index.html` and every `auth.js` guard (`requireAuth`, the server two-factor check, Sign out) point at the one sign-in.
+- **Remember me starts off for staff too.** It is one public page now (handoff 2026-11-03 §5).
+- Tests:
+  - new: `tests/portal/one-sign-in.test.js` (13), `tests/security/fp4-signin-account-kind-db.test.js` (3), and the shared jsdom harness `tests/signin-harness.js`;
+  - 18 older sign-in test files ported to the one page (staff ids `staff*`), every safety assertion kept.
+- `scripts/signin-browser-check.js` was ported and run in Chromium: all checks pass, including axe WCAG 2.2 AA on every state. The screenshots in `docs/screenshots/signin/` were regenerated.
+
+## What changed, 2026-11-06 -- FP4.2 Verified email aliases
+
+Fix plan FP4.2 (D11; approved design EmailAliases). A client can add other email addresses they've used with Triple H. Invoices, quotes, jobs, contracts and checkups sent to any of them show up in their portal.
+
+- **Proof of ownership, never a guess:**
+  - The client adds an email (portal → Settings → Profile → Emails) and gets a 6-digit code at that address. It works for 15 minutes and allows 5 wrong tries; each address gets at most 5 codes an hour. Only the right code links the email. Never matched on name or phone.
+  - "Add" reads the same for every address. What happens to a staff address, an address with its own portal account, or one already linked elsewhere is said only after the right code, and none of those is ever linked.
+- **An email with its own portal account is a staff-assisted merge** (Workspace → client record → Portal emails, accounts with Clients, after a preview):
+  1. B is locked and can't sign in again.
+  2. B's saved cards are detached from B's Stripe customer. A card can't move between Stripe customers, so the client adds a card again at their next payment.
+  3. B's email and B's other confirmed emails become A's, so A sees B's history. Nothing is deleted, and each step is safe to retry.
+- **Staff can start an add** from the client record. We email a link to that address, and it links only when someone opens it while signed in to that client's portal account. It works for 7 days.
+- **Database** (`sql/security/fp4_email_aliases.sql`):
+  - `client_email_aliases`: no client access at all.
+  - `client_portal_my_emails()`: the caller's sign-in email plus confirmed aliases.
+  - The 13 client policies that matched `auth.email() = client_email` now match any of my emails, case-insensitively. The "Confirmed email only" policies are unchanged.
+  - Rows that belong to the person themselves stay keyed to the sign-in email: profile, notification settings, read marks, the sender of a message, and the asker of a quote question.
+  - `get_portal_unread_counts()` counts alias threads and uses the reader's own read marks.
+- **Edge functions:**
+  - New: `portal-email-alias`.
+  - `respond-to-quote`, `respond-to-contract`, `schedule-quote-job`, `schedule-checkup-visit`, `cancel-work-order`, `get-job-photo-urls`, `create-payment-intent` and `create-bulk-payment-intent` accept a record on any confirmed email. Cards stay on the payer's own Stripe customer.
+  - The saved-card gate in `manage-saved-card` counts records on a confirmed email.
+  - The helper fails closed: if the alias table can't be read, only the sign-in email counts.
+  - `ensure-my-referral-code` was left as is: it only looks up a display name.
+- Tests: `tests/security/fp4-email-aliases-db.test.js` (8, PGlite), `tests/edge-functions/portal-email-alias.test.js` (9), `tests/edge-functions/fp4-alias-ownership.test.js` (3) and `tests/portal/fp4-email-aliases-ui.test.js` (8).

@@ -69,9 +69,10 @@ test('tied labels point at the right field (a sample from each kind of form)', (
     assert.ok(doc.getElementById(id), `${page} #${id} exists`);
   }
   // Code fields with no visible label say what they want.
-  for (const page of ['tools/login.html', 'portal/login.html']) {
-    const doc = new JSDOM(read(page)).window.document;
-    assert.equal(doc.getElementById('mfaChallengeCodeInput').getAttribute('aria-label'), '6-digit code from your authenticator app', page);
+  // One sign-in since FP4.1: the client and staff code steps both live on portal/login.html.
+  const signIn = new JSDOM(read('portal/login.html')).window.document;
+  for (const id of ['mfaChallengeCodeInput', 'staffCodeInput']) {
+    assert.equal(signIn.getElementById(id).getAttribute('aria-label'), '6-digit code from your authenticator app', id);
   }
 });
 

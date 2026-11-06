@@ -67,7 +67,8 @@ test('every one of the 8 portal pages has the generic 16px fallback rule, coveri
 
 test('every affected tools page and the public booking form also got the fix', () => {
   for (const file of [
-    'tools/job-tracker.html', 'tools/login.html', 'tools/parts-reference.html', 'tools/reset-password.html',
+    // tools/login.html only forwards to /portal/login.html since FP4.1 (2026-11-06).
+    'tools/job-tracker.html', 'tools/parts-reference.html', 'tools/reset-password.html',
     'tools/review-request.html', 'tools/route-planner.html', 'tools/runway-dashboard.html', 'tools/workspace.html',
   ]) {
     const html = fs.readFileSync(repo(file), 'utf8');
@@ -84,8 +85,8 @@ test('the shared "Report a problem" textarea, identical across all 8 portal page
   }
 });
 
-test('the shared login-field rule, identical across portal login/set-password and tools login/reset-password, is fixed on all four', () => {
-  for (const file of ['portal/login.html', 'portal/set-password.html', 'tools/login.html', 'tools/reset-password.html']) {
+test('the shared login-field rule, identical across portal login/set-password and tools reset-password, is fixed on all three (tools login forwards since FP4.1)', () => {
+  for (const file of ['portal/login.html', 'portal/set-password.html', 'tools/reset-password.html']) {
     const html = fs.readFileSync(repo(file), 'utf8');
     assert.match(html, /font-size: 16px; font-family: inherit; box-sizing: border-box;\s*\n\s*\}/, `${file}'s login-field input should be at 16px`);
   }

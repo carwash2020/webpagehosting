@@ -38,9 +38,9 @@ const PORTAL_DIR = path.join(__dirname, '..', 'portal');
 // Pages that are deliberately different, and why -- see the code review
 // this checker came out of for the full reasoning on each:
 const EXEMPT = {
-  'login.html': 'the login gate itself -- requireAuth() would be circular here',
+  'login.html': 'forwards to the one sign-in, /portal/login.html, since FP4.1 -- not a gated app page',
   'reset-password.html': "reached from a password-recovery email link before the person is logged in -- requireAuth() would lock them out of the one page meant to get them back in",
-  'index.html': 'bare /tools/ directory URL -- soft-landing redirect to login.html, not a gated app page',
+  'index.html': 'bare /tools/ directory URL -- soft-landing redirect to the one sign-in, not a gated app page',
   'runway-dashboard.html': 'has its own fully self-contained <style> block, does not load /styles.css',
 };
 

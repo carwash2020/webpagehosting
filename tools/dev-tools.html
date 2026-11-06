@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=a4f7f4597e"></script>
+<script src="/tools/auth.js?v=f6476e7a83"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -53,15 +53,15 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=7c03870603">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=a038f9f7de">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=32b0b6ede8">
 <script src="/tools/data-layer.js?v=e736cf54f5" defer></script>
-<script src="/tools/dev-tools-shared.js?v=c57edc22d2" defer></script>
+<script src="/tools/dev-tools-shared.js?v=3132b24dc1" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=05f55fda07" defer></script>
-<script src="/tools/tools-command-palette.js?v=8cde9621ed" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=a7791bfe4b" defer></script>
+<script src="/tools/tools-command-palette.js?v=1acf1175ac" defer></script>
 <script src="/tools/sync.js?v=92a4047864" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -1302,7 +1302,7 @@
         <input type="email" id="newAccountEmail" placeholder="name@example.com" style="margin-top:4px;">
       </label>
       <label style="display:block; margin-bottom:10px; font-size:13px; color:var(--text-dim);">Start from a template (optional)
-        <select id="newAccountPreset" style="margin-top:4px;"><option value="">None -- start with everything unchecked</option></select>
+        <select id="newAccountPreset" style="margin-top:4px;"><option value="">None -- own jobs and Clients only</option></select>
       </label>
       <button class="secondary-btn" onclick="addAccount()">Add account</button>
     </div>
@@ -1333,16 +1333,18 @@
   // (no CSP, manifest or PWA meta) since 2026-09-21, so "Run full health
   // check" reported 1 ISSUE on every run. Retired stubs belong in
   // check-consistency.js's EXEMPT list, not here.
+  // login.html left this list in fix plan FP4.1 (2026-11-06): it only
+  // forwards to the one sign-in, /portal/login.html.
   const TOOL_PAGES_TO_CHECK = [
     'workspace.html', 'contract-generator.html', 'invoice-generator.html',
-    'job-tracker.html', 'login.html', 'review-request.html', 'route-planner.html',
+    'job-tracker.html', 'review-request.html', 'route-planner.html',
     'parts-reference.html', 'runway-dashboard.html', 'dev-tools.html',
   ];
   // Pages that are deliberately different -- kept in sync with
-  // scripts/check-consistency.js's EXEMPT list. login.html has no auth
-  // gate to check (it IS the gate), and runway-dashboard.html doesn't
-  // load /styles.css at all.
-  const NO_AUTH_CHECK = ['login.html'];
+  // scripts/check-consistency.js's EXEMPT list. runway-dashboard.html
+  // doesn't load /styles.css at all. (None skip the auth gate since
+  // login.html left the list.)
+  const NO_AUTH_CHECK = [];
   const NO_STYLES_VERSION_CHECK = ['runway-dashboard.html'];
 
 
@@ -2345,7 +2347,7 @@
     // needed. can_manage_business_finances (the old, broader
     // checkbox) no longer exists as a column at all.
     const res = await fetchWithTimeout(
-      SUPABASE_URL + '/rest/v1/account_roles?select=email,role_name,display_name,title,can_manage_roles,can_access_dev_tools,can_access_dev_tools_full,can_manage_site_content,can_manage_invoices,can_manage_contracts,can_view_finance,can_view_runway,can_manage_reviews&order=email',
+      SUPABASE_URL + '/rest/v1/account_roles?select=email,role_name,display_name,title,can_manage_roles,can_access_dev_tools,can_access_dev_tools_full,can_manage_site_content,can_manage_invoices,can_manage_contracts,can_view_finance,can_view_runway,can_manage_reviews,can_manage_clients,can_manage_others_jobs&order=email',
       8000,
       { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
     );
@@ -2359,7 +2361,7 @@
   // authorization time anywhere in the app anymore.
   async function fetchRoleDefinitions() {
     const res = await fetchWithTimeout(
-      SUPABASE_URL + '/rest/v1/role_definitions?select=name,can_manage_roles,can_access_dev_tools,can_access_dev_tools_full,can_manage_site_content,can_manage_invoices,can_manage_contracts,can_view_finance,can_view_runway,can_manage_reviews&order=name',
+      SUPABASE_URL + '/rest/v1/role_definitions?select=name,can_manage_roles,can_access_dev_tools,can_access_dev_tools_full,can_manage_site_content,can_manage_invoices,can_manage_contracts,can_view_finance,can_view_runway,can_manage_reviews,can_manage_clients,can_manage_others_jobs&order=name',
       8000,
       { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
     );
@@ -2598,7 +2600,13 @@
   // Grouped into 5 categories for the UI below -- "Money" and "Grow"
   // match workspace.html's own tool-group-label names for the same
   // tools, so the grouping here isn't a new vocabulary to learn.
+  // Fix plan FP3.4 (2026-11-06): Work holds the two Phase 4 switches, so
+  // this panel and the Starting templates table cover all eleven.
   const PERMISSION_CATEGORIES = [
+    { key: 'work', label: 'Work', fields: [
+      { field: 'can_manage_clients', label: 'Clients' },
+      { field: 'can_manage_others_jobs', label: 'Manage jobs for others' },
+    ] },
     { key: 'devtools', label: 'Dev Tools', fields: [
       { field: 'can_access_dev_tools', label: 'Dev Tools' },
       { field: 'can_access_dev_tools_full', label: 'Dev Tools (full technical)' },
@@ -2671,7 +2679,7 @@
 
       const presetSelect = document.getElementById('newAccountPreset');
       if (presetSelect) {
-        presetSelect.innerHTML = '<option value="">None -- start with everything unchecked</option>' +
+        presetSelect.innerHTML = '<option value="">None -- own jobs and Clients only</option>' +
           roleDefs.map(r => '<option value="' + escapeAttr(r.name) + '">' + escapeHtml(r.name) + ' template</option>').join('');
       }
       const addForm = document.getElementById('addAccountForm');
@@ -2813,6 +2821,10 @@
       can_view_finance: preset ? !!preset.can_view_finance : false,
       can_view_runway: preset ? !!preset.can_view_runway : false,
       can_manage_reviews: preset ? !!preset.can_manage_reviews : false,
+      // FP3.5: the two Phase 4 switches come from the template too; with no
+      // template, Clients is on (D3) and Manage jobs for others is off.
+      can_manage_clients: preset ? !!preset.can_manage_clients : true,
+      can_manage_others_jobs: preset ? !!preset.can_manage_others_jobs : false,
       assigned_by: (typeof getCurrentUserEmail === 'function' && getCurrentUserEmail()) || null,
     };
 
@@ -4485,6 +4497,8 @@
       host.setAttribute('data-th-key', key);
       host.innerHTML = '<table class="th-dt-matrix"><thead><tr><th scope="col">Permission</th>' +
         roles.map(r => '<th scope="col">' + esc(r.name) + '</th>').join('') + '</tr></thead><tbody>' +
+        // Base access (FP3.4): what every account has, switches or not.
+        '<tr><td>Own assigned jobs: log hours and parts, mark done (always)</td>' + roles.map(() => '<td><span class="th-dt-mark is-on" aria-label="Yes">✓</span></td>').join('') + '</tr>' +
         fields.map(f => '<tr><td>' + esc(f.label) + '</td>' + roles.map(r => {
           const on = !!r[f.field];
           return '<td><span class="th-dt-mark' + (on ? ' is-on' : '') + '" aria-label="' + (on ? 'Yes' : 'No') + '">' + (on ? '✓' : '–') + '</span></td>';

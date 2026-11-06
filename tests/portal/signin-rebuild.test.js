@@ -23,12 +23,22 @@ const { JSDOM } = require('jsdom');
 const ROOT = path.join(__dirname, '..', '..');
 const read = (...p) => fs.readFileSync(path.join(ROOT, ...p), 'utf8');
 const PORTAL_LOGIN = read('portal', 'login.html');
-const TOOLS_LOGIN = read('tools', 'login.html');
+// One sign-in (fix plan FP4.1, 2026-11-06): tools/login.html only forwards
+// here now, so the Workspace's steps (code, recovery code, required setup)
+// are the staff half of portal/login.html. TOOLS_LOGIN stays as a name for
+// that half's checks below.
+const TOOLS_LOGIN = PORTAL_LOGIN;
 const CSS = read('signin.css');
 const UI_JS = read('signin-ui.js');
 const PORTAL_APP = read('portal', 'portal-app.js');
 const TRUSTED_JS = read('trusted-device.js');
-const PAGES = { 'portal/login.html': PORTAL_LOGIN, 'tools/login.html': TOOLS_LOGIN };
+const PAGES = { 'portal/login.html': PORTAL_LOGIN };
+
+test('tools/login.html is only a forward to the one sign-in, keeping ?return= and ?reason=', () => {
+  const stub = read('tools', 'login.html');
+  assert.match(stub, /location\.replace\('\/portal\/login\.html' \+ location\.search \+ location\.hash\)/);
+  assert.doesNotMatch(stub, /<form|type="password"/, 'no second password form to keep in step');
+});
 
 // ---- ghost logo + shared assets ---------------------------------------------
 
@@ -149,30 +159,29 @@ test('email + password with Show/Hide, a real Remember me switch, and Forgot pas
     assert.match(html, /<h1 class="login-title/, `${name}: one h1`);
   }
   // Handoff 2026-11-03 §5: "Portal 'Remember me for 30 days' is switched ON by
-  // default on a public login page. Fix: default it OFF." The Workspace sign-in
-  // (staff, own devices) keeps it on.
-  assert.match(PORTAL_LOGIN, /<input type="checkbox" id="rememberMe" role="switch">/, 'portal: Remember me starts OFF');
-  assert.match(TOOLS_LOGIN, /<input type="checkbox" id="rememberMe" role="switch" checked>/, 'Workspace: unchanged');
+  // default on a public login page. Fix: default it OFF." Since FP4.1 there
+  // is one public page for everyone, so it starts OFF for staff too.
+  assert.match(PORTAL_LOGIN, /<input type="checkbox" id="rememberMe" role="switch">/, 'Remember me starts OFF');
+  assert.equal((PORTAL_LOGIN.match(/id="rememberMe"/g) || []).length, 1, 'one Remember me, for both kinds of account');
   // Forgot password was a href-less <a> (not keyboard reachable); now a real button.
   assert.match(PORTAL_LOGIN, /<button type="button" class="forgot-link" id="forgotLink">/);
 });
 
 test('both 2FA steps offer "Trust this device for 30 days"', () => {
   assert.match(PORTAL_LOGIN, /id="portalTrustDevice"[\s\S]{0,300}Trust this device for 30 days/);
-  assert.match(TOOLS_LOGIN, /id="thTrustDevice"[\s\S]{0,300}Trust this device for 30 days/);
+  assert.match(TOOLS_LOGIN, /id="staffTrustDevice"[\s\S]{0,300}Trust this device for 30 days/);
   assert.match(PORTAL_LOGIN, /portalSetRemember\(document\.getElementById\('portalTrustDevice'\)\.checked\);\s*ThSignin\.setBusy\(submitBtn[\s\S]*?challengeAndVerify/, 'portal: trust chosen BEFORE the code is verified, code check unchanged');
-  assert.match(TOOLS_LOGIN, /pendingRememberMe = document\.getElementById\('thTrustDevice'\)\.checked;/);
-  assert.match(TOOLS_LOGIN, /persistSession\(\{\s*access_token: result\.access_token,[\s\S]*?\}, pendingRememberMe\);/, 'tools: the verified session is stored with the trust choice');
+  assert.match(TOOLS_LOGIN, /staffRememberMe = document\.getElementById\('staffTrustDevice'\)\.checked;/);
+  assert.match(TOOLS_LOGIN, /staffPending = \{ access_token: result\.access_token,[^\n]*\};\s*staffStoreAndFinish\(staffPending\);/, 'staff: the verified session is what gets stored');
+  assert.match(TOOLS_LOGIN, /function staffStoreAndFinish\(session\) \{\s*persistSession\(session, staffRememberMe\);/, 'staff: stored with the trust choice');
 });
 
 test('Trust helper copy says the code is skipped but the password is not; headings match on both screens', () => {
   // Trusted devices (2026-11-01): Trust now does skip the code on this
   // device for 30 days (server-checked; see tests/security/trusted-devices-db.test.js).
-  for (const [name, html] of Object.entries(PAGES)) {
-    assert.match(html, /Skip the code here for 30 days\. You still sign in with your password\. Leave off on a shared computer\./, name);
-  }
+  const copy = /Skip the code here for 30 days\. You still sign in with your password\. Leave off on a shared computer\./g;
+  assert.equal((PORTAL_LOGIN.match(copy) || []).length, 2, 'the client and staff code steps say the same thing');
   assert.match(PORTAL_LOGIN, /id="pageTitle">Sign in<\/h1>/);
-  assert.match(TOOLS_LOGIN, /id="loginTitle">Sign in<\/h1>/);
 });
 
 test('code boxes keep breathing room from the screen edge (focus ring included)', () => {
@@ -184,11 +193,15 @@ test('2FA is not weakened: only the server can let a device skip the code, and n
   // exists, unless use_trusted_device() (server-side, bcrypt-checked) says
   // this device is trusted. No local flag can stand in for that answer.
   assert.match(PORTAL_LOGIN, /aal\.nextLevel === 'aal2' && aal\.currentLevel !== 'aal2'/);
-  assert.match(TOOLS_LOGIN, /const factor = await mfaListVerifiedTotpFactor\(pendingSession\.access_token\);\s*if \(factor\) \{/);
-  assert.match(TOOLS_LOGIN, /if \(requiresMfaForRole\(roleInfo\)\) \{\s*await startMandatoryEnrollment\(\);/, 'employees without a factor are still forced to enrol');
+  assert.match(TOOLS_LOGIN, /const factor = await mfaListVerifiedTotpFactor\(staffPending\.access_token\);\s*if \(factor\) \{/);
+  assert.match(TOOLS_LOGIN, /if \(requiresMfaForRole\(roleInfo\)\) \{ await staffStartEnrollment\(\); return; \}/, 'employees without a factor are still forced to enrol');
   // The skip is only reachable after signInWithPassword / the password grant.
-  assert.ok(PORTAL_LOGIN.indexOf('signInWithPassword') < PORTAL_LOGIN.indexOf('await portalSignInOnTrustedDevice(email)'));
-  assert.ok(TOOLS_LOGIN.indexOf('await signIn(email, password') < TOOLS_LOGIN.indexOf('if (await signInOnTrustedDevice()) return;'));
+  const pw = PORTAL_LOGIN.indexOf('await signinClient.auth.signInWithPassword(');
+  assert.ok(pw > 0 && pw < PORTAL_LOGIN.indexOf('await portalSignInOnTrustedDevice(email)'));
+  assert.ok(pw < PORTAL_LOGIN.indexOf('await staffContinueSignIn('), 'staff steps start only after the password');
+  assert.ok(PORTAL_LOGIN.indexOf('async function staffContinueSignIn(') < PORTAL_LOGIN.indexOf('if (await staffSignInOnTrustedDevice()) return;'));
+  // Staff on a trusted device still pass the Workspace's own two-factor gate.
+  assert.match(TOOLS_LOGIN, /status = await rpc\('internal_mfa_session_status', \{\}\);[\s\S]{0,120}if \(status && status\.blocked === true\) return false;/);
   assert.match(TRUSTED_JS, /rpc\('use_trusted_device'/);
   assert.match(TRUSTED_JS, /if \(ok === true\) return true;/, 'only an explicit true from the server skips the code');
   assert.match(PORTAL_APP, /client\.rpc\('current_session_is_trusted'\)/, 'portal pages ask the server, not a local flag');
@@ -213,9 +226,12 @@ test('loading, wrong-password and success states are wired on both screens', () 
 test('every redirect still happens; success only delays it by the animation', () => {
   // Home, or the checked ?return= page (2026-11-04, §3D) -- portalAfterSignInUrl().
   assert.match(PORTAL_LOGIN, /async function goHomeAfterSignIn\(\) \{[\s\S]*?ThSignin\.success\(\(\) => window\.location\.replace\(portalAfterSignInUrl\(\)\)\);\s*\}/);
-  assert.match(PORTAL_LOGIN, /\}\s*window\.location\.replace\(portalAfterSignInUrl\(\)\);\s*\}\);/, 'already-signed-in visitors are still sent straight on, no animation'); 
-  assert.match(TOOLS_LOGIN, /ALLOWED_RETURN_PATHS\.has\(returnTo\) \? returnTo : '\/tools\/workspace\.html'/);
-  assert.match(TOOLS_LOGIN, /ThSignin\.success\(\(\) => \{ window\.location\.href = target; \}\);/);
+  // Already signed in (FP4.1, approved OneSignIn design): "You're signed in"
+  // with Continue, which goes the same place a fresh sign-in would.
+  assert.match(PORTAL_LOGIN, /showSignedIn\('client', '', email\);/);
+  assert.match(PORTAL_LOGIN, /showSignedIn\('staff',/);
+  assert.match(TOOLS_LOGIN, /STAFF_RETURN_PATHS\.has\(r\) \? r : '\/tools\/workspace\.html'/);
+  assert.match(TOOLS_LOGIN, /ThSignin\.success\(\(\) => \{ window\.location\.href = staffAfterSignInUrl\(\); \}\);/);
 });
 
 function loadUi({ reduced }) {
@@ -345,7 +361,10 @@ test('storage that throws (private mode) never breaks sign-in', () => {
 test('every portal page builds its Supabase client on the shared storage, so Remember me holds across pages', () => {
   for (const f of fs.readdirSync(path.join(ROOT, 'portal')).filter((n) => n.endsWith('.html'))) {
     const html = read('portal', f);
-    const calls = [...html.matchAll(/createClient\(([\s\S]*?)\);/g)].filter((m) => !/const \{ createClient \}/.test(m[0]));
+    const calls = [...html.matchAll(/createClient\(([\s\S]*?)\);/g)].filter((m) => !/const \{ createClient \}/.test(m[0]))
+      // The one sign-in's password check (FP4.1) runs on a client that stores
+      // nothing at all; the session then moves into the shared storage.
+      .filter((m) => !(f === 'login.html' && /storage: memoryStore, persistSession: false/.test(m[1])));
     for (const c of calls) assert.match(c[1], /portalAuthStorage\(\)/, `${f}: createClient without the shared storage`);
     if (calls.length) assert.match(html, /portal-app\.js/, `${f} loads portal-app.js (defines portalAuthStorage)`);
   }

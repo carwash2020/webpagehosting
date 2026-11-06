@@ -1,5 +1,6 @@
 // Trusted devices on the Workspace (2026-11-01): "trusted device skips 2FA
-// for 30 days." Runs the real tools/login.html, settings.html and
+// for 30 days." Runs the real sign-in (the staff half of portal/login.html
+// since fix plan FP4.1, 2026-11-06), tools/settings.html and
 // reset-password.html with the real auth.js and the shared /trusted-device.js
 // in jsdom, against a fake Supabase whose trusted-device functions follow the
 // same rules as sql/security/add_trusted_devices.sql (those rules themselves
@@ -20,7 +21,8 @@ const { JSDOM } = require('jsdom');
 const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const AUTH_JS = fs.readFileSync(repo('tools', 'auth.js'), 'utf8');
 const TRUSTED_JS = fs.readFileSync(repo('trusted-device.js'), 'utf8');
-const LOGIN = fs.readFileSync(repo('tools', 'login.html'), 'utf8');
+const SIGNIN = require('../signin-harness');
+require('node:test').after(SIGNIN.closeAll);
 const SETTINGS = fs.readFileSync(repo('tools', 'settings.html'), 'utf8');
 const RESET = fs.readFileSync(repo('tools', 'reset-password.html'), 'utf8');
 
@@ -115,20 +117,14 @@ function inline(html) {
 }
 
 function loadLogin(backend, { stored } = {}) {
-  const dom = new JSDOM(inline(LOGIN), {
-    runScripts: 'dangerously', url: 'https://www.triplehenterprisesllc.biz/tools/login.html',
+  const w = SIGNIN.openOnBackend(backend.fetch, {
     beforeParse(w) {
-      w.fetch = backend.fetch;
       if (stored) w.localStorage.setItem(DEVICE_KEY, JSON.stringify(stored));
+      // The error log: the one sign-in loads the portal's (portal-app.js).
+      w.__logged = [];
+      w.logClientError = (msg) => { w.__logged.push(String(msg)); };
     },
   });
-  const w = dom.window;
-  // The Workspace's error log (tools-media-sharing.js, not loaded here).
-  w.__logged = [];
-  w.logClientError = (msg) => { w.__logged.push(String(msg)); };
-  w.__redirects = 0;
-  w.redirectAfterLogin = () => { w.__redirects++; };
-  w.finishSignInFlow = () => { w.__redirects++; };
   return w;
 }
 const visible = (w, id) => w.document.getElementById(id).style.display !== 'none';
@@ -140,8 +136,8 @@ async function until(check, what) {
   assert.fail(`timed out waiting for: ${what}`);
 }
 async function submitPassword(w) {
-  w.document.getElementById('loginEmail').value = EMAIL;
-  w.document.getElementById('loginPassword').value = 'correct horse';
+  w.document.getElementById('clientEmail').value = EMAIL;
+  w.document.getElementById('clientPassword').value = 'correct horse';
   w.document.getElementById('rememberMe').checked = true;
   w.document.getElementById('loginForm').dispatchEvent(new w.Event('submit', { cancelable: true }));
 }
@@ -156,7 +152,7 @@ test('Workspace: a trusted device skips the code after a correct password, and s
   const w = loadLogin(backend, { stored: { id: 'dev-1', token: 'tok-dev-1', expires_at: new Date(Date.now() + 86400000).toISOString() } });
   await submitPassword(w);
   await until(() => w.__redirects === 1, 'signed in');
-  assert.ok(!visible(w, 'mfaChallengeView'), 'the code step never showed');
+  assert.ok(!visible(w, 'staffCodeView'), 'the code step never showed');
   assert.ok(backend.log.includes('POST /auth/v1/token'), 'the password was checked');
   assert.deepEqual(backend.rpcArgs.use_trusted_device.map((c) => c.args), [{ p_device_id: 'dev-1', p_token: 'tok-dev-1' }]);
   assert.equal(backend.rpcArgs.use_trusted_device[0].aal, 'aal1', 'asked with the session the password produced');
@@ -169,7 +165,7 @@ test('Workspace: an untrusted device still gets the code, and nothing is stored 
   const backend = fakeSupabase({ devices: trustedDevice() });
   const w = loadLogin(backend);
   await submitPassword(w);
-  await until(() => visible(w, 'mfaChallengeView'), 'the code step');
+  await until(() => visible(w, 'staffCodeView'), 'the code step');
   assert.equal(storedSession(w), null);
   assert.equal(w.__redirects, 0);
   assert.equal(backend.rpcArgs.use_trusted_device, undefined, 'no token on this device, so nothing to ask');
@@ -182,7 +178,7 @@ test('Workspace: a device past its 30 days (or removed, or after a password chan
     const backend = fakeSupabase({ devices });
     const w = loadLogin(backend, { stored: { id: 'dev-1', token: 'tok-dev-1', expires_at: new Date(Date.now() + 86400000).toISOString() } });
     await submitPassword(w);
-    await until(() => visible(w, 'mfaChallengeView'), `the code step (${flag})`);
+    await until(() => visible(w, 'staffCodeView'), `the code step (${flag})`);
     assert.equal(storedSession(w), null, flag);
     assert.equal(deviceRecord(w), null, `${flag}: a token the server refused is dropped`);
   }
@@ -192,7 +188,7 @@ test('Workspace: a token whose local expiry has passed is not even sent', async 
   const backend = fakeSupabase({ devices: trustedDevice() });
   const w = loadLogin(backend, { stored: { id: 'dev-1', token: 'tok-dev-1', expires_at: new Date(Date.now() - 1000).toISOString() } });
   await submitPassword(w);
-  await until(() => visible(w, 'mfaChallengeView'), 'the code step');
+  await until(() => visible(w, 'staffCodeView'), 'the code step');
   assert.equal(backend.rpcArgs.use_trusted_device, undefined);
   assert.equal(deviceRecord(w), null);
 });
@@ -201,7 +197,7 @@ test("Workspace: if the server's 2FA gate refuses the trusted session, the code 
   const backend = fakeSupabase({ devices: trustedDevice(), gateBlocks: true });
   const w = loadLogin(backend, { stored: { id: 'dev-1', token: 'tok-dev-1' } });
   await submitPassword(w);
-  await until(() => visible(w, 'mfaChallengeView'), 'the code step');
+  await until(() => visible(w, 'staffCodeView'), 'the code step');
   assert.equal(storedSession(w), null);
   assert.equal(w.__redirects, 0);
 });
@@ -210,10 +206,10 @@ test('Workspace: before the migration is applied (functions missing), sign-in wo
   const backend = fakeSupabase({ rpcMissing: true });
   const w = loadLogin(backend, { stored: { id: 'dev-1', token: 'tok-dev-1' } });
   await submitPassword(w);
-  await until(() => visible(w, 'mfaChallengeView'), 'the code step');
-  w.document.getElementById('thTrustDevice').checked = true;
-  w.document.getElementById('mfaChallengeCodeInput').value = '123456';
-  w.document.getElementById('mfaChallengeSubmitBtn').click();
+  await until(() => visible(w, 'staffCodeView'), 'the code step');
+  w.document.getElementById('staffTrustDevice').checked = true;
+  w.document.getElementById('staffCodeInput').value = '123456';
+  w.document.getElementById('staffCodeSubmit').click();
   await until(() => w.__redirects === 1, 'signed in with the code');
   assert.equal(storedSession(w).access_token, token('aal2', 's-verified'));
   assert.deepEqual(deviceRecord(w), { id: 'dev-1', token: 'tok-dev-1' }, 'a network/missing-function error never deletes the token');
@@ -229,23 +225,23 @@ test('Workspace, migration not applied: "Trust this device" on, the code is stil
   const backend = fakeSupabase({ rpcMissing: true });
   const w = loadLogin(backend);
   await submitPassword(w);
-  await until(() => visible(w, 'mfaChallengeView'), 'the code step');
+  await until(() => visible(w, 'staffCodeView'), 'the code step');
   assert.equal(storedSession(w), null, 'the password alone stores nothing');
-  assert.equal(w.document.getElementById('thTrustDevice').checked, true);
-  w.document.getElementById('mfaChallengeCodeInput').value = '123456';
-  w.document.getElementById('mfaChallengeSubmitBtn').click();
+  assert.equal(w.document.getElementById('staffTrustDevice').checked, true);
+  w.document.getElementById('staffCodeInput').value = '123456';
+  w.document.getElementById('staffCodeSubmit').click();
   await until(() => w.__redirects === 1, 'signed in with the code');
   assert.ok(backend.log.includes('POST /rest/v1/rpc/trust_this_device'), 'it tried to trust the device');
   assert.equal(storedSession(w).access_token, token('aal2', 's-verified'));
   assert.equal(deviceRecord(w), null, 'nothing kept: there is no device on the server');
-  assert.equal(w.document.getElementById('mfaChallengeError').textContent, '');
+  assert.equal(w.document.getElementById('staffCodeError').textContent, '');
   assert.deepEqual(w.__logged, [], 'a missing migration is not an error');
 
   // The next sign-in on this device asks for the code again, and doesn't
   // even ask the server (no token was kept).
   const again = loadLogin(backend);
   await submitPassword(again);
-  await until(() => visible(again, 'mfaChallengeView'), 'the code step again');
+  await until(() => visible(again, 'staffCodeView'), 'the code step again');
   assert.equal(again.__redirects, 0);
   assert.ok(!backend.log.includes('POST /rest/v1/rpc/use_trusted_device'));
 });
@@ -254,9 +250,9 @@ test('Workspace: a real failure trusting the device (500) still signs in with th
   const backend = fakeSupabase({ rpcFail: { trust_this_device: 500 } });
   const w = loadLogin(backend);
   await submitPassword(w);
-  await until(() => visible(w, 'mfaChallengeView'), 'the code step');
-  w.document.getElementById('mfaChallengeCodeInput').value = '123456';
-  w.document.getElementById('mfaChallengeSubmitBtn').click();
+  await until(() => visible(w, 'staffCodeView'), 'the code step');
+  w.document.getElementById('staffCodeInput').value = '123456';
+  w.document.getElementById('staffCodeSubmit').click();
   await until(() => w.__redirects === 1, 'signed in with the code');
   assert.equal(deviceRecord(w), null);
   assert.equal(w.__logged.length, 1);
@@ -267,7 +263,7 @@ test('Workspace: a real failure checking a trusted device (network) asks for the
   const backend = fakeSupabase({ devices: trustedDevice(), rpcFail: { use_trusted_device: 'network' } });
   const w = loadLogin(backend, { stored: { id: 'dev-1', token: 'tok-dev-1' } });
   await submitPassword(w);
-  await until(() => visible(w, 'mfaChallengeView'), 'the code step');
+  await until(() => visible(w, 'staffCodeView'), 'the code step');
   assert.equal(w.__redirects, 0, 'a failure never skips the code');
   assert.equal(storedSession(w), null);
   assert.deepEqual(deviceRecord(w), { id: 'dev-1', token: 'tok-dev-1' });
@@ -279,10 +275,10 @@ test('Workspace: a correct code with "Trust this device" on trusts it, using the
   const backend = fakeSupabase();
   const w = loadLogin(backend);
   await submitPassword(w);
-  await until(() => visible(w, 'mfaChallengeView'), 'the code step');
-  assert.equal(w.document.getElementById('thTrustDevice').checked, true, 'starts from Remember me');
-  w.document.getElementById('mfaChallengeCodeInput').value = '123456';
-  w.document.getElementById('mfaChallengeSubmitBtn').click();
+  await until(() => visible(w, 'staffCodeView'), 'the code step');
+  assert.equal(w.document.getElementById('staffTrustDevice').checked, true, 'starts from Remember me');
+  w.document.getElementById('staffCodeInput').value = '123456';
+  w.document.getElementById('staffCodeSubmit').click();
   await until(() => w.__redirects === 1, 'signed in');
   const calls = backend.rpcArgs.trust_this_device;
   assert.equal(calls.length, 1);
@@ -298,17 +294,17 @@ test('Workspace: a correct code with "Trust this device" on trusts it, using the
   const again = loadLogin(backend, { stored: rec });
   await submitPassword(again);
   await until(() => again.__redirects === 1, 'signed in again');
-  assert.ok(!visible(again, 'mfaChallengeView'));
+  assert.ok(!visible(again, 'staffCodeView'));
 });
 
 test('Workspace: with "Trust this device" off, a correct code signs in without trusting the device', async () => {
   const backend = fakeSupabase();
   const w = loadLogin(backend);
   await submitPassword(w);
-  await until(() => visible(w, 'mfaChallengeView'), 'the code step');
-  w.document.getElementById('thTrustDevice').checked = false;
-  w.document.getElementById('mfaChallengeCodeInput').value = '123456';
-  w.document.getElementById('mfaChallengeSubmitBtn').click();
+  await until(() => visible(w, 'staffCodeView'), 'the code step');
+  w.document.getElementById('staffTrustDevice').checked = false;
+  w.document.getElementById('staffCodeInput').value = '123456';
+  w.document.getElementById('staffCodeSubmit').click();
   await until(() => w.__redirects === 1, 'signed in');
   assert.equal(backend.rpcArgs.trust_this_device, undefined);
   assert.equal(deviceRecord(w), null);
@@ -318,10 +314,10 @@ test('Workspace: a wrong code still fails and trusts nothing', async () => {
   const backend = fakeSupabase();
   const w = loadLogin(backend);
   await submitPassword(w);
-  await until(() => visible(w, 'mfaChallengeView'), 'the code step');
-  w.document.getElementById('mfaChallengeCodeInput').value = '000000';
-  w.document.getElementById('mfaChallengeSubmitBtn').click();
-  await until(() => w.document.getElementById('mfaChallengeError').textContent, 'an error');
+  await until(() => visible(w, 'staffCodeView'), 'the code step');
+  w.document.getElementById('staffCodeInput').value = '000000';
+  w.document.getElementById('staffCodeSubmit').click();
+  await until(() => w.document.getElementById('staffCodeError').textContent, 'an error');
   assert.equal(backend.rpcArgs.trust_this_device, undefined);
   assert.equal(storedSession(w), null);
 });

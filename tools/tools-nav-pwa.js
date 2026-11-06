@@ -119,7 +119,10 @@ function thNavEsc(v) {
     '/tools/dev-tools.html': function () { return typeof hasDevToolsAccess === 'function' && hasDevToolsAccess(); },
     // Team (Phase 4, 2026-11-04): its own page, for accounts with Team &
     // Settings (can_manage_roles).
-    '/tools/team.html': function () { return typeof canManageRoles === 'function' && canManageRoles(); },
+    // Since FP3.6 (2026-11-06, D13) everyone on the team can open it: a
+    // read-only directory (names and titles) unless they can manage it.
+    // Still fail-closed: shown once the role is confirmed, not before.
+    '/tools/team.html': function () { return typeof getCurrentUserRole === 'function' && !!getCurrentUserRole(); },
     // Website (2026-09-23): the same check site-content.html gates on.
     // Listed in SIDEBAR_DESTS with hideUntilAllowed -- see below.
     '/tools/site-content.html': function () { return typeof canManageSiteContent === 'function' && canManageSiteContent(); }
@@ -151,8 +154,18 @@ function thNavEsc(v) {
   // account can't open shows while the role is loading. FP2.2: a group
   // header (Work / Money / Office) shows only while a link under it does.
   function hideRestrictedNavLinks() {
+    var field = fieldViewActive();
+    applyFieldViewClass();
     Object.keys(NAV_PERMISSION_CHECKS).forEach(function (href) {
       var allowed = NAV_PERMISSION_CHECKS[href]();
+      // Field view (FP3.1): the office sections leave the shell's nav too.
+      // A view, not a lock: the page's own link (allowed) stays as it is.
+      if (field && FIELD_HIDDEN_PAGES[href]) {
+        document.querySelectorAll(SHELL_LINK_SELECTOR.split(', ').map(function (sel) { return sel + '[href="' + href + '"]'; }).join(', ')).forEach(function (el) {
+          revealShellLink(el, false);
+        });
+        return;
+      }
       document.querySelectorAll(SHELL_LINK_SELECTOR.split(', ').map(function (sel) { return sel + '[href="' + href + '"]'; }).join(', ')).forEach(function (el) {
         revealShellLink(el, allowed);
       });
@@ -184,14 +197,79 @@ function thNavEsc(v) {
     });
   }
   window.addEventListener('th-role-loaded', hideRestrictedNavLinks);
+  window.addEventListener('th-view-changed', hideRestrictedNavLinks);
+
+  // ---- Field view everywhere (fix plan FP3.1, 2026-11-06, D2; approved
+  // "Field view everywhere") ------------------------------------------------
+  // Field view is a screen filter for someone who can also use Office view
+  // (Manage jobs for others): their own jobs, today's work, big buttons,
+  // and none of the office sections (Clients, Invoices, Money, Contracts,
+  // Reviews, Team). Office is the whole app. It never decides access:
+  // permissions do, and an account without Office view is not touched by
+  // any of this -- its screens follow its permissions alone (so a field
+  // tech with Clients keeps Clients). One setting per device (thViewMode in
+  // data-layer.js).
+  var FIELD_HIDDEN_PAGES = {
+    '/tools/clients.html': 'Clients',
+    '/tools/client-detail.html': 'Clients',
+    '/tools/invoice-generator.html': 'Invoices',
+    '/tools/finance.html': 'Money',
+    '/tools/runway-dashboard.html': 'Runway',
+    '/tools/contract-generator.html': 'Contracts',
+    '/tools/review-request.html': 'Reviews',
+    '/tools/team.html': 'Team'
+  };
+  var VIEW_SWITCH_PAGES = { '/tools/clients.html': 1, '/tools/finance.html': 1, '/tools/invoice-generator.html': 1 };
+  function fieldViewActive() {
+    try {
+      return typeof thCanUseOfficeView === 'function' && thCanUseOfficeView() && typeof thViewMode === 'function' && thViewMode() === 'field';
+    } catch (e) { return false; }
+  }
+  window.thFieldViewActive = fieldViewActive;
+  function applyFieldViewClass() {
+    var field = fieldViewActive();
+    document.body.classList.toggle('th-field-view', field);
+    var note = document.querySelector('.th-sidebar-view-note');
+    if (note) note.hidden = !field;
+    applyFieldGate(field);
+  }
+  // An office page opened in Field view (a link, Search, a bookmark): say
+  // where it is and offer the one tap back to Office.
+  function applyFieldGate(field) {
+    var label = FIELD_HIDDEN_PAGES[path];
+    var gate = document.getElementById('thFieldGate');
+    if (!label || !field) { if (gate) gate.hidden = true; document.body.classList.remove('th-field-gated'); return; }
+    if (!gate) {
+      gate = document.createElement('div');
+      gate.id = 'thFieldGate';
+      gate.className = 'th-field-gate';
+      gate.setAttribute('role', 'region');
+      gate.setAttribute('aria-labelledby', 'thFieldGateTitle');
+      gate.innerHTML =
+        '<div class="th-field-gate-card">' +
+          '<h1 class="th-field-gate-title" id="thFieldGateTitle"></h1>' +
+          '<p class="th-field-gate-body">You\u2019re in Field view on this device, which shows just your jobs. Switch to Office to see Money, Clients and Team.</p>' +
+          '<button type="button" class="primary-btn th-field-gate-switch">Switch to Office</button>' +
+          '<a class="secondary-btn th-field-gate-home" href="/tools/workspace.html">Back to Home</a>' +
+        '</div>';
+      gate.querySelector('.th-field-gate-switch').addEventListener('click', function () {
+        if (typeof thSetViewMode === 'function') thSetViewMode('office');
+      });
+      document.body.appendChild(gate);
+    }
+    gate.querySelector('.th-field-gate-title').textContent = label + ' is in Office view';
+    gate.hidden = false;
+    document.body.classList.add('th-field-gated');
+  }
 
   function applyMoneyPermissions() {
     var canInvoices = NAV_PERMISSION_CHECKS['/tools/invoice-generator.html']();
     var canFinance = NAV_PERMISSION_CHECKS['/tools/finance.html']();
     var tab = document.querySelector('.th-bn-money');
     if (tab) {
-      // Injected hidden (FP2.1); shown once either Money page is allowed.
-      revealShellLink(tab, canInvoices || canFinance);
+      // Injected hidden (FP2.1); shown once either Money page is allowed --
+      // and not in Field view (FP3.1).
+      revealShellLink(tab, (canInvoices || canFinance) && !fieldViewActive());
       if (canInvoices && !canFinance) tab.setAttribute('href', MONEY_PAGES[0]);
       else if (!canInvoices && canFinance) tab.setAttribute('href', MONEY_PAGES[1]);
     }
@@ -806,6 +884,8 @@ function thNavEsc(v) {
       // Account chip (v2, 2026-09-28): who is signed in, at the foot of the
       // rail, opening Settings. Filled from the stored session and the role
       // once it loads (fillSidebarAccount); empty until then, never a guess.
+      // Field view note (FP3.1): which view this device is in, and the way back.
+      '<button type="button" class="th-sidebar-view-note" hidden onclick="if (typeof thSetViewMode === \'function\') thSetViewMode(\'office\')">Field view · <span>Switch to Office</span></button>' +
       '<a href="/tools/settings.html" class="th-sidebar-account" aria-label="Account and settings">' +
         '<span class="th-sidebar-account-avatar" aria-hidden="true"></span>' +
         '<span class="th-sidebar-account-text"><span class="th-sidebar-account-name"></span><span class="th-sidebar-account-role"></span></span>' +
@@ -1003,6 +1083,10 @@ function thNavEsc(v) {
     // with nothing to act on yet: apply it now, or a hideUntilAllowed link
     // would wait for an event that has already happened.
     if (typeof getCurrentUserRole === 'function' && getCurrentUserRole()) hideRestrictedNavLinks();
+    // The Field / Office switch (FP3.1) on the other pages D2 names --
+    // Dashboard and Jobs mount their own. Shown only to accounts that can
+    // use Office view (thMountViewSwitch draws nothing otherwise).
+    if (VIEW_SWITCH_PAGES[path] && typeof thMountViewSwitch === 'function') thMountViewSwitch(document.querySelector('.hub-header'));
     // Next tick, not now: on a page that loads this file after the DOM is
     // ready, inject() runs before the QUICK ADD section further down this
     // file has set its tables, and the parser would throw.
