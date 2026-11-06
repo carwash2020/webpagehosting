@@ -54,13 +54,13 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=7c03870603">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=a038f9f7de">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=32b0b6ede8">
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=05f55fda07" defer></script>
-<script src="/tools/tools-command-palette.js?v=8cde9621ed" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=a7791bfe4b" defer></script>
+<script src="/tools/tools-command-palette.js?v=1acf1175ac" defer></script>
 <script src="/tools/tools-tour.js?v=f8c0b490ba" defer></script>
 <script src="/tools/data-layer.js?v=e736cf54f5" defer></script>
 <script src="/tools/dev-tools-shared.js?v=3132b24dc1" defer></script>
@@ -121,6 +121,10 @@
   .team-ident { margin: 0 16px; padding: 14px; border-radius: 12px; background: var(--bg-panel); border: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
   .team-ident .form-field { margin: 0; }
   .team-ident-save { min-height: 46px; }
+  /* Read-only directory (FP3.6, D13): names and titles only. */
+  .team-dir { border-radius: 12px; background: var(--bg-panel); border: 1px solid var(--border); overflow: hidden; }
+  .team-dir-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+  .team-dir-row:last-child { border-bottom: 0; }
   @media (min-width: 700px) { .team-sheet { align-items: center; } .team-sheet-card { border-radius: 20px; } }
 </style>
 </head>
@@ -151,6 +155,7 @@
 <!-- The roster (team_roster(), sql/security/phase4_team_roster_and_deactivate.sql). -->
 <section id="teamRosterView" aria-labelledby="mainContent" style="padding:0;">
   <p class="team-intro">Everyone starts with their own assigned jobs: log hours and parts, mark done. Turn on more per person.</p>
+  <p class="team-intro" id="teamDirIntro" hidden>Who’s on the team. Ask Steve or Connor to change anything here.</p>
   <div class="team-list" id="teamList"><div class="skeleton-line w-100"></div><div class="skeleton-line w-60"></div></div>
 </section>
 
@@ -530,12 +535,49 @@
   // Only accounts that can manage the team (Team & Settings). The roster
   // itself is readable by any internal account; the switches and actions
   // are refused by the database and team-admin for anyone else anyway.
+  // Fix plan FP3.6 (2026-11-06, D13; approved "Read-only team directory"):
+  // everyone else on the team sees who's on it -- names and titles only, no
+  // switches, emails, sign-in dates, invite or deactivate. The locked
+  // screen is only for a role that couldn't be confirmed.
+  let teamDirectoryOnly = false;
+  function teamRenderDirectory() {
+    const list = document.getElementById('teamList');
+    const people = teamRoster.filter(p => p.status !== 'deactivated')
+      .sort((a, b) => teamDisplayName(a).localeCompare(teamDisplayName(b)));
+    if (!people.length) { list.innerHTML = '<p class="team-meta">No one yet.</p>'; return; }
+    list.innerHTML = '<div class="team-dir" data-team-directory>' + people.map(p =>
+      '<div class="team-dir-row">' +
+        '<span class="team-avatar" aria-hidden="true">' + escapeHtml(teamInitials(p)) + '</span>' +
+        '<span class="team-who"><span class="team-name" style="display:block;">' + escapeHtml(teamDisplayName(p)) + '</span>' + teamTitleHtml(p) +
+        (p.status === 'invited' ? '<span class="team-meta" style="display:block;">Invite pending</span>' : '') + '</span>' +
+      '</div>').join('') + '</div>';
+  }
+  async function teamLoadDirectory() {
+    try {
+      teamRoster = await teamFetchRoster();
+    } catch (e) {
+      document.getElementById('teamList').innerHTML = '<p class="team-error">Couldn’t load the team (' + escapeHtml(e.message || String(e)) + '). Try again in a minute.</p>';
+      return;
+    }
+    teamRenderDirectory();
+  }
+
   window.addEventListener('th-role-loaded', () => {
+    const overlay = document.getElementById('roleBlockedOverlay');
     if (typeof canManageRoles === 'function' && canManageRoles()) {
-      document.getElementById('roleBlockedOverlay').classList.remove('is-shown');
+      teamDirectoryOnly = false;
+      overlay.classList.remove('is-shown');
       teamReload();
+    } else if (typeof getCurrentUserRole === 'function' && getCurrentUserRole()) {
+      teamDirectoryOnly = true;
+      overlay.classList.remove('is-shown');
+      document.body.classList.add('team-is-directory');
+      document.getElementById('teamInviteBtn').hidden = true;
+      document.getElementById('teamDirIntro').hidden = false;
+      document.querySelector('#teamRosterView > .team-intro:not(#teamDirIntro)').hidden = true;
+      teamLoadDirectory();
     } else {
-      document.getElementById('roleBlockedOverlay').classList.add('is-shown');
+      overlay.classList.add('is-shown');
     }
   });
   document.addEventListener('DOMContentLoaded', () => {

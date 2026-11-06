@@ -66,7 +66,7 @@ test('FP2.2: a group header shows only while a link under it does -- no MONEY he
   assert.deepEqual(groups(w, '.th-desktop-sidebar'), ['Work', 'Office'], 'before the role: Money has nothing to show');
   roleLoads(FIELD_TECH);
   assert.deepEqual(groups(w, '.th-desktop-sidebar'), ['Work', 'Office']);
-  assert.deepEqual(sidebar(w), ['Dashboard', 'Jobs', 'Settings']);
+  assert.deepEqual(sidebar(w), ['Dashboard', 'Jobs', 'Team', 'Settings'], 'Team is a read-only directory for everyone since FP3.6');
 });
 
 test('once the role loads, an owner sees everything, and the bar tabs come back into reach', () => {
@@ -95,7 +95,7 @@ test('Money with only one of its two pages allowed: the tab shows and points at 
   assert.ok(shown(tab));
   assert.equal(tab.getAttribute('href'), '/tools/finance.html');
   assert.deepEqual(groups(w, '.th-desktop-sidebar'), ['Work', 'Money', 'Office']);
-  assert.deepEqual(sidebar(w), ['Dashboard', 'Jobs', 'Money', 'Settings']);
+  assert.deepEqual(sidebar(w), ['Dashboard', 'Jobs', 'Money', 'Team', 'Settings']);
 });
 
 test('Settings keeps its Website and Dev Tools rows hidden until the role confirms them (FP2.1 Settings half)', () => {

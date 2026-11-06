@@ -59,8 +59,11 @@ test('the nav is the nine, in the approved groups -- no Website, Dev Tools, Wiki
   }
 });
 
-test('Team is its own page since Phase 4 (2026-11-04), gated on Team & Settings; Dev Tools\' account permissions panel links to it', () => {
-  assert.match(NAV, /'\/tools\/team\.html': function \(\) \{ return typeof canManageRoles === 'function' && canManageRoles\(\); \}/);
+// Since FP3.6 (2026-11-06, D13) everyone on the team can open Team -- a
+// read-only directory unless they have Team & Settings -- once the role is
+// confirmed (still fail-closed before it loads).
+test('Team is its own page since Phase 4 (2026-11-04), open to every confirmed staff account since FP3.6; Dev Tools\' account permissions panel links to it', () => {
+  assert.match(NAV, /'\/tools\/team\.html': function \(\) \{ return typeof getCurrentUserRole === 'function' && !!getCurrentUserRole\(\); \}/);
   assert.doesNotMatch(NAV, /'\/tools\/dev-tools\.html#team'/);
   const DEV = read('dev-tools.html');
   assert.match(DEV, /<div class="dev-panel dev-panel-wide" id="team">\s*<div class="dev-panel-heading">\s*<h2>Account permissions<\/h2>/);
@@ -110,7 +113,7 @@ test('everything that left the nav is still in Search, behind the same checks', 
   for (const [title, href, perm] of [
     ['Website', '/tools/site-content.html', 'canManageSiteContent'],
     ['Dev Tools', '/tools/dev-tools.html', 'hasDevToolsAccess'],
-    ['Team', '/tools/team.html', 'canManageRoles'],
+    ['Team', '/tools/team.html', null], // everyone on the team since FP3.6 (D13)
     ['Analytics', '/tools/workspace.html#insights', null],
     ['Runway Dashboard', '/tools/runway-dashboard.html#runway', 'canViewRunway'],
   ]) {

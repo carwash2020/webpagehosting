@@ -69,7 +69,7 @@
   })();
 </script>
 <link rel="stylesheet" href="/styles.css?v=7c03870603">
-<link rel="stylesheet" href="/tools/styles-tools.css?v=a038f9f7de">
+<link rel="stylesheet" href="/tools/styles-tools.css?v=32b0b6ede8">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=92a4047864" defer></script>
 <!-- Shared business-hours data (2026-09-03) -- used by the work order
@@ -83,8 +83,8 @@
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
-<script src="/tools/tools-nav-pwa.js?v=05f55fda07" defer></script>
-<script src="/tools/tools-command-palette.js?v=8cde9621ed" defer></script>
+<script src="/tools/tools-nav-pwa.js?v=a7791bfe4b" defer></script>
+<script src="/tools/tools-command-palette.js?v=1acf1175ac" defer></script>
 <script src="/tools/tools-tour.js?v=f8c0b490ba" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -4645,6 +4645,11 @@
     // Money can show as soon as the role is confirmed, from this device's
     // copy, without waiting for the pull to finish.
     window.addEventListener('th-role-loaded', () => { try { renderMetrics(); renderInvoicesList(); } catch (e) { reportHomeRenderError('money redraw on role load', e); } });
+    // Field view (FP3.1) is today's work only: no Insights. If it comes on
+    // while Insights is showing, go back to Today.
+    const leaveInsightsInField = () => { if (typeof window.thFieldViewActive === 'function' && window.thFieldViewActive() && currentDashView === 'insights') showDashView('today'); };
+    window.addEventListener('th-view-changed', leaveInsightsInField);
+    window.addEventListener('th-role-loaded', leaveInsightsInField);
     // The greeting's name is the person's own (fix plan FP1.2): redraw it once
     // their account row has loaded.
     window.addEventListener('th-role-loaded', () => { try { renderGreetingBanner(); } catch (e) { reportHomeRenderError('greeting redraw on role load', e); } });
