@@ -1617,7 +1617,7 @@ One page now signs in both kinds of account, which raised two ways to get this w
 - Staff sign-in errors now go to the portal error log, the one this page loads, instead of the Workspace's.
 - The precached `tools/login.html` is only a forward now, so opening the Workspace app offline and signed out shows the browser's offline page instead of a sign-in form that couldn't work offline anyway.
 
-**Still to apply live:** `sql/security/fp4_signin_account_kind.sql`. It is held for Connor's OK. Until it is applied, the page fails safe: every account reads as a client, so staff would be routed to the portal. The page must not ship before the function is live.
+**Applied live 2026-11-06 (Connor's OK):** `sql/security/fp4_signin_account_kind.sql`. Checked live: a staff email at password-only reads as staff in any letter case, while that caller still sees 0 `account_roles` rows; the TEST client reads as client; anon cannot call it.
 
 ## 2026-11-06 -- FP4.2 verified email aliases: what widened, and why it's safe
 
@@ -1629,4 +1629,8 @@ This change widens what a client can read: records on any email they have proved
 - **Edge functions** that check "is this record yours?" use one helper. It returns the sign-in email plus confirmed aliases, and fails closed to the sign-in email alone. Stripe customers and card authorizations stay keyed to the payer's sign-in email.
 - **Case-insensitive matching** (`lower(client_email)`) is a small, deliberate broadening: a record sent to `Sam@Example.com` now shows for `sam@example.com`. Email addresses are case-insensitive in practice, and every live client email is lower-case today.
 
-**Not live yet:** `sql/security/fp4_email_aliases.sql`, the new `portal-email-alias` function and the 9 edited functions all wait for Connor's OK. The edited functions are safe to deploy before the SQL (the helper reads nothing and falls back), and the portal card stays hidden until the function answers.
+**Live 2026-11-06 (Connor's OK for each step):**
+- Applied: `sql/security/fp4_email_aliases.sql`. The TEST client sees exactly the same rows as before (1 invoice, 1 card authorization). 13 policies are widened, and all 14 "Confirmed email only" restrictive policies remain. The alias table is closed to clients and anon. The Supabase security advisor shows nothing new for anon; the new findings are intentional (a service-only table, and functions that answer only about the caller).
+- Deployed: `portal-email-alias` (`verify_jwt` on; a call with no session gets 401), plus the 9 edited functions. All are byte-identical to the repo, and `verify_jwt` is unchanged (true).
+- CodeQL then flagged the email-format regex in `portal-email-alias` as a polynomial ReDoS: its domain part `[^\s@]+\.[^\s@]+` is ambiguous. It is now linear (`[^\s@.]+(?:\.[^\s@.]+)+`), with the length cap checked first. Connor approved the redeploy of the fixed function.
+- **Out of scope, worth a later look:** `edge-functions/portal-signup-index.ts` carries the same old pattern. It is reachable without a session, but behind a per-IP limit.
