@@ -33,7 +33,10 @@ const KNOWN = AUTH.slice(AUTH.indexOf('const KNOWN_USER_NAMES = {'), AUTH.indexO
 // auth.js's name and title, with a given signed-in email and loaded row.
 function who(email, role) {
   const w = new JSDOM('<!doctype html><body></body>', { runScripts: 'outside-only' }).window;
-  w.eval(`var _cachedRoleInfo = ${JSON.stringify(role || null)}; function getCurrentUserEmail() { return ${JSON.stringify(email)}; }`);
+  // Values go on the window; only fixed code is evaluated.
+  w.__email = email;
+  w._cachedRoleInfo = role || null;
+  w.eval('function getCurrentUserEmail() { return window.__email; }');
   w.eval(KNOWN.replace('const ', 'var '));
   for (const fn of ['thNameFromEmail', 'getCurrentUserDisplayName', 'getCurrentUserFirstName', 'getCurrentUserTitle']) w.eval(extractFn(AUTH, fn));
   return w;
@@ -59,7 +62,9 @@ test('FP1.1: the account row is read with display_name and title, kept as labels
 test('FP1.8: a screen they can\'t open says their name and title, never the preset', () => {
   const run = (role, title) => {
     const w = new JSDOM('<!doctype html><body><div data-rb><span class="th-rb-who"></span></div></body>', { runScripts: 'outside-only' }).window;
-    w.eval(`var __r = ${JSON.stringify(role)}; function getCurrentUserRole() { return __r; } function getCurrentUserDisplayName() { return 'Steve'; } function getCurrentUserTitle() { return ${JSON.stringify(title)}; }`);
+    w.__r = role;
+    w.__title = title;
+    w.eval("function getCurrentUserRole() { return window.__r; } function getCurrentUserDisplayName() { return 'Steve'; } function getCurrentUserTitle() { return window.__title; }");
     w.eval(extractFn(AUTH, 'fillRoleBlockedScreens'));
     w.fillRoleBlockedScreens();
     return w.document.querySelector('.th-rb-who').textContent;
@@ -70,7 +75,10 @@ test('FP1.8: a screen they can\'t open says their name and title, never the pres
 
 function chip(email, name, title) {
   const w = new JSDOM('<!doctype html><body><a class="th-sidebar-account"><span class="th-sidebar-account-avatar"></span><span class="th-sidebar-account-name"></span><span class="th-sidebar-account-role"></span></a></body>', { runScripts: 'outside-only' }).window;
-  w.eval(`function getStoredSession() { return { email: ${JSON.stringify(email)} }; } function getCurrentUserDisplayName() { return ${JSON.stringify(name)}; } function getCurrentUserTitle() { return ${JSON.stringify(title)}; } function getCurrentUserRole() { return { roleName: 'Owner' }; }`);
+  w.__session = { email };
+  w.__name = name;
+  w.__title = title;
+  w.eval("function getStoredSession() { return window.__session; } function getCurrentUserDisplayName() { return window.__name; } function getCurrentUserTitle() { return window.__title; } function getCurrentUserRole() { return { roleName: 'Owner' }; }");
   w.eval(extractFn(NAV, 'fillSidebarAccount'));
   w.fillSidebarAccount();
   const q = (c) => w.document.querySelector(c).textContent;
