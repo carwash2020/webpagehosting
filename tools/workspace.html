@@ -68,7 +68,7 @@
     document.documentElement.style.colorScheme = saved === 'light' ? 'light' : 'dark';
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=7c03870603">
+<link rel="stylesheet" href="/styles.css?v=09ad2a2e15">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=32b0b6ede8">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=92a4047864" defer></script>
@@ -484,10 +484,28 @@
      they get the shared 46px phone height, 16px text and focus ring
      instead of ~20 copies of one inline style. */
   .license-item {
-    display: flex; justify-content: space-between; align-items: center; gap: 12px;
-    padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 14px;
+    padding: 0; border-bottom: 1px solid var(--border); font-size: 14px;
   }
   .license-item:last-child { border-bottom: none; }
+  /* FP5.1: the row is one button; it opens the license in place. */
+  .license-row-toggle {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    width: 100%; min-height: 48px; padding: 12px 0; border: 0; background: none;
+    color: inherit; font: inherit; text-align: left; cursor: pointer;
+  }
+  .license-row-end { display: inline-flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .license-badge { font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; color: var(--text-dim); background: rgba(255,255,255,0.08); }
+  .license-badge.is-active { color: #8fd19e; background: rgba(76,175,120,0.15); }
+  .license-badge.is-soon { color: var(--orange-light); background: rgba(255,128,0,0.14); }
+  .license-badge.is-expired { color: #ff8a80; background: rgba(224,82,82,0.15); }
+  .license-chevron { width: 18px; height: 18px; fill: none; stroke: var(--text-dim); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .2s ease; }
+  .license-item.is-open .license-chevron { transform: rotate(180deg); }
+  .license-detail { padding: 0 0 14px; }
+  .license-facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; font-size: 13.5px; }
+  .license-facts dt { color: var(--text-dim); }
+  .license-facts dd { margin: 0; color: var(--white); word-break: break-word; }
+  .license-detail-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
+  @media (prefers-reduced-motion: reduce) { .license-chevron { transition: none; } }
 
   .realtime-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-dim); margin-left: 10px; }
   .pending-changes-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--orange-light); margin-left: 10px; }
@@ -1007,7 +1025,8 @@
   body.th-tool-page[data-th-page="workspace"] .compliance-card-title { font-family: var(--font-app); font-size: 14.5px; font-weight: 600; color: var(--text); }
   body.th-tool-page[data-th-page="workspace"] .compliance-detail-row { font-size: 12.5px; gap: 4px 16px; }
   body.th-tool-page[data-th-page="workspace"] .compliance-status-badge { border-radius: 999px; font-family: var(--font-app); letter-spacing: 0; text-transform: none; font-size: 12px; }
-  body.th-tool-page[data-th-page="workspace"] .license-item, body.th-tool-page[data-th-page="workspace"] #secureDocsList .dash-list-item { padding: 11px 0; margin: 0; border: 0; border-top: 1px solid var(--th-hairline); border-radius: 0; background: none; }
+  body.th-tool-page[data-th-page="workspace"] .license-item { padding: 0; margin: 0; border: 0; border-top: 1px solid var(--th-hairline); border-radius: 0; background: none; }
+  body.th-tool-page[data-th-page="workspace"] #secureDocsList .dash-list-item { padding: 11px 0; margin: 0; border: 0; border-top: 1px solid var(--th-hairline); border-radius: 0; background: none; }
   body.th-tool-page[data-th-page="workspace"] #body-compliance > .secondary-btn[onclick="addLicensePrompt()"] {
     display: flex; align-items: center; justify-content: center; width: 100%; min-height: 44px; margin: 6px 0 14px !important;
     border: 1px dashed var(--border); border-radius: 12px; background: none; box-shadow: none;
@@ -3385,28 +3404,59 @@
   }
 
   let justAddedLicenseIdx = null;
+  // Fix plan FP5.1 (2026-11-06; D4; approved design Group3Screens): a
+  // license row was a dead tap beside a Remove button. Now the row is one
+  // button that opens it in place: number, expiry with days left, and a
+  // status badge. Remove lives inside the open row, away from the tap.
+  // One row open at a time.
+  let openLicenseIdx = null;
+  function licenseStatus(days) {
+    if (days === null) return { label: 'No expiry on file', cls: 'is-none' };
+    if (days < 0) return { label: 'Expired', cls: 'is-expired' };
+    if (days <= 30) return { label: days === 0 ? 'Renews today' : 'Renews in ' + days + (days === 1 ? ' day' : ' days'), cls: 'is-soon' };
+    return { label: 'Active', cls: 'is-active' };
+  }
+  function licenseExpiryText(dateStr, days) {
+    if (!dateStr) return 'Not on file';
+    const d = new Date(dateStr + 'T00:00:00');
+    const when = isNaN(d.getTime()) ? dateStr : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    if (days === null) return when;
+    if (days < 0) return when + ' · ' + (-days) + (days === -1 ? ' day' : ' days') + ' ago';
+    if (days === 0) return when + ' · today';
+    return when + ' · in ' + days + (days === 1 ? ' day' : ' days');
+  }
+  function toggleLicense(idx) {
+    openLicenseIdx = openLicenseIdx === idx ? null : idx;
+    renderLicensesList();
+  }
   function renderLicensesList() {
     const compliance = loadCompliance();
     const licenses = compliance.licenses || [];
     const container = document.getElementById('licensesList');
     if (licenses.length === 0) {
+      openLicenseIdx = null;
       container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-inbox" xlink:href="#icon-inbox"></use></svg>No city licenses on file yet.</div>';
       return;
     }
+    if (openLicenseIdx !== null && openLicenseIdx >= licenses.length) openLicenseIdx = null;
     container.innerHTML = licenses.map((lic, idx) => {
       const days = daysUntil(lic.expirationDate);
-      let badge = '';
-      if (days !== null) {
-        if (days < 0) badge = ' &mdash; <span style="color:#e05252;">Expired</span>';
-        else if (days <= 30) badge = ' &mdash; <span style="color:var(--orange-light);">renews in ' + days + 'd</span>';
-      }
+      const status = licenseStatus(days);
+      const open = idx === openLicenseIdx;
       return `
-      <div class="license-item ${idx === justAddedLicenseIdx ? 'list-row-enter' : ''}" data-license-idx="${idx}">
-        <div>
-          <div class="dash-list-item-title">${escapeHtml(lic.city)}</div>
-          <div class="dash-list-item-meta">${escapeHtml(lic.licenseNumber || 'No number on file')}${lic.expirationDate ? ' &middot; expires ' + escapeHtml(lic.expirationDate) : ''}${badge}</div>
+      <div class="license-item ${open ? 'is-open' : ''} ${idx === justAddedLicenseIdx ? 'list-row-enter' : ''}" data-license-idx="${idx}">
+        <button type="button" class="license-row-toggle" aria-expanded="${open}" aria-controls="licenseDetail${idx}" onclick="toggleLicense(${idx})">
+          <span class="dash-list-item-title">${escapeHtml(lic.city)}</span>
+          <span class="license-row-end"><span class="license-badge ${status.cls}">${escapeHtml(status.label)}</span><svg class="license-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></span>
+        </button>
+        <div class="license-detail" id="licenseDetail${idx}" ${open ? '' : 'hidden'}>
+          <dl class="license-facts">
+            <dt>License number</dt><dd>${escapeHtml(lic.licenseNumber || 'Not on file')}</dd>
+            <dt>Expires</dt><dd>${escapeHtml(licenseExpiryText(lic.expirationDate, days))}</dd>
+            <dt>City</dt><dd>${escapeHtml(lic.city)}</dd>
+          </dl>
+          <div class="license-detail-actions"><button type="button" class="small-btn danger" onclick="removeLicense(${idx})">Remove license</button></div>
         </div>
-        <button class="small-btn danger" onclick="removeLicense(${idx})">Remove</button>
       </div>`;
     }).join('');
     justAddedLicenseIdx = null;
@@ -3528,6 +3578,7 @@
       const compliance = loadCompliance();
       compliance.licenses.splice(idx, 1);
       saveCompliance(compliance);
+      openLicenseIdx = null;
       renderLicensesList();
     });
   }

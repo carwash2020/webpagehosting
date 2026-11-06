@@ -50,18 +50,19 @@ function setup({ caches = ['th-workspace-v398'], newWorker = false, switches = t
 }
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
-test('shows the installed version from the service worker cache name', async () => {
+test('reads the installed build from the service worker cache name, but shows the product label (FP5.5)', async () => {
   const { api, text } = setup({ caches: ['th-workspace-v97', 'th-workspace-v398', 'other-cache'] });
   assert.equal(await api.currentAppVersion(), 'v398', 'the highest number, not the last listed');
   await api.showAppVersion();
-  assert.equal(text(), 'Version v398');
+  // FP5.5: Settings shows the product label; the stamp is only compared, never shown.
+  assert.equal(text(), 'Triple H Homebase V1.0');
 });
 
 test('a newer version on the server: it downloads, takes over, and the page reloads', async () => {
   const { api, out, text } = setup({ newWorker: true });
   await api.checkForAppUpdate();
   assert.equal(out.updates, 1);
-  assert.equal(text(), 'Updated to v399. Reloading…');
+  assert.equal(text(), 'Updated. Reloading…');
   await wait(700);
   assert.equal(out.reloads, 1);
   assert.equal(out.toasts.length, 0);
@@ -73,7 +74,7 @@ test('already current: no reload, says so, and the button comes back', async () 
   assert.equal(out.updates, 1);
   await wait(700);
   assert.equal(out.reloads, 0);
-  assert.equal(text(), 'Up to date · Version v398');
+  assert.equal(text(), 'Up to date · Triple H Homebase V1.0');
   assert.match(out.toasts[0].m, /newest version/);
   assert.equal(btn().disabled, false);
   assert.equal(btn().textContent, 'Update');
@@ -87,11 +88,11 @@ test('offline: nothing is attempted', async () => {
   assert.match(out.toasts[0].m, /offline/);
 });
 
-test('no service worker (a plain browser tab): it reports the state instead of failing', async () => {
+test('no service worker (a plain browser tab): it still answers, with the product label', async () => {
   const { api, out, text } = setup({ noSw: true, caches: [] });
   await api.checkForAppUpdate();
   assert.equal(out.reloads, 0);
-  assert.equal(text(), 'Up to date · Version not available on this device');
+  assert.equal(text(), 'Up to date · Triple H Homebase V1.0');
 });
 
 test('the page has the App version section with the Update button wired to it', () => {

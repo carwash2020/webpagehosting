@@ -836,20 +836,14 @@ body.portal-page .th-toast-container {
     border-right: 1px solid var(--border);
   }
 
-  /* v2 brand: the orange brand hex (clip-path var(--hex)) drawn in CSS,
-     so every page's identical rail markup gets it; the logo image
-     stays in the markup, hidden here. */
+  /* Brand mark: the real Triple H logo (fix plan FP5.7, 2026-11-06), the
+     same image the homepage header and the Workspace sidebar show. It used
+     to be hidden here behind a CSS-drawn orange hexagon with "HHH". */
   .portal-rail-brand {
     display: flex; align-items: center; gap: 10px;
     padding: 4px 8px 6px; text-decoration: none;
   }
-  .portal-rail-brand::before {
-    content: 'HHH'; flex-shrink: 0; width: 34px; height: 34px;
-    display: flex; align-items: center; justify-content: center;
-    background: var(--orange); color: #1a0d02; clip-path: var(--hex);
-    font-family: var(--font-display); font-size: 13px; letter-spacing: .2px;
-  }
-  .portal-rail-brand img { display: none; }
+  .portal-rail-brand img { display: block; flex-shrink: 0; width: 34px; height: 34px; object-fit: contain; }
   .portal-rail-name { display: block; font-family: var(--font-display); font-size: 18px; letter-spacing: .5px; text-transform: uppercase; color: var(--text); line-height: 1.05; }
   .portal-rail-tag { display: block; font-size: 11.5px; color: var(--text-dim); margin-top: 1px; }
 

@@ -52,7 +52,7 @@
     document.documentElement.style.colorScheme = saved === 'light' ? 'light' : 'dark';
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=7c03870603">
+<link rel="stylesheet" href="/styles.css?v=09ad2a2e15">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=32b0b6ede8">
 <script src="/tools/data-layer.js?v=e736cf54f5" defer></script>
 <script src="/tools/dev-tools-shared.js?v=3132b24dc1" defer></script>
@@ -643,6 +643,9 @@
     <div class="dev-health-run-row">
       <span class="dev-health-run-note">Consistency check, service worker, Supabase, latest deploy, and cron health in one pass.</span>
     </div>
+    <!-- Fix plan FP5.5 (2026-11-06): the build stamp lives here now. Settings
+         shows the product label "Triple H Homebase V1.0" instead. -->
+    <div class="dev-health-run-note" id="devBuildStamp">Build: checking&hellip;</div>
     <div id="fullHealthCheckResults" style="margin-top:12px;"></div>
   </div>
 
@@ -4642,6 +4645,24 @@
       });
     });
   })();
+</script>
+<script>
+  // Fix plan FP5.5 (2026-11-06): this device's build, from the service
+  // worker's cache name (it changes on every deploy). Developer-facing only.
+  async function showBuildStamp() {
+    const el = document.getElementById('devBuildStamp');
+    if (!el) return;
+    let v = '';
+    try {
+      if ('caches' in window) {
+        const names = (await caches.keys()).filter((n) => /^th-workspace-v\d+$/.test(n));
+        names.sort((a, b) => Number(b.split('-v')[1]) - Number(a.split('-v')[1]));
+        v = names[0] ? names[0].replace('th-workspace-', '') : '';
+      }
+    } catch (e) { v = ''; }
+    el.textContent = v ? 'Build ' + v + ' on this device' : 'Build: not available on this device';
+  }
+  document.addEventListener('DOMContentLoaded', showBuildStamp);
 </script>
 </body>
 </html>

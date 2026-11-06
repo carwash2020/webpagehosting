@@ -52,11 +52,11 @@ function loadTriagePage(html) {
   return dom.window;
 }
 
-test('one pill button per appliance, sourced from triage.js\'s own DATA -- 5 appliances, nothing invented', () => {
+test('one pill button per appliance, sourced from triage.js\'s own DATA -- 6 appliances (microwave added in FP5.4), nothing invented', () => {
   const window = loadTriagePage(INDEX);
   const pills = window.document.querySelectorAll('#triageSymptomGrid .triage-appliance-pill');
-  assert.equal(Object.keys(window.TRIAGE_DATA).length, 5, 'sanity check: triage.js should still have exactly 5 appliances');
-  assert.equal(pills.length, 5, 'expected one pill per appliance -- no more, no fewer');
+  assert.equal(Object.keys(window.TRIAGE_DATA).length, 6, 'sanity check: triage.js has exactly 6 appliances (microwave since FP5.4, D6)');
+  assert.equal(pills.length, 6, 'expected one pill per appliance -- no more, no fewer');
 });
 
 test('no symptom pills are shown until an appliance is selected', () => {

@@ -33,7 +33,10 @@ const LEAD_EMAIL_FROM = Deno.env.get("LEAD_EMAIL_FROM") || "";
 const LOGO_URL = "https://www.triplehenterprisesllc.biz/images/logo-signature-email.png";
 const LOGIN_URL = "https://www.triplehenterprisesllc.biz/portal/login.html";
 
-const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Linear-time (fix plan Group 3, 2026-11-06; CodeQL-class ReDoS): domain
+// labels are separated by single dots, so no two repeats can match the same
+// characters. This runs before any rate limit, so it must never backtrack.
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 const CODE_SHAPE = /^\d{6}$/;
 const CODE_MINUTES = 15;
 const MAX_WRONG_TRIES = 5;
@@ -181,7 +184,7 @@ Deno.serve(async (req: Request) => {
     const body = await req.json().catch(() => ({}));
     const action = body.action;
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
-    if (!EMAIL_SHAPE.test(email) || email.length > 254) return json({ ok: false, error: "Enter a valid email address." }, 400);
+    if (email.length > 254 || !EMAIL_SHAPE.test(email)) return json({ ok: false, error: "Enter a valid email address." }, 400);
 
     if (action === "start") {
       const password = typeof body.password === "string" ? body.password : "";

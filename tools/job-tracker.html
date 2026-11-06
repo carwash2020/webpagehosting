@@ -52,7 +52,7 @@
     document.documentElement.style.colorScheme = saved === 'light' ? 'light' : 'dark';
   })();
 </script>
-<link rel="stylesheet" href="/styles.css?v=7c03870603">
+<link rel="stylesheet" href="/styles.css?v=09ad2a2e15">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=32b0b6ede8">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
 <script src="/tools/sync.js?v=92a4047864" defer></script>
@@ -494,6 +494,10 @@
     aspect-ratio: 1; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px;
     padding: 6px; cursor: pointer; display: flex; flex-direction: column; position: relative;
     transition: border-color 0.15s ease;
+    /* Fix plan FP5.2 (2026-11-06; D5; approved design Group3Screens): the
+       day number centers under its weekday label, and the job dots center
+       at the bottom. */
+    align-items: center;
   }
   .cal-day:hover { border-color: var(--orange-light); }
   .cal-day:active { transform: scale(0.95); border-color: var(--orange-light); transition: transform 0.08s ease; }
@@ -502,7 +506,7 @@
   .cal-day.is-selected { background: rgba(58,160,255,0.12); border-color: var(--blue-light); }
   .cal-day-num { font-size: 12.5px; color: var(--text-dim); }
   .cal-day.is-today .cal-day-num { color: var(--blue-light); font-weight: 700; }
-  .cal-day-dots { display: flex; gap: 3px; flex-wrap: wrap; margin-top: auto; }
+  .cal-day-dots { display: flex; gap: 3px; flex-wrap: wrap; justify-content: center; margin-top: auto; }
   .cal-day-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--orange-light); flex-shrink: 0; }
   .cal-day-dot.is-done { background: var(--text-dim); }
   .cal-day-dot.is-high { background: #e05252; }

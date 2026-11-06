@@ -142,10 +142,10 @@ test('the open-status dot pulses only when open, via a real ::after ring, not an
   assert.doesNotMatch(STYLES, /\.open-status\.is-closed \.dot::after/);
 });
 
-test('every appliance row shows its own icon, and the icon set covers exactly the 5 appliances in triage.js', () => {
+test('every appliance row shows its own icon, and the icon set covers exactly the 6 appliances in triage.js', () => {
   const TRIAGE_JS = fs.readFileSync(repo('js/triage.js'), 'utf8');
   const iconMap = TRIAGE_JS.match(/const APPLIANCE_ICONS = \{([\s\S]*?)\n\s*\};/)[1];
-  for (const key of ['washer', 'dryer', 'dishwasher', 'refrigerator', 'range']) {
+  for (const key of ['washer', 'dryer', 'dishwasher', 'refrigerator', 'range', 'microwave']) {
     assert.match(iconMap, new RegExp(`${key}:\\s*'<svg`), `expected an icon for ${key}`);
   }
 });
