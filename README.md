@@ -60,7 +60,7 @@ Settings.
 - **Site Content** (`site-content.html`): edit the public site's changeable text, with history and undo, and review the gallery queue.
 - **Settings** (theme, notifications, MFA, add-ons, backup and restore) and **Dev Tools** (role-gated diagnostics grouped into sections: health, data, sync, notifications, ops, reports, access, content, with tool search and recents).
 - Cross-device sync through Supabase, per signed-in account with row-level security (ops, money and runway data in separate rows), per-record merge, deletion tombstones and a restorable Graveyard.
-- Two-factor sign-in for internal accounts, enforced server-side for every table, bucket and edge function once an authenticator is set up.
+- Two-factor sign-in for internal accounts. The server-side check covers every table, bucket and edge function, but it is in **log-only mode** today (`internal_mfa_mode()` returns `log`): it records what it would block and blocks nothing until it is switched to `enforce`.
 
 ### Automation
 - Email and push notifications for bookings, leads, quotes, invoices, payment and appointment reminders, and job status changes (Resend for email, Web Push for push).
@@ -151,6 +151,7 @@ actually live.
 
 | Doc | What's in it |
 |---|---|
+| [`CONTINUE-HERE.md`](CONTINUE-HERE.md) | Pick-up notes for a fresh session: read first, then re-verify against the code |
 | [`docs/GETTING-STARTED.md`](docs/GETTING-STARTED.md) | Reading order and how to verify a change is safe |
 | [`docs/REFERENCE.md`](docs/REFERENCE.md) | What every file is for, plus sync, booking, automation, cache-busting, and the **Do not delete** list |
 | [`docs/CHANGELOG.md`](docs/CHANGELOG.md) | Dated history of every change, newest at the bottom |
