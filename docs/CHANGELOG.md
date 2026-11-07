@@ -6128,6 +6128,8 @@ Fix plan Group 4 (RP1 + RP2; decisions D16, D17, D18, D19, D21, D24, D28; approv
 - `sql/payments/03b_round_real_invoice_amounts.sql`
 - `sql/infra/group4_insights_and_ga.sql`
 
+**Edge functions** (deployed 2026-11-07 from faf6f95b, byte-identical to the repo, `verify_jwt` unchanged): `create-payment-intent` v28, `create-bulk-payment-intent` v26, `guest-pay` v8 (no JWT, as before), `sync-invoice-to-portal` v33, `ga4-report` v7, `ga4-conversion` v6. None was called after deploying.
+
 **Tests** (new):
 - `tests/payments/portal-balance-db.test.js` (8, PGlite)
 - `tests/security/group4-insights-db.test.js` (6, PGlite)
