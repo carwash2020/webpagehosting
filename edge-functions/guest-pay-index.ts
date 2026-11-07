@@ -146,13 +146,13 @@ async function rateLimitTake(bucket: string, key: string, max: number, windowSec
 const VIEW_LIMIT_PER_HOUR = 60;
 const PAY_LIMIT_PER_HOUR = 20;
 
-// "tony@example.com" -> "t\u2022\u2022\u2022@example.com": enough for the payer to
+// "tony@example.com" -> "t•••@example.com": enough for the payer to
 // recognise their own address, not enough to read someone else's.
 function maskEmail(email: unknown): string | null {
   const e = String(email || "").trim().toLowerCase();
   const at = e.lastIndexOf("@");
   if (at < 1 || at === e.length - 1) return null;
-  return `${e.charAt(0)}\u2022\u2022\u2022${e.slice(at)}`;
+  return `${e.charAt(0)}•••${e.slice(at)}`;
 }
 
 // D15: a paid invoice's code works for 90 days after paid_at. No paid_at on

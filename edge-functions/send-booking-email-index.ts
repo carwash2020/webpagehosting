@@ -149,7 +149,7 @@ function formatDateRange(startAt: string, endAt: string): { dateLabel: string; t
     hour: "numeric",
     minute: "2-digit",
   });
-  const timeLabel = `${timeFmt.format(start)} \u2013 ${timeFmt.format(end)}`;
+  const timeLabel = `${timeFmt.format(start)} – ${timeFmt.format(end)}`;
   return { dateLabel, timeLabel };
 }
 

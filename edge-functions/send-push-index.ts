@@ -859,7 +859,7 @@ async function sendWeeklyDigest(): Promise<string[]> {
 
   await sendToAllSubscriptions({
     title: "Weekly Summary",
-    body: parts.join(" \u00b7 "),
+    body: parts.join(" · "),
     url: "/tools/workspace.html",
   });
 
