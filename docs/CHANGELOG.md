@@ -6087,3 +6087,56 @@ Fix plan Group 3 (FP5 + FP6; decisions D4, D5, D6; approved design Group3Screens
   - FP6.4 (D12): both funnels stay.
   - FP6.5 and FP6.6: parked until Connor asks.
 - Tests: `tests/design/fp5-group3.test.js` (10). Updated: triage symptom grid (6 appliances), round-3 icons, and settings check-for-updates (the product label).
+
+## What changed, 2026-11-07 -- Group 4: money shown is money received; Insights tells one story
+
+Fix plan Group 4 (RP1 + RP2; decisions D16, D17, D18, D19, D21, D24, D28; approved designs InsightsWebsite and PortalBalance). Database changes and deploys were each approved in this session by Kavi, on Connor's behalf.
+
+**Money (RP1)**
+- **RP1.2 (D16):** Resend on an invoice or estimate with no portal copy now creates the portal copy and emails it, instead of sending an email the portal never shows.
+- **RP1.3:** part payments. `client_portal_invoices.paid_amount` follows the Workspace's recorded payments by database trigger. The portal shows a part-paid invoice's balance with a "Part paid" pill and "$X paid of $Y". The pay functions (`create-payment-intent`, `create-bulk-payment-intent`, `guest-pay`) charge only what is left. Stripe's paid-short/overpaid check and the Pay All split use the balance too. No invoice was part-paid on the day of the change.
+- **RP1.4:** Runway counts money received, once: a card-paid invoice is not counted again through its POS charge, and an unpaid one counts $0 (the same rule as Finance).
+- **RP1.5:** an invoice's income row can't be deleted from the Finance log (it would only come back); the user is sent to the invoice.
+- **RP1.6:** Convert Quote → Invoice carries the client email.
+- **RP1.7 (D21):** Snapshot Net Profit and the tax set-aside are on money received.
+- **RP1.8 (D24):** `invoices.sent_at` records when an invoice first reached the client's portal, backfilled from the portal rows.
+- **RP1.9:** a partly refunded portal invoice shows what was kept.
+- **RP1.10:** money is stored in whole cents (the invoices mirror and `sync-invoice-to-portal`). Two real invoices were corrected with approval: INV-2026-1000 (paid, no amount recorded) and INV-2026-0905 (total 125.0025). Undo values are in `sql/payments/03b_round_real_invoice_amounts.sql`.
+- **RP1.11:** one money format, with cents above $1,000.
+- **RP1.12:** each mileage trip uses the IRS rate for its own date and keeps it.
+
+**Insights and analytics (RP2)**
+- **RP2.1:** campaign capture (`utm-tracking.js`) runs on all 39 public pages, not just the homepage and booking page.
+- **RP2.16 (D28):** campaign values and the first referrer stay tab-only until the visitor accepts analytics cookies. Accept moves them to 90-day storage; Decline (or no choice) removes them from it.
+- **RP2.2 (D17), RP2.13, RP2.22:** the funnel nests. Jobs, Invoiced and Paid follow this period's leads and bookings: the jobs they became, those jobs' invoices, and the money received on them so far. Someone who sent the form and booked counts once. Live, the inverted "1 lead → 13 jobs" became "1 lead → 0 jobs".
+- **RP2.5, RP2.11:** "Google" typed into Who referred you? is no longer a Referral. A referral code or a real name still is. `(direct)` reads Direct and google/organic reads Google search, the same names the website card uses. The database and the Workspace share one rule, tested case by case.
+- **RP2.6:** confirmed that Add to Jobs on a booking already links the booking and keeps its source; now pinned by a test.
+- **RP2.7, RP2.8, RP2.19, RP2.20, RP2.21:** Google Analytics sales
+  - A sale Google never accepted is queued again when the invoice is paid again.
+  - A refund on a sale Google already has is sent as a refund event.
+  - Nothing is sent for $0 or a TEST client.
+  - Each event is checked on Google's validation endpoint before it counts as sent.
+  - The transaction-id comment is corrected.
+- **RP2.9:** `ga4-report` fails loudly (502) when any period fails, so the watchdog alerts, and fetches the three periods side by side.
+- **RP2.10 (D19), RP2.3 (D18):** the website card adds Visitors, Texts, Emails and Book clicks, plus a Booking page strip (opened → started → finished). The strip notes that "finished" includes bookings later cancelled.
+- **RP2.12, RP2.14, RP2.18:** the note says which days each card covers and what declining cookies changes; numbers over 48 hours old carry a warning.
+- **RP2.15 (D18):** Dev Tools' booking cancellation percentage counts the same cohort as its denominator.
+- **RP2.17:** `lead_form_submitted` fires only for a new lead, not a duplicate submit.
+
+**Database** (applied 2026-11-07; live function bodies checked byte-for-byte against the repo):
+- `sql/payments/03_portal_balance_and_sent.sql`
+- `sql/payments/03b_round_real_invoice_amounts.sql`
+- `sql/infra/group4_insights_and_ga.sql`
+
+**Tests** (new):
+- `tests/payments/portal-balance-db.test.js` (8, PGlite)
+- `tests/security/group4-insights-db.test.js` (6, PGlite)
+- `tests/workspace/rp1-money.test.js` (7)
+- `tests/workspace/rp2-insights.test.js` (4)
+- `tests/payments/portal-part-paid.test.js` (3)
+- plus new cases in the UTM, GA function, pay-function, Insights and resend suites.
+
+**Left for later, reported rather than built:**
+- Confirmed bookings in the past are never listed in the dashboard's bookings list, so they can't be added to Jobs.
+- `invoice_payment_status` counts only Stripe money for an invoice Stripe helped pay, so a cash part payment before a card balance isn't added in there.
+- Runway months saved before RP1.4 keep their old revenue until re-pulled.
