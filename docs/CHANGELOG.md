@@ -6219,6 +6219,9 @@ Fix plan Group 5 (RP3 + RP4; decisions D15, D20, D23, D26, D29, D30, D31). Each 
 - `sql/security/group5_backend_hardening.sql`
 - `sql/item1/07_reseed_clients_2026_11.sql`
 
+**Edge functions** (deployed 2026-11-07 from d6b3f971, each byte-identical to the repo, `verify_jwt` unchanged; none called after deploying): Send-Push v61, respond-to-quote v20, guest-pay v11 (no JWT), create-payment-intent v31, create-bulk-payment-intent v29, delete-portal-invoice v14, create-pos-charge v28, stripe-webhook v32 (no JWT), manage-saved-card v25, send-invite v34, send-job-confirmation-email v15, team-admin v10, advisor-health v28, trigger-workflow v29, send-invoice-notification v35, send-quote-notification v32, send-contract-notification v15, portal-signup v8 (no JWT), schedule-checkup-visit v18, schedule-quote-job v20, send-payment-reminder v11, send-quote-followup v10, uptime-alert v19, resend-webhook v8 (no JWT), notify-job-message-email v13, notify-work-order-message-email v21, notify-work-order-scheduled-email v19, send-booking-email v28.
+- On the way there, Send-Push v59/v60 went out from an earlier attempt: the deploy path decodes `\uXXXX` escapes, so a workaround left v60 showing a literal `\u00b7` in the weekly-digest push for about 20 minutes. d6b3f971 replaced the three files' escapes with the characters themselves, and v61 fixed it.
+
 **Held for Connor:**
 - `sql/security/group5_rp36_finance_documents.sql`: receipts and secure documents behind `can_view_finance`, a proposal not yet decided. The matching Workspace message is kept in that file's header.
 - The D20 deadline date.
