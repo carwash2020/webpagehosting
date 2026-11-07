@@ -153,15 +153,16 @@ test('invoice and quote numbers are drawn from the database sequence, never gene
   assert.match(INVOICE_GEN, /assignNextNumber\('quoteNumber', 'next_quote_number', 'EST-'\)/);
 });
 
-test('every number-assignment site uses the sequence -- initial load and both form resets', () => {
-  // Page load, the post-generate invoice reset, and the post-generate
-  // quote reset -- plus (2026-11-03) a resumed invoice draft whose number
-  // the clean form already used. Missing one would silently reintroduce
-  // random numbering on that path only.
+test('every number-assignment site uses the sequence -- drawn once, at generate time', () => {
+  // Fix plan A4 (2026-11-07): drawing on page load and on every form reset
+  // burned a number per visit (1167 -> 1174 with nothing saved between).
+  // The one draw per document is now in generatePDF() / generateQuotePDF(),
+  // when the field is empty. tests/workspace/group6-a3-a4-invoices.test.js
+  // covers the paths that no longer draw.
   const invoiceCalls = (INVOICE_GEN.match(/assignNextNumber\('invoiceNumber'/g) || []).length;
   const quoteCalls = (INVOICE_GEN.match(/assignNextNumber\('quoteNumber'/g) || []).length;
-  assert.equal(invoiceCalls, 3, 'expected invoice number drawn on page load, on form reset, and on a resumed draft whose number was used');
-  assert.equal(quoteCalls, 2, 'expected quote number drawn on page load and on form reset');
+  assert.equal(invoiceCalls, 1, 'expected the invoice number drawn only at generate time');
+  assert.equal(quoteCalls, 1, 'expected the quote number drawn only at generate time');
 });
 
 test('a failed number draw falls back to a clearly-marked temporary number, never blank', () => {
