@@ -54,7 +54,9 @@ function loadRenderInvoiceSummary() {
     formatCurrency: (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n),
   };
   vm.createContext(ctx);
-  vm.runInContext(`${circumferenceLine}\n${fnSrc}\nthis.renderInvoiceSummary = renderInvoiceSummary;`, ctx);
+  // RP1.3 (2026-11-07): paid and outstanding count part payments.
+  const helpers = ['invoicePaidSoFar', 'invoiceBalance', 'invoiceIsPartPaid'].map((n) => extractFn(DASHBOARD, n)).join('\n');
+  vm.runInContext(`${helpers}\n${circumferenceLine}\n${fnSrc}\nthis.renderInvoiceSummary = renderInvoiceSummary;`, ctx);
   return { renderInvoiceSummary: ctx.renderInvoiceSummary, els };
 }
 

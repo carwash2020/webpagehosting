@@ -130,7 +130,7 @@ test('relative times read naturally', () => {
 
 test('Home loads the extra columns the feed needs, and renders it after the account cards', () => {
   const fn = extractFn(HOME, 'loadSummary');
-  assert.match(fn, /select\('id,total,paid,paid_at,invoice_number,invoice_date,client_name'\)/);
+  assert.match(fn, /select\('id,total,paid,paid_amount,paid_at,invoice_number,invoice_date,client_name'\)/); // paid_amount: RP1.3
   assert.match(fn, /select\('id,status,total,quote_number,quote_date,responded_at,client_name'\)/);
   assert.match(fn, /select\('id,title,job_date'\)/);
   assert.match(extractFn(HOME, 'init'), /renderRecentActivity\(summary, new Date\(\)\);/);

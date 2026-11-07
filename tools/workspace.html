@@ -1151,6 +1151,14 @@
   body.th-tool-page[data-th-page="workspace"] .ins-web-tile b { display: block; font-family: var(--font-display, var(--font-ui)); font-size: 22px; color: var(--text); }
   body.th-tool-page[data-th-page="workspace"] .ins-web-tile span { font-size: 12px; color: var(--text-dim); }
   body.th-tool-page[data-th-page="workspace"] .ins-web-list { margin: 0 0 12px; }
+  /* Fix plan Group 4 (RP2.18, RP2.10): stale warning and the booking page strip. */
+  body.th-tool-page[data-th-page="workspace"] .ins-stale { margin: 0 0 12px; padding: 8px 10px; border-radius: 10px; font-size: 12.5px; line-height: 1.4; color: var(--tone-orange-fg, #ffb347); background: color-mix(in srgb, var(--orange) 12%, transparent); border: 1px solid color-mix(in srgb, var(--orange) 35%, var(--border)); }
+  body.th-tool-page[data-th-page="workspace"] .ins-booking { margin: 0 0 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-panel-2); }
+  body.th-tool-page[data-th-page="workspace"] .ins-booking h4 { margin: 0 0 8px; font-family: var(--font-app); font-size: 13px; font-weight: 600; color: var(--text); letter-spacing: 0; }
+  body.th-tool-page[data-th-page="workspace"] .ins-booking-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; font-size: 13px; padding: 3px 0; }
+  body.th-tool-page[data-th-page="workspace"] .ins-booking-row > span:first-child { color: var(--text-dim); }
+  body.th-tool-page[data-th-page="workspace"] .ins-booking-row em { font-style: normal; color: var(--text-faint); }
+  body.th-tool-page[data-th-page="workspace"] .ins-booking p { margin: 8px 0 0; font-size: 11.5px; line-height: 1.4; color: var(--text-faint); }
   body.th-tool-page[data-th-page="workspace"] .ins-web-list h4 { margin: 0 0 4px; font-family: var(--font-ui); font-size: 12px; letter-spacing: 1.5px; color: var(--text-dim); font-weight: 500; }
   body.th-tool-page[data-th-page="workspace"] .ins-web-row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--th-hairline); font-size: 14px; color: var(--text); }
   body.th-tool-page[data-th-page="workspace"] .ins-web-row span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1641,7 +1649,7 @@
         </div>
         <div class="ins-funnel" id="insFunnel"></div>
         <div class="ins-table" id="insBySource"></div>
-        <p class="ins-note">Paid counts money actually received. A job keeps the source of the lead or booking it came from; its invoices take it from the job.</p>
+        <p class="ins-note">Jobs, Invoiced and Paid follow the leads and bookings from this period: the jobs they became, those jobs' invoices, and the money received on them so far. Someone who sent the form and booked counts once. A job keeps the source of the lead or booking it came from.</p>
       </div>
       <div class="insights-card insights-card--website" id="insightsWebsiteCard">
         <div class="analytics-subheading">The website <span class="insights-card-note" id="insWebPeriod">last 90 days</span></div>
@@ -4264,6 +4272,9 @@
     renderInsightsFunnel();
   }
   const insNum = (n) => (Number(n) || 0).toLocaleString('en-US');
+  // Fix plan RP2.14: declining cookies stops the visit ID being saved; GA can
+  // still count a declined visitor's taps without cookies.
+  const INS_CONSENT_NOTE = 'No visit ID is saved for visitors who declined cookies.';
   let insightsRun = 0;
   async function renderInsightsFunnel() {
     const funnelEl = document.getElementById('insFunnel');
@@ -4291,7 +4302,7 @@
     const steps = [
       [report ? insNum(report.sessions) : '\u2014', 'Visits', false],
       [insNum(sum('leads')), 'Leads & bookings', false],
-      [insNum(sum('jobs')), 'Jobs', false],
+      [insNum(sum('jobs')), 'Became jobs', false],
       [insNum(sum('invoiced')), 'Invoiced', false],
     ];
     if (money_) steps.push([money(sum('paid')), 'Paid', true]);
@@ -4316,23 +4327,47 @@
       webEl.innerHTML = '<div class="empty-state-small">' + (web.ok
         ? 'Website numbers appear here after the first daily update from Google Analytics.'
         : 'Couldn\'t load the website numbers (' + escapeHtml(web.error) + ').') + '</div>';
-      if (note) note.textContent = 'Visitors who declined cookies aren\'t counted here.';
+      if (note) note.textContent = INS_CONSENT_NOTE;
       return;
     }
     const list = (title, items) => items.length
       ? '<div class="ins-web-list"><h4>' + escapeHtml(title) + '</h4>' + items.map(([a, b]) => '<div class="ins-web-row"><span title="' + escapeAttr(a) + '">' + escapeHtml(a) + '</span><span>' + insNum(b) + '</span></div>').join('') + '</div>'
       : '';
-    webEl.innerHTML =
+    // RP2.18: say so when the daily copy is over 48 hours old.
+    const fetched = web.fetchedAt ? new Date(web.fetchedAt) : null;
+    const when = fetched && !isNaN(fetched) ? fetched.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+    const ageMs = fetched && !isNaN(fetched) ? Date.now() - fetched.getTime() : 0;
+    const stale = ageMs > 48 * 3600000
+      ? '<div class="ins-stale" role="status">These website numbers are ' + Math.floor(ageMs / 86400000) + ' days old. The daily update hasn\'t run since ' + escapeHtml(when) + '.</div>'
+      : '';
+    const tile = (n, label) => '<div class="ins-web-tile"><b>' + insNum(n) + '</b><span>' + escapeHtml(label) + '</span></div>';
+    // RP2.10 (D19): the booking page from opened to finished. Older daily
+    // copies don't carry the two new counts, so the strip waits for one that does.
+    let booking = '';
+    if (report.booking_page_views != null) {
+      const opened = Number(report.booking_page_views) || 0;
+      const started = Number(report.booking_form_starts) || 0;
+      // Each step as a share of the step before it (the approved board).
+      const pct = (n, of) => (of > 0 ? ' <em>\u00b7 ' + Math.round((Number(n) || 0) / of * 100) + '%</em>' : '');
+      booking = '<div class="ins-booking"><h4>Booking page</h4>' +
+        '<div class="ins-booking-row"><span>Opened the booking page</span><span>' + insNum(opened) + '</span></div>' +
+        '<div class="ins-booking-row"><span>Started the form' + pct(started, opened) + '</span><span>' + insNum(report.booking_form_starts) + '</span></div>' +
+        '<div class="ins-booking-row"><span>Finished booking' + pct(report.bookings, started) + '</span><span>' + insNum(report.bookings) + '</span></div>' +
+        // RP2.3 (D18): GA counts every finished form; the funnel counts confirmed bookings.
+        '<p>Finished counts every completed form, including bookings later cancelled. Confirmed bookings are in Leads &amp; bookings above.</p></div>';
+    }
+    webEl.innerHTML = stale +
       '<div class="ins-web-tiles">' +
-        '<div class="ins-web-tile"><b>' + insNum(report.sessions) + '</b><span>Visits</span></div>' +
-        '<div class="ins-web-tile"><b>' + insNum(report.calls) + '</b><span>Calls tapped</span></div>' +
-        '<div class="ins-web-tile"><b>' + insNum(report.bookings) + '</b><span>Bookings</span></div>' +
+        tile(report.sessions, 'Visits') + tile(report.users, 'Visitors') + tile(report.calls, 'Calls tapped') +
+        tile(report.texts, 'Texts tapped') + tile(report.emails, 'Emails tapped') + tile(report.booking_clicks, 'Book clicks') +
       '</div>' +
+      booking +
       list('WHERE VISITS COME FROM', (report.channels || []).slice(0, 6).map(c => [c.name, c.sessions])) +
       list('TOP PAGES', (report.pages || []).slice(0, 5).map(pg => [pg.title || pg.path, pg.views]));
     if (note) {
-      const when = web.fetchedAt ? new Date(web.fetchedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
-      note.textContent = 'From Google Analytics, refreshed once a day' + (when ? ' \u00b7 updated ' + when : '') + '. Visitors who declined cookies aren\'t counted here.';
+      // RP2.12: the two cards cover different days; RP2.14: what consent changes.
+      note.textContent = 'From Google Analytics, refreshed once a day' + (when ? ' \u00b7 updated ' + when : '') +
+        ' \u00b7 covers the ' + INS_DAYS[period] + ' days through yesterday (the funnel above includes today). ' + INS_CONSENT_NOTE;
     }
   }
   document.addEventListener('click', (e) => {

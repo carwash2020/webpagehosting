@@ -50,7 +50,8 @@ function runAttention(summary) {
     Date,
   };
   vm.createContext(ctx);
-  vm.runInContext(`${moneyFn}\n${dateFn}\n${fn}\nthis.renderAttention = renderAttention;`, ctx);
+  const balanceFn = extractFn(HOME, 'homeInvoiceBalance'); // RP1.3: what is left after a part payment
+  vm.runInContext(`${balanceFn}\n${moneyFn}\n${dateFn}\n${fn}\nthis.renderAttention = renderAttention;`, ctx);
   ctx.renderAttention(summary);
   return el.innerHTML;
 }
@@ -69,7 +70,8 @@ function runPayFirst(invoices) {
     Date,
   };
   vm.createContext(ctx);
-  vm.runInContext(`${formatCurrency}\n${formatDate}\n${hideFn}\n${fn}\nthis.renderPayFirst = renderPayFirst;`, ctx);
+  const helpers = ['invoicePaidSoFar', 'invoiceBalance', 'invoiceIsPartPaid'].map((n) => extractFn(DASHBOARD, n)).join('\n'); // RP1.3
+  vm.runInContext(`${helpers}\n${formatCurrency}\n${formatDate}\n${hideFn}\n${fn}\nthis.renderPayFirst = renderPayFirst;`, ctx);
   ctx.renderPayFirst(invoices);
   return el.innerHTML;
 }

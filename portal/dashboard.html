@@ -500,11 +500,24 @@
   // shown as a meaningless 0%) when nothing has been invoiced yet,
   // matching the same divide-by-zero guard used for the ring devices
   // elsewhere in this codebase (job-tracker.html, portal/jobs.html).
+  // Fix plan RP1.3 (2026-11-07): part payments. client_portal_invoices
+  // .paid_amount is what the client has paid so far (kept in step with the
+  // Workspace by the database); what's left is what Pay charges.
+  function invoicePaidSoFar(inv) {
+    const total = Number(inv.total) || 0;
+    if (inv.paid) return total;
+    return Math.min(total, Math.max(0, Number(inv.paid_amount) || 0));
+  }
+  function invoiceBalance(inv) {
+    if (inv.paid) return 0;
+    return Math.max(0, Math.round(((Number(inv.total) || 0) - invoicePaidSoFar(inv)) * 100) / 100);
+  }
+  function invoiceIsPartPaid(inv) { return !inv.paid && invoicePaidSoFar(inv) > 0; }
   const INVOICE_SUMMARY_RING_CIRCUMFERENCE = 2 * Math.PI * 30;
   function renderInvoiceSummary(invoices) {
     const el = document.getElementById('invoiceSummary');
-    const totalPaid = invoices.filter(inv => inv.paid).reduce((sum, inv) => sum + Number(inv.total || 0), 0);
-    const totalOutstanding = invoices.filter(inv => !inv.paid).reduce((sum, inv) => sum + Number(inv.total || 0), 0);
+    const totalPaid = invoices.reduce((sum, inv) => sum + invoicePaidSoFar(inv), 0);
+    const totalOutstanding = invoices.reduce((sum, inv) => sum + invoiceBalance(inv), 0);
     const grandTotal = totalPaid + totalOutstanding;
     if (grandTotal <= 0) { el.style.display = 'none'; return; }
 
@@ -548,13 +561,14 @@
       return;
     }
 
-    const total = outstanding.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
+    const total = outstanding.reduce((sum, inv) => sum + invoiceBalance(inv), 0);
     const oldest = outstanding.slice().sort((a, b) => new Date(a.invoice_date) - new Date(b.invoice_date))[0];
     const newest = outstanding.slice().sort((a, b) => new Date(b.invoice_date) - new Date(a.invoice_date))[0];
     let meta;
     if (outstanding.length === 1) {
       meta = (outstanding[0].invoice_number ? escapeHtml(outstanding[0].invoice_number) + ' · ' : '') +
-        'Invoiced ' + escapeHtml(formatDate(outstanding[0].invoice_date));
+        'Invoiced ' + escapeHtml(formatDate(outstanding[0].invoice_date)) +
+        (invoiceIsPartPaid(outstanding[0]) ? ' · ' + formatCurrency(invoicePaidSoFar(outstanding[0])) + ' already paid' : '');
     } else {
       meta = outstanding.length + ' unpaid invoices · oldest invoiced ' +
         escapeHtml(formatDate(oldest.invoice_date));
@@ -669,6 +683,7 @@
   // the card just says so.
   function invoiceStatusPill(inv) {
     if (inv.paid && inv.refund_status === 'full') return '<span class="invoice-status is-refunded">Refunded</span>';
+    if (invoiceIsPartPaid(inv)) return '<span class="invoice-status is-unpaid">Part paid</span>';
     return `<span class="invoice-status ${inv.paid ? 'is-paid' : 'is-unpaid'}">${inv.paid ? 'Paid' : 'Unpaid'}</span>`;
   }
   function invoiceRefundLine(inv) {
@@ -684,6 +699,7 @@
   // what the client actually paid in the end (total - refunded), not the
   // original total.
   function invoiceShownTotal(inv) {
+    if (invoiceIsPartPaid(inv)) return invoiceBalance(inv);
     const refunded = Number(inv.refunded_amount) || 0;
     if (inv.refund_status === 'partial' && refunded > 0) return Math.max(0, Math.round((Number(inv.total) - refunded) * 100) / 100);
     return inv.total;
@@ -703,11 +719,12 @@
             ${invoiceStatusPill(inv)}
             ${inv.paid && inv.paid_at ? `<div class="invoice-desc invoice-paid-on">Paid ${formatDate(inv.paid_at.slice(0, 10))}</div>` : ''}
             ${invoiceRefundLine(inv)}
+            ${invoiceIsPartPaid(inv) ? `<div class="invoice-desc invoice-part-paid">${formatCurrency(invoicePaidSoFar(inv))} paid of ${formatCurrency(inv.total)}</div>` : ''}
           </div>
         </div>
         ${renderLineItemsTable(inv.line_items)}
         <div class="invoice-card-actions">
-          ${!inv.paid ? `<button class="btn orange" onclick="startPayment(${inv.id})">Pay now</button>` : ''}
+          ${!inv.paid ? `<button class="btn orange" onclick="startPayment(${inv.id})">${invoiceIsPartPaid(inv) ? 'Pay ' + formatCurrency(invoiceBalance(inv)) : 'Pay now'}</button>` : ''}
           <button class="btn secondary-btn" onclick="downloadInvoicePDF(${inv.id})">${inv.paid ? 'Download receipt' : 'Download PDF'}</button>
         </div>
       </div>
@@ -970,7 +987,7 @@
 
   function renderPaymentSignatureStep(invoiceId) {
     const inv = currentInvoices.find(i => i.id === invoiceId);
-    const amountLabel = inv ? '$' + Number(inv.total).toFixed(2) : 'the invoice total';
+    const amountLabel = inv ? '$' + invoiceBalance(inv).toFixed(2) : 'the amount due';
     // v2 sheet, step 1 of 2 (2026-09-28): a kicker + Anton heading over
     // the unchanged authorization text, name field and signature pad.
     // Continue stays disabled until the pad has a signature
@@ -1058,7 +1075,7 @@
   function renderBulkPaymentSignatureStep(invoiceIds) {
     const total = currentInvoices
       .filter(inv => invoiceIds.includes(inv.id))
-      .reduce((sum, inv) => sum + Number(inv.total), 0);
+      .reduce((sum, inv) => sum + invoiceBalance(inv), 0);
     const amountLabel = '$' + total.toFixed(2);
     document.getElementById('paymentModalBody').innerHTML =
       '<p class="pay-step-kicker">Step 1 of 2 &middot; authorize</p>' +

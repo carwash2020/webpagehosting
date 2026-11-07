@@ -13,7 +13,9 @@ const src = ['invoiceStatusPill', 'invoiceRefundLine', 'invoiceShownTotal'].map(
   const m = PAGE.match(new RegExp(`  function ${name}\\(inv\\) \\{[\\s\\S]*?\\n  \\}\\n`));
   assert.ok(m, `expected ${name}() in portal/dashboard.html`);
   return m[0];
-}).join('\n');
+}).join('\n') +
+  // RP1.3 (2026-11-07): the pill and amount also know about part payments.
+  PAGE.slice(PAGE.indexOf('  function invoicePaidSoFar(inv) {'), PAGE.indexOf('  const INVOICE_SUMMARY_RING_CIRCUMFERENCE'));
 const formatCurrency = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
 const { invoiceStatusPill, invoiceRefundLine, invoiceShownTotal } = new Function('formatCurrency', `${src}; return { invoiceStatusPill, invoiceRefundLine, invoiceShownTotal };`)(formatCurrency);
 
