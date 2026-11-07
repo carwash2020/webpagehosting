@@ -44,11 +44,12 @@ function site({ url = 'https://www.triplehenterprisesllc.biz/', referrer = '', c
 }
 
 test('the first outside site that sent the visitor is kept (host only, first touch); our own site and a later referrer never replace it', () => {
-  let w = site({ referrer: 'https://www.google.com/search?q=dryer+repair+st+george' });
+  // (consent 'granted': kept in localStorage; without it, tab-only -- RP2.16, utm-lead-tracking.test.js)
+  let w = site({ consent: 'granted', referrer: 'https://www.google.com/search?q=dryer+repair+st+george' });
   assert.deepEqual(JSON.parse(JSON.stringify(w.getStoredAttributionExtras())), { landing_referrer: 'www.google.com', ga_client_id: null });
   assert.doesNotMatch(w.localStorage.getItem('th_first_referrer'), /dryer|search/, 'never the search terms or path');
   const kept = w.localStorage.getItem('th_first_referrer');
-  w = site({ referrer: 'https://m.facebook.com/', before: (x) => x.localStorage.setItem('th_first_referrer', kept) });
+  w = site({ consent: 'granted', referrer: 'https://m.facebook.com/', before: (x) => x.localStorage.setItem('th_first_referrer', kept) });
   assert.equal(w.getStoredAttributionExtras().landing_referrer, 'www.google.com');
   w = site({ referrer: 'https://www.triplehenterprisesllc.biz/our-work.html' });
   assert.equal(w.getStoredAttributionExtras().landing_referrer, null);

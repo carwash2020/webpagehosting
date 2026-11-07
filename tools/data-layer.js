@@ -1107,6 +1107,7 @@ function thAttribution(rec) {
     utmTerm: pick('utm_term', 'utmTerm'),
     utmContent: pick('utm_content', 'utmContent'),
     referredBy: pick('referred_by', 'referredBy'),
+    referredByCode: pick('referred_by_code', 'referredByCode'),
     landingReferrer: pick('landing_referrer', 'landingReferrer').toLowerCase(),
   };
 }
@@ -1114,15 +1115,28 @@ function thHasAttribution(rec) {
   const a = thAttribution(rec);
   return !!(a.source || a.utmSource || a.utmCampaign || a.landingReferrer || a.referredBy);
 }
+// Fix plan RP2.5 (2026-11-06): "Who referred you?" is free text, and people
+// type "Google" or "Facebook" into it. Those are not referrals. Same list as
+// insights_channel() in sql/infra/group4_insights.sql.
+const TH_NOT_A_REFERRER = /^(google|yelp|facebook|fb|instagram|ig|nextdoor|tiktok|twitter|x|linkedin|youtube|pinterest|bing|yahoo|duckduckgo|ecosia|internet|online|web|website|search|social media)( (search|maps?|ads?|reviews?|business|page|search engine))?$/;
+function thIsReferral(a) {
+  if (a.referredByCode || /^referral/i.test(a.source)) return true;
+  if (!a.referredBy) return false;
+  const name = a.referredBy.slice(0, 60).toLowerCase().split(/\s+/).filter(Boolean).join(' ');
+  return !TH_NOT_A_REFERRER.test(name);
+}
 function thChannelLabel(rec, opts) {
   const a = thAttribution(rec);
   const ignoreCampaign = !!(opts && opts.ignoreCampaign);
   const GBP = ['gbp', 'gmb', 'google_business', 'googlebusiness', 'google-business', 'google_business_profile'];
   const s = a.utmSource.toLowerCase(), m = a.utmMedium.toLowerCase(), c = a.utmCampaign.toLowerCase(), ref = a.landingReferrer;
-  if (a.referredBy || /^referral/i.test(a.source)) return 'Referral';
+  if (thIsReferral(a)) return 'Referral';
   if (GBP.includes(s) || ['gbp', 'gmb', 'google_business'].includes(m) || GBP.includes(c)) return 'Google Business';
   if (a.utmCampaign && !ignoreCampaign) return a.utmCampaign.slice(0, 60);
   if (s === 'google' && ['cpc', 'ppc', 'paid', 'paid_search'].includes(m)) return 'Google Ads';
+  // RP2.11: the same names the website card (GA) uses for these two.
+  if (s === '(direct)') return 'Direct';
+  if (s === 'google' && m === 'organic') return 'Google search';
   if (a.utmSource) return a.utmSource.slice(0, 60);
   // Host checks by label, not regex (the host came from a visitor's browser).
   const labels = ref ? ref.slice(0, 253).split('.') : [];
