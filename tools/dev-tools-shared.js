@@ -194,7 +194,7 @@
     },
     triggerworkflows: {
       title: 'Trigger workflows',
-      body: `<p>Runs any of the 5 GitHub Actions workflows on demand instead of waiting for its schedule. Calls a Supabase Edge Function (trigger-workflow) that holds the actual GitHub credential server-side -- it's never present anywhere in this page's own code, since anything sitting in client-side JS on a public page can be read by anyone who views the page source.</p><p>That function separately verifies the account calling it is genuinely signed in AND has a real assigned role (the same account_roles check everything else on this page depends on) before it will do anything, regardless of what this page itself shows -- so this stays safe even if something else about the page's own access control were ever wrong.</p>`,
+      body: `<p>Runs any of the 5 GitHub Actions workflows on demand instead of waiting for its schedule. Calls a Supabase Edge Function (trigger-workflow) that holds the actual GitHub credential server-side -- it's never present anywhere in this page's own code, since anything sitting in client-side JS on a public page can be read by anyone who views the page source.</p><p>That function separately verifies the account calling it is genuinely signed in AND has the full Dev Tools switch (can_access_dev_tools_full, the same switch that shows this panel; fix plan RP3.15) before it will do anything, regardless of what this page itself shows -- so this stays safe even if something else about the page's own access control were ever wrong.</p>`,
     },
   };
   function openDevInfo(key) {

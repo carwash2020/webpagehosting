@@ -325,13 +325,49 @@ test('the 30-day cutoff is enforced on read and purges the stored session', () =
   assert.equal(w.localStorage.getItem('th_portal_remember_until'), null);
 });
 
-test('a session from before this change (localStorage, no cutoff) keeps working untouched', () => {
-  const w = loadPortalApp({ [TOKEN]: '{"s":4}' });
+// Fix plan RP3.34 / D31 (2026-11-07): this used to read "a session from
+// before this change keeps working untouched". D31 forces one re-auth.
+test('D31: a pre-cap session (localStorage, no cutoff) is cleared once and the person is asked to sign in again', () => {
+  const w = loadPortalApp({ [TOKEN]: '{"s":4}', [TOKEN + '-code-verifier']: 'v', th_portal_biometric_lock_pat: 'cred' });
   const storage = w.eval('portalAuthStorage()');
-  assert.equal(storage.getItem(TOKEN), '{"s":4}');
-  storage.setItem(TOKEN, '{"s":5}'); // a silent token refresh
-  assert.equal(w.localStorage.getItem(TOKEN), '{"s":5}', 'refresh stays where it was');
-  assert.equal(w.sessionStorage.getItem(TOKEN), null);
+  assert.equal(storage.getItem(TOKEN), null, 'signed out');
+  assert.equal(w.localStorage.getItem(TOKEN), null, 'removed, not just hidden');
+  assert.equal(w.localStorage.getItem(TOKEN + '-code-verifier'), null);
+  assert.equal(w.localStorage.getItem('th_portal_biometric_lock_pat'), 'cred', 'only the session keys go');
+  assert.equal(w.sessionStorage.getItem('th_signin_again_notice'), '1', 'login.html says why');
+  assert.equal(w.localStorage.getItem('th_portal_uncapped_session_retired'), '1');
+});
+
+test('D31: it never repeats -- once the flag is set, nothing on this device is cleared again', () => {
+  const w = loadPortalApp({ th_portal_uncapped_session_retired: '1', [TOKEN]: '{"s":5}' });
+  assert.equal(w.eval('portalAuthStorage()').getItem(TOKEN), '{"s":5}');
+  assert.equal(w.sessionStorage.getItem('th_signin_again_notice'), null);
+  // A device with nothing to clear still sets the flag the first time.
+  const fresh = loadPortalApp();
+  fresh.eval('portalAuthStorage()');
+  assert.equal(fresh.localStorage.getItem('th_portal_uncapped_session_retired'), '1');
+  assert.equal(fresh.sessionStorage.getItem('th_signin_again_notice'), null, 'no notice when nothing was cleared');
+});
+
+test('D31: a session WITH its cutoff, and a sessionStorage session, are untouched', () => {
+  const until = String(Date.now() + 5 * DAY);
+  const capped = loadPortalApp({ [TOKEN]: '{"s":6}', th_portal_remember_until: until });
+  assert.equal(capped.eval('portalAuthStorage()').getItem(TOKEN), '{"s":6}');
+  assert.equal(capped.localStorage.getItem('th_portal_remember_until'), until);
+  const tabOnly = loadPortalApp({}, { [TOKEN]: '{"s":7}', th_portal_session_only: '1' });
+  assert.equal(tabOnly.eval('portalAuthStorage()').getItem(TOKEN), '{"s":7}');
+  assert.equal(tabOnly.sessionStorage.getItem('th_signin_again_notice'), null);
+});
+
+test('D31: a localStorage session written with no cutoff (no Remember me choice, e.g. set-password.html) gets the 30-day cutoff', () => {
+  const w = loadPortalApp();
+  const storage = w.eval('portalAuthStorage()');
+  storage.setItem(TOKEN, '{"s":8}');
+  const days = (Number(w.localStorage.getItem('th_portal_remember_until')) - Date.now()) / DAY;
+  assert.ok(days > 29.99 && days <= 30, 'cutoff is 30 days out: ' + days);
+  const before = w.localStorage.getItem('th_portal_remember_until');
+  storage.setItem(TOKEN, '{"s":9}'); // a token refresh never pushes the cutoff out
+  assert.equal(w.localStorage.getItem('th_portal_remember_until'), before);
 });
 
 test('changing the choice at the 2FA step moves the next write and removes the other copy', () => {

@@ -31,7 +31,26 @@ const REMEMBER_DAYS = 30;
 function getSessionStore(rememberMe) {
   return rememberMe ? localStorage : sessionStorage;
 }
+// Fix plan RP3.34 / D31 (2026-11-07): a remembered session from before the
+// 30-day cap (in localStorage with no remember_until) is cleared ONCE per
+// device and the person signs in again (portal/login.html says why). The
+// one-time flag means it never repeats; a session with remember_until, and
+// a sessionStorage session, are left alone.
+const UNCAPPED_RETIRED_KEY = 'th_auth_uncapped_session_retired';
+function retireUncappedSession() {
+  try {
+    if (localStorage.getItem(UNCAPPED_RETIRED_KEY) !== null) return;
+    localStorage.setItem(UNCAPPED_RETIRED_KEY, '1');
+    const s = JSON.parse(localStorage.getItem(AUTH_SESSION_KEY) || 'null');
+    if (s && !s.remember_until) {
+      localStorage.removeItem(AUTH_SESSION_KEY);
+      try { sessionStorage.setItem('th_signin_again_notice', '1'); } catch (e) { /* notice only */ }
+    }
+  } catch (e) { /* storage blocked or unreadable: nothing to retire */ }
+}
+
 function findStoredSession() {
+  retireUncappedSession();
   // A remembered session should still work after sessionStorage would
   // have been cleared (a new tab, browser restart) -- so localStorage is
   // checked first, then sessionStorage for the current-session-only case.

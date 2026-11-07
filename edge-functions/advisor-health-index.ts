@@ -43,14 +43,20 @@ function decodeJwtPayload(token: string): { email?: string; role?: string; sub?:
   }
 }
 
-async function callerHasAssignedRole(email: string): Promise<boolean> {
+// Fix plan RP3.15 (2026-11-07): this used to select role_name but only
+// check that a row existed, so any internal account -- an Employee preset
+// with every switch off included -- could use it. It now requires the
+// "Dev Tools (full technical)" switch, account_roles.can_access_dev_tools_full:
+// the same switch that shows this panel in Dev Tools (its .dev-owner-hidden
+// panels, tools/dev-tools.html applyOwnerRestrictedView). Fails closed.
+async function callerCanUseFullDevTools(email: string): Promise<boolean> {
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=role_name`,
+    `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=can_access_dev_tools_full&limit=1`,
     { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
   );
   if (!res.ok) return false;
   const rows = await res.json();
-  return rows.length > 0;
+  return Array.isArray(rows) && rows.length === 1 && rows[0].can_access_dev_tools_full === true;
 }
 
 // Two-factor gate (2026-09-25, docs/ACTION-ITEMS.md #13). An internal
@@ -110,8 +116,8 @@ Deno.serve(async (req: Request) => {
     if (claims.role !== "authenticated" || !claims.email) {
       return json({ ok: false, error: "Must be signed in with a real session." }, 401);
     }
-    if (!(await callerHasAssignedRole(claims.email))) {
-      return json({ ok: false, error: "This account has no assigned role." }, 403);
+    if (!(await callerCanUseFullDevTools(claims.email))) {
+      return json({ ok: false, error: "This account doesn't have full Dev Tools access." }, 403);
     }
     if (!(await callerPassesInternalMfa(claims, "advisor-health"))) {
       return json({ ok: false, error: MFA_REQUIRED_ERROR, code: "mfa_required" }, 403);
@@ -158,7 +164,9 @@ Deno.serve(async (req: Request) => {
     if (!secRes.ok || !perfRes.ok) {
       const failedRes = !secRes.ok ? secRes : perfRes;
       const errText = await failedRes.text();
-      return json({ ok: false, error: `Supabase Management API HTTP ${failedRes.status}: ${errText.slice(0, 300)}` }, 502);
+      // Fix plan RP3.22 (2026-11-07): the upstream text is logged, not returned.
+      console.error(`advisor-health: Supabase Management API HTTP ${failedRes.status}: ${errText.slice(0, 500)}`);
+      return json({ ok: false, error: `Supabase Management API answered HTTP ${failedRes.status}; see the function logs.` }, 502);
     }
 
     const security = await secRes.json();
@@ -170,6 +178,8 @@ Deno.serve(async (req: Request) => {
       performance: performance.lints || [],
     });
   } catch (err: any) {
-    return json({ ok: false, error: err.message }, 500);
+    // Fix plan RP3.22 (2026-11-07): logged in full, generic to the caller.
+    console.error("advisor-health error:", err?.message || err);
+    return json({ ok: false, error: "advisor-health failed; see the function logs." }, 500);
   }
 });

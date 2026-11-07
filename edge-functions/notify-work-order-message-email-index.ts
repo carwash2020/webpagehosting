@@ -32,15 +32,29 @@ function escapeHtml(value: unknown): string {
 // internal team regardless of any client-side preference (that's
 // the whole point of the message existing), so this has nothing to
 // do with the client->internal direction at all.
-async function clientWantsNotification(email: string, column: string): Promise<boolean> {
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/client_notification_preferences?client_email=eq.${encodeURIComponent(email.toLowerCase())}&select=${column}&limit=1`,
-    { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
-  );
-  if (!res.ok) return true;
-  const rows = await res.json();
-  if (!rows.length) return true;
-  return rows[0][column] !== false;
+// Fix plan RP3.26 (2026-11-07): fails CLOSED. true = send, false = the
+// client opted out, null = the preference couldn't be read (database
+// error) -- the caller skips the email and says so. Only a MISSING row
+// means "wants it" (matching the column default, so a client who never
+// opened Settings keeps getting the same transactional emails).
+async function clientWantsNotification(email: string, column: string): Promise<boolean | null> {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/client_notification_preferences?client_email=eq.${encodeURIComponent(email.toLowerCase())}&select=${column}&limit=1`,
+      { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+    );
+    if (!res.ok) {
+      console.error(`notify-work-order-message-email: preferences lookup failed (HTTP ${res.status}); not emailing`);
+      return null;
+    }
+    const rows = await res.json();
+    if (!Array.isArray(rows)) return null;
+    if (!rows.length) return true;
+    return rows[0][column] !== false;
+  } catch (err: any) {
+    console.error(`notify-work-order-message-email: preferences lookup failed (${err?.message || err}); not emailing`);
+    return null;
+  }
 }
 
 async function sendResend(to: string, subject: string, html: string, text: string, replyTo?: string) {
@@ -170,7 +184,13 @@ Deno.serve(async (req: Request) => {
 
     if (msg.sender_type === "internal") {
       // Internal -> client: one email, to the one client on this request.
-      if (!(await clientWantsNotification(wo.client_email, "wants_message_emails"))) {
+      const wants = await clientWantsNotification(wo.client_email, "wants_message_emails");
+      if (wants === null) {
+        // Fix plan RP3.26 (2026-11-07): couldn't tell whether they opted
+        // out, so no email; a 503 so the failure is visible in the logs.
+        return new Response(JSON.stringify({ ok: false, skipped: "preferences unavailable", error: "Client email preferences couldn't be read; not sent." }), { status: 503, headers: { "Content-Type": "application/json" } });
+      }
+      if (!wants) {
         return new Response(JSON.stringify({ ok: true, skipped: "client opted out of message emails" }), { headers: { "Content-Type": "application/json" } });
       }
       const displayName = (typeof wo.client_name === "string" && wo.client_name.trim() && wo.client_name !== wo.client_email) ? wo.client_name : wo.client_email;
@@ -182,6 +202,15 @@ Deno.serve(async (req: Request) => {
       // this line means they DO want to be notified about this.
       await sendClientPush(wo.client_email, "New reply on your request", `Re: ${wo.title || "your request"}`, "/portal/work-orders.html");
       return new Response(JSON.stringify({ ok: true, sent_to: sent ? 1 : 0 }), { headers: { "Content-Type": "application/json" } });
+    }
+
+    // Fix plan RP3.23 (2026-11-07): only an explicit 'client' sender reaches
+    // the client -> internal branch. Anything else (null, a typo, a new
+    // sender type) used to fall through and email staff as if the client
+    // had written; it is now refused and nobody is emailed.
+    if (msg.sender_type !== "client") {
+      console.error(`notify-work-order-message-email: unknown sender_type ${JSON.stringify(msg.sender_type)}; nothing sent`);
+      return new Response(JSON.stringify({ ok: false, error: "Unknown sender_type; nothing sent." }), { status: 400, headers: { "Content-Type": "application/json" } });
     }
 
     // Client -> internal: every address on the notification list, same
@@ -213,7 +242,8 @@ Deno.serve(async (req: Request) => {
     }
     return new Response(JSON.stringify({ ok: true, sent_to: sentCount }), { headers: { "Content-Type": "application/json" } });
   } catch (err: any) {
+    // Fix plan RP3.22 (2026-11-07): logged in full, generic to the caller.
     console.error("notify-work-order-message-email error:", err.message);
-    return new Response(JSON.stringify({ ok: false, error: err.message }), { status: 500, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ ok: false, error: "notify-work-order-message-email failed; see function logs." }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 });

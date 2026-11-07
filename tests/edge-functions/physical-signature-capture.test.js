@@ -157,7 +157,7 @@ test('create-pos-charge and create-payment-intent/create-bulk-payment-intent/man
   assert.match(POS_CHARGE, /recordCardAuthorization\(normalizedEmail, signer_name\.trim\(\), authorizationText, amount, description, claims\.email, signature_image\);/);
   assert.match(PAYMENT_INTENT, /recordCardAuthorization\(claims\.email, signer_name\.trim\(\), authorizationText, amountCents \/ 100, invoice\.id, signature_image\);/);
   assert.match(BULK_PAYMENT_INTENT, /recordCardAuthorization\(claims\.email, signer_name\.trim\(\), authorizationText, amountCents \/ 100, `\$\{invoiceCount\} invoices \(IDs: \$\{invoice_ids\.join\(", "\)\}\)`, signature_image\);/);
-  assert.match(MANAGE_CARD, /recordCardAuthorization\(claims\.email, signer_name\.trim\(\), authorizationText, signature_image\);/);
+  assert.match(MANAGE_CARD, /recordCardAuthorization\(callerEmail, signer_name\.trim\(\), authorizationText, signature_image\);/); // RP3.20: the lowercased email
 });
 
 // ---- schema ----

@@ -73,7 +73,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=09ad2a2e15">
-<link rel="stylesheet" href="/portal/portal-app.css?v=4af907b767">
+<link rel="stylesheet" href="/portal/portal-app.css?v=ef0735c580">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -112,7 +112,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=32b0b6ede8">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous"></script>
-<script src="/portal/portal-app.js?v=abb7e37c38"></script>
+<script src="/portal/portal-app.js?v=8bbf28b1fe"></script>
 <style>
   body { background: #0a0a0a; max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
   /* Widened for real desktop screens (2026-09-03), reported directly
@@ -476,6 +476,9 @@
 <link rel="stylesheet" href="/portal/portal-polish.css?v=f0d57c5e20">
 </head>
 <body class="portal-page">
+<!-- Skip link (fix plan RP4.9, 2026-11-07): hidden until focused; jumps past
+     the app bar and navigation to #portalMain. Styles: portal-app.css. -->
+<a href="#portalMain" class="portal-skip-link">Skip to main content</a>
 
 <!-- App bar (v2 shell, 2026-09-28): an Oswald kicker over the Anton
      page title, then a round Report-a-problem button (the page's one
@@ -534,6 +537,8 @@
     <div class="portal-rail-help-actions"><a href="tel:+14354141667">Call</a><a href="sms:+14354141667">Text</a></div>
   </div>
 </div>
+
+<main id="portalMain" tabindex="-1">
 
 <!-- Greeting (v2): a date kicker, the Anton greeting, then one line
      that says what's next and how many things need the client --
@@ -597,6 +602,8 @@
   </div>
 </div>
 
+
+</main>
 
 <script>
   const { createClient } = supabase;

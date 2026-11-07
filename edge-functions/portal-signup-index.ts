@@ -25,6 +25,18 @@
 // Workspace). Codes are kept only as an HMAC, expire in 15 minutes, allow
 // 5 wrong tries, and one address gets at most 5 codes an hour; one network
 // address at most 10 sign-ups an hour.
+//
+// Fix plan RP3.30 (2026-11-07): "verify" is limited per network address too
+// (30 an hour, shared rate_limit_take), the 5 wrong tries now count across
+// the address's hour window (a re-send no longer resets them), the code
+// check is constant-time, and the network address is the gateway-set one
+// (clientIp()), not the caller-written first x-forwarded-for entry.
+// Fix plan RP4.2 (2026-11-07): "start" is also limited to 5 an hour per
+// address for EVERY address -- new, unconfirmed, confirmed client, staff --
+// counted before anything about the account is looked up. Over it, the
+// answer is SENT plus `limited: true`, so the page can say "no new code was
+// sent" honestly; the flag depends only on how often that address was asked
+// for this hour, never on whether it has an account.
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -42,6 +54,7 @@ const CODE_MINUTES = 15;
 const MAX_WRONG_TRIES = 5;
 const MAX_CODES_PER_HOUR = 5;
 const MAX_STARTS_PER_IP_PER_HOUR = 10;
+const MAX_VERIFIES_PER_IP_PER_HOUR = 30;
 
 const ALLOWED_ORIGIN = "https://www.triplehenterprisesllc.biz";
 const CORS_HEADERS: Record<string, string> = {
@@ -90,9 +103,40 @@ async function adminUser(method: string, path: string, body: unknown): Promise<R
   return fetch(`${SUPABASE_URL}/auth/v1/admin/users${path}`, { method, headers: SR_HEADERS, body: JSON.stringify(body) });
 }
 
+function clientIp(req: Request): string {
+  // Cloudflare sets cf-connecting-ip and overwrites any client-sent value
+  // (seen on this project's edge logs, 2026-11-07). x-forwarded-for's FIRST
+  // entry is whatever the caller wrote, so fall back to its LAST entry.
+  const cf = (req.headers.get("cf-connecting-ip") || "").trim();
+  if (cf) return cf.slice(0, 64);
+  const xff = (req.headers.get("x-forwarded-for") || "").split(",").map((s) => s.trim()).filter(Boolean);
+  return (xff[xff.length - 1] || "unknown").slice(0, 64);
+}
+
+// Shared fixed-window limiter (sql/security/group5_backend_hardening.sql).
+// true = allowed, false = over the limit; throws when the call itself fails,
+// so each caller picks fail-open or fail-closed explicitly.
+async function rateLimitTake(bucket: string, key: string, max: number, windowSeconds: number): Promise<boolean> {
+  const res = await rest("rpc/rate_limit_take", {
+    method: "POST",
+    body: JSON.stringify({ p_bucket: bucket, p_key: key, p_max: max, p_window_seconds: windowSeconds }),
+  });
+  if (!res.ok) throw new Error(`rate_limit_take failed (HTTP ${res.status})`);
+  return (await res.json()) === true;
+}
+
+// Constant-time compare of two hex HMACs (fix plan RP3.30, 2026-11-07):
+// no early exit on the first differing character.
+function sameHex(a: string, b: string): boolean {
+  if (typeof a !== "string" || typeof b !== "string" || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 // One row per address-hash per hour. Returns false once over the limit.
 async function underIpLimit(req: Request): Promise<boolean> {
-  const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "unknown";
+  const ip = clientIp(req);
   const ipHash = await hmac(`ip:${ip}`);
   const res = await rest(`portal_signup_ip_limits?ip_hash=eq.${ipHash}&select=starts,window_started_at`);
   const rows = res.ok ? await res.json() : [];
@@ -192,6 +236,18 @@ Deno.serve(async (req: Request) => {
       if (password.length > 72) return json({ ok: false, error: "Password can be at most 72 characters." }, 400);
       if (!(await underIpLimit(req))) return json({ ok: false, error: "Too many tries from here. Please wait an hour, or call (435) 414-1667." }, 429);
 
+      // Fix plan RP4.2 (2026-11-07): the same per-address limit for every
+      // address, before anything about the account is looked up. Fails OPEN
+      // (logged): the per-code-row limit below still caps codes for new and
+      // unconfirmed addresses, and the IP limit above still holds.
+      let addressAllowed = true;
+      try {
+        addressAllowed = await rateLimitTake("portal-signup:start-email", email, MAX_CODES_PER_HOUR, 3600);
+      } catch (e: any) {
+        console.error(`portal-signup: start-email limit unavailable, allowing (${e.message})`);
+      }
+      if (!addressAllowed) return json({ ...SENT, limited: true });
+
       if (await isStaff(email)) return json(SENT); // staff sign in to the Workspace; nothing is sent
 
       const status = await rpc("portal_account_status", { p_email: email });
@@ -202,7 +258,7 @@ Deno.serve(async (req: Request) => {
       }
 
       // Per-address limit, counted on the code row.
-      const existingRes = await rest(`portal_signup_codes?email=eq.${encodeURIComponent(email)}&select=sends,window_started_at`);
+      const existingRes = await rest(`portal_signup_codes?email=eq.${encodeURIComponent(email)}&select=sends,window_started_at,attempts`);
       const existing = existingRes.ok ? (await existingRes.json())[0] : null;
       const now = Date.now();
       const inWindow = existing && now - Date.parse(existing.window_started_at) < 3600_000;
@@ -223,7 +279,10 @@ Deno.serve(async (req: Request) => {
         method: "POST", headers: { Prefer: "resolution=merge-duplicates" },
         body: JSON.stringify([{
           email, code_hash: await hmac(`${email}:${code}`),
-          expires_at: new Date(now + CODE_MINUTES * 60_000).toISOString(), attempts: 0,
+          expires_at: new Date(now + CODE_MINUTES * 60_000).toISOString(),
+          // Fix plan RP3.30: wrong tries carry over within the hour window;
+          // only a new window starts them at 0.
+          attempts: inWindow ? Number(existing.attempts) || 0 : 0,
           sends: inWindow ? existing.sends + 1 : 1,
           window_started_at: inWindow ? existing.window_started_at : new Date(now).toISOString(),
         }]),
@@ -237,11 +296,17 @@ Deno.serve(async (req: Request) => {
       const code = typeof body.code === "string" ? body.code.trim() : "";
       const wrong = (error = "That code didn't work. Check the latest email from us, or send a new code.") => json({ ok: false, error }, 400);
       if (!CODE_SHAPE.test(code)) return wrong();
+      // Fix plan RP3.30 (2026-11-07): per network address, 30 checks an hour.
+      // Fails CLOSED: this guards a code check, so if the limiter can't be
+      // reached the request is refused (the catch below answers 500).
+      if (!(await rateLimitTake("portal-signup:verify", clientIp(req), MAX_VERIFIES_PER_IP_PER_HOUR, 3600))) {
+        return json({ ok: false, error: "Too many tries from here. Please wait an hour, or call (435) 414-1667." }, 429);
+      }
       const res = await rest(`portal_signup_codes?email=eq.${encodeURIComponent(email)}&select=code_hash,expires_at,attempts`);
       const row = res.ok ? (await res.json())[0] : null;
       if (!row || Date.parse(row.expires_at) < Date.now()) return wrong("That code has expired. Send a new code.");
-      if (row.attempts >= MAX_WRONG_TRIES) return wrong("Too many wrong tries. Send a new code.");
-      if ((await hmac(`${email}:${code}`)) !== row.code_hash) {
+      if (row.attempts >= MAX_WRONG_TRIES) return wrong("Too many wrong tries. Please wait an hour, then send a new code, or call (435) 414-1667.");
+      if (!sameHex(await hmac(`${email}:${code}`), String(row.code_hash || ""))) {
         await rest(`portal_signup_codes?email=eq.${encodeURIComponent(email)}`, { method: "PATCH", body: JSON.stringify({ attempts: row.attempts + 1 }) });
         return wrong();
       }

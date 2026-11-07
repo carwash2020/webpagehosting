@@ -30,10 +30,11 @@
 // just click the button again.
 //
 // Auth pattern copied from sync-job-to-portal-index.ts: verifies the
-// caller is a real internal account (any account_roles row, no
-// specific granular permission needed -- job-tracker.html itself has
-// no finer-grained gate for this action either) rather than trusting
-// anything the client claims about itself.
+// caller is a real internal account rather than trusting anything the
+// client claims about itself -- and, since fix plan RP3.10 / D23
+// (2026-11-07), that the job is theirs (assignee, else creator) or that
+// they hold "Manage jobs for others" (can_manage_others_jobs). Each
+// caller is also capped at 60 sends an hour (RP3.25).
 //
 // BCC'd to LEAD_EMAIL_TO (added 2026-09-11, direct follow-up request:
 // "we should be CC'ed on the email... to confirm it worked correctly
@@ -87,6 +88,64 @@ async function callerIsInternalAccount(email: string): Promise<boolean> {
   const rows = await res.json();
   return rows.length > 0;
 }
+
+// Fix plan RP3.10 / D23 (2026-11-07): the caller must be the job's owner
+// or hold "Manage jobs for others" (account_roles.can_manage_others_jobs).
+// It used to accept any internal account for any job_id, so a field
+// employee could email confirmations for anyone else's jobs. The owner is
+// the job's assignee, else whoever created it -- the Workspace's own rule
+// (tools/data-layer.js thJobOwner). public.jobs carries created_by; an
+// `assignee` column is used when the row has one. Fails closed: an
+// unreadable job or role row means no.
+async function callerCanManageOthersJobs(email: string): Promise<boolean> {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=can_manage_others_jobs&limit=1`,
+    { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+  );
+  if (!res.ok) return false;
+  const rows = await res.json();
+  return Array.isArray(rows) && rows.length === 1 && rows[0].can_manage_others_jobs === true;
+}
+// "found" false = no such job; owner "" = nobody (unassigned, no creator).
+async function jobOwner(jobId: number): Promise<{ ok: boolean; found: boolean; owner: string }> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/jobs?id=eq.${jobId}&select=*&limit=1`, {
+      headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+    });
+    if (!res.ok) return { ok: false, found: false, owner: "" };
+    const rows = await res.json();
+    if (!Array.isArray(rows) || !rows.length) return { ok: true, found: false, owner: "" };
+    const row = rows[0];
+    return { ok: true, found: true, owner: String(row.assignee || row.created_by || "").trim().toLowerCase() };
+  } catch {
+    return { ok: false, found: false, owner: "" };
+  }
+}
+
+// Fix plan RP3.25 (2026-11-07): a per-caller cap on this staff send path,
+// so a compromised staff session can't spam clients. One hit against
+// public.rate_limit_take (sql/security/group5_backend_hardening.sql), keyed
+// by the caller's email. Fails OPEN (logged) if the limiter can't be
+// reached: a real send by staff is worth more than the cap.
+const STAFF_SEND_LIMIT_PER_HOUR = 60;
+async function staffSendAllowed(callerEmail: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/rate_limit_take`, {
+      method: "POST",
+      headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_bucket: "staff-send:send-job-confirmation-email", p_key: String(callerEmail || "").toLowerCase(), p_max: STAFF_SEND_LIMIT_PER_HOUR, p_window_seconds: 3600 }),
+    });
+    if (!res.ok) {
+      console.error(`send-job-confirmation-email: rate_limit_take failed (HTTP ${res.status}); allowing the send`);
+      return true;
+    }
+    return (await res.json()) !== false;
+  } catch (err: any) {
+    console.error(`send-job-confirmation-email: rate_limit_take failed (${err?.message || err}); allowing the send`);
+    return true;
+  }
+}
+const TOO_MANY_SENDS_ERROR = "Too many emails sent from this account in the last hour. Wait a while and try again.";
 
 function escapeHtml(value: unknown): string {
   const s = value === null || value === undefined ? "" : String(value);
@@ -340,6 +399,18 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: "job_id (number) is required." }, 400);
     }
 
+    // RP3.10: owner or "Manage jobs for others", checked before anything
+    // is claimed or sent.
+    const owner = await jobOwner(job_id);
+    if (!owner.ok) return json({ ok: false, error: "Couldn't look up that job just now. Try again." }, 502);
+    if (!owner.found) return json({ ok: false, error: "Confirmation already sent for this job (or the job doesn't exist)." }, 409);
+    if (owner.owner !== claims.email.toLowerCase() && !(await callerCanManageOthersJobs(claims.email))) {
+      return json({ ok: false, error: "That job isn't yours, and this account can't manage other people's jobs." }, 403);
+    }
+    if (!(await staffSendAllowed(claims.email))) {
+      return json({ ok: false, error: TOO_MANY_SENDS_ERROR, code: "rate_limited" }, 429);
+    }
+
     const claimedJob = await claimConfirmation(job_id);
     if (!claimedJob) {
       return json({ ok: false, error: "Confirmation already sent for this job (or the job doesn't exist)." }, 409);
@@ -361,7 +432,8 @@ Deno.serve(async (req: Request) => {
 
     return json({ ok: true, confirmation_sent_at: claimedJob.confirmation_sent_at });
   } catch (err: any) {
+    // Fix plan RP3.22 (2026-11-07): logged in full, generic to the caller.
     console.error("send-job-confirmation-email error:", err.message);
-    return json({ ok: false, error: err.message }, 500);
+    return json({ ok: false, error: "Something went wrong sending the confirmation. Try again." }, 500);
   }
 });

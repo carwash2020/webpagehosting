@@ -90,20 +90,33 @@ async function supabaseRequest(path: string, init: RequestInit = {}) {
   });
 }
 
-function safeParse(jsonString: string | undefined, fallback: any) {
-  try {
-    return JSON.parse(jsonString || "null") ?? fallback;
-  } catch (_e) {
-    return fallback;
-  }
+// Fix plan RP3.2 (2026-11-07): this used to read the th_invoices blob from
+// workspace_sync?select=data&limit=1 -- no code filter over a 4-row table,
+// so it only worked while the legacy row happened to come back first, and
+// a failed read quietly answered ok:true, sent:0. It now reads
+// public.invoices (the relational mirror sync.js keeps, which
+// stripe_record_event also marks paid), mapped to the blob's own field
+// names so everything below is unchanged. null = the read failed; the
+// handler answers 502.
+function numOrNull(v: unknown): number | null {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
 }
-
-async function getSyncedInvoices(): Promise<any[]> {
-  const res = await supabaseRequest(`/rest/v1/workspace_sync?select=data&limit=1`);
-  if (!res.ok) return [];
+async function getSyncedInvoices(): Promise<any[] | null> {
+  const res = await supabaseRequest(
+    "/rest/v1/invoices?select=id,invoice_number,client_name,client_email,invoice_date,terms,total,paid,paid_amount&order=id",
+  );
+  if (!res.ok) {
+    console.error(`send-payment-reminder: invoices read failed (HTTP ${res.status})`);
+    return null;
+  }
   const rows = await res.json();
-  if (!rows.length) return [];
-  return safeParse(rows[0].data?.th_invoices, []);
+  if (!Array.isArray(rows)) return null;
+  return rows.map((r: any) => ({
+    id: r.id, invoiceNumber: r.invoice_number, clientName: r.client_name, clientEmail: r.client_email,
+    date: r.invoice_date, terms: r.terms, total: numOrNull(r.total), paid: r.paid === true, paidAmount: numOrNull(r.paid_amount),
+  }));
 }
 
 // Mirrors workspace.html's getPaidAmount/getRemainingCents exactly --
@@ -161,14 +174,26 @@ async function markSent(notifType: string, itemKey: string): Promise<void> {
 // established -- a client who opted out of invoice/quote emails in
 // Portal Settings shouldn't get a payment reminder either; it's the
 // same category of email to them.
-async function clientWantsEmail(email: string): Promise<boolean> {
-  const res = await supabaseRequest(
-    `/rest/v1/client_notification_preferences?client_email=eq.${encodeURIComponent(email.toLowerCase())}&select=wants_invoice_quote_emails&limit=1`,
-  );
-  if (!res.ok) return true;
-  const rows = await res.json();
-  if (!rows.length) return true;
-  return rows[0].wants_invoice_quote_emails !== false;
+// Fix plan RP3.26 (2026-11-07): a lookup that ERRORS fails closed -- null,
+// and the reminder is skipped (and retried on the next run, since nothing
+// is marked sent). Only a missing row means "wants it" (the column default).
+async function clientWantsEmail(email: string): Promise<boolean | null> {
+  try {
+    const res = await supabaseRequest(
+      `/rest/v1/client_notification_preferences?client_email=eq.${encodeURIComponent(email.toLowerCase())}&select=wants_invoice_quote_emails&limit=1`,
+    );
+    if (!res.ok) {
+      console.error(`send-payment-reminder: preferences lookup failed (HTTP ${res.status}); not emailing`);
+      return null;
+    }
+    const rows = await res.json();
+    if (!Array.isArray(rows)) return null;
+    if (!rows.length) return true;
+    return rows[0].wants_invoice_quote_emails !== false;
+  } catch (err: any) {
+    console.error(`send-payment-reminder: preferences lookup failed (${err.message}); not emailing`);
+    return null;
+  }
 }
 
 const STAGE_COPY: Record<Stage, { subject: string; heading: string; body: string }> = {
@@ -314,7 +339,9 @@ Deno.serve(async (req: Request) => {
     // (see uptime-alert-auth.test.js).
     const authHeader = req.headers.get("Authorization") || "";
     const token = authHeader.replace(/^Bearer\s+/i, "");
-    if (token !== SERVICE_ROLE_KEY) {
+    // `!SERVICE_ROLE_KEY ||` (fix plan RP3.14, 2026-11-07): an empty env
+    // key can never match an empty bearer.
+    if (!SERVICE_ROLE_KEY || token !== SERVICE_ROLE_KEY) {
       return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
@@ -322,8 +349,15 @@ Deno.serve(async (req: Request) => {
     }
 
     const invoices = await getSyncedInvoices();
+    if (!invoices) {
+      return new Response(JSON.stringify({ ok: false, error: "Could not read invoices; no reminders were sent." }), {
+        status: 502,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
     let sent = 0;
     let checked = 0;
+    let preferenceErrors = 0;
 
     for (const invoice of invoices) {
       const remainingCents = getRemainingCents(invoice);
@@ -340,7 +374,9 @@ Deno.serve(async (req: Request) => {
       const notifType = `invoice-reminder-${stage}d`;
       const itemKey = String(invoice.id);
       if (await alreadySent(notifType, itemKey)) continue;
-      if (!(await clientWantsEmail(clientEmail))) continue;
+      const wants = await clientWantsEmail(clientEmail);
+      if (wants === null) { preferenceErrors++; continue; }
+      if (!wants) continue;
 
       const ok = await sendReminder(invoice, stage, remainingCents / 100);
       if (ok) {
@@ -349,12 +385,19 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    return new Response(JSON.stringify({ ok: true, checked, sent }), {
+    // RP3.2: nothing read is said out loud, not reported as a quiet ok.
+    // RP3.26: skipped-because-unknown preferences make the run a 502 so the
+    // cron health watchdog sees it.
+    const result: Record<string, unknown> = { ok: preferenceErrors === 0, checked, sent, invoices_read: invoices.length };
+    if (!invoices.length) result.warning = "no invoices found";
+    if (preferenceErrors) result.error = `${preferenceErrors} reminder(s) skipped: the client's email preferences couldn't be read`;
+    return new Response(JSON.stringify(result), {
+      status: preferenceErrors ? 502 : 200,
       headers: { "Content-Type": "application/json" },
     });
   } catch (err: any) {
     console.error("send-payment-reminder error:", err.message);
-    return new Response(JSON.stringify({ ok: false, error: err.message }), {
+    return new Response(JSON.stringify({ ok: false, error: "send-payment-reminder failed; see function logs." }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

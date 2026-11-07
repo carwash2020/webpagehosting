@@ -61,6 +61,15 @@ test('a status move without a time sends p_scheduled_at: null (the function keep
   assert.deepEqual(JSON.parse(h.calls[0].init.body), { p_id: 32, p_status: 'reviewing', p_scheduled_at: null });
 });
 
+test('RP4.8: closing with a note sends p_note; without one the call is unchanged', async () => {
+  const h = helper(json(200, [{ id: 33, status: 'declined', status_note: 'Out of our area.' }]));
+  await h.run(33, 'declined', null, 'Out of our area.');
+  assert.deepEqual(JSON.parse(h.calls[0].init.body), { p_id: 33, p_status: 'declined', p_scheduled_at: null, p_note: 'Out of our area.' });
+  const g = helper(json(200, [{ id: 34, status: 'declined' }]));
+  await g.run(34, 'declined', null, null);
+  assert.deepEqual(JSON.parse(g.calls[0].init.body), { p_id: 34, p_status: 'declined', p_scheduled_at: null });
+});
+
 test('an update that matched no row is an error, not a success toast (the #469 bug)', async () => {
   await assert.rejects(helper(json(200, [])).run(31, 'scheduled', null), /wasn't updated/);
   await assert.rejects(helper({ ok: true, status: 204, json: async () => { throw new SyntaxError('no body'); }, text: async () => '' }).run(31, 'declined'), /wasn't updated/);
@@ -74,7 +83,8 @@ test('Schedule and every status move use updateWorkRequest(), and neither PATCHe
   const schedule = extractFn(WORKSPACE, 'confirmWorkOrderApproval');
   const advance = extractFn(WORKSPACE, 'advanceWorkRequest');
   assert.match(schedule, /await updateWorkRequest\(id, 'scheduled', scheduledAtUtc\.toISOString\(\)\)/);
-  assert.match(advance, /await updateWorkRequest\(id, newStatus\)/);
+  assert.match(advance, /await updateWorkRequest\(id, newStatus, null, note\)/); // RP4.8: a closing note, when given
+  assert.match(advance, /if \(newStatus === 'declined' && typeof showPromptForm === 'function'\)/);
   for (const fn of [schedule, advance]) assert.doesNotMatch(fn, /PATCH|client_portal_work_orders\?id=eq/);
 });
 

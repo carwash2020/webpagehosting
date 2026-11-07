@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=f6476e7a83"></script>
+<script src="/tools/auth.js?v=f361d31973"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -55,7 +55,7 @@
 <link rel="stylesheet" href="/styles.css?v=09ad2a2e15">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=32b0b6ede8">
 <script src="/tools/data-layer.js?v=e9b434448f" defer></script>
-<script src="/tools/dev-tools-shared.js?v=3132b24dc1" defer></script>
+<script src="/tools/dev-tools-shared.js?v=d03765c719" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
@@ -3402,8 +3402,8 @@
   // (trigger-workflow) that alone holds the real GitHub credential --
   // it is NEVER present in this file or anywhere client-side, since
   // anything in a page's own JS can be read by anyone who views source.
-  // That function independently re-checks the caller has a real
-  // assigned role before doing anything, so this stays safe even if
+  // That function independently re-checks the caller has the full Dev
+  // Tools switch (RP3.15) before doing anything, so this stays safe even if
   // this page's own gate were ever bypassed some other way.
   // ---------------------------------------------------------------------
 

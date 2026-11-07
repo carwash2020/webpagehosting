@@ -39,9 +39,14 @@ const bearer = (claims) => `Bearer ${b64url({ alg: 'HS256', typ: 'JWT' })}.${b64
 
 // A caller with every internal permission, so each function's own
 // account_roles check passes and the two-factor gate is what decides.
+// can_manage_clients (send-invite, D23), can_manage_others_jobs
+// (send-job-confirmation-email, D23) and can_access_dev_tools_full
+// (advisor-health / trigger-workflow, RP3.15) joined the list with fix plan
+// Round-2 Phase 3 (2026-11-07), when those functions started checking them.
 const INTERNAL_ROW = {
   email: CLAIMS.email, role_name: 'Developer',
   can_manage_invoices: true, can_manage_contracts: true, can_manage_roles: true, can_view_finance: true,
+  can_manage_clients: true, can_manage_others_jobs: true, can_access_dev_tools_full: true,
 };
 
 function loadHandler(name, { gate, internal = true }) {

@@ -27,15 +27,29 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 // notification toggles." Defaults to wanting the email (true) if the
 // client has never visited Settings and set a preference at all --
 // matching this table's own column default.
-async function clientWantsNotification(email: string, column: string): Promise<boolean> {
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/client_notification_preferences?client_email=eq.${encodeURIComponent(email.toLowerCase())}&select=${column}&limit=1`,
-    { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
-  );
-  if (!res.ok) return true;
-  const rows = await res.json();
-  if (!rows.length) return true;
-  return rows[0][column] !== false;
+// Fix plan RP3.26 (2026-11-07): fails CLOSED. true = send, false = the
+// client opted out, null = the preference couldn't be read (database
+// error) -- the caller skips the email and says so. Only a MISSING row
+// means "wants it" (matching the column default, so a client who never
+// opened Settings keeps getting the same transactional emails).
+async function clientWantsNotification(email: string, column: string): Promise<boolean | null> {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/client_notification_preferences?client_email=eq.${encodeURIComponent(email.toLowerCase())}&select=${column}&limit=1`,
+      { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+    );
+    if (!res.ok) {
+      console.error(`notify-work-order-scheduled-email: preferences lookup failed (HTTP ${res.status}); not emailing`);
+      return null;
+    }
+    const rows = await res.json();
+    if (!Array.isArray(rows)) return null;
+    if (!rows.length) return true;
+    return rows[0][column] !== false;
+  } catch (err: any) {
+    console.error(`notify-work-order-scheduled-email: preferences lookup failed (${err?.message || err}); not emailing`);
+    return null;
+  }
 }
 
 function escapeHtml(value: unknown): string {
@@ -204,7 +218,13 @@ Deno.serve(async (req: Request) => {
       : wo.client_email;
     const scheduledLabel = formatScheduledAt(wo.scheduled_at);
 
-    if (!(await clientWantsNotification(wo.client_email, "wants_work_order_emails"))) {
+    const wants = await clientWantsNotification(wo.client_email, "wants_work_order_emails");
+    if (wants === null) {
+      // Fix plan RP3.26 (2026-11-07): couldn't tell whether they opted
+      // out, so no email; a 503 so the failure is visible in the logs.
+      return new Response(JSON.stringify({ ok: false, skipped: "preferences unavailable", error: "Client email preferences couldn't be read; not sent." }), { status: 503, headers: { "Content-Type": "application/json" } });
+    }
+    if (!wants) {
       return new Response(JSON.stringify({ ok: true, skipped: "client opted out of work order emails" }), { headers: { "Content-Type": "application/json" } });
     }
 
@@ -222,7 +242,9 @@ Deno.serve(async (req: Request) => {
 
     if (!emailRes.ok) {
       const errBody = await emailRes.text();
-      return new Response(JSON.stringify({ ok: false, error: `Email failed to send: ${errBody.slice(0, 300)}` }), {
+      // Fix plan RP3.22 (2026-11-07): Resend's text is logged, not returned.
+      console.error(`notify-work-order-scheduled-email: Resend refused the email (HTTP ${emailRes.status}): ${errBody.slice(0, 500)}`);
+      return new Response(JSON.stringify({ ok: false, error: "Email failed to send; see function logs." }), {
         status: 502,
         headers: { "Content-Type": "application/json" },
       });
@@ -232,8 +254,9 @@ Deno.serve(async (req: Request) => {
 
     return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
   } catch (err: any) {
+    // Fix plan RP3.22 (2026-11-07): logged in full, generic to the caller.
     console.error("notify-work-order-scheduled-email error:", err.message);
-    return new Response(JSON.stringify({ ok: false, error: err.message }), {
+    return new Response(JSON.stringify({ ok: false, error: "notify-work-order-scheduled-email failed; see function logs." }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

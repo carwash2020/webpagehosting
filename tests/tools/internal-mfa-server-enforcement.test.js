@@ -51,7 +51,8 @@ function authSandbox({ stored, fetchImpl, path: pagePath = '/tools/invoice-gener
   if (stored) sandbox.localStorage.setItem('th_auth_session', JSON.stringify(stored));
   return { sandbox, calls, location };
 }
-const fresh = (access_token) => ({ access_token, refresh_token: 'r', expires_at: Math.floor(Date.now() / 1000) + 3600, email: 'connor@triplehenterprisesllc.biz' });
+// remember_until: a current remembered session (D31 clears pre-cap ones once).
+const fresh = (access_token) => ({ access_token, refresh_token: 'r', expires_at: Math.floor(Date.now() / 1000) + 3600, email: 'connor@triplehenterprisesllc.biz', remember_until: Date.now() + 30 * 86400000 });
 
 test('accessTokenAal reads the aal claim locally and returns null for anything unreadable', () => {
   const { sandbox } = authSandbox({ fetchImpl: async () => reply({}) });

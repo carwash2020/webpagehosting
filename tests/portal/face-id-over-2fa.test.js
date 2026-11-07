@@ -103,7 +103,7 @@ test('owed, Face ID on this device but failing: it waits on the button, and "Use
   assert.equal(box.querySelector('#faceIdStepBtn').textContent, 'Continue with Face ID', 'back to the button after the failed try');
   assert.equal(box.querySelector('#faceIdStepBtn').disabled, false);
   box.querySelector('#faceIdStepCodeBtn').click();
-  assert.deepEqual(Array.from(w.went), ['/portal/login.html?step=code']);
+  assert.deepEqual(Array.from(w.went), ['/portal/login.html?return=%2Fportal%2Fhome.html&step=code'], 'back to this page after the code (fix plan RP4.1)');
   assert.equal(w.document.querySelector('.biometric-lock-overlay'), null);
   assert.equal(await settles(p), false, 'never resolves: the page must not render as if Face ID had passed');
   assert.equal(w.sessionStorage.getItem(STEP_KEY), null);
@@ -114,7 +114,7 @@ test('owed, with no Face ID on this device: straight to the code, and the page n
   const w = page({ faceId: 'pass', faceIdOnDevice: false });
   const p = w.portalRequireSecondStep(EMAIL, client());
   assert.equal(await settles(p), false);
-  assert.deepEqual(Array.from(w.went), ['/portal/login.html?step=code']);
+  assert.deepEqual(Array.from(w.went), ['/portal/login.html?return=%2Fportal%2Fhome.html&step=code'], 'back to this page after the code (fix plan RP4.1)');
   assert.equal(w.faceIdAsks, undefined, 'no Face ID prompt on a device without it');
   w.close();
 });

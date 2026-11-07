@@ -51,15 +51,18 @@ test('dedupes per quote via notification_log, keyed on the real quote id', () =>
 });
 
 test('respects the client\'s existing invoice/quote email preference before sending -- same column as send-payment-reminder/send-invoice-notification', () => {
-  const fnMatch = SRC.match(/async function clientWantsEmail\(email: string\): Promise<boolean> \{[\s\S]*?\n\}\n/);
+  // Fix plan RP3.26 (2026-11-07): a lookup that errors now fails CLOSED
+  // (null -> skipped); only a missing row still means "wants it". The
+  // behaviour is run for real in rp3-cron-data-sources.test.js.
+  const fnMatch = SRC.match(/async function clientWantsEmail\(email: string\): Promise<boolean \| null> \{[\s\S]*?\n\}\n/);
   assert.ok(fnMatch, 'expected to isolate clientWantsEmail()');
   assert.match(fnMatch[0], /wants_invoice_quote_emails/);
-  assert.match(fnMatch[0], /if \(!res\.ok\) return true;/);
+  assert.doesNotMatch(fnMatch[0], /if \(!res\.ok\) return true;/);
   assert.match(fnMatch[0], /if \(!rows\.length\) return true;/);
   assert.match(fnMatch[0], /return rows\[0\]\.wants_invoice_quote_emails !== false;/);
 
   const handler = SRC.match(/Deno\.serve\(async \(req: Request\) => \{[\s\S]*?\n\}\);/);
-  assert.match(handler[0], /if \(!\(await clientWantsEmail\(clientEmail\)\)\) continue;/);
+  assert.match(handler[0], /const wants = await clientWantsEmail\(clientEmail\);\n\s*if \(wants === null\) \{ preferenceErrors\+\+; continue; \}\n\s*if \(!wants\) continue;/);
 });
 
 test('email links to the client portal quotes page to respond, and sets Reply-To back to the internal team', () => {
@@ -73,8 +76,11 @@ test('exactly one Deno.serve handler, structure intact', () => {
 });
 
 test('the run always returns ok:true with checked/sent counts on success, and a real error shape on failure', () => {
-  assert.match(SRC, /return new Response\(JSON\.stringify\(\{ ok: true, checked, sent \}\)/);
-  assert.match(SRC, /return new Response\(JSON\.stringify\(\{ ok: false, error: err\.message \}\)/);
+  // Fix plan RP3.2/RP3.22 (2026-11-07): ok only when nothing was skipped
+  // for an unreadable preference; the 500 says to read the logs instead of
+  // returning the raw error text.
+  assert.match(SRC, /ok: preferenceErrors === 0, checked, sent/);
+  assert.match(SRC, /error: "send-quote-followup failed; see function logs\." \}\)/);
   assert.match(SRC, /status: 500,/);
 });
 

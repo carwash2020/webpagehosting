@@ -106,7 +106,7 @@ test('approving sends both status and scheduled_at together in one write (the st
   assert.match(fnMatch[0], /await updateWorkRequest\(id, 'scheduled', scheduledAtUtc\.toISOString\(\)\)/);
   // ...and updateWorkRequest puts both in the one RPC call, so the
   // on_work_order_scheduled trigger's email has the time.
-  const helper = WORKSPACE.match(/async function updateWorkRequest\(id, status, scheduledAtIso\)[\s\S]*?\n  \}\n/);
+  const helper = WORKSPACE.match(/async function updateWorkRequest\(id, status, scheduledAtIso, note\)[\s\S]*?\n  \}\n/); // note: RP4.8
   assert.match(helper[0], /p_status: status, p_scheduled_at: scheduledAtIso \|\| null/);
 });
 

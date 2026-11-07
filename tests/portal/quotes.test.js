@@ -160,8 +160,10 @@ test('scheduling only ever offered for an approved, not-yet-scheduled quote (or 
   assert.match(html, /onclick="toggleScheduleForm\(\$\{quoteId\}\)"/);
 });
 
-test('a scheduled job shows a confirmation note instead of the scheduling flow again', () => {
-  assert.match(html, /Job scheduled\. We'll see you then!/);
+test('a scheduled job with no visible booking shows a confirm-your-time note instead of the scheduling flow again', () => {
+  // Fix plan RP4.6 (2026-11-07): no longer asserts "We'll see you then!"
+  // without a booking; see tests/portal/portal-visits.test.js.
+  assert.match(html, /Call or text us to confirm your time/);
 });
 
 test('booking creation and the quote scheduled_at write-back both go through schedule-quote-job, never a direct table write', () => {

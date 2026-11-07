@@ -13,10 +13,15 @@
 // domain. notify-work-order-scheduled-email mailed any address in the
 // payload directly.
 //
-// Same fix as uptime-alert / send-payment-reminder / send-quote-followup
-// (see uptime-alert-auth.test.js), plus a guard so an empty env key can
-// never match an empty header. These tests execute each real handler
-// with a mocked Deno runtime and fetch, rather than only reading source.
+// Same service-role check as uptime-alert / send-payment-reminder /
+// send-quote-followup (see uptime-alert-auth.test.js), plus a guard so an
+// empty env key can never match an empty header. (This header used to say
+// those three already had that guard too; they didn't -- they compared
+// `token !== SERVICE_ROLE_KEY` bare. Fix plan RP3.14, 2026-11-07, added
+// `!SERVICE_ROLE_KEY ||` to all three, and they are now in the list below,
+// so the empty-key case is run against them as well.) These tests execute
+// each real handler with a mocked Deno runtime and fetch, rather than only
+// reading source.
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
@@ -41,6 +46,11 @@ const FUNCTIONS = [
   { name: 'send-job-application-email', payload: { type: 'INSERT', table: 'th_job_applications', record: { id: 1, name: 'n', email: 'applicant@example.com' } } },
   { name: 'send-job-status-change-email', payload: { type: 'UPDATE', table: 'jobs', record: { id: 1, cancelled_at: '2026-09-23T00:00:00Z' }, old_record: { id: 1, cancelled_at: null } } },
   { name: 'reconcile-stripe-payments', payload: {} },
+  // Fix plan RP3.14 (2026-11-07): the three cron/workflow-only functions
+  // that lacked the empty-key guard.
+  { name: 'uptime-alert', payload: { status: 'down', message: 'test' } },
+  { name: 'send-payment-reminder', payload: {} },
+  { name: 'send-quote-followup', payload: {} },
 ];
 
 // Load the real function source, strip TypeScript types, and run it in a

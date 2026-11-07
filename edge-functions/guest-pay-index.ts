@@ -25,6 +25,16 @@
 //   * The same double-charge guards as create-payment-intent: a payment
 //     already through or still processing blocks a new one, an open one for
 //     the same amount is handed back instead of making a second.
+//   * Fix plan RP3.17 (2026-11-07): if Stripe can't answer the lookup of
+//     the earlier PaymentIntent (anything but a 404), "pay" answers 502
+//     instead of going ahead without the double-charge check.
+//   * Fix plan RP3.18 (2026-11-07): view/pdf and pay are rate limited per
+//     IP (rate_limit_take, failing open if the limiter can't be reached),
+//     the Stripe receipt only ever goes to the invoice's own client email,
+//     and "view" tells the page where, as a masked address.
+//   * Fix plan RP4.3 / D15 (2026-11-07): the code stops working 90 days
+//     after the invoice was paid. An unpaid invoice's code keeps working. An
+//     expired code gets the same not_found answer as a wrong one.
 // Deploy: supabase functions deploy guest-pay --no-verify-jwt
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -81,20 +91,79 @@ function blocksNewPayment(pi: any): boolean {
   return !(charge && typeof charge === "object" && charge.refunded === true);
 }
 
-async function retrievePaymentIntent(id: string): Promise<any | null> {
+// Fix plan RP3.17 (2026-11-07): ok:false means Stripe couldn't be asked
+// (network error, 5xx, 401/403...), and the caller answers 502 rather than
+// risk a second PaymentIntent. A 404 (resource_missing) still means "no
+// earlier PaymentIntent": ok:true, pi:null.
+async function retrievePaymentIntent(id: string): Promise<{ ok: boolean; pi: any | null }> {
   try {
     const res = await fetch(`https://api.stripe.com/v1/payment_intents/${encodeURIComponent(id)}?expand[]=latest_charge`, {
       headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` },
     });
+    if (res.status === 404) return { ok: true, pi: null };
     if (!res.ok) {
-      if (res.status !== 404) console.error(`guest-pay: could not retrieve ${id} (HTTP ${res.status}); continuing without the double-charge check`);
-      return null;
+      console.error(`guest-pay: could not retrieve ${id} (HTTP ${res.status}); refusing to start a payment without the double-charge check`);
+      return { ok: false, pi: null };
     }
-    return await res.json();
+    return { ok: true, pi: await res.json() };
   } catch (err: any) {
-    console.error(`guest-pay: could not retrieve ${id} (${err.message}); continuing without the double-charge check`);
-    return null;
+    console.error(`guest-pay: could not retrieve ${id} (${err.message}); refusing to start a payment without the double-charge check`);
+    return { ok: false, pi: null };
   }
+}
+
+// Fix plan RP3.18 (2026-11-07): the client's IP, for the rate limit.
+function clientIp(req: Request): string {
+  // Cloudflare sets cf-connecting-ip and overwrites any client-sent value
+  // (seen on this project's edge logs, 2026-11-07). x-forwarded-for's FIRST
+  // entry is whatever the caller wrote, so fall back to its LAST entry.
+  const cf = (req.headers.get("cf-connecting-ip") || "").trim();
+  if (cf) return cf.slice(0, 64);
+  const xff = (req.headers.get("x-forwarded-for") || "").split(",").map((s) => s.trim()).filter(Boolean);
+  return (xff[xff.length - 1] || "unknown").slice(0, 64);
+}
+
+// One hit against public.rate_limit_take (sql/security/group5_backend_hardening.sql).
+// true = allowed. Fails OPEN (logged): this is a customer paying an invoice,
+// and a limiter outage must not stop a real payment.
+async function rateLimitTake(bucket: string, key: string, max: number, windowSeconds: number): Promise<boolean> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/rate_limit_take`, {
+      method: "POST",
+      headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_bucket: bucket, p_key: key, p_max: max, p_window_seconds: windowSeconds }),
+    });
+    if (!res.ok) {
+      console.error(`guest-pay: rate_limit_take ${bucket} failed (HTTP ${res.status}); allowing the request`);
+      return true;
+    }
+    return (await res.json()) !== false;
+  } catch (err: any) {
+    console.error(`guest-pay: rate_limit_take ${bucket} failed (${err.message}); allowing the request`);
+    return true;
+  }
+}
+const VIEW_LIMIT_PER_HOUR = 60;
+const PAY_LIMIT_PER_HOUR = 20;
+
+// "tony@example.com" -> "t•••@example.com": enough for the payer to
+// recognise their own address, not enough to read someone else's.
+function maskEmail(email: unknown): string | null {
+  const e = String(email || "").trim().toLowerCase();
+  const at = e.lastIndexOf("@");
+  if (at < 1 || at === e.length - 1) return null;
+  return `${e.charAt(0)}•••${e.slice(at)}`;
+}
+
+// D15: a paid invoice's code works for 90 days after paid_at. No paid_at on
+// a paid invoice (none recorded) leaves the code working, as before: there
+// is nothing to count from.
+const PAID_TOKEN_DAYS = 90;
+function tokenExpired(invoice: { paid?: unknown; paid_at?: unknown }, now = Date.now()): boolean {
+  if (!invoice.paid || !invoice.paid_at) return false;
+  const paidAt = new Date(String(invoice.paid_at)).getTime();
+  if (isNaN(paidAt)) return false;
+  return now > paidAt + PAID_TOKEN_DAYS * 24 * 60 * 60 * 1000;
 }
 
 // "Tony Perides" -> "T. Perides"; one word stays as it is.
@@ -177,9 +246,21 @@ Deno.serve(async (req: Request) => {
 
   try {
     const { action, token, receipt_email } = await req.json().catch(() => ({}));
+    // Counted before the code is even looked at, so probing for codes is
+    // throttled too (RP3.18). pdf shares the view budget.
+    const isPay = action === "pay";
+    const allowed = await rateLimitTake(
+      isPay ? "guest-pay:pay" : "guest-pay:view",
+      clientIp(req),
+      isPay ? PAY_LIMIT_PER_HOUR : VIEW_LIMIT_PER_HOUR,
+      3600,
+    );
+    if (!allowed) {
+      return json({ ok: false, code: "too_many_requests", error: "Too many tries from this connection. Please wait a while and try again, or call (435) 414-1667." }, 429);
+    }
     if (typeof token !== "string" || !TOKEN_SHAPE.test(token)) return notFound();
     const invoice = await findInvoice(token);
-    if (!invoice) return notFound();
+    if (!invoice || tokenExpired(invoice)) return notFound();
 
     if (action === "view") {
       return json({
@@ -192,6 +273,8 @@ Deno.serve(async (req: Request) => {
         due_date: await dueDateFor(invoice),
         paid: !!invoice.paid,
         paid_at: invoice.paid_at || null,
+        // Where Stripe will send the receipt (RP3.18), masked.
+        receipt_to: maskEmail(invoice.client_email),
       });
     }
     if (action === "pdf") {
@@ -201,7 +284,14 @@ Deno.serve(async (req: Request) => {
     if (action !== "pay") return json({ ok: false, error: "unknown_action" }, 400);
 
     if (invoice.paid) return json({ ok: false, already_paid: true, error: "This invoice is already paid." }, 409);
-    const earlierPi = invoice.stripe_payment_intent_id ? await retrievePaymentIntent(invoice.stripe_payment_intent_id) : null;
+    let earlierPi: any = null;
+    if (invoice.stripe_payment_intent_id) {
+      const lookup = await retrievePaymentIntent(invoice.stripe_payment_intent_id);
+      if (!lookup.ok) {
+        return json({ ok: false, error: "We couldn't check this invoice's earlier payment just now. Please try again in a minute, or call (435) 414-1667." }, 502);
+      }
+      earlierPi = lookup.pi;
+    }
     if (earlierPi && blocksNewPayment(earlierPi)) {
       return json({ ok: false, already_paying: true, error: "A payment for this invoice has already gone through or is still processing. It can take a minute to show as paid." }, 409);
     }
@@ -217,8 +307,13 @@ Deno.serve(async (req: Request) => {
       return json({ ok: true, client_secret: earlierPi.client_secret, reused: true });
     }
 
+    // RP3.18: the receipt goes to the invoice's own client email, never to
+    // an address the caller names. A typed address that IS the client's
+    // (any case) is the same address; anything else is ignored.
+    const onFile = String(invoice.client_email || "").trim().toLowerCase();
     const typed = typeof receipt_email === "string" ? receipt_email.trim().toLowerCase() : "";
-    const receiptTo = typed.length <= 254 && EMAIL_SHAPE.test(typed) ? typed : invoice.client_email;
+    if (typed && typed !== onFile) console.log(`guest-pay: ignored a receipt_email that isn't the client's for invoice ${invoice.id}`);
+    const receiptTo = onFile.length <= 254 && EMAIL_SHAPE.test(onFile) ? onFile : null;
     const params = new URLSearchParams({
       amount: String(amountCents),
       currency: "usd",

@@ -378,7 +378,7 @@ async function runBehaviour(browser, base) {
     await again.context.close();
   }
 
-  console.log('\n== portal: legacy session (signed in before this change) keeps working');
+  console.log('\n== portal: legacy session (signed in before the 30-day cap) is asked to sign in once (RP3.34, D31)');
   {
     const ctl = { tokenCalls: 0 };
     const seed = await newPage(browser, base, vp, ctl);
@@ -393,7 +393,8 @@ async function runBehaviour(browser, base) {
     const old = await newPage(browser, base, vp, { tokenCalls: 0 }, { storageState: legacy });
     await old.page.goto(base + PORTAL.path);
     await old.page.waitForTimeout(700);
-    check('session with no cutoff record (pre-existing) is still signed in', await old.page.isVisible('#signedInView'));
+    check('session with no cutoff record (pre-cap) is signed out once', !(await old.page.isVisible('#signedInView')));
+    check('…with the one-time "please sign in again" note', /sign in again/i.test(await old.page.textContent('body')));
     await old.context.close();
   }
 

@@ -389,12 +389,21 @@ function portalBiometricLockGate(email, client) {
 //     a hard 30-day cutoff, checked on every read, because Supabase has no
 //     per-login refresh-token lifetime.
 //   - remember OFF: sessionStorage, so it ends when the browser closes.
-// Sessions that were already signed in before this shipped sit in
-// localStorage with no cutoff and keep working exactly as before.
 // Password/2FA logic is untouched; this only decides WHERE the session lives.
+//
+// Fix plan RP3.34 / D31 (2026-11-07): a session from before the cap (in
+// localStorage with no cutoff record) is cleared ONCE per device and the
+// person signs in again (login.html says why). A one-time flag means it
+// never repeats; sessions with a cutoff, and sessionStorage sessions, are
+// left alone. And a localStorage session written with no cutoff (a page
+// that never chose Remember me, e.g. set-password.html) now gets the same
+// 30-day cutoff, so no uncapped session can be made again.
 var PORTAL_REMEMBER_DAYS = 30;
 var PORTAL_REMEMBER_UNTIL_KEY = 'th_portal_remember_until';
 var PORTAL_SESSION_ONLY_KEY = 'th_portal_session_only';
+var PORTAL_UNCAPPED_RETIRED_KEY = 'th_portal_uncapped_session_retired';
+// Shared with tools/auth.js: login.html shows "please sign in again" once.
+var SIGNIN_AGAIN_NOTICE_KEY = 'th_signin_again_notice';
 
 function portalSafeStore(kind) {
   try { return window[kind]; } catch (e) { return null; }
@@ -426,9 +435,31 @@ function portalSetRemember(remember) {
   }
 }
 
+// supabase-js keeps its session under sb-<project ref>-auth-token (plus
+// -code-verifier / -user companions).
+var PORTAL_SUPABASE_SESSION_KEY = /^sb-[a-z0-9]+-auth-token/;
+function portalRetireUncappedSession(local, session) {
+  if (!local || portalStoreGet(local, PORTAL_UNCAPPED_RETIRED_KEY) !== null) return;
+  portalStoreSet(local, PORTAL_UNCAPPED_RETIRED_KEY, '1');
+  if (portalStoreGet(local, PORTAL_REMEMBER_UNTIL_KEY) !== null) return; // has its cutoff: untouched
+  var keys = [];
+  try {
+    for (var i = 0; i < local.length; i++) {
+      var k = local.key(i);
+      if (k && PORTAL_SUPABASE_SESSION_KEY.test(k)) keys.push(k);
+    }
+  } catch (e) { return; }
+  if (!keys.length) return;
+  keys.forEach(function (k) { portalStoreRemove(local, k); });
+  portalStoreSet(session, SIGNIN_AGAIN_NOTICE_KEY, '1');
+}
+
 function portalAuthStorage() {
   var local = portalSafeStore('localStorage');
   var session = portalSafeStore('sessionStorage');
+  // Before supabase-js reads anything (every page builds its client with
+  // this storage).
+  portalRetireUncappedSession(local, session);
   return {
     getItem: function (key) {
       var fromSession = portalStoreGet(session, key);
@@ -447,6 +478,9 @@ function portalAuthStorage() {
         portalStoreSet(session, key, value);
         portalStoreRemove(local, key);
       } else {
+        if (portalStoreGet(local, PORTAL_REMEMBER_UNTIL_KEY) === null) {
+          portalStoreSet(local, PORTAL_REMEMBER_UNTIL_KEY, String(Date.now() + PORTAL_REMEMBER_DAYS * 24 * 60 * 60 * 1000));
+        }
         portalStoreSet(local, key, value);
         portalStoreRemove(session, key);
       }
@@ -604,9 +638,17 @@ function portalGo(url) {
   window.location.replace(url);
 }
 
+// The code step on login.html, carrying this page (and its #card) as
+// ?return= so the code lands back here, not on Home (fix plan RP4.1,
+// 2026-11-07). login.html reads both ?return= and ?step=code.
+function portalSecondStepUrl() {
+  const base = portalLoginUrl();
+  return base + (base.indexOf('?') === -1 ? '?' : '&') + 'step=code';
+}
+
 async function portalRequireSecondStep(email, client) {
   if (!(await portalSecondStepOwed(email, client))) return false;
-  const toCode = () => portalGo('/portal/login.html?step=code');
+  const toCode = () => portalGo(portalSecondStepUrl());
   if (!portalIsBiometricLockEnabled(email)) {
     toCode();
     return new Promise(() => {});
@@ -1490,6 +1532,19 @@ function portalSetComposerSending(inputEl, sendBtn) {
     if (sendBtn) { sendBtn.disabled = false; sendBtn.classList.remove('is-sending'); }
   };
 }
+
+// Skip link (fix plan RP4.9, 2026-11-07): moves focus to <main
+// id="portalMain"> without touching the URL hash, so Settings' section
+// routing (#payment...) and portalScrollToHash() never see "#portalMain".
+// Without this script the plain href="#portalMain" still works.
+document.addEventListener('click', (e) => {
+  const link = e.target && e.target.closest ? e.target.closest('.portal-skip-link') : null;
+  if (!link) return;
+  const main = document.getElementById('portalMain');
+  if (!main) return;
+  e.preventDefault();
+  main.focus();
+});
 
 // Deep-link from Home's action inbox (Pay / Approve / Sign / Reply)
 // onto the matching card. Pages call this after they finish rendering

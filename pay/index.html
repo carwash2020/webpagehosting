@@ -76,10 +76,8 @@
   .section-label{font-family:var(--ui); font-size:12px; letter-spacing:1.5px; color:var(--label); text-transform:uppercase; margin:4px 0 0;}
   .stripe-box{background:#fff; border-radius:8px; padding:14px; min-height:120px;}
   .stripe-box .loading{color:#666; font-size:14px; margin:0;}
-  .receipt{display:flex; flex-direction:column; gap:6px; font-family:var(--ui); font-size:12px; letter-spacing:1.5px; color:var(--label); text-transform:uppercase;}
-  .receipt input{height:48px; background:var(--panel); border:1px solid var(--border); border-radius:8px; color:#fff; padding:0 14px; font-family:var(--body); font-size:16px; letter-spacing:normal; text-transform:none;}
-  .receipt input::placeholder{color:#8a8a8a;}
-  .receipt .hint{font-family:var(--body); font-size:12.5px; letter-spacing:normal; text-transform:none; color:var(--dim);}
+  .receipt-to{font-size:13.5px; color:var(--text-2); margin:0; overflow-wrap:anywhere;}
+  .retry-btn{height:48px; border:1px solid var(--orange); border-radius:8px; background:transparent; color:var(--orange-light); font-family:var(--body); font-weight:700; font-size:16px; cursor:pointer;}
   .error{color:var(--overdue); font-size:14.5px; margin:0;}
   .error:empty{display:none;}
   .pay-btn{height:56px; border:0; border-radius:8px; background:var(--orange); color:var(--on-orange); font-family:var(--body); font-weight:700; font-size:18px; cursor:pointer; margin-top:6px;}
@@ -129,11 +127,9 @@
         <div class="stripe-box" role="group" aria-labelledby="payLabel">
           <div id="paymentElement"><p class="loading">Loading the secure card form...</p></div>
         </div>
-        <label class="receipt">Email my receipt to
-          <input type="email" id="receiptEmail" autocomplete="email" inputmode="email" placeholder="you@example.com">
-          <span class="hint">Leave it blank to send it to the email this invoice came to.</span>
-        </label>
+        <p class="receipt-to" id="receiptTo" hidden></p>
         <p class="error" id="payError" role="alert"></p>
+        <button type="button" class="retry-btn" id="retryBtn" hidden>Try again</button>
         <button type="button" class="pay-btn" id="payBtn" disabled>Pay</button>
         <p class="note">No account needed. Questions? Call or text <a href="tel:+14354141667">(435) 414-1667</a>.</p>
       </div>
@@ -162,7 +158,6 @@
   // Publishable (public) key, the same one portal/dashboard.html uses.
   const STRIPE_PUBLISHABLE_KEY = 'pk_live_51TxzzNLJyq7HLm12tpc3XfPvsQK1vN7qHJ5KhvYhhi2YSFtPOqNXMTr2bTm7ADjwxtbUl2UmXg9kHGfzKve1izn700mFVhdVRo';
   const TOKEN_SHAPE = /^[a-hjkmnp-z2-9]{10,40}$/;
-  const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const TZ = 'America/Denver';
   const $ = (id) => document.getElementById(id);
 
@@ -217,9 +212,11 @@
     ['loadingView', 'notFoundView', 'invoiceView', 'doneView'].forEach((v) => { $(v).hidden = v !== id; });
   }
 
-  function showDone(inv, amount, email) {
+  // The receipt always goes to the email the invoice was sent to (fix plan
+  // RP3.18, 2026-11-07); guest-pay says which, masked (receipt_to).
+  function showDone(inv, amount) {
     $('doneLead').textContent = money(amount) + ' for invoice ' + inv.invoice_number + '. A receipt is on its way to ' +
-      (email || 'the email this invoice was sent to') + ', and Steve has been told.';
+      (inv.receipt_to || 'the email this invoice was sent to') + ', and Steve has been told.';
     show('doneView');
     $('doneTitle').setAttribute('tabindex', '-1');
     $('doneTitle').focus();
@@ -247,6 +244,8 @@
     $('forLine').textContent = [inv.description, dated ? shortDate(dated) : ''].filter(Boolean).join(' · ') || '—';
     $('billedTo').textContent = inv.billed_to || '—';
     $('payArea').hidden = !!inv.paid;
+    $('receiptTo').textContent = inv.receipt_to ? 'Your receipt will be emailed to ' + inv.receipt_to + ', the address this invoice was sent to.' : '';
+    $('receiptTo').hidden = !inv.receipt_to;
     if (inv.paid) $('amountDue').textContent = money(0);
     show('invoiceView');
   }
@@ -273,25 +272,41 @@
 
     // Back from a bank or 3-D Secure step Stripe sent the payer to.
     const back = new URLSearchParams(location.search);
-    if (back.get('redirect_status') === 'succeeded') { showDone(inv, inv.amount_due, back.get('receipt') || ''); return; }
+    if (back.get('redirect_status') === 'succeeded') { showDone(inv, inv.amount_due); return; }
     if (inv.paid) return;
+    setUpPayment(inv, token);
+  }
 
+  // Fix plan RP4.7 (2026-11-07): a payment that couldn't be started keeps
+  // the card box and offers "Try again", which asks guest-pay again,
+  // instead of emptying the form and leaving only a reload.
+  async function setUpPayment(inv, token) {
+    const retry = $('retryBtn');
+    retry.hidden = true;
+    $('payError').textContent = '';
+    $('paymentElement').innerHTML = '<p class="loading">Loading the secure card form...</p>';
     let pay;
     try {
       pay = await guestPay({ action: 'pay', token });
     } catch (e) {
-      pay = { ok: false, error: 'Could not reach the server. Check your connection and reload this page.' };
+      pay = { ok: false, error: 'Could not reach the server. Check your connection and try again.' };
     }
     if (!pay.ok) {
-      $('paymentElement').innerHTML = '';
-      $('payError').textContent = pay.error || 'The payment could not be started. Please call (435) 414-1667.';
-      if (pay.already_paid) { inv.paid = true; renderInvoice(inv); }
+      $('paymentElement').innerHTML = '<p class="loading">The card form will appear here once the payment can be started.</p>';
+      $('payError').textContent = pay.error || 'The payment could not be started. Please try again, or call (435) 414-1667.';
+      if (pay.already_paid) { inv.paid = true; renderInvoice(inv); return; }
+      if (!pay.already_paying) {
+        retry.hidden = false;
+        retry.onclick = () => setUpPayment(inv, token);
+      }
       return;
     }
     try {
       await loadStripeJs();
     } catch (e) {
-      $('paymentElement').innerHTML = '<p class="loading">The secure card form didn’t load. Check your connection (or any ad blocker) and reload this page.</p>';
+      $('paymentElement').innerHTML = '<p class="loading">The secure card form didn’t load. Check your connection (or any ad blocker) and try again.</p>';
+      $('retryBtn').hidden = false;
+      $('retryBtn').onclick = () => setUpPayment(inv, token);
       return;
     }
     const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
@@ -302,21 +317,15 @@
     btn.textContent = 'Pay ' + money(inv.amount_due);
     btn.disabled = false;
 
-    btn.addEventListener('click', async () => {
+    btn.onclick = async () => {
       $('payError').textContent = '';
-      const typed = $('receiptEmail').value.trim().toLowerCase();
-      if (typed && !EMAIL_SHAPE.test(typed)) {
-        $('payError').textContent = 'That email doesn’t look right. Fix it, or leave it blank.';
-        $('receiptEmail').focus();
-        return;
-      }
       btn.disabled = true;
       btn.textContent = 'Processing...';
       const returnUrl = new URL(location.href);
       ['payment_intent', 'payment_intent_client_secret', 'redirect_status', 'receipt'].forEach((k) => returnUrl.searchParams.delete(k));
-      if (typed) returnUrl.searchParams.set('receipt', typed);
+      // No receipt address here: the PaymentIntent already names the
+      // invoice's own email, and only that one (RP3.18).
       const confirmParams = { return_url: returnUrl.toString() };
-      if (typed) confirmParams.receipt_email = typed;
       const { error, paymentIntent } = await stripe.confirmPayment({ elements, confirmParams, redirect: 'if_required' });
       if (error) {
         $('payError').textContent = error.message || 'The payment didn’t go through. Please try again.';
@@ -326,10 +335,10 @@
       }
       if (paymentIntent && (paymentIntent.status === 'succeeded' || paymentIntent.status === 'processing')) {
         const amount = typeof paymentIntent.amount === 'number' ? paymentIntent.amount / 100 : inv.amount_due;
-        showDone(inv, amount, typed);
+        showDone(inv, amount);
         if (paymentIntent.status === 'processing') $('doneTitle').textContent = 'Payment sent. Thank you!';
       }
-    });
+    };
   }
 
   // Exposed for tests only; nothing on the page reads it.

@@ -349,16 +349,70 @@ async function markNotified(notifType: string, itemKey: string) {
 }
 
 // --- reading the synced business data -----------------------------------
-// Jobs, invoices, and compliance settings all live inside one JSON blob
+// Jobs, compliance settings and review reminders live inside one JSON blob
 // per sync code (see sync.js's collectSyncData()), not their own
 // tables -- each key is a STRING containing JSON, not a nested object.
+//
+// Fix plan RP3.2 (2026-11-07): this used to read
+// workspace_sync?select=data&limit=1 with no code filter over a 4-row table
+// (legacy + scope:ops/money/runway), so it only worked while PostgREST
+// happened to return the legacy row first, and a missing/failed read just
+// meant "nothing to remind about". It now names the legacy row, and a read
+// that fails or finds no row is reported as an error (non-2xx), never as
+// a quiet ok. Invoices and quotes are read from their relational tables
+// (public.invoices / public.quotes, kept by sync.js's mirror and by
+// stripe_record_event), which carry everything these checks use.
+const WORKSPACE_SYNC_CODE = "tripleh-workspace-2026";
 
 async function getSyncedData() {
-  const res = await supabaseRequest(`/rest/v1/workspace_sync?select=data,updated_at&limit=1`);
-  if (!res.ok) return null;
+  const res = await supabaseRequest(`/rest/v1/workspace_sync?code=eq.${encodeURIComponent(WORKSPACE_SYNC_CODE)}&select=data,updated_at&limit=1`);
+  if (!res.ok) {
+    console.error(`getSyncedData: workspace_sync read failed (HTTP ${res.status})`);
+    return null;
+  }
   const rows = await res.json();
-  if (!rows.length) return null;
+  if (!Array.isArray(rows) || !rows.length) {
+    console.error(`getSyncedData: no workspace_sync row with code ${WORKSPACE_SYNC_CODE}`);
+    return null;
+  }
   return { data: rows[0].data || {}, updatedAt: rows[0].updated_at as string | undefined };
+}
+
+// public.invoices / public.quotes rows in the blob's own shape (sync.js
+// mirrorInvoiceToRelational / mirrorQuoteToRelational, read back the same
+// way sync.js does), so the checks below are unchanged. null = the read failed.
+function numOrNull(v: unknown): number | null {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+async function getRelationalInvoices(): Promise<any[] | null> {
+  const res = await supabaseRequest(
+    "/rest/v1/invoices?select=id,invoice_number,client_name,client_email,invoice_date,terms,total,paid,paid_amount,job_id&order=id",
+  );
+  if (!res.ok) {
+    console.error(`getRelationalInvoices: read failed (HTTP ${res.status})`);
+    return null;
+  }
+  const rows = await res.json();
+  if (!Array.isArray(rows)) return null;
+  return rows.map((r: any) => ({
+    id: r.id, invoiceNumber: r.invoice_number, clientName: r.client_name, clientEmail: r.client_email,
+    date: r.invoice_date, terms: r.terms, total: numOrNull(r.total), paid: r.paid === true,
+    paidAmount: numOrNull(r.paid_amount), jobRefId: r.job_id ?? null,
+  }));
+}
+async function getRelationalQuotes(): Promise<any[] | null> {
+  const res = await supabaseRequest("/rest/v1/quotes?select=id,quote_number,client_name,quote_date,status,job_id&order=id");
+  if (!res.ok) {
+    console.error(`getRelationalQuotes: read failed (HTTP ${res.status})`);
+    return null;
+  }
+  const rows = await res.json();
+  if (!Array.isArray(rows)) return null;
+  return rows.map((r: any) => ({
+    id: r.id, quoteNumber: r.quote_number, clientName: r.client_name, date: r.quote_date, status: r.status, jobRefId: r.job_id ?? null,
+  }));
 }
 
 function safeParse(jsonString: string | undefined, fallback: any) {
@@ -742,11 +796,18 @@ function buildWeeklyDigestEmailHtml(parts: string[], uptimeStats: { uptimePct: n
 // nagging, so this one is intentionally sent even when every number is
 // zero (a quiet week is itself useful to know), unlike every check
 // above which only ever sends when something needs attention.
-async function sendWeeklyDigest() {
-  const synced = await getSyncedData();
+// Returns the sources that could not be read (RP3.2): the caller reports
+// them as an error instead of a quiet ok. The digest still goes out with
+// whatever could be read.
+async function sendWeeklyDigest(): Promise<string[]> {
+  const [synced, invoicesRead, quotesRead] = await Promise.all([getSyncedData(), getRelationalInvoices(), getRelationalQuotes()]);
+  const failed: string[] = [];
+  if (!synced) failed.push(`workspace_sync (${WORKSPACE_SYNC_CODE})`);
+  if (!invoicesRead) failed.push("invoices");
+  if (!quotesRead) failed.push("quotes");
   const jobs: any[] = synced ? safeParse(synced.data.th_tracker_jobs, []) : [];
-  const invoices: any[] = synced ? safeParse(synced.data.th_invoices, []) : [];
-  const quotes: any[] = synced ? safeParse(synced.data.th_quotes, []) : [];
+  const invoices: any[] = invoicesRead || [];
+  const quotes: any[] = quotesRead || [];
 
   const weekAgo = new Date();
   weekAgo.setDate(weekAgo.getDate() - 7);
@@ -798,7 +859,7 @@ async function sendWeeklyDigest() {
 
   await sendToAllSubscriptions({
     title: "Weekly Summary",
-    body: parts.join(" \u00b7 "),
+    body: parts.join(" · "),
     url: "/tools/workspace.html",
   });
 
@@ -832,6 +893,7 @@ async function sendWeeklyDigest() {
   } else {
     console.log("Weekly digest email skipped -- REPORTS_EMAIL_FROM not yet configured.");
   }
+  return failed;
 }
 
 Deno.serve(async (req: Request) => {
@@ -947,39 +1009,56 @@ Deno.serve(async (req: Request) => {
     }
 
     if (payload.type === "reminder-check") {
-      const synced = await getSyncedData();
+      // RP3.2: the legacy blob row by name; invoices and quotes from their
+      // own tables. Each check runs on whatever could be read; anything that
+      // couldn't be read makes the whole run answer 502 with the list.
+      const [synced, invoicesRead, quotesRead] = await Promise.all([getSyncedData(), getRelationalInvoices(), getRelationalQuotes()]);
 
       const jobs = synced ? safeParse(synced.data.th_tracker_jobs, []) : [];
-      const invoices = synced ? safeParse(synced.data.th_invoices, []) : [];
-      const quotes = synced ? safeParse(synced.data.th_quotes, []) : [];
       const compliance = synced ? safeParse(synced.data.th_compliance, null) : null;
       const reviewReminders = synced ? safeParse(synced.data.th_review_requests_pending, []) : [];
 
       if (synced) {
         await checkTomorrowsJobs(jobs);
         await checkFollowups(jobs);
-        await checkOverdueInvoices(invoices);
         await checkCompliance(compliance);
         await checkOverdueNotStarted(jobs);
         await checkStuckInProgress(jobs);
         await checkStaleSync(synced.updatedAt);
-        await checkUnconvertedQuotes(quotes, invoices);
         await checkPhotolessCompletedJobs(jobs);
         await checkWarrantyCheckIn(jobs);
         await checkPendingReviewReminders(reviewReminders);
       }
+      if (invoicesRead) await checkOverdueInvoices(invoicesRead);
+      if (invoicesRead && quotesRead) await checkUnconvertedQuotes(quotesRead, invoicesRead);
 
       // Independent of workspace_sync -- th_leads is its own table, so
       // this check runs regardless of whether synced data was found.
       await checkUnrespondedLeads();
 
-      return new Response(JSON.stringify({ ok: true, ran: true, syncedDataFound: !!synced }), {
+      const unread: string[] = [];
+      if (!synced) unread.push(`workspace_sync (${WORKSPACE_SYNC_CODE})`);
+      if (!invoicesRead) unread.push("invoices");
+      if (!quotesRead) unread.push("quotes");
+      if (unread.length) {
+        return new Response(JSON.stringify({ ok: false, ran: true, error: `Could not read: ${unread.join(", ")}`, unread }), {
+          status: 502,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ ok: true, ran: true, syncedDataFound: true, invoices: invoicesRead!.length, quotes: quotesRead!.length }), {
         headers: { "Content-Type": "application/json" },
       });
     }
 
     if (payload.type === "weekly-digest") {
-      await sendWeeklyDigest();
+      const unread = await sendWeeklyDigest();
+      if (unread.length) {
+        return new Response(JSON.stringify({ ok: false, ran: true, error: `Could not read: ${unread.join(", ")}`, unread }), {
+          status: 502,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
       return new Response(JSON.stringify({ ok: true, ran: true }), { headers: { "Content-Type": "application/json" } });
     }
 
@@ -998,6 +1077,16 @@ Deno.serve(async (req: Request) => {
     // this alert is about an invoice, so it should land on the page
     // that actually shows invoices (Portal invoices, in
     // tools/clients.html), not Dev Tools.
+    // A client approved or declined a portal quote (fix plan RP3.1,
+    // 2026-11-07; sent by respond-to-quote). Internal broadcast like the
+    // alerts above, landing on Clients, where portal quotes are managed.
+    if (payload.type === "quote-response") {
+      const title = typeof payload.title === "string" && payload.title ? payload.title.slice(0, 120) : "Quote response";
+      const body = typeof payload.body === "string" ? payload.body.slice(0, 400) : "";
+      await sendToAllSubscriptions({ title, body, url: "/tools/clients.html" });
+      return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
+    }
+
     if (payload.type === "stripe-reconciliation-alert") {
       const title = typeof payload.title === "string" ? payload.title : "Payment reconciliation alert";
       const body = typeof payload.body === "string" ? payload.body : "";
@@ -1066,7 +1155,9 @@ Deno.serve(async (req: Request) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (err: any) {
-    return new Response(JSON.stringify({ ok: false, error: err.message }), {
+    // Fix plan RP3.22 (2026-11-07): logged in full, generic to the caller.
+    console.error("Send-Push error:", err?.message || err);
+    return new Response(JSON.stringify({ ok: false, error: "Send-Push failed; see function logs." }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

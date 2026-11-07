@@ -981,3 +981,22 @@ body.portal-page .th-toast-container {
      scheduling panel doesn't stretch its neighbour. */
   .card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; align-items: start; }
 }
+
+/* ----------------------------------------------------------
+   Skip link (fix plan RP4.9, 2026-11-07). On every portal page that
+   uses the shell: first in the tab order, hidden off-screen until
+   focused, jumps past the app bar and the navigation to
+   <main id="portalMain">. Same look and motion as the public site's
+   .skip-link (styles.css), in the portal's orange.
+   ---------------------------------------------------------- */
+.portal-skip-link {
+  position: absolute; top: -80px; left: 12px; z-index: 1000;
+  padding: 10px 18px; border-radius: 8px;
+  background: var(--orange); color: #1a0d02;
+  font-family: var(--font-ui); font-weight: 600; font-size: 14px;
+  text-decoration: none;
+  transition: top .15s ease;
+}
+.portal-skip-link:focus { top: calc(12px + env(safe-area-inset-top, 0px)); outline: 2px solid var(--orange-light); outline-offset: 2px; }
+#portalMain:focus { outline: none; }
+@media (prefers-reduced-motion: reduce) { .portal-skip-link { transition: none; } }

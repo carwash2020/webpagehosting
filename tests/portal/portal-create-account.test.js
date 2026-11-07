@@ -93,7 +93,8 @@ test('the whole path: email + password -> code -> confirmed -> signed in with th
   d.getElementById('loginForm').dispatchEvent(new d.defaultView.Event('submit', { cancelable: true }));
   await until(() => d.getElementById('signupCodeOverlay').style.display === 'flex', 'code step');
   assert.deepEqual(calls.signup[0], { action: 'start', email: 'Tony@Example.com', password: 'fridge-fixed-1' });
-  assert.match(d.getElementById('signupCodeSub').textContent, /We sent a 6-digit code to Tony@Example\.com\./);
+  // Fix plan RP4.2 (2026-11-07): neutral -- never "we sent".
+  assert.equal(d.getElementById('signupCodeSub').textContent, "If Tony@Example.com doesn't have an account yet, a 6-digit code is on its way. Check spam.");
   assert.equal(calls.signIn.length, 0, 'nothing signs in before the code');
 
   d.getElementById('signupCodeInput').value = '482913';
@@ -158,4 +159,50 @@ test('return path: only listed portal pages and a plain #anchor are ever followe
   assert.equal(ctx.l(), '/portal/login.html?return=%2Fportal%2Fcontracts.html%23contract-card-7');
   ctx.window.location.pathname = '/portal/set-password.html'; ctx.window.location.hash = '';
   assert.equal(ctx.l(), '/portal/login.html', 'a page not on the list just goes to sign in');
+});
+
+// --- Fix plan RP4.2 (2026-11-07) --------------------------------------------
+
+async function toCodeStep(opts) {
+  const g = open('https://www.triplehenterprisesllc.biz/portal/login.html', opts);
+  await settle();
+  g.d.getElementById('tabCreate').click();
+  g.d.getElementById('clientEmail').value = 'tony@example.com';
+  g.d.getElementById('clientPassword').value = 'fridge-fixed-1';
+  g.d.getElementById('loginForm').dispatchEvent(new g.d.defaultView.Event('submit', { cancelable: true }));
+  await until(() => g.d.getElementById('signupCodeOverlay').style.display === 'flex', 'code step');
+  return g;
+}
+
+test('RP4.2: the code step is neutral and offers Sign in instead; nothing on it says a code was definitely sent', async () => {
+  const { d } = await toCodeStep();
+  const overlay = d.getElementById('signupCodeOverlay').textContent;
+  assert.doesNotMatch(overlay, /We sent/);
+  assert.match(overlay, /Already have an account\? Sign in instead\./);
+  assert.equal(d.getElementById('signupCodeNote').style.display, 'none');
+  d.getElementById('signupCodeSignIn').click();
+  assert.equal(d.getElementById('signupCodeOverlay').style.display, 'none');
+  assert.equal(d.getElementById('pageTitle').textContent, 'Sign in');
+  assert.equal(d.getElementById('clientEmail').value, 'tony@example.com', 'email kept');
+  assert.equal(d.getElementById('clientPassword').value, '', 'the new-account password is not reused');
+});
+
+test('RP4.2: Resend never claims a new code is definitely coming', async () => {
+  const { d, calls } = await toCodeStep();
+  d.getElementById('signupCodeResend').click();
+  await until(() => d.getElementById('signupCodeNote').style.display === 'block', 'note');
+  assert.equal(calls.signup[1].action, 'start');
+  assert.equal(d.getElementById('signupCodeNote').textContent, "If this email doesn't have an account yet, a new code is on its way. Use the newest one.");
+  assert.doesNotMatch(d.getElementById('signupCodeNote').textContent, /^A new code is on its way/);
+});
+
+test('RP4.2: the server\'s `limited` answer says plainly that no new code was sent (first try and Resend)', async () => {
+  const limited = { start: { ok: true, next: 'code', limited: true } };
+  const { d } = await toCodeStep({ signup: limited });
+  assert.equal(d.getElementById('signupCodeNote').style.display, 'block');
+  assert.equal(d.getElementById('signupCodeNote').textContent, 'No new code was sent. Try again in a little while.');
+  d.getElementById('signupCodeNote').style.display = 'none';
+  d.getElementById('signupCodeResend').click();
+  await until(() => d.getElementById('signupCodeNote').style.display === 'block', 'note');
+  assert.equal(d.getElementById('signupCodeNote').textContent, 'No new code was sent. Try again in a little while.');
 });

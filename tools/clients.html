@@ -14,7 +14,7 @@
      background-image on html here too. -->
 <html lang="en" style="background-color:#0a0a0a;">
 <head>
-<script src="/tools/auth.js?v=f6476e7a83"></script>
+<script src="/tools/auth.js?v=f361d31973"></script>
 <script>
   // Security gate -- redirect to login before this page's own content
   // is meaningfully usable. See auth.js for why this exists (a small,
@@ -73,7 +73,7 @@
      file dev-tools.html and site-content.html already load, rather
      than duplicating any of it -- these five panels' help-modal
      content already lives there from when they were built. -->
-<script src="/tools/dev-tools-shared.js?v=3132b24dc1" defer></script>
+<script src="/tools/dev-tools-shared.js?v=d03765c719" defer></script>
 <!-- Client Lookup dispute-evidence export (2026-09-05), requested
      directly -- same jsPDF version/SRI hash/async loading pattern
      already proven on invoice-generator.html. -->
@@ -699,17 +699,28 @@
   let _portalAccountsCache = null;
   let _internalEmailsCache = null;
 
-  async function loadInternalEmails() {
-    if (_internalEmailsCache) return _internalEmailsCache;
+  // Fix plan RP3.33 (D30, 2026-11-07): staff accounts are no longer listed to
+  // every staff member, so instead of reading every staff email this asks
+  // the database which of these portal emails belong to staff
+  // (internal_emails_among) -- it answers only about the emails asked.
+  async function loadInternalEmails(emails) {
+    const key = (emails || []).slice().sort().join(',');
+    if (_internalEmailsCache && _internalEmailsCache.key === key) return _internalEmailsCache.set;
     try {
       const res = await fetchWithTimeout(
-        SUPABASE_URL + '/rest/v1/account_roles?select=email',
+        SUPABASE_URL + '/rest/v1/rpc/internal_emails_among',
         8000,
-        { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken() } }
+        {
+          method: 'POST',
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + getAuthToken(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ p_emails: emails || [] }),
+        }
       );
       if (!res.ok) return new Set();
-      _internalEmailsCache = new Set((await res.json()).map(r => (r.email || '').toLowerCase()));
-      return _internalEmailsCache;
+      const list = await res.json();
+      const set = new Set((Array.isArray(list) ? list : []).map(e => String(e || '').toLowerCase()));
+      _internalEmailsCache = { key, set };
+      return set;
     } catch (e) {
       return new Set(); // non-fatal: the list still renders, just without the flag
     }
@@ -983,7 +994,7 @@
       return;
     }
 
-    const internalEmails = await loadInternalEmails();
+    const internalEmails = await loadInternalEmails(accounts.map(a => a.email));
 
     el.innerHTML = accounts.map(a => {
       const parts = ['invoices', 'quotes', 'jobs']

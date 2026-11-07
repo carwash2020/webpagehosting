@@ -49,7 +49,7 @@ function load(name, state) {
     if (u.includes('/rest/v1/client_portal_invoices') && method === 'PATCH') return j([]);
     if (u.includes('/rest/v1/stripe_customers') && method === 'GET') return j(state.customerId ? [{ stripe_customer_id: state.customerId }] : []);
     if (u.includes('/rest/v1/stripe_customers') && method === 'POST') return j([]);
-    if (u.includes('/rest/v1/card_authorizations')) return j([], 201);
+    if (u.includes('/rest/v1/card_authorizations')) return state.authFails ? j({ message: state.authFails }, 400) : j([], 201);
     if (u.includes('/rest/v1/notification_log') && method === 'GET') {
       const type = decodeURIComponent(u.match(/notif_type=eq\.([^&]+)/)[1]);
       const key = decodeURIComponent(u.match(/item_key=eq\.([^&]+)/)[1]);
@@ -68,7 +68,10 @@ function load(name, state) {
       if (r.httpStatus) return j({ error: {} }, r.httpStatus);
       return j(r);
     }
-    if (u === 'https://api.stripe.com/v1/payment_intents' && method === 'POST') return j({ id: 'pi_new', client_secret: 'pi_new_secret_x' });
+    if (u === 'https://api.stripe.com/v1/payment_intents' && method === 'POST') {
+      if (state.piCreateError) return j({ error: { message: state.piCreateError } }, 400);
+      return j({ id: 'pi_new', client_secret: 'pi_new_secret_x' });
+    }
     throw new Error(`unexpected fetch: ${method} ${u}`);
   };
   let handler = null;
@@ -175,18 +178,28 @@ for (const [label, over] of [
   });
 }
 
+test('single: a 404 for the earlier PaymentIntent (e.g. a test-mode id after the live-key cutover) means there is none -> a new one, as before', async () => {
+  const f = load('create-payment-intent', { invoices: [invoice({ stripe_payment_intent_id: 'pi_old' })], customerId: CUSTOMER, retrieve: {} });
+  const r = await f.call({ invoice_id: 7 });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.client_secret, 'pi_new_secret_x');
+  assert.equal(f.created().length, 1);
+});
+
+// Fix plan RP3.17 (2026-11-07): these used to carry on and create a new
+// PaymentIntent; a Stripe read outage during a retry could then charge twice.
 for (const [label, state] of [
-  ['404 (e.g. a test-mode id after the live-key cutover)', { retrieve: {} }],
   ['a 500', { retrieve: { pi_old: { httpStatus: 500 } } }],
   ['a 403 (key permissions)', { retrieve: { pi_old: { httpStatus: 403 } } }],
   ['a network error', { retrieveThrows: true }],
 ]) {
-  test(`single: Stripe answering the lookup with ${label} never blocks the payment -> a new one, as before`, async () => {
+  test(`single: Stripe answering the lookup with ${label} -> 502, and no new PaymentIntent`, async () => {
     const f = load('create-payment-intent', { invoices: [invoice({ stripe_payment_intent_id: 'pi_old' })], customerId: CUSTOMER, ...state });
     const r = await f.call({ invoice_id: 7 });
-    assert.equal(r.status, 200);
-    assert.equal(r.body.client_secret, 'pi_new_secret_x');
-    assert.equal(f.created().length, 1);
+    assert.equal(r.status, 502);
+    assert.equal(r.body.ok, false);
+    assert.equal(f.created().length, 0);
+    assert.equal(f.patched().length, 0);
   });
 }
 
@@ -262,11 +275,35 @@ test('bulk: invoices pointing at different open PaymentIntents get a new one', a
   assert.equal(r.body.client_secret, 'pi_new_secret_x');
 });
 
-test('bulk: Stripe errors on the lookup never block the payment', async () => {
-  const f = load('create-bulk-payment-intent', { invoices: [invoice({ stripe_payment_intent_id: 'pi_bulk' }), inv8({ stripe_payment_intent_id: 'pi_bulk' })], customerId: CUSTOMER, retrieveThrows: true });
+// Fix plan RP3.17 (2026-11-07): this used to go ahead and create a new one.
+test('bulk: Stripe errors on the lookup -> 502, nothing created', async () => {
+  for (const state of [{ retrieveThrows: true }, { retrieve: { pi_bulk: { httpStatus: 500 } } }]) {
+    const f = load('create-bulk-payment-intent', { invoices: [invoice({ stripe_payment_intent_id: 'pi_bulk' }), inv8({ stripe_payment_intent_id: 'pi_bulk' })], customerId: CUSTOMER, ...state });
+    const r = await f.call({ invoice_ids: [7, 8] });
+    assert.equal(r.status, 502);
+    assert.equal(f.created().length, 0);
+    assert.equal(f.patched().length, 0);
+  }
+  // A 404 on one of them still just means "none".
+  const f = load('create-bulk-payment-intent', { invoices: [invoice({ stripe_payment_intent_id: 'pi_bulk' }), inv8({ stripe_payment_intent_id: 'pi_bulk' })], customerId: CUSTOMER, retrieve: {} });
   const r = await f.call({ invoice_ids: [7, 8] });
   assert.equal(r.status, 200);
   assert.equal(r.body.client_secret, 'pi_new_secret_x');
+});
+
+// Fix plan RP3.22 (2026-11-07): Stripe's own error text stays in the logs.
+test('single and bulk: a Stripe refusal or an unexpected error never returns Stripe/database text to the client', async () => {
+  for (const name of ['create-payment-intent', 'create-bulk-payment-intent']) {
+    const body = name === 'create-payment-intent' ? { invoice_id: 7 } : { invoice_ids: [7, 8] };
+    const f = load(name, { invoices: [invoice(), inv8()], customerId: CUSTOMER, piCreateError: 'Invalid API Key provided: sk_live_SECRET' });
+    const r = await f.call(body);
+    assert.equal(r.status, 502);
+    assert.doesNotMatch(JSON.stringify(r.body), /sk_live|Invalid API Key/);
+    const g = load(name, { invoices: [invoice(), inv8()], customerId: null, savedCard: false, authFails: 'relation "card_authorizations" violates policy xyz' });
+    const r2 = await g.call({ ...body, signer_name: 'Pat', signature_image: 'data:image/png;base64,AAAA' });
+    assert.equal(r2.status, 500);
+    assert.doesNotMatch(JSON.stringify(r2.body), /violates|card_authorizations/);
+  }
 });
 
 // ---------------------------------------------------------------- reconcile

@@ -67,7 +67,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=09ad2a2e15">
-<link rel="stylesheet" href="/portal/portal-app.css?v=4af907b767">
+<link rel="stylesheet" href="/portal/portal-app.css?v=ef0735c580">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -106,7 +106,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=32b0b6ede8">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous"></script>
-<script src="/portal/portal-app.js?v=abb7e37c38"></script>
+<script src="/portal/portal-app.js?v=8bbf28b1fe"></script>
 <!-- jsPDF for the service history download loads on the first tap
      (pdfLoadJsPdf() in pdf-layout.js, 2026-09-30), not with the page. -->
 <script src="/js/pdf-layout.js?v=f56a0ea2a2" defer></script>
@@ -299,6 +299,9 @@
 <link rel="stylesheet" href="/portal/portal-polish.css?v=f0d57c5e20">
 </head>
 <body class="portal-page">
+<!-- Skip link (fix plan RP4.9, 2026-11-07): hidden until focused; jumps past
+     the app bar and navigation to #portalMain. Styles: portal-app.css. -->
+<a href="#portalMain" class="portal-skip-link">Skip to main content</a>
 
 <!-- App bar (v2 shell, part 2, 2026-09-28) -- the same one home.html and
      dashboard.html carry: kicker + Anton title, the round Report-a-problem
@@ -353,6 +356,8 @@
   </div>
 </div>
 
+<main id="portalMain" tabindex="-1">
+
 <!-- "Triple H replied" (2026-09-22): a reply on a finished job used to
      sit below the check-up list with only the tab badge to say so.
      Filled by renderJobReplyNotice(); empty when nothing is unread. -->
@@ -384,6 +389,8 @@
 </div>
 </div>
 </div>
+
+</main>
 
 <!-- Same lightbox markup/classes as the public site's own Gallery
      (shared styles.css), reused here for job photos instead of
