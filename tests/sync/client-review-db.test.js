@@ -16,7 +16,7 @@ const BATCH_04 = read('multi-tenant', '04_fixes_defaults_and_remaining_triggers.
 const BATCH_06 = read('multi-tenant', '06_tenant_id_from_session_top_level_tables.sql');
 const BATCH_07 = read('multi-tenant', '07_tenant_id_fallback_for_sessionless_inserts.sql');
 const ITEM1 = ['01_clients_table_and_legacy_client_id.sql', '02_client_seeding_and_duplicate_candidates.sql',
-  '03_client_review_actions.sql'].map((f) => read('item1', f));
+  '03_client_review_actions.sql', '08_client_review_d27_clients_access.sql'].map((f) => read('item1', f));
 const DEFAULT_TENANT_FN = BATCH_04.match(
   /create or replace function public\.default_tenant_id_triple_h\(\)[\s\S]*?grant execute on function public\.default_tenant_id_triple_h\(\)[^;]*;/)[0];
 
@@ -24,6 +24,7 @@ const TRIPLE_H = 'aaaaaaaa-0000-4000-8000-000000000001';
 const OTHER = 'aaaaaaaa-0000-4000-8000-000000000002';
 const STEVE = { email: 'steve@triplehenterprisesllc.biz', role: 'authenticated' };
 const HELPER = { email: 'helper@triplehenterprisesllc.biz', role: 'authenticated' }; // staff, no invoices permission
+const CLIENTS_ONLY = { email: 'office@triplehenterprisesllc.biz', role: 'authenticated' }; // Clients switch, no Invoices (D27)
 const OTHER_STAFF = { email: 'staff@other.example', role: 'authenticated' };
 const PORTAL_CLIENT = { email: 'client@example.com', role: 'authenticated' };
 const ANON = { role: 'anon' };
@@ -45,10 +46,10 @@ const BASE_SCHEMA = `
   insert into public.tenants values ('${TRIPLE_H}', 'triple-h'), ('${OTHER}', 'other');
 
   create table public.account_roles (email text primary key, tenant_id uuid references public.tenants(id),
-    can_manage_invoices boolean not null default false);
+    can_manage_invoices boolean not null default false, can_manage_clients boolean not null default false);
   insert into public.account_roles values
-    ('${STEVE.email}', '${TRIPLE_H}', true), ('${HELPER.email}', '${TRIPLE_H}', false),
-    ('${OTHER_STAFF.email}', '${OTHER}', true);
+    ('${STEVE.email}', '${TRIPLE_H}', true, false), ('${HELPER.email}', '${TRIPLE_H}', false, false),
+    ('${OTHER_STAFF.email}', '${OTHER}', true, false), ('${CLIENTS_ONLY.email}', '${TRIPLE_H}', false, true);
   alter table public.account_roles enable row level security;
   grant select on public.account_roles to authenticated;
   create policy own_role on public.account_roles for select to authenticated
@@ -267,7 +268,16 @@ test('edit: staff can correct a client directly, and the refresh sees it', async
   assert.deepEqual((await pairOf(db, IDS.supplier, IDS.supplierTwin)).reasons, ['name'], 'reasons refreshed');
 });
 
-test('permissions: only staff who can manage invoices, in their own tenant, can review', async () => {
+test('D27: an account with the Clients switch (no Invoices) can review too', async () => {
+  const db = await buildDb();
+  const pair = await pairOf(db, IDS.registry, IDS.contact);
+  const r = await as(db, CLIENTS_ONLY, 'select public.keep_client_candidate_separate($1)', [pair.id]);
+  assert.ifError(r.error);
+  const n = await as(db, CLIENTS_ONLY, 'select public.refresh_my_client_candidates() as n');
+  assert.ifError(n.error);
+});
+
+test('permissions: only staff who can manage invoices or clients, in their own tenant, can review', async () => {
   const db = await buildDb();
   const pair = await pairOf(db, IDS.registry, IDS.contact);
   const calls = [

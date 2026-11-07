@@ -32,13 +32,14 @@ test('the homepage footer has a Client Portal column linking to the portal login
   }
 });
 
-test('the footer column states plainly that the portal is for existing clients', () => {
-  // The portal has deliberately NO public self-signup -- accounts are
-  // created by an invite triggered from a real invoice, quote, or
-  // completed job. Saying so in the footer avoids a first-time
-  // visitor bouncing off a login wall with no explanation.
+test('the footer column says how a client gets an account: they create it themselves', () => {
+  // Fix plan RP5.1 (2026-11-07): the old "Existing clients only -- your
+  // account is set up automatically" was wrong on the facts. Portal access
+  // comes from the client signing up with the email their invoice or quote
+  // went to, or a manual staff invite -- never automatically.
   const colMatch = INDEX.match(/<h4>Client Portal<\/h4>[\s\S]*?<\/div>/);
-  assert.match(colMatch[0], /[Ee]xisting clients only/);
+  assert.match(colMatch[0], /Got an invoice or estimate from us\? <a href="\/portal\/login\.html">Create your account<\/a>/);
+  assert.doesNotMatch(colMatch[0], /set up automatically/);
 });
 
 test('the Clients tool can send an account invite to any email, not only to clients already in the list', () => {

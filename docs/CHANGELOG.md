@@ -6240,3 +6240,40 @@ Fix plan Group 5 (RP3 + RP4; decisions D15, D20, D23, D26, D29, D30, D31). Each 
 - `tests/edge-functions/rp3-portal-and-payments.test.js`
 - `tests/edge-functions/rp3-cron-data-sources.test.js`
 - plus new portal tests: second-step return, typed signature, closed-work-order note, skip link, D31.
+
+## What changed, 2026-11-07 -- Group 6 (part 1): the public site and the Workspace tell the truth
+
+Fix plan Group 6 (RP5 + RP6 + A1–A7; decisions D9, D22, D25, D27, D32). Each database change and deploy was approved in this session by Kavi, on Connor's behalf. The design-gated items wait for Connor (see the end).
+
+**Public site (RP5)**
+- **RP5.1:** the homepage footer says a client creates their own portal account with the email their invoice or estimate went to. It no longer claims accounts are "set up automatically".
+- **RP5.2:** the lead form's Preferred Time windows sit inside business hours: Afternoon 2–5, Evening 5–8, Late 8–10 (not Sunday), Saturday morning 7–11.
+- **RP5.3:** Preferred Date can't be in the past; the box starts at today and the form refuses a typed past date.
+- **RP5.4:** the sitemap drops `lastmod` rather than ship a wrong date.
+- **RP5.5 (D25):** booking and the lead form offer the same services: In-person Estimate, Inspection, Emergency Calls and Something Else are on both. Emergency points at the phone first.
+- **RP5.6:** the careers posting has `validThrough` 2027-03-19.
+- **RP5.7:** booking, manage-booking and manage-job have a skip link to `<main id="main">`.
+
+**Workspace (RP6)**
+- **RP6.1:** the 30-day warranty counts from when a job was marked done, on Job detail, the Job Tracker card and the job sheet PDF.
+- **RP6.2 (D22):** a supplier's History shows what was spent with them, from Expenses by vendor.
+- **RP6.3:** Top Clients and Follow-ups group by client (id, else a cleaned-up name); Top Vendors groups by cleaned-up vendor name.
+- **RP6.4:** Due soon rows open their job.
+- **RP6.8 (D27):** Search hides a gated entry when its permission check is missing (fails closed). The Clients page's Portal tab and duplicate review accept the Invoices or the Clients switch, and so does the database check behind the review (`sql/item1/08_client_review_d27_clients_access.sql`, applied).
+- **RP6.9:** changing the calendar month refreshes the day panel.
+- **RP6.10:** "already asked for a review" is per job and client, not per phone number.
+- **RP6.11:** a deactivated person opens read-only.
+- **RP6.12:** Log Expense uses the receipt icon. **RP6.13:** "1 month ago".
+- **RP6.14:** Send test lead says it also emails Steve and Connor.
+- **RP6.15:** the Email list says it also receives client job-message alerts (documented, not separated).
+- **RP6.16 (D32):** `send-job-status-change-email` is now `send-job-cancel-reschedule-email` (v1, deployed), and the job trigger posts to it (`sql/infra/rp616_job_cancel_reschedule_email_rename.sql`, applied). The old function was deleted in the dashboard by Kavi (confirmed gone from the live list).
+
+**Addendum**
+- **A1:** shipped in Group 2 (one sign-in).
+- **A3:** a first send clears "Never sent to portal" at once; only Resend did before.
+- **A4:** invoice and estimate numbers are drawn when the document is generated, not on every page open or form reset (which skipped 1168–1173).
+- **A5 (database half):** `client_portal_my_invoice_due_dates()` (applied) gives a signed-in client their own invoices' due dates from the Workspace terms, as the pay page does. The portal display waits for Connor.
+
+**Waiting for Connor (09:00):** the Group 6 design boards (A2 dates, A5 portal due-date display, A7 Settings alignment, RP6.5 invite switches) and the A6 Field/Office split. D9 TEST-record cleanup runs once A3 is verified live.
+
+Tests: `tests/seo/group6-rp5-public-site.test.js`, `tests/workspace/group6-rp6.test.js`, `tests/workspace/group6-a3-a4-invoices.test.js`, `tests/portal/a5-invoice-due-dates-db.test.js`, `tests/sync/client-review-db.test.js` (D27).

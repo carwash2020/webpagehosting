@@ -15,7 +15,7 @@ const repo = (...p) => path.join(__dirname, '..', '..', ...p);
 const MIGRATION = fs.readFileSync(repo('sql', 'infra', 'add_job_cancel_reschedule.sql'), 'utf8');
 const HARDEN_MIGRATION = fs.readFileSync(repo('sql', 'infra', 'harden_job_cancel_reschedule.sql'), 'utf8');
 const CONFIRMATION_FN = fs.readFileSync(repo('edge-functions', 'send-job-confirmation-email-index.ts'), 'utf8');
-const STATUS_CHANGE_FN = fs.readFileSync(repo('edge-functions', 'send-job-status-change-email-index.ts'), 'utf8');
+const STATUS_CHANGE_FN = fs.readFileSync(repo('edge-functions', 'send-job-cancel-reschedule-email-index.ts'), 'utf8');
 
 test('jobs gains a cancel_token (unique) and the three status columns, same nullable-guard shape as th_bookings', () => {
   assert.match(MIGRATION, /alter table public\.jobs add column if not exists cancel_token uuid not null default gen_random_uuid\(\);/);
@@ -58,22 +58,30 @@ test('notify_job_status_change only fires its http_post on the two real customer
   assert.match(fnMatch[0], /send-job-status-change-email/);
 });
 
+test('RP6.16 (D32): the live trigger body (rp616 file) calls send-job-cancel-reschedule-email, and only the URL changed', () => {
+  const rename = fs.readFileSync(repo('sql', 'infra', 'rp616_job_cancel_reschedule_email_rename.sql'), 'utf8');
+  const body = (sql) => sql.match(/create or replace function public\.notify_job_status_change\(\)[\s\S]*?\$\$;/)[0];
+  assert.match(body(rename), /functions\/v1\/send-job-cancel-reschedule-email'/);
+  assert.equal(body(rename).replace('send-job-cancel-reschedule-email', 'send-job-status-change-email'), body(MIGRATION));
+  assert.ok(!fs.existsSync(repo('edge-functions', 'send-job-status-change-email-index.ts')), 'the old function file is gone with the old function');
+});
+
 test('send-job-confirmation-email links to manage-job.html with the job\'s own cancel_token, in both the HTML and plain-text email bodies', () => {
   assert.match(CONFIRMATION_FN, /manage-job\.html\?token=\$\{escapeHtml\(job\.cancel_token\)\}/);
   assert.match(CONFIRMATION_FN, /manage-job\.html\?token=\$\{job\.cancel_token\}/);
 });
 
-test('send-job-status-change-email re-derives the transition from old_record/record itself, not just trusting the caller', () => {
+test('send-job-cancel-reschedule-email re-derives the transition from old_record/record itself, not just trusting the caller', () => {
   assert.match(STATUS_CHANGE_FN, /const isCancellation = !oldJob\.cancelled_at && !!job\.cancelled_at;/);
   assert.match(STATUS_CHANGE_FN, /const isRescheduleRequest = !oldJob\.reschedule_requested_at && !!job\.reschedule_requested_at;/);
 });
 
-test('send-job-status-change-email is staff-facing only -- no guest email address is ever used', () => {
+test('send-job-cancel-reschedule-email is staff-facing only -- no guest email address is ever used', () => {
   assert.doesNotMatch(STATUS_CHANGE_FN, /client_email/);
   assert.match(STATUS_CHANGE_FN, /to: LEAD_EMAIL_TO,/);
 });
 
-test('send-job-status-change-email\'s reschedule-request email is explicit that nothing was applied automatically', () => {
+test('send-job-cancel-reschedule-email\'s reschedule-request email is explicit that nothing was applied automatically', () => {
   const sendCallMatch = STATUS_CHANGE_FN.match(/Reschedule requested:[\s\S]*?\);\n    \}/);
   assert.ok(sendCallMatch);
   assert.match(sendCallMatch[0], /NOT been applied automatically/);

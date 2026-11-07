@@ -68,7 +68,7 @@
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=a7791bfe4b" defer></script>
-<script src="/tools/tools-command-palette.js?v=1acf1175ac" defer></script>
+<script src="/tools/tools-command-palette.js?v=33e01d62de" defer></script>
 <script src="/tools/tools-tour.js?v=f8c0b490ba" defer></script>
 <script src="/tools/qrcode-lib.js?v=79ec86f828" defer></script>
 <style>
@@ -706,6 +706,10 @@
   // (no risk of a second network round-trip landing a different order),
   // and picking a job is instant, not another await.
   let cachedRecentDoneJobs = [];
+  // Fix plan RP6.10 (2026-11-07): the job last picked from Ready to ask or
+  // the dropdown, so a request sent for it logs its job and client IDs
+  // (logSentRequest()). Cleared when a reminder fills the form instead.
+  let reviewPickedJob = null;
   async function renderRecentJobs() {
     const jobs = await loadRecentDoneJobs();
     cachedRecentDoneJobs = jobs;
@@ -720,13 +724,41 @@
   // ---------- v2 (2026-09-29): "Ready to ask" rows ----------
   // The same cached list as the dropdown above, one row per job. Ask picks
   // that job through the dropdown and applyRecentJobSelection(), so the
-  // fields fill exactly as before. A job whose phone already got a request
-  // in the last 30 days (the duplicate-warning rule) reads Sent instead.
-  function recentlyAskedDigits() {
+  // fields fill exactly as before. A job already asked in the last 30 days
+  // reads Sent instead.
+  // Fix plan RP6.10 (2026-11-07): "asked" is per job and per client, not
+  // per phone number -- two clients sharing one number (a couple, a
+  // landlord and tenant) used to mark each other Sent. Requests sent from a
+  // picked job now log its jobId (and clientId when the job has one); a job
+  // reads Sent when it, or another job for the same client, was asked.
+  // Older log entries carry no IDs: they still count by phone, but only for
+  // the name on that request -- the form fills the client's first name, so
+  // either the first name or the full name (trimmed, any case, spaces
+  // collapsed) has to match. An old request to Pat no longer hides Sam on
+  // the same number. Returns a check: (job) => true when already asked.
+  function recentlyAskedCheck() {
     const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
-    return new Set(loadSentLog()
-      .filter(e => e.phone && (Date.now() - new Date(e.sentAt).getTime()) < THIRTY_DAYS)
-      .map(e => digitsOnly(e.phone)));
+    const norm = (v) => String(v || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const jobIds = new Set(), clientIds = new Set(), byPhoneAndName = new Set();
+    loadSentLog()
+      .filter(e => e && (Date.now() - new Date(e.sentAt).getTime()) < THIRTY_DAYS)
+      .forEach(e => {
+        if (e.jobId != null && e.jobId !== '') {
+          jobIds.add(String(e.jobId));
+          if (e.clientId) clientIds.add(String(e.clientId));
+        } else if (e.phone) {
+          byPhoneAndName.add(digitsOnly(e.phone) + '|' + norm(e.name));
+        }
+      });
+    return (job) => {
+      if (!job) return false;
+      if (job.id != null && jobIds.has(String(job.id))) return true;
+      if (job.clientId && clientIds.has(String(job.clientId))) return true;
+      const digits = digitsOnly(job.phone || '');
+      if (!digits) return false;
+      const full = norm(job.client);
+      return byPhoneAndName.has(digits + '|' + full) || byPhoneAndName.has(digits + '|' + full.split(' ')[0]);
+    };
   }
   function reviewInitials(name) {
     const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
@@ -736,10 +768,9 @@
   function renderRecentJobRows() {
     const host = document.getElementById('recentJobsRows');
     if (!host) return;
-    const asked = recentlyAskedDigits();
+    const asked = recentlyAskedCheck();
     host.innerHTML = cachedRecentDoneJobs.map((j, idx) => {
-      const digits = digitsOnly(j.phone || '');
-      const sent = digits && asked.has(digits);
+      const sent = asked(j);
       const when = j.statusChangedAt || j.date;
       const whenText = when && !isNaN(new Date(when).getTime()) ? ' \u00b7 done ' + new Date(String(when).length === 10 ? when + 'T00:00:00' : when).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
       return '<div class="review-ready-row">' +
@@ -778,9 +809,9 @@
     const asked30 = log.filter(e => (Date.now() - new Date(e.sentAt).getTime()) < THIRTY_DAYS).length;
     const left = log.filter(e => e.status === 'received').length;
     const today = todayDateStrBusinessTz();
-    const asked = recentlyAskedDigits();
+    const asked = recentlyAskedCheck();
     const ready = loadPending().filter(p => p.remindAt <= today).length +
-      cachedRecentDoneJobs.filter(j => !(j.phone && asked.has(digitsOnly(j.phone)))).length;
+      cachedRecentDoneJobs.filter(j => !asked(j)).length;
     const tile = (label, value, tone) => '<div class="review-stat' + (tone ? ' is-' + tone : '') + '"><span class="review-stat-label">' + label + '</span><span class="review-stat-value">' + value + '</span></div>';
     el.innerHTML = tile('Ready to ask', ready, 'orange') + tile('Asked \u00b7 30 days', asked30, '') + tile('Left a review', left, 'green');
   }
@@ -842,6 +873,7 @@
     if (idx === '') return;
     const job = cachedRecentDoneJobs[Number(idx)];
     if (!job) return;
+    reviewPickedJob = job;
     if (job.client) document.getElementById('custName').value = job.client.split(' ')[0];
     if (job.title) document.getElementById('jobDesc').value = job.title;
     if (job.phone) document.getElementById('custPhone').value = formatPhoneStatic(job.phone);
@@ -875,7 +907,17 @@
     const job = document.getElementById('jobDesc').value.trim();
     if (!phone) return; // nothing meaningful to log without a number to key off of
     const log = loadSentLog();
-    log.unshift({ id: Date.now(), name, phone, job, method, sentAt: new Date().toISOString(), status: 'sent' });
+    const entry = { id: Date.now(), name, phone, job, method, sentAt: new Date().toISOString(), status: 'sent' };
+    // Fix plan RP6.10 (2026-11-07): the picked job's IDs, but only while the
+    // form still holds that job's number and first name -- typed over, it's
+    // someone else, and the entry falls back to phone + name.
+    const picked = reviewPickedJob;
+    if (picked && picked.id != null && digitsOnly(picked.phone || '') === digitsOnly(phone) &&
+        (!picked.client || name.toLowerCase() === picked.client.split(' ')[0].trim().toLowerCase())) {
+      entry.jobId = picked.id;
+      if (picked.clientId) entry.clientId = picked.clientId;
+    }
+    log.unshift(entry);
     // 300 rather than the old 50 -- this is a real lasting record now,
     // not just a rolling duplicate-check window, so it's bounded
     // against unbounded growth rather than capped tight on purpose.
@@ -1054,6 +1096,7 @@
   function useReminder(id) {
     const item = loadPending().find(p => p.id === id);
     if (!item) return;
+    reviewPickedJob = null; // Fix plan RP6.10: a reminder is not the picked job
     if (item.name) document.getElementById('custName').value = item.name;
     if (item.job) document.getElementById('jobDesc').value = item.job;
     if (item.phone) document.getElementById('custPhone').value = formatPhoneStatic(item.phone);

@@ -908,6 +908,10 @@
     .bk-menu > summary, .bk-menu > summary::after, .bk-menu-list a{transition:none;}
   }
   /* === end Header menus === */
+  /* Fix plan RP5.7 (2026-11-07): skip link, copied from styles.css (this
+     page does not load it). */
+  .skip-link{font-family:var(--font-ui, 'Oswald', sans-serif); position:absolute; top:-60px; left:12px; background:#3aa0ff; color:#08131f; padding:10px 18px; border-radius:6px; font-weight:600; font-size:14px; z-index:1000; transition:top .15s ease;}
+  .skip-link:focus{top:12px;}
 </style>
 <!-- Shared business-hours data + timezone helpers (2026-09-03),
      extracted here from what used to be this page's own private copy
@@ -925,6 +929,7 @@
 <body>
 <div class="bg-blueprint" aria-hidden="true"></div>
 
+<a href="#main" class="skip-link">Skip to main content</a>
 <header class="site-header">
   <div class="wrap">
     <a href="/" class="brand">
@@ -1023,7 +1028,7 @@
     </div>
   </aside>
 
-  <main class="booking-main">
+  <main class="booking-main" id="main">
     <h1>Book an Appointment</h1>
     <p class="subhead">Pick a service and a real open time, and you'll get a confirmation right away.</p>
     <p class="cta-proof">
@@ -1235,6 +1240,13 @@
       icon: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>' },
     { key: 'drywall', label: 'Drywall & Painting', minutes: 180, desc: 'Patch work, touch ups, and full room paint jobs finished clean, with no dust left behind.',
       icon: '<path d="M3 21l4.5-1.5L21 6a2.1 2.1 0 0 0-3-3L4.5 16.5 3 21z"/>' },
+    // Fix plan RP5.5 / D25 (2026-11-07): the booking and lead-form lists are
+    // the same union. Emergency points at the phone first; booking it still
+    // holds the first open time.
+    { key: 'emergency', label: 'Emergency Calls', minutes: 60, desc: 'Something that can\'t wait? For the fastest help, call or text us now (the number is at the top of the page). Or book the first open time here.',
+      icon: '<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>' },
+    { key: 'other', label: 'Something Else', minutes: 60, desc: 'Not on this list? Book a visit and tell us about it in the notes.',
+      icon: '<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>' },
   ];
 
   // SLOT_INCREMENT_MINUTES, MIN_LEAD_HOURS, SCHEDULE_BUFFER_MINUTES,

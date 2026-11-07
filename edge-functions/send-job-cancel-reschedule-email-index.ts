@@ -1,4 +1,9 @@
-// Supabase Edge Function: send-job-status-change-email
+// Supabase Edge Function: send-job-cancel-reschedule-email
+//
+// Fix plan RP6.16 / D32 (2026-11-07): renamed from
+// send-job-status-change-email, which promised an email on every status
+// change. It only ever sends on a client's cancel or reschedule request,
+// to staff. Same code otherwise.
 //
 // Direct follow-up (2026-09-11): "do the reschedule/cancel link" for
 // manually-scheduled jobs, matching the cancel/reschedule links
@@ -27,7 +32,7 @@
 // the entire mechanism by which staff learn a request exists --
 // there's no other notification surface for it yet.
 //
-// Deploy with: supabase functions deploy send-job-status-change-email
+// Deploy with: supabase functions deploy send-job-cancel-reschedule-email
 // Required secrets (already configured for the booking/lead email
 // pipeline; no new secrets needed): RESEND_API_KEY, LEAD_EMAIL_FROM,
 // LEAD_EMAIL_TO
@@ -47,7 +52,7 @@ function escapeHtml(value: unknown): string {
 
 async function sendInternalEmail(subject: string, html: string, text: string): Promise<void> {
   if (!LEAD_EMAIL_TO.length) {
-    console.log("send-job-status-change-email: no LEAD_EMAIL_TO configured, skipping");
+    console.log("send-job-cancel-reschedule-email: no LEAD_EMAIL_TO configured, skipping");
     return;
   }
   try {
@@ -67,10 +72,10 @@ async function sendInternalEmail(subject: string, html: string, text: string): P
     });
     if (!res.ok) {
       const errBody = await res.text();
-      console.error("send-job-status-change-email: Resend API error:", res.status, errBody);
+      console.error("send-job-cancel-reschedule-email: Resend API error:", res.status, errBody);
     }
   } catch (err: any) {
-    console.error("send-job-status-change-email: Resend request failed:", err.message);
+    console.error("send-job-cancel-reschedule-email: Resend request failed:", err.message);
   }
 }
 
@@ -132,7 +137,7 @@ Deno.serve(async (req: Request) => {
 
     return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
   } catch (err: any) {
-    console.error("send-job-status-change-email error:", err.message);
+    console.error("send-job-cancel-reschedule-email error:", err.message);
     return new Response(JSON.stringify({ ok: false, error: err.message }), {
       status: 500,
       headers: { "Content-Type": "application/json" },

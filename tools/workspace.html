@@ -84,7 +84,7 @@
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=a7791bfe4b" defer></script>
-<script src="/tools/tools-command-palette.js?v=1acf1175ac" defer></script>
+<script src="/tools/tools-command-palette.js?v=33e01d62de" defer></script>
 <script src="/tools/tools-tour.js?v=f8c0b490ba" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -2151,12 +2151,41 @@
       </div>`).join('');
   }
 
+  // Fix plan RP6.3 (2026-11-07): one name in any spelling. Clients group by
+  // their client ID where the record has one; a record without one joins
+  // the registry client with its name, else groups by the name itself --
+  // normalized (trimmed, any case, spaces collapsed) the way
+  // thNormalizeClientName() does. "Pat Smith", "pat  smith " and Pat's
+  // invoices linked by ID are one row, not three.
+  function dashClientKeyer() {
+    const norm = (typeof thNormalizeClientName === 'function') ? thNormalizeClientName : (n => String(n || '').trim().toLowerCase().replace(/\s+/g, ' '));
+    const idByName = {};
+    (typeof thLoadClients === 'function' ? thLoadClients() : []).forEach(c => {
+      const k = c && c.id ? norm(c.name) : '';
+      if (k && !idByName[k]) idByName[k] = c.id;
+    });
+    return (clientId, name) => {
+      if (clientId) return 'id:' + clientId;
+      const k = norm(name);
+      if (!k) return '';
+      return idByName[k] ? 'id:' + idByName[k] : 'name:' + k;
+    };
+  }
+
   function renderTopVendors() {
     const range = getCurrentRange();
     const expenses = thExpenses.all().filter(e => e.type === 'expense' && inRange(e.date, range) && e.vendor);
+    // Fix plan RP6.3 (2026-11-07): a vendor in any spelling ("Home Depot",
+    // "home depot ") is one bar, under the first spelling seen (oldest
+    // expense first).
     const totals = {};
-    expenses.forEach(e => { totals[e.vendor] = (totals[e.vendor] || 0) + e.amount; });
-    const sorted = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    expenses.slice().sort((a, b) => String(a.date || '').localeCompare(String(b.date || ''))).forEach(e => {
+      const key = String(e.vendor).trim().toLowerCase().replace(/\s+/g, ' ');
+      if (!key) return;
+      if (!totals[key]) totals[key] = { name: String(e.vendor).trim(), total: 0 };
+      totals[key].total += e.amount;
+    });
+    const sorted = Object.values(totals).map(v => [v.name, v.total]).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
     const container = document.getElementById('topVendors');
     if (sorted.length === 0) {
@@ -2179,20 +2208,26 @@
     // ever, aggregated by client name.
     const invoices = thInvoices.all().filter(i => i.clientName && i.clientName.trim());
     const jobs = thJobs.all();
+    // Fix plan RP6.3 (2026-11-07): grouped by dashClientKeyer() (client ID,
+    // else the normalized name), shown under the latest invoice's spelling.
+    const keyOf = dashClientKeyer();
     const totals = {};
     invoices.forEach(inv => {
-      const key = inv.clientName.trim();
-      if (!totals[key]) totals[key] = { revenue: 0, invoiceCount: 0 };
-      totals[key].revenue += inv.total || 0;
-      totals[key].invoiceCount += 1;
+      const key = keyOf(inv.clientId, inv.clientName);
+      if (!key) return;
+      if (!totals[key]) totals[key] = { revenue: 0, invoiceCount: 0, name: '', nameDate: '' };
+      const t = totals[key];
+      t.revenue += inv.total || 0;
+      t.invoiceCount += 1;
+      const d = String(inv.date || '');
+      if (!t.name || d >= t.nameDate) { t.name = inv.clientName.trim(); t.nameDate = d; }
     });
     // Last-seen date comes from jobs (which usually has more entries and
-    // richer date history than invoices alone), matched by client name --
-    // same matching convention renderFollowups() already uses above.
+    // richer date history than invoices alone), matched the same way.
     const lastSeenByClient = {};
     jobs.forEach(j => {
       if (!j.client || !j.client.trim() || !j.date) return;
-      const key = j.client.trim();
+      const key = keyOf(j.clientId, j.client);
       if (!lastSeenByClient[key] || j.date > lastSeenByClient[key]) lastSeenByClient[key] = j.date;
     });
 
@@ -2203,15 +2238,17 @@
       return;
     }
     const max = sorted[0][1].revenue;
-    container.innerHTML = sorted.map(([client, data]) => {
-      const lastSeen = lastSeenByClient[client];
+    container.innerHTML = sorted.map(([key, data]) => {
+      const client = data.name;
+      const lastSeen = lastSeenByClient[key];
       const lastSeenLabel = lastSeen ? new Date(lastSeen + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '';
       // Additive only -- looks up the registry id for a link, but never
       // changes the revenue/count numbers themselves, which come from
       // this function's own proven aggregation above. Falls back to a
       // plain row (no link) on the rare case the registry doesn't have
       // this client yet, rather than showing a broken link.
-      const registryMatch = (typeof thFindClientByName === 'function') ? thFindClientByName(client) : null;
+      const registryMatch = (key.startsWith('id:') && typeof thFindClientById === 'function' && thFindClientById(key.slice(3)))
+        || ((typeof thFindClientByName === 'function') ? thFindClientByName(client) : null);
       const rowTag = registryMatch ? 'a' : 'div';
       const rowHref = registryMatch ? ' href="/tools/client-detail.html?id=' + encodeURIComponent(registryMatch.id) + '" style="text-decoration:none; color:inherit; cursor:pointer;"' : '';
       return `
@@ -2227,19 +2264,22 @@
 
   function renderFollowups() {
     const jobs = thJobs.all().filter(j => j.client && j.client.trim() && j.date);
+    // Fix plan RP6.3 (2026-11-07): one row per client (dashClientKeyer()),
+    // named as on their latest job.
+    const keyOf = dashClientKeyer();
     const lastJobByClient = {};
     jobs.forEach(j => {
-      const key = j.client.trim();
+      const key = keyOf(j.clientId, j.client);
       const d = new Date(j.date + 'T00:00:00');
       if (isNaN(d.getTime())) return;
       if (!lastJobByClient[key] || d > lastJobByClient[key].date) {
-        lastJobByClient[key] = { date: d, dateStr: j.date, phone: j.phone || '' };
+        lastJobByClient[key] = { client: j.client.trim(), date: d, dateStr: j.date, phone: j.phone || '' };
       }
     });
 
     const today = new Date(new Date().toDateString());
-    const overdue = Object.entries(lastJobByClient)
-      .map(([client, info]) => ({ client, ...info, daysSince: Math.round((today - info.date) / (24 * 60 * 60 * 1000)) }))
+    const overdue = Object.values(lastJobByClient)
+      .map(info => ({ ...info, daysSince: Math.round((today - info.date) / (24 * 60 * 60 * 1000)) }))
       .filter(entry => entry.daysSince >= FOLLOWUP_THRESHOLD_DAYS)
       .sort((a, b) => b.daysSince - a.daysSince);
 
@@ -2255,11 +2295,13 @@
       const params = new URLSearchParams();
       params.set('name', entry.client.split(' ')[0]);
       if (entry.phone) params.set('phone', entry.phone);
+      // Fix plan RP6.13 (2026-11-07): "1 month ago", not "1 months ago".
+      const months = Math.round(entry.daysSince / 30);
       return `
       <div class="dash-list-item">
         <div>
           <div class="dash-list-item-title">${escapeHtml(entry.client)}</div>
-          <div class="dash-list-item-meta">Last job: ${escapeHtml(entry.dateStr)} &middot; ${Math.round(entry.daysSince / 30)} months ago</div>
+          <div class="dash-list-item-meta">Last job: ${escapeHtml(entry.dateStr)} &middot; ${months} month${months === 1 ? '' : 's'} ago</div>
         </div>
         <a href="/tools/review-request.html?${params.toString()}" class="small-btn" style="text-decoration:none;">Follow Up</a>
       </div>`;
@@ -2285,10 +2327,12 @@
       container.innerHTML = '<div class="empty-state-small is-good"><svg class="th-icon" aria-hidden="true"><use href="#icon-check-circle" xlink:href="#icon-check-circle"></use></svg>Nothing due in the next 7 days.</div>';
       return;
     }
+    // Fix plan RP6.4 (2026-11-07): the title opens the job (a real link, so
+    // Tab reaches it), the same link and look as Ready to invoice's rows.
     container.innerHTML = upcoming.map(j => `
       <div class="dash-list-item">
         <div>
-          <div class="dash-list-item-title">${escapeHtml(j.title)}</div>
+          <div class="dash-list-item-title"><a class="rti-job-link" href="/tools/job-detail.html?id=${encodeURIComponent(j.id)}">${escapeHtml(j.title)}</a></div>
           <div class="dash-list-item-meta">${new Date(j.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}${j.client ? ' &middot; ' + escapeHtml(j.client) : ''}</div>
         </div>
       </div>`).join('');

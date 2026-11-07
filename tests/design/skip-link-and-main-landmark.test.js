@@ -23,11 +23,9 @@ const ALL = [
   ...['blog', 'locations', 'services'].flatMap((d) => fs.readdirSync(repo(d)).filter((f) => f.endsWith('.html')).map((f) => `${d}/${f}`)),
 ].filter((p) => /<header[\s>]/.test(read(p)));
 
-const NOT_THIS_LANE = {
-  'booking.html': 'booking lane',
-  'manage-booking.html': 'booking lane',
-  'manage-job.html': 'booking lane',
-};
+// The booking pages were excluded until fix plan RP5.7 (2026-11-07) gave
+// them the same skip link.
+const NOT_THIS_LANE = {};
 
 test('the scan finds the public pages it should (so an exclusion typo cannot empty it)', () => {
   for (const p of ['index.html', 'about.html', 'our-work.html', 'terms.html', 'blog/index.html', 'locations/handyman-hurricane-ut.html', 'services/plumbing-repairs.html']) {

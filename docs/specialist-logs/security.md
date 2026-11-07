@@ -1664,3 +1664,10 @@ This change widens what a client can read: records on any email they have proved
 **Accepted risk, documented:**
 - Someone holding a pay link can still ask Stripe.js directly to send a receipt elsewhere; the page no longer does.
 - `markPaidInWorkspaceBlob` has no version check (unchanged; documented in stripe-webhook).
+
+## 2026-11-07 -- Group 6 (part 1)
+
+- **D27 widened one check on purpose.** `client_review_tenant()` now accepts Invoices OR Clients (same tenant). The decision was already made (D27); without the database half, the UI would have offered the duplicate review to Clients-only accounts and every action would have been refused. Applied with Kavi's OK.
+- **Found, not changed (for Connor):** the Portal tab's data (card authorizations, referrals, work orders, portal jobs, notification recipients) is readable by ANY internal account at the database (`current_user_has_any_role()` or any `account_roles` row). Only the Workspace screen limited it to Invoices (now Invoices or Clients). Narrowing it is a permission change, so it is reported, not done.
+- **Command palette fails closed (RP6.8):** a gated Search entry whose permission check is missing is hidden, not shown.
+- **Data gap:** 4 of 7 live `client_portal_invoices` rows have no `tenant_id` (sync-invoice-to-portal doesn't set one). The A5 due-date function tolerates a missing tenant but never matches a different one.

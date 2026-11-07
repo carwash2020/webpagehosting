@@ -60,10 +60,10 @@
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=a7791bfe4b" defer></script>
-<script src="/tools/tools-command-palette.js?v=1acf1175ac" defer></script>
+<script src="/tools/tools-command-palette.js?v=33e01d62de" defer></script>
 <script src="/tools/tools-tour.js?v=f8c0b490ba" defer></script>
 <script src="/tools/data-layer.js?v=e9b434448f" defer></script>
-<script src="/tools/dev-tools-shared.js?v=d03765c719" defer></script>
+<script src="/tools/dev-tools-shared.js?v=a1c189d69c" defer></script>
 <script src="/tools/sync.js?v=d5226d99a6" defer></script>
 <style>
   @view-transition {
@@ -97,6 +97,8 @@
   .team-caps { margin: 0 16px; border-radius: 12px; background: var(--bg-panel); border: 1px solid var(--border); overflow: hidden; }
   .team-cap { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
   .team-cap:last-child { border-bottom: 0; }
+  /* Fix plan RP6.11 (2026-11-07): a deactivated person's switches are locked. */
+  .team-cap .th-toggle:disabled { opacity: .5; cursor: not-allowed; }
   .team-cap-main { flex: 1 1 auto; min-width: 0; }
   .team-cap-label { font-size: 15px; font-weight: 600; color: var(--text); }
   .team-cap-sub { font-size: 12.5px; color: var(--text-dim); line-height: 1.4; }
@@ -299,8 +301,10 @@
     let actions = '';
     if (p.status === 'invited') actions = '<div class="team-actions"><button type="button" class="secondary-btn" data-team-act="resend" data-email="' + email + '">Resend</button><button type="button" class="secondary-btn" data-team-act="revoke" data-email="' + email + '">Revoke</button></div>';
     if (p.status === 'deactivated') actions = '<div class="team-actions"><button type="button" class="secondary-btn" data-team-act="reactivate" data-email="' + email + '">Reactivate</button></div>';
+    // Fix plan RP6.11 (2026-11-07): a deactivated person opens too, read-only
+    // (teamRenderPerson()); the row used to be a disabled button.
     return '<div class="team-row' + (p.status === 'deactivated' ? ' is-deactivated' : '') + '">' +
-      '<button type="button" class="team-open" data-team-open="' + email + '"' + (p.status === 'deactivated' ? ' disabled' : '') + '>' +
+      '<button type="button" class="team-open" data-team-open="' + email + '">' +
         '<span class="team-avatar" aria-hidden="true">' + escapeHtml(teamInitials(p)) + '</span>' +
         '<span class="team-who"><span class="team-name" style="display:block;">' + escapeHtml(teamDisplayName(p)) + '</span>' + teamTitleHtml(p) + '</span>' +
         '<span class="team-status is-' + escapeAttr(p.status) + '">' + escapeHtml(TEAM_STATUS_LABEL[p.status] || p.status) + '</span>' +
@@ -335,6 +339,11 @@
       document.getElementById('teamIdentTitle').value = title;
       document.getElementById('teamIdentError').textContent = '';
     }
+    // Fix plan RP6.11 (2026-11-07): a deactivated person's view is read-only:
+    // what they had shows, but the switches and name/title don't change, and
+    // the one thing offered is Reactivate.
+    const gone = p.status === 'deactivated';
+    ['teamIdentName', 'teamIdentTitle', 'teamIdentSave'].forEach(id => { document.getElementById(id).disabled = gone; });
     document.getElementById('teamPersonCapsLabel').textContent = 'What ' + teamDisplayName(p).split(' ')[0] + ' can do';
     document.getElementById('teamCaps').innerHTML = TEAM_CAPS.map(cap => {
       const st = teamCapState(p, cap);
@@ -342,11 +351,12 @@
       return '<div class="team-cap"><div class="team-cap-main"><div class="team-cap-label" id="' + id + '">' + escapeHtml(cap.label) + '</div>' +
         '<div class="team-cap-sub">' + escapeHtml(cap.sub) + '</div>' +
         (st === 'partial' ? '<div class="team-cap-partial">Partly on: some of it is turned off in Dev Tools. Switching it sets all of it.</div>' : '') +
-        '</div><button type="button" class="th-toggle" role="switch" aria-checked="' + (st === 'on' ? 'true' : 'false') + '" aria-labelledby="' + id + '" data-team-cap="' + escapeAttr(cap.key) + '"></button></div>';
+        '</div><button type="button" class="th-toggle" role="switch" aria-checked="' + (st === 'on' ? 'true' : 'false') + '" aria-labelledby="' + id + '" data-team-cap="' + escapeAttr(cap.key) + '"' + (gone ? ' disabled' : '') + '></button></div>';
     }).join('');
     const me = typeof getCurrentUserEmail === 'function' ? String(getCurrentUserEmail() || '').toLowerCase() : '';
     const actions = document.getElementById('teamPersonActions');
-    if (p.email.toLowerCase() === me) actions.innerHTML = '<p class="team-note">This is you. Someone else on the team can deactivate your account if they need to.</p>';
+    if (gone) actions.innerHTML = '<p class="team-note">Deactivated. Reactivate to change what they can do.</p><button type="button" class="secondary-btn" data-team-act="reactivate" data-email="' + escapeAttr(p.email) + '">Reactivate ' + escapeHtml(teamDisplayName(p)) + '</button>';
+    else if (p.email.toLowerCase() === me) actions.innerHTML = '<p class="team-note">This is you. Someone else on the team can deactivate your account if they need to.</p>';
     else if (teamIsLastManager(p)) actions.innerHTML = '<p class="team-note">Deactivate isn’t offered: ' + escapeHtml(teamDisplayName(p)) + ' is the last active person with Team &amp; Settings, and someone always has to be able to manage the team.</p>';
     else actions.innerHTML = '<button type="button" class="team-danger" data-team-act="deactivate" data-email="' + escapeAttr(p.email) + '">Deactivate ' + escapeHtml(teamDisplayName(p)) + '</button>';
   }
@@ -393,7 +403,7 @@
   async function teamToggleCap(capKey, btn) {
     const p = teamRoster.find(x => x.email === teamSelected);
     const cap = TEAM_CAPS.find(c => c.key === capKey);
-    if (!p || !cap) return;
+    if (!p || !cap || p.status === 'deactivated') return; // Fix plan RP6.11: read-only
     const next = btn.getAttribute('aria-checked') !== 'true';
     if (!next && cap.key === 'team' && teamIsLastManager(p)) {
       showToast('Someone else needs Team & Settings first: the team always needs one person who can manage it.', { type: 'error' });
@@ -428,7 +438,7 @@
   async function teamSaveIdent(e) {
     e.preventDefault();
     const p = teamRoster.find(x => x.email === teamSelected);
-    if (!p) return;
+    if (!p || p.status === 'deactivated') return; // Fix plan RP6.11: read-only
     const err = document.getElementById('teamIdentError');
     const name = document.getElementById('teamIdentName').value.replace(/\s+/g, ' ').trim();
     const title = document.getElementById('teamIdentTitle').value.replace(/\s+/g, ' ').trim();

@@ -55,13 +55,13 @@
 <link rel="stylesheet" href="/styles.css?v=09ad2a2e15">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=32b0b6ede8">
 <script src="/tools/data-layer.js?v=e9b434448f" defer></script>
-<script src="/tools/dev-tools-shared.js?v=d03765c719" defer></script>
+<script src="/tools/dev-tools-shared.js?v=a1c189d69c" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=a7791bfe4b" defer></script>
-<script src="/tools/tools-command-palette.js?v=1acf1175ac" defer></script>
+<script src="/tools/tools-command-palette.js?v=33e01d62de" defer></script>
 <script src="/tools/sync.js?v=d5226d99a6" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -1017,13 +1017,18 @@
   <div class="dev-panel dev-owner-hidden is-collapsible" data-collapse-key="pushtest">
     <div class="dev-panel-heading" onclick="toggleDevPanel(this)">
       <h2>Push notification test</h2>
-      <span class="dev-panel-hint">Sends a test lead, then deletes it</span>
+      <span class="dev-panel-hint">Sends a test lead (and its email), then deletes it</span>
       <button class="dev-info-bubble" onclick="event.stopPropagation(); openDevInfo('pushtest')" aria-label="What does this do?" title="What does this do?">?</button>
       <span class="dev-collapse-caret">&#9660;</span>
     </div>
     <div class="dev-panel-body">
+      <!-- Fix plan RP6.14 (2026-11-07): the test lead goes through th_leads,
+           whose trigger also runs send-lead-email, so Steve and Connor get
+           the internal new-lead email for it. Said here, not suppressed
+           (that would be a server change). -->
+      <p class="tool-sub" id="pushTestEmailNote">This also emails Steve and Connor a test lead (the same new-lead email a real one sends). It's named "TEST &mdash; Dev Tools push check"; they can ignore it.</p>
       <div id="pushTestResult"></div>
-      <button class="secondary-btn" style="margin-top:12px;" id="pushTestBtn" onclick="runPushNotificationTest()">Send test lead</button>
+      <button class="secondary-btn" style="margin-top:12px;" id="pushTestBtn" aria-describedby="pushTestEmailNote" onclick="runPushNotificationTest()">Send test lead</button>
     </div>
   </div>
 

@@ -59,7 +59,7 @@
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=a7791bfe4b" defer></script>
-<script src="/tools/tools-command-palette.js?v=1acf1175ac" defer></script>
+<script src="/tools/tools-command-palette.js?v=33e01d62de" defer></script>
 <script src="/tools/tools-tour.js?v=f8c0b490ba" defer></script>
 <!-- supabase-js (2026-09-22): the client list follows live changes from other devices
      (startRealtimeSync), which needs the realtime client this page never loaded before. -->
@@ -73,7 +73,7 @@
      file dev-tools.html and site-content.html already load, rather
      than duplicating any of it -- these five panels' help-modal
      content already lives there from when they were built. -->
-<script src="/tools/dev-tools-shared.js?v=d03765c719" defer></script>
+<script src="/tools/dev-tools-shared.js?v=a1c189d69c" defer></script>
 <!-- Client Lookup dispute-evidence export (2026-09-05), requested
      directly -- same jsPDF version/SRI hash/async loading pattern
      already proven on invoice-generator.html. -->
@@ -547,7 +547,11 @@
       Backed by notification_recipients -- notify-new-work-order-email
       reads this table fresh on every send, so adding or removing a
       row here takes effect on the very next submission, no deploy.
+      Fix plan RP6.15 (2026-11-07): notify-job-message-email reads the
+      same rows (notify_types "work_order") for a client's message on a
+      job. Documented here, not separated (that needs a function deploy).
     -->
+    <p class="tool-sub" style="margin-top:0;">Everyone here also gets an email when a client sends a message about a job in their portal (the same list, not a separate one).</p>
     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid var(--border);">
       <label style="flex:1; min-width:180px; font-size:12.5px; color:var(--text-dim);">Email
         <input type="email" id="emailListNewEmail" placeholder="new-hire@triplehenterprisesllc.biz" style="width:100%; box-sizing:border-box; margin-top:4px;">
@@ -1663,7 +1667,9 @@
   function applyPortalPermission(roleInfo) {
     // Only a definite "no" hides the tab: a role that failed to load
     // (offline, a dropped request) leaves it where it was.
-    if (!roleInfo || roleInfo.canManageInvoices) return;
+    // Fix plan RP6.8 (2026-11-07, D27): Invoices or Clients opens the
+    // Portal tab. The row's Quote and Invoice stay Invoices-only.
+    if (!roleInfo || roleInfo.canManageInvoices || roleInfo.canManageClients) return;
     portalTabAllowed = false;
     const btn = document.getElementById('clientsPortalTabBtn');
     if (btn) btn.hidden = true;
@@ -2209,8 +2215,9 @@
 
   // The Clients tab's notice: one count request, only for someone who can
   // review (the Portal tab's permission).
+  // Fix plan RP6.8 (2026-11-07, D27): Invoices or Clients, as the tab.
   async function refreshClientDupNotice(roleInfo) {
-    if (!roleInfo || !roleInfo.canManageInvoices) return;
+    if (!roleInfo || !(roleInfo.canManageInvoices || roleInfo.canManageClients)) return;
     try {
       const pairs = await loadClientDuplicatePairs();
       updateClientDupNotice(pairs.filter(p => p.a && p.b).length);

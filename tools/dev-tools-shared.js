@@ -86,7 +86,10 @@
     },
     emaillist: {
       title: 'Email list',
-      body: `<p>Who gets emailed every time a client submits a new work request. Reads fresh from the database on every submission -- adding or removing someone here takes effect on the very next request, no deploy needed.</p><p>Add a new hire's email here when they join, and remove someone who leaves. Nothing is hardcoded into the notification itself.</p>`,
+      // Fix plan RP6.15 (2026-11-07): notify-job-message-email reads this
+      // same list (notify_types "work_order") for a client's message on a
+      // job. Documented, not separated: that would need a function deploy.
+      body: `<p>Who gets emailed every time a client submits a new work request. The same list also gets an email when a client sends a message about a job in their portal. Reads fresh from the database on every submission -- adding or removing someone here takes effect on the very next request, no deploy needed.</p><p>Add a new hire's email here when they join, and remove someone who leaves. Nothing is hardcoded into the notification itself.</p>`,
     },
     portalworkorders: {
       title: 'Portal work orders',
@@ -105,8 +108,10 @@
       body: `<p>Every client who has anything in the client portal, built from their real invoices, quotes, and completed jobs -- with a count of each, so you can see at a glance what a given client can actually log in and see.</p><p><strong>Send or resend an account invite</strong> (the field at the top) emails an account-setup link to ANY address you type in, whether or not they appear in the list below. Use this to set someone up before their first invoice, or when a client says the invite never arrived. If that email already has an account, it tells you so rather than silently sending nothing -- in that case they should use "Forgot password" on the portal login page instead.</p><p><strong>Resend invite</strong> on an individual row does the same thing for a client already in the list. Safe to press any time: if they already have an account, the underlying function treats that as success rather than an error.</p><p>The list is built from the portal tables rather than Supabase's own auth user list, since reading that would need the service_role key (which must never sit in this page's JavaScript) and what actually matters day to day is what a client HAS in the portal, not whether an auth row exists. That's also why the field at the top exists: the list can only ever show clients who already have an invoice, quote, or job on file.</p>`,
     },
     pushtest: {
+      // Fix plan RP6.14 (2026-11-07): says the test lead also emails Steve
+      // and Connor; suppressing it would need a server change.
       title: 'Push notification test',
-      body: `<p>Inserts a test lead using the exact same path the real contact form uses (not a direct call to the Send-Push function itself, which needs a service_role key that must never sit in this page's JavaScript). That insert should trigger the same server-side notification pipeline a real lead does.</p><p>This can't directly confirm a push was actually received on any device -- only that the insert (and whatever fires from it server-side) ran without an error. The test lead gets deleted automatically a few seconds later either way.</p>`,
+      body: `<p>Inserts a test lead using the exact same path the real contact form uses (not a direct call to the Send-Push function itself, which needs a service_role key that must never sit in this page's JavaScript). That insert should trigger the same server-side notification pipeline a real lead does -- so it also emails Steve and Connor a test lead (the internal new-lead email, named "TEST \u2014 Dev Tools push check").</p><p>This can't directly confirm a push was actually received on any device -- only that the insert (and whatever fires from it server-side) ran without an error. The test lead gets deleted automatically a few seconds later either way.</p>`,
     },
     pushhistory: {
       title: 'Push notification history',

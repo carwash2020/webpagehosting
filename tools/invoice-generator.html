@@ -63,7 +63,7 @@
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=a7791bfe4b" defer></script>
-<script src="/tools/tools-command-palette.js?v=1acf1175ac" defer></script>
+<script src="/tools/tools-command-palette.js?v=33e01d62de" defer></script>
 <script src="/tools/tools-tour.js?v=f8c0b490ba" defer></script>
 <!-- U15/W18 fix (High-Impact Upgrades, Master Audit, 2026-09-08): the
      masthead/footer/totals-block drawing code below moved into this
@@ -824,7 +824,7 @@
     <div class="form-field">
       <label for="invoiceNumber">Invoice Number</label>
       <span class="label-hint field-caption" id="invoiceNumberTempNote" hidden>Temporary number. Couldn't load the next one.</span>
-      <input type="text" id="invoiceNumber" value="" oninput="checkDuplicateInvoiceNumber()">
+      <input type="text" id="invoiceNumber" value="" placeholder="Assigned when you save" oninput="checkDuplicateInvoiceNumber()">
       <div id="duplicateInvoiceWarning" style="display:none; color: var(--orange-light); font-size: 13px; margin-top: 6px; padding: 8px 10px; background: var(--orange-tint-soft); border: 1px solid var(--orange-tint-border); border-radius: 6px;"></div>
     </div>
     <div class="form-field">
@@ -926,7 +926,7 @@
     <div class="form-field">
       <label for="quoteNumber">Estimate Number</label>
       <span class="label-hint field-caption" id="quoteNumberTempNote" hidden>Temporary number. Couldn't load the next one.</span>
-      <input type="text" id="quoteNumber" value="">
+      <input type="text" id="quoteNumber" value="" placeholder="Assigned when you save">
     </div>
     <div class="form-field">
       <label for="quoteDate">Date</label>
@@ -1676,7 +1676,7 @@
         const result = await res.json().catch(() => ({}));
         if (result && result.ok) {
           if (notInPortal) {
-            portalInvoiceInfoBySourceId[inv.id] = true; // the "Never sent to portal" badge goes
+            portalInvoiceInfoBySourceId[inv.id] = true; // the "Never sent to portal" badge goes (A3: markInvoiceInPortal does the same for a first send)
             if (typeof renderInvoiceLog === 'function') renderInvoiceLog();
           }
           showToast('Invoice #' + inv.invoiceNumber + (emailChanged ? ' resent to ' : ' sent to the portal and emailed to ') + inv.clientEmail + '.');
@@ -2058,8 +2058,10 @@
     if (el) el.addEventListener('input', () => syncTempNumberNote(el));
   });
 
-  assignNextNumber('invoiceNumber', 'next_invoice_number', 'INV-');
-  assignNextNumber('quoteNumber', 'next_quote_number', 'EST-');
+  // Fix plan A4 (2026-11-07): no number is drawn when the page opens or a
+  // form is cleared. Each draw burns a sequence value, so every visit to
+  // Invoices skipped a number (1167 -> 1174 with nothing saved between).
+  // generatePDF() / generateQuotePDF() draw one when the field is empty.
 
   const CARD_INFO = {
     salesTax: {
@@ -2818,6 +2820,7 @@
     // out the job. Plain "INVOICE" for the standard case, unchanged.
     const INVOICE_TYPE_LABELS = { standard: 'INVOICE', deposit: 'DEPOSIT INVOICE', balance: 'BALANCE DUE', progress: 'PROGRESS PAYMENT' };
     const invoiceTypeVal = (document.getElementById('invoiceType') || {}).value || 'standard';
+    if (!document.getElementById('invoiceNumber').value.trim()) await assignNextNumber('invoiceNumber', 'next_invoice_number', 'INV-');
     const invoiceNumberVal = document.getElementById('invoiceNumber').value;
     const clientEmailVal = document.getElementById('clientEmail').value.trim();
     // clientEmail's type="email" never gets native browser validation
@@ -3021,6 +3024,7 @@
         });
         const result = await syncRes.json().catch(() => ({}));
         if (result && result.ok) {
+          markInvoiceInPortal(newEntry.id);
           await showAlert('Sent! Invoice ' + newEntry.invoiceNumber + ' was emailed to ' + clientEmailVal + (pdfBase64 ? ' with the PDF attached.' : ' and posted to their portal.'));
         } else {
           // A real, specific reason -- e.g. "This account is an
@@ -3136,7 +3140,7 @@
     // fresh random number.
     // keepNumber: opening a clean form over an unsent draft keeps the
     // draft's never-used number rather than burning a new one.
-    if (!(opts && opts.keepNumber)) assignNextNumber('invoiceNumber', 'next_invoice_number', 'INV-');
+    if (!(opts && opts.keepNumber)) document.getElementById('invoiceNumber').value = '';
     document.getElementById('invoiceTerms').value = 'Net 15';
     if (document.getElementById('invoiceType')) document.getElementById('invoiceType').value = 'standard';
     recalc();
@@ -3208,7 +3212,7 @@
     // The clean form may have used this number in the meantime.
     const num = (d.fields.invoiceNumber || '').trim().toLowerCase();
     if (num && thInvoices.all().some(inv => (inv.invoiceNumber || '').trim().toLowerCase() === num)) {
-      assignNextNumber('invoiceNumber', 'next_invoice_number', 'INV-');
+      document.getElementById('invoiceNumber').value = ''; // A4: drawn at generate time
     }
     recalc();
     if (typeof renderJobFillPanel === 'function') renderJobFillPanel();
@@ -3694,6 +3698,13 @@
   // stays silent until then, so a slow/offline fetch never flashes a
   // false "Never sent to portal" on every row before the real data is in.
   let portalInvoiceStatusKnown = false;
+  // Fix plan A3 (2026-11-07): a send that reached the portal clears the
+  // badge at once. Only Resend did this before, so a first send left "Never
+  // sent to portal" on the row until something refetched the portal rows.
+  function markInvoiceInPortal(id) {
+    portalInvoiceInfoBySourceId[id] = true;
+    if (typeof renderInvoiceLog === 'function') renderInvoiceLog();
+  }
 
   async function refreshPortalInvoiceStatuses() {
     if (typeof getAuthToken !== 'function') return;
@@ -3750,6 +3761,7 @@
     // valid-until field in this form; 30 days is this trade's usual
     // quote-honoring window and is stated again in the fine print
     // below, not just implied by a bare date).
+    if (!document.getElementById('quoteNumber').value.trim()) await assignNextNumber('quoteNumber', 'next_quote_number', 'EST-');
     const quoteNumberVal = document.getElementById('quoteNumber').value;
     const quoteDateIso = document.getElementById('quoteDate').value;
     const quoteDateDisplay = quoteDateIso
@@ -3909,8 +3921,8 @@
     document.getElementById('quoteLineItemsBody').innerHTML = '';
     addQuoteLineItem();
     document.getElementById('quoteDate').value = todayDateStrBusinessTz();
-    // Same collision-proof sequence draw as the invoice reset above.
-    assignNextNumber('quoteNumber', 'next_quote_number', 'EST-');
+    // Fix plan A4: drawn at generate time, like the invoice's.
+    document.getElementById('quoteNumber').value = '';
     recalcQuote();
   }
 
