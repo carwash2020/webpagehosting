@@ -1457,14 +1457,29 @@ function deriveInvoicePaid(inv) {
   return totalCents > 0 && paidCents >= totalCents;
 }
 
+// Fix plan RP1.10 (2026-11-06): money in the database is whole cents. A
+// fractional-cent total from tax math (125.0025) made "paid" and "total"
+// differ by a fraction of a cent, and a paid invoice with no recorded amount
+// (paid before amounts were kept) read as $0 received in SQL.
+function centsOrNull(v) {
+  if (v === undefined || v === null || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
+}
+function mirrorInvoicePaidAmount(entry) {
+  const recorded = centsOrNull(entry.paidAmount);
+  if (recorded !== null) return recorded;
+  return deriveInvoicePaid(entry) ? centsOrNull(entry.total) : null;
+}
+
 function mirrorInvoiceToRelational(entry) {
   if (!entry) return;
   mirrorUpsert('invoices', [{
     id: entry.id, invoice_number: entry.invoiceNumber || null, client_name: entry.clientName || null,
     legacy_client_id: entry.clientId || null, client_email: entry.clientEmail || null, invoice_date: entry.date || null,
-    terms: entry.terms || null, invoice_type: entry.invoiceType || null, subtotal: entry.subtotal ?? null,
-    tax: entry.tax ?? null, discount: entry.discount ?? null, total: entry.total ?? null,
-    paid: deriveInvoicePaid(entry), paid_amount: entry.paidAmount ?? null,
+    terms: entry.terms || null, invoice_type: entry.invoiceType || null, subtotal: centsOrNull(entry.subtotal),
+    tax: centsOrNull(entry.tax), discount: centsOrNull(entry.discount), total: centsOrNull(entry.total),
+    paid: deriveInvoicePaid(entry), paid_amount: mirrorInvoicePaidAmount(entry),
     job_id: entry.jobRefId ? Number(entry.jobRefId) : null, job_ref_title: entry.jobRefTitle || null,
     source_quote_id: entry.sourceQuoteId || null, generated_by: entry.generatedBy || null,
   }]);
@@ -1476,7 +1491,7 @@ function mirrorQuoteToRelational(entry) {
   mirrorUpsert('quotes', [{
     id: entry.id, quote_number: entry.quoteNumber || null, client_name: entry.clientName || null,
     legacy_client_id: entry.clientId || null, client_email: entry.clientEmail || null, quote_date: entry.date || null,
-    subtotal: entry.subtotal ?? null, tax: entry.tax ?? null, discount: entry.discount ?? null, total: entry.total ?? null,
+    subtotal: centsOrNull(entry.subtotal), tax: entry.tax ?? null, discount: entry.discount ?? null, total: entry.total ?? null,
     status: entry.status || null, job_id: entry.jobRefId ? Number(entry.jobRefId) : null,
     job_ref_title: entry.jobRefTitle || null, generated_by: entry.generatedBy || null,
     converted_to_invoice_id: entry.convertedToInvoiceId || null,

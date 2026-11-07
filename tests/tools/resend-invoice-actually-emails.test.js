@@ -43,7 +43,7 @@ const INVOICE = { id: 1790448758936, invoiceNumber: 'INV-2026-1051', clientName:
   clientEmail: 'old@example.com', date: '2026-09-26', total: 212.66, jobRefTitle: 'Parts delivery',
   line_items: [{ desc: 'Parts', amount: 212.66 }] };
 
-function setup({ invoice = INVOICE, confirm = true, resendResult = { ok: true } } = {}) {
+function setup({ invoice = INVOICE, confirm = true, resendResult = { ok: true }, inPortal = true } = {}) {
   const dom = new JSDOM('<!doctype html><body></body>', { url: 'https://example.com/tools/invoice-generator.html', runScripts: 'outside-only' });
   const w = dom.window;
   installDataLayer(w); // the page reads/writes the log through thInvoices
@@ -61,6 +61,8 @@ function setup({ invoice = INVOICE, confirm = true, resendResult = { ok: true } 
   w.eval(DIALOGS);
   w.showToast = (m, o) => out.toasts.push({ m, type: o && o.type });
   w.showConfirm = async (m) => { out.confirms.push(m); return confirm; };
+  // RP1.2 (D16): these cases are about an invoice already in the portal.
+  w.eval('var portalInvoiceStatusKnown = true; var portalInvoiceInfoBySourceId = {}; portalInvoiceInfoBySourceId[' + JSON.stringify(String(invoice.id)) + '] = ' + inPortal + '; window.__portalCache = portalInvoiceInfoBySourceId; function refreshPortalInvoiceStatuses() {}');
   w.eval(RESEND + '\nwindow.__r = resendInvoiceToClient;');
   const field = () => w.document.getElementById('customDialogField0');
   const click = (text) => [...w.document.querySelectorAll('#customDialogButtons button')].find((b) => b.textContent === text).click();
@@ -127,4 +129,20 @@ test('changing only the capitalisation is still treated as unchanged and uses se
   await out.resend('OLD@example.com');
   assert.equal(out.confirms.length, 0);
   assert.equal(out.sent[0].url, 'https://x.supabase.co/functions/v1/send-invoice-notification');
+});
+
+// ---- RP1.2 (D16, 2026-11-06): a same-email Resend of an invoice with no
+// portal row goes through sync-invoice-to-portal, which creates the row
+// and emails the client in one step.
+test('RP1.2: unchanged email, but never sent to the portal: it syncs (creating the portal row) instead of only emailing', async () => {
+  const { out, w } = setup({ inPortal: false });
+  await out.resend(undefined);
+  assert.equal(out.sent.length, 1);
+  assert.match(out.sent[0].url, /\/functions\/v1\/sync-invoice-to-portal$/);
+  assert.equal(out.sent[0].body.source_invoice_id, INVOICE.id);
+  assert.equal(out.sent[0].body.client_email, 'old@example.com');
+  assert.equal(out.confirms.length, 0, 'no "move it" confirm: the email did not change');
+  assert.match(out.toasts[0].m, /sent to the portal and emailed to old@example\.com/);
+  assert.equal(w.__portalCache[String(INVOICE.id)], true, 'the "Never sent to portal" badge goes away');
+  assert.equal(out.renders, 1);
 });

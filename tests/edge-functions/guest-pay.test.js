@@ -167,3 +167,19 @@ test('no sign-in needed: it works with no Authorization header at all', async ()
   const r = await g.call({ action: 'view', token: TOKEN }, {});
   assert.equal(r.status, 200);
 });
+
+// Fix plan RP1.3 (2026-11-07): a part-paid invoice asks for, and charges,
+// only what is left.
+test('RP1.3: a part-paid invoice shows and charges only the balance; nothing left means nothing to pay', async () => {
+  let g = load({ invoices: [invoice({ paid_amount: 100.5 })], workspaceInvoices: [{ id: 1730000000000, terms: 'Due Upon Receipt' }] });
+  assert.equal((await g.call({ action: 'view', token: TOKEN })).body.amount_due, 199.5);
+  const r = await g.call({ action: 'pay', token: TOKEN });
+  assert.equal(r.status, 200);
+  assert.equal(new URLSearchParams(g.created()[0].body).get('amount'), '19950');
+  g = load({ invoices: [invoice({ paid_amount: 300 })] });
+  const none = await g.call({ action: 'pay', token: TOKEN });
+  assert.equal(none.status, 409);
+  assert.equal(none.body.already_paid, true);
+  assert.equal(g.created().length, 0, 'no charge');
+  assert.ok(g.calls.some((c) => /select=[^&]*paid_amount/.test(c.url)), 'the balance is read from the database');
+});

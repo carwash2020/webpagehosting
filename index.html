@@ -287,8 +287,8 @@
   ]
 }
 </script>
-<script src="/js/cookie-consent.js?v=14d2625000" defer></script>
-<script src="/js/utm-tracking.js?v=6829298ac5" defer></script>
+<script src="/js/cookie-consent.js?v=c28c83f9f9" defer></script>
+<script src="/js/utm-tracking.js?v=95fa0dda8e" defer></script>
 </head>
 <body class="has-blueprint-bg page-home">
 <div class="bg-blueprint" aria-hidden="true"></div>
@@ -2948,7 +2948,10 @@
         status.textContent = "Request sent! We'll follow up by phone or email shortly.";
         status.classList.add('is-success');
         submitBtn.textContent = 'Sent ✓';
-        if (typeof gtag === 'function') {
+        // Fix plan RP2.17 (2026-11-06): a 409 is a resubmission of a lead we
+        // already have -- the visitor still sees "sent", but GA counts only a
+        // genuinely new lead.
+        if (response.ok && typeof gtag === 'function') {
           gtag('event', 'lead_form_submitted', { service: formData.get('service') || '' });
         }
         form.reset();

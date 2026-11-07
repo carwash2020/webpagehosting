@@ -33,16 +33,60 @@
    Loaded on every public page that could be a real campaign landing
    page (same set as cookie-consent.js/analytics-events.js), in <head>,
    so a UTM-tagged link is captured immediately on arrival -- before any
-   possible navigation away from that exact URL.
+   possible navigation away from that exact URL. (Fix plan RP2.1,
+   2026-11-06: until then it was on index.html and booking.html only, so a
+   campaign landing on a service, city or blog page was lost.)
+
+   Consent (fix plan RP2.16, D28, 2026-11-06): until the visitor accepts
+   analytics cookies, the campaign values and first referrer live in
+   sessionStorage only (gone when the tab closes), so a visit that clicks
+   from a landing page to the booking form still carries them. On Accept
+   they move to localStorage for the 90-day window; on Decline any
+   localStorage copy is removed and they stay tab-only.
 */
 (function () {
   var STORAGE_KEY = 'th_utm_attribution';
   var MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
   var UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
 
+  function consentGranted() {
+    try { return localStorage.getItem('th-cookie-consent') === 'granted'; } catch (e) { return false; }
+  }
+  // Where attribution may be kept right now: 90-day storage only with consent.
+  function attributionStore() {
+    try { return consentGranted() ? localStorage : sessionStorage; } catch (e) { return null; }
+  }
+  function getAttr(key) {
+    var store = attributionStore();
+    try { return store ? store.getItem(key) : null; } catch (e) { return null; }
+  }
+  // Put what's kept where the visitor's current choice says: Accept moves
+  // a tab-only copy to localStorage; anything else (Decline, or no choice
+  // yet) moves a localStorage copy -- including one saved before this rule
+  // -- to tab-only storage and removes it from localStorage.
+  var ATTR_KEYS = [STORAGE_KEY, 'th_first_referrer'];
+  function settleAttribution() {
+    var granted = consentGranted();
+    ATTR_KEYS.forEach(function (key) {
+      try {
+        var from = granted ? sessionStorage : localStorage;
+        var to = granted ? localStorage : sessionStorage;
+        var v = from.getItem(key);
+        if (v === null) return;
+        if (to.getItem(key) === null) to.setItem(key, v);
+        from.removeItem(key);
+      } catch (e) { /* storage blocked -- nothing to move */ }
+    });
+  }
+  settleAttribution();
+  function setAttr(key, value) {
+    var store = attributionStore();
+    if (store) store.setItem(key, value);
+  }
+
   function readStored() {
     try {
-      var raw = localStorage.getItem(STORAGE_KEY);
+      var raw = getAttr(STORAGE_KEY);
       if (!raw) return null;
       var parsed = JSON.parse(raw);
       if (!parsed || typeof parsed.captured_at !== 'number') return null;
@@ -72,7 +116,7 @@
 
     found.captured_at = Date.now();
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(found));
+      setAttr(STORAGE_KEY, JSON.stringify(found));
     } catch (e) { /* private browsing / storage full -- never worth breaking the page over */ }
   }
 
@@ -99,17 +143,21 @@
     if (!host || host === window.location.hostname.toLowerCase() || OWN_HOSTS.test(host)) return;
     if (host.length > 253 || !/^[a-z0-9.-]+$/.test(host) || host.charAt(0) === '.' || host.charAt(0) === '-') return;
     try {
-      var prev = JSON.parse(localStorage.getItem(REFERRER_KEY) || 'null');
+      var prev = JSON.parse(getAttr(REFERRER_KEY) || 'null');
       if (prev && typeof prev.captured_at === 'number' && Date.now() - prev.captured_at <= MAX_AGE_MS) return;
-      localStorage.setItem(REFERRER_KEY, JSON.stringify({ host: host, captured_at: Date.now() }));
+      setAttr(REFERRER_KEY, JSON.stringify({ host: host, captured_at: Date.now() }));
     } catch (e) { /* storage blocked -- nothing to keep */ }
   }
 
   captureReferrer();
 
+  // RP2.16: follow the visitor's cookie choice (cookie-consent.js sends
+  // this right after saving it).
+  window.addEventListener('th-consent-change', settleAttribution);
+
   function storedReferrer() {
     try {
-      var prev = JSON.parse(localStorage.getItem(REFERRER_KEY) || 'null');
+      var prev = JSON.parse(getAttr(REFERRER_KEY) || 'null');
       if (!prev || typeof prev.captured_at !== 'number' || Date.now() - prev.captured_at > MAX_AGE_MS) return null;
       return prev.host || null;
     } catch (e) {

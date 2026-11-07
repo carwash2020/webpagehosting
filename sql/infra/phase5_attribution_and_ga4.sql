@@ -1,3 +1,5 @@
+-- Fix plan Group 4 (2026-11-07): insights_channel, insights_source_funnel and
+-- ga_queue_paid_invoice below are replaced by sql/infra/group4_insights_and_ga.sql.
 -- Phase 5 (2026-11-04): analytics joined to the business. Approved design
 -- "Insights: source -> paid, and the website" + "A lead becomes a job and
 -- keeps its source". Connor's calls: jobs carry the source of the lead or

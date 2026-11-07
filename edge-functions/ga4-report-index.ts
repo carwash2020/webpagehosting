@@ -15,7 +15,12 @@
 //
 // Read-only on Google's side (analytics.readonly scope). Writes only the
 // cache table. Three periods (30 / 90 / 365 days, through yesterday) in
-// three batch calls.
+// three batch calls, made side by side (fix plan RP2.9: one after another,
+// the 365-day call left little room in the cron's 60-second limit).
+//
+// If any period fails the call answers 502 (RP2.9), so the cron watchdog
+// alerts; the periods that did save are kept, and a failed period keeps
+// yesterday's copy.
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
@@ -24,7 +29,9 @@ const PROPERTY_ID = (Deno.env.get("GA4_PROPERTY_ID") || "").trim();
 
 const PERIODS: Array<[string, number]> = [["30d", 30], ["90d", 90], ["365d", 365]];
 // The site's own events (js/analytics-events.js) that the Insights tiles count.
-const EVENTS = ["phone_click", "text_click", "email_click", "book_cta_click", "booking_completed", "lead_form_submitted"];
+// booking_page_view and booking_form_start (fix plan RP2.10, D19) give the
+// booking page's opened -> started -> finished strip.
+const EVENTS = ["phone_click", "text_click", "email_click", "book_cta_click", "booking_completed", "lead_form_submitted", "booking_page_view", "booking_form_start"];
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -59,8 +66,9 @@ async function googleAccessToken(sa: { client_email: string; private_key: string
   return out.access_token;
 }
 
-// Same labels, in the same order, as public.insights_channel() in
-// sql/infra/phase5_attribution_and_ga4.sql, so both Insights phones agree.
+// Same labels as public.insights_channel() in
+// sql/infra/group4_insights_and_ga.sql (Direct and Google search included
+// there since fix plan RP2.11), so both Insights cards agree.
 const GBP = ["gbp", "gmb", "google_business", "googlebusiness", "google-business", "google_business_profile"];
 const SOCIAL = /(^|\.)(facebook|instagram|nextdoor|tiktok|twitter|x|linkedin|youtube|pinterest)\.com$|^t\.co$|^(facebook|instagram|nextdoor|tiktok|linkedin|youtube|pinterest)$/;
 function channelFor(sourceRaw: string, mediumRaw: string, campaignRaw: string): string {
@@ -128,6 +136,8 @@ function buildReport(period: string, days: number, reports: Array<{ rows?: Row[]
     booking_clicks: evCount("book_cta_click"),
     bookings: evCount("booking_completed"),
     lead_forms: evCount("lead_form_submitted"),
+    booking_page_views: evCount("booking_page_view"),
+    booking_form_starts: evCount("booking_form_start"),
     channels: Array.from(channels, ([name, sessions]) => ({ name, sessions })).sort((a, b) => b.sessions - a.sessions),
     pages: Array.from(byPath.values()).sort((a, b) => b.views - a.views).slice(0, 10),
   };
@@ -166,14 +176,14 @@ Deno.serve(async (req: Request) => {
 
   const saved: string[] = [];
   const failed: Record<string, string> = {};
-  for (const [period, days] of PERIODS) {
+  async function fetchAndSave(period: string, days: number): Promise<void> {
     try {
       const res = await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${PROPERTY_ID}:batchRunReports`, {
         method: "POST",
         headers: { Authorization: `Bearer ${access}`, "Content-Type": "application/json" },
         body: JSON.stringify({ requests: requestsFor(days) }),
       });
-      if (!res.ok) { failed[period] = `Google answered ${res.status}`; continue; }
+      if (!res.ok) { failed[period] = `Google answered ${res.status}`; return; }
       const out = await res.json();
       const report = buildReport(period, days, out.reports || []);
       const put = await fetch(`${SUPABASE_URL}/rest/v1/ga_report_cache?on_conflict=tenant_id,period`, {
@@ -186,12 +196,15 @@ Deno.serve(async (req: Request) => {
         },
         body: JSON.stringify([{ period, report, fetched_at: new Date().toISOString() }]),
       });
-      if (!put.ok) { failed[period] = `save ${put.status}`; continue; }
+      if (!put.ok) { failed[period] = `save ${put.status}`; return; }
       saved.push(period);
     } catch (_e) {
       failed[period] = "network";
     }
   }
+  await Promise.all(PERIODS.map(([period, days]) => fetchAndSave(period, days)));
+  saved.sort((x, y) => PERIODS.findIndex((p) => p[0] === x) - PERIODS.findIndex((p) => p[0] === y));
   // Yesterday's copy stays in place for any period that failed today.
-  return json({ ok: saved.length === PERIODS.length, saved, failed }, saved.length ? 200 : 502);
+  const ok = saved.length === PERIODS.length;
+  return json({ ok, saved, failed }, ok ? 200 : 502);
 });

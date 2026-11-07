@@ -632,7 +632,7 @@
   // fix; it just hadn't been applied to the rest of this Promise.all yet.
   async function loadSummary(email) {
     const [invoices, quotes, jobs, requests, contracts, visitResult, unread, profile] = await Promise.all([
-      client.from('client_portal_invoices').select('id,total,paid,paid_at,invoice_number,invoice_date,client_name').eq('client_email', email),
+      client.from('client_portal_invoices').select('id,total,paid,paid_amount,paid_at,invoice_number,invoice_date,client_name').eq('client_email', email),
       client.from('client_portal_quotes').select('id,status,total,quote_number,quote_date,responded_at,client_name').eq('client_email', email),
       client.from('client_portal_jobs').select('id,title,job_date').eq('client_email', email),
       client.from('client_portal_work_orders').select('id,title,status,scheduled_at,address,created_at').eq('client_email', email),
@@ -832,6 +832,15 @@
       '</div>' + moreHtml;
   }
 
+  // Fix plan RP1.3 (2026-11-07): what is left on an invoice after any part
+  // payment (paid_amount), the amount Pay charges. Same rule as
+  // invoiceBalance() in dashboard.html.
+  function homeInvoiceBalance(i) {
+    if (i.paid) return 0;
+    const total = Number(i.total) || 0;
+    return Math.max(0, Math.round((total - Math.min(total, Math.max(0, Number(i.paid_amount) || 0))) * 100) / 100);
+  }
+
   function renderAttention(s) {
     const el = document.getElementById('attentionArea');
     const items = [];
@@ -840,7 +849,7 @@
     // path already on dashboard.html -- no new payment API.
     const unpaid = s.invoices.filter(i => !i.paid);
     if (unpaid.length) {
-      const owed = unpaid.reduce((sum, i) => sum + (Number(i.total) || 0), 0);
+      const owed = unpaid.reduce((sum, i) => sum + homeInvoiceBalance(i), 0);
       const oldest = unpaid.slice().sort((a, b) => new Date(a.invoice_date) - new Date(b.invoice_date))[0];
       const oldestDate = formatInvoiceDate(oldest && oldest.invoice_date);
       items.push({
@@ -1222,7 +1231,7 @@
       const covered = jobs.filter(j => { const d = homeWarrantyDaysLeft(j.job_date); return d !== null && d > 0 && d <= 30; }).length;
       rings.push({ value: String(covered), sub: 'of ' + jobs.length, label: 'Under warranty', fraction: covered / jobs.length, tone: 'green', href: '/portal/jobs.html' });
     }
-    const paidTotal = (s.invoices || []).filter(i => i.paid).reduce((sum, i) => sum + (Number(i.total) || 0), 0);
+    const paidTotal = (s.invoices || []).reduce((sum, i) => sum + ((Number(i.total) || 0) - homeInvoiceBalance(i)), 0);
     const grand = (s.invoices || []).reduce((sum, i) => sum + (Number(i.total) || 0), 0);
     if (grand > 0) {
       const f = paidTotal / grand;

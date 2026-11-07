@@ -47,7 +47,21 @@ test('Booking funnel health counts new/cancelled/rescheduled correctly, using th
   assert.match(text, /New bookings \(5 total\)/);
   assert.match(text, /Cancelled \(1 total\)/);
   assert.match(text, /Rescheduled \(1 total\)/);
-  assert.match(text, /20% of new bookings/);
+  assert.match(text, /1 of the 5 bookings made in this window was later cancelled \(20%\)\./);
+});
+
+test('RP2.15 (D18): the cancellation share is one cohort -- an older booking cancelled this window never pushes it past 100%', async () => {
+  const bookings = [
+    { created_at: daysAgo(1), cancelled_at: null, last_rescheduled_at: null },
+    { created_at: daysAgo(200), cancelled_at: daysAgo(2), last_rescheduled_at: null },
+    { created_at: daysAgo(300), cancelled_at: daysAgo(3), last_rescheduled_at: null },
+  ];
+  const window = loadPage(async (url) => (String(url).includes('th_bookings') ? { ok: true, json: async () => bookings } : { ok: false }));
+  await window.renderBookingFunnelReport();
+  const text = window.document.getElementById('bookingFunnelReport').textContent;
+  assert.match(text, /Cancelled \(2 total\)/, 'the bar still shows cancellations that happened this window');
+  assert.match(text, /0 of the 1 bookings made in this window were later cancelled \(0%\)\./);
+  assert.doesNotMatch(text, /200%/);
 });
 
 test('Lead response time computes a correct median for an EVEN number of handled leads -- caught and fixed a real bug here (picking the upper-middle element instead of averaging the two middle values)', async () => {

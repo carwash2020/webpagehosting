@@ -40,7 +40,7 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=92a4047864" defer></script>
+<script src="/tools/sync.js?v=d5226d99a6" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <!-- F18 fix (2026-09-07): this page never loaded the shared mobile
      bottom nav / desktop sidebar / flag button script every other tool
@@ -3192,6 +3192,21 @@ function invoiceRemainingBalance(invoice){
 function totalAccountsReceivable(){
   return loadJobTrackerInvoices().reduce((sum, inv) => sum + invoiceRemainingBalance(inv), 0);
 }
+// Paid-only revenue (RP1.4): kept identical to data-layer.js's
+// thInvoicePaidAmount()/thIncomeReceived(); tests/workspace/rp1-money.test.js
+// runs both on the same cases.
+function runwayInvoicePaid(inv){
+  if (inv.paidAmount !== undefined && inv.paidAmount !== null) return Number(inv.paidAmount) || 0;
+  return inv.paid ? (Number(inv.total) || 0) : 0;
+}
+function runwayIncomeReceived(entry, invoices){
+  if (!entry) return 0;
+  if (entry.appliedToInvoiceId) return 0;
+  if (entry.origin !== 'invoice') return Number(entry.amount) || 0;
+  const inv = (invoices || []).find((i) => String(i.id) === String(entry.invoiceId));
+  if (!inv) return 0;
+  return Math.min(Number(entry.amount) || 0, runwayInvoicePaid(inv));
+}
 function pullMonthFromJobTracker(monthVal){
   const expenseLog = loadJobTrackerExpenses();
   const invoices = loadJobTrackerInvoices();
@@ -3210,8 +3225,13 @@ function pullMonthFromJobTracker(monthVal){
   const incomeInMonth = incomeLog.filter(e => inMonth(e.date));
   const orphanedInMonth = orphanedInvoices.filter(i => inMonth(i.date));
 
-  const revenue = incomeInMonth.reduce((s,e) => s + (Number(e.amount)||0), 0)
-                + orphanedInMonth.reduce((s,i) => s + (Number(i.total)||0), 0);
+  // Fix plan RP1.4 (2026-11-06): money RECEIVED, the same rule Finance uses
+  // (thIncomeReceived() in data-layer.js, which this page doesn't load). A
+  // card charge applied to an invoice is that invoice's payment, so only the
+  // invoice row counts it; an invoice counts only what has been paid on it.
+  // Before this, a card-paid $300 invoice counted $600, and an unpaid one $300.
+  const revenue = incomeInMonth.reduce((s,e) => s + runwayIncomeReceived(e, invoices), 0)
+                + orphanedInMonth.reduce((s,i) => s + runwayInvoicePaid(i), 0);
   const expenses = expenseLog.filter(e => e.type !== 'mileage' && inMonth(e.date)).reduce((s,e) => s + (Number(e.amount)||0), 0);
   const fuel = expenseLog.filter(e => e.type === 'mileage' && inMonth(e.date)).reduce((s,e) => s + (Number(e.amount)||0), 0);
 

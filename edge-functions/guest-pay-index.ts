@@ -108,7 +108,7 @@ function billedTo(name: string | null): string {
 async function findInvoice(token: string): Promise<any | null> {
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/client_portal_invoices?pay_token=eq.${encodeURIComponent(token)}` +
-      `&select=id,source_invoice_id,invoice_number,invoice_date,description,client_name,client_email,total,paid,paid_at,stripe_payment_intent_id&limit=1`,
+      `&select=id,source_invoice_id,invoice_number,invoice_date,description,client_name,client_email,total,paid,paid_amount,paid_at,stripe_payment_intent_id&limit=1`,
     { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
   );
   if (!res.ok) throw new Error(`invoice lookup failed (HTTP ${res.status})`);
@@ -155,6 +155,20 @@ async function signedPdfUrl(invoiceNumber: string): Promise<string | null> {
   return typeof signed === "string" ? `${SUPABASE_URL}/storage/v1${signed.startsWith("/") ? "" : "/"}${signed}` : null;
 }
 
+// Fix plan RP1.3 (2026-11-07): what is still owed on a portal invoice, in
+// cents -- the total less anything already paid (a part payment recorded in
+// the Workspace). client_portal_invoices.paid_amount is kept in step by the
+// database (sql/payments/03_portal_balance_and_sent.sql).
+// In dollars, rounded to cents once at the end -- the same way the webhook
+// rounds what is owed, so the two always agree; with nothing paid it is
+// exactly the old Math.round(total * 100).
+function balanceDollars(inv: { total: unknown; paid_amount?: unknown }): number {
+  return Math.max(0, (Number(inv.total) || 0) - (Number(inv.paid_amount) || 0));
+}
+function balanceCents(inv: { total: unknown; paid_amount?: unknown }): number {
+  return Math.round(balanceDollars(inv) * 100);
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: CORS_HEADERS });
   const json = (body: unknown, status = 200) =>
@@ -174,7 +188,7 @@ Deno.serve(async (req: Request) => {
         invoice_date: invoice.invoice_date,
         description: invoice.description,
         billed_to: billedTo(invoice.client_name),
-        amount_due: invoice.paid ? 0 : Number(invoice.total),
+        amount_due: invoice.paid ? 0 : balanceCents(invoice) / 100,
         due_date: await dueDateFor(invoice),
         paid: !!invoice.paid,
         paid_at: invoice.paid_at || null,
@@ -192,7 +206,8 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, already_paying: true, error: "A payment for this invoice has already gone through or is still processing. It can take a minute to show as paid." }, 409);
     }
 
-    const amountCents = Math.round(Number(invoice.total) * 100);
+    const amountCents = balanceCents(invoice);
+    if (amountCents <= 0) return json({ ok: false, already_paid: true, error: "Nothing is owed on this invoice." }, 409);
     if (
       earlierPi && REUSABLE_STATUSES.has(earlierPi.status) &&
       earlierPi.amount === amountCents && earlierPi.currency === "usd" && !earlierPi.customer &&

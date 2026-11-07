@@ -145,12 +145,33 @@ test('ga4-report: signs in read-only with the service account, asks for 30/90/36
   for (const call of f.calls) assert.doesNotMatch(String(call.init.body || ''), /BEGIN PRIVATE KEY/, 'the key itself never leaves');
 });
 
-test('ga4-report: a period Google refuses keeps yesterday\'s copy; the others still save', async () => {
+test('ga4-report: a period Google refuses keeps yesterday\'s copy; the others still save; the call fails so the watchdog alerts (RP2.9)', async () => {
   const st = { asked: [], saved: [], failOn: '365daysAgo' };
   const f = load('ga4-report', ENV, reportFetch(st));
   const res = await f.handler(post({}));
+  assert.equal(res.status, 502, 'not a quiet 200');
   assert.deepEqual(await res.json(), { ok: false, saved: ['30d', '90d'], failed: { '365d': 'Google answered 429' } });
   assert.deepEqual(st.saved.map((s) => s.period), ['30d', '90d']);
+});
+
+test('ga4-report: the three periods are asked side by side, and the booking page strip is counted (RP2.9, RP2.10)', async () => {
+  const st = { asked: [], saved: [] };
+  let inFlight = 0, most = 0;
+  const base = reportFetch(st);
+  const f = load('ga4-report', ENV, async (url, init) => {
+    if (!url.startsWith('https://analyticsdata.googleapis.com/')) return base(url, init);
+    inFlight++; most = Math.max(most, inFlight);
+    await new Promise((r) => setTimeout(r, 20));
+    inFlight--;
+    const reqBody = JSON.parse(init.body);
+    assert.deepEqual(Array.from(reqBody.requests[3].dimensionFilter.filter.inListFilter.values).slice(-2), ['booking_page_view', 'booking_form_start']);
+    const reports = GA_REPORTS.slice(0, 3).concat([{ rows: [row(['booking_page_view'], [14]), row(['booking_form_start'], [6]), row(['booking_completed'], [1]), row(['text_click'], [2]), row(['email_click'], [1]), row(['book_cta_click'], [12])] }]);
+    return j({ reports });
+  });
+  assert.equal((await f.handler(post({}))).status, 200);
+  assert.equal(most, 3);
+  const r = st.saved.find((x) => x.period === '90d').report;
+  assert.deepEqual([r.booking_page_views, r.booking_form_starts, r.bookings, r.texts, r.emails, r.booking_clicks, r.users], [14, 6, 1, 2, 1, 12, 300]);
 });
 
 // ------------------------------------------------------------ ga4-conversion
@@ -162,7 +183,10 @@ function convFetch(state) {
       const u = new URL(url);
       if (method === 'GET') {
         const id = u.searchParams.get('invoice_id');
-        const rows = state.rows.filter((r) => (id ? 'eq.' + r.invoice_id === id : r.status === 'pending'));
+        const status = u.searchParams.get('status');
+        const refund = u.searchParams.get('refund_status');
+        const rows = state.rows.filter((r) => (id ? 'eq.' + r.invoice_id === id
+          : 'eq.' + r.status === status && (!refund || 'eq.' + r.refund_status === refund)));
         return j(rows);
       }
       if (method === 'PATCH') {
@@ -170,6 +194,10 @@ function convFetch(state) {
         Object.assign(state.rows.find((r) => r.invoice_id === id), JSON.parse(init.body));
         return new Response(null, { status: 204 });
       }
+    }
+    if (url.startsWith('https://www.google-analytics.com/debug/mp/collect')) {
+      state.checked = (state.checked || 0) + 1;
+      return j({ validationMessages: state.validation || [] });
     }
     if (url.startsWith('https://www.google-analytics.com/mp/collect')) {
       state.sent.push({ url, body: JSON.parse(init.body) });
@@ -260,4 +288,53 @@ test('ga4-report: keys from Google can never reach an object prototype, and host
   assert.deepEqual(Array.from(r.pages, (p) => p.path), ['__proto__', '/'], 'a page literally named __proto__ is just a row');
   assert.equal(r.pages[1].title, 'Home');
   assert.ok(r.pages[0].title.length <= 80);
+});
+
+test('ga4-conversion RP2.20: Google\'s validation endpoint checks each event first; one it rejects is failed, never "sent"', async () => {
+  const st = { rows: [fresh()], sent: [], validation: [{ fieldPath: 'events', description: 'Event name is reserved', validationCode: 'NAME_RESERVED' }] };
+  const f = load('ga4-conversion', CENV, convFetch(st));
+  const res = await f.handler(post({ invoice_id: 5001 }));
+  assert.deepEqual(await res.json(), { ok: true, results: { failed: 1 } });
+  assert.equal(st.sent.length, 0, 'nothing reaches the real endpoint');
+  assert.equal(st.rows[0].status, 'failed');
+  assert.equal(st.rows[0].last_error, 'Google rejected it: Event name is reserved');
+  const ok = { rows: [fresh()], sent: [] };
+  const g = load('ga4-conversion', CENV, convFetch(ok));
+  await g.handler(post({ invoice_id: 5001 }));
+  assert.equal(ok.checked, 1);
+  assert.equal(ok.sent.length, 1);
+  assert.ok(g.calls.findIndex((c) => c.url.includes('/debug/mp/collect')) < g.calls.findIndex((c) => c.url.includes('/mp/collect') && !c.url.includes('/debug/')), 'checked before sent');
+});
+
+test('ga4-conversion RP2.8: a refund on a sale Google has goes out once, for the amount not yet reported', async () => {
+  const st = { rows: [fresh({ status: 'sent', refund_value: '40.00', refund_sent_value: '0', refund_status: 'pending', refund_attempts: 0 })], sent: [] };
+  const f = load('ga4-conversion', CENV, convFetch(st));
+  const res = await f.handler(post({ invoice_id: 5001, refund: true }));
+  assert.deepEqual(await res.json(), { ok: true, results: { refund_sent: 1 } });
+  assert.deepEqual(st.sent[0].body.events, [{ name: 'refund', params: { transaction_id: 'invoice-5001', value: 40, currency: 'USD', source: 'invoice_refunded' } }]);
+  assert.deepEqual(Object.keys(st.sent[0].body).sort(), ['client_id', 'consent', 'events', 'non_personalized_ads']);
+  assert.deepEqual([st.rows[0].refund_status, st.rows[0].refund_sent_value, st.rows[0].status], ['sent', 40, 'sent']);
+  await f.handler(post({ invoice_id: 5001, refund: true }));
+  assert.equal(st.sent.length, 1, 'not twice');
+  // A second, later refund: only the new part.
+  Object.assign(st.rows[0], { refund_value: '100.00', refund_status: 'pending', refund_attempts: 0 });
+  await f.handler(post({ invoice_id: 5001, refund: true }));
+  assert.equal(st.sent[1].body.events[0].params.value, 60);
+  // The refund flag never resends the sale itself.
+  const p = { rows: [fresh()], sent: [] };
+  const g = load('ga4-conversion', CENV, convFetch(p));
+  assert.deepEqual(await (await g.handler(post({ invoice_id: 5001, refund: true }))).json(), { ok: true, results: { refund_none: 1 } });
+  assert.equal(p.sent.length, 0);
+});
+
+test('ga4-conversion: the daily retry also sends pending refunds, and retries a refund Google failed on', async () => {
+  const st = { rows: [fresh({ invoice_id: 1 }), fresh({ invoice_id: 2, status: 'sent', refund_value: '25', refund_sent_value: '0', refund_status: 'pending', refund_attempts: 0 })], sent: [] };
+  const f = load('ga4-conversion', CENV, convFetch(st));
+  const res = await f.handler(post({ retry_pending: true }));
+  assert.deepEqual(await res.json(), { ok: true, results: { sent: 1, refund_sent: 1 } });
+  assert.deepEqual(st.sent.map((s) => s.body.events[0].name), ['purchase', 'refund']);
+  const bad = { rows: [fresh({ status: 'sent', refund_value: '25', refund_sent_value: '0', refund_status: 'pending', refund_attempts: 0 })], sent: [], googleStatus: 500 };
+  const g = load('ga4-conversion', CENV, convFetch(bad));
+  await g.handler(post({ invoice_id: 5001, refund: true }));
+  assert.deepEqual([bad.rows[0].refund_status, bad.rows[0].refund_attempts, bad.rows[0].refund_error], ['pending', 1, 'Google answered 500']);
 });

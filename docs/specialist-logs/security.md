@@ -1634,3 +1634,14 @@ This change widens what a client can read: records on any email they have proved
 - Deployed: `portal-email-alias` (`verify_jwt` on; a call with no session gets 401), plus the 9 edited functions. All are byte-identical to the repo, and `verify_jwt` is unchanged (true).
 - CodeQL then flagged the email-format regex in `portal-email-alias` as a polynomial ReDoS: its domain part `[^\s@]+\.[^\s@]+` is ambiguous. It is now linear (`[^\s@.]+(?:\.[^\s@.]+)+`), with the length cap checked first. Connor approved the redeploy of the fixed function.
 - **Out of scope, worth a later look:** `edge-functions/portal-signup-index.ts` carries the same old pattern. It is reachable without a session, but behind a per-IP limit.
+
+## 2026-11-07 -- Group 4: the balance is the only amount a client can be charged
+
+**What changed:** a part-paid invoice can now exist in the portal, so "how much to charge" moved from the invoice total to the balance (total minus `paid_amount`). The risks I weighed:
+
+- **Who sets `paid_amount`.** Only staff, through the Workspace, write `invoices.paid_amount` (RLS: internal accounts of the business). A `security definer` trigger copies it to the portal row, and Stripe sets it to the total when it marks the invoice paid. Clients can't write either table. A client can't lower their own balance.
+- **Charge and check agree.** The pay functions compute the balance from the database row, never from the browser. The Stripe webhook's paid-short/overpaid check computes the same balance, so a balance payment marks the invoice paid, and paying the full total again raises the existing "overpaid" alert. A balance of 0 refuses to create a PaymentIntent at all.
+- **Pay All split.** Each invoice's share of one payment is now by balance, so refunds and disputes land on the right invoice.
+- **New trigger functions** (`portal_invoice_follow_payment`, `portal_invoice_on_send`) have EXECUTE revoked from anon/authenticated (tested); the advisor run after applying shows nothing new.
+- **Analytics consent (D28).** Campaign attribution no longer touches localStorage without analytics consent, and a copy saved before this rule is moved out on the next page load.
+- **Real data.** Two real invoices' amounts were rounded to the cent and one got its missing paid amount. These were approved separately from the schema change, with undo values in the file.

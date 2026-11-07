@@ -354,3 +354,29 @@ test('reconcile: still never writes to client_portal_invoices (alert-only)', asy
   await r.run();
   assert.equal(r.calls.filter((c) => c.url.includes('client_portal_invoices') && c.method !== 'GET').length, 0);
 });
+
+// ---------------------------------------------------------------- balance
+// Fix plan RP1.3 (2026-11-07): a part-paid invoice is charged only what is
+// left (client_portal_invoices.paid_amount, kept in step by the database).
+
+test('RP1.3 single: a part-paid invoice is charged the balance; nothing left is refused without a charge', async () => {
+  let f = load('create-payment-intent', { invoices: [invoice({ paid_amount: 50 })], customerId: CUSTOMER });
+  let r = await f.call({ invoice_id: 7 });
+  assert.equal(r.status, 200);
+  assert.equal(new URLSearchParams(f.created()[0].body).get('amount'), '10000');
+  assert.ok(f.calls.some((c) => /client_portal_invoices\?[^ ]*select=[^&]*paid_amount/.test(c.url)));
+  f = load('create-payment-intent', { invoices: [invoice({ paid_amount: 150 })], customerId: CUSTOMER });
+  r = await f.call({ invoice_id: 7 });
+  assert.equal(r.status, 400);
+  assert.match(r.body.error, /Nothing is owed/);
+  assert.equal(f.created().length, 0);
+});
+
+test('RP1.3 bulk: Pay All adds up what is left on each invoice', async () => {
+  const f = load('create-bulk-payment-intent', {
+    invoices: [invoice({ id: 7, total: 150, paid_amount: 50 }), invoice({ id: 8, total: 40.25 })], customerId: CUSTOMER,
+  });
+  const r = await f.call({ invoice_ids: [7, 8] });
+  assert.equal(r.status, 200);
+  assert.equal(new URLSearchParams(f.created()[0].body).get('amount'), '14025');
+});

@@ -55,8 +55,8 @@
 <link rel="stylesheet" href="/styles.css?v=09ad2a2e15">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=32b0b6ede8">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous" defer></script>
-<script src="/tools/sync.js?v=92a4047864" defer></script>
-<script src="/tools/data-layer.js?v=e736cf54f5" defer></script>
+<script src="/tools/sync.js?v=d5226d99a6" defer></script>
+<script src="/tools/data-layer.js?v=e9b434448f" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
 <script src="/signature-pad.js?v=f95f8e1d28" defer></script>
@@ -1226,7 +1226,9 @@
     return true;
   }
 
-  function moneyShort(n) { return n >= 1000 ? '$' + Math.round(n).toLocaleString('en-US') : money(n); }
+  // Fix plan RP1.11 (2026-11-06): one money format everywhere -- cents
+  // included above $1,000 too, matching Dashboard and Finance.
+  function moneyShort(n) { return money(n); }
 
   // Owed / Overdue / Billed this month, over every invoice (not the search
   // or the filter -- same rule as the quote conversion rate below), so the
@@ -1645,7 +1647,13 @@
 
     try {
       if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      if (emailChanged) {
+      // Fix plan RP1.2 (D16, 2026-11-06): a same-email Resend used to email
+      // the invoice without ever putting it in the client's portal. When no
+      // portal row exists yet, it now goes through sync-invoice-to-portal,
+      // which creates the row AND emails the client, in one step.
+      if (!portalInvoiceStatusKnown) await refreshPortalInvoiceStatuses();
+      const notInPortal = portalInvoiceStatusKnown && !portalInvoiceInfoBySourceId[inv.id];
+      if (emailChanged || notInPortal) {
         const res = await fetch(`${SUPABASE_URL}/functions/v1/sync-invoice-to-portal`, {
           method: 'POST',
           headers: {
@@ -1667,7 +1675,11 @@
         });
         const result = await res.json().catch(() => ({}));
         if (result && result.ok) {
-          showToast('Invoice #' + inv.invoiceNumber + ' resent to ' + inv.clientEmail + '.');
+          if (notInPortal) {
+            portalInvoiceInfoBySourceId[inv.id] = true; // the "Never sent to portal" badge goes
+            if (typeof renderInvoiceLog === 'function') renderInvoiceLog();
+          }
+          showToast('Invoice #' + inv.invoiceNumber + (emailChanged ? ' resent to ' : ' sent to the portal and emailed to ') + inv.clientEmail + '.');
         } else {
           showToast('Resend failed: ' + ((result && result.error) || 'unknown error'), { type: 'error' });
         }
@@ -1747,7 +1759,11 @@
 
     try {
       if (typeof ensureFreshToken === 'function') await ensureFreshToken();
-      if (emailChanged) {
+      // RP1.2 (D16): same as invoices -- an estimate with no portal row yet
+      // goes through sync-quote-to-portal, which creates it and emails it.
+      if (!portalQuoteStatusKnown) await refreshPortalQuoteStatuses();
+      const notInPortal = portalQuoteStatusKnown && !portalQuoteInfoBySourceId[q.id];
+      if (emailChanged || notInPortal) {
         const res = await fetch(`${SUPABASE_URL}/functions/v1/sync-quote-to-portal`, {
           method: 'POST',
           headers: {
@@ -1768,7 +1784,8 @@
         });
         const result = await res.json().catch(() => ({}));
         if (result && result.ok) {
-          showToast('Estimate #' + q.quoteNumber + ' resent to ' + q.clientEmail + '.');
+          showToast('Estimate #' + q.quoteNumber + (emailChanged ? ' resent to ' : ' sent to the portal and emailed to ') + q.clientEmail + '.');
+          if (!emailChanged) refreshPortalQuoteStatuses();
         } else {
           showToast('Resend failed: ' + ((result && result.error) || 'unknown error'), { type: 'error' });
         }
@@ -2665,6 +2682,10 @@
     pendingSourceQuoteId = matchingQuote ? matchingQuote.id : null;
 
     document.getElementById('clientName').value = document.getElementById('quoteClientName').value;
+    // Fix plan RP1.6 (2026-11-06): the email carries over too. Without it the
+    // invoice had no Resend button and never reached the client's portal.
+    const quoteEmailEl = document.getElementById('quoteClientEmail');
+    if (quoteEmailEl) document.getElementById('clientEmail').value = quoteEmailEl.value;
     document.getElementById('clientAddress').value = document.getElementById('quoteClientAddress').value;
     document.getElementById('jobDescription').value = document.getElementById('quoteJobDescription').value;
     document.getElementById('invoiceJobRef').value = document.getElementById('quoteJobRef').value;
@@ -3611,6 +3632,9 @@
   // sync-quote-to-portal ran -- see logQuote()). Populated by
   // refreshPortalQuoteStatuses(), read by renderQuoteLog() above.
   let portalQuoteInfoBySourceId = {};
+  // True once a refresh has actually answered (RP1.2): until then nothing
+  // is read as "not in the portal".
+  let portalQuoteStatusKnown = false;
 
   // Fetched fresh every time the Recent tab is opened (see
   // activateGenTab below) -- a direct, real-time read against
@@ -3642,6 +3666,7 @@
       });
 
       const bySourceId = {};
+      portalQuoteStatusKnown = true;
       portalQuotes.forEach(pq => {
         bySourceId[pq.source_quote_id] = {
           status: pq.status,

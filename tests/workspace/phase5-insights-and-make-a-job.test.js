@@ -44,11 +44,12 @@ function site({ url = 'https://www.triplehenterprisesllc.biz/', referrer = '', c
 }
 
 test('the first outside site that sent the visitor is kept (host only, first touch); our own site and a later referrer never replace it', () => {
-  let w = site({ referrer: 'https://www.google.com/search?q=dryer+repair+st+george' });
+  // (consent 'granted': kept in localStorage; without it, tab-only -- RP2.16, utm-lead-tracking.test.js)
+  let w = site({ consent: 'granted', referrer: 'https://www.google.com/search?q=dryer+repair+st+george' });
   assert.deepEqual(JSON.parse(JSON.stringify(w.getStoredAttributionExtras())), { landing_referrer: 'www.google.com', ga_client_id: null });
   assert.doesNotMatch(w.localStorage.getItem('th_first_referrer'), /dryer|search/, 'never the search terms or path');
   const kept = w.localStorage.getItem('th_first_referrer');
-  w = site({ referrer: 'https://m.facebook.com/', before: (x) => x.localStorage.setItem('th_first_referrer', kept) });
+  w = site({ consent: 'granted', referrer: 'https://m.facebook.com/', before: (x) => x.localStorage.setItem('th_first_referrer', kept) });
   assert.equal(w.getStoredAttributionExtras().landing_referrer, 'www.google.com');
   w = site({ referrer: 'https://www.triplehenterprisesllc.biz/our-work.html' });
   assert.equal(w.getStoredAttributionExtras().landing_referrer, null);
@@ -245,7 +246,7 @@ const FUNNEL = [
   { channel: 'spring-tuneup', leads: 2, jobs: 1, invoiced: 1, paid: 300 },
   { channel: 'Not known', leads: 1, jobs: 2, invoiced: 2, paid: 80 },
 ];
-function insights({ finance = true, report = REPORT, funnel = FUNNEL, saved = null } = {}) {
+function insights({ finance = true, report = REPORT, funnel = FUNNEL, saved = null, fetchedAt = new Date(Date.now() - 3600000).toISOString() } = {}) {
   const dom = new JSDOM('<!doctype html><body><div class="insights-grid">' + INS_MARKUP + '</div></body>', { url: 'https://example.com/tools/workspace.html#insights', runScripts: 'outside-only' });
   const w = dom.window;
   if (saved) w.localStorage.setItem('th_insights_period', saved);
@@ -254,7 +255,7 @@ function insights({ finance = true, report = REPORT, funnel = FUNNEL, saved = nu
     escapeHtml: ESC, escapeAttr: ESC, isSyncConfigured: () => true, anyFinanceAccessV2: () => finance,
     money: (n) => '$' + Number(n).toFixed(2),
     fetchInsightsFunnel: async (since) => { asked.push(['funnel', since]); return { ok: true, rows: funnel.map((r) => ({ ...r, paid: finance ? r.paid : null })) }; },
-    fetchWebsiteReport: async (period) => { asked.push(['web', period]); return { ok: true, report, fetchedAt: report ? '2026-11-04T13:20:00Z' : null }; },
+    fetchWebsiteReport: async (period) => { asked.push(['web', period]); return { ok: true, report, fetchedAt: report ? fetchedAt : null }; },
   });
   w.eval(INS_CODE + ';Object.assign(window, { renderInsightsFunnel, setInsPeriod });');
   return { w, asked, $: (id) => w.document.getElementById(id), text: (id) => w.document.getElementById(id).textContent.replace(/\s+/g, ' ').trim() };
@@ -266,7 +267,7 @@ test('Insights: the funnel and By source for the last 90 days by default, Not kn
   assert.deepEqual(asked.map((a) => a[0] === 'web' ? a : a[0]), ['funnel', ['web', '90d']]);
   const since = Date.parse(asked[0][1]);
   assert.ok(Math.abs(Date.now() - 90 * 86400000 - since) < 60000, '90 days back');
-  assert.deepEqual(Array.from($('insFunnel').querySelectorAll('.ins-step'), (s) => s.textContent), ['1,240Visits', '9Leads & bookings', '7Jobs', '6Invoiced', '$1630.00Paid']);
+  assert.deepEqual(Array.from($('insFunnel').querySelectorAll('.ins-step'), (s) => s.textContent), ['1,240Visits', '9Leads & bookings', '7Became jobs', '6Invoiced', '$1630.00Paid']);
   const rows = Array.from($('insBySource').querySelectorAll('.ins-row'), (r) => Array.from(r.children, (c) => c.textContent));
   assert.deepEqual(rows, [['Source', 'Leads', 'Jobs', 'Paid'], ['Google search', '6', '4', '$1250.00'], ['spring-tuneup', '2', '1', '$300.00'], ['Not known', '1', '2', '$80.00']]);
   assert.ok($('insBySource').querySelector('.ins-row:last-child').classList.contains('is-unknown'));
@@ -276,17 +277,18 @@ test('Insights: the funnel and By source for the last 90 days by default, Not kn
 test('Insights: the website card shows visits, calls tapped, bookings, where visits come from and top pages, and says where the numbers are from', async () => {
   const { w, $, text } = insights();
   await w.renderInsightsFunnel();
-  assert.deepEqual(Array.from($('insWebBody').querySelectorAll('.ins-web-tile'), (t) => t.textContent), ['1,240Visits', '41Calls tapped', '9Bookings']);
+  // Group 4 (D19): visitors, texts, emails and book clicks shown too; bookings moved to the booking page strip.
+  assert.deepEqual(Array.from($('insWebBody').querySelectorAll('.ins-web-tile'), (t) => t.textContent), ['1,240Visits', '0Visitors', '41Calls tapped', '0Texts tapped', '0Emails tapped', '0Book clicks']);
   const lists = Array.from($('insWebBody').querySelectorAll('.ins-web-list'), (l) => Array.from(l.querySelectorAll('.ins-web-row'), (r) => r.textContent));
   assert.deepEqual(lists, [['Google search700', 'Direct300', 'Google Business140', 'Social100'], ['Home900', 'Book online200']]);
-  assert.match(text('insWebNote'), /^From Google Analytics, refreshed once a day · updated Nov \d+\. Visitors who declined cookies aren't counted here\.$/);
+  assert.match(text('insWebNote'), /^From Google Analytics, refreshed once a day · updated Nov \d+ · covers the 90 days through yesterday \(the funnel above includes today\)\. No visit ID is saved for visitors who declined cookies\.$/);
   assert.equal(text('insWebPeriod'), 'last 90 days');
 });
 
 test('Insights: without finance access the Paid step and column are left out; the period switch is remembered on this device', async () => {
   const { w, asked, $ } = insights({ finance: false });
   await w.renderInsightsFunnel();
-  assert.deepEqual(Array.from($('insFunnel').querySelectorAll('.ins-step span'), (s) => s.textContent), ['Visits', 'Leads & bookings', 'Jobs', 'Invoiced']);
+  assert.deepEqual(Array.from($('insFunnel').querySelectorAll('.ins-step span'), (s) => s.textContent), ['Visits', 'Leads & bookings', 'Became jobs', 'Invoiced']);
   assert.deepEqual(Array.from($('insBySource').querySelector('.ins-row.is-head').children, (c) => c.textContent), ['Source', 'Leads', 'Jobs']);
   assert.doesNotMatch($('insBySource').innerHTML, /\$/);
   w.document.querySelector('[data-ins-period="365d"]').click();
@@ -301,7 +303,7 @@ test('Insights: before the first Google Analytics update the website card says s
   await w.renderInsightsFunnel();
   assert.equal($('insFunnel').querySelector('.ins-step b').textContent, '—');
   assert.equal(text('insWebBody'), 'Website numbers appear here after the first daily update from Google Analytics.');
-  assert.equal(text('insWebNote'), "Visitors who declined cookies aren't counted here.");
+  assert.equal(text('insWebNote'), 'No visit ID is saved for visitors who declined cookies.');
   const empty = insights({ funnel: [] });
   await empty.w.renderInsightsFunnel();
   assert.equal(empty.text('insBySource'), 'No leads, jobs or invoices in this period yet.');
@@ -311,4 +313,40 @@ test('Insights replaces the old lead-source and campaign lists, keeps Business S
   assert.match(WS, /<div class="section-block" id="section-snapshot">/);
   for (const id of ['insightsRevenueCard', 'insightsStatusDonut', 'topVendors', 'topClients', 'insightsFunnelCard', 'insightsWebsiteCard']) assert.ok(WS.includes('id="' + id + '"'), id);
   assert.match(WS, /expandSection\('analytics'\);\s*renderInsightsCharts\(\);\s*renderInsightsFunnel\(\);/);
+});
+
+// Fix plan Group 4 (2026-11-07), approved Insights board.
+test('Group 4: the extra Google Analytics tiles and the booking page strip, with the note that finished includes later-cancelled', async () => {
+  const report = Object.assign({}, REPORT, { users: 298, texts: 2, emails: 1, booking_clicks: 12, booking_page_views: 14, booking_form_starts: 6, bookings: 1 });
+  const { w, $ } = insights({ report });
+  await w.renderInsightsFunnel();
+  assert.deepEqual(Array.from($('insWebBody').querySelectorAll('.ins-web-tile'), (t) => t.textContent), ['1,240Visits', '298Visitors', '41Calls tapped', '2Texts tapped', '1Emails tapped', '12Book clicks']);
+  const rows = Array.from($('insWebBody').querySelectorAll('.ins-booking-row'), (r) => r.textContent);
+  assert.deepEqual(rows, ['Opened the booking page14', 'Started the form · 43%6', 'Finished booking · 17%1']);
+  assert.match($('insWebBody').querySelector('.ins-booking p').textContent, /^Finished counts every completed form, including bookings later cancelled\. Confirmed bookings are in Leads & bookings above\.$/);
+  assert.equal($('insWebBody').querySelector('.ins-stale'), null, 'fresh: no warning');
+});
+
+test('Group 4: an older daily copy without the booking counts shows no strip rather than zeros', async () => {
+  const { w, $ } = insights();
+  await w.renderInsightsFunnel();
+  assert.equal($('insWebBody').querySelector('.ins-booking'), null);
+});
+
+test('Group 4 RP2.18: numbers over 48 hours old carry a warning that says how old and since when', async () => {
+  const fetchedAt = new Date(Date.now() - 4 * 86400000 - 3600000).toISOString();
+  const { w, $ } = insights({ fetchedAt });
+  await w.renderInsightsFunnel();
+  const warn = $('insWebBody').querySelector('.ins-stale');
+  assert.ok(warn);
+  assert.match(warn.textContent, /^These website numbers are 4 days old\. The daily update hasn't run since [A-Z][a-z]{2} \d+\.$/);
+  assert.equal(warn.getAttribute('role'), 'status');
+  const fresh = insights({ fetchedAt: new Date(Date.now() - 47 * 3600000).toISOString() });
+  await fresh.w.renderInsightsFunnel();
+  assert.equal(fresh.$('insWebBody').querySelector('.ins-stale'), null, '47 hours: still fine');
+});
+
+test('Group 4 RP2.2: the funnel caption says the stages nest', () => {
+  assert.match(INS_MARKUP, /<p class="ins-note">Jobs, Invoiced and Paid follow the leads and bookings from this period: the jobs they became, those jobs' invoices, and the money received on them so far\./);
+  assert.doesNotMatch(WS, /Visitors who declined cookies aren't counted here/);
 });

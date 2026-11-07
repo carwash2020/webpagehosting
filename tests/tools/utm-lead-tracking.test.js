@@ -53,17 +53,76 @@ test('booking.html\'s booking insert sends the captured UTM params alongside the
   assert.match(fnMatch[0], /source: formData\.get\('source'\) \|\| null,/);
 });
 
-test('utm-tracking.js captures utm params from the URL into localStorage', () => {
+test('utm-tracking.js captures utm params from the URL into localStorage (visitor accepted analytics cookies)', () => {
   const dom = new JSDOM('<!doctype html><html><body></body></html>', {
     url: 'https://www.triplehenterprisesllc.biz/services/drywall-painting.html?utm_source=google&utm_medium=cpc&utm_campaign=fall-promo',
     runScripts: 'dangerously',
   });
+  dom.window.localStorage.setItem('th-cookie-consent', 'granted');
   dom.window.eval(utmTrackingSrc);
   const stored = JSON.parse(dom.window.localStorage.getItem('th_utm_attribution'));
   assert.equal(stored.utm_source, 'google');
   assert.equal(stored.utm_medium, 'cpc');
   assert.equal(stored.utm_campaign, 'fall-promo');
   assert.equal(typeof stored.captured_at, 'number');
+});
+
+// Fix plan RP2.16 (D28, 2026-11-06): nothing goes in localStorage until the
+// visitor accepts analytics cookies. Until then it is kept for this tab only.
+const LANDING = 'https://www.triplehenterprisesllc.biz/services/drywall-painting.html?utm_source=google&utm_campaign=fall-promo';
+function visit(url, consent, before) {
+  const dom = new JSDOM('<!doctype html><html><body></body></html>', { url, referrer: 'https://www.google.com/search?q=x', runScripts: 'dangerously' });
+  if (consent) dom.window.localStorage.setItem('th-cookie-consent', consent);
+  if (before) before(dom.window);
+  dom.window.eval(utmTrackingSrc);
+  return dom.window;
+}
+
+test('RP2.16: before any cookie choice, the campaign and first referrer are kept for this tab only', () => {
+  const w = visit(LANDING, null);
+  assert.equal(w.localStorage.getItem('th_utm_attribution'), null);
+  assert.equal(w.localStorage.getItem('th_first_referrer'), null);
+  assert.equal(JSON.parse(w.sessionStorage.getItem('th_utm_attribution')).utm_campaign, 'fall-promo');
+  assert.equal(w.getStoredUtmParams().utm_campaign, 'fall-promo', 'a click through to the form in the same tab still carries it');
+  assert.equal(w.getStoredAttributionExtras().landing_referrer, 'www.google.com');
+});
+
+test('RP2.16: declining keeps it tab-only too', () => {
+  const w = visit(LANDING, 'denied');
+  assert.equal(w.localStorage.getItem('th_utm_attribution'), null);
+  assert.equal(w.getStoredUtmParams().utm_source, 'google');
+});
+
+test('RP2.16: Accept moves it to the 90-day storage; Decline removes it from there', () => {
+  const ccSrc = fs.readFileSync(repo('js/cookie-consent.js'), 'utf8');
+  assert.match(ccSrc, /window\.dispatchEvent\(new CustomEvent\('th-consent-change', \{ detail: value \}\)\)/, 'the banner tells the page about the choice');
+  const w = visit(LANDING, null);
+  w.localStorage.setItem('th-cookie-consent', 'granted');
+  w.dispatchEvent(new w.CustomEvent('th-consent-change', { detail: 'granted' }));
+  assert.equal(JSON.parse(w.localStorage.getItem('th_utm_attribution')).utm_campaign, 'fall-promo');
+  assert.equal(JSON.parse(w.localStorage.getItem('th_first_referrer')).host, 'www.google.com');
+  assert.equal(w.sessionStorage.getItem('th_utm_attribution'), null);
+  w.localStorage.setItem('th-cookie-consent', 'denied');
+  w.dispatchEvent(new w.CustomEvent('th-consent-change', { detail: 'denied' }));
+  assert.equal(w.localStorage.getItem('th_utm_attribution'), null);
+  assert.equal(w.localStorage.getItem('th_first_referrer'), null);
+  assert.equal(w.getStoredUtmParams().utm_campaign, 'fall-promo', 'still there for this tab');
+});
+
+test('RP2.16: a copy saved in localStorage before this rule is moved out when there is no consent', () => {
+  const old = JSON.stringify({ utm_source: 'yelp', captured_at: Date.now() - 1000 });
+  const w = visit('https://www.triplehenterprisesllc.biz/', null, (x) => x.localStorage.setItem('th_utm_attribution', old));
+  assert.equal(w.localStorage.getItem('th_utm_attribution'), null);
+  assert.equal(w.getStoredUtmParams().utm_source, 'yelp');
+});
+
+test('RP2.1: every public page that loads the cookie banner also loads utm-tracking.js, so a campaign can land anywhere', () => {
+  const { execSync } = require('child_process');
+  const files = execSync('git ls-files "*.html"', { cwd: repo(), encoding: 'utf8' }).trim().split('\n')
+    .filter(f => !/^(tools|portal|tests|docs|node_modules)\//.test(f));
+  const withBanner = files.filter(f => /<script src="\/js\/cookie-consent\.js/.test(fs.readFileSync(repo(f), 'utf8')));
+  assert.ok(withBanner.length >= 39, 'found ' + withBanner.length);
+  for (const f of withBanner) assert.match(fs.readFileSync(repo(f), 'utf8'), /<script src="\/js\/utm-tracking\.js\?v=[a-f0-9]+" defer><\/script>/, f);
 });
 
 test('getStoredUtmParams() returns null when no UTM params were ever captured', () => {

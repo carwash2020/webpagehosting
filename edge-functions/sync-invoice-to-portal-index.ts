@@ -148,7 +148,7 @@ Deno.serve(async (req: Request) => {
       typeof client_name !== "string" || !client_name ||
       typeof invoice_number !== "string" || !invoice_number ||
       typeof invoice_date !== "string" || !invoice_date ||
-      typeof total !== "number"
+      typeof total !== "number" || !Number.isFinite(total)
     ) {
       return json({ ok: false, error: "Missing or invalid invoice fields." }, 400);
     }
@@ -158,6 +158,10 @@ Deno.serve(async (req: Request) => {
     if (line_items !== undefined && line_items !== null && !Array.isArray(line_items)) {
       return json({ ok: false, error: "line_items must be an array if provided." }, 400);
     }
+    // Fix plan RP1.10 (2026-11-07): money is stored in whole cents. A total
+    // from tax math like 125.0025 is kept as 125.00, so paid and total can
+    // never differ by a fraction of a cent.
+    const totalCents = Math.round(total * 100) / 100;
 
     // The guest pay code (2026-11-04, handoff §3A): made by the invoice
     // generator when the invoice is sent, the only key to /pay/ for this
@@ -197,7 +201,7 @@ Deno.serve(async (req: Request) => {
       invoice_number,
       invoice_date,
       description: description || null,
-      total,
+      total: totalCents,
       line_items: line_items || null,
       updated_at: new Date().toISOString(),
     };
@@ -252,7 +256,7 @@ Deno.serve(async (req: Request) => {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: authHeader },
         body: JSON.stringify({
-          client_email: normalizedEmail, client_name, invoice_number, total, description,
+          client_email: normalizedEmail, client_name, invoice_number, total: totalCents, description,
           pdf_base64: pdf_base64 || null, pdf_filename: pdf_filename || null,
           has_portal_account: !isNewClient,
           pay_token: payTokenStored ? pay_token : null,

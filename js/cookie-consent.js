@@ -24,6 +24,10 @@
     } catch (e) {
       /* private-browsing / storage blocked -- the choice just won't persist across visits */
     }
+    // Fix plan RP2.16 (D28, 2026-11-06): utm-tracking.js keeps campaign
+    // attribution only for this tab until analytics consent, and moves it
+    // to 90-day storage when consent is given (or drops it when declined).
+    try { window.dispatchEvent(new CustomEvent('th-consent-change', { detail: value })); } catch (e) { /* old browser */ }
   }
 
   function updateGtagConsent(value) {

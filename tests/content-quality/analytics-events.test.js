@@ -103,8 +103,10 @@ test('/tools/ and /portal/ do not load the public marketing analytics-events.js'
 
 test('the homepage lead form fires lead_form_submitted only on a real successful insert, not optimistically', () => {
   const html = fs.readFileSync(repo('index.html'), 'utf8');
-  const successBlock = html.slice(html.indexOf("fetch(LEADS_URL"), html.indexOf("fetch(LEADS_URL") + 1900);
+  const successBlock = html.slice(html.indexOf("fetch(LEADS_URL"), html.indexOf("fetch(LEADS_URL") + 2300);
   assert.match(successBlock, /if \(response\.ok \|\| response\.status === 409\) \{[\s\S]*?lead_form_submitted[\s\S]*?\}/);
+  // RP2.17: the visitor sees "sent" on a 409 too, but GA counts only a new lead.
+  assert.match(successBlock, /if \(response\.ok && typeof gtag === 'function'\) \{\s*gtag\('event', 'lead_form_submitted'/);
 });
 
 test('booking.html fires booking_step_view on real step navigation and booking_completed only on a real successful insert (not the honeypot bot-trap path)', () => {

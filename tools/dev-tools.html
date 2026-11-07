@@ -54,7 +54,7 @@
 </script>
 <link rel="stylesheet" href="/styles.css?v=09ad2a2e15">
 <link rel="stylesheet" href="/tools/styles-tools.css?v=32b0b6ede8">
-<script src="/tools/data-layer.js?v=e736cf54f5" defer></script>
+<script src="/tools/data-layer.js?v=e9b434448f" defer></script>
 <script src="/tools/dev-tools-shared.js?v=3132b24dc1" defer></script>
 <script src="/tools/tools-effects.js?v=0c74baaa7e" defer></script>
 <script src="/tools/tools-dialogs.js?v=c38f7b5b1e" defer></script>
@@ -62,7 +62,7 @@
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=a7791bfe4b" defer></script>
 <script src="/tools/tools-command-palette.js?v=1acf1175ac" defer></script>
-<script src="/tools/sync.js?v=92a4047864" defer></script>
+<script src="/tools/sync.js?v=d5226d99a6" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
      already proven in portal/*.html: keeps the old page's visual
@@ -3158,8 +3158,15 @@
       html += renderWeeklyBarRow('Cancelled (' + totalCancelled + ' total)', cancelledCounts, '#e05555');
       html += renderWeeklyBarRow('Rescheduled (' + totalRescheduled + ' total)', rescheduledCounts, '#5b9bd5');
       if (totalNew > 0) {
-        const cancelPct = Math.round((totalCancelled / totalNew) * 100);
-        html += '<p class="tool-sub" style="margin-top:8px;">' + cancelPct + '% of new bookings over this window were later cancelled.</p>';
+        // Fix plan RP2.15 (D18, 2026-11-06): one cohort -- bookings MADE in
+        // this window, and how many of THOSE were later cancelled. The
+        // Cancelled bar above also counts older bookings cancelled this
+        // window, so dividing it by new bookings could pass 100%.
+        const startMs = Date.parse(bookingWindowStart);
+        const madeInWindow = rows.filter(r => r.created_at && Date.parse(r.created_at) >= startMs);
+        const madeThenCancelled = madeInWindow.filter(r => r.cancelled_at).length;
+        const cancelPct = Math.round((madeThenCancelled / madeInWindow.length) * 100);
+        html += '<p class="tool-sub" style="margin-top:8px;">' + madeThenCancelled + ' of the ' + madeInWindow.length + ' bookings made in this window ' + (madeThenCancelled === 1 ? 'was' : 'were') + ' later cancelled (' + cancelPct + '%).</p>';
       }
       el.innerHTML = html;
     } catch (e) {
