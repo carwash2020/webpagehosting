@@ -250,6 +250,16 @@ async function callerEmails(claims: { email?: string; sub?: string }): Promise<s
   return out;
 }
 
+// Fix plan RP1.3 (2026-11-07): what is still owed on a portal invoice, in
+// cents -- the total less anything already paid (a part payment recorded in
+// the Workspace). client_portal_invoices.paid_amount is kept in step by the
+// database (sql/payments/03_portal_balance_and_sent.sql).
+function balanceCents(inv: { total: unknown; paid_amount?: unknown }): number {
+  const total = Math.round((Number(inv.total) || 0) * 100);
+  const paid = Math.round((Number(inv.paid_amount) || 0) * 100);
+  return Math.max(0, total - paid);
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: CORS_HEADERS });
@@ -291,7 +301,7 @@ Deno.serve(async (req: Request) => {
     // operation, since it also needs to write stripe_payment_intent_id
     // back onto the row a moment later regardless).
     const invoiceRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/client_portal_invoices?id=eq.${invoice_id}&select=id,client_email,total,paid,stripe_payment_intent_id`,
+      `${SUPABASE_URL}/rest/v1/client_portal_invoices?id=eq.${invoice_id}&select=id,client_email,total,paid,paid_amount,stripe_payment_intent_id`,
       { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
     );
     if (!invoiceRes.ok) {
@@ -320,9 +330,14 @@ Deno.serve(async (req: Request) => {
     }
 
     // Stripe amounts are in the smallest currency unit (cents for
-    // USD) -- Math.round guards against a floating-point total like
+    // USD) -- rounding guards against a floating-point total like
     // 19.999999999998 ever becoming a rejected, non-integer amount.
-    const amountCents = Math.round(Number(invoice.total) * 100);
+    // The balance, not the total (RP1.3): a part-paid invoice is never
+    // charged again for what was already paid.
+    const amountCents = balanceCents(invoice);
+    if (amountCents <= 0) {
+      return json({ ok: false, error: "Nothing is owed on this invoice." }, 400);
+    }
 
     // Signature required only when this client is about to have a
     // NEW card saved -- if they already have one on file, Stripe's

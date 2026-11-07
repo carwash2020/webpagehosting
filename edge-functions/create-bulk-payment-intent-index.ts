@@ -219,6 +219,16 @@ async function recordCardAuthorization(clientEmail: string, signerName: string, 
   }
 }
 
+// Fix plan RP1.3 (2026-11-07): what is still owed on a portal invoice, in
+// cents -- the total less anything already paid (a part payment recorded in
+// the Workspace). client_portal_invoices.paid_amount is kept in step by the
+// database (sql/payments/03_portal_balance_and_sent.sql).
+function balanceCents(inv: { total: unknown; paid_amount?: unknown }): number {
+  const total = Math.round((Number(inv.total) || 0) * 100);
+  const paid = Math.round((Number(inv.paid_amount) || 0) * 100);
+  return Math.max(0, total - paid);
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: CORS_HEADERS });
@@ -254,7 +264,7 @@ Deno.serve(async (req: Request) => {
 
     const idList = invoice_ids.join(",");
     const invoicesRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/client_portal_invoices?id=in.(${idList})&select=id,client_email,total,paid,stripe_payment_intent_id`,
+      `${SUPABASE_URL}/rest/v1/client_portal_invoices?id=in.(${idList})&select=id,client_email,total,paid,paid_amount,stripe_payment_intent_id`,
       { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
     );
     if (!invoicesRes.ok) {
@@ -284,8 +294,11 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, already_paying: true, error: "A payment covering one or more of these invoices has already gone through or is still processing. It can take a minute to show as paid, so please refresh this page before paying again." }, 409);
     }
 
-    const totalAmount = invoices.reduce((sum: number, inv: any) => sum + Number(inv.total), 0);
-    const amountCents = Math.round(totalAmount * 100);
+    // What is still owed on each, added up in cents (RP1.3).
+    const amountCents = invoices.reduce((sum: number, inv: any) => sum + balanceCents(inv), 0);
+    if (amountCents <= 0) {
+      return json({ ok: false, error: "Nothing is owed on these invoices." }, 400);
+    }
 
     // Same logic as create-payment-intent: a signature is required
     // only when this client is about to have a NEW card saved. If
