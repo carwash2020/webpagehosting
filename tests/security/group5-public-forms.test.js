@@ -1,6 +1,7 @@
 // Fix plan Group 5 (2026-11-07): the public forms explain the database's new
 // limits (RP3.3, RP3.4) instead of a generic error, and the Workspace bits
-// that follow the new access rules (RP3.6, RP3.33, RP4.8).
+// that follow the new access rules (RP3.33, RP4.8). RP3.6 (Finance-only
+// documents) waits for Connor's decision.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
@@ -23,14 +24,6 @@ test('RP3.4: the lead and careers forms turn a 429 into "call or text us", not "
     assert.match(s, /if \(err && err\.message === 'rate-limited'\) \{/, file);
     assert.match(s, new RegExp("We've had several " + word + ' from here in the last hour'), file);
   }
-});
-
-test('RP3.6: without Finance access the Workspace says secure documents are for Finance accounts, and hides upload', () => {
-  const ws = read('tools', 'workspace.html');
-  const fn = ws.slice(ws.indexOf('  async function renderSecureDocsList() {'), ws.indexOf('  async function uploadSecureDocumentUI() {'));
-  assert.match(fn, /getCurrentUserRole\(\) && !canViewFinance\(\)/);
-  assert.match(fn, /Secure documents are for accounts with Finance access\./);
-  assert.match(fn, /uploadWrap\.hidden = true/);
 });
 
 test('RP3.33 (D30): the Clients page asks which portal emails are staff instead of reading every staff email', () => {

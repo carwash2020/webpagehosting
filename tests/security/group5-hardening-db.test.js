@@ -12,7 +12,7 @@
 //   - a public lead arrives unhandled, now, in the default business, and the
 //     public forms are rate limited per IP; error logs over the limit are
 //     dropped quietly (RP3.4, RP3.5);
-//   - receipts and secure documents need can_view_finance (RP3.6);
+//   - the RP3.6 proposal (its own file): receipts and secure documents need can_view_finance;
 //   - D20: no deadline = as before; after it, no factor = no pass (RP3.7);
 //   - policy names say what they do (RP3.32);
 //   - D30: a staff member sees only their own account_roles row; a role
@@ -27,6 +27,8 @@ const path = require('path');
 const { PGlite } = require('@electric-sql/pglite');
 
 const SQL = fs.readFileSync(path.join(__dirname, '..', '..', 'sql', 'security', 'group5_backend_hardening.sql'), 'utf8');
+// RP3.6 is its own file (undecided, Connor); applied after the main one here so its proposal stays tested.
+const RP36 = fs.readFileSync(path.join(__dirname, '..', '..', 'sql', 'security', 'group5_rp36_finance_documents.sql'), 'utf8');
 const T = '07775ed9-0000-4000-8000-000000000001';
 const BOSS = 'boss@example.com';      // can manage roles, finance
 const TECH = 'tech@example.com';      // plain staff
@@ -130,6 +132,8 @@ async function db() {
     await d.exec(SCHEMA);
     await d.exec(SQL);
     await d.exec(SQL); // re-runnable
+    await d.exec(RP36);
+    await d.exec(RP36);
     await d.exec('grant execute on function public.current_user_can_manage_roles() to authenticated;');
     return d;
   })();

@@ -17,10 +17,8 @@
 --      error logs over the limit are dropped quietly, never an error), and a
 --      public lead always arrives unhandled, timestamped now, in the default
 --      business (handled/created_at/tenant_id from the caller are ignored).
---   5. RP3.6: receipts and secure documents (insurance, LLC certificate) are
---      readable, uploadable and deletable only with can_view_finance, like
---      invoice PDFs are with can_manage_invoices. Job photos stay staff-wide
---      (the field needs them).
+--   5. RP3.6 is NOT here: who may read receipts and secure documents is
+--      undecided (Connor), so it lives in group5_rp36_finance_documents.sql.
 --   6. RP3.7 (D20): internal_mfa_enforcement.enroll_deadline. Until it is set
 --      nothing changes. After it, a staff account with no verified second
 --      factor no longer passes the two-factor gate (logged while the mode is
@@ -240,42 +238,6 @@ create trigger public_insert_guard before insert on public.portal_bug_reports
 drop trigger if exists public_insert_guard on public.portal_client_errors;
 create trigger public_insert_guard before insert on public.portal_client_errors
   for each row execute function public.public_insert_guard();
-
--- 5. RP3.6 receipts and secure documents ---------------------------------------------
--- Was: "Internal accounts can view|upload|delete receipts|secure-documents",
--- each `bucket_id = '<bucket>' and current_user_has_any_role()`.
-create or replace function public.current_user_can_view_finance()
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select public.current_user_has_any_role()
-     and coalesce((select ar.can_view_finance from public.account_roles ar
-                   where ar.email = (select auth.jwt() ->> 'email')), false);
-$$;
-revoke execute on function public.current_user_can_view_finance() from public, anon;
-grant execute on function public.current_user_can_view_finance() to authenticated;
-
-do $$
-declare
-  b text;
-  verb text;
-begin
-  foreach b in array array['receipts', 'secure-documents'] loop
-    foreach verb in array array['view', 'upload', 'delete'] loop
-      execute format('drop policy if exists %I on storage.objects', 'Internal accounts can ' || verb || ' ' || b);
-      execute format('drop policy if exists %I on storage.objects', 'Finance accounts can ' || verb || ' ' || b);
-    end loop;
-    execute format($p$create policy %I on storage.objects for select to authenticated
-      using (bucket_id = %L and (select public.current_user_can_view_finance()))$p$, 'Finance accounts can view ' || b, b);
-    execute format($p$create policy %I on storage.objects for insert to authenticated
-      with check (bucket_id = %L and (select public.current_user_can_view_finance()))$p$, 'Finance accounts can upload ' || b, b);
-    execute format($p$create policy %I on storage.objects for delete to authenticated
-      using (bucket_id = %L and (select public.current_user_can_view_finance()))$p$, 'Finance accounts can delete ' || b, b);
-  end loop;
-end $$;
 
 -- 6. RP3.7 (D20) two-factor enrolment deadline ----------------------------------------
 alter table public.internal_mfa_enforcement add column if not exists enroll_deadline timestamptz;

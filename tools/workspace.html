@@ -3501,15 +3501,6 @@
       container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-link" xlink:href="#icon-link"></use></svg>Secure document storage isn\'t available on this page yet.</div>';
       return;
     }
-    // Fix plan RP3.6 (2026-11-07): secure documents need Finance access
-    // (the database enforces it; without it the list would just look empty).
-    const uploadWrap = document.getElementById('secureDocsUploadWrap');
-    if (typeof canViewFinance === 'function' && typeof getCurrentUserRole === 'function' && getCurrentUserRole() && !canViewFinance()) {
-      if (uploadWrap) uploadWrap.hidden = true;
-      container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-shield" xlink:href="#icon-shield"></use></svg>Secure documents are for accounts with Finance access.</div>';
-      return;
-    }
-    if (uploadWrap) uploadWrap.hidden = false;
     container.innerHTML = `
       <div class="skeleton-line w-60"></div>
       <div class="skeleton-line w-40"></div>
