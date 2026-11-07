@@ -84,5 +84,6 @@ test('the bulk signature preview computes the real total from the actual invoice
   const fnMatch = DASHBOARD.match(/function renderBulkPaymentSignatureStep\(invoiceIds\)[\s\S]*?\n  \}\n/);
   assert.ok(fnMatch, 'expected to isolate renderBulkPaymentSignatureStep()');
   assert.match(fnMatch[0], /currentInvoices\s*\n\s*\.filter\(inv => invoiceIds\.includes\(inv\.id\)\)/);
-  assert.match(fnMatch[0], /\.reduce\(\(sum, inv\) => sum \+ Number\(inv\.total\), 0\)/);
+  // RP1.3 (2026-11-07): what is left on each, summed before rounding, as the function charges.
+  assert.match(fnMatch[0], /\.reduce\(\(sum, inv\) => sum \+ \(Number\(inv\.total\) \|\| 0\) - invoicePaidSoFar\(inv\), 0\)/);
 });

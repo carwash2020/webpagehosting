@@ -51,7 +51,7 @@ test('Pay All, the authorize steps, the summary ring and the home screen use the
   assert.match(PAGE, /const totalPaid = invoices\.reduce\(\(sum, inv\) => sum \+ invoicePaidSoFar\(inv\), 0\);/);
   assert.match(PAGE, /const totalOutstanding = invoices\.reduce\(\(sum, inv\) => sum \+ invoiceBalance\(inv\), 0\);/);
   assert.match(PAGE, /const amountLabel = inv \? '\$' \+ invoiceBalance\(inv\)\.toFixed\(2\) : 'the amount due';/);
-  assert.match(fn(PAGE, 'renderBulkPaymentSignatureStep'), /\.reduce\(\(sum, inv\) => sum \+ invoiceBalance\(inv\), 0\);/);
+  assert.match(fn(PAGE, 'renderBulkPaymentSignatureStep'), /\.reduce\(\(sum, inv\) => sum \+ \(Number\(inv\.total\) \|\| 0\) - invoicePaidSoFar\(inv\), 0\);/, 'summed, then rounded once, as the function charges');
   assert.match(HOME, /select\('id,total,paid,paid_amount,paid_at,invoice_number,invoice_date,client_name'\)/);
   assert.match(HOME, /const owed = unpaid\.reduce\(\(sum, i\) => sum \+ homeInvoiceBalance\(i\), 0\);/);
   const home = new Function(fn(HOME, 'homeInvoiceBalance') + '; return homeInvoiceBalance;')();

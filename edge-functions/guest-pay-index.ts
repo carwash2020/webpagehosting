@@ -159,10 +159,14 @@ async function signedPdfUrl(invoiceNumber: string): Promise<string | null> {
 // cents -- the total less anything already paid (a part payment recorded in
 // the Workspace). client_portal_invoices.paid_amount is kept in step by the
 // database (sql/payments/03_portal_balance_and_sent.sql).
+// In dollars, rounded to cents once at the end -- the same way the webhook
+// rounds what is owed, so the two always agree; with nothing paid it is
+// exactly the old Math.round(total * 100).
+function balanceDollars(inv: { total: unknown; paid_amount?: unknown }): number {
+  return Math.max(0, (Number(inv.total) || 0) - (Number(inv.paid_amount) || 0));
+}
 function balanceCents(inv: { total: unknown; paid_amount?: unknown }): number {
-  const total = Math.round((Number(inv.total) || 0) * 100);
-  const paid = Math.round((Number(inv.paid_amount) || 0) * 100);
-  return Math.max(0, total - paid);
+  return Math.round(balanceDollars(inv) * 100);
 }
 
 Deno.serve(async (req: Request) => {

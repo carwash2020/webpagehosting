@@ -543,3 +543,15 @@ test('a short payment still marks nothing paid anywhere, public.invoices include
   assert.equal(state.workspace[0].paidAmount, 0);
   assert.equal((state.relational || []).length, 0);
 });
+
+// Fix plan RP1.3 (2026-11-07): with a part payment recorded, what the pay
+// functions charge is still exactly what the webhook counts as owed --
+// including totals with a fraction of a cent, rounded once, never per invoice.
+for (const [totals, paid] of [[[10.075, 10.075], [0, 0]], [[150, 40.25], [50, 0]], [[0.1, 0.2], [0.05, 0]], [[33.33, 33.34], [10.005, 0]]]) {
+  test(`bulk with part payments: totals ${totals.join(' + ')}, already paid ${paid.join(' + ')} -- the charge matches what the webhook says is owed`, async () => {
+    const rows = totals.map((total, i) => ({ id: 20 + i, client_email: CLIENT, total, paid_amount: paid[i], paid: false, stripe_payment_intent_id: null }));
+    const charged = await loadCreator('create-bulk-payment-intent', rows)({ invoice_ids: rows.map((r) => r.id) });
+    const owed = Math.round(rows.reduce((s, r) => s + Math.max(0, r.total - r.paid_amount), 0) * 100);
+    assert.equal(charged, owed);
+  });
+}

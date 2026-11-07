@@ -223,10 +223,11 @@ async function recordCardAuthorization(clientEmail: string, signerName: string, 
 // cents -- the total less anything already paid (a part payment recorded in
 // the Workspace). client_portal_invoices.paid_amount is kept in step by the
 // database (sql/payments/03_portal_balance_and_sent.sql).
-function balanceCents(inv: { total: unknown; paid_amount?: unknown }): number {
-  const total = Math.round((Number(inv.total) || 0) * 100);
-  const paid = Math.round((Number(inv.paid_amount) || 0) * 100);
-  return Math.max(0, total - paid);
+// In dollars, rounded to cents once at the end -- the same way the webhook
+// rounds what is owed, so the two always agree; with nothing paid it is
+// exactly the old Math.round(sum of totals * 100).
+function balanceDollars(inv: { total: unknown; paid_amount?: unknown }): number {
+  return Math.max(0, (Number(inv.total) || 0) - (Number(inv.paid_amount) || 0));
 }
 
 Deno.serve(async (req: Request) => {
@@ -294,8 +295,8 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, already_paying: true, error: "A payment covering one or more of these invoices has already gone through or is still processing. It can take a minute to show as paid, so please refresh this page before paying again." }, 409);
     }
 
-    // What is still owed on each, added up in cents (RP1.3).
-    const amountCents = invoices.reduce((sum: number, inv: any) => sum + balanceCents(inv), 0);
+    // What is still owed on each (RP1.3), added up and rounded once.
+    const amountCents = Math.round(invoices.reduce((sum: number, inv: any) => sum + balanceDollars(inv), 0) * 100);
     if (amountCents <= 0) {
       return json({ ok: false, error: "Nothing is owed on these invoices." }, 400);
     }

@@ -83,6 +83,8 @@ function loadMirrorFunctions() {
   const replaceLineItemsSrc = SYNC_JS.match(/async function mirrorReplaceLineItems[\s\S]*?\n\}/)[0];
   const jobsSrc = SYNC_JS.match(/function mirrorJobsToRelational[\s\S]*?\n\}/)[0];
   const deriveInvoicePaidSrc = SYNC_JS.match(/function deriveInvoicePaid[\s\S]*?\n\}/)[0];
+  // RP1.10 (2026-11-07): the invoice mirror writes whole cents through these two.
+  const centsSrc = SYNC_JS.match(/function centsOrNull[\s\S]*?\n\}/)[0] + '\n' + SYNC_JS.match(/function mirrorInvoicePaidAmount[\s\S]*?\n\}/)[0];
   const invoiceSrc = SYNC_JS.match(/function mirrorInvoiceToRelational[\s\S]*?\n\}/)[0];
   assert.ok(upsertSrc && deleteSrc && replaceLineItemsSrc && jobsSrc && deriveInvoicePaidSrc && invoiceSrc, 'one or more mirror functions not found in sync.js');
 
@@ -92,7 +94,7 @@ function loadMirrorFunctions() {
   const fetchWithRetryStub = 'async function fetchWithRetry(url, opts) { return fetch(url, opts); }\n';
 
   const sandbox = { isSyncConfigured: () => true, getAuthToken: () => 'fake-token', fetch: (...args) => global.fetch(...args) };
-  const src = fetchWithRetryStub + failureLogSrc + '\n' + upsertSrc + '\n' + deleteSrc + '\n' + replaceLineItemsSrc + '\n' + jobsSrc + '\n' + deriveInvoicePaidSrc + '\n' + invoiceSrc +
+  const src = fetchWithRetryStub + failureLogSrc + '\n' + upsertSrc + '\n' + deleteSrc + '\n' + replaceLineItemsSrc + '\n' + jobsSrc + '\n' + deriveInvoicePaidSrc + '\n' + centsSrc + '\n' + invoiceSrc +
     '\nsandbox.mirrorUpsert = mirrorUpsert; sandbox.mirrorDelete = mirrorDelete; sandbox.mirrorReplaceLineItems = mirrorReplaceLineItems; sandbox.mirrorJobsToRelational = mirrorJobsToRelational; sandbox.mirrorInvoiceToRelational = mirrorInvoiceToRelational;' +
     '\nsandbox.fetchWithRetry = fetchWithRetry; sandbox.fetch = fetch;' +
     '\nsandbox.loadMirrorFailures = loadMirrorFailures; sandbox.clearMirrorFailures = clearMirrorFailures;';

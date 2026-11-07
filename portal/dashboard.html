@@ -1075,7 +1075,7 @@
   function renderBulkPaymentSignatureStep(invoiceIds) {
     const total = currentInvoices
       .filter(inv => invoiceIds.includes(inv.id))
-      .reduce((sum, inv) => sum + invoiceBalance(inv), 0);
+      .reduce((sum, inv) => sum + (Number(inv.total) || 0) - invoicePaidSoFar(inv), 0);
     const amountLabel = '$' + total.toFixed(2);
     document.getElementById('paymentModalBody').innerHTML =
       '<p class="pay-step-kicker">Step 1 of 2 &middot; authorize</p>' +
