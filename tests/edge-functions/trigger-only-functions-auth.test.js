@@ -45,6 +45,8 @@ const FUNCTIONS = [
   { name: 'send-lead-email', payload: { type: 'INSERT', table: 'th_leads', record: { id: 1, name: 'n', email: 'lead@example.com', details: 'd' } } },
   { name: 'send-job-application-email', payload: { type: 'INSERT', table: 'th_job_applications', record: { id: 1, name: 'n', email: 'applicant@example.com' } } },
   { name: 'send-job-status-change-email', payload: { type: 'UPDATE', table: 'jobs', record: { id: 1, cancelled_at: '2026-09-23T00:00:00Z' }, old_record: { id: 1, cancelled_at: null } } },
+  // Fix plan RP6.16 (2026-11-07): the renamed function.
+  { name: 'send-job-cancel-reschedule-email', payload: { type: 'UPDATE', table: 'jobs', record: { id: 1, cancelled_at: '2026-09-23T00:00:00Z' }, old_record: { id: 1, cancelled_at: null } } },
   { name: 'reconcile-stripe-payments', payload: {} },
   // Fix plan RP3.14 (2026-11-07): the three cron/workflow-only functions
   // that lacked the empty-key guard.
@@ -138,6 +140,7 @@ test('every in-repo SQL caller authenticates with the send_push_service_role_key
     ['sql/leads/add_lead_email_notification.sql', 'send-lead-email'],
     ['sql/careers/create_th_job_applications.sql', 'send-job-application-email'],
     ['sql/infra/add_job_cancel_reschedule.sql', 'send-job-status-change-email'],
+    ['sql/infra/rp616_job_cancel_reschedule_email_rename.sql', 'send-job-cancel-reschedule-email'],
     ['sql/infra/add_stripe_reconciliation_cron.sql', 'reconcile-stripe-payments'],
   ];
   for (const [file, fn] of callers) {
