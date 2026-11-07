@@ -6266,7 +6266,7 @@ Fix plan Group 6 (RP5 + RP6 + A1–A7; decisions D9, D22, D25, D27, D32). Each d
 - **RP6.12:** Log Expense uses the receipt icon. **RP6.13:** "1 month ago".
 - **RP6.14:** Send test lead says it also emails Steve and Connor.
 - **RP6.15:** the Email list says it also receives client job-message alerts (documented, not separated).
-- **RP6.16 (D32):** `send-job-status-change-email` is now `send-job-cancel-reschedule-email` (v1, deployed), and the job trigger posts to it (`sql/infra/rp616_job_cancel_reschedule_email_rename.sql`, applied). The old function is to be deleted in the dashboard (Kavi).
+- **RP6.16 (D32):** `send-job-status-change-email` is now `send-job-cancel-reschedule-email` (v1, deployed), and the job trigger posts to it (`sql/infra/rp616_job_cancel_reschedule_email_rename.sql`, applied). The old function was deleted in the dashboard by Kavi (confirmed gone from the live list).
 
 **Addendum**
 - **A1:** shipped in Group 2 (one sign-in).
