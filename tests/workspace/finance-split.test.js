@@ -127,8 +127,12 @@ test('the job-card margin badge reads expense/income/invoice data via the shared
 
 test('Contacts\' client-history feature reads income data via the shared data layer, not the removed loadIncomeEntries', () => {
   const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
-  assert.match(src, /const manualIncomeForClient = thRead\(TH_KEYS\.income, \[\]\)/,
-    'toggleClientHistory should read income via thRead now that loadIncomeEntries moved to finance.html');
+  // Fix plan RP6.2 (2026-11-07, D22): a supplier's History reads Expenses
+  // by vendor through the shared layer (thExpenses) and no longer reads
+  // income at all; still never the removed loadIncomeEntries.
+  const fn = src.slice(src.indexOf('function toggleClientHistory('), src.indexOf('function toggleClientHistory(') + 2500);
+  assert.match(fn, /thExpenses\.all\(\)/);
+  assert.doesNotMatch(fn, /loadIncomeEntries/);
 });
 
 test('old #cost/#income/#expenses/#profitability links on job-tracker.html redirect to finance.html', () => {
@@ -1023,7 +1027,9 @@ test('Finance is no longer styled as a tab -- it\'s visually distinct from the r
 
 test('the "Log Expense" action on a job opens Finance\'s Expenses form for that job, behind Finance\'s own permission; the pop-up copy of the form is gone', () => {
   const src = fs.readFileSync(JOB_TRACKER_PATH, 'utf8');
-  assert.match(src, /if \(typeof canViewFinance !== 'function' \|\| canViewFinance\(\)\) \{\s*actions\.push\(\{ label: 'Log Expense', icon: 'camera', onClick: \(\) => \{ location\.href = '\/tools\/finance\.html\?job=' \+ encodeURIComponent\(jobId\) \+ '#expenses'; \} \}\);/);
+  // Fix plan RP6.12 (2026-11-07): the receipt icon, not the camera (a
+  // comment line now sits above the push).
+  assert.match(src, /if \(typeof canViewFinance !== 'function' \|\| canViewFinance\(\)\) \{\s*(?:\/\/[^\n]*\n\s*)?actions\.push\(\{ label: 'Log Expense', icon: 'receipt', onClick: \(\) => \{ location\.href = '\/tools\/finance\.html\?job=' \+ encodeURIComponent\(jobId\) \+ '#expenses'; \} \}\);/);
   assert.doesNotMatch(src, /id="quickExpenseOverlay"|function showQuickExpenseModal|function submitQuickExpense|QUICK_EXPENSE_TUTORIAL/);
   // Job detail's Expense button: the same destination.
   const jd = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'job-detail.html'), 'utf8');
