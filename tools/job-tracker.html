@@ -62,7 +62,7 @@
 <script src="/tools/tools-media-sharing.js?v=bc2b89004d" defer></script>
 <script src="/js/app-freshness.js?v=191f305671" defer></script>
 <script src="/tools/tools-nav-pwa.js?v=a7791bfe4b" defer></script>
-<script src="/tools/tools-command-palette.js?v=1acf1175ac" defer></script>
+<script src="/tools/tools-command-palette.js?v=33e01d62de" defer></script>
 <script src="/tools/tools-tour.js?v=f8c0b490ba" defer></script>
 <style>
   /* Cross-document view transitions (2026-09-21) -- same pattern
@@ -1218,7 +1218,7 @@
       <ul>
         <li><strong>Jobs</strong> &mdash; the main list, grouped by when (Overdue, Today, Tomorrow, Next 7 days, Later), with search and status filters. On a phone each card shows what you need in the truck: <strong>Done</strong>, a <strong>Call</strong> button, <strong>Directions</strong>, and <strong>&middot;&middot;&middot;</strong> for everything else (start it, photos, create an invoice, send the confirmation email, log an expense, edit, delete) &mdash; long-press a card for the same list. Tap the title to open the job's own page. Swipe a card left for a quick Done. Marking a job done asks what's next: <strong>Create invoice</strong> (the form opens filled from the job) or a review request. A finished job nobody has billed wears an orange <strong>To invoice</strong> pill, and the <strong>To invoice</strong> filter lists them all, until it's invoiced, paid another way, or marked <strong>No charge</strong> from its &middot;&middot;&middot; (a warranty callback, a favor). Filed under "Done," a job shows where its money is (Invoiced, Overdue, Paid) and its profit margin once it's linked to an invoice. On a real desktop screen, this same list also shows as a sortable table &mdash; click any column header to sort by it, click again to reverse. "Photos" attaches before/after pictures; tap the <svg class="th-icon" aria-hidden="true"><use href="#icon-star" xlink:href="#icon-star"></use></svg> star on any photo to queue it for the public website's gallery.</li>
         <li><strong>List / Board / Calendar</strong> &mdash; the same jobs three ways, remembered per device. <strong>Board</strong> puts Not Started, In Progress, and Done side by side. <strong>Calendar</strong> is a month view of every dated job (plus online bookings you haven't added yet, in purple) &mdash; tap a day to see what's scheduled, then <strong>Add to Phone</strong> to drop a job into your phone's own calendar app as a one-time export.</li>
-        <li><strong>Suppliers</strong> &mdash; an address book for the parts houses and vendors you buy from. Clients have their own list on <strong>Clients</strong> (anyone on a job lands there by themselves; <strong>Add</strong> covers anyone new). Anyone saved here before keeps their entry, and "History" still shows their past jobs and lifetime spend (matched by exact name against Jobs and Invoices).</li>
+        <li><strong>Suppliers</strong> &mdash; an address book for the parts houses and vendors you buy from. Clients have their own list on <strong>Clients</strong> (anyone on a job lands there by themselves; <strong>Add</strong> covers anyone new). Anyone saved here before keeps their entry, and "History" shows what you've spent with them: the expenses logged on Money with that vendor name.</li>
         <li><strong>Notes</strong> &mdash; keep as many separate, named notes as you want. Search by title or content, click one on the left to open it, or start a new one. Saves automatically as you type.</li>
       </ul>
       <p>Set up Cloud Sync once on the Workspace page's "?" help, and this data follows you to any device using the same sync code. The small dot next to the sync status shows whether live updates are connected &mdash; green means changes on another device show up here automatically, no refresh needed.</p>
@@ -2872,7 +2872,8 @@
     // pass, 2026-10-31) -- the same link Job detail's Expense button uses,
     // and gated the same way: Finance is a finance-permission page.
     if (typeof canViewFinance !== 'function' || canViewFinance()) {
-      actions.push({ label: 'Log Expense', icon: 'camera', onClick: () => { location.href = '/tools/finance.html?job=' + encodeURIComponent(jobId) + '#expenses'; } });
+      // Fix plan RP6.12 (2026-11-07): the receipt icon, not the camera.
+      actions.push({ label: 'Log Expense', icon: 'receipt', onClick: () => { location.href = '/tools/finance.html?job=' + encodeURIComponent(jobId) + '#expenses'; } });
     }
     actions.push({ label: 'Edit', icon: 'edit', kind: 'edit', onClick: () => editJob(jobId) });
     actions.push({ label: 'Delete', isDanger: true, icon: 'trash', kind: 'delete', onClick: () => deleteJob(jobId) });
@@ -3358,6 +3359,11 @@
     });
   }
 
+  // Fix plan RP6.2 (2026-11-07, D22): a supplier's History is what was
+  // spent with them -- Expenses (type 'expense') whose vendor is this
+  // supplier's name, trimmed and in any case -- newest first. It used to
+  // match Jobs, Invoices and Income by name as if the supplier were a
+  // client, so a supplier showed a same-named client's jobs and spend.
   function toggleClientHistory(contactId) {
     const el = document.getElementById('history-' + contactId);
     if (!el) return;
@@ -3366,28 +3372,20 @@
 
     const contact = thContacts.all().find(c => c.id === contactId);
     if (!contact) return;
-    const name = contact.name.trim().toLowerCase();
+    const name = String(contact.name || '').trim().toLowerCase();
 
-    const jobs = thJobs.list({ pageSize: Infinity }).rows.filter(j => j.client && j.client.trim().toLowerCase() === name);
-    const invoices = thInvoices.all().filter(i => i.clientName && i.clientName.trim().toLowerCase() === name);
-    // loadIncomeEntries() moved to finance.html with the Income tab --
-    // this Contacts feature legitimately still needs manual income data
-    // for the lifetime-spend total, so it reads via the shared layer
-    // directly rather than losing this capability entirely.
-    const manualIncomeForClient = thRead(TH_KEYS.income, []).filter(e => e.origin !== 'invoice' && e.source && e.source.trim().toLowerCase() === name);
-    const invoiceSpend = invoices.reduce((sum, i) => sum + (i.total || 0), 0);
-    const manualSpend = manualIncomeForClient.reduce((sum, e) => sum + (e.amount || 0), 0);
-    const lifetimeSpend = invoiceSpend + manualSpend;
-    const totalEntries = invoices.length + manualIncomeForClient.length;
+    const spent = name ? thExpenses.all()
+      .filter(e => e && e.type === 'expense' && String(e.vendor || '').trim().toLowerCase() === name)
+      .sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))) : [];
 
-    let html = `<p style="color:var(--orange-light); font-size:13px; font-weight:600; margin:0 0 10px;">Lifetime spend: ${money(lifetimeSpend)} across ${totalEntries} entr${totalEntries === 1 ? 'y' : 'ies'}</p>`;
-
-    if (jobs.length === 0) {
-      html += '<p class="inline-note">No jobs on file for this exact name yet &mdash; this only matches jobs where the Client Name field matches exactly.</p>';
+    let html;
+    if (spent.length === 0) {
+      html = '<p class="inline-note">No expenses logged with this vendor name yet. Expenses you log on Money with this exact vendor name show up here.</p>';
     } else {
-      html += jobs
-        .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
-        .map(j => `<p style="font-size:13.5px; color:var(--white); margin:4px 0;">${escapeHtml(j.title)} <span style="color:var(--text-dim);">&mdash; ${STATUS_LABEL[j.status]}${j.date ? ' &middot; ' + escapeHtml(j.date) : ''}</span></p>`)
+      const total = spent.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+      html = `<p style="color:var(--orange-light); font-size:13px; font-weight:600; margin:0 0 10px;">Spent with them: ${money(total)} across ${spent.length} expense${spent.length === 1 ? '' : 's'}</p>`;
+      html += spent
+        .map(e => `<p class="supplier-history-row" style="display:flex; justify-content:space-between; gap:12px; font-size:13.5px; color:var(--white); margin:4px 0;"><span>${escapeHtml(e.date || '')} <span style="color:var(--text-dim);">&mdash; ${escapeHtml(e.desc || 'Expense')}</span></span><span>${money(Number(e.amount) || 0)}</span></p>`)
         .join('');
     }
     el.innerHTML = html;
@@ -3660,8 +3658,14 @@
     viewMonth += delta;
     if (viewMonth < 0) { viewMonth = 11; viewYear--; }
     if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+    // Fix plan RP6.9 (2026-11-07): the day panel follows the month, as
+    // goToToday() and selectDay() keep it. A selected day outside the new
+    // month is cleared (its jobs kept showing under a month they aren't
+    // in); one inside it is re-rendered.
+    if (selectedDateStr && selectedDateStr.slice(0, 8) !== dateKey(viewYear, viewMonth, 1).slice(0, 8)) selectedDateStr = null;
     renderCalendar();
     playCalGridTransition(delta);
+    renderDayDetail();
   }
 
   function goToToday() {

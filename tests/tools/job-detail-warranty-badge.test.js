@@ -52,7 +52,11 @@ test('job-detail.html now shows the same 30-day warranty countdown job-tracker.h
   const jobDetailFn = extractFn(JOB_DETAIL, 'warrantyBadgeHtml');
   const jobTrackerFn = extractFn(JOB_TRACKER, 'warrantyBadgeHtml');
   // Same business rule, not a second, potentially-drifting copy of it.
-  assert.match(jobDetailFn, /job\.status !== 'done' \|\| !job\.date/);
+  // Fix plan RP6.1 (2026-11-07): job-detail.html now counts from when the
+  // job was marked done (thJobDoneDate), not job.date; the 30 days and the
+  // look are still the same as job-tracker.html's.
+  assert.match(jobDetailFn, /job\.status !== 'done' \|\| typeof thJobDoneDate !== 'function'/);
+  assert.match(jobDetailFn, /const completionDate = thJobDoneDate\(job\);/);
   assert.match(jobDetailFn, /const daysLeft = 30 - daysSince;/);
   assert.match(jobTrackerFn, /const daysLeft = 30 - daysSince;/);
   assert.match(JOB_DETAIL, /warrantyBadgeHtml\(j\)/, 'expected the badge to actually be inserted into the rendered hero');

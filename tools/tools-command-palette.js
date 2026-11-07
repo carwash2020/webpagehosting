@@ -48,7 +48,15 @@
   // and record matches follow underneath. Gated ones use the same auth.js
   // checks the nav uses, so an Employee account never sees a Finance link
   // here that the bar hides.
-  function allowed(check) { return typeof window[check] !== 'function' || window[check](); }
+  // Fix plan RP6.8 (2026-11-07): fails closed, like the nav's own check
+  // (tools-nav-pwa.js) -- a check that isn't on the page (auth.js missing,
+  // a misspelled name) hides the entry instead of showing it. A list of
+  // checks means any one of them is enough (D27: Client portal admin is
+  // Invoices or Clients).
+  function allowed(check) {
+    if (Array.isArray(check)) return check.some(allowed);
+    return typeof window[check] === 'function' && !!window[check]();
+  }
   var ACTIONS = [
     { title: 'New job', meta: 'Jobs \u203a Add a Job', href: '/tools/job-tracker.html#add-job', keywords: 'add create book schedule' },
     { title: 'Calendar', meta: 'Jobs \u203a Calendar view', href: '/tools/job-tracker.html#calendar', keywords: 'month schedule bookings' },
@@ -56,7 +64,7 @@
     { title: 'Notes', meta: 'Jobs \u203a Notes tab', href: '/tools/job-tracker.html#notes', keywords: 'notepad memo' },
     { title: 'Clients', meta: 'Your client list: who owes you, next and last job, call or text', href: '/tools/clients.html#directory', keywords: 'customer directory people owes balance phone', perm: 'canManageClients' },
     { title: 'Add a client', meta: 'Clients \u203a new client', href: '/tools/clients.html#new', keywords: 'new customer create person', perm: 'canManageClients' },
-    { title: 'Client portal admin', meta: 'Clients \u203a Portal: accounts, invites, referral credit, work orders', href: '/tools/clients.html#portal', keywords: 'portal invite referral work order', perm: 'canManageInvoices' },
+    { title: 'Client portal admin', meta: 'Clients \u203a Portal: accounts, invites, referral credit, work orders', href: '/tools/clients.html#portal', keywords: 'portal invite referral work order', perm: ['canManageInvoices', 'canManageClients'] },
     { title: 'Create invoice', meta: 'Invoices \u203a New invoice tab', href: '/tools/invoice-generator.html#invoice', keywords: 'bill send pdf', perm: 'canManageInvoices' },
     { title: 'New quote / estimate', meta: 'Invoices \u203a New quote tab', href: '/tools/invoice-generator.html#quote', keywords: 'price bid proposal cost lookup calculator tax', perm: 'canManageInvoices' },
     { title: 'Charge a card', meta: 'Invoices \u203a take a card on the spot, no invoice', href: '/tools/invoice-generator.html#charge', keywords: 'quick charge pos pay payment card stripe', perm: 'canManageInvoices' },

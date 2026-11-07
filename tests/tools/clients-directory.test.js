@@ -284,7 +284,8 @@ test('Clients is in the nav for accounts with the Clients capability (Phase 4, 2
   assert.match(palette, /\{ label: 'Clients', load: loadClients,/);
   assert.match(palette, /href: '\/tools\/client-detail\.html\?id=' \+ encodeURIComponent\(c\.id\)/);
   assert.match(palette, /href: '\/tools\/job-detail\.html\?id=' \+ encodeURIComponent\(j\.id\)/, 'job results open the job itself');
-  assert.match(palette, /href: '\/tools\/clients\.html#portal', [^\n]*perm: 'canManageInvoices'/);
+  // Fix plan RP6.8 (2026-11-07, D27): portal admin is Invoices or Clients.
+  assert.match(palette, /href: '\/tools\/clients\.html#portal', [^\n]*perm: \['canManageInvoices', 'canManageClients'\]/);
   // First Impressions handoff (2026-09-29): the 6-step tour no longer
   // visits every page (clients.html included) -- see tools/tools-tour.js.
   assert.match(CLIENTS, /id="clientDirSearch"/);
