@@ -2470,17 +2470,19 @@
     return copy;
   }
 
+  // Fix plan RP6.1 (2026-11-07): counts from when the job was marked done
+  // (thJobDoneDate, data-layer.js), the same as Job detail's badge.
   function warrantyBadgeHtml(job) {
-    if (job.status !== 'done' || !job.date) return '';
-    const completionDate = new Date(job.date + 'T00:00:00');
-    if (isNaN(completionDate.getTime())) return '';
+    if (job.status !== 'done' || typeof thJobDoneDate !== 'function') return '';
+    const completionDate = thJobDoneDate(job);
+    if (!completionDate) return '';
     const today = new Date(new Date().toDateString());
     const daysSince = Math.round((today - completionDate) / (24 * 60 * 60 * 1000));
     const daysLeft = 30 - daysSince;
     if (daysLeft >= 0) {
-      return `<span class="badge badge-warranty is-active" title="30-day labor warranty, based on this job's date">Warranty: ${daysLeft} day${daysLeft === 1 ? '' : 's'} left</span>`;
+      return `<span class="badge badge-warranty is-active" title="30-day labor warranty, based on when it was marked done">Warranty: ${daysLeft} day${daysLeft === 1 ? '' : 's'} left</span>`;
     }
-    return `<span class="badge badge-warranty is-expired" title="30-day labor warranty, based on this job's date">Warranty expired</span>`;
+    return `<span class="badge badge-warranty is-expired" title="30-day labor warranty, based on when it was marked done">Warranty expired</span>`;
   }
 
   // Extracted (2026-09-07) from what used to be an inline .map() callback

@@ -56,7 +56,8 @@ test('RP5.5 (D25): the booking and lead-form service lists are the same union', 
   assert.deepEqual([...lead].sort(), [...union].sort(), 'lead form');
   assert.deepEqual([...labels].sort(), [...union].sort(), 'booking');
   // Emergency on the booking page points at the phone first.
-  assert.match(booking, /key: 'emergency', label: 'Emergency Calls'[^\n]*call or text \(435\) 414-1667/);
+  // (the number itself stays out of the page's scripts: contact-hooks-public.test.js)
+  assert.match(booking, /key: 'emergency', label: 'Emergency Calls'[^\n]*call or text us now/);
   // manage-booking draws an icon for every label booking can store.
   const manage = read('manage-booking.html');
   for (const l of union) assert.ok(manage.includes(`'${l}':`), `manage-booking icon for ${l}`);

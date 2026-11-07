@@ -595,7 +595,7 @@
   // the job's own date for jobs finished before that field existed -- not
   // from the day it was scheduled. A job booked for the 1st and finished on
   // the 9th is covered through the 9th + 30. Job Tracker's card badge and
-  // this page's PDF warranty line still count from job.date (not in RP6.1).
+  // this page's PDF warranty line use the same date.
   function warrantyBadgeHtml(job) {
     if (job.status !== 'done' || typeof thJobDoneDate !== 'function') return '';
     const completionDate = thJobDoneDate(job);
@@ -1106,13 +1106,18 @@
       }
 
       // Warranty -- U17 (same finding): "state it plainly rather than
-      // leave it in the contract nobody reads." Same 30-day-from-job.date
-      // rule as warrantyBadgeHtml() above; the sheet states the actual
-      // end date rather than a "days left" count, since that number goes
-      // stale the moment this PDF is saved or printed.
-      if (j.date) {
-        const completionDate = new Date(j.date + 'T00:00:00');
-        if (!isNaN(completionDate.getTime())) {
+      // leave it in the contract nobody reads." Same 30 days from when it
+      // was marked done as warrantyBadgeHtml() above (RP6.1, 2026-11-07);
+      // the sheet states the actual end date rather than a "days left"
+      // count, since that number goes stale the moment this PDF is saved
+      // or printed.
+      {
+        // statusChangedAt is the LAST status change, so it is the done date
+        // only for a done job; a sheet for an unfinished job keeps job.date.
+        const completionDate = j.status === 'done' && typeof thJobDoneDate === 'function'
+          ? thJobDoneDate(j)
+          : (j.date && !isNaN(new Date(j.date + 'T00:00:00').getTime()) ? new Date(j.date + 'T00:00:00') : null);
+        if (completionDate) {
           const warrantyEnd = new Date(completionDate);
           warrantyEnd.setDate(warrantyEnd.getDate() + 30);
           const warrantyDisplay = warrantyEnd.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });

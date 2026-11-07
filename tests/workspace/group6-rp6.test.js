@@ -436,3 +436,12 @@ test('RP6.15: the Email list says it also gets client job-message alerts (docume
   // The function itself is unchanged: it still reads the work_order list.
   assert.match(read('edge-functions', 'notify-job-message-email-index.ts'), /notification_recipients\?select=email&notify_types=cs\.%5B%22work_order%22%5D/);
 });
+
+test('RP6.1: Job Tracker\'s card badge and the job sheet PDF count the warranty from the same done date', () => {
+  const jt = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'job-tracker.html'), 'utf8');
+  const fn = jt.slice(jt.indexOf('  function warrantyBadgeHtml(job) {'), jt.indexOf('  function warrantyBadgeHtml(job) {') + 900);
+  assert.match(fn, /const completionDate = thJobDoneDate\(job\);/);
+  assert.doesNotMatch(fn, /new Date\(job\.date \+ 'T00:00:00'\)/);
+  const jd = fs.readFileSync(path.join(__dirname, '..', '..', 'tools', 'job-detail.html'), 'utf8');
+  assert.match(jd, /const completionDate = j\.status === 'done' && typeof thJobDoneDate === 'function'\s*\? thJobDoneDate\(j\)/);
+});
