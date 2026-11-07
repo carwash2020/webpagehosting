@@ -357,6 +357,8 @@ function blobRoute(st, method, body, p) {
   }
   return null;
 }
+// The parsed host, not a string prefix (CodeQL js/incomplete-url-substring-sanitization).
+const isStripe = (url) => { try { return new URL(url).hostname === 'api.stripe.com'; } catch (e) { return false; } };
 const income = (st, code = 'tripleh-workspace-2026') => JSON.parse(st.blobs[code].data.th_income_log || '[]');
 
 test('create-pos-charge RP3.16: an unknown mode is a 400 -- no PaymentIntent, no card authorization', async () => {
@@ -365,7 +367,7 @@ test('create-pos-charge RP3.16: an unknown mode is a 400 -- no PaymentIntent, no
     const g = load('create-pos-charge', posRoutes(st));
     const r = await g.call({ mode, client_email: 'client@example.com', amount: 50, description: 'x', signer_name: 'Pat', signature_image: 'data:image/png;base64,AA' }, staffToken());
     assert.equal(r.status, 400, String(mode));
-    assert.equal(g.calls.filter((c) => c.url.startsWith('https://api.stripe.com')).length, 0);
+    assert.equal(g.calls.filter((c) => isStripe(c.url)).length, 0);
     assert.equal(st.authorizations || 0, 0);
   }
 });
@@ -376,7 +378,7 @@ test('create-pos-charge RP3.27 / D29: "check" needs can_manage_invoices; others 
   const denied = await g.call({ mode: 'check', client_email: 'client@example.com' }, staffToken('tech@example.com'));
   assert.equal(denied.status, 403);
   assert.doesNotMatch(JSON.stringify(denied.body), /4242|visa|has_saved_card/);
-  assert.equal(g.calls.filter((c) => c.url.includes('stripe_customers') || c.url.startsWith('https://api.stripe.com')).length, 0);
+  assert.equal(g.calls.filter((c) => c.url.includes('stripe_customers') || isStripe(c.url)).length, 0);
   const ok = await g.call({ mode: 'check', client_email: 'client@example.com' }, staffToken());
   assert.deepEqual(ok.body, { ok: true, has_saved_card: true, brand: 'visa', last4: '4242' });
 });
