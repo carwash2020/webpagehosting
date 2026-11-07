@@ -130,6 +130,7 @@ async function withRealRole(row) {
   const w = dom.window;
   w.localStorage.setItem('th_auth_session', JSON.stringify({
     email: row.email, access_token: 'test-token', refresh_token: 'r', expires_at: Math.floor(Date.now() / 1000) + 3600,
+    remember_until: Date.now() + 30 * 86400000, // a current remembered session (D31 clears pre-cap ones once)
   }));
   w.fetch = async (url) => ({ ok: true, status: 200, json: async () => (String(url).includes('/rest/v1/account_roles') ? [row] : []) });
   const s = w.document.createElement('script');

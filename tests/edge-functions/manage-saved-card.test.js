@@ -21,7 +21,9 @@ test('uses its own dedicated Stripe secret, not the shared one, matching the "on
 });
 
 test('list mode looks up the caller\'s own customer by their verified session email, never a client-supplied value', () => {
-  assert.match(MANAGE_CARD, /const customerId = await findExistingStripeCustomerId\(claims\.email\.toLowerCase\(\)\);/);
+  // Fix plan RP3.20 (2026-11-07): lowercased once, at the top, from the verified claims.
+  assert.match(MANAGE_CARD, /const callerEmail = String\(claims\.email\)\.trim\(\)\.toLowerCase\(\);/);
+  assert.match(MANAGE_CARD, /const customerId = await findExistingStripeCustomerId\(callerEmail\);/);
 });
 
 test('a client with no Stripe customer at all gets an empty list, not an error', () => {

@@ -63,7 +63,7 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="/styles.css?v=09ad2a2e15">
-<link rel="stylesheet" href="/portal/portal-app.css?v=4af907b767">
+<link rel="stylesheet" href="/portal/portal-app.css?v=ef0735c580">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -103,7 +103,7 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=32b0b6ede8">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous"></script>
 <script src="/signature-pad.js?v=f95f8e1d28"></script>
-<script src="/portal/portal-app.js?v=abb7e37c38"></script>
+<script src="/portal/portal-app.js?v=8bbf28b1fe"></script>
 <script>
   // Stripe.js is only needed once a client opens the card sheet, never to
   // paint the page -- so it no longer blocks parsing. It starts a few
@@ -339,6 +339,9 @@
 <link rel="stylesheet" href="/portal/portal-polish.css?v=f0d57c5e20">
 </head>
 <body class="portal-page">
+<!-- Skip link (fix plan RP4.9, 2026-11-07): hidden until focused; jumps past
+     the app bar and navigation to #portalMain. Styles: portal-app.css. -->
+<a href="#portalMain" class="portal-skip-link">Skip to main content</a>
 
 <!-- App bar (v2 shell, 2026-09-28) -- same as home.html's: kicker +
      Anton title, the round Report-a-problem button (this page's one
@@ -392,6 +395,8 @@
   </div>
 </div>
 
+<main id="portalMain" tabindex="-1">
+
 <!-- Desktop (1200px+, 2026-09-22): the invoice list is the main column
      and the "what do I owe" summary sits beside it. Same DOM order as
      before, so a phone still sees pay-first, ring, chart, then the list. -->
@@ -433,6 +438,8 @@
 </div>
 </div>
 </div>
+
+</main>
 
 <div class="report-bug-overlay" id="reportBugOverlay" style="display:none;">
   <div class="report-bug-modal">

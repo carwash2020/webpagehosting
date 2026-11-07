@@ -94,7 +94,9 @@ Deno.serve(async (req: Request) => {
     // down" push notifications and emails to Steve/Connor at will.
     const authHeader = req.headers.get("Authorization") || "";
     const token = authHeader.replace(/^Bearer\s+/i, "");
-    if (token !== SERVICE_ROLE_KEY) {
+    // `!SERVICE_ROLE_KEY ||` (fix plan RP3.14, 2026-11-07): an empty env
+    // key can never match an empty bearer.
+    if (!SERVICE_ROLE_KEY || token !== SERVICE_ROLE_KEY) {
       return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
@@ -120,7 +122,7 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
   } catch (err: any) {
     console.error("uptime-alert error:", err.message);
-    return new Response(JSON.stringify({ ok: false, error: err.message }), {
+    return new Response(JSON.stringify({ ok: false, error: "uptime-alert failed; see function logs." }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

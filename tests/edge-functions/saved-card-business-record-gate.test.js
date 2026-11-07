@@ -36,6 +36,10 @@ function reset() {
   st.customers = [];
   st.records = Object.fromEntries(ALL_TABLES.map((t) => [t, []]));
   st.setupIntents = 0;
+  st.stripeCalls = 0;
+  st.authorizations = [];
+  st.customerPosts = [];
+  st.setupFails = false;
 }
 reset();
 
@@ -48,6 +52,8 @@ async function fakeFetch(url, init = {}) {
 
   if (u.host === 'api.stripe.com') {
     const p = u.pathname.replace('/v1/', '');
+    st.stripeCalls += 1;
+    if (p === 'setup_intents' && st.setupFails) return json({ error: { message: 'secret-ish Stripe detail rk_live_xyz' } }, 400);
     if (p === 'customers') return json({ id: 'cus_new', object: 'customer' });
     if (p === 'setup_intents') {
       st.setupIntents += 1;
@@ -62,11 +68,12 @@ async function fakeFetch(url, init = {}) {
       const row = st.customers.find((c) => c.client_email === email);
       return json(row ? [row] : []);
     }
+    st.customerPosts.push(...JSON.parse(init.body));
     for (const row of JSON.parse(init.body)) if (!st.customers.some((c) => c.client_email === row.client_email)) st.customers.push(row);
     return new Response(null, { status: 201 });
   }
 
-  if (u.pathname === '/rest/v1/card_authorizations') return new Response(null, { status: 201 });
+  if (u.pathname === '/rest/v1/card_authorizations') { st.authorizations.push(...JSON.parse(init.body)); return new Response(null, { status: st.authFails ? 409 : 201 }); }
 
   const table = ALL_TABLES.find((t) => u.pathname === `/rest/v1/${t}`);
   if (table) {
@@ -170,4 +177,61 @@ test('the gate checks the real Postgres tables with the service-role key, never 
   assert.ok(fnMatch, 'expected to isolate accountHasBusinessRecord()');
   assert.match(fnMatch[0], /apikey: SERVICE_ROLE_KEY, Authorization: `Bearer \$\{SERVICE_ROLE_KEY\}`/);
   assert.doesNotMatch(fnMatch[0], /req\.json\(\)/);
+});
+
+// --- Fix plan RP4.4 / RP3.20 / RP3.22 (2026-11-07) ---------------------------
+
+async function call(email, body) {
+  const res = await handler(new Request('https://x/functions/v1/manage-saved-card', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + jwt(email), 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }));
+  return { status: res.status, body: await res.json() };
+}
+
+test('RP4.4: can_save_card answers the same gate, read-only -- no Stripe call, no customer, no authorization row', async () => {
+  reset();
+  const no = await call('nobody@example.com', { mode: 'can_save_card' });
+  assert.deepEqual([no.status, no.body.ok, no.body.can_save_card], [200, true, false]);
+  assert.match(no.body.message, /it needs at least one invoice, quote, job, contract or checkup from Triple H first\./);
+
+  st.records.client_portal_jobs.push({ id: 1, client_email: 'pat@example.com' });
+  const yes = await call('pat@example.com', { mode: 'can_save_card' });
+  assert.deepEqual(yes.body, { ok: true, can_save_card: true });
+
+  st.records.client_portal_work_orders.push({ id: 2, client_email: 'wo-only@example.com' });
+  assert.equal((await call('wo-only@example.com', { mode: 'can_save_card' })).body.can_save_card, false, 'same rule: work orders do not count');
+
+  assert.equal(st.stripeCalls, 0);
+  assert.equal(st.customerPosts.length, 0);
+  assert.equal(st.authorizations.length, 0);
+});
+
+test('RP3.20: the signed authorization is recorded under the lowercased email, same as the Stripe customer', async () => {
+  reset();
+  st.records.client_portal_invoices.push({ id: 1, client_email: 'pat@example.com' });
+  const r = await createSetupIntent('Pat@Example.COM');
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(st.authorizations[0].client_email, 'pat@example.com');
+  assert.equal(st.customerPosts[0].client_email, 'pat@example.com');
+});
+
+test('RP3.22: Stripe and database error text never reaches the caller', async () => {
+  reset();
+  st.records.client_portal_invoices.push({ id: 1, client_email: 'pat@example.com' });
+  st.setupFails = true;
+  const r = await createSetupIntent('pat@example.com');
+  assert.equal(r.status, 502);
+  assert.doesNotMatch(JSON.stringify(r.body), /rk_live|Stripe detail|Stripe error/);
+  assert.equal(r.body.error, 'Could not start adding a card right now. Please try again.');
+
+  reset();
+  st.records.client_portal_invoices.push({ id: 1, client_email: 'pat@example.com' });
+  st.authFails = true;
+  const a = await createSetupIntent('pat@example.com');
+  st.authFails = false;
+  assert.equal(a.status, 500);
+  assert.equal(a.body.error, 'Something went wrong. Please try again, or call (435) 414-1667.');
+  assert.equal(st.setupIntents, 0, 'no SetupIntent without the signed record');
 });

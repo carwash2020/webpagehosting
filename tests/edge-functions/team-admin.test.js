@@ -36,7 +36,8 @@ function load(seed = {}) {
     emailOk: seed.emailOk !== undefined ? seed.emailOk : true,
     banOk: seed.banOk !== undefined ? seed.banOk : true,
     archived: seed.archived || [],
-    log: [], emails: [], links: [],
+    overLimit: !!seed.overLimit, limiterDown: !!seed.limiterDown, deleteStatus: seed.deleteStatus || 200,
+    log: [], emails: [], links: [], limited: [],
   };
   const fetch = async (url, init = {}) => {
     const u = String(url);
@@ -54,6 +55,11 @@ function load(seed = {}) {
       return j(st.staff[e] ? [{ email: e }] : []);
     }
     if (u.endsWith('/rest/v1/rpc/check_internal_mfa_for_edge_function')) return j(st.mfa);
+    if (u.endsWith('/rest/v1/rpc/rate_limit_take')) {
+      st.limited.push(body);
+      if (st.limiterDown) return j({ message: 'down' }, 500);
+      return j(!st.overLimit);
+    }
     if (u.endsWith('/rest/v1/rpc/get_auth_user_id_by_email')) return j(st.users[body.p_email] || null);
     const rpc = u.match(/\/rest\/v1\/rpc\/(team_\w+)$/);
     if (rpc) {
@@ -61,16 +67,20 @@ function load(seed = {}) {
       assert.notEqual(auth, 'Bearer srk', 'team RPCs are made as the caller, never the service role');
       assert.equal(init.headers.apikey, 'anon', 'with the anon key');
       const err = st.rpcErrors[rpc[1]];
-      return err ? j({ message: err }, 400) : j(null);
+      // The team RPCs RAISE with an errcode (42501, P0002, ...); a bare
+      // string here stands for one of those deliberate refusals.
+      if (err && typeof err === 'object') return j(err, 400);
+      return err ? j({ message: err, code: '42501' }, 400) : j(null);
     }
     if (u.endsWith('/auth/v1/admin/generate_link')) {
+      if (seed.linkThrows) throw new Error('connect ECONNREFUSED internal-auth-host:9999');
       st.links.push(body);
       return st.linkOk ? j({ action_link: 'https://example.supabase.co/verify?t=abc' }) : j({ msg: 'no' }, 500);
     }
     if (u.includes('/auth/v1/admin/users/')) {
       st.log.push(['admin', method, u.split('/admin/users/')[1], body]);
       if (method === 'PUT') return st.banOk ? j({}) : j({}, 500);
-      return j({});
+      return j({}, st.deleteStatus);
     }
     if (u === 'https://api.resend.com/emails') { st.emails.push(body); return st.emailOk ? j({ id: 'e' }) : j({}, 500); }
     throw new Error(`unexpected fetch ${method} ${u}`);
@@ -241,4 +251,68 @@ test('the invite email names the inviter by their Team name; with no name saved,
   const escaped = load({ staff: { [MANAGER]: { can_manage_roles: true, display_name: '<b>Pat</b>' } } });
   await escaped.call({ action: 'invite', email: 'new@example.com', name: 'New' });
   assert.match(escaped.st.emails[0].html, /&lt;b&gt;Pat&lt;\/b&gt; added you/);
+});
+
+// Fix plan RP3.28 (2026-11-07): revoke used to ignore the Auth DELETE result,
+// so a failed delete left the invite link usable while saying "done".
+test('RP3.28 revoke: a failed delete of the unused login is a 502 that says so; a 404 (already gone) is fine', async () => {
+  const g = load({ users: { 'p@example.com': 'u-p' }, deleteStatus: 500 });
+  const r = await g.call({ action: 'revoke', email: 'p@example.com' });
+  assert.equal(r.status, 502);
+  assert.equal(r.body.revoked, true);
+  assert.match(r.body.error, /couldn't be cancelled\. Try Revoke again/);
+  const gone = load({ users: { 'p@example.com': 'u-p' }, deleteStatus: 404 });
+  assert.deepEqual((await gone.call({ action: 'revoke', email: 'p@example.com' })).body, { ok: true });
+});
+
+// Fix plan RP3.22 (2026-11-07): the RPCs' own refusals still reach the
+// screen; raw database errors do not.
+test('RP3.22: a deliberate RPC refusal is shown as-is; a raw database error is replaced with a generic message', async () => {
+  const deliberate = load({ rpcErrors: { team_deactivate: { message: "You can't deactivate yourself.", code: '42501' } }, users: { [MANAGER]: 'u-owner' } });
+  assert.equal((await deliberate.call({ action: 'deactivate', email: MANAGER })).body.error, "You can't deactivate yourself.");
+  const lastAdmin = load({ rpcErrors: { team_deactivate: { message: 'Cannot remove the last remaining account with permission management access -- grant another account that permission first.', code: 'P0001' } } });
+  assert.match((await lastAdmin.call({ action: 'deactivate', email: TECH })).body.error, /last remaining account/);
+  for (const raw of [
+    { message: 'duplicate key value violates unique constraint "account_roles_pkey"', code: '23505' },
+    { message: 'permission denied for function team_add_invited', code: '42501' },
+    { message: 'relation "public.account_roles_x" does not exist', code: '42P01' },
+    { message: 'Could not find the function public.team_add_invited(p_email, p_name) in the schema cache', code: 'PGRST202' },
+  ]) {
+    const g = load({ rpcErrors: { team_add_invited: raw } });
+    const r = await g.call({ action: 'invite', email: 'x@example.com' });
+    assert.equal(r.status, 400);
+    assert.doesNotMatch(r.body.error, /constraint|permission denied|relation|schema cache|team_add_invited/, raw.message);
+  }
+});
+
+test('RP3.22: an unexpected error is a generic 500, never its message', async () => {
+  const g = load({ linkThrows: true });
+  const r = await g.call({ action: 'invite', email: 'new@example.com', name: 'N' });
+  assert.equal(r.status, 500);
+  assert.doesNotMatch(JSON.stringify(r.body), /internal-auth-host/);
+});
+
+// Fix plan RP3.25 (2026-11-07): invite and resend are capped per caller.
+test('RP3.25: invite and resend are throttled per caller (staff-send:team-admin, 60/hour); over the cap is a 429 and nothing is sent', async () => {
+  const g = load({ pending: { 'p@example.com': { display_name: 'Pat' } } });
+  await g.call({ action: 'invite', email: 'new@example.com', name: 'N' });
+  await g.call({ action: 'resend', email: 'p@example.com' });
+  assert.deepEqual(g.st.limited, [
+    { p_bucket: 'staff-send:team-admin', p_key: MANAGER, p_max: 60, p_window_seconds: 3600 },
+    { p_bucket: 'staff-send:team-admin', p_key: MANAGER, p_max: 60, p_window_seconds: 3600 },
+  ]);
+  const over = load({ overLimit: true, pending: { 'p@example.com': { display_name: 'Pat' } } });
+  for (const body of [{ action: 'invite', email: 'new@example.com' }, { action: 'resend', email: 'p@example.com' }]) {
+    const r = await over.call(body);
+    assert.equal(r.status, 429);
+    assert.match(r.body.error, /Too many emails/);
+  }
+  assert.equal(over.st.emails.length + over.st.links.length, 0);
+  assert.equal(over.st.log.filter((x) => x[1] === 'team_add_invited').length, 0, 'no invite row made either');
+});
+
+test('RP3.25: the throttle fails open when the limiter itself is down', async () => {
+  const g = load({ limiterDown: true });
+  assert.deepEqual((await g.call({ action: 'invite', email: 'new@example.com', name: 'N' })).body, { ok: true });
+  assert.equal(g.st.emails.length, 1);
 });

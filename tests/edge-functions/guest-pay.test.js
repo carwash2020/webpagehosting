@@ -23,6 +23,13 @@ function load(state) {
     const u = String(url);
     const method = (init.method || 'GET').toUpperCase();
     calls.push({ url: u, method, body: init.body, headers: init.headers || {} });
+    if (u.endsWith('/rest/v1/rpc/rate_limit_take') && method === 'POST') {
+      const b = JSON.parse(init.body);
+      (state.limited = state.limited || []).push(b);
+      if (state.rateLimitThrows) throw new Error('limiter down');
+      if (state.rateLimitStatus) return j({ message: 'nope' }, state.rateLimitStatus);
+      return j(!(state.overLimit || []).includes(b.p_bucket));
+    }
     if (u.includes('/rest/v1/client_portal_invoices') && method === 'GET') {
       const tok = decodeURIComponent((u.match(/pay_token=eq\.([^&]+)/) || [])[1] || '');
       return j(state.invoices.filter((i) => i.pay_token === tok));
@@ -39,7 +46,9 @@ function load(state) {
     }
     const m = u.match(/^https:\/\/api\.stripe\.com\/v1\/payment_intents\/([^/?]+)\?expand\[\]=latest_charge$/);
     if (m && method === 'GET') {
+      if (state.retrieveThrows) throw new Error('network down');
       const r = (state.retrieve || {})[decodeURIComponent(m[1])];
+      if (r && r.httpStatus) return j({ error: {} }, r.httpStatus);
       return r ? j(r) : j({ error: { code: 'resource_missing' } }, 404);
     }
     if (u === 'https://api.stripe.com/v1/payment_intents' && method === 'POST') return j({ id: 'pi_guest', client_secret: 'pi_guest_secret_x' });
@@ -74,8 +83,8 @@ test('view: the code shows what the client needs to pay, and nothing that identi
   const g = load({ invoices: [invoice()], workspaceInvoices: [{ id: 1730000000000, terms: 'Due Upon Receipt' }] });
   const r = await g.call({ action: 'view', token: TOKEN });
   assert.equal(r.status, 200);
-  assert.deepEqual(r.body, { ok: true, invoice_number: 'INV-2026-1112', invoice_date: '2026-10-28', description: 'Repair fridge', billed_to: 'T. Perides', amount_due: 300, due_date: '2026-10-28', paid: false, paid_at: null });
-  assert.ok(!JSON.stringify(r.body).includes(CLIENT), 'the email never leaves the server');
+  assert.deepEqual(r.body, { ok: true, invoice_number: 'INV-2026-1112', invoice_date: '2026-10-28', description: 'Repair fridge', billed_to: 'T. Perides', amount_due: 300, due_date: '2026-10-28', paid: false, paid_at: null, receipt_to: 't\u2022\u2022\u2022@example.com' });
+  assert.ok(!JSON.stringify(r.body).includes(CLIENT), 'the email never leaves the server, only a masked form of it');
   assert.equal(r.headers.get('Access-Control-Allow-Origin'), 'https://www.triplehenterprisesllc.biz');
 });
 
@@ -109,21 +118,126 @@ test('pay: a one-time payment for the invoice total -- no saved card, no custome
   assert.deepEqual(JSON.parse(patch.body), { stripe_payment_intent_id: 'pi_guest' });
 });
 
-test('pay: a receipt address typed on the page is used if it is a real address', async () => {
-  const g = load({ invoices: [invoice()] });
-  await g.call({ action: 'pay', token: TOKEN, receipt_email: ' Office@Example.com ' });
-  assert.equal(new URLSearchParams(g.created()[0].body).get('receipt_email'), 'office@example.com');
-  const g2 = load({ invoices: [invoice()] });
-  await g2.call({ action: 'pay', token: TOKEN, receipt_email: 'not an email' });
-  assert.equal(new URLSearchParams(g2.created()[0].body).get('receipt_email'), CLIENT);
+// Fix plan RP3.18 (2026-11-07): whoever holds the link can't send the
+// receipt somewhere else. Only the invoice's own client email is used.
+test('pay: the receipt never goes to an address the caller names -- only to the invoice\'s own client email', async () => {
+  for (const typed of [' Office@Example.com ', 'attacker@example.net', 'not an email', '', null, 42]) {
+    const g = load({ invoices: [invoice()] });
+    const r = await g.call({ action: 'pay', token: TOKEN, receipt_email: typed });
+    assert.equal(r.status, 200);
+    assert.equal(new URLSearchParams(g.created()[0].body).get('receipt_email'), CLIENT, `typed ${JSON.stringify(typed)}`);
+  }
+  // The client's own address typed in another case is the same address.
+  const same = load({ invoices: [invoice()] });
+  await same.call({ action: 'pay', token: TOKEN, receipt_email: 'TONY@Example.com' });
+  assert.equal(new URLSearchParams(same.created()[0].body).get('receipt_email'), CLIENT);
+  // An invoice with a mixed-case email on file still sends to that address, lower-cased.
+  const mixed = load({ invoices: [invoice({ client_email: 'Tony@Example.com' })] });
+  await mixed.call({ action: 'pay', token: TOKEN, receipt_email: 'someone@else.com' });
+  assert.equal(new URLSearchParams(mixed.created()[0].body).get('receipt_email'), 'tony@example.com');
+});
+
+test('view: the page is told where the receipt will go, masked', async () => {
+  const g = load({ invoices: [invoice({ client_email: 'Office.Manager@Example.co' })] });
+  const r = await g.call({ action: 'view', token: TOKEN });
+  assert.equal(r.body.receipt_to, 'o\u2022\u2022\u2022@example.co');
+  assert.ok(!JSON.stringify(r.body).toLowerCase().includes('office.manager'));
+  const none = await load({ invoices: [invoice({ client_email: '' })] }).call({ action: 'view', token: TOKEN });
+  assert.equal(none.body.receipt_to, null);
+});
+
+// Fix plan RP3.18 (2026-11-07): per-IP limits on view/pdf and pay.
+test('rate limit: view and pdf share a 60/hour bucket, pay has its own 20/hour one, keyed by the gateway-set client IP', async () => {
+  const state = { invoices: [invoice()], pdfs: ['invoices/INV-2026-1112.pdf'] };
+  const g = load(state);
+  await g.call({ action: 'view', token: TOKEN }, { 'cf-connecting-ip': '203.0.113.9', 'x-forwarded-for': '1.1.1.1, 198.51.100.7' });
+  await g.call({ action: 'pdf', token: TOKEN }, { 'x-forwarded-for': '1.1.1.1, 198.51.100.7' });
+  await g.call({ action: 'pay', token: TOKEN }, { 'x-forwarded-for': '198.51.100.8' });
+  assert.deepEqual(state.limited, [
+    { p_bucket: 'guest-pay:view', p_key: '203.0.113.9', p_max: 60, p_window_seconds: 3600 },
+    { p_bucket: 'guest-pay:view', p_key: '198.51.100.7', p_max: 60, p_window_seconds: 3600 },
+    { p_bucket: 'guest-pay:pay', p_key: '198.51.100.8', p_max: 20, p_window_seconds: 3600 },
+  ], 'the caller-written first x-forwarded-for entry is never the key');
+});
+
+test('rate limit: over the limit is a 429 before the code is even looked up, and nothing is charged', async () => {
+  for (const [action, bucket] of [['view', 'guest-pay:view'], ['pdf', 'guest-pay:view'], ['pay', 'guest-pay:pay']]) {
+    const g = load({ invoices: [invoice()], overLimit: [bucket] });
+    const r = await g.call({ action, token: TOKEN });
+    assert.equal(r.status, 429, action);
+    assert.equal(r.body.code, 'too_many_requests');
+    assert.equal(g.calls.filter((c) => c.url.includes('client_portal_invoices')).length, 0, `${action}: no invoice lookup`);
+    assert.equal(g.created().length, 0);
+  }
+  // Probing with wrong codes is throttled the same way.
+  const probe = load({ invoices: [invoice()], overLimit: ['guest-pay:view'] });
+  assert.equal((await probe.call({ action: 'view', token: 'zzzzzzzzzzzz' })).status, 429);
+});
+
+test('rate limit: if the limiter itself is down, a real payer is let through (fails open)', async () => {
+  for (const state of [{ rateLimitThrows: true }, { rateLimitStatus: 500 }, { rateLimitStatus: 404 }]) {
+    const g = load({ invoices: [invoice()], ...state });
+    assert.equal((await g.call({ action: 'view', token: TOKEN })).status, 200);
+    const p = await g.call({ action: 'pay', token: TOKEN });
+    assert.equal(p.status, 200);
+    assert.equal(g.created().length, 1);
+  }
+});
+
+// Fix plan RP4.3 / D15 (2026-11-07): the code stops working 90 days after
+// the invoice was paid. Unpaid, it keeps working.
+const daysAgo = (n) => new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString();
+test('D15: 90 days after the invoice was paid the code is dead -- the same not_found as a wrong code, for every action', async () => {
+  const wrong = await load({ invoices: [invoice()] }).call({ action: 'view', token: 'zzzzzzzzzzzz' });
+  for (const action of ['view', 'pdf', 'pay']) {
+    const g = load({ invoices: [invoice({ paid: true, paid_at: daysAgo(91) })], pdfs: ['invoices/INV-2026-1112.pdf'] });
+    const r = await g.call({ action, token: TOKEN });
+    assert.equal(r.status, 404, action);
+    assert.deepEqual(r.body, wrong.body, `${action}: indistinguishable from a wrong code`);
+    assert.equal(g.calls.filter((c) => c.url.includes('/storage/')).length, 0);
+  }
+});
+
+test('D15: a paid invoice\'s code still works inside the 90 days; an unpaid invoice\'s code never expires', async () => {
+  const recent = await load({ invoices: [invoice({ paid: true, paid_at: daysAgo(89) })] }).call({ action: 'view', token: TOKEN });
+  assert.equal(recent.status, 200);
+  assert.equal(recent.body.paid, true);
+  const oldUnpaid = await load({ invoices: [invoice({ invoice_date: '2025-01-02', paid: false, paid_at: null })] }).call({ action: 'view', token: TOKEN });
+  assert.equal(oldUnpaid.status, 200);
+  const g = load({ invoices: [invoice({ invoice_date: '2025-01-02' })] });
+  assert.equal((await g.call({ action: 'pay', token: TOKEN })).status, 200);
+});
+
+// Fix plan RP3.17 (2026-11-07): if Stripe can't say what happened to the
+// earlier PaymentIntent, don't risk a second one.
+for (const [label, state] of [
+  ['a 500', { retrieve: { pi_old: { httpStatus: 500 } } }],
+  ['a 403', { retrieve: { pi_old: { httpStatus: 403 } } }],
+  ['a network error', { retrieveThrows: true }],
+]) {
+  test(`RP3.17: Stripe answering the earlier-payment lookup with ${label} -> 502, no new PaymentIntent`, async () => {
+    const g = load({ invoices: [invoice({ stripe_payment_intent_id: 'pi_old' })], ...state });
+    const r = await g.call({ action: 'pay', token: TOKEN });
+    assert.equal(r.status, 502);
+    assert.equal(r.body.ok, false);
+    assert.equal(g.created().length, 0);
+    assert.equal(g.calls.filter((c) => c.method === 'PATCH').length, 0);
+  });
+}
+test('RP3.17: a 404 for the earlier PaymentIntent still means there is none -> a new one', async () => {
+  const g = load({ invoices: [invoice({ stripe_payment_intent_id: 'pi_gone' })], retrieve: {} });
+  const r = await g.call({ action: 'pay', token: TOKEN });
+  assert.equal(r.status, 200);
+  assert.equal(g.created().length, 1);
 });
 
 test('an invoice already paid cannot be paid again, and the page is told when', async () => {
-  const g = load({ invoices: [invoice({ paid: true, paid_at: '2026-11-04T16:00:00Z' })] });
+  const paidAt = daysAgo(3);
+  const g = load({ invoices: [invoice({ paid: true, paid_at: paidAt })] });
   const v = await g.call({ action: 'view', token: TOKEN });
   assert.equal(v.body.paid, true);
   assert.equal(v.body.amount_due, 0);
-  assert.equal(v.body.paid_at, '2026-11-04T16:00:00Z');
+  assert.equal(v.body.paid_at, paidAt);
   const p = await g.call({ action: 'pay', token: TOKEN });
   assert.equal(p.status, 409);
   assert.equal(p.body.already_paid, true);

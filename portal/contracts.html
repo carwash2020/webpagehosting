@@ -40,7 +40,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=09ad2a2e15">
-<link rel="stylesheet" href="/portal/portal-app.css?v=4af907b767">
+<link rel="stylesheet" href="/portal/portal-app.css?v=ef0735c580">
 <style>
   input, select, textarea { font-size: 16px; }
   @view-transition {
@@ -50,7 +50,7 @@
 <link rel="stylesheet" href="/tools/styles-tools.css?v=32b0b6ede8">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous"></script>
 <script src="/signature-pad.js?v=f95f8e1d28"></script>
-<script src="/portal/portal-app.js?v=abb7e37c38"></script>
+<script src="/portal/portal-app.js?v=8bbf28b1fe"></script>
 <style>
   body { background: #0a0a0a; max-width: 640px; margin: 0 auto; padding: 24px 16px 60px; }
   @media (min-width: 860px) {
@@ -111,6 +111,14 @@
   .signature-pad-label { font-size: 13px; color: var(--text-dim); margin-bottom: 6px; }
   #signatureCanvas-tpl { width: 100%; max-width: 560px; height: 160px; background: #ffffff; border: 1px solid var(--border); border-radius: 8px; touch-action: none; cursor: crosshair; display: block; }
   .signature-pad-actions { display: flex; gap: 10px; align-items: center; margin-top: 8px; }
+  /* Typed-name signature (fix plan RP4.5, 2026-11-07): same typed legal
+     name field as the pay and add-card flows. */
+  .signature-typed { margin-top: 10px; }
+  .signature-typed input[type="text"] { width: 100%; max-width: 560px; box-sizing: border-box; padding: 10px 12px; background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; color: var(--white); font-size: 16px; font-family: inherit; }
+  .signature-typed-agree { display: flex; gap: 8px; align-items: flex-start; margin-top: 10px; font-size: 13px; color: var(--text); line-height: 1.4; cursor: pointer; }
+  .signature-typed-agree input { margin-top: 2px; flex: none; width: 18px; height: 18px; }
+  /* .wo-hint: the shared reset for sentences nested in a label (portal-polish.css). */
+  .signature-typed-agree .wo-hint { color: var(--text); }
   .contract-actions { display: flex; gap: 8px; margin-top: 12px; }
   .contract-actions button { flex: 1; justify-content: center; }
   .responded-note { color: var(--text-dim); font-size: 12.5px; margin-top: 8px; }
@@ -129,6 +137,9 @@
 <link rel="stylesheet" href="/portal/portal-polish.css?v=f0d57c5e20">
 </head>
 <body class="portal-page">
+<!-- Skip link (fix plan RP4.9, 2026-11-07): hidden until focused; jumps past
+     the app bar and navigation to #portalMain. Styles: portal-app.css. -->
+<a href="#portalMain" class="portal-skip-link">Skip to main content</a>
 
 <!-- App bar (v2 shell, part 2, 2026-09-28) -- the same one home.html and
      dashboard.html carry: kicker + Anton title, the round Report-a-problem
@@ -183,6 +194,8 @@
     <div class="portal-rail-help-actions"><a href="tel:+14354141667">Call</a><a href="sms:+14354141667">Text</a></div>
   </div>
 </div>
+
+<main id="portalMain" tabindex="-1">
 <!--
   Contracts is deliberately NOT a 6th item in the bottom nav above --
   that grid is hard-coded to exactly 5 equal columns specifically to
@@ -198,6 +211,8 @@
   <div class="skeleton-card"><div class="skeleton-line is-title"></div><div class="skeleton-line is-wide"></div><div class="skeleton-line is-narrow"></div></div>
   <div class="skeleton-card"><div class="skeleton-line is-title"></div><div class="skeleton-line is-wide"></div><div class="skeleton-line is-narrow"></div></div>
 </div>
+
+</main>
 
 <script>
   const { createClient } = supabase;
@@ -289,12 +304,20 @@
         <div class="contract-body" id="contractBody-${c.id}">${renderContractBody(c.blocks)}</div>
         ${isPending ? `
           <div class="signature-pad-wrap">
-            <div class="signature-pad-label">Sign with your finger or mouse</div>
-            <canvas id="signatureCanvas-${c.id}" width="600" height="180" style="width:100%; max-width:560px; height:160px; background:#ffffff; border:1px solid var(--border); border-radius:8px; touch-action:none; cursor:crosshair; display:block;"></canvas>
-            <div class="signature-pad-actions">
-              <button type="button" class="secondary-btn signature-clear-btn" onclick="clearContractSignature(${c.id})">Clear</button>
-              <span id="signatureStatus-${c.id}" style="color:var(--text-dim); font-size:13px;"></span>
+            <div id="signatureDrawn-${c.id}">
+              <div class="signature-pad-label" id="signatureLabel-${c.id}">Sign with your finger or mouse</div>
+              <canvas id="signatureCanvas-${c.id}" role="img" aria-labelledby="signatureLabel-${c.id}" width="600" height="180" style="width:100%; max-width:560px; height:160px; background:#ffffff; border:1px solid var(--border); border-radius:8px; touch-action:none; cursor:crosshair; display:block;"></canvas>
+              <div class="signature-pad-actions">
+                <button type="button" class="secondary-btn signature-clear-btn" onclick="clearContractSignature(${c.id})">Clear</button>
+                <span id="signatureStatus-${c.id}" style="color:var(--text-dim); font-size:13px;"></span>
+              </div>
             </div>
+            <div class="signature-typed" id="signatureTyped-${c.id}" hidden>
+              <label for="signatureTypedName-${c.id}" class="signature-pad-label" style="display:block;">Type your full legal name</label>
+              <input type="text" id="signatureTypedName-${c.id}" autocomplete="name" placeholder="Full name" maxlength="120">
+              <label class="signature-typed-agree"><input type="checkbox" id="signatureTypedAgree-${c.id}"><span class="wo-hint">I agree that my typed name is my signature on this contract.</span></label>
+            </div>
+            <button type="button" class="contract-body-toggle signature-mode-toggle" id="signatureModeToggle-${c.id}" aria-controls="signatureTyped-${c.id}" aria-expanded="false" onclick="toggleTypedSignature(${c.id})">Can't draw? Type your name instead</button>
           </div>
           <div class="contract-error" id="contractError-${c.id}"></div>
           <div class="contract-actions">
@@ -327,6 +350,52 @@
   }
   function getContractSignatureDataUrl(contractId) {
     return sigPadDataUrl('signatureCanvas-' + contractId);
+  }
+
+  // Typed-name signature (fix plan RP4.5, 2026-11-07): a client who can't
+  // draw (motor impairment, keyboard only) types their full legal name and
+  // ticks the box -- every control is a plain button/input, so it all works
+  // from the keyboard. respond-to-contract requires a data:image/ signature,
+  // so the typed name is rendered onto a canvas and sent as that image; the
+  // page also sends signer_name and signature_method, which the function
+  // ignores until it is taught to store them.
+  // Read from the page itself, so a re-render always starts in draw mode.
+  function typedSignatureOn(contractId) {
+    const box = document.getElementById('signatureTyped-' + contractId);
+    return !!box && !box.hidden;
+  }
+  function toggleTypedSignature(contractId) {
+    const on = !typedSignatureOn(contractId);
+    document.getElementById('signatureDrawn-' + contractId).hidden = on;
+    document.getElementById('signatureTyped-' + contractId).hidden = !on;
+    const toggle = document.getElementById('signatureModeToggle-' + contractId);
+    toggle.setAttribute('aria-expanded', String(on));
+    toggle.textContent = on ? 'Draw my signature instead' : "Can't draw? Type your name instead";
+    document.getElementById('contractError-' + contractId).textContent = '';
+    if (on) document.getElementById('signatureTypedName-' + contractId).focus();
+  }
+  function typedSignatureDataUrl(name) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 600;
+    canvas.height = 180;
+    const ctx = canvas.getContext && canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#111111';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    let size = 64;
+    do {
+      ctx.font = 'italic ' + size + 'px "Segoe Script", "Brush Script MT", "Snell Roundhand", cursive';
+      size -= 4;
+    } while (size > 20 && ctx.measureText(name).width > canvas.width - 40);
+    ctx.fillText(name, canvas.width / 2, canvas.height / 2 - 8);
+    ctx.font = '14px -apple-system, Helvetica, Arial, sans-serif';
+    ctx.fillStyle = '#666666';
+    ctx.fillText('Signed by typing their name', canvas.width / 2, canvas.height - 18);
+    const url = canvas.toDataURL('image/png');
+    return typeof url === 'string' && url.indexOf('data:image/') === 0 ? url : null;
   }
 
   async function renderContracts() {
@@ -393,10 +462,31 @@
     errorEl.textContent = '';
 
     let clientSignatureDataUrl = null;
-    if (action === 'sign') {
-      clientSignatureDataUrl = getContractSignatureDataUrl(contractId);
+    let signerName;
+    let signatureMethod;
+    if (action === 'sign' && typedSignatureOn(contractId)) {
+      signerName = document.getElementById('signatureTypedName-' + contractId).value.trim();
+      if (!signerName) {
+        errorEl.textContent = 'Please type your full legal name above before signing.';
+        document.getElementById('signatureTypedName-' + contractId).focus();
+        return;
+      }
+      if (!document.getElementById('signatureTypedAgree-' + contractId).checked) {
+        errorEl.textContent = 'Please tick the box to confirm your typed name is your signature.';
+        document.getElementById('signatureTypedAgree-' + contractId).focus();
+        return;
+      }
+      clientSignatureDataUrl = typedSignatureDataUrl(signerName);
+      signatureMethod = 'typed';
       if (!clientSignatureDataUrl) {
-        errorEl.textContent = 'Please draw your signature above before signing.';
+        errorEl.textContent = "Couldn't prepare your typed signature on this device. Please draw it instead, or call (435) 414-1667.";
+        return;
+      }
+    } else if (action === 'sign') {
+      clientSignatureDataUrl = getContractSignatureDataUrl(contractId);
+      signatureMethod = 'drawn';
+      if (!clientSignatureDataUrl) {
+        errorEl.textContent = "Please draw your signature above before signing, or tap \"Can't draw? Type your name instead\".";
         return;
       }
     }
@@ -422,7 +512,7 @@
             'apikey': SUPABASE_ANON_KEY,
             'Authorization': `Bearer ${session.access_token}`,
           },
-          body: JSON.stringify({ contract_id: contractId, action, client_signature_data_url: clientSignatureDataUrl }),
+          body: JSON.stringify({ contract_id: contractId, action, client_signature_data_url: clientSignatureDataUrl, signer_name: signerName, signature_method: signatureMethod }),
         }
       );
       const result = await res.json();

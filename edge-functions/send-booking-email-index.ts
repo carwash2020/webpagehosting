@@ -498,11 +498,12 @@ function buildGuestEmailText(booking: Record<string, unknown>): string {
   return parts.join("\n");
 }
 
-async function sendGuestConfirmation(booking: Record<string, unknown>): Promise<void> {
+// true = the guest's confirmation went (RP3.31 reports it).
+async function sendGuestConfirmation(booking: Record<string, unknown>): Promise<boolean> {
   const guestEmail = booking.email ? String(booking.email).trim() : "";
   if (!guestEmail) {
     console.log("sendGuestConfirmation: booking has no email address, skipping guest confirmation");
-    return;
+    return false;
   }
   let result: { ok: boolean; id?: string } = { ok: false };
   try {
@@ -519,6 +520,7 @@ async function sendGuestConfirmation(booking: Record<string, unknown>): Promise<
   }
   await recordGuestEmailResult(booking.id, result);
   if (!result.ok) await alertStaffOfFailedGuestEmail(booking, "confirmation");
+  return result.ok;
 }
 
 // --- reschedule / cancellation (2026-09-22) ----------------------------
@@ -818,19 +820,24 @@ Deno.serve(async (req: Request) => {
       console.error("Internal booking notification error:", err.message);
     }
 
-    await sendGuestConfirmation(booking);
+    const guestSent = await sendGuestConfirmation(booking);
 
-    if (!internalOk) {
-      return new Response(JSON.stringify({ ok: false, error: "internal notification failed, see function logs" }), {
+    // Fix plan RP3.31 (2026-11-07): once the guest's confirmation has gone,
+    // the call succeeded from the guest's side -- it answers ok:true with
+    // the breakdown instead of a 502 that read as "nothing was sent". Only
+    // when neither email went is it a failure.
+    if (!internalOk && !guestSent) {
+      return new Response(JSON.stringify({ ok: false, guest_sent: false, internal_sent: false, error: "internal notification failed, see function logs" }), {
         status: 502,
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ ok: true, guest_sent: guestSent, internal_sent: internalOk }), { headers: { "Content-Type": "application/json" } });
   } catch (err: any) {
     console.error("send-booking-email error:", err.message);
-    return new Response(JSON.stringify({ ok: false, error: err.message }), {
+    // Fix plan RP3.22 (2026-11-07): logged in full, generic to the caller.
+    return new Response(JSON.stringify({ ok: false, error: "send-booking-email failed; see function logs." }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

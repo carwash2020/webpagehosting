@@ -193,6 +193,30 @@ async function sendDisputeAlert(r: any) {
   }
 }
 
+// Fix plan RP3.29 (2026-11-07): a payment that went through for no portal
+// invoice -- the invoice was deleted (delete-portal-invoice now cancels an
+// open PaymentIntent first, but one already confirming can still land) or
+// its metadata matches nothing. Recorded in the ledger by the RPC; this is
+// the heads-up so the money isn't left unexplained. Same channel and type
+// as the other reconciliation alerts. Never throws.
+async function sendUnmatchedPaymentAlert(pi: Stripe.PaymentIntent) {
+  const meta: any = pi.metadata || {};
+  const ref = meta.client_portal_invoice_id ? `portal invoice id ${meta.client_portal_invoice_id}`
+    : meta.client_portal_invoice_ids ? `portal invoice ids ${meta.client_portal_invoice_ids}` : "no portal invoice";
+  const body = `Stripe payment ${pi.id} for ${money(Number(pi.amount_received ?? pi.amount) || 0)} went through, but it matches no invoice (${ref}). ` +
+    "Find it in Stripe and refund it or apply it by hand.";
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/Send-Push`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+      body: JSON.stringify({ type: "stripe-reconciliation-alert", title: "Payment matches no invoice", body }),
+    });
+    if (!res.ok) console.error(`Unmatched-payment alert for ${pi.id} failed: HTTP ${res.status}`);
+  } catch (err) {
+    console.error(`Unmatched-payment alert for ${pi.id} failed:`, err);
+  }
+}
+
 // The database half of this webhook. Returns the RPC's JSON, or null if
 // the call itself failed (the function isn't deployed yet, the database is
 // unreachable): the caller answers 500 so Stripe retries.
@@ -248,27 +272,45 @@ async function logPosIncome(pi: Stripe.PaymentIntent) {
     createdBy: pi.metadata?.internal_account || "",
     lastEditedBy: pi.metadata?.internal_account || "",
   };
+  // Fix plan RP3.19 (2026-11-07), the same two guards create-pos-charge's
+  // logPosIncomeToWorkspaceSync has:
+  //   * an in-function dedupe re-check on the PaymentIntent id, so this
+  //     doesn't rely on the stripe_pos_charges_logged claim alone;
+  //   * a version check: the PATCH only lands if updated_at is still the
+  //     value read, so two sales logged at once can't overwrite each other
+  //     (last write wins). A lost race reads again, up to 3 times.
   for (const code of MONEY_SYNC_CODES) {
-    const syncRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.${encodeURIComponent(code)}&select=data`,
-      { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
-    );
-    if (!syncRes.ok) {
-      console.error(`Failed to read workspace_sync (${code}) for POS charge ${pi.id}: ${await syncRes.text().catch(() => "")}`);
-      continue;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const syncRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.${encodeURIComponent(code)}&select=data,updated_at`,
+        { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+      );
+      if (!syncRes.ok) {
+        console.error(`Failed to read workspace_sync (${code}) for POS charge ${pi.id}: ${await syncRes.text().catch(() => "")}`);
+        break;
+      }
+      const syncRows = await syncRes.json();
+      if (!syncRows.length) break;
+      const blob = syncRows[0].data || {};
+      const readAt: string | null = syncRows[0].updated_at || null;
+      const incomeLog = JSON.parse(blob.th_income_log || "[]");
+      if (incomeLog.some((e: any) => e.stripePaymentIntentId === pi.id)) break;
+      incomeLog.push(entry);
+      blob.th_income_log = JSON.stringify(incomeLog);
+      const versionFilter = readAt ? `updated_at=eq.${encodeURIComponent(readAt)}` : "updated_at=is.null";
+      const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.${encodeURIComponent(code)}&${versionFilter}&select=code`, {
+        method: "PATCH",
+        headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json", Prefer: "return=representation" },
+        body: JSON.stringify({ data: blob, updated_at: new Date().toISOString() }),
+      });
+      if (!patchRes.ok) {
+        console.error(`Failed to log POS income (${code}) for ${pi.id}: ${await patchRes.text().catch(() => "")}`);
+        break;
+      }
+      const written = await patchRes.json().catch(() => null);
+      if (Array.isArray(written) && written.length) break;
+      if (attempt === 3) console.error(`Gave up logging POS income (${code}) for ${pi.id}: the row kept changing; add it by hand`);
     }
-    const syncRows = await syncRes.json();
-    if (!syncRows.length) continue;
-    const blob = syncRows[0].data || {};
-    const incomeLog = JSON.parse(blob.th_income_log || "[]");
-    incomeLog.push(entry);
-    blob.th_income_log = JSON.stringify(incomeLog);
-    const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.${encodeURIComponent(code)}`, {
-      method: "PATCH",
-      headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ data: blob, updated_at: new Date().toISOString() }),
-    });
-    if (!patchRes.ok) console.error(`Failed to log POS income (${code}) for ${pi.id}: ${await patchRes.text().catch(() => "")}`);
   }
 }
 
@@ -391,6 +433,11 @@ Deno.serve(async (req: Request) => {
   if (result.action === "invoice_payment") {
     const pi = event.data.object as Stripe.PaymentIntent;
     if (result.warning) console.error(`payment_intent.succeeded for ${pi.id}: ${result.warning}`);
+    // RP3.29: staff are told about money that matched no invoice. (A POS
+    // sale never reaches here -- the RPC answers it as action pos_charge.)
+    if (result.warning === "no matching invoice" && pi.metadata?.pos_charge !== "true") {
+      await sendUnmatchedPaymentAlert(pi);
+    }
     if (result.amount_mismatch) {
       const invoices = Array.isArray(result.invoices) ? result.invoices : [];
       await sendAmountMismatchAlert(pi.id, invoices, Number(result.received_cents), Number(result.owed_cents), result.amount_mismatch === "underpaid");

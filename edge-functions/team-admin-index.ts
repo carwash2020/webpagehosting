@@ -98,7 +98,16 @@ async function callerPassesInternalMfa(claims: { sub?: string; email?: string; a
 }
 
 // An RPC made AS THE CALLER, so the database applies its own checks.
-// Returns null on success, or the database's own error message.
+// Returns null on success, or a message for the Team screen.
+//
+// Fix plan RP3.22 (2026-11-07): only the plain-English refusals the team
+// RPCs raise on purpose (sql/security/phase4_team_roster_and_deactivate.sql,
+// fp3_invite_defaults_and_templates.sql, and the last-admin triggers: RAISE
+// with errcode 42501/22023/23505/P0002/55000, or the default P0001) are
+// passed through -- the screen shows those ("You can't deactivate
+// yourself."). Anything else (a raw Postgres error naming a constraint,
+// relation or function) is logged and replaced with a generic message.
+const DELIBERATE_RPC_CODES = new Set(["P0001", "P0002", "42501", "22023", "23505", "55000"]);
 async function rpcAsCaller(token: string, fn: string, args: Record<string, unknown>): Promise<string | null> {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
     method: "POST",
@@ -106,12 +115,18 @@ async function rpcAsCaller(token: string, fn: string, args: Record<string, unkno
     body: JSON.stringify(args),
   });
   if (res.ok) return null;
-  let message = `${fn} failed (HTTP ${res.status})`;
-  try {
-    const body = await res.json();
-    if (body && typeof body.message === "string") message = body.message;
-  } catch { /* keep the generic message */ }
-  return message;
+  const generic = "That change couldn't be saved. Try again, or check the function logs.";
+  let body: any = null;
+  try { body = await res.json(); } catch { /* not JSON */ }
+  const message = body && typeof body.message === "string" ? body.message : "";
+  const code = body && typeof body.code === "string" ? body.code : "";
+  // Raw Postgres wording for these codes ("duplicate key value violates
+  // unique constraint ...", "permission denied for function ...") is never
+  // one of the RPCs' own sentences.
+  const raw = /^(duplicate key value|permission denied for|new row violates|null value in column|relation |function |column )/i.test(message);
+  if (message && DELIBERATE_RPC_CODES.has(code) && !raw) return message;
+  console.error(`team-admin: ${fn} failed (HTTP ${res.status}, code ${code || "none"}): ${message.slice(0, 500)}`);
+  return generic;
 }
 
 async function authUserId(email: string): Promise<string | null> {
@@ -216,6 +231,31 @@ async function inviterName(email: string): Promise<string> {
   return local ? local.charAt(0).toUpperCase() + local.slice(1) : "Someone on the team";
 }
 
+// Fix plan RP3.25 (2026-11-07): a per-caller cap on this staff send path,
+// so a compromised staff session can't spam clients. One hit against
+// public.rate_limit_take (sql/security/group5_backend_hardening.sql), keyed
+// by the caller's email. Fails OPEN (logged) if the limiter can't be
+// reached: a real send by staff is worth more than the cap.
+const STAFF_SEND_LIMIT_PER_HOUR = 60;
+async function staffSendAllowed(callerEmail: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/rate_limit_take`, {
+      method: "POST",
+      headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_bucket: "staff-send:team-admin", p_key: String(callerEmail || "").toLowerCase(), p_max: STAFF_SEND_LIMIT_PER_HOUR, p_window_seconds: 3600 }),
+    });
+    if (!res.ok) {
+      console.error(`team-admin: rate_limit_take failed (HTTP ${res.status}); allowing the send`);
+      return true;
+    }
+    return (await res.json()) !== false;
+  } catch (err: any) {
+    console.error(`team-admin: rate_limit_take failed (${err?.message || err}); allowing the send`);
+    return true;
+  }
+}
+const TOO_MANY_SENDS_ERROR = "Too many emails sent from this account in the last hour. Wait a while and try again.";
+
 async function callerCanManageTeam(email: string): Promise<boolean> {
   const res = await rest(`account_roles?email=eq.${encodeURIComponent(email)}&select=can_manage_roles&limit=1`);
   if (!res.ok) return false;
@@ -248,6 +288,8 @@ Deno.serve(async (req: Request) => {
     const inviter = claims.email;
 
     if (action === "invite") {
+      // RP3.25: invite and resend share one per-caller cap.
+      if (!(await staffSendAllowed(inviter))) return json({ ok: false, error: TOO_MANY_SENDS_ERROR, code: "rate_limited" }, 429);
       const name = typeof body.name === "string" ? body.name.trim().slice(0, 120) : "";
       const err = await rpcAsCaller(token, "team_add_invited", { p_email: email, p_name: name });
       if (err) return json({ ok: false, error: err }, 400);
@@ -264,6 +306,7 @@ Deno.serve(async (req: Request) => {
       if (!(await callerCanManageTeam(inviter))) return json({ ok: false, error: "Not allowed: you can't manage the team." }, 403);
       const pending = await pendingInvite(email);
       if (!pending) return json({ ok: false, error: "No pending invite for that email." }, 404);
+      if (!(await staffSendAllowed(inviter))) return json({ ok: false, error: TOO_MANY_SENDS_ERROR, code: "rate_limited" }, 429);
       const existing = (await authUserId(email)) !== null;
       const link = await setPasswordLink(email, existing);
       if (!link || !(await sendInviteEmail(email, pending.display_name || "", await inviterName(inviter), link, true))) {
@@ -277,9 +320,17 @@ Deno.serve(async (req: Request) => {
       if (err) return json({ ok: false, error: err }, 400);
       // Their unused invite link stops working with the login it was for.
       // Only reached when the database confirmed they never signed in.
+      // Fix plan RP3.28 (2026-11-07): the DELETE's result is checked. If the
+      // login survives, the invite link may still work, so say so (502, like
+      // deactivate's sign-in block); the invite row is already gone, and
+      // Revoke again retries just this step (a 404 counts as done).
       const userId = await authUserId(email);
       if (userId) {
-        await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${encodeURIComponent(userId)}`, { method: "DELETE", headers: SR_HEADERS });
+        const del = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${encodeURIComponent(userId)}`, { method: "DELETE", headers: SR_HEADERS }).catch(() => null);
+        if (!del || (!del.ok && del.status !== 404)) {
+          console.error(`team-admin: deleting the unused login for a revoked invite failed (HTTP ${del ? del.status : "network"})`);
+          return json({ ok: false, revoked: true, error: "Invite removed, but their unused sign-in link couldn't be cancelled. Try Revoke again." }, 502);
+        }
       }
       return json({ ok: true });
     }
@@ -315,6 +366,8 @@ Deno.serve(async (req: Request) => {
 
     return json({ ok: false, error: "Unknown action." }, 400);
   } catch (err: any) {
-    return json({ ok: false, error: err?.message || "Something went wrong." }, 500);
+    // RP3.22: logged in full, generic to the caller.
+    console.error("team-admin error:", err?.message || err);
+    return json({ ok: false, error: "Something went wrong." }, 500);
   }
 });

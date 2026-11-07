@@ -2753,7 +2753,7 @@
   // nothing saved. The RPC re-checks the staff gate, returns the updated
   // row (an empty result is a real failure, reported as one), and the
   // table's status CHECK still rejects any value outside the known set.
-  async function updateWorkRequest(id, status, scheduledAtIso) {
+  async function updateWorkRequest(id, status, scheduledAtIso, note) {
     if (typeof ensureFreshToken === 'function') await ensureFreshToken();
     const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/internal_update_client_portal_work_order`, {
       method: 'POST',
@@ -2762,7 +2762,8 @@
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': 'Bearer ' + getAuthToken(),
       },
-      body: JSON.stringify({ p_id: Number(id), p_status: status, p_scheduled_at: scheduledAtIso || null }),
+      // RP4.8: p_note only when there is one (the 3-argument call still works).
+      body: JSON.stringify(Object.assign({ p_id: Number(id), p_status: status, p_scheduled_at: scheduledAtIso || null }, note ? { p_note: note } : {})),
     });
     if (!res.ok) {
       const body = await res.text();
@@ -2777,8 +2778,18 @@
 
   // Moves a request along the workflow.
   async function advanceWorkRequest(id, newStatus) {
+    // Fix plan RP4.8 (2026-11-07): closing a request can tell the client why;
+    // the note shows on their portal card.
+    let note = null;
+    if (newStatus === 'declined' && typeof showPromptForm === 'function') {
+      const values = await showPromptForm('Close this request', [
+        { id: 'note', label: 'Note for the client (optional)', defaultValue: '', placeholder: 'e.g. We don\u2019t service that area yet.' },
+      ], { confirmText: 'Close request' });
+      if (!values) return;
+      note = String(values.note || '').trim().slice(0, 1000) || null;
+    }
     try {
-      await updateWorkRequest(id, newStatus);
+      await updateWorkRequest(id, newStatus, null, note);
       showToast('Request updated.');
       loadAndRenderWorkRequests();
     } catch (e) {
@@ -3490,6 +3501,15 @@
       container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-link" xlink:href="#icon-link"></use></svg>Secure document storage isn\'t available on this page yet.</div>';
       return;
     }
+    // Fix plan RP3.6 (2026-11-07): secure documents need Finance access
+    // (the database enforces it; without it the list would just look empty).
+    const uploadWrap = document.getElementById('secureDocsUploadWrap');
+    if (typeof canViewFinance === 'function' && typeof getCurrentUserRole === 'function' && getCurrentUserRole() && !canViewFinance()) {
+      if (uploadWrap) uploadWrap.hidden = true;
+      container.innerHTML = '<div class="empty-state-small"><svg class="th-icon" aria-hidden="true"><use href="#icon-shield" xlink:href="#icon-shield"></use></svg>Secure documents are for accounts with Finance access.</div>';
+      return;
+    }
+    if (uploadWrap) uploadWrap.hidden = false;
     container.innerHTML = `
       <div class="skeleton-line w-60"></div>
       <div class="skeleton-line w-40"></div>

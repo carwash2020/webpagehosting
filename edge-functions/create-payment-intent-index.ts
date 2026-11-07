@@ -147,9 +147,10 @@ async function hasSavedCard(customerId: string): Promise<boolean> {
 // checked first. One that went through (or is still processing) blocks a
 // second charge; one still open for the same amount, customer and invoice
 // is handed back instead of a new one, and a single PaymentIntent can only
-// ever be charged once. Anything unexpected from Stripe falls back to the
-// old behavior rather than blocking a real payment --
-// reconcile-stripe-payments flags any invoice paid twice as the backstop.
+// ever be charged once. If Stripe can't be asked (anything but a 404), the
+// call answers 502 rather than risk a second charge (fix plan RP3.17,
+// 2026-11-07; it used to carry on). reconcile-stripe-payments still flags
+// any invoice paid twice as the backstop.
 const PAID_OR_PAYING_STATUSES = new Set(["succeeded", "processing", "requires_capture"]);
 const REUSABLE_STATUSES = new Set(["requires_payment_method", "requires_confirmation", "requires_action"]);
 
@@ -162,7 +163,11 @@ function blocksNewPayment(pi: any): boolean {
   return !(charge && typeof charge === "object" && charge.refunded === true);
 }
 
-async function retrievePaymentIntent(id: string): Promise<any | null> {
+// Fix plan RP3.17 (2026-11-07): ok:false means Stripe couldn't be asked
+// (network error, 5xx, 401/403...), and the caller answers 502 rather than
+// go ahead without the double-charge check. A 404 (resource_missing) still
+// means "no earlier PaymentIntent": ok:true, pi:null.
+async function retrievePaymentIntent(id: string): Promise<{ ok: boolean; pi: any | null }> {
   try {
     // latest_charge is expanded so a refunded payment can be told apart
     // from one that still stands: refunding doesn't change a
@@ -170,14 +175,15 @@ async function retrievePaymentIntent(id: string): Promise<any | null> {
     const res = await fetch(`https://api.stripe.com/v1/payment_intents/${encodeURIComponent(id)}?expand[]=latest_charge`, {
       headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` },
     });
+    if (res.status === 404) return { ok: true, pi: null };
     if (!res.ok) {
-      if (res.status !== 404) console.error(`create-payment-intent: could not retrieve ${id} (HTTP ${res.status}); continuing without the double-charge check`);
-      return null;
+      console.error(`create-payment-intent: could not retrieve ${id} (HTTP ${res.status}); refusing to start a payment without the double-charge check`);
+      return { ok: false, pi: null };
     }
-    return await res.json();
+    return { ok: true, pi: await res.json() };
   } catch (err: any) {
-    console.error(`create-payment-intent: could not retrieve ${id} (${err.message}); continuing without the double-charge check`);
-    return null;
+    console.error(`create-payment-intent: could not retrieve ${id} (${err.message}); refusing to start a payment without the double-charge check`);
+    return { ok: false, pi: null };
   }
 }
 
@@ -328,7 +334,14 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: "This invoice is already paid." }, 400);
     }
 
-    const earlierPi = invoice.stripe_payment_intent_id ? await retrievePaymentIntent(invoice.stripe_payment_intent_id) : null;
+    let earlierPi: any = null;
+    if (invoice.stripe_payment_intent_id) {
+      const lookup = await retrievePaymentIntent(invoice.stripe_payment_intent_id);
+      if (!lookup.ok) {
+        return json({ ok: false, error: "We couldn't check this invoice's earlier payment just now. Please try again in a minute." }, 502);
+      }
+      earlierPi = lookup.pi;
+    }
     if (earlierPi && blocksNewPayment(earlierPi)) {
       return json({ ok: false, already_paying: true, error: "A payment for this invoice has already gone through or is still processing. It can take a minute to show as paid, so please refresh this page before paying again." }, 409);
     }
@@ -394,8 +407,9 @@ Deno.serve(async (req: Request) => {
     }), piIdempotencyKey);
 
     if (!piRes.ok) {
-      const errBody = await piRes.text();
-      return json({ ok: false, error: `Stripe error: ${errBody.slice(0, 300)}` }, 502);
+      // RP3.22: logged in full, never returned.
+      console.error(`create-payment-intent: Stripe refused the PaymentIntent (HTTP ${piRes.status}): ${(await piRes.text()).slice(0, 500)}`);
+      return json({ ok: false, error: "The payment could not be started. Please try again, or call (435) 414-1667." }, 502);
     }
     const pi = await piRes.json();
 
@@ -419,6 +433,9 @@ Deno.serve(async (req: Request) => {
 
     return json({ ok: true, client_secret: pi.client_secret });
   } catch (err: any) {
-    return json({ ok: false, error: err.message }, 500);
+    // Fix plan RP3.22 (2026-11-07): the full error is logged; the client
+    // gets a plain message (Stripe/database text can name keys or internals).
+    console.error("create-payment-intent error:", err?.message || err);
+    return json({ ok: false, error: "Something went wrong starting the payment. Please try again, or call (435) 414-1667." }, 500);
   }
 });

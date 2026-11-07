@@ -122,20 +122,45 @@ async function ensureAccountCode(email: string, displayName: string): Promise<vo
   }
 }
 
-// Granular permission expansion (2026-09-02): this function is shared
-// by BOTH the invoice/quote sync path (gated on can_manage_invoices)
-// AND the job/checkup sync path (no specific gate at all) -- the
-// least-restrictive, correct check for a shared utility called from
-// multiple contexts is "any recognized internal account."
-async function callerIsInternalAccount(email: string): Promise<boolean> {
+// Fix plan RP3.9 / D23 (2026-11-07): sending a client a portal invite
+// requires the "Manage clients" switch (account_roles.can_manage_clients).
+// This used to accept any account_roles row, so any Employee-preset account
+// could send portal invites to arbitrary addresses. Same read as
+// portal-email-alias's callerCanManageClients.
+async function callerCanManageClients(email: string): Promise<boolean> {
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=email&limit=1`,
+    `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=can_manage_clients&limit=1`,
     { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
   );
   if (!res.ok) return false;
   const rows = await res.json();
-  return rows.length > 0;
+  return Array.isArray(rows) && rows.length === 1 && rows[0].can_manage_clients === true;
 }
+
+// Fix plan RP3.25 (2026-11-07): a per-caller cap on this staff send path,
+// so a compromised staff session can't spam clients. One hit against
+// public.rate_limit_take (sql/security/group5_backend_hardening.sql), keyed
+// by the caller's email. Fails OPEN (logged) if the limiter can't be
+// reached: a real send by staff is worth more than the cap.
+const STAFF_SEND_LIMIT_PER_HOUR = 60;
+async function staffSendAllowed(callerEmail: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/rate_limit_take`, {
+      method: "POST",
+      headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_bucket: "staff-send:send-invite", p_key: String(callerEmail || "").toLowerCase(), p_max: STAFF_SEND_LIMIT_PER_HOUR, p_window_seconds: 3600 }),
+    });
+    if (!res.ok) {
+      console.error(`send-invite: rate_limit_take failed (HTTP ${res.status}); allowing the send`);
+      return true;
+    }
+    return (await res.json()) !== false;
+  } catch (err: any) {
+    console.error(`send-invite: rate_limit_take failed (${err?.message || err}); allowing the send`);
+    return true;
+  }
+}
+const TOO_MANY_SENDS_ERROR = "Too many emails sent from this account in the last hour. Wait a while and try again.";
 
 function buildInviteEmailHtml(clientName: string, inviteUrl: string, isResend: boolean): string {
   const heading = isResend ? "Finish setting up your account" : "You've been invoiced";
@@ -268,8 +293,8 @@ Deno.serve(async (req: Request) => {
     if (claims.role !== "authenticated" || !claims.email) {
       return json({ ok: false, error: "Must be signed in with a real session." }, 401);
     }
-    if (!(await callerIsInternalAccount(claims.email))) {
-      return json({ ok: false, error: "This account isn't recognized." }, 403);
+    if (!(await callerCanManageClients(claims.email))) {
+      return json({ ok: false, error: "This account can't manage clients, so it can't send portal invites." }, 403);
     }
     if (!(await callerPassesInternalMfa(claims, "send-invite"))) {
       return json({ ok: false, error: MFA_REQUIRED_ERROR, code: "mfa_required" }, 403);
@@ -341,6 +366,10 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    if (!(await staffSendAllowed(claims.email))) {
+      return json({ ok: false, error: TOO_MANY_SENDS_ERROR, code: "rate_limited" }, 429);
+    }
+
     const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
     // An 'invite' link can only be generated for an email with no user
@@ -374,7 +403,9 @@ Deno.serve(async (req: Request) => {
           error: `${targetEmail} already has a client portal account, so no new invite was sent. If they can't get in, have them use "Forgot password" on the portal login page.`,
         });
       }
-      return json({ ok: false, error: `Could not generate invite link: ${linkError.message}` }, 502);
+      // Fix plan RP3.22 (2026-11-07): Auth's own text is logged, not returned.
+      console.error(`send-invite: generateLink (${linkType}) failed: ${linkError.message}`);
+      return json({ ok: false, error: "The invite link couldn't be made just now. Try again in a minute." }, 502);
     }
 
     const inviteUrl = linkData.properties?.action_link;
@@ -406,12 +437,15 @@ Deno.serve(async (req: Request) => {
     });
 
     if (!emailRes.ok) {
-      const errBody = await emailRes.text();
-      return json({ ok: false, error: `Invite link created but email failed to send: ${errBody.slice(0, 300)}` }, 502);
+      // RP3.22: Resend's text is logged, not returned.
+      console.error(`send-invite: Resend refused the invite email (HTTP ${emailRes.status}): ${(await emailRes.text()).slice(0, 500)}`);
+      return json({ ok: false, error: "The invite link was made, but the email didn't send. Try again in a minute." }, 502);
     }
 
     return json({ ok: true, was_resend: isResend });
   } catch (err: any) {
-    return json({ ok: false, error: err.message }, 500);
+    // RP3.22: logged in full, generic to the caller.
+    console.error("send-invite error:", err?.message || err);
+    return json({ ok: false, error: "Something went wrong sending the invite. Try again in a minute." }, 500);
   }
 });

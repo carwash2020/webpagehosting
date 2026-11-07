@@ -202,9 +202,15 @@ test('a confirmed booking already in the past reads as "past"; no booking visibl
   assert.equal(get(99).kind, 'unknown');
 });
 
-test('the quote card keeps the original wording only when no booking is visible at all', () => {
-  const fn = extractFn(QUOTES, 'quoteScheduleSectionHtml');
-  assert.match(fn, /state\.kind === 'unknown'[\s\S]*Job scheduled\. We'll see you then!/);
+test('no booking visible ("unknown"): the date the time was picked and "Call or text us to confirm your time", never an asserted visit (fix plan RP4.6)', () => {
+  const ctx = { Intl, console, Date, escapeHtml: (s) => String(s), quoteVisitState: () => ({ kind: 'unknown', visit: null }), quoteSchedulePanelHtml: () => '<panel>' };
+  vm.createContext(ctx);
+  vm.runInContext(extractFn(QUOTES, 'quoteScheduleSectionHtml') + ';this.f = quoteScheduleSectionHtml;', ctx);
+  const out = ctx.f({ id: 7, scheduled_at: '2026-11-03T18:30:00Z' });
+  assert.match(out, /You scheduled this on Nov 3, 2026\. Call or text us to confirm your time: <a href="tel:\+14354141667">\(435\) 414-1667<\/a>\./);
+  assert.doesNotMatch(out, /We'll see you then/);
+  assert.match(ctx.f({ id: 7, scheduled_at: 'not a date' }), /^<div class="responded-note quote-visit-unknown">Call or text us to confirm your time:/);
+  assert.equal(ctx.f({ id: 7, scheduled_at: null }), '<panel>', 'never scheduled: the scheduling flow, unchanged');
 });
 
 test('an upcoming quote visit offers Add to calendar and the real Reschedule or cancel link', () => {

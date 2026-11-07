@@ -138,6 +138,18 @@ async function callerIsInternalAccount(email: string): Promise<boolean> {
   return rows.length > 0;
 }
 
+// D29: 'check' discloses whether an email has a card on file (and its
+// brand/last4), so it takes the invoices switch. Fails closed.
+async function callerCanManageInvoices(email: string): Promise<boolean> {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/account_roles?email=eq.${encodeURIComponent(email.toLowerCase())}&select=can_manage_invoices&limit=1`,
+    { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+  );
+  if (!res.ok) return false;
+  const rows = await res.json();
+  return Array.isArray(rows) && rows.length === 1 && rows[0].can_manage_invoices === true;
+}
+
 // Duplicated from create-payment-intent/create-bulk-payment-intent --
 // see that function's own comment for why (no shared-module system
 // across separately-deployed Edge Functions).
@@ -311,42 +323,57 @@ async function logPosIncomeToWorkspaceSync(description: string, amount: number, 
     createdBy: internalAccountEmail,
     lastEditedBy: internalAccountEmail,
   };
+  // Fix plan RP3.19 (2026-11-07): read-modify-write with a version check.
+  // The PATCH only lands if the row's updated_at is still the value read
+  // (every writer -- sync.js, this function, stripe-webhook -- sets a new
+  // updated_at), so two POS sales logged at once can no longer overwrite
+  // each other's entry (last write wins). A lost race re-reads and tries
+  // again, and the dedupe check below runs on every fresh read.
   for (const code of MONEY_SYNC_CODES) {
-    const syncRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.${encodeURIComponent(code)}&select=data`,
-      { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
-    );
-    if (!syncRes.ok) {
-      // The Stripe charge itself already succeeded by the time this runs --
-      // logged so a real POS sale that never made it into the income log
-      // is at least visible for manual reconciliation, instead of the
-      // register operator seeing "charge succeeded" on screen with no
-      // sign anything is actually missing from the books.
-      console.error(`Failed to read workspace_sync (${code}) for POS charge (PaymentIntent ${stripePaymentIntentId}): ${await syncRes.text().catch(() => "")}`);
-      continue;
-    }
-    const syncRows = await syncRes.json();
-    if (!syncRows.length) continue;
-    const blob = syncRows[0].data || {};
-    const incomeLog = JSON.parse(blob.th_income_log || "[]");
-    // Idempotent on the PaymentIntent id -- Stripe sends
-    // payment_intent.succeeded to stripe-webhook for EVERY successful
-    // charge regardless of how it was confirmed, including one already
-    // confirmed synchronously right here (the 'charge_saved' path knows
-    // the real outcome immediately and logs it directly, without
-    // waiting on the webhook at all). Without this check, that same
-    // charge would be logged twice -- once here, once again when the
-    // webhook's own pos_charge handling sees the same event.
-    if (incomeLog.some((e: any) => e.stripePaymentIntentId === stripePaymentIntentId)) continue;
-    incomeLog.push(entry);
-    blob.th_income_log = JSON.stringify(incomeLog);
-    const posSyncPatchRes = await fetch(`${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.${encodeURIComponent(code)}`, {
-      method: "PATCH",
-      headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ data: blob, updated_at: new Date().toISOString() }),
-    });
-    if (!posSyncPatchRes.ok) {
-      console.error(`Failed to log POS income (${code}) for PaymentIntent ${stripePaymentIntentId}: ${await posSyncPatchRes.text().catch(() => "")}`);
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const syncRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.${encodeURIComponent(code)}&select=data,updated_at`,
+        { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+      );
+      if (!syncRes.ok) {
+        // The Stripe charge itself already succeeded by the time this runs --
+        // logged so a real POS sale that never made it into the income log
+        // is at least visible for manual reconciliation, instead of the
+        // register operator seeing "charge succeeded" on screen with no
+        // sign anything is actually missing from the books.
+        console.error(`Failed to read workspace_sync (${code}) for POS charge (PaymentIntent ${stripePaymentIntentId}): ${await syncRes.text().catch(() => "")}`);
+        break;
+      }
+      const syncRows = await syncRes.json();
+      if (!syncRows.length) break;
+      const blob = syncRows[0].data || {};
+      const readAt: string | null = syncRows[0].updated_at || null;
+      const incomeLog = JSON.parse(blob.th_income_log || "[]");
+      // Idempotent on the PaymentIntent id -- Stripe sends
+      // payment_intent.succeeded to stripe-webhook for EVERY successful
+      // charge regardless of how it was confirmed, including one already
+      // confirmed synchronously right here (the 'charge_saved' path knows
+      // the real outcome immediately and logs it directly, without
+      // waiting on the webhook at all). Without this check, that same
+      // charge would be logged twice -- once here, once again when the
+      // webhook's own pos_charge handling sees the same event.
+      if (incomeLog.some((e: any) => e.stripePaymentIntentId === stripePaymentIntentId)) break;
+      incomeLog.push(entry);
+      blob.th_income_log = JSON.stringify(incomeLog);
+      const versionFilter = readAt ? `updated_at=eq.${encodeURIComponent(readAt)}` : "updated_at=is.null";
+      const posSyncPatchRes = await fetch(`${SUPABASE_URL}/rest/v1/workspace_sync?code=eq.${encodeURIComponent(code)}&${versionFilter}&select=code`, {
+        method: "PATCH",
+        headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json", Prefer: "return=representation" },
+        body: JSON.stringify({ data: blob, updated_at: new Date().toISOString() }),
+      });
+      if (!posSyncPatchRes.ok) {
+        console.error(`Failed to log POS income (${code}) for PaymentIntent ${stripePaymentIntentId}: ${await posSyncPatchRes.text().catch(() => "")}`);
+        break;
+      }
+      const written = await posSyncPatchRes.json().catch(() => null);
+      if (Array.isArray(written) && written.length) break;
+      // Zero rows: the row changed after our read. Read it again.
+      if (attempt === 3) console.error(`Gave up logging POS income (${code}) for PaymentIntent ${stripePaymentIntentId}: the row kept changing; add it by hand`);
     }
   }
 }
@@ -452,7 +479,20 @@ Deno.serve(async (req: Request) => {
     }
     const normalizedEmail = client_email.toLowerCase().trim();
 
+    // Fix plan RP3.16 (2026-11-07): an unknown mode is refused. It used to
+    // fall through to 'new_card', so a typo'd mode created a PaymentIntent
+    // and recorded a card authorization.
+    if (mode !== "check" && mode !== "charge_saved" && mode !== "new_card") {
+      return json({ ok: false, error: "Unknown mode. Use check, charge_saved or new_card." }, 400);
+    }
+
     if (mode === "check") {
+      // Fix plan RP3.27 / D29 (2026-11-07): looking up whether an email has
+      // a saved card (and its brand/last4) needs "Manage invoices"; it used
+      // to be open to any internal account.
+      if (!(await callerCanManageInvoices(claims.email))) {
+        return json({ ok: false, error: "This account can't look up saved cards." }, 403);
+      }
       const customerId = await findExistingStripeCustomerId(normalizedEmail);
       if (!customerId) return json({ ok: true, has_saved_card: false });
       const cards = await listSavedCards(customerId);
@@ -514,8 +554,8 @@ Deno.serve(async (req: Request) => {
       return json({ ok: true, charged: true, replayed: piRes.headers.get("Idempotent-Replayed") === "true" || undefined });
     }
 
-    // mode === 'new_card' (or unrecognized -- defaults to the safest,
-    // most general path rather than silently doing nothing)
+    // mode === 'new_card' (the only mode left: anything unrecognized was
+    // refused above, RP3.16)
     //
     // Signature required here specifically (2026-09-03), requested
     // directly: "we also need to collect signitures when we collect
@@ -559,12 +599,15 @@ Deno.serve(async (req: Request) => {
       "metadata[internal_account]": claims.email,
     }), `pos-new-v1-${validRequestId(request_id) || crypto.randomUUID()}`);
     if (!piRes.ok) {
-      const errBody = await piRes.text();
-      return json({ ok: false, error: `Stripe error: ${errBody.slice(0, 300)}` }, 502);
+      // Fix plan RP3.22 (2026-11-07): Stripe's text is logged, not returned.
+      console.error(`create-pos-charge: Stripe refused the new-card PaymentIntent (HTTP ${piRes.status}): ${(await piRes.text()).slice(0, 500)}`);
+      return json({ ok: false, error: "Stripe didn't accept the payment setup. Try again." }, 502);
     }
     const pi = await piRes.json();
     return json({ ok: true, client_secret: pi.client_secret });
   } catch (err: any) {
-    return json({ ok: false, error: err.message }, 500);
+    // RP3.22: logged in full, generic to the caller.
+    console.error("create-pos-charge error:", err?.message || err);
+    return json({ ok: false, error: "Something went wrong with the charge. Check Stripe before trying again." }, 500);
   }
 });

@@ -39,6 +39,16 @@
 //                account having at least one real business record --
 //                see accountHasBusinessRecord() below for the rule
 //                and why it's checked this way.
+//   'can_save_card' -- (fix plan RP4.4, 2026-11-07) answers that same
+//                gate and nothing else: no Stripe call, no write. The
+//                Settings page asks it BEFORE showing the name +
+//                signature step, so a gated account sees the
+//                explanation instead of signing for nothing.
+//
+// Fix plan RP3.20 (2026-11-07): the caller's email is lowercased once,
+// at the top (callerEmail), and used everywhere, including the signed
+// authorization record. RP3.22: Stripe and database error text is logged
+// here and never returned; the caller gets a plain message.
 //
 // Uses its own dedicated Stripe secret (STRIPE_CLIENT_CARDS_SECRET_KEY),
 // matching the "one key one function" practice already established
@@ -220,6 +230,9 @@ async function accountHasBusinessRecord(email: string): Promise<boolean> {
 // context is "settings_add_card" here specifically: this save isn't
 // a side effect of a payment or a POS sale, it's a deliberate,
 // dedicated action the client takes from their own Settings page.
+const GATE_MESSAGE = "Saving a card isn't available on this account yet -- it needs at least one invoice, quote, job, contract or checkup from Triple H first.";
+const GENERIC_ERROR = "Something went wrong. Please try again, or call (435) 414-1667.";
+
 async function recordCardAuthorization(clientEmail: string, signerName: string, authorizationText: string, signatureImage: string | null) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/card_authorizations`, {
     method: "POST",
@@ -259,11 +272,28 @@ Deno.serve(async (req: Request) => {
       return json({ ok: false, error: "Must be signed in." }, 401);
     }
     if (!STRIPE_SECRET_KEY) {
-      return json({ ok: false, error: "STRIPE_CLIENT_CARDS_SECRET_KEY secret is not set." }, 500);
+      console.error("manage-saved-card: STRIPE_CLIENT_CARDS_SECRET_KEY secret is not set.");
+      return json({ ok: false, error: GENERIC_ERROR }, 500);
     }
+    const callerEmail = String(claims.email).trim().toLowerCase();
 
     const { mode, payment_method_id, signer_name, signature_image, request_id } = await req.json();
-    const customerId = await findExistingStripeCustomerId(claims.email.toLowerCase());
+
+    // Who-can-save-a-card gate (ACTION-ITEMS #15). FP4.2: a record sent to
+    // any email this account has proved it owns counts.
+    const canSaveCard = async (): Promise<boolean> => {
+      for (const email of await callerEmails(claims)) if (await accountHasBusinessRecord(email)) return true;
+      return false;
+    };
+
+    // Fix plan RP4.4 (2026-11-07): the gate alone, read-only, asked before
+    // the page shows the signature step.
+    if (mode === "can_save_card") {
+      const allowed = await canSaveCard();
+      return json(allowed ? { ok: true, can_save_card: true } : { ok: true, can_save_card: false, message: GATE_MESSAGE });
+    }
+
+    const customerId = await findExistingStripeCustomerId(callerEmail);
 
     if (mode === "list") {
       if (!customerId) return json({ ok: true, cards: [] });
@@ -315,24 +345,18 @@ Deno.serve(async (req: Request) => {
 
       const detachRes = await stripePost(`payment_methods/${payment_method_id}/detach`, new URLSearchParams(), `pm-detach-v1-${payment_method_id}`);
       if (!detachRes.ok) {
-        const errBody = await detachRes.text();
-        return json({ ok: false, error: `Stripe error: ${errBody.slice(0, 300)}` }, 502);
+        console.error(`manage-saved-card: detach failed (HTTP ${detachRes.status}): ${(await detachRes.text()).slice(0, 300)}`);
+        return json({ ok: false, error: "Could not remove that card right now. Please try again." }, 502);
       }
       return json({ ok: true, removed: true });
     }
 
     if (mode === "create_setup_intent") {
-      // Who-can-save-a-card gate (ACTION-ITEMS #15) -- checked first,
-      // before asking anyone to sign anything, so a gated account gets
-      // a clear explanation instead of a pointless signature prompt.
-      // FP4.2: a record sent to any email this account has proved it owns counts.
-      let hasRecord = false;
-      for (const email of await callerEmails(claims)) if (await accountHasBusinessRecord(email)) { hasRecord = true; break; }
-      if (!hasRecord) {
-        return json({
-          ok: false,
-          error: "Saving a card isn't available on this account yet -- it needs at least one invoice, quote, job, contract or checkup from Triple H first.",
-        }, 403);
+      // Who-can-save-a-card gate (ACTION-ITEMS #15), enforced here on
+      // every save. The page asks can_save_card first (RP4.4), so a gated
+      // account sees this explanation before any signature prompt.
+      if (!(await canSaveCard())) {
+        return json({ ok: false, error: GATE_MESSAGE }, 403);
       }
       // Same dispute-protection requirement as every other place a
       // new card gets saved -- see recordCardAuthorization()'s own
@@ -348,9 +372,9 @@ Deno.serve(async (req: Request) => {
         return json({ ok: false, needs_signature: true, error: "A drawn signature is required before adding a new card." }, 400);
       }
       const authorizationText = `I, ${signer_name.trim()}, authorize Triple H Enterprises to securely save this card on file (via Stripe) for future charges I separately approve.`;
-      await recordCardAuthorization(claims.email, signer_name.trim(), authorizationText, signature_image);
+      await recordCardAuthorization(callerEmail, signer_name.trim(), authorizationText, signature_image);
 
-      const setupCustomerId = customerId || await getOrCreateStripeCustomer(claims.email.toLowerCase());
+      const setupCustomerId = customerId || await getOrCreateStripeCustomer(callerEmail);
       // A SetupIntent never charges, so the key only needs to cover this
       // one request and its retries: the page's request_id when it sends
       // one, else a fresh id.
@@ -360,8 +384,8 @@ Deno.serve(async (req: Request) => {
         "automatic_payment_methods[enabled]": "true",
       }), setupKey);
       if (!setupRes.ok) {
-        const errBody = await setupRes.text();
-        return json({ ok: false, error: `Stripe error: ${errBody.slice(0, 300)}` }, 502);
+        console.error(`manage-saved-card: SetupIntent failed (HTTP ${setupRes.status}): ${(await setupRes.text()).slice(0, 300)}`);
+        return json({ ok: false, error: "Could not start adding a card right now. Please try again." }, 502);
       }
       const setupIntent = await setupRes.json();
       return json({ ok: true, client_secret: setupIntent.client_secret });
@@ -369,6 +393,8 @@ Deno.serve(async (req: Request) => {
 
     return json({ ok: false, error: "Unknown mode." }, 400);
   } catch (err: any) {
-    return json({ ok: false, error: err.message }, 500);
+    // RP3.22: the detail (Stripe/DB text) stays in the log.
+    console.error(`manage-saved-card: ${err && err.message}`);
+    return json({ ok: false, error: GENERIC_ERROR }, 500);
   }
 });

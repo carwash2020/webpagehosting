@@ -343,7 +343,8 @@ function loadSettings(backend, { aal = 'aal2', stored } = {}) {
     runScripts: 'dangerously', url: 'https://www.triplehenterprisesllc.biz/tools/settings.html',
     beforeParse(w) {
       w.fetch = backend.fetch;
-      w.localStorage.setItem('th_auth_session', JSON.stringify({ access_token: token(aal, 's1'), refresh_token: 'r', expires_at: Math.floor(Date.now() / 1000) + 3600, email: EMAIL }));
+      // remember_until: a current remembered session (D31 clears pre-cap ones once).
+      w.localStorage.setItem('th_auth_session', JSON.stringify({ access_token: token(aal, 's1'), refresh_token: 'r', expires_at: Math.floor(Date.now() / 1000) + 3600, email: EMAIL, remember_until: Date.now() + 30 * 86400000 }));
       if (stored) w.localStorage.setItem(DEVICE_KEY, JSON.stringify(stored));
       w.showConfirm = async () => true;
       w.initAppTour = () => {};

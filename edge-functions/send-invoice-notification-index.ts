@@ -82,16 +82,55 @@ async function callerCanManageInvoices(email: string): Promise<boolean> {
 // matching this table's own column default, so a client who's never
 // touched this setting keeps getting the same transactional emails
 // they always did.
-async function clientWantsNotification(email: string, column: string): Promise<boolean> {
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/client_notification_preferences?client_email=eq.${encodeURIComponent(email.toLowerCase())}&select=${column}&limit=1`,
-    { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
-  );
-  if (!res.ok) return true;
-  const rows = await res.json();
-  if (!rows.length) return true;
-  return rows[0][column] !== false;
+// Fix plan RP3.26 (2026-11-07): fails CLOSED. true = send, false = the
+// client opted out, null = the preference couldn't be read (database
+// error) -- the caller skips the email and says so. Only a MISSING row
+// means "wants it" (matching the column default, so a client who never
+// opened Settings keeps getting the same transactional emails).
+async function clientWantsNotification(email: string, column: string): Promise<boolean | null> {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/client_notification_preferences?client_email=eq.${encodeURIComponent(email.toLowerCase())}&select=${column}&limit=1`,
+      { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+    );
+    if (!res.ok) {
+      console.error(`send-invoice-notification: preferences lookup failed (HTTP ${res.status}); not emailing`);
+      return null;
+    }
+    const rows = await res.json();
+    if (!Array.isArray(rows)) return null;
+    if (!rows.length) return true;
+    return rows[0][column] !== false;
+  } catch (err: any) {
+    console.error(`send-invoice-notification: preferences lookup failed (${err?.message || err}); not emailing`);
+    return null;
+  }
 }
+
+// Fix plan RP3.25 (2026-11-07): a per-caller cap on this staff send path,
+// so a compromised staff session can't spam clients. One hit against
+// public.rate_limit_take (sql/security/group5_backend_hardening.sql), keyed
+// by the caller's email. Fails OPEN (logged) if the limiter can't be
+// reached: a real send by staff is worth more than the cap.
+const STAFF_SEND_LIMIT_PER_HOUR = 60;
+async function staffSendAllowed(callerEmail: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/rate_limit_take`, {
+      method: "POST",
+      headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_bucket: "staff-send:send-invoice-notification", p_key: String(callerEmail || "").toLowerCase(), p_max: STAFF_SEND_LIMIT_PER_HOUR, p_window_seconds: 3600 }),
+    });
+    if (!res.ok) {
+      console.error(`send-invoice-notification: rate_limit_take failed (HTTP ${res.status}); allowing the send`);
+      return true;
+    }
+    return (await res.json()) !== false;
+  } catch (err: any) {
+    console.error(`send-invoice-notification: rate_limit_take failed (${err?.message || err}); allowing the send`);
+    return true;
+  }
+}
+const TOO_MANY_SENDS_ERROR = "Too many emails sent from this account in the last hour. Wait a while and try again.";
 
 function escapeHtml(value: unknown): string {
   const s = value === null || value === undefined ? "" : String(value);
@@ -374,8 +413,16 @@ Deno.serve(async (req: Request) => {
     // when the caller confirms a real account already exists.
     const hasPortalAccount = has_portal_account === true;
 
-    if (!(await clientWantsNotification(client_email, "wants_invoice_quote_emails"))) {
+    const wants = await clientWantsNotification(client_email, "wants_invoice_quote_emails");
+    if (wants === null) {
+      // RP3.26: couldn't tell whether they opted out, so nothing was sent.
+      return json({ ok: false, skipped: "preferences unavailable", error: "The client's email preferences couldn't be checked, so nothing was sent. Try again in a minute." }, 503);
+    }
+    if (!wants) {
       return json({ ok: true, skipped: "client opted out of invoice/quote emails" });
+    }
+    if (!(await staffSendAllowed(claims.email))) {
+      return json({ ok: false, error: TOO_MANY_SENDS_ERROR, code: "rate_limited" }, 429);
     }
 
     const parts: EmailParts = {
@@ -406,8 +453,9 @@ Deno.serve(async (req: Request) => {
     });
 
     if (!emailRes.ok) {
-      const errBody = await emailRes.text();
-      return json({ ok: false, error: `Email failed to send: ${errBody.slice(0, 300)}` }, 502);
+      // Fix plan RP3.22 (2026-11-07): Resend's text is logged, not returned.
+      console.error(`send-invoice-notification: Resend refused the email (HTTP ${emailRes.status}): ${(await emailRes.text()).slice(0, 500)}`);
+      return json({ ok: false, error: "The email didn't send. Try again in a minute." }, 502);
     }
 
     // Push is an additional channel, checked here rather than in a
@@ -418,6 +466,8 @@ Deno.serve(async (req: Request) => {
 
     return json({ ok: true });
   } catch (err: any) {
-    return json({ ok: false, error: err.message }, 500);
+    // RP3.22: logged in full, generic to the caller.
+    console.error("send-invoice-notification error:", err?.message || err);
+    return json({ ok: false, error: "Something went wrong sending the email. Try again in a minute." }, 500);
   }
 });

@@ -78,7 +78,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=09ad2a2e15">
-<link rel="stylesheet" href="/portal/portal-app.css?v=4af907b767">
+<link rel="stylesheet" href="/portal/portal-app.css?v=ef0735c580">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -117,7 +117,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=32b0b6ede8">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous"></script>
-<script src="/portal/portal-app.js?v=abb7e37c38"></script>
+<script src="/portal/portal-app.js?v=8bbf28b1fe"></script>
 <!-- Shared business-hours data (2026-09-04) -- see business-hours.js's
      own header comment for the full reasoning. -->
 <script src="/js/business-hours.js?v=e0e3b29210"></script>
@@ -375,6 +375,16 @@
     text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
   }
   @media (hover:hover){.wo-cancel-ask:hover { color: var(--orange-light); }}
+  /* Closed by Triple H (fix plan RP4.8, 2026-11-07): the staff note, or a
+     way to ask about it. */
+  .wo-status-note {
+    font-size: 13px; color: var(--text); margin-top: 8px; line-height: 1.45; white-space: pre-line;
+    padding: 8px 10px; background: var(--bg-panel-2); border: 1px solid var(--border); border-radius: 8px;
+  }
+  .wo-status-note-ask {
+    background: none; border: 0; padding: 0; color: var(--orange-light); font: inherit;
+    text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+  }
   /* A real progress track (2026-09-07): the status pill already told a
      client where a request stood, but as a single word with no sense
      of how much further there was to go. Reuses the exact real pipeline
@@ -428,6 +438,9 @@
 <link rel="stylesheet" href="/portal/portal-polish.css?v=f0d57c5e20">
 </head>
 <body class="portal-page">
+<!-- Skip link (fix plan RP4.9, 2026-11-07): hidden until focused; jumps past
+     the app bar and navigation to #portalMain. Styles: portal-app.css. -->
+<a href="#portalMain" class="portal-skip-link">Skip to main content</a>
 
 <!-- App bar (v2 shell, part 2, 2026-09-28) -- the same one home.html and
      dashboard.html carry: kicker + Anton title, the round Report-a-problem
@@ -481,6 +494,8 @@
     <div class="portal-rail-help-actions"><a href="tel:+14354141667">Call</a><a href="sms:+14354141667">Text</a></div>
   </div>
 </div>
+
+<main id="portalMain" tabindex="-1">
 
 <p class="wo-intro">Tell us what needs doing and we'll follow up to confirm details and pricing. For anything urgent &mdash; an active leak, no power, a fridge that's failed &mdash; call or text <a href="tel:+14354141667" style="color:var(--orange-light);">(435) 414-1667</a> instead, that reaches us faster.</p>
 
@@ -610,6 +625,8 @@
 </div>
 </div>
 </div>
+
+</main>
 
 <script>
   const { createClient } = supabase;
@@ -1038,6 +1055,37 @@
   }
 
 
+  // Closed by Triple H (fix plan RP4.8, 2026-11-07): staff's note on a
+  // declined request (client_portal_work_orders.status_note, written from
+  // the staff tools), else a way into this request's message thread.
+  // Loaded separately, only for declined rows, so the list itself never
+  // depends on the column existing yet; any failure just means no note.
+  let woStatusNotes = {};
+  async function loadWoStatusNotes(requests, email) {
+    woStatusNotes = {};
+    const ids = (requests || []).filter(r => r.status === 'declined').map(r => r.id);
+    if (!ids.length) return;
+    try {
+      const { data, error } = await client.from('client_portal_work_orders').select('id,status_note').eq('client_email', email).in('id', ids);
+      if (error) return;
+      (data || []).forEach(r => { if (typeof r.status_note === 'string' && r.status_note.trim()) woStatusNotes[r.id] = r.status_note.trim(); });
+    } catch (e) { /* no note shown */ }
+  }
+  function woClosedNoteHtml(wo) {
+    if (wo.status !== 'declined') return '';
+    const note = woStatusNotes[wo.id];
+    if (note) return `<div class="wo-status-note"><strong>From Triple H:</strong> ${escapeHtml(note)}</div>`;
+    return `<div class="wo-status-note">Questions? <button type="button" class="wo-status-note-ask" onclick="openWoThread(${wo.id})">Send us a message.</button></div>`;
+  }
+  // Opens this request's thread (the card's own Messages) and puts the
+  // cursor in the reply box.
+  async function openWoThread(workOrderId) {
+    const btn = document.querySelector('#wo-card-' + workOrderId + ' .portal-thread-toggle');
+    if (!woThreadIsOpen(workOrderId)) await toggleMessages(workOrderId, btn);
+    const input = document.getElementById('woMessageInput-' + workOrderId);
+    if (input) input.focus();
+  }
+
   function renderRequestCard(wo) {
     const statusKey = wo.status || 'submitted';
     const statusLabel = STATUS_LABELS[statusKey] || statusKey;
@@ -1056,6 +1104,7 @@
         <div class="wo-card-desc">${escapeHtml(wo.description)}</div>
         ${urgencyLabel ? `<div class="wo-urgency-tag${urgentClass}">${escapeHtml(urgencyLabel)}</div>` : ''}
         ${(statusKey === 'scheduled' && wo.scheduled_at) ? `<div class="wo-scheduled-tag">Scheduled for ${escapeHtml(formatScheduledAt(wo.scheduled_at))}</div>` : ''}
+        ${woClosedNoteHtml(wo)}
         <div class="wo-card-actions">
         <button type="button" class="wo-messages-toggle portal-thread-toggle${woUnreadCounts[wo.id] ? ' has-unread' : ''}" onclick="toggleMessages(${wo.id}, this)" aria-expanded="false" aria-controls="woMessages-${wo.id}">${THREAD_ICON}Messages${woUnreadBadgeHtml(wo.id)}</button>
         <!-- Cancel (2026-09-19), requested directly -- only while still
@@ -1227,6 +1276,7 @@
         '<div class="empty-state is-neutral"><div class="empty-state-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 8.5v7M8.5 12h7"/></svg></div><p class="empty-state-title">Nothing requested yet. Anything you send above will show up here so you can track it.</p></div>';
       return;
     }
+    await loadWoStatusNotes(requests, session.user.email.toLowerCase());
     listEl.innerHTML = '<div class="wo-section-title">Your requests</div>' +
       openRequestsBannerHtml(requests) +
       requests.map(renderRequestCard).join('');

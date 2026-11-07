@@ -2959,10 +2959,19 @@
         // session must get its own id, not collide with this one.
         sessionStorage.removeItem(LEAD_REQUEST_ID_KEY);
       } else {
-        throw new Error('Form submission failed');
+        // Fix plan RP3.4 (2026-11-07): the database limits how many requests
+        // one place can send in an hour.
+        throw new Error(response.status === 429 ? 'rate-limited' : 'Form submission failed');
       }
     })
-    .catch(() => {
+    .catch((err) => {
+      if (err && err.message === 'rate-limited') {
+        status.textContent = "We've had several requests from here in the last hour. Please call or text us at " + (window.__siteOverridePhone || '(435) 414-1667') + " and we'll take it from there.";
+        status.classList.add('is-error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = idleLabel || 'Submit Request';
+        return;
+      }
       status.textContent = "Something went wrong sending that. Please call us at " + (window.__siteOverridePhone || '(435) 414-1667') + " or email " + (window.__siteOverrideEmail || 'steve@triplehenterprisesllc.biz') + " directly.";
       status.classList.add('is-error');
       submitBtn.disabled = false;

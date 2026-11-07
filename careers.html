@@ -646,10 +646,18 @@
           }
           form.reset();
         } else {
-          throw new Error('Application submission failed');
+          // Fix plan RP3.4 (2026-11-07): limited per hour from one place.
+          throw new Error(response.status === 429 ? 'rate-limited' : 'Application submission failed');
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        if (err && err.message === 'rate-limited') {
+          status.textContent = "We've had several applications from here in the last hour. Please call or text " + (window.__siteOverridePhone || '(435) 414-1667') + " instead.";
+          status.classList.add('is-error');
+          submitBtn.disabled = false;
+          submitBtn.textContent = idleLabel || 'Submit Application';
+          return;
+        }
         status.textContent = "Something went wrong sending that. Please call or text " + (window.__siteOverridePhone || '(435) 414-1667') + " or email " + (window.__siteOverrideEmail || 'steve@triplehenterprisesllc.biz') + " directly.";
         status.classList.add('is-error');
         submitBtn.disabled = false;

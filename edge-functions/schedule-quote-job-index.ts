@@ -177,11 +177,13 @@ Deno.serve(async (req: Request) => {
     if (!bookingRes.ok) {
       const errText = await bookingRes.text();
       const wasConflict = errText.includes("23P01") || errText.includes("exclusion") || bookingRes.status === 409;
+      // Fix plan RP3.22 (2026-11-07): the database's text is logged, not returned.
+      if (!wasConflict) console.error(`schedule-quote-job: booking insert for quote ${quote.id} failed (HTTP ${bookingRes.status}): ${errText.slice(0, 500)}`);
       return json({
         ok: false,
         error: wasConflict
           ? "That time was just booked by someone else. Please pick another."
-          : `Could not create the booking: ${errText.slice(0, 300)}`,
+          : "We couldn't book that time just now. Please try again, or call or text us.",
       }, wasConflict ? 409 : 502);
     }
 
@@ -207,7 +209,10 @@ Deno.serve(async (req: Request) => {
     const scheduledAtFilter = priorScheduledAt
       ? `scheduled_at=eq.${encodeURIComponent(priorScheduledAt)}`
       : "scheduled_at=is.null";
-    const quotePatchRes = await fetch(
+    // This request's own marker value, so a retry can tell "our first try
+    // actually landed" apart from "someone else got there first".
+    const markAt = new Date().toISOString();
+    const patchQuote = () => fetch(
       `${SUPABASE_URL}/rest/v1/client_portal_quotes?id=eq.${quote_id}&${scheduledAtFilter}`,
       {
         method: "PATCH",
@@ -217,37 +222,68 @@ Deno.serve(async (req: Request) => {
           "Content-Type": "application/json",
           Prefer: "return=representation",
         },
-        body: JSON.stringify({ scheduled_at: new Date().toISOString() }),
+        body: JSON.stringify({ scheduled_at: markAt }),
       },
-    );
+    ).catch((err: any) => {
+      console.error(`schedule-quote-job: marking quote ${quote_id} scheduled failed (${err?.message || err})`);
+      return null;
+    });
+    // Undo exactly the booking this request created (by id when known).
+    const undoBooking = async () => {
+      const undoFilter = createdBookingId
+        ? `id=eq.${createdBookingId}`
+        : `quote_id=eq.${quote.id}&start_at=eq.${encodeURIComponent(start_at)}&status=eq.confirmed`;
+      const del = await fetch(`${SUPABASE_URL}/rest/v1/th_bookings?${undoFilter}`, {
+        method: "DELETE",
+        headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
+      }).catch(() => null);
+      if (!del || !del.ok) console.error(`schedule-quote-job: could not undo booking ${createdBookingId ?? `for quote ${quote.id} at ${start_at}`} -- remove it by hand`);
+    };
 
-    if (quotePatchRes.ok) {
-      const updated = await quotePatchRes.json();
-      if (!updated.length) {
+    // Fix plan RP3.11 (2026-11-07): an HTTP error on this write used to be
+    // logged and answered ok:true -- the booking stood but scheduled_at
+    // stayed null, so the quote stayed schedulable (a later double
+    // booking). Now: one retry, then 502 with the booking undone, exactly
+    // as when the race is lost.
+    let quotePatchRes = await patchQuote();
+    let retried = false;
+    if (!quotePatchRes || !quotePatchRes.ok) {
+      if (quotePatchRes) console.error(`schedule-quote-job: marking quote ${quote_id} scheduled failed (HTTP ${quotePatchRes.status}): ${(await quotePatchRes.text().catch(() => "")).slice(0, 300)}; retrying once`);
+      retried = true;
+      quotePatchRes = await patchQuote();
+    }
+    if (!quotePatchRes || !quotePatchRes.ok) {
+      if (quotePatchRes) console.error(`schedule-quote-job: marking quote ${quote_id} scheduled failed again (HTTP ${quotePatchRes.status}); undoing the booking`);
+      await undoBooking();
+      return json({ ok: false, error: "We couldn't finish scheduling this visit, so it wasn't booked. Please try again, or call or text us." }, 502);
+    }
+    const updated = await quotePatchRes.json().catch(() => []);
+    if (!Array.isArray(updated) || !updated.length) {
+      // Zero rows after a retry may be our own first try having landed
+      // (its answer lost on the way back): the marker is then ours.
+      let ours = false;
+      if (retried) {
+        const again = await fetch(
+          `${SUPABASE_URL}/rest/v1/client_portal_quotes?id=eq.${quote_id}&select=scheduled_at`,
+          { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } },
+        ).catch(() => null);
+        const rowsNow = again && again.ok ? await again.json().catch(() => []) : [];
+        ours = Array.isArray(rowsNow) && rowsNow[0] && Date.parse(rowsNow[0].scheduled_at) === Date.parse(markAt);
+      }
+      if (!ours) {
         // Lost the race: another request already scheduled this quote
         // between our read above and this write. Delete the booking we
         // just created instead of leaving a real, duplicate appointment
         // on the calendar for one already-scheduled job.
-        const undoFilter = createdBookingId
-          ? `id=eq.${createdBookingId}`
-          : `quote_id=eq.${quote.id}&start_at=eq.${encodeURIComponent(start_at)}&status=eq.confirmed`;
-        await fetch(`${SUPABASE_URL}/rest/v1/th_bookings?${undoFilter}`, {
-          method: "DELETE",
-          headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
-        });
+        await undoBooking();
         return json({ ok: false, error: "This job is already scheduled. Call or text us to reschedule." }, 409);
       }
-    } else {
-      // The booking itself is real and already created -- log this
-      // rather than silently returning ok:true with a quote row that
-      // never actually got its scheduled_at set (which would let a
-      // second request schedule ANOTHER booking against it later, since
-      // the is-it-already-scheduled check above reads scheduled_at).
-      console.error(`Failed to mark client_portal_quotes ${quote_id} scheduled: ${await quotePatchRes.text().catch(() => "")}`);
     }
 
     return json({ ok: true });
   } catch (err: any) {
-    return json({ ok: false, error: err.message }, 500);
+    // Fix plan RP3.22 (2026-11-07): logged in full, generic to the client.
+    console.error("schedule-quote-job error:", err?.message || err);
+    return json({ ok: false, error: "Something went wrong. Please try again, or call or text us." }, 500);
   }
 });

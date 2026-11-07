@@ -68,7 +68,9 @@ function loadWebhook(state) {
   });
   vm.runInContext(src, context, { filename: 'resend-webhook-index.ts' });
 
-  const deliver = async (eventType, data, { svixId = 'msg_1', svixTimestamp = '1700000000', badSignature = false } = {}) => {
+  // Fix plan RP3.21 (2026-11-07): deliveries now have to be fresh, so the
+  // default is "now" (it was a fixed 2023 timestamp, which is now refused).
+  const deliver = async (eventType, data, { svixId = 'msg_1', svixTimestamp = String(Math.floor(Date.now() / 1000)), badSignature = false } = {}) => {
     const body = JSON.stringify({ type: eventType, data });
     const signature = badSignature ? 'v1,not-a-real-signature' : sign(state.secret ?? SECRET, svixId, svixTimestamp, body);
     const res = await handler(new Request('https://example.supabase.co/functions/v1/resend-webhook', {
@@ -134,4 +136,30 @@ test('a signature made with the wrong secret is rejected', async () => {
   const raw = fs.readFileSync(repo('edge-functions', 'resend-webhook-index.ts'), 'utf8');
   assert.match(raw, /RESEND_WEBHOOK_SIGNING_SECRET/, 'sanity check: the function reads its secret from this env var');
   assert.notEqual(sig, sign(SECRET, 'msg_1', '1700000000', body), 'the two secrets must actually produce different signatures for this test to mean anything');
+});
+
+// Fix plan RP3.21 (2026-11-07): Svix replay protection. A captured,
+// correctly signed delivery can't be replayed once it is more than five
+// minutes old (or dated more than five minutes ahead).
+test('RP3.21: a correctly signed delivery older or newer than 5 minutes is refused and writes nothing', async () => {
+  const now = Math.floor(Date.now() / 1000);
+  for (const ts of [now - 6 * 60, now + 6 * 60, 1700000000, 'not-a-number', '']) {
+    const state = { bookings: [{ id: 1, resend_message_id: 'em_1', email_delivery_status: 'sent' }] };
+    const w = loadWebhook(state);
+    const r = await w.deliver('email.delivered', { email_id: 'em_1' }, { svixTimestamp: String(ts) });
+    assert.ok(r.status === 401 || r.status === 400, `timestamp ${ts}: ${r.status}`);
+    assert.equal(w.calls.length, 0, `timestamp ${ts}: nothing written`);
+    assert.equal(state.bookings[0].email_delivery_status, 'sent');
+  }
+});
+
+test('RP3.21: a delivery within the 5 minutes either way is still accepted', async () => {
+  const now = Math.floor(Date.now() / 1000);
+  for (const ts of [now, now - 4 * 60, now + 4 * 60]) {
+    const state = { bookings: [{ id: 1, resend_message_id: 'em_1', email_delivery_status: 'sent' }] };
+    const w = loadWebhook(state);
+    const r = await w.deliver('email.delivered', { email_id: 'em_1' }, { svixTimestamp: String(ts) });
+    assert.equal(r.status, 200, `timestamp ${ts}`);
+    assert.equal(state.bookings[0].email_delivery_status, 'delivered');
+  }
 });

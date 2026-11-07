@@ -66,9 +66,9 @@ holds across pages:
 
 - ON: `localStorage` plus `th_portal_remember_until` (now + 30 days). Checked on every read; past the cutoff the session is purged.
 - OFF: `sessionStorage` (marker `th_portal_session_only`); new tabs and restarts start signed out.
-- A session from before this change (in `localStorage`, no cutoff record) keeps working with no cap, exactly as before.
+- A session from before the cap (in `localStorage`, no cutoff record) is signed out once per device (fix plan RP3.34, D31, 2026-11-07): the page asks the person to sign in again, and a flag (`th_portal_uncapped_session_retired`) makes sure it never happens twice. A `localStorage` session written without a cutoff from then on gets the 30-day cutoff on its first write.
 
-Tools keep their existing store in `tools/auth.js` (`th_auth_session`, `remember_until`).
+Tools keep their existing store in `tools/auth.js` (`th_auth_session`, `remember_until`); a pre-cap tools session (no `remember_until`) is retired once the same way (flag `th_auth_uncapped_session_retired`).
 
 ## Verifying
 

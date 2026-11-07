@@ -21,11 +21,15 @@ const FUNCS = [
 ];
 
 for (const { name, src, column } of FUNCS) {
-  test(`${name} checks ${column} before sending, defaulting to true if unset`, () => {
+  // Fix plan RP3.26 (2026-11-07): still true when no preference row exists,
+  // but a lookup that ERRORS now fails closed (null -> not sent) instead of
+  // returning true. Run for real in rp3-staff-sends.test.js.
+  test(`${name} checks ${column} before sending, defaulting to true if unset and failing closed on a lookup error`, () => {
     const fnMatch = src.match(/async function clientWantsNotification\(email: string, column: string\)[\s\S]*?\n\}\n/);
     assert.ok(fnMatch, `expected to isolate clientWantsNotification() in ${name}`);
     const body = fnMatch[0];
-    assert.match(body, /if \(!res\.ok\) return true;/);
+    assert.doesNotMatch(body, /if \(!res\.ok\) return true;/);
+    assert.match(body, /if \(!res\.ok\) \{[\s\S]*?return null;/);
     assert.match(body, /if \(!rows\.length\) return true;/);
     assert.match(src, new RegExp(`clientWantsNotification\\([a-zA-Z_.]+, "${column}"\\)`));
   });

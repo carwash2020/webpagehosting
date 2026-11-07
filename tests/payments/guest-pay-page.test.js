@@ -24,7 +24,8 @@ async function open(search, answers) {
       w.fetch = async (url, init) => {
         const body = JSON.parse(init.body);
         calls.push({ url, body, headers: init.headers });
-        const a = answers[body.action] || { status: 404, ok: false, error: 'not_found' };
+        const queued = Array.isArray(answers[body.action]) ? answers[body.action].shift() : null;
+        const a = queued || (Array.isArray(answers[body.action]) ? null : answers[body.action]) || { status: 404, ok: false, error: 'not_found' };
         return { status: a.status || 200, json: async () => a };
       };
       // Stripe.js never loads in jsdom; the page must say so, not hang.
@@ -35,7 +36,7 @@ async function open(search, answers) {
   return { dom, doc: dom.window.document, calls, w: dom.window };
 }
 
-const VIEW = { ok: true, invoice_number: 'INV-2026-1112', invoice_date: '2026-10-28', description: 'Repair fridge', billed_to: 'T. Perides', amount_due: 300, due_date: '2099-11-15', paid: false, paid_at: null };
+const VIEW = { ok: true, invoice_number: 'INV-2026-1112', invoice_date: '2026-10-28', description: 'Repair fridge', billed_to: 'T. Perides', amount_due: 300, due_date: '2099-11-15', paid: false, paid_at: null, receipt_to: 't\u2022\u2022\u2022@example.com' };
 
 test('an open invoice: number, amount, due date, what it was for and the initial-and-surname -- nothing else', async () => {
   const { doc, calls } = await open('?c=INV-2026-1112-k7f3qm2xw9', { view: VIEW, pay: { ok: false, error: 'stub' } });
@@ -81,10 +82,46 @@ test('a payment that cannot start shows the server\'s reason on the page', async
   assert.match(doc.getElementById('payError').textContent, /already gone through/);
 });
 
-test('back from a bank step: the thank-you, with the receipt address the payer typed', async () => {
+// Fix plan RP3.18 (2026-11-07): the receipt only ever goes to the invoice's
+// own email, so the page shows where (masked) instead of asking for one,
+// and a ?receipt= in the URL is ignored.
+test('back from a bank step: the thank-you names the masked invoice email, never an address from the URL', async () => {
   const { doc } = await open('?c=INV-2026-1112-k7f3qm2xw9&redirect_status=succeeded&receipt=office%40example.com', { view: VIEW });
   assert.equal(doc.getElementById('doneView').hidden, false);
-  assert.equal(doc.getElementById('doneLead').textContent, '$300.00 for invoice INV-2026-1112. A receipt is on its way to office@example.com, and Steve has been told.');
+  assert.equal(doc.getElementById('doneLead').textContent, '$300.00 for invoice INV-2026-1112. A receipt is on its way to t\u2022\u2022\u2022@example.com, and Steve has been told.');
+});
+
+test('RP3.18: the page says where the receipt will go, and has no field to send it anywhere else', async () => {
+  const { doc } = await open('?c=INV-1-k7f3qm2xw9', { view: VIEW, pay: { ok: false, error: 'stub' } });
+  assert.equal(doc.getElementById('receiptTo').hidden, false);
+  assert.equal(doc.getElementById('receiptTo').textContent, 'Your receipt will be emailed to t\u2022\u2022\u2022@example.com, the address this invoice was sent to.');
+  assert.equal(doc.getElementById('receiptEmail'), null);
+  assert.equal(doc.querySelector('input[type="email"]'), null);
+  assert.doesNotMatch(PAGE, /receipt_email/, 'the page never hands Stripe a receipt address of its own');
+  const none = await open('?c=INV-1-k7f3qm2xw9', { view: { ...VIEW, receipt_to: null }, pay: { ok: false, error: 'stub' } });
+  assert.equal(none.doc.getElementById('receiptTo').hidden, true);
+});
+
+// Fix plan RP4.7 (2026-11-07): a failed setup keeps the card box and offers
+// "Try again", which asks guest-pay again.
+test('RP4.7: a payment that could not start keeps the card box and a Try again button that re-runs the pay step', async () => {
+  const { doc, calls } = await open('?c=INV-1-k7f3qm2xw9', { view: VIEW, pay: [{ status: 502, ok: false, error: 'We couldn\u2019t check this invoice\u2019s earlier payment just now.' }, { status: 502, ok: false, error: 'Still down.' }] });
+  assert.match(doc.getElementById('payError').textContent, /earlier payment just now/);
+  assert.ok(doc.querySelector('#paymentElement .loading'), 'the card box is still there, not emptied');
+  const retry = doc.getElementById('retryBtn');
+  assert.equal(retry.hidden, false);
+  retry.click();
+  await settle();
+  assert.equal(calls.filter((c) => c.body.action === 'pay').length, 2, 'Try again asks for the payment again');
+  assert.equal(doc.getElementById('payError').textContent, 'Still down.');
+  assert.equal(retry.hidden, false);
+});
+
+test('RP4.7: no Try again when a payment is already going through, or the invoice turned out paid', async () => {
+  const paying = await open('?c=INV-1-k7f3qm2xw9', { view: VIEW, pay: { status: 409, ok: false, already_paying: true, error: 'A payment for this invoice has already gone through or is still processing.' } });
+  assert.equal(paying.doc.getElementById('retryBtn').hidden, true);
+  const paid = await open('?c=INV-1-k7f3qm2xw9', { view: VIEW, pay: { status: 409, ok: false, already_paid: true, error: 'This invoice is already paid.' } });
+  assert.equal(paid.doc.getElementById('payArea').hidden, true);
 });
 
 test('the page loads nothing it does not need: no Supabase SDK, no Workspace or portal scripts, Stripe only from js.stripe.com', () => {

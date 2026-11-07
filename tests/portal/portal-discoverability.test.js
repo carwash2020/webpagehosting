@@ -158,5 +158,7 @@ test('an internal account appearing in the portal client list is flagged, not hi
   // invoices on file is legitimate but unusual, and hiding it would
   // make the list silently disagree with the actual data.
   assert.match(CLIENTS, /Internal account/);
-  assert.match(CLIENTS, /async function loadInternalEmails\(\)/);
+  assert.match(CLIENTS, /async function loadInternalEmails\(emails\)/); // RP3.33 (D30): asks about these emails only
+  assert.match(CLIENTS, /\/rest\/v1\/rpc\/internal_emails_among/);
+  assert.doesNotMatch(CLIENTS, /account_roles\?select=email'/);
 });

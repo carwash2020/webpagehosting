@@ -1963,9 +1963,18 @@
           // the form sat open ("in-the-past") -- same fix as a taken slot:
           // back to fresh times.
           const wasConflict = body.indexOf('23P01') !== -1 || body.indexOf('exclusion') !== -1 || res.status === 409 || body.indexOf('in-the-past') !== -1;
+          // Fix plan RP3.3 (2026-11-07): create_booking now refuses an email
+          // that doesn't look like one, and more than 5 bookings an hour from
+          // one place (429).
+          const badEmail = body.indexOf('invalid-email') !== -1;
+          const tooMany = res.status === 429 || body.indexOf('too-many') !== -1;
           statusEl.textContent = wasConflict
             ? 'That time was just booked by someone else. Please pick another.'
-            : 'Something went wrong submitting your booking. Please call us at ' + (window.__siteOverridePhone || '(435) 414-1667') + '.';
+            : badEmail
+              ? 'That email address doesn\'t look right. Check it, or leave it blank and we\'ll call or text instead.'
+              : tooMany
+                ? 'We\'ve had several bookings from here in the last hour. Please call or text us at ' + (window.__siteOverridePhone || '(435) 414-1667') + ' to book.'
+                : 'Something went wrong submitting your booking. Please call us at ' + (window.__siteOverridePhone || '(435) 414-1667') + '.';
           statusEl.classList.add('is-visible', 'is-error');
           submitBtn.disabled = false;
           submitBtn.textContent = 'Confirm Booking';

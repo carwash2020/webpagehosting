@@ -83,7 +83,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css?v=09ad2a2e15">
-<link rel="stylesheet" href="/portal/portal-app.css?v=4af907b767">
+<link rel="stylesheet" href="/portal/portal-app.css?v=ef0735c580">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -126,8 +126,8 @@
      along for the staff path (the Workspace's two-factor helpers and its
      own session store). Nothing in auth.js runs on its own on this page. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous"></script>
-<script src="/tools/auth.js?v=f6476e7a83"></script>
-<script src="/portal/portal-app.js?v=abb7e37c38"></script>
+<script src="/tools/auth.js?v=f361d31973"></script>
+<script src="/portal/portal-app.js?v=8bbf28b1fe"></script>
 <script src="/trusted-device.js?v=9ed57ff363"></script>
 <style>
   body { background: #0a0a0a; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
@@ -314,7 +314,10 @@
   <div class="report-bug-modal mfa-challenge-modal">
     <div class="th-step-topbar"><button type="button" class="th-step-back" id="signupCodeBackBtn">Back</button><span class="th-step-spacer" aria-hidden="true"></span></div>
     <h1 class="report-bug-title">Check your email</h1>
-    <p class="report-bug-sub" id="signupCodeSub">We sent a 6-digit code. Enter it here to finish.</p>
+    <!-- Fix plan RP4.2 (2026-11-07): neutral copy. portal-signup answers the
+         same for an address with or without an account (anti-enumeration),
+         so this step never claims a code was sent. -->
+    <p class="report-bug-sub" id="signupCodeSub">If this email doesn't have an account yet, a 6-digit code is on its way. Check spam.</p>
     <div class="th-code-boxes-wrap" id="signupCodeBoxesWrap">
       <div class="th-code-boxes" id="signupCodeBoxes" aria-hidden="true">
         <span class="th-code-box"></span><span class="th-code-box"></span><span class="th-code-box"></span>
@@ -322,13 +325,14 @@
       </div>
       <input type="text" id="signupCodeInput" aria-label="6-digit code from the email" class="th-code-real-input" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" maxlength="6">
     </div>
-    <p class="th-code-hint">It can take a minute to arrive. Check spam too. The code works for 15 minutes.</p>
+    <p class="th-code-hint">It can take a minute to arrive. A code works for 15 minutes.</p>
     <div class="report-bug-error" id="signupCodeError" role="alert"></div>
     <div class="report-bug-success" id="signupCodeNote" role="status" style="display:none;"></div>
     <div class="report-bug-actions">
       <button class="btn secondary-btn" id="signupCodeResend" type="button">Send a new code</button>
       <button class="btn orange" id="signupCodeSubmit" type="button">Confirm</button>
     </div>
+    <button type="button" class="forgot-link" id="signupCodeSignIn">Already have an account? Sign in instead.</button>
   </div>
 </div>
 
@@ -568,6 +572,18 @@
 
   let forgotPasswordMode = false;
 
+  // Fix plan RP3.34 / D31 (2026-11-07): portalAuthStorage() or tools/auth.js
+  // just cleared a pre-cap "remember me" session on this device (once).
+  try {
+    if (typeof getStoredSession === 'function') getStoredSession(); // runs auth.js's one-time check first
+    if (sessionStorage.getItem('th_signin_again_notice') !== null) {
+      sessionStorage.removeItem('th_signin_again_notice');
+      const note = document.getElementById('loginSuccess');
+      note.textContent = 'For your security, please sign in again. You only need to do this once on this device.';
+      note.style.display = 'block';
+    }
+  } catch (e) { /* storage blocked: no note */ }
+
   // The email of the sign-in under way, for the code challenge's success.
   let signingInEmail = '';
 
@@ -714,9 +730,17 @@
     });
   }
   let releaseSignupFocusTrap = null;
+  // portal-signup adds `limited: true` (for every address alike) once an
+  // address has asked for 5 codes this hour: nothing new was sent.
+  const SIGNUP_NOT_SENT = 'No new code was sent. Try again in a little while.';
+  function showSignupCodeNote(text) {
+    const note = document.getElementById('signupCodeNote');
+    note.textContent = text;
+    note.style.display = 'block';
+  }
   function openSignupCode(email) {
     setPortalStepChromeHidden(true);
-    document.getElementById('signupCodeSub').textContent = 'We sent a 6-digit code to ' + email + '. Enter it here to finish.';
+    document.getElementById('signupCodeSub').textContent = 'If ' + email + " doesn't have an account yet, a 6-digit code is on its way. Check spam.";
     document.getElementById('signupCodeOverlay').style.display = 'flex';
     document.getElementById('signupCodeInput').value = '';
     document.getElementById('signupCodeError').textContent = '';
@@ -735,14 +759,24 @@
     paintSignupCodeBoxes();
   });
   document.getElementById('signupCodeBackBtn').addEventListener('click', () => { pendingSignup = null; closeSignupCode(); });
+  // "Already have an account? Sign in instead.": back to Sign in, email kept.
+  document.getElementById('signupCodeSignIn').addEventListener('click', () => {
+    pendingSignup = null;
+    closeSignupCode();
+    setCreateMode(false);
+    document.getElementById('clientPassword').value = '';
+    document.getElementById('clientPassword').focus();
+  });
   document.getElementById('signupCodeResend').addEventListener('click', async () => {
     if (!pendingSignup) return;
     const btn = document.getElementById('signupCodeResend');
     ThSignin.setBusy(btn, true, 'Sending...', 'Send a new code');
     const r = await portalSignup({ action: 'start', email: pendingSignup.email, password: pendingSignup.password });
     ThSignin.setBusy(btn, false, '', 'Send a new code');
-    const note = document.getElementById('signupCodeNote');
-    if (r.ok) { note.textContent = 'A new code is on its way. Use the newest one.'; note.style.display = 'block'; }
+    document.getElementById('signupCodeError').textContent = '';
+    // Never claims a code is definitely coming (fix plan RP4.2).
+    if (r.ok && r.limited) showSignupCodeNote(SIGNUP_NOT_SENT);
+    else if (r.ok) showSignupCodeNote("If this email doesn't have an account yet, a new code is on its way. Use the newest one.");
     else document.getElementById('signupCodeError').textContent = r.error || 'Something went wrong. Please try again.';
   });
   async function confirmSignupCode() {
@@ -829,6 +863,7 @@
       if (!r.ok) { errorEl.textContent = r.error || 'Something went wrong. Please try again.'; return; }
       pendingSignup = { email: email.toLowerCase(), password };
       openSignupCode(email);
+      if (r.limited) showSignupCodeNote(SIGNUP_NOT_SENT);
       return;
     }
 

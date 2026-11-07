@@ -80,6 +80,17 @@ async function verifySvixSignature(svixId: string, svixTimestamp: string, rawBod
   return false;
 }
 
+// Fix plan RP3.21 (2026-11-07): Svix's replay guard. The signature covers
+// the timestamp, so a captured delivery can only be replayed with its
+// original svix-timestamp; anything more than 5 minutes from now (either
+// way) is refused, per Svix's own verification guidance.
+const TIMESTAMP_TOLERANCE_SECONDS = 5 * 60;
+function timestampIsFresh(svixTimestamp: string, nowMs = Date.now()): boolean {
+  if (!/^\d{1,12}$/.test(svixTimestamp)) return false;
+  const ts = Number(svixTimestamp);
+  return Math.abs(nowMs / 1000 - ts) <= TIMESTAMP_TOLERANCE_SECONDS;
+}
+
 async function updateBookingDeliveryStatus(messageId: string, status: string): Promise<void> {
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/th_bookings?resend_message_id=eq.${encodeURIComponent(messageId)}`,
@@ -132,6 +143,14 @@ Deno.serve(async (req: Request) => {
         headers: { "Content-Type": "application/json" },
       });
     }
+    // RP3.21: a correctly signed but stale (or future-dated) delivery is a
+    // replay; refused before anything is written.
+    if (!timestampIsFresh(svixTimestamp)) {
+      return new Response(JSON.stringify({ ok: false, error: "Stale or future svix-timestamp" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
     const payload = JSON.parse(rawBody);
     const status = EVENT_TO_STATUS[payload?.type];
@@ -146,8 +165,9 @@ Deno.serve(async (req: Request) => {
     await updateBookingDeliveryStatus(messageId, status);
     return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
   } catch (err: any) {
+    // Fix plan RP3.22 (2026-11-07): logged in full, generic to the caller.
     console.error("resend-webhook error:", err.message);
-    return new Response(JSON.stringify({ ok: false, error: err.message }), {
+    return new Response(JSON.stringify({ ok: false, error: "resend-webhook failed" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

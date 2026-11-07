@@ -70,15 +70,21 @@ async function supabaseRequest(path: string, init: RequestInit = {}) {
   });
 }
 
-async function fetchPendingQuotes(): Promise<any[]> {
+// null = the read failed (fix plan RP3.2, 2026-11-07): the handler answers
+// 502 instead of a quiet ok:true, sent:0.
+async function fetchPendingQuotes(): Promise<any[] | null> {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - FOLLOWUP_DAYS);
   const cutoffStr = cutoff.toISOString().slice(0, 10);
   const res = await supabaseRequest(
     `/rest/v1/client_portal_quotes?select=id,source_quote_id,client_email,client_name,quote_number,quote_date,total&status=eq.pending&quote_date=lte.${cutoffStr}`,
   );
-  if (!res.ok) return [];
-  return res.json();
+  if (!res.ok) {
+    console.error(`send-quote-followup: client_portal_quotes read failed (HTTP ${res.status})`);
+    return null;
+  }
+  const rows = await res.json();
+  return Array.isArray(rows) ? rows : null;
 }
 
 async function alreadySent(itemKey: string): Promise<boolean> {
@@ -100,14 +106,26 @@ async function markSent(itemKey: string): Promise<void> {
 
 // Same preference column/semantics send-invoice-notification and
 // send-payment-reminder already established.
-async function clientWantsEmail(email: string): Promise<boolean> {
-  const res = await supabaseRequest(
-    `/rest/v1/client_notification_preferences?client_email=eq.${encodeURIComponent(email.toLowerCase())}&select=wants_invoice_quote_emails&limit=1`,
-  );
-  if (!res.ok) return true;
-  const rows = await res.json();
-  if (!rows.length) return true;
-  return rows[0].wants_invoice_quote_emails !== false;
+// Fix plan RP3.26 (2026-11-07): a lookup that ERRORS fails closed -- null,
+// and the followup is skipped (and retried next run; nothing is marked
+// sent). Only a missing row means "wants it" (the column default).
+async function clientWantsEmail(email: string): Promise<boolean | null> {
+  try {
+    const res = await supabaseRequest(
+      `/rest/v1/client_notification_preferences?client_email=eq.${encodeURIComponent(email.toLowerCase())}&select=wants_invoice_quote_emails&limit=1`,
+    );
+    if (!res.ok) {
+      console.error(`send-quote-followup: preferences lookup failed (HTTP ${res.status}); not emailing`);
+      return null;
+    }
+    const rows = await res.json();
+    if (!Array.isArray(rows)) return null;
+    if (!rows.length) return true;
+    return rows[0].wants_invoice_quote_emails !== false;
+  } catch (err: any) {
+    console.error(`send-quote-followup: preferences lookup failed (${err.message}); not emailing`);
+    return null;
+  }
 }
 
 function buildFollowupEmailHtml(quote: Record<string, unknown>): string {
@@ -233,7 +251,9 @@ Deno.serve(async (req: Request) => {
     // uptime-alert-auth.test.js).
     const authHeader = req.headers.get("Authorization") || "";
     const token = authHeader.replace(/^Bearer\s+/i, "");
-    if (token !== SERVICE_ROLE_KEY) {
+    // `!SERVICE_ROLE_KEY ||` (fix plan RP3.14, 2026-11-07): an empty env
+    // key can never match an empty bearer.
+    if (!SERVICE_ROLE_KEY || token !== SERVICE_ROLE_KEY) {
       return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
@@ -241,17 +261,34 @@ Deno.serve(async (req: Request) => {
     }
 
     const quotes = await fetchPendingQuotes();
+    if (!quotes) {
+      return new Response(JSON.stringify({ ok: false, error: "Could not read pending quotes; no followups were sent." }), {
+        status: 502,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
     let sent = 0;
     let checked = 0;
+    let preferenceErrors = 0;
 
     for (const quote of quotes) {
       const clientEmail = quote.client_email ? String(quote.client_email).trim() : "";
       if (!clientEmail) continue;
+      // Fix plan RP3.24 (2026-11-07): the dedupe key is source_quote_id; a
+      // row without one would share the key "null" with every other such
+      // row (only the first would ever get a followup). None exist live;
+      // skipped anyway rather than guessed at.
+      if (quote.source_quote_id === null || quote.source_quote_id === undefined || quote.source_quote_id === "") {
+        console.error(`send-quote-followup: portal quote ${quote.id} has no source_quote_id; skipped`);
+        continue;
+      }
       checked++;
 
       const itemKey = String(quote.source_quote_id);
       if (await alreadySent(itemKey)) continue;
-      if (!(await clientWantsEmail(clientEmail))) continue;
+      const wants = await clientWantsEmail(clientEmail);
+      if (wants === null) { preferenceErrors++; continue; }
+      if (!wants) continue;
 
       const ok = await sendFollowup(quote);
       if (ok) {
@@ -260,12 +297,15 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    return new Response(JSON.stringify({ ok: true, checked, sent }), {
+    const result: Record<string, unknown> = { ok: preferenceErrors === 0, checked, sent };
+    if (preferenceErrors) result.error = `${preferenceErrors} followup(s) skipped: the client's email preferences couldn't be read`;
+    return new Response(JSON.stringify(result), {
+      status: preferenceErrors ? 502 : 200,
       headers: { "Content-Type": "application/json" },
     });
   } catch (err: any) {
     console.error("send-quote-followup error:", err.message);
-    return new Response(JSON.stringify({ ok: false, error: err.message }), {
+    return new Response(JSON.stringify({ ok: false, error: "send-quote-followup failed; see function logs." }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });

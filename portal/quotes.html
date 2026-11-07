@@ -68,7 +68,7 @@
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400..700&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Oswald:wght@200..700&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="/styles.css?v=09ad2a2e15">
-<link rel="stylesheet" href="/portal/portal-app.css?v=4af907b767">
+<link rel="stylesheet" href="/portal/portal-app.css?v=ef0735c580">
 <style>
   /* iOS Safari zoom-on-focus fix (2026-09-05), same root cause and
      fix already applied to invoice-generator.html: a tapped
@@ -107,7 +107,7 @@
 </style>
 <link rel="stylesheet" href="/tools/styles-tools.css?v=32b0b6ede8">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3/dist/umd/supabase.js" integrity="sha384-qafw21c/iciq0VXsi9FzkfoQv5I/V0iqE4lSNcKXPnW9/UTJLnv5CcN4FHxVLnKg" crossorigin="anonymous"></script>
-<script src="/portal/portal-app.js?v=abb7e37c38"></script>
+<script src="/portal/portal-app.js?v=8bbf28b1fe"></script>
 <!-- Shared business-hours data (2026-09-03) -- see business-hours.js's
      own header comment. This page used to keep its own hand-copied
      duplicate of these exact constants ("keep these in sync manually
@@ -323,6 +323,9 @@
 <link rel="stylesheet" href="/portal/portal-polish.css?v=f0d57c5e20">
 </head>
 <body class="portal-page">
+<!-- Skip link (fix plan RP4.9, 2026-11-07): hidden until focused; jumps past
+     the app bar and navigation to #portalMain. Styles: portal-app.css. -->
+<a href="#portalMain" class="portal-skip-link">Skip to main content</a>
 
 <!-- App bar (v2 shell, part 2, 2026-09-28) -- the same one home.html and
      dashboard.html carry: kicker + Anton title, the round Report-a-problem
@@ -377,11 +380,15 @@
   </div>
 </div>
 
+<main id="portalMain" tabindex="-1">
+
 <div id="quoteList">
   <div class="skeleton-card"><div class="skeleton-line is-title"></div><div class="skeleton-line is-wide"></div><div class="skeleton-line is-narrow"></div></div>
   <div class="skeleton-card"><div class="skeleton-line is-title"></div><div class="skeleton-line is-wide"></div><div class="skeleton-line is-narrow"></div></div>
   <div class="skeleton-card"><div class="skeleton-line is-title"></div><div class="skeleton-line is-wide"></div><div class="skeleton-line is-narrow"></div></div>
 </div>
+
+</main>
 
 <script>
   const { createClient } = supabase;
@@ -583,7 +590,12 @@
     if (!q.scheduled_at) return quoteSchedulePanelHtml(q.id, 'Pick a time for this job');
     const state = quoteVisitState(q.id);
     if (state.kind === 'unknown') {
-      return `<div class="responded-note" style="color:#4caf78;">Job scheduled. We'll see you then! Call or text us if you need to reschedule.</div>`;
+      // Fix plan RP4.6 (2026-11-07): no booking visible (lookup failed, or
+      // older than get_my_portal_visits()' window), so never assert the
+      // visit. scheduled_at is when the time was picked, not the visit.
+      const pickedOn = new Date(q.scheduled_at);
+      const pickedText = isNaN(pickedOn.getTime()) ? '' : pickedOn.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      return `<div class="responded-note quote-visit-unknown">${pickedText ? `You scheduled this on ${escapeHtml(pickedText)}. ` : ''}Call or text us to confirm your time: <a href="tel:+14354141667">(435) 414-1667</a>.</div>`;
     }
     if (state.kind === 'cancelled') return quoteVisitCardHtml(state) + quoteSchedulePanelHtml(q.id, 'Pick a new time');
     return quoteVisitCardHtml(state);
