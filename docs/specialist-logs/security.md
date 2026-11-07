@@ -1645,3 +1645,22 @@ This change widens what a client can read: records on any email they have proved
 - **New trigger functions** (`portal_invoice_follow_payment`, `portal_invoice_on_send`) have EXECUTE revoked from anon/authenticated (tested); the advisor run after applying shows nothing new.
 - **Analytics consent (D28).** Campaign attribution no longer touches localStorage without analytics consent, and a copy saved before this rule is moved out on the next page load.
 - **Real data.** Two real invoices' amounts were rounded to the cent and one got its missing paid amount. These were approved separately from the schema change, with undo values in the file.
+
+## 2026-11-07 -- Group 5: rate limits, capability checks, and what was held back
+
+**Rate limits key on an IP the caller can't choose.** This project's edge logs show Cloudflare's `cf-connecting-ip` on every request. Cloudflare overwrites any value the client sends, so that is the key. Without it, the fallback is the LAST `x-forwarded-for` entry: the first is whatever the caller wrote, which is how `portal-signup` was previously spoofable. Counters store a SHA-256 of the key, never the IP or email.
+
+**Fail-open vs fail-closed was chosen per path, and is written next to each call:**
+- **Fail open (logged):** a customer paying, and staff sending. An outage of the limiter must never stop a real payment or a real invoice.
+- **Fail closed:** the signup code check, because it guards a guessable 6-digit code.
+- **Opt-out lookups fail closed:** an outage now sends nothing, rather than emailing someone who opted out.
+
+**D30 was interpreted, not applied literally.** account_roles is now own-row or role-manager only. But team_roster still gives every staff member coworkers' emails, because job assignment stores and shows them. Only the switches and sign-in dates are hidden. The Clients page's "is this client also staff?" flag uses `internal_emails_among`, which answers only about the emails it is given. `current_user_can_manage_roles()` became SECURITY DEFINER so the new policy can call it without recursing on account_roles.
+
+**Held, not applied:**
+- **RP3.6:** gating receipts and secure documents behind a switch is undecided. Today any internal account can read them, which is the risk the plan flagged.
+- **D20:** the enrolment deadline is in place but unset. Until it is set, staff with no second factor still pass the gate (log mode).
+
+**Accepted risk, documented:**
+- Someone holding a pay link can still ask Stripe.js directly to send a receipt elsewhere; the page no longer does.
+- `markPaidInWorkspaceBlob` has no version check (unchanged; documented in stripe-webhook).

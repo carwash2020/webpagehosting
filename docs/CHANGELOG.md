@@ -6142,3 +6142,98 @@ Fix plan Group 4 (RP1 + RP2; decisions D16, D17, D18, D19, D21, D24, D28; approv
 - Confirmed bookings in the past are never listed in the dashboard's bookings list, so they can't be added to Jobs.
 - `invoice_payment_status` counts only Stripe money for an invoice Stripe helped pay, so a cash part payment before a card balance isn't added in there.
 - Runway months saved before RP1.4 keep their old revenue until re-pulled.
+
+## What changed, 2026-11-07 -- Group 5: public doors closed to abuse; internal doors check the switch
+
+Fix plan Group 5 (RP3 + RP4; decisions D15, D20, D23, D26, D29, D30, D31). Each database change and deploy was approved in this session by Kavi, on Connor's behalf. RP3.6 is held for Connor (see the end).
+
+**Public forms and bookings**
+- **RP3.3:** a booking needs a real-looking email when one is given, and one place (IP) can make at most 5 bookings an hour. Each booking emails and pushes staff and holds a slot.
+- **RP3.4:** per-IP hourly limits:
+  - leads 5;
+  - job applications 3;
+  - bug reports 10;
+  - error logs 30 (extra error logs are dropped quietly).
+
+  The forms say "call or text us" instead of a generic error when a limit is hit.
+- **RP3.5:** a public lead always arrives unhandled, timestamped now, in the default business.
+- **IP source:** limits key on Cloudflare's `cf-connecting-ip`, or else the last `x-forwarded-for` entry, never the first one, which the caller writes. Only a hash is kept (`rate_limit_take`, `rate_limit_hits`).
+
+**Payments (guest pay, portal pay, POS)**
+- **RP3.17:** if Stripe can't be asked about an earlier payment, no new payment starts (502) rather than risking a double charge.
+- **RP3.18:** per-IP limits on the pay link. The receipt goes only to the invoice's own client email, and the page shows where (masked).
+- **RP4.3 (D15):** a pay link stops working 90 days after the invoice is paid.
+- **RP4.7:** the pay page keeps the card form and offers Try again after a failed setup.
+- **RP3.29:** deleting a portal invoice cancels its still-open payment first, and refuses while a payment is going through. A payment that matches no invoice now alerts staff.
+- **RP3.16, RP3.27 (D29), RP3.19:** POS charges:
+  - an unknown mode is refused;
+  - the saved-card check needs `can_manage_invoices`;
+  - income-log writes no longer overwrite each other.
+- **RP3.20, RP4.4:** saved cards:
+  - emails are lowercased once;
+  - Settings checks whether a card can be saved before asking for a signature.
+
+**Staff sends and access**
+- **RP3.9, RP3.10 (D23):**
+  - send-invite needs `can_manage_clients`;
+  - a job confirmation needs the job's owner or `can_manage_others_jobs`.
+- **RP3.15:** advisor-health and trigger-workflow need the full Dev Tools switch.
+- **RP3.25:** staff sends are limited to 60 an hour per person.
+- **RP3.26:** a failed opt-out lookup sends nothing.
+- **RP3.22:** upstream error text is logged, not shown.
+- **RP3.28:** a failed invite revoke says so.
+- **RP3.33 (D30):** account_roles shows each person their own row, and role managers every row. The team roster still lists everyone's name, title and email (job assignment needs them), but switches and sign-in dates only for managers. The Clients page asks `internal_emails_among` instead of reading every staff email.
+- **RP3.7 (D20):** a two-factor enrolment deadline (`internal_mfa_enforcement.enroll_deadline`). It is unset, so nothing changes until Connor sets a date.
+
+**Reliability**
+- **RP3.1:** approving or declining an estimate emails and pushes staff (with the decline reason).
+- **RP3.2:** reminders and the digest read invoices and quotes from their tables and the blob by name, and fail loudly instead of answering "sent 0".
+- **RP3.8:** a check-up visit can't be booked twice (`client_portal_checkups.scheduled_at`).
+- **RP3.11:** a failed estimate mark retries, then undoes the booking.
+- **RP3.14:** the empty-key guard covers the last three functions.
+- **RP3.21:** stale webhook timestamps are refused.
+- **RP3.23:** unknown message senders are refused.
+- **RP3.24:** follow-ups skip estimates with no source id.
+- **RP3.31:** booking emails report what actually sent.
+- **RP3.13 (D26):** the notification log is kept 370 days.
+- **RP3.32:** portal policy names say what they do.
+
+**Portal**
+- **RP4.1:** after the two-factor code you return to the page you came from.
+- **RP4.2:** neutral "if this email doesn't have an account yet" copy, and an honest "no new code was sent".
+- **RP3.30:** signup code checks:
+  - limited per IP;
+  - wrong tries carry over within the hour;
+  - compared in constant time.
+- **RP4.5:** a contract can be signed by typing your name.
+- **RP4.6:** an approved estimate with no visible booking asks you to confirm your time.
+- **RP4.8:** a closed work request shows the staff note. Staff can add the note when they close the request.
+- **RP4.9:** a skip-to-content link.
+- **RP3.34 (D31):** a sign-in from before the 30-day cap is asked to sign in again, once per device.
+
+**RP3.12:** the database clients table is live (every Stripe payment and new saved card reads it; the Clients page's duplicate review uses it). The 8 Workspace clients missing from it were added (11 → 19; 2 are TEST). Existing payments and cards already missing a client link stay unlinked.
+
+**RP2.4 (Group 4, verified here):** a TEST lead and TEST booking sent through the live site with a tagged link and analytics consent arrived with `utm_*` = google / cpc / rp24-test and the same GA visit ID on both.
+
+**Database** (applied 2026-11-07; live function bodies match the repo):
+- `sql/security/group5_backend_hardening.sql`
+- `sql/item1/07_reseed_clients_2026_11.sql`
+
+**Held for Connor:**
+- `sql/security/group5_rp36_finance_documents.sql`: receipts and secure documents behind `can_view_finance`, a proposal not yet decided. The matching Workspace message is kept in that file's header.
+- The D20 deadline date.
+
+**Noted for Connor:**
+- `jobs` has no assignee column, so job confirmations go by the creator.
+- A job sync's automatic invite is refused for staff without `can_manage_clients`; the sync itself still works.
+- Deleting one invoice cancels a shared Pay All payment.
+- Typed contract signatures are sent as an image; storing the typed name and method needs a respond-to-contract change.
+- The rate-limit numbers are a proposal.
+
+**Tests** (new):
+- `tests/security/group5-hardening-db.test.js` (PGlite)
+- `tests/security/group5-public-forms.test.js`
+- `tests/edge-functions/rp3-staff-sends.test.js`
+- `tests/edge-functions/rp3-portal-and-payments.test.js`
+- `tests/edge-functions/rp3-cron-data-sources.test.js`
+- plus new portal tests: second-step return, typed signature, closed-work-order note, skip link, D31.
