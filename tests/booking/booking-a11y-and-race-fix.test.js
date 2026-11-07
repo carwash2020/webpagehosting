@@ -73,8 +73,9 @@ test('a stale availability load never wins: picking a second service before the 
   services[0].dispatchEvent(new window.Event('click', { bubbles: true }));
   await waitForCondition(() => resolvers.length === 1);
   window.document.getElementById('backToService').click();
-  // ...then Drywall & Painting (3 hrs), the last one.
-  services[services.length - 1].dispatchEvent(new window.Event('click', { bubbles: true }));
+  // ...then Drywall & Painting (3 hrs), found by name (RP5.5 added two
+  // services after it, 2026-11-07).
+  [...services].find((el) => /Drywall/.test(el.textContent)).dispatchEvent(new window.Event('click', { bubbles: true }));
   await waitForCondition(() => resolvers.length === 2);
 
   // Resolve the CURRENT (second) load first, then the stale first one --

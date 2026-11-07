@@ -1625,6 +1625,8 @@
               <option>Plumbing Fixes &amp; Leaks</option>
               <option>Drywall &amp; Painting</option>
               <option>Assembly &amp; Installation</option>
+              <option>In-person Estimate</option>
+              <option>Inspection</option>
               <option>Emergency Calls</option>
               <option>Something Else</option>
             </select>
@@ -1634,16 +1636,16 @@
         <div class="form-row">
           <div class="field">
             <label for="date">Preferred Date</label>
-            <input id="date" name="date" type="date">
+            <input id="date" name="date" type="date" data-min-today>
           </div>
           <div class="field">
             <label for="time">Preferred Time</label>
             <select id="time" name="time">
               <option value="" disabled selected>Choose one</option>
-              <option>Morning (8AM to 11AM)</option>
-              <option>Midday (11AM to 2PM)</option>
               <option>Afternoon (2PM to 5PM)</option>
-              <option>Evening (5PM to 7PM)</option>
+              <option>Evening (5PM to 8PM)</option>
+              <option>Late (8PM to 10PM, not Sunday)</option>
+              <option>Saturday morning (7AM to 11AM)</option>
               <option>I'm flexible</option>
             </select>
           </div>
@@ -1977,7 +1979,7 @@
           <li><a href="/portal/login.html">Approve Estimates</a></li>
           <li><a href="/portal/login.html">Request Work</a></li>
         </ul>
-        <p style="color:var(--text-dim); font-size:12.5px; line-height:1.5; margin-top:8px;">Existing clients only &mdash; your account is set up automatically the first time we send you an invoice or estimate. New here? <a href="/booking.html">Schedule a service</a> or call us.</p>
+        <p style="color:var(--text-dim); font-size:12.5px; line-height:1.5; margin-top:8px;">Got an invoice or estimate from us? <a href="/portal/login.html">Create your account</a> with the email it was sent to. New here? <a href="/booking.html">Schedule a service</a> or call us.</p>
       </div>
     </div>
 
@@ -2872,6 +2874,15 @@
   // The #schedule form is the single homepage lead form (the hero
   // estimate form was removed 2026-10-14; its CTA now links here).
   // Do not add a second backend.
+  // Fix plan RP5.3 (2026-11-07): Preferred Date can't be in the past. The
+  // date box gets min=today (the visitor's own date, as the box shows it),
+  // and submit refuses a typed past date in case a browser ignores min.
+  function leadTodayIso() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  document.querySelectorAll('input[data-min-today]').forEach((el) => { el.min = leadTodayIso(); });
+
   function submitLeadFromForm(form, status, submitBtn) {
     const idleLabel = submitBtn.textContent;
     const formData = new FormData(form);
@@ -2887,6 +2898,14 @@
       status.classList.add('is-success', 'is-visible');
       submitBtn.textContent = 'Sent ✓';
       form.reset();
+      return;
+    }
+
+    const pickedDate = String(formData.get('date') || '');
+    if (pickedDate && pickedDate < leadTodayIso()) {
+      status.textContent = 'That date has passed. Pick today or later, or leave it blank.';
+      status.classList.remove('is-success');
+      status.classList.add('is-error', 'is-visible');
       return;
     }
 
