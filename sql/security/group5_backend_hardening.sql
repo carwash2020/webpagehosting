@@ -429,6 +429,11 @@ $$;
 revoke execute on function public.team_roster() from public, anon;
 grant execute on function public.team_roster() to authenticated;
 
+-- 10b. RP3.8: the check-up reminder records when a visit was booked from it,
+--      so a double tap or retry can't book a second visit
+--      (schedule-checkup-visit writes it with a conditional PATCH).
+alter table public.client_portal_checkups add column if not exists scheduled_at timestamptz;
+
 -- 10. RP4.8 a note on a closed work order -------------------------------------------------
 alter table public.client_portal_work_orders add column if not exists status_note text;
 do $$

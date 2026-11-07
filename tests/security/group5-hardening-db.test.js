@@ -18,7 +18,8 @@
 //   - D30: a staff member sees only their own account_roles row; a role
 //     manager sees all; team_roster hides switches from non-managers;
 //     internal_emails_among answers only about the emails asked (RP3.33);
-//   - a declined work order carries the staff note (RP4.8).
+//   - a declined work order carries the staff note (RP4.8);
+//   - check-up reminders get a scheduled_at marker (RP3.8).
 const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
@@ -115,6 +116,7 @@ const SCHEMA = `
   create table public.client_portal_invoices (id bigserial primary key, client_email text);
   alter table public.client_portal_invoices enable row level security;
   create policy "clients or internal accounts can view invoices" on public.client_portal_invoices for select using (client_email = auth.email());
+  create table public.client_portal_checkups (id bigserial primary key, client_email text);
   create table public.client_portal_work_orders (id bigserial primary key, client_email text, status text, scheduled_at timestamptz,
     updated_at timestamptz, tenant_id uuid);
   grant select on public.client_portal_work_orders to authenticated;
@@ -247,6 +249,11 @@ test('RP3.33 (D30): staff see only their own account_roles row; a role manager s
   assert.deepEqual((await as(TECH, 'select public.internal_emails_among($1) as e', [[CLIENT, 'BOSS@example.com', 'x@y.z']]))[0].e, [BOSS]);
   assert.deepEqual((await as(CLIENT, 'select public.internal_emails_among($1) as e', [[BOSS]]))[0].e, [], 'a client learns nothing');
   await assert.rejects(as(CLIENT, 'select * from public.team_roster()'), /not an internal account/);
+});
+
+test('RP3.8: check-up reminders have a scheduled_at column for the booked marker', async () => {
+  const cols = (await admin("select column_name, data_type from information_schema.columns where table_name = 'client_portal_checkups' and column_name = 'scheduled_at'"));
+  assert.deepEqual(cols.map((c) => c.data_type), ['timestamp with time zone']);
 });
 
 test('RP4.8: closing a work order carries the staff note; any other status clears it', async () => {
